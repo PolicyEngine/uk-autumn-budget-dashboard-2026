@@ -27,7 +27,7 @@ const changeClass = (value) => {
  * (as negative amounts), benefits and pension contributions, then net
  * income. Each top row opens to its taxes or benefits, closed at first.
  * Net income shows its before and after only: its change is the headline
- * sentence above (each fact once). On a phone the table is Item | Change,
+ * card above (each fact once). On a phone the table is Item | Change,
  * and each row opens to its before and after too.
  *
  * Whole pounds that agree with the rest of the page (roundProgrammeGroups):
@@ -176,7 +176,7 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
                 {narrow ? (
                   `${money(totals.before)} → ${money(totals.after)}`
                 ) : (
-                  <span className="visually-hidden">The change is in the sentence above.</span>
+                  <span className="visually-hidden">See the headline above.</span>
                 )}
               </td>
             </tr>

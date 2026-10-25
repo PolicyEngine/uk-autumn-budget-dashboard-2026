@@ -152,10 +152,13 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
       if (value === "personal") {
         // The form's first box is the head's age, with its default
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
-        // The results below the form (every answer has a default): the tab
-        // asks the household API in two stages and shows the answer
+        // Nothing is asked before Calculate
+        expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
+        // Every answer has a default: one press asks the household API in
+        // two stages and shows the answer
+        fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
         expect(
-          await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
+          await within(panel).findByText(/^Change in your net income, /, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
         await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
         const stages = requests
@@ -180,9 +183,50 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
     );
     expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
+  });
+
+  it("keeps a household calculation running across a tab switch, and shows its answer on return", async () => {
+    // Hold the household API's answers until released
+    const held = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input, init = {}) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url === HOUSEHOLD_API) {
+          return new Promise((resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+            held.push(() => resolve(serve(input, init)));
+          });
+        }
+        return serve(input, init);
+      }),
+    );
+    window.history.replaceState({}, "", "/?tab=personal");
+    render(<App />);
+    const personal = await screen.findByRole("tabpanel", { name: "Personal impact" });
+    fireEvent.click(within(personal).getByRole("button", { name: /^Calculate/ }));
+    await waitFor(() => expect(held).toHaveLength(1));
+
+    // Away to Methodology while the first stage is in flight
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    expect(personal).not.toBeVisible();
+    held.shift()();
+    // The second stage follows while the view is hidden
+    await waitFor(() => expect(held).toHaveLength(1));
+    held.shift()();
+    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2));
+
+    // Back: the same view, with the finished answer, and nothing asked again
+    fireEvent.click(screen.getByRole("tab", { name: "Personal impact" }));
+    expect(screen.getByRole("tabpanel", { name: "Personal impact" })).toBe(personal);
+    expect(await within(personal).findByText(/^Change in your net income, /)).toBeInTheDocument();
+    await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
+    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
+    expect(held).toHaveLength(0);
   });
 });

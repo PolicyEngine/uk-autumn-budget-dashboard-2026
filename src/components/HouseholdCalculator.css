@@ -512,9 +512,88 @@
   color: var(--pe-gray-500);
 }
 
+/* The header's right side: the examples picker and Calculate */
+.household-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .household-examples {
   flex: 0 1 240px;
   min-width: 200px;
+}
+
+/* Calculate, as the student loan calculator's .calculate-button */
+.calculate-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 148px;
+  height: 40px;
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--pe-surface);
+  background: var(--pe-teal-500);
+  border: none;
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.calculate-button:hover:not(:disabled) {
+  background: var(--pe-teal-700);
+}
+
+.calculate-button:active:not(:disabled) {
+  background: var(--pe-teal-800);
+  transform: translateY(1px);
+}
+
+.calculate-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pe-teal-200);
+}
+
+.calculate-button:disabled {
+  cursor: default;
+}
+
+.calculate-button:disabled:not(.is-busy) {
+  background: var(--pe-gray-300);
+}
+
+.calculate-button.is-busy {
+  background: var(--pe-teal-600);
+  cursor: progress;
+}
+
+.calculate-arrow {
+  transition: transform 0.15s ease;
+}
+
+.calculate-button:hover:not(:disabled) .calculate-arrow {
+  transform: translateX(2px);
+}
+
+.calculate-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--pe-teal-200);
+  border-top-color: var(--pe-surface);
+  border-radius: 50%;
+  animation: calculate-spin 0.8s linear infinite;
+}
+
+@keyframes calculate-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .household-examples-note {
@@ -909,6 +988,11 @@
   padding: 4px 28px 20px;
 }
 
+/* Press feedback on the steppers */
+.household-field .stepper-button:active:not(:disabled) {
+  background: var(--pe-teal-100);
+}
+
 .household-subgroup + .household-subgroup {
   margin-top: 20px;
   padding-top: 20px;
@@ -928,7 +1012,9 @@
     padding: 14px 16px 0;
   }
 
-  .household-examples {
+  .household-examples,
+  .household-header-actions,
+  .calculate-button {
     flex: 1 1 100%;
   }
 
@@ -939,7 +1025,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .household-more-chevron,
-  .info-tooltip {
+  .info-tooltip,
+  .calculate-button,
+  .calculate-arrow {
     transition: none;
+  }
+
+  .calculate-spinner {
+    animation-duration: 2.4s;
   }
 }

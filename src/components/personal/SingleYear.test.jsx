@@ -34,6 +34,12 @@ beforeEach(() => {
   clearHouseholdImpactCache();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
+  // Figures at once, not counted up: the count-up is presentation only
+  vi.stubGlobal("matchMedia", (query) => ({
+    matches: query.includes("reduce"),
+    addEventListener() {},
+    removeEventListener() {},
+  }));
 });
 
 afterEach(() => {
@@ -53,11 +59,19 @@ function renderTab(props = {}) {
   );
 }
 
-// The results are beside the form from the start: every answer has a
-// default, and they update as the answers change
-function toResults() {}
+// Nothing is asked until Calculate: every answer has a default, so one
+// press gives the results
+const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
+function toResults() {
+  fireEvent.click(calculateButton());
+}
 
-const HEADLINE = /The selected policies would/;
+// The headline card's label, once a result is shown
+const HEADLINE = /^Change in your net income, /;
+/** The headline card (there is none before a result). */
+const headlineCard = () => document.querySelector(".headline-hero");
+/** The headline figure, once it has counted up. */
+const changeValue = () => headlineCard().querySelector(".headline-hero-value").textContent;
 
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
@@ -68,7 +82,7 @@ describe("Personal impact's results", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    await within(await results()).findByText("+£3,765");
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
@@ -106,27 +120,37 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  it("says the change in one sentence, then one line of what it assumes", async () => {
+  it("shows the change, its share and net income after as headline cards, then what they assume as boxes", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
+    toResults();
     const panel = await results();
-    const banner = (await within(panel).findByText(HEADLINE)).closest(".single-year-banner");
-    expect(banner).toHaveTextContent(
-      "The selected policies would raise your household's annual net income by £3,765 (+5.8%) in 2029-30",
-    );
-    expect(banner).toHaveClass("is-gain");
-    // The change is said once: not as a tile, not in the breakdown, and no
-    // sentence repeating what the headline says
-    expect(panel.querySelector(".single-year-tiles")).toBeNull();
+    await within(panel).findByText("+£3,765");
+    const hero = headlineCard();
+    expect(hero).toHaveClass("is-gain");
+    expect(hero.querySelector(".headline-hero-label")).toHaveTextContent("Change in your net income, 2029-30");
+    expect(changeValue()).toBe("+£3,765");
+    // The figure once, for copying and screen readers alike
+    expect(hero.textContent.match(/£3,765/g)).toHaveLength(1);
+    expect(hero.querySelector(".headline-hero-figure")).toHaveTextContent(/^\+£3,765 a year$/);
+    // Its share and the before and after on one line, in the same card
+    expect(hero.querySelector(".headline-hero-detail")).toHaveTextContent("+5.8% of net income · Net income before and after: £65,371 → £69,136");
+    expect(panel.querySelectorAll(".headline-hero")).toHaveLength(1);
+    // The change is said once: no sentence repeating it
+    expect(panel).not.toHaveTextContent("The selected policies would");
     expect(panel).not.toHaveTextContent("before and after the selected policies.");
-    // One line of assumptions, short items; the rail explanation is in
-    // "About these figures"
-    const assumptions = panel.querySelector("dl.single-year-assumptions");
-    expect(assumptions).toHaveTextContent(
-      "Salary in 2029-30: £34,192, partner £12,822 (grown from 2026 with OBR earnings)",
-    );
-    expect(assumptions).toHaveTextContent("Rent area: Central Greater Manchester (region default)");
-    expect(assumptions).toHaveTextContent("Rail fares freeze: not shown (national figures only)");
+    // What it is based on: a strip, each a label over its value, the note
+    // behind an "i"; the rail explanation is in "About these figures"
+    const assumptions = panel.querySelector("dl.based-on");
+    const box = (label) =>
+      [...assumptions.querySelectorAll(".based-on-item")].find((item) =>
+        item.querySelector("dt").textContent.startsWith(label),
+      );
+    expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
+    expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
+    expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
+    expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
+    expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child
@@ -149,10 +173,21 @@ describe("the household calculation, from the fixture", () => {
     const sum = bars
       .map((bar) => parse(bar.querySelector(".policy-bar-value").textContent))
       .reduce((a, b) => a + b, 0);
-    const headline = container.querySelector(".single-year-amount").textContent;
-    expect(sum).toBe(parse(headline));
+    expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
-    expect(screen.getByText(/No effect on your household: Dividend tax increase/)).toBeInTheDocument();
+    // The measures that leave the household where it was: one expander
+    // under the chart, closed at first, each on its own row with its colour
+    const noEffect = screen.getByRole("button", { name: /^No effect on your household \(\d+\)$/ });
+    expect(noEffect).toHaveAttribute("aria-expanded", "false");
+    expect(container.querySelector(".no-effect-item")).toBeNull();
+    fireEvent.click(noEffect);
+    expect(noEffect).toHaveAttribute("aria-expanded", "true");
+    const items = [...container.querySelectorAll(".no-effect-item")];
+    expect(noEffect).toHaveTextContent(`(${items.length})`);
+    expect(items.map((item) => item.querySelector(".no-effect-name").textContent)).toContain(
+      "Dividend tax increase (+2pp)",
+    );
+    expect(items.every((item) => item.querySelector(".no-effect-dot").style.background)).toBe(true);
     expect(container.querySelector('[data-policy="interaction"]')).toBeNull();
   });
 
@@ -169,7 +204,7 @@ describe("the household calculation, from the fixture", () => {
     for (const name of ["Before", "After", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
-    // Net income: before and after only; its change is the sentence above
+    // Net income: before and after only; its change is the headline card
     const net = within(table).getByRole("row", { name: /Net income/ });
     expect(net).toHaveTextContent("£65,371£69,136");
     expect(net).not.toHaveTextContent("£3,765");
@@ -211,6 +246,7 @@ describe("the household calculation, from the fixture", () => {
   it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
+    toResults();
     await screen.findByRole("heading", { name: /Net income across earnings/ });
     expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
     // Always shown, not in an expander
@@ -222,17 +258,51 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks again for another year, and shows nothing without a policy", async () => {
+  it("asks nothing before Calculate, then asks again for another year only on Calculate", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
+    // Before Calculate: the empty cards and a prompt, and no request
+    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(headlineCard()).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household).toEqual([]);
     toResults();
     await screen.findByText(HEADLINE);
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
+    // Another year: the result stays, dimmed, with a note; nothing asked yet
+    expect(await screen.findByText("Answers changed: press Calculate to update.")).toBeInTheDocument();
+    expect(document.querySelector(".single-year-result")).toHaveClass("is-stale");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household.some((body) => body.year === 2030)).toBe(false);
+    toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
     expect(screen.getByText(/Select at least one policy/)).toBeInTheDocument();
+  });
+});
+
+describe("Calculate", () => {
+  it("asks only on Calculate or Enter, never on an example or an edit", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    // An example fills the form only
+    const examples = screen.getByRole("combobox", { name: "Start from an example" });
+    fireEvent.change(examples, { target: { value: within(examples).getAllByRole("option")[1].value } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household).toEqual([]);
+    // Enter in a box sends the form
+    fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(household[0].household.age).toBe(40);
+    // An edit after a result: the result stays, dimmed, and nothing is asked
+    const asked = household.length;
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
+    expect(screen.getByText("Answers changed: press Calculate to update.")).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household).toHaveLength(asked);
   });
 });
 
@@ -254,8 +324,8 @@ describe("while a new answer loads", () => {
     };
   }
 
-  const banner = () => screen.getByText(HEADLINE).closest(".single-year-banner");
-  const stalePart = () => screen.getByText(HEADLINE).closest(".single-year-stale");
+  const banner = () => headlineCard();
+  const stalePart = () => document.querySelector(".single-year-result.is-stale");
   const details = (container) => container.querySelector(".single-year-details");
 
   it("keeps the old figures under their own year, greyed, until the new year's answer arrives", async () => {
@@ -263,26 +333,30 @@ describe("while a new answer loads", () => {
     const { rerender, container } = renderTab();
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    expect(banner()).toHaveTextContent("in 2029-30");
+    expect(banner()).toHaveTextContent("2029-30");
     expect(stalePart()).toBeNull();
     server.slowDown();
     const ids = POLICIES_FOR_TEST.map((p) => p.id);
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
+    toResults();
+    // The button is busy and cannot send twice
+    expect(calculateButton()).toBeDisabled();
+    expect(calculateButton()).toHaveTextContent("Calculating…");
     // At once, and still after the debounce and while the request is held
     for (const wait of [0, 600]) {
       await new Promise((resolve) => setTimeout(resolve, wait));
-      expect(banner()).toHaveTextContent("in 2029-30");
+      expect(banner()).toHaveTextContent("2029-30");
       expect(banner()).not.toHaveTextContent("2030-31");
-      expect(stalePart()).toHaveClass("is-stale");
+      expect(stalePart()).not.toBeNull();
       expect(details(container)).toHaveClass("is-stale");
       expect(screen.getByRole("heading", { name: /Change in net income by policy, 2029-30/ })).toBeInTheDocument();
-      expect(screen.getByText(/Updating for 2030-31/)).toBeInTheDocument();
     }
+    // A compact processing panel over the dimmed result
+    expect(container.querySelector(".processing-panel.is-compact")).toHaveTextContent("Calculating your household");
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     server.releaseAll();
-    await waitFor(() => expect(banner()).toHaveTextContent("in 2030-31"));
+    await waitFor(() => expect(banner()).toHaveTextContent("2030-31"));
     expect(stalePart()).toBeNull();
-    expect(screen.queryByText(/Updating for/)).not.toBeInTheDocument();
     // The breakdown stage: the old bars stay greyed under their year until it lands
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     expect(details(container)).not.toHaveClass("is-stale");
@@ -298,6 +372,7 @@ describe("while a new answer loads", () => {
     server.slowDown();
     const ids = POLICIES_FOR_TEST.map((p) => p.id).slice(1);
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2029} />);
+    toResults();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(stalePart()).toHaveClass("is-stale");
     expect(details(container)).toHaveClass("is-stale");

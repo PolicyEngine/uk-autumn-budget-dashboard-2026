@@ -8,7 +8,7 @@ import { consistentRound } from "./householdImpactApi";
 import { getPolicyColor } from "./policyConfig";
 import { CHART_COLOURS } from "./chartTheme";
 
-const MINUS = "−";
+export const MINUS = "−";
 
 /** "£1,234", whole pounds, a true minus. */
 export function money(value) {
@@ -229,6 +229,16 @@ export function policyRows(byPolicy, total, policies) {
     noEffect: byPolicy.measures
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
+    // Every measure that leaves the household's net income where it was,
+    // with its colour and, for an employer cost, why
+    noEffectItems: byPolicy.measures
+      .filter((row) => row.status === "not_affected")
+      .map((row) => ({
+        id: row.id,
+        name: nameOf(row),
+        color: getPolicyColor(row.id),
+        reason: row.noteKind === "employer_cost" ? row.note : null,
+      })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount
     notes: byPolicy.measures

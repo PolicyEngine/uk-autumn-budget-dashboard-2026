@@ -9,10 +9,13 @@ import {
   OLDEST_CHILD_AGE,
   asksEducation,
   atStatePensionAge,
+  buildHouseholdRequest,
   isRenting,
   parseChildrenAges,
+  requestKey,
   statePensionFor,
 } from "../utils/householdImpactApi";
+import useCollapse from "../hooks/useCollapse";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -301,11 +304,11 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, moreOpen: false };
+const savedWizard = { inputs: null, presetId: null, moreOpen: false, submitted: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false });
+  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false, submitted: null });
 }
 
 /**
@@ -325,6 +328,10 @@ function HouseholdCalculator({
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
   // More details, closed at first; kept between tab switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
+  const more = useCollapse(moreOpen);
+  // The answers, year and policies last sent with Calculate: nothing is
+  // asked before it, and a result stays tied to what it was asked with
+  const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
   const selectionKey = selectedPolicies.join(",");
 
   const handleInputChange = (id, value) => {
@@ -341,7 +348,8 @@ function HouseholdCalculator({
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
     savedWizard.moreOpen = moreOpen;
-  }, [inputs, presetId, moreOpen]);
+    savedWizard.submitted = submitted;
+  }, [inputs, presetId, moreOpen, submitted]);
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
@@ -350,18 +358,34 @@ function HouseholdCalculator({
   };
   const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
 
-  // The results, updated as the answers change
   const householdPolicies = useMemo(
     () => (selectionKey ? selectionKey.split(",") : []),
     [selectionKey],
   );
-  const householdResult = useHouseholdImpact({
-    inputs,
-    year,
-    policies: householdPolicies,
-    enabled: true,
-  });
   const noneSelected = householdPolicies.length === 0;
+  // The results for the answers sent with Calculate, never the ones being
+  // edited. The request carries on whatever else changes on the page (this
+  // view stays mounted while another is shown).
+  const householdResult = useHouseholdImpact({
+    inputs: submitted?.inputs ?? inputs,
+    year: submitted?.year ?? year,
+    policies: submitted?.policies ?? householdPolicies,
+    enabled: submitted !== null,
+  });
+  const running =
+    submitted !== null && (householdResult.status === "loading" || householdResult.detailStatus === "loading");
+  // The answers, year or policies differ from those of the result shown
+  const changed =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+
+  const calculate = (event) => {
+    event?.preventDefault();
+    // One calculation at a time; nothing to ask without a policy
+    if (running || noneSelected) return;
+    setSubmitted({ inputs, year, policies: householdPolicies });
+  };
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
@@ -527,8 +551,15 @@ function HouseholdCalculator({
             </svg>
           </button>
         </h3>
-        {moreOpen && (
-          <div id={panelId} role="region" aria-labelledby={labelId} className="household-more-panel">
+        {more.mounted && (
+          <div
+            id={panelId}
+            role="region"
+            aria-labelledby={labelId}
+            className={`collapse ${more.expanded ? "is-expanded" : ""}`}
+          >
+            <div className="collapse-inner">
+            <div className="household-more-panel">
             {section.groups.map((group) => {
               if (!group.fields.some(fieldApplies)) return null;
               const groupId = `${labelId}-${group.title.toLowerCase().replace(/[^a-z]+/g, "-")}`;
@@ -541,6 +572,8 @@ function HouseholdCalculator({
                 </div>
               );
             })}
+            </div>
+            </div>
           </div>
         )}
       </section>
@@ -552,12 +585,13 @@ function HouseholdCalculator({
       <div className="household-layout">
         {/* The whole form in one card: a header with the examples, then
             the questions in sections */}
-        <div className="card household-form">
+        <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
             <div className="household-form-title">
               <h2>Your household</h2>
-              <p>Every answer starts at a typical value. Change any of them; the results update as you go.</p>
+              <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
+            <div className="household-header-actions">
             <div className="household-examples">
               <label className="visually-hidden" htmlFor="household-example">
                 Start from an example
@@ -594,6 +628,27 @@ function HouseholdCalculator({
                 </svg>
               </div>
             </div>
+            <button
+              type="submit"
+              className={`calculate-button ${running ? "is-busy" : ""}`}
+              disabled={running || noneSelected}
+              aria-busy={running || undefined}
+            >
+              {running ? (
+                <>
+                  <span className="calculate-spinner" aria-hidden="true" />
+                  Calculating…
+                </>
+              ) : (
+                <>
+                  Calculate
+                  <span className="calculate-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </>
+              )}
+            </button>
+            </div>
           </div>
           {activePreset && (
             <p className="household-examples-note" role="status">
@@ -601,23 +656,30 @@ function HouseholdCalculator({
             </p>
           )}
           {FORM_SECTIONS.map(renderSection)}
-        </div>
+        </form>
 
         <div className="household-results" role="region" aria-label="Results">
           <SingleYearHeadline
             result={householdResult}
-            year={year}
+            year={submitted?.year ?? year}
             policies={policies}
             noPolicies={noneSelected}
-            renting={isRenting(inputs.tenure)}
+            renting={isRenting((submitted?.inputs ?? inputs).tenure)}
+            submitted={submitted !== null}
+            changed={changed}
           />
         </div>
       </div>
 
-      {/* The results' sections, below the form and headline */}
-      {!noneSelected && (
+      {/* The results' sections, below the form and headline, once asked */}
+      {submitted !== null && !noneSelected && (
         <div role="region" aria-label="Your household's results">
-          <SingleYearDetails result={householdResult} year={year} policies={policies} />
+          <SingleYearDetails
+            result={householdResult}
+            year={submitted.year}
+            policies={policies}
+            changed={changed}
+          />
         </div>
       )}
     </div>

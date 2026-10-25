@@ -39,7 +39,7 @@ describe("the view tabs", () => {
     // The intro holds for every view, and sits above the tabs
     const intro = container.querySelector(".dashboard-intro");
     expect(intro).toHaveTextContent(
-      "How nine candidate Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook. Choose a year and policies in the bar above.",
+      "This dashboard shows how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook. Choose a year and policies in the bar above.",
     );
     expect(intro.compareDocumentPosition(viewList())).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

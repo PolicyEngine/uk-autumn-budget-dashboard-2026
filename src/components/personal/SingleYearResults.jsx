@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
+import useCountUp from "../../hooks/useCountUp";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import { areaName, headlineVerb, money, policyRows, signedPercent } from "../../utils/singleYear";
+import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
+import { SLOW_CALCULATION_SECONDS, TYPICAL_CALCULATION_SECONDS } from "../../utils/householdTiming";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -134,16 +136,146 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
 
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
+/** Seconds since `active` turned true, counted while it holds. */
+function useElapsedSeconds(active) {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!active) return undefined;
+    const began = Date.now();
+    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - began) / 1000)), 1000);
+    return () => {
+      clearInterval(timer);
+      setSeconds(0);
+    };
+  }, [active]);
+  return seconds;
+}
+
+/** "+£88", "−£12" or "No change", from whole pounds. */
+const signedPounds = (value) =>
+  value === 0 ? "No change" : `${value > 0 ? "+" : MINUS}${money(Math.abs(value))}`;
+
 /**
- * The household's headline: one sentence with the change (the only place
- * it appears), then one line of what the figures assume.
+ * How far the progress bar is after `seconds`: eased towards 90% over the
+ * usual time, then holding there until the answer arrives.
  */
-export function SingleYearHeadline({ result, year, policies = [], noPolicies, renting = false }) {
+export function progressShare(seconds, typical = TYPICAL_CALCULATION_SECONDS) {
+  const t = Math.min(1, seconds / typical);
+  return 0.9 * (1 - (1 - t) ** 2);
+}
+
+/**
+ * The calculation in progress, shown once it has run 300ms: a spinner, what
+ * is happening, the usual time with the seconds so far, and a slim bar that
+ * fills over the usual time. `compact` sits over a dimmed earlier result.
+ */
+function ProcessingPanel({ seconds, compact = false }) {
+  const late = seconds > SLOW_CALCULATION_SECONDS;
+  return (
+    <div className={`processing-panel ${compact ? "is-compact" : ""}`.trim()} role="status">
+      <span className="processing-spinner" aria-hidden="true" />
+      <div className="processing-text">
+        <p className="processing-title">Calculating your household</p>
+        <p className="processing-time">
+          {late
+            ? "Taking longer than usual; still working"
+            : `Usually about ${TYPICAL_CALCULATION_SECONDS} seconds · ${seconds} s of ~${TYPICAL_CALCULATION_SECONDS} s`}
+        </p>
+        <div className="processing-bar" aria-hidden="true">
+          <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The headline: one card with the change (said nowhere else), large and
+ * counted up, with its share and the before and after on one quiet line
+ * under it. The figure is one element, so it reads (and copies) once.
+ */
+function HeadlineHero({ totals, yearLabel }) {
+  const shown = Math.round(useCountUp(totals.change));
+  const counting = shown !== totals.change;
+  const share = totals.change === 0 ? null : signedPercent(totals.change, totals.before);
+  return (
+    <div className={`card headline-hero ${changeClass(totals.change)}`}>
+      <p className="headline-hero-label">Change in your net income, {yearLabel}</p>
+      <p className="headline-hero-figure">
+        <span className="headline-hero-value" aria-busy={counting || undefined}>
+          {signedPounds(counting ? shown : totals.change)}
+        </span>
+        {totals.change !== 0 && <span className="headline-hero-unit"> a year</span>}
+      </p>
+      <p className="headline-hero-detail">
+        {share && (
+          <>
+            {share} of net income
+            <span className="headline-hero-sep" aria-hidden="true">
+              {" · "}
+            </span>
+          </>
+        )}
+        <span className="visually-hidden">Net income before and after: </span>
+        {money(totals.before)} → {money(totals.after)}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * What the figures are based on: one quiet strip, each item a label over
+ * its value, with how it was chosen behind an "i".
+ */
+function BasedOn({ items }) {
+  if (items.length === 0) return null;
+  return (
+    <dl className="based-on" aria-label="Based on">
+      {items.map((item) => (
+        <div key={item.id} className="based-on-item single-year-assumption">
+          <dt className="based-on-label">
+            {item.label}
+            {item.detail && (
+              <span className="info-icon-wrapper">
+                <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
+                  i
+                </button>
+                <span className="info-tooltip" role="tooltip">
+                  {item.detail}
+                </span>
+              </span>
+            )}
+          </dt>
+          <dd className="based-on-value">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * The household's headline: the hero card, then what it is based on.
+ * Nothing is asked until Calculate: before it, a prompt. The first answer
+ * shows a processing panel in place of everything; a later one keeps the
+ * last result, dimmed, under a compact panel. When the answers change
+ * after a result, the result stays dimmed with a note to press Calculate.
+ */
+export function SingleYearHeadline({
+  result,
+  year,
+  policies = [],
+  noPolicies,
+  renting = false,
+  submitted = true,
+  changed = false,
+}) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
   // their year, never the one just chosen
   const yearLabel = fiscalYearTick(data?.year ?? year);
-  const showLoading = useDelayed(status === "loading" && !data);
+  const running = submitted && status === "loading";
+  const showLoading = useDelayed(running);
+  const seconds = useElapsedSeconds(running);
 
   if (noPolicies) {
     return (
@@ -154,50 +286,40 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
     );
   }
 
+  if (!submitted) {
+    return (
+      <div className="single-year-headline">
+        <div className="card single-year-prompt" role="status">
+          Choose your answers and press Calculate.
+        </div>
+      </div>
+    );
+  }
+
+  // The first answer: only the processing panel, nothing empty around it
+  if (running && !data) {
+    return (
+      <div className="single-year-headline" aria-busy="true">
+        <div className="card processing-card">{showLoading && <ProcessingPanel seconds={seconds} />}</div>
+      </div>
+    );
+  }
+
   const totals = data ? headlineTotals(data.net) : null;
+  const dimmed = (stale || changed) && status !== "error";
   return (
-    <div className="single-year-headline" aria-busy={status === "loading"}>
-      {stale && status !== "error" && (
-        <p className="single-year-updating" role="status">
-          Updating for {fiscalYearTick(year)} and the policies now selected; the figures below are the last ones
-          calculated.
+    <div className="single-year-headline" aria-busy={running}>
+      {running && showLoading && <ProcessingPanel seconds={seconds} compact />}
+      {changed && !running && (
+        <p className="single-year-changed" role="status">
+          Answers changed: press Calculate to update.
         </p>
       )}
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
-      {status === "loading" && !data && (
-        <p className="single-year-quiet" role="status">
-          {showLoading ? "Calculating your household…" : " "}
-        </p>
-      )}
       {data && status !== "error" && (
-        <div className={stale ? "single-year-stale is-stale" : undefined} aria-busy={stale || undefined}>
-          {/* The headline, as Spring Statement 2026 words it: one sentence,
-              the change in it; the before and after are in the breakdown */}
-          <div className={`single-year-banner ${changeClass(totals.change)} ${stale ? "is-stale" : ""}`}>
-            <p>
-              {`The selected policies would ${headlineVerb(totals.change)} your household's annual net income`}
-              {totals.change !== 0 && (
-                <>
-                  {" "}by <span className="single-year-amount">{money(Math.abs(totals.change))}</span>
-                  {signedPercent(totals.change, totals.before) && (
-                    <span className="single-year-pct"> ({signedPercent(totals.change, totals.before)})</span>
-                  )}
-                </>
-              )}{" "}
-              in {yearLabel}
-            </p>
-          </div>
-          <dl className="single-year-assumptions" aria-label="Assumptions">
-            {assumptionItems(data, yearLabel, { renting, policies }).map((item) => (
-              <div key={item.id} className="single-year-assumption">
-                <dt>{item.label}: </dt>
-                <dd>
-                  {item.value}
-                  {item.detail && <span className="single-year-assumption-detail"> ({item.detail})</span>}
-                </dd>
-              </div>
-            ))}
-          </dl>
+        <div className={`single-year-result ${dimmed ? "is-stale" : ""}`} aria-busy={dimmed || undefined}>
+          <HeadlineHero totals={totals} yearLabel={yearLabel} />
+          <BasedOn items={assumptionItems(data, yearLabel, { renting, policies })} />
         </div>
       )}
     </div>
@@ -221,8 +343,10 @@ function Pending({ text }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies }) {
-  const { data, detailStatus, detailError, retry, stale } = result;
+export function SingleYearDetails({ result, year, policies, changed = false }) {
+  const { data, detailStatus, detailError, retry } = result;
+  // Greyed while a newer answer runs, or after the answers changed
+  const stale = result.stale || changed;
   if (!data || result.status === "error") return null;
   // The figures' own year (see SingleYearHeadline)
   const yearLabel = fiscalYearTick(data.year ?? year);
@@ -269,6 +393,7 @@ export function SingleYearDetails({ result, year, policies }) {
               <PolicyBars
                 rows={bars.rows}
                 noEffect={bars.noEffect}
+                noEffectItems={bars.noEffectItems}
                 underAPound={bars.underAPound}
                 notes={bars.notes}
                 yearLabel={yearLabel}
