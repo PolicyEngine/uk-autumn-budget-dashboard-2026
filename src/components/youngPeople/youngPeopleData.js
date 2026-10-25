@@ -14,8 +14,9 @@ import {
   MIN_SAMPLE_SIZE,
   YOUNG_BAND,
   singleAgeKey,
+  wholeSelectionRun,
 } from "../../utils/ageImpact";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { CHART_COLOURS, REFERENCE_DASH } from "../../utils/chartTheme";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -29,7 +30,7 @@ export const GROUP_STYLES = {
   "35-49": { color: CHART_COLOURS.ageAdults },
   "50-64": { color: CHART_COLOURS.ageOlder },
   "65+": { color: CHART_COLOURS.agePension },
-  all: { color: CHART_COLOURS.reference, dash: "5 3" },
+  all: { color: CHART_COLOURS.reference, dash: REFERENCE_DASH },
 };
 
 /** Below this (in £ a year) a mean change counts as no change. */
@@ -69,7 +70,7 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
     if (group.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
-      noEffect.push(policy.name);
+      noEffect.push({ id: policy.id, name: policy.name });
     } else {
       shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
     }
@@ -165,6 +166,7 @@ export function singleAgeBars(rows, policies, selected, year) {
   for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
     let net = 0;
     let complete = chosen.length > 0;
+    const parts = [];
     for (const policy of chosen) {
       const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
       if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
@@ -172,8 +174,13 @@ export function singleAgeBars(rows, policies, selected, year) {
         break;
       }
       net += row.mean_change;
+      parts.push({ id: policy.id, name: policy.name, value: row.mean_change });
     }
-    bars.push({ age, label: String(age), netChange: complete ? net : null });
+    // Each policy's own change, for the tooltip, largest first
+    parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    // Each policy's own change under its name too, for the stacked bars
+    const byName = complete ? Object.fromEntries(parts.map((part) => [part.name, part.value])) : {};
+    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...byName });
   }
   return bars;
 }
@@ -198,4 +205,37 @@ export function fitRange(min, max) {
   for (let tick = bottom; tick <= top + 1e-9; tick += step) ticks.push(tick);
   if (ticks.length < 2) ticks.push(bottom + step);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * Why a measure has no effect in a year, where there is a short reason: an
+ * employer cost moves no household's income, and two measures apply in one
+ * year or from one year only.
+ */
+export function noEffectReason(id, year) {
+  if (id === "employer_ni_relief_under_25s") return "Employer cost; wages held fixed";
+  if (id === "threshold_freeze_2031_32" && year < 2031) return "Starts in 2031-32";
+  if (id === "warm_home_discount_top_up" && year !== 2026) return "Paid in 2026-27 only";
+  return null;
+}
+
+/**
+ * Better off, unchanged and worse off for each single year of age,
+ * SINGLE_AGE_FIRST to SINGLE_AGE_LAST, from the whole selection's run (as
+ * for the age groups): `{ run, groups: [{ key, label, row, suppressed }] }`,
+ * or null when the selection has no such run or the year no rows. An age
+ * with fewer than MIN_SAMPLE_SIZE survey records is suppressed.
+ */
+export function sharesBySingleAge(rows, policies, selected, year) {
+  const run = wholeSelectionRun(policies, selected);
+  if (!run) return null;
+  const yearRows = (rows ?? []).filter((row) => row.year === Number(year) && row.reform_id === run);
+  if (!yearRows.length) return null;
+  const groups = [];
+  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+    const row = yearRows.find((candidate) => candidate.age_band === singleAgeKey(age)) ?? null;
+    const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
+    groups.push({ key: String(age), label: String(age), age, row: usable, suppressed: !usable });
+  }
+  return { run, groups };
 }

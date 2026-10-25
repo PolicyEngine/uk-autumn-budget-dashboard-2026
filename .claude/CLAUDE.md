@@ -41,7 +41,7 @@ Microsimulations are built through `pe.uk.managed_microsimulation()`, which
 resolves the bundle's dataset from the private HuggingFace repo. That needs
 `HUGGING_FACE_TOKEN` in the environment (and as a repo secret in CI).
 
-The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 measures compared against current law (policyengine-uk before the Budget): each changes parameters, or applies a module-level modifier from `budget_measures.py`, to show its impact.
+The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 measures compared against current law (policyengine-uk before the Budget): each changes parameters, or applies a module-level modifier from its own module in `budget_measures/`, to show its impact.
 
 ## Visual Style Guide
 
@@ -78,7 +78,7 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 The stack is in the README's "Architecture" section. For components: React 19 hooks for state, Recharts 2 for charts, Tailwind CSS 4 and `@policyengine/ui-kit` (theme and page shell) plus component CSS.
 
 ### Key components
-- `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Personal impact answers in the address.
+- `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Household impact answers in the address.
 - `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people).
 - `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
 - `src/components/livingStandards/`: the Living standards tab.
