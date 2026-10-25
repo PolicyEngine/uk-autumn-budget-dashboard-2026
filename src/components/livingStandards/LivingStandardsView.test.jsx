@@ -206,7 +206,7 @@ describe("the Living standards view", () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     render(<App />);
     const section = await screen.findByRole("region", { name: "Living standards" });
-    expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
+    expect(await within(section).findByText("policyengine 6.10.0 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
     expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
     expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
