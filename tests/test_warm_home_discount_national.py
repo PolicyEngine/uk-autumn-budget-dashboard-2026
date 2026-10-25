@@ -13,7 +13,9 @@ reach 4.8m).
 import numpy as np
 import pytest
 
-from uk_budget_data import budget_measures
+from uk_budget_data.budget_measures.warm_home_discount_top_up import (
+    warm_home_discount_top_up,
+)
 
 YEAR = 2026
 
@@ -27,9 +29,7 @@ def test_the_top_up_reaches_about_desnz_recipients():
     baseline = build_microsimulation(None)
     reform = build_microsimulation(
         None,
-        Scenario(
-            simulation_modifier=budget_measures.warm_home_discount_top_up
-        ),
+        Scenario(simulation_modifier=warm_home_discount_top_up),
     )
     weight = baseline.calculate("household_weight", YEAR).values
     paid = (
