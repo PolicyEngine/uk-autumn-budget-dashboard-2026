@@ -30,45 +30,22 @@
   margin: 4px 0 24px;
 }
 
-/* One line on desktop: no wrap above 900px, so the pills tighten instead */
-@media (min-width: 901px) {
-  .ls-controls {
-    gap: 6px;
-  }
+/* Labels and full values on every pill. In a half-width card the row
+   needs about 600px against 500px, so the pills wrap tidily: two a row,
+   left-aligned, the same 8px gap (2 + 2, not 3 + 1) */
+.ls-controls .pill-select-prefix::after {
+  content: ":";
+}
 
-  /* Full choices, never cut off: the value in bold teal with no chip, so
-     four labelled pills fit a half-width card */
-  .ls-controls > .pill-select,
-  .ls-controls > .ls-range {
-    flex-shrink: 0;
-  }
-
-  .ls-controls .pill-select-light .pill-select-toggle {
-    gap: 3px;
-    padding: 0 6px 0 9px;
-  }
-
-  .ls-controls .pill-select-light .pill-select-badge {
-    padding: 0;
-    background: none;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-  .ls-controls .pill-select-prefix::after {
-    content: ":";
+@media (min-width: 1025px) {
+  .charts-grid > :not(:only-child) .ls-controls {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
   }
 }
 
-@media (max-width: 900px) {
-  .ls-controls {
-    gap: 6px;
-  }
 
-  .ls-controls .pill-select-prefix::after {
-    content: ":";
-  }
-}
 
 /* The years compared: one pill holding the two year lists and an arrow */
 .ls-range {
