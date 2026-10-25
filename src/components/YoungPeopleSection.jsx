@@ -58,6 +58,7 @@ import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, sharesBySingleAge, singleA
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
@@ -390,7 +391,10 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={title} />
+            <TitleIcon name="users" />
+            <span className="title-text">
+              <NoBreakYear text={title} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>
@@ -635,7 +639,10 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={title} />
+            <TitleIcon name="users" />
+            <span className="title-text">
+              <NoBreakYear text={title} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>

@@ -7,6 +7,7 @@ import Disclosure from "../Disclosure";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import { CHART_COLOURS } from "../../utils/chartTheme";
+import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
 const NAME_COLOUR = CHART_COLOURS.text;
@@ -90,7 +91,10 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
     <div className="card single-year-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="hbars" />
+            <span className="title-text">{title}</span>
+          </h3>
         </div>
         <ChartDownloadMenu download={rows.length ? download : undefined} chartTitle={title} />
       </div>

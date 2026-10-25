@@ -30,6 +30,7 @@ import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 import { AGE_GROUPS, YOUNG_BAND } from "../../utils/ageImpact";
 import { GROUP_STYLES, changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
+import TitleIcon from "../TitleIcon";
 
 /** One line per age group, 16 to 24 drawn thicker, all ages dashed. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -166,7 +167,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     <div className="young-people-trend">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="trend" />
+            <span className="title-text">{title}</span>
+          </h3>
           <p className="chart-description">{TREND_DESCRIPTION}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />

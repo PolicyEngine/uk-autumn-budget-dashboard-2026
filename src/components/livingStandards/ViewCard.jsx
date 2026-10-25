@@ -11,7 +11,7 @@ import PillSelect from "../PillSelect";
  *
  * views: [{ value, label, view }], where a null view is left out.
  */
-export default function ViewCard({ title, name, views, value, onChange }) {
+export default function ViewCard({ title, icon, name, views, value, onChange }) {
   const available = views.filter((v) => v.view);
   if (!available.length) return null;
   const current = available.find((v) => v.value === value) || available[0];
@@ -19,6 +19,7 @@ export default function ViewCard({ title, name, views, value, onChange }) {
   return (
     <LsCard
       title={title}
+      icon={icon}
       period={view.period}
       summary={view.summary}
       about={view.about}

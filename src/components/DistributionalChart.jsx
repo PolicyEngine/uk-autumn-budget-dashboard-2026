@@ -37,6 +37,7 @@ import {
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 // Order for distributional chart: good for households first, then bad
 // Every legend uses one order, set in policyConfig: revenue raisers, then
@@ -249,7 +250,10 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={chartTitle} />
+            <TitleIcon name="bars" />
+            <span className="title-text">
+              <NoBreakYear text={chartTitle} />
+            </span>
           </h3>
           <p className="chart-description">
             This chart shows the percentage change in net income by decile,

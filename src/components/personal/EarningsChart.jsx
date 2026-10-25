@@ -9,6 +9,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
+import TitleIcon from "../TitleIcon";
 
 export const BEFORE_COLOUR = CHART_COLOURS.noChange;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
@@ -164,7 +165,10 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
     <div className="card single-year-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="trend" />
+            <span className="title-text">{title}</span>
+          </h3>
           <p className="chart-description">
             Your household&apos;s net income as your salary varies, with partner income and everything else held fixed.
           </p>

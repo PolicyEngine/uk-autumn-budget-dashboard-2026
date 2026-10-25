@@ -1,0 +1,24 @@
+/* A chart card's title icon (TitleIcon.jsx): the forecast tiles' tinted
+   chip, before the title, level with its first line */
+.title-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border-radius: 8px;
+  background: var(--pe-teal-50, #e6fffa);
+  color: var(--c-gain-text);
+  vertical-align: middle;
+}
+
+h3:has(> .title-icon) {
+  display: flex;
+  align-items: flex-start;
+}
+
+h3 > .title-icon {
+  margin-top: -2px;
+}

@@ -375,7 +375,7 @@ describe("ConstituencyMap", () => {
     ).toBeInTheDocument();
     // No results map: at most the unpublished template, every seat grey.
     const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .obr-view-switch"),
+      (path) => !path.closest(".map-template-svg, .chart-download, .obr-view-switch, .title-icon"),
     );
     expect(drawn).toEqual([]);
     container
@@ -430,7 +430,7 @@ describe("ConstituencyMap", () => {
     ).toBeInTheDocument();
     // No results map: at most the unpublished template, every seat grey.
     const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .obr-view-switch"),
+      (path) => !path.closest(".map-template-svg, .chart-download, .obr-view-switch, .title-icon"),
     );
     expect(drawn).toEqual([]);
     container

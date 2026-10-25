@@ -187,6 +187,7 @@ export default function WhoIsInPovertySection({ data }) {
   return (
     <LsCard
       title="Who is in poverty"
+      icon="users"
       period={periodLabel(from, to)}
       about={about}
       summary={lead}

@@ -64,6 +64,7 @@ import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
+import TitleIcon from "./TitleIcon";
 
 /**
  * A hovered seat's tooltip rows from describeSeat's lines: the figure under
@@ -753,7 +754,10 @@ export default function ConstituencyMap({
         <div className="chart-header">
           <div>
             <h3>
-              {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
+              <TitleIcon name="map" />
+              <span className="title-text">
+                {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
+              </span>
             </h3>
             <p className="chart-description">
               {notRouted ? (

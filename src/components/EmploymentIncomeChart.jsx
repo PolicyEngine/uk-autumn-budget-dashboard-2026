@@ -40,6 +40,7 @@ import {
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -109,7 +110,10 @@ function EmploymentIncomeChart({
         <div className="chart-header">
           <div>
             <h3>
-              <NoBreakYear text={chartTitle} />
+              <TitleIcon name="trend" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
             </h3>
           </div>
         </div>
@@ -126,7 +130,10 @@ function EmploymentIncomeChart({
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={chartTitle} />
+            <TitleIcon name="trend" />
+            <span className="title-text">
+              <NoBreakYear text={chartTitle} />
+            </span>
           </h3>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />

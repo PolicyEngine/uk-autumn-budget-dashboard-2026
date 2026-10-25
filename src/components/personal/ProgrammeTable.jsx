@@ -13,6 +13,7 @@ import {
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import Disclosure from "../Disclosure";
 import { downloadFile } from "../../utils/downloadFile";
+import TitleIcon from "../TitleIcon";
 
 const changeClass = (value) => {
   const rounded = Math.round(value);
@@ -140,7 +141,10 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
     <div className="card single-year-card breakdown-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="list" />
+            <span className="title-text">{title}</span>
+          </h3>
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>

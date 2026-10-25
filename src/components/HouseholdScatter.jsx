@@ -27,6 +27,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import TitleIcon from "./TitleIcon";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -279,7 +280,10 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={chartTitle} />
+            <TitleIcon name="dots" />
+            <span className="title-text">
+              <NoBreakYear text={chartTitle} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>

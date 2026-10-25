@@ -64,6 +64,20 @@ function forecastCsv(series, rows, published, names, source) {
   });
 }
 
+// Each forecast series' title icon, as the headline tiles' are
+const SERIES_ICONS = {
+  cpi: "tag",
+  cpih: "tag",
+  cpi_ahc: "tag",
+  rpi: "receipt",
+  earnings: "briefcase",
+  non_labour_income: "coins",
+  house_prices: "house",
+  rent: "key",
+  social_rent: "key",
+  mortgage_interest: "percent",
+};
+
 function ForecastCard({ series, forecast, published, view }) {
   const rows = toRows(series, published);
   if (!rows.length) return null;
@@ -77,6 +91,7 @@ function ForecastCard({ series, forecast, published, view }) {
   // says only what is its own: a series PolicyEngine derives
   const common = {
     title: series.label,
+    icon: SERIES_ICONS[series.key],
     period,
     summary: derived ? "A PolicyEngine derivation from the OBR forecast, not an OBR series." : null,
     sourceText,

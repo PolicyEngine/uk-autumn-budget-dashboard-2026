@@ -22,6 +22,7 @@ export function IncomesOverTimeCard({ data }) {
   return (
     <ViewCard
       title="Incomes over time"
+      icon="trend"
       name="Income view"
       value={show}
       onChange={setShow}
@@ -44,6 +45,7 @@ export function GrowthCard({ data }) {
   return (
     <ViewCard
       title="Growth across the distribution"
+      icon="bars"
       name="Distribution view"
       value={show}
       onChange={setShow}
@@ -63,6 +65,7 @@ export function PovertyOverTimeCard({ data }) {
   return (
     <ViewCard
       title="Poverty over time"
+      icon="users"
       name="Poverty view"
       value={show}
       onChange={setShow}

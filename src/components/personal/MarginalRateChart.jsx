@@ -29,6 +29,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS, earningsChartHeight } from "./EarningsChart";
+import TitleIcon from "../TitleIcon";
 
 const Y_TICKS = [0, 0.25, 0.5, 0.75, 1];
 const pct = (value) => `${Math.round(value * 100)}%`;
@@ -131,7 +132,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
     <div className="card single-year-card single-year-mtr">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="percent" />
+            <span className="title-text">{title}</span>
+          </h3>
           {yours && (
             <p className="chart-description">
               At {formatPounds(salary)} your marginal tax rate is {pct(yours.before)} before and{" "}

@@ -40,6 +40,7 @@ import {
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 // Net impact labels, one per year, as on the 2025 dashboard: the signed
 // total in a small white tag. A tag sits just above the year's stack of
@@ -244,7 +245,10 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     <div className="budgetary-impact-chart">
       <div className="chart-header">
         <div>
-          <h3>Revenue impact</h3>
+          <h3>
+            <TitleIcon name="landmark" />
+            <span className="title-text">Revenue impact</span>
+          </h3>
           <p className="chart-description">
             This chart shows the annual budgetary impact from{" "}
             {fiscalYearTick(FIRST_DISPLAY_YEAR)} to{" "}

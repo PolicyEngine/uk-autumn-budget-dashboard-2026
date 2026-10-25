@@ -12,6 +12,7 @@ import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } fr
 import { NoEffectList } from "../personal/PolicyBars";
 import { getPolicyColor } from "../../utils/policyConfig";
 import "./MeasureDumbbell.css";
+import TitleIcon from "../TitleIcon";
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -191,7 +192,10 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={title} />
+            <TitleIcon name="hbars" />
+            <span className="title-text">
+              <NoBreakYear text={title} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>
