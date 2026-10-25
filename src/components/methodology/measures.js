@@ -38,6 +38,7 @@ export const MEASURE_MODELLING = [
   {
     name: "Warm Home Discount top-up",
     how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616). There is no high-cost-to-heat test, and legacy benefits are not counted.",
+    sources: ["desnz_whd_ia", "pe_uk_2616"],
     from: 2026,
   },
   {
@@ -48,6 +49,7 @@ export const MEASURE_MODELLING = [
   {
     name: "Employer NI relief for under-25s",
     how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline; apprentices are not identified.",
+    sources: ["hmrc_employer_rates"],
     from: 2027,
   },
   {

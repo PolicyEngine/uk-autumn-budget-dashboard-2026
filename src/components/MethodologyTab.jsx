@@ -10,7 +10,7 @@ import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
-import { BackToTop, Callout, IconChip, Tag } from "./methodology/MethodUi";
+import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
 import ExpandableText from "./methodology/ExpandableText";
 import {
   Briefcase,
@@ -33,10 +33,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import "./methodology/Methodology.css";
-
-const RESEARCH = [
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
-];
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
@@ -266,16 +262,21 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Dataset",
                   <>
-                    Microcosm UK 2024-25, national file (
+                    <SourceLink id="microcosm">Microcosm</SourceLink> UK 2024-25, national file (
                     <code>microcosm_uk_2024_25</code>): the certified dataset
-                    the policyengine.py release pins. The release pins the
+                    the <SourceLink id="policyengine_py_release">policyengine.py release</SourceLink> pins. The release pins the
                     model version and the dataset built and certified with it
                     together, so the two cannot drift apart.
                   </>,
                 ],
                 [
                   "Survey",
-                  "Built from households in the Family Resources Survey, 2024-25. A survey household can appear as several records, each linked to the household it was made from.",
+                  <>
+                    Built from households in the{" "}
+                    <SourceLink id="frs_2024_25">Family Resources Survey, 2024-25</SourceLink>. A
+                    survey household can appear as several records, each linked to the household
+                    it was made from.
+                  </>,
                 ],
                 [
                   "Weights",
@@ -283,7 +284,12 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Projection",
-                  "Incomes and prices are projected from the survey year to each year shown with policyengine-uk's economic assumptions: the OBR's March 2026 Economic and Fiscal Outlook to 2030, then long-run assumptions from 2031.",
+                  <>
+                    Incomes and prices are projected from the survey year to each year shown with
+                    policyengine-uk&apos;s economic assumptions: the OBR&apos;s{" "}
+                    <SourceLink id="obr_efo_march_2026">March 2026 Economic and Fiscal Outlook</SourceLink>{" "}
+                    to 2030, then long-run assumptions from 2031.
+                  </>,
                 ],
                 [
                   "Small groups",
@@ -352,6 +358,17 @@ function MethodologyTab({ onShowTab }) {
                     </th>
                     <td>
                       <ExpandableText text={measure.how} />
+                      {measure.sources && (
+                        <span className="method-sources">
+                          Sources:{" "}
+                          {measure.sources.map((id, index) => (
+                            <span key={id}>
+                              {index > 0 && "; "}
+                              <SourceLink id={id} />
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </td>
                     <td className="method-measure-year">
                       <Tag tone="teal">
@@ -446,7 +463,13 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Income deciles",
-                  "Households are ranked by their baseline equivalised household net income before housing costs (the HBAI measure, adjusted for household size), then split into ten groups with equal numbers of people. Negative incomes count as zero for the ranking. Households without a decile are left out.",
+                  <>
+                    Households are ranked by their baseline equivalised household net income
+                    before housing costs (the <SourceLink id="dwp_hbai">HBAI</SourceLink> measure,
+                    adjusted for household size), then split into ten groups with equal numbers of
+                    people. Negative incomes count as zero for the ranking. Households without a
+                    decile are left out.
+                  </>,
                 ],
                 [
                   "Absolute change",
@@ -472,7 +495,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Household scatter bands",
-                  `Households are grouped by their 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots, as the 2025 dashboard's sample of households did: each income group gets a share in proportion to its households in 2027-28. In the year shown, a group's dots are spread across its households' changes (its k-th dot at the group's k-th quantile), so a dot keeps its row and moves only sideways between years. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
+                  `Households are grouped by their 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots: each income group gets a share in proportion to its households in 2027-28. In the year shown, a group's dots are spread across its households' changes (its k-th dot at the group's k-th quantile), so a dot keeps its row and moves only sideways between years. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
                 ],
                 [
                   "Gain, loss, no change",
@@ -541,8 +564,9 @@ function MethodologyTab({ onShowTab }) {
                     </a>
                     , which splits 16 to 24 into 16 to 17 and 18 to 24). 16 to 24 is the
                     ONS labour-market definition of young people. Children are under 16, as
-                    in ONS population statistics and DWP&apos;s Households Below Average
-                    Income; unlike HBAI, the bands count 16- to 19-year-olds in full-time non-advanced
+                    in <SourceLink id="ons_mid_year_estimates">ONS population statistics</SourceLink> and
+                    DWP&apos;s <SourceLink id="dwp_hbai">Households Below Average Income</SourceLink>;
+                    unlike HBAI, the bands count 16- to 19-year-olds in full-time non-advanced
                     education with 16 to 24, not as children.
                   </>,
                 ],
@@ -635,18 +659,6 @@ function MethodologyTab({ onShowTab }) {
             <p>
               The replication code and the engine version behind these figures
               are in the line at the foot of the page.
-            </p>
-            <p>
-              Methods and sources: our research on the{" "}
-              {RESEARCH.map(([href, label], index) => (
-                <span key={href}>
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    {label}
-                  </a>
-                  {index < RESEARCH.length - 2 ? ", " : index === RESEARCH.length - 2 ? " and " : ""}
-                </span>
-              ))}
-              .
             </p>
           </div>
         </MethodSection>

@@ -3,6 +3,7 @@
 
 import { ArrowUp } from "lucide-react";
 import { goToSection } from "./MethodContents";
+import { EXTERNAL, SOURCES } from "../../utils/sources";
 
 /** An icon in a tinted square chip; decorative, so hidden from assistive tech. */
 export function IconChip({ icon: Icon, size = "md", tone = "teal" }) {
@@ -69,5 +70,15 @@ export function BackToTop({ targetId }) {
         Back to top
       </a>
     </p>
+  );
+}
+
+/** A link to a named external source (src/utils/sources.js), in a new tab. */
+export function SourceLink({ id, children }) {
+  const source = SOURCES[id];
+  return (
+    <a href={source.url} {...EXTERNAL}>
+      {children ?? source.label}
+    </a>
   );
 }

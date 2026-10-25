@@ -820,3 +820,11 @@
     transition: none;
   }
 }
+
+/* A measure's official sources, under its note */
+.method-sources {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}

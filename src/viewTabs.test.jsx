@@ -246,12 +246,13 @@ describe("the view tabs", () => {
     expect(within(panel).getByRole("heading", { level: 3, name: "Household calculation" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    expect(panel).toHaveTextContent("Methods and sources: our research on the");
+    // No leftover link to last year's research
+    expect(panel).not.toHaveTextContent("our research on the");
+    expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
     // Said once on the page
     for (const phrase of [
-      /Methods and sources/g,
       /dominance and p% rules/g,
       /leave out interactions between measures/g,
       /line at the foot of the page/g,
