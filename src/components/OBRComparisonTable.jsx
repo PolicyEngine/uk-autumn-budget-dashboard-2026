@@ -18,8 +18,9 @@ export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
  * measures only: the OBR's from obr_comparison.csv once it verifies against
  * the approved results, PolicyEngine's from the catalogue's verified
  * budgetary tables. Null while loading. `{ unavailable: true }` when no OBR
- * file can be bound: today it holds the November 2025 costings (see
- * FLAT_VIEW_FILES in utils/publication/flat.js).
+ * file can be bound, which is always today: obr_comparison.csv is not among
+ * the flat files a view may read (FLAT_VIEW_FILES in
+ * utils/publication/flat.js), however its OBR columns are filled.
  */
 export function useObrComparisonData(enabled = true) {
   const catalogue = useMeasureCatalogue();

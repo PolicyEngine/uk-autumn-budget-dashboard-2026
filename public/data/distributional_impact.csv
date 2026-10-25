@@ -1,14 +1,14 @@
 reform_id,reform_name,year,decile,value
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,1st,0.2659062863318797
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,2nd,0.17952559223782993
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,3rd,0.1572400664570907
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,4th,0.1402230309006714
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,5th,0.12512412422183206
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,6th,0.10819769821929341
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,7th,0.0945746915177451
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,8th,0.09200934834127007
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,9th,0.07936544999638065
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,10th,0.04136531631033303
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,1st,0.27143921008398403
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,2nd,0.18811720686305555
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,3rd,0.16421525698917294
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,4th,0.14487584831656938
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,5th,0.12707463336137476
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,6th,0.10993903836104461
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,7th,0.09503034907155568
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,8th,0.09259113821638515
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,9th,0.07951002036133109
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,10th,0.041396672026599454
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,1st,0.2954102476692408
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,2nd,0.20689666356247224
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,3rd,0.19744699440712837
@@ -179,16 +179,16 @@ state_pension_income_tax_protection,State Pension income tax protection,2031,7th
 state_pension_income_tax_protection,State Pension income tax protection,2031,8th,0.003325187138121502
 state_pension_income_tax_protection,State Pension income tax protection,2031,9th,0.0023879759780426404
 state_pension_income_tax_protection,State Pension income tax protection,2031,10th,0.004414462921098359
-warm_home_discount_top_up,Warm Home Discount top-up,2026,1st,0.11347701791330354
-warm_home_discount_top_up,Warm Home Discount top-up,2026,2nd,0.07383386580119741
-warm_home_discount_top_up,Warm Home Discount top-up,2026,3rd,0.05831366008362778
-warm_home_discount_top_up,Warm Home Discount top-up,2026,4th,0.046211660034817095
-warm_home_discount_top_up,Warm Home Discount top-up,2026,5th,0.03214875698867127
-warm_home_discount_top_up,Warm Home Discount top-up,2026,6th,0.023825951241128608
-warm_home_discount_top_up,Warm Home Discount top-up,2026,7th,0.015140623008726189
-warm_home_discount_top_up,Warm Home Discount top-up,2026,8th,0.00917357314068354
-warm_home_discount_top_up,Warm Home Discount top-up,2026,9th,0.00396292560356201
-warm_home_discount_top_up,Warm Home Discount top-up,2026,10th,0.0012875139430779154
+warm_home_discount_top_up,Warm Home Discount top-up,2026,1st,0.11902446590850829
+warm_home_discount_top_up,Warm Home Discount top-up,2026,2nd,0.08229741084498142
+warm_home_discount_top_up,Warm Home Discount top-up,2026,3rd,0.06540502633283798
+warm_home_discount_top_up,Warm Home Discount top-up,2026,4th,0.0508902799127351
+warm_home_discount_top_up,Warm Home Discount top-up,2026,5th,0.0340981755911594
+warm_home_discount_top_up,Warm Home Discount top-up,2026,6th,0.025570268398133172
+warm_home_discount_top_up,Warm Home Discount top-up,2026,7th,0.015594154309971952
+warm_home_discount_top_up,Warm Home Discount top-up,2026,8th,0.009757501357144998
+warm_home_discount_top_up,Warm Home Discount top-up,2026,9th,0.004107301074530527
+warm_home_discount_top_up,Warm Home Discount top-up,2026,10th,0.00131871836631409
 warm_home_discount_top_up,Warm Home Discount top-up,2027,1st,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2027,2nd,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2027,3rd,0.0

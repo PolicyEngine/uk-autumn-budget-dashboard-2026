@@ -11,6 +11,7 @@ import {
   postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
+  stageMismatch,
 } from "../utils/householdImpactApi";
 
 // Results already fetched this session, by request: switching the year or
@@ -102,6 +103,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     const refuse = (error) => {
       cache.delete(key);
       setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+      // Nothing else this request asked for can be shown now
+      controller.abort();
     };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
@@ -157,12 +160,21 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const parts = DETAIL_PARTS.filter((include) =>
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
+      // The detail service's answer is used only if it matches the headline;
+      // otherwise the part is asked of the main API
+      const accept = (raw) => {
+        try {
+          return stageMismatch(first, normaliseHouseholdImpact(raw)) === null;
+        } catch {
+          return false;
+        }
+      };
       await Promise.all(
         parts.map(async (include) => {
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept },
             );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions
@@ -189,8 +201,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           }
         }),
       );
-      if (signal.aborted || refused || !failure) return;
-      setState((prev) => ({ ...prev, detailStatus: "error", detailError: failure }));
+      if (signal.aborted || refused) return;
+      // An answer without the part it was asked for leaves the result
+      // incomplete: say so rather than wait for good
+      const incomplete = merged.byPolicy === null || merged.sweep === null;
+      if (!failure && !incomplete) return;
+      setState((prev) => ({
+        ...prev,
+        detailStatus: "error",
+        detailError: failure ?? new Error("The household calculator's breakdown came back incomplete"),
+      }));
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);

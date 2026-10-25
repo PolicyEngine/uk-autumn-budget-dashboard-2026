@@ -43,8 +43,7 @@ export const EVERY_POLICY_NOTE = (
     // Lines true whatever is selected: a note about one measure would stay
     // on the page when that measure changes or isn't published (#104)
     points={[
-      "Duty and VAT on fuel and electricity act on the petrol, diesel and electricity spending you enter.",
-      "A cost paid by employers shows as £0 for your household: wages are held fixed.",
+      "Fuel duty acts on the petrol and diesel spending you enter, and VAT on that and the electricity spending.",
       "A policy with no effect in the chosen year shows no change.",
     ]}
   />

@@ -372,8 +372,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           show how Autumn Budget 2026 measures would affect the public
           finances and households: by income, area and age, and
           for your own household, alongside the living standards outlook.
-          Measures and costings: <SourceLink source="budget_documents" />;
-          forecast: <SourceLink source="obr_efo_current" />. Choose a year and
+          Costings are our own; forecast:{" "}
+          <SourceLink source="obr_efo_current" />. Choose a year and
           policies in the bar above.
         </p>
         {updated && (

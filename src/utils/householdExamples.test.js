@@ -50,6 +50,6 @@ describe("the example households", () => {
 
   it("use neutral wording", () => {
     const text = HOUSEHOLD_EXAMPLES.map((example) => `${example.label} ${example.description} ${example.note}`).join(" ");
-    expect(text).not.toMatch(/\\b(poor|rich|wealthy)\\b/i);
+    expect(text).not.toMatch(/\b(poor|rich|wealthy)\b/i);
   });
 });
