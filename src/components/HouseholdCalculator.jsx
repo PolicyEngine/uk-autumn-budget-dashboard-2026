@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
-import SectionHeading from "./SectionHeading";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
@@ -15,7 +14,7 @@ import {
   statePensionFor,
 } from "../utils/householdImpactApi";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
-import { ChoiceTiles, NumberField } from "./personal/FormControls";
+import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import "./HouseholdCalculator.css";
 
@@ -58,44 +57,37 @@ export const WIZARD_DEFAULTS = {
   partner_state_pension_per_year: null,
 };
 
-// The form: one list of questions, each a row showing its answer that opens
-// in place to change it. The essentials first, then the optional details.
-// `children` stands for one row per child (their age and, from 16, their
-// education).
+// The form: one card of questions in labelled sections, each a grid of
+// boxes. The essentials first, then the optional details in More details,
+// closed at first, in groups of their own. `children` stands for each
+// child's answers (their age and, from 16, their education).
 export const FORM_SECTIONS = [
+  { title: "You", fields: ["current_age", "current_salary", "region"] },
   {
-    title: null,
-    fields: [
-      "current_age",
-      "current_salary",
-      "region",
-      "has_partner",
-      "partner_age",
-      "partner_salary",
-      "children_count",
-      "children",
-      "tenure",
-      "monthly_rent",
-    ],
+    title: "Family and home",
+    fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
   },
   {
     title: "More details",
-    fields: [
-      "savings_interest_per_year",
-      "dividends_per_year",
-      "property_income_per_year",
-      "private_pension_per_year",
-      "partner_private_pension_per_year",
-      "state_pension_per_year",
-      "partner_state_pension_per_year",
-      "salary_sacrifice_per_year",
-      "student_loan_plan",
-      "petrol_spending_per_year",
-      "diesel_spending_per_year",
-      "electricity_spending_per_year",
-      "council_tax_band",
-      "monthly_childcare",
-      "claims_universal_credit",
+    collapsible: true,
+    groups: [
+      { title: "Other income", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
+      {
+        title: "Pension and student loan",
+        fields: [
+          "private_pension_per_year",
+          "partner_private_pension_per_year",
+          "state_pension_per_year",
+          "partner_state_pension_per_year",
+          "salary_sacrifice_per_year",
+          "student_loan_plan",
+        ],
+      },
+      {
+        title: "Spending",
+        fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
+      },
+      { title: "Council tax and benefits", fields: ["council_tax_band", "claims_universal_credit"] },
     ],
   },
 ];
@@ -124,7 +116,7 @@ const MAX_CHILDREN = 6;
 // A child's age when added (as Spring Statement's calculator does)
 const NEW_CHILD_AGE = 5;
 
-// Choices shown as boxes
+// Choices shown as selects
 const CHOICE_CONFIGS = {
   region: {
     label: "Region",
@@ -289,6 +281,9 @@ const PREFILLED = {
   monthly_rent: (year, inputs) => regionalRent(inputs.region),
 };
 
+// A short hint goes under its box; a long one behind an "i" by the label
+const hintPlace = (hint) => (hint && hint.length > 60 ? "tooltip" : "below");
+
 const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? region;
 
 // The prefilled fields' notes: what the prefill is
@@ -306,54 +301,11 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, open: null, presetId: null };
+const savedWizard = { inputs: null, presetId: null, moreOpen: false };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, open: null, presetId: null });
-}
-
-const money = (value) => `£${d3.format(",.0f")(value)}`;
-
-/** A row's answer, as the closed row shows it. */
-function summaryOf(id, inputs, year) {
-  if (CHOICE_CONFIGS[id]) {
-    const config = CHOICE_CONFIGS[id];
-    if (config.summary) return config.summary(inputs[id]);
-    return config.options.find((option) => option.value === inputs[id])?.label ?? String(inputs[id]);
-  }
-  const config = NUMBER_CONFIGS[id];
-  const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-  if (!config.money) return String(value);
-  return config.suffix ? `${money(value)} ${config.suffix}` : money(value);
-}
-
-/**
- * One question: a row showing its label and answer that opens in place to
- * change it.
- */
-function FormRow({ rowId, label, summary, open, onToggle, children }) {
-  const panelId = `household-row-${rowId}`;
-  const buttonId = `${panelId}-button`;
-  return (
-    <li className={`household-row ${open ? "is-open" : ""}`} data-row={rowId}>
-      <button
-        type="button"
-        id={buttonId}
-        className="household-row-button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={onToggle}
-      >
-        <span className="household-row-label">{label}</span>
-        <span className="household-row-value">{summary}</span>
-        <span className="household-row-chevron" aria-hidden="true" />
-      </button>
-      <div id={panelId} role="region" aria-labelledby={buttonId} className="household-row-panel" hidden={!open}>
-        {open && children}
-      </div>
-    </li>
-  );
+  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false });
 }
 
 /**
@@ -371,8 +323,8 @@ function HouseholdCalculator({
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
-  // The row open (one at a time); kept between tab switches for the session
-  const [openRow, setOpenRow] = useState(() => savedWizard.open);
+  // More details, closed at first; kept between tab switches for the session
+  const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
   const selectionKey = selectedPolicies.join(",");
 
   const handleInputChange = (id, value) => {
@@ -384,12 +336,12 @@ function HouseholdCalculator({
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
-  // Remember the inputs and the open row for this session
+  // Remember the inputs and whether More details is open for this session
   useEffect(() => {
     savedWizard.inputs = inputs;
-    savedWizard.open = openRow;
     savedWizard.presetId = presetId;
-  }, [inputs, openRow, presetId]);
+    savedWizard.moreOpen = moreOpen;
+  }, [inputs, presetId, moreOpen]);
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
@@ -434,163 +386,221 @@ function HouseholdCalculator({
     }));
   };
 
-  const toggle = (rowId) => setOpenRow((current) => (current === rowId ? null : rowId));
-
-  // A question's input, inside its open row
-  const renderInput = (id) => {
+  // One question: its box, label above and hint below
+  const renderField = (id) => {
+    if (!fieldApplies(id)) return null;
+    if (id === "children") return childAges.map(renderChild);
+    let field;
     if (id === "children_count") {
-      return (
-        <ChoiceTiles
+      field = (
+        <SelectField
           id={id}
-          {...CHOICE_CONFIGS.children_count}
-          label={CHOICE_CONFIGS.children_count.question}
-          hideLabel
+          label={CHOICE_CONFIGS.children_count.label}
+          options={CHOICE_CONFIGS.children_count.options}
           value={childrenCount}
           onChange={setChildrenCount}
         />
       );
-    }
-    if (CHOICE_CONFIGS[id]) {
+    } else if (CHOICE_CONFIGS[id]) {
       const config = CHOICE_CONFIGS[id];
-      return (
-        <ChoiceTiles
+      // An option's own note (a loan plan's) stands in for the field's
+      const chosen = config.options.find((option) => option.value === inputs[id]);
+      field = (
+        <SelectField
           id={id}
-          {...config}
-          label={config.question ?? config.label}
-          hideLabel={!config.question}
+          label={config.label}
+          options={config.options}
           value={inputs[id]}
+          hint={chosen?.hint ?? config.hint}
+          hintAs={hintPlace(chosen?.hint ?? config.hint)}
           onChange={(value) => handleInputChange(id, value)}
         />
       );
+    } else {
+      const config = NUMBER_CONFIGS[id];
+      const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
+      const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
+      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
+      field = (
+        <div className="number-field-wrap">
+          <NumberField
+            id={id}
+            {...config}
+            hint={hint}
+            hintAs={hintPlace(hint)}
+            value={value}
+            onChange={(next) => handleInputChange(id, next)}
+          />
+          {PREFILLED[id] && !prefilled && (
+            <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
+              {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
+            </button>
+          )}
+        </div>
+      );
     }
-    const config = NUMBER_CONFIGS[id];
-    const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
-    const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-    const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
     return (
-      <div className="number-field-wrap">
-        <NumberField
-          id={id}
-          {...config}
-          hideLabel
-          hint={hint}
-          value={value}
-          onChange={(next) => handleInputChange(id, next)}
-        />
-        {PREFILLED[id] && !prefilled && (
-          <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
-            {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
-          </button>
-        )}
+      <div key={id} className="household-field" data-row={id}>
+        {field}
       </div>
     );
   };
 
-  // One child's row: their age and, from 16, whether they are in school or
+  // One child: their age and, from 16, whether they are in school or
   // college
-  const renderChild = (age, index) => {
-    const rowId = `child_${index}`;
-    const education = asksEducation(age) ? (childEducation(index) ? " · in education" : " · not in education") : "";
-    return (
-      <FormRow
-        key={rowId}
-        rowId={rowId}
-        label={`Child ${index + 1}`}
-        summary={`Age ${age}${education}`}
-        open={openRow === rowId}
-        onToggle={() => toggle(rowId)}
-      >
-        <div className="child-answers">
-          <NumberField
-            id={`child_age_${index}`}
-            label={`Child ${index + 1}'s age`}
-            value={age}
-            min={0}
-            max={OLDEST_CHILD_AGE}
-            step={1}
-            hint="Age in 2026, from 0 to 19."
-            outOfRangeMessage={CHILD_AGE_MESSAGE}
-            onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+  const renderChild = (age, index) => (
+    <div
+      key={`child_${index}`}
+      className={`household-field household-child ${asksEducation(age) ? "has-education" : ""}`.trim()}
+      data-row={`child_${index}`}
+    >
+      <div className="child-answers">
+        <NumberField
+          id={`child_age_${index}`}
+          label={`Child ${index + 1}'s age`}
+          value={age}
+          min={0}
+          max={OLDEST_CHILD_AGE}
+          step={1}
+          hint="Age in 2026, from 0 to 19."
+          outOfRangeMessage={CHILD_AGE_MESSAGE}
+          onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+        />
+        {asksEducation(age) && (
+          <SelectField
+            id={`child_in_education_${index}`}
+            label={`Child ${index + 1} in full-time education (non-advanced)`}
+            options={YES_NO.slice().reverse()}
+            value={childEducation(index)}
+            onChange={(value) => setChildEducation(index, value)}
+            hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
+            hintAs="tooltip"
           />
-          {asksEducation(age) && (
-            <ChoiceTiles
-              id={`child_in_education_${index}`}
-              label={`Child ${index + 1} in full-time education (non-advanced)`}
-              layout="compact"
-              options={YES_NO.slice().reverse()}
-              value={childEducation(index)}
-              onChange={(value) => setChildEducation(index, value)}
-              hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
-            />
-          )}
-        </div>
-      </FormRow>
-    );
-  };
+        )}
+      </div>
+    </div>
+  );
 
-  const renderRow = (id) => {
-    if (!fieldApplies(id)) return null;
-    if (id === "children") return childAges.map(renderChild);
-    const config = CHOICE_CONFIGS[id] ?? NUMBER_CONFIGS[id];
-    const summary = id === "children_count" ? String(childrenCount) : summaryOf(id, inputs, year);
+  const renderGrid = (fields) => <div className="household-grid">{fields.map(renderField)}</div>;
+
+  const renderSection = (section, index) => {
+    const labelId = `household-section-${index}`;
+    if (!section.collapsible) {
+      return (
+        <section key={section.title} className="household-group" aria-labelledby={labelId}>
+          <h3 className="household-group-label" id={labelId}>
+            {section.title}
+          </h3>
+          {renderGrid(section.fields)}
+        </section>
+      );
+    }
+    const fields = section.groups.flatMap((group) => group.fields);
+    const shown = fields.filter(fieldApplies).length;
+    const panelId = `${labelId}-panel`;
     return (
-      <FormRow
-        key={id}
-        rowId={id}
-        label={config.label}
-        summary={summary}
-        open={openRow === id}
-        onToggle={() => toggle(id)}
-      >
-        {renderInput(id)}
-      </FormRow>
+      <section key={section.title} className="household-group household-more">
+        <h3 className="household-group-label">
+          <button
+            type="button"
+            className="household-more-toggle"
+            id={labelId}
+            aria-expanded={moreOpen}
+            aria-controls={panelId}
+            onClick={() => setMoreOpen((value) => !value)}
+          >
+            {section.title}{" "}
+            <span className="household-more-count">{shown} questions</span>
+            <svg
+              className="household-more-chevron"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </h3>
+        {moreOpen && (
+          <div id={panelId} role="region" aria-labelledby={labelId} className="household-more-panel">
+            {section.groups.map((group) => {
+              if (!group.fields.some(fieldApplies)) return null;
+              const groupId = `${labelId}-${group.title.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+              return (
+                <div key={group.title} className="household-subgroup" role="group" aria-labelledby={groupId}>
+                  <h4 className="household-subgroup-label" id={groupId}>
+                    {group.title}
+                  </h4>
+                  {renderGrid(group.fields)}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     );
   };
 
   return (
     <div className="household-calculator">
-      <SectionHeading
-        title="Your household"
-        subtitle="Every answer starts at a typical value. Open a row to change it; the results update as you go."
-      />
       <div className="household-layout">
-        <div className="household-form">
-          <div className="household-examples" role="group" aria-labelledby="household-examples-label">
-            <span id="household-examples-label" className="household-examples-label">
-              Start from an example
-            </span>
-            {YOUNG_PERSON_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className={`example-chip ${presetId === preset.id ? "is-active" : ""}`}
-                aria-pressed={presetId === preset.id}
-                onClick={() => applyPreset(preset)}
-              >
-                {preset.label}
-              </button>
-            ))}
+        {/* The whole form in one card: a header with the examples, then
+            the questions in sections */}
+        <div className="card household-form">
+          <div className="household-form-header">
+            <div className="household-form-title">
+              <h2>Your household</h2>
+              <p>Every answer starts at a typical value. Change any of them; the results update as you go.</p>
+            </div>
+            <div className="household-examples">
+              <label className="visually-hidden" htmlFor="household-example">
+                Start from an example
+              </label>
+              <div className="select-box">
+                <select
+                  id="household-example"
+                  value={presetId ?? ""}
+                  onChange={(event) => {
+                    const preset = YOUNG_PERSON_PRESETS.find((item) => item.id === event.target.value);
+                    if (preset) applyPreset(preset);
+                  }}
+                >
+                  <option value="">Start from an example</option>
+                  {YOUNG_PERSON_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="select-chevron"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </div>
           </div>
           {activePreset && (
             <p className="household-examples-note" role="status">
               {activePreset.note}
             </p>
           )}
-          {FORM_SECTIONS.map((section, index) => (
-            <section
-              className="household-section"
-              key={section.title ?? "essentials"}
-              aria-labelledby={section.title ? `household-section-${index}` : undefined}
-              aria-label={section.title ? undefined : "Essentials"}
-            >
-              {section.title && (
-                <h3 className="household-section-title" id={`household-section-${index}`}>
-                  {section.title}
-                </h3>
-              )}
-              <ul className="household-list">{section.fields.map(renderRow)}</ul>
-            </section>
-          ))}
+          {FORM_SECTIONS.map(renderSection)}
         </div>
 
         <div className="household-results" role="region" aria-label="Results">

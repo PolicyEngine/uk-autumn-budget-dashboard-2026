@@ -50,9 +50,9 @@ const FAILURE_TEXT = [
 const LOADED = {
   // App.jsx renders the Public finances section only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The form's list: its first row (Age) and the optional details; the
-  // results are checked below.
-  personal: (panel) => within(panel).findAllByRole("heading", { name: "More details" }),
+  // The form's card: its More details section; the results are checked
+  // below.
+  personal: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
@@ -150,9 +150,9 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
       );
       expect(missing).toEqual([]);
       if (value === "personal") {
-        // The form's first row is the head's age, with its default
-        expect(within(panel).getByRole("button", { name: /^Age/, expanded: false })).toHaveTextContent("Age30");
-        // The results beside the form (every answer has a default): the tab
+        // The form's first box is the head's age, with its default
+        expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
+        // The results below the form (every answer has a default): the tab
         // asks the household API in two stages and shows the answer
         expect(
           await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
