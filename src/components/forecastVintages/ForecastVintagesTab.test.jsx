@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import ForecastVintagesTab, { pointsSentence, startsSentence } from "./ForecastVintagesTab";
+import ForecastVintagesTab, { pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesTab";
 import { resetForecastVintages } from "../../utils/forecastVintages/load";
 import { buildView } from "../../utils/forecastVintages/view";
 
@@ -267,5 +267,32 @@ describe("the chart's sentences", () => {
       "The labelled points are the latest outturn (Q2 2026).",
     );
     expect(pointsSentence({ ...view, points: [] })).toBeNull();
+  });
+});
+
+describe("the CSV download", () => {
+  it("has a row per period shown, blank where a series has no value, and only the ONS's and OBR's figures", () => {
+    const view = buildView(DATA, RHDI, { unit: "level" });
+    const rows = view.rows.slice(view.windowStart);
+    const text = vintageCsv({ title: RHDI.label, units: view.axisLabel, view, rows, notes: ["A note."] });
+    const lines = text.replace(/^\uFEFF/, "").trimEnd().split("\r\n");
+    expect(lines[0]).toBe(`# ${RHDI.label}: OBR forecasts and ONS outturn`);
+    // Quoted, as the source line holds a comma
+    expect(lines[1]).toBe('"# Units: £ per head a year (chained volume measure) | Source: ONS (outturn), OBR (forecast)"');
+    expect(lines[2].split(",")).toEqual(["Period", "Outturn", ...view.vintages.map((v) => `${v.label} forecast`)]);
+    const body = lines.slice(3, 3 + rows.length);
+    expect(body).toHaveLength(rows.length);
+    expect(body[0].split(",")[0]).toBe(view.label(rows[0].x));
+    // Q2 2024: the outturn at the start, ×4, as the chart shows it
+    const start = body.find((line) => line.startsWith("Q2 2024,"));
+    expect(Math.round(Number(start.split(",")[1]))).toBe(25820);
+    // Q2 2029: the March 2026 forecast's end, in the last column
+    const end = body.find((line) => line.startsWith("Q2 2029,")).split(",");
+    expect(Math.round(Number(end[end.length - 1]))).toBe(26628);
+    // A forecast made later has no value for an earlier period: blank, not 0
+    const first = body[0].split(",");
+    expect(first.slice(2).every((cell) => cell === "")).toBe(true);
+    expect(text).not.toMatch(/PolicyEngine/);
+    expect(lines[lines.length - 1]).toBe("# A note.");
   });
 });

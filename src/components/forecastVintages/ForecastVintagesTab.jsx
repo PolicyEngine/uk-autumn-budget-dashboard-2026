@@ -76,6 +76,25 @@ export function pointsSentence(view) {
   return `The labelled points are ${list}.`;
 }
 
+/**
+ * The CSV download: a row per period shown, the outturn and each forecast
+ * drawn as columns; a period a series does not cover is blank, never zero.
+ */
+export function vintageCsv({ title, units, view, rows, notes = [] }) {
+  return buildChartCsv({
+    title: `${title}: OBR forecasts and ONS outturn`,
+    units,
+    source: SOURCE_LINE,
+    columns: [
+      { key: "period", label: "Period" },
+      { key: OUTTURN_KEY, label: "Outturn", decimals: 4 },
+      ...view.vintages.map((v) => ({ key: v.key, label: `${v.label} forecast`, decimals: 4 })),
+    ],
+    rows: rows.map((row) => ({ ...row, period: view.label(row.x) })),
+    notes,
+  });
+}
+
 /** The single toggles beside the unit switch: F, H and A. */
 function Toggles({ toggles }) {
   return (
@@ -191,19 +210,7 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
     .filter(Boolean)
     .join(" ");
 
-  const csv = () =>
-    buildChartCsv({
-      title: `${variable.label}: OBR forecasts and ONS outturn`,
-      units: csvUnits,
-      source: SOURCE_LINE,
-      columns: [
-        { key: "period", label: "Period" },
-        { key: OUTTURN_KEY, label: "Outturn", decimals: 4 },
-        ...view.vintages.map((v) => ({ key: v.key, label: `${v.label} forecast`, decimals: 4 })),
-      ],
-      rows: shownRows.map((row) => ({ ...row, period: view.label(row.x) })),
-      notes,
-    });
+  const csv = () => vintageCsv({ title: variable.label, units: csvUnits, view, rows: shownRows, notes });
 
   return (
     <LsCard
