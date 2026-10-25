@@ -32,6 +32,11 @@ from uk_budget_data.publication.commands import (
     run_generate_artifacts,
     run_publish,
 )
+from uk_budget_data.publish_measure_cli import (
+    PUBLISH_MEASURE_COMMANDS,
+    add_publish_measure_parsers,
+    run_publish_measure_command,
+)
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
     get_reform,
@@ -179,6 +184,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_publish_measure_parsers(subparsers)
     add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
@@ -383,6 +389,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command in PUBLISH_MEASURE_COMMANDS:
+        return run_publish_measure_command(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
@@ -401,6 +409,13 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  publish-measure  - Budget day: one measure's receipted "
+            "artifact, staged (#105)"
+        )
+        console.print(
+            "  refresh-combined - Budget day: the approved measures combined"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"

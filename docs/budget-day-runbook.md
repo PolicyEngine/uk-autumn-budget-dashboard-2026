@@ -721,6 +721,59 @@ A fix that changes a package version (policyengine-uk, say) is a re-cut, not a G
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
+## Budget day: publish one measure
+
+**Proposed in [#105](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/105); the commands exist once its PR merges.** Each measure is generated and staged on its own when its pull request merges, so a measure ready at 13:30 doesn't wait for the slowest one, and a late fix reruns one measure. It is G2 to G4 above, one measure at a time: the same receipted artifacts, gates and manifest, run by a workflow. The combined run is refreshed in batches.
+
+**A measure moves through** coded → run → staged → approved (live):
+
+1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py` and merges to `main` on the usual gates.
+2. **Run (automatic).** The merge starts the "Publish measures (Budget day)" workflow (`.github/workflows/publish-measure.yml`):
+   - it finds the measures the merge added or changed, comparing the registry on `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach): `uv run uk-budget-data changed-measures`;
+   - it generates each one's receipted artifact in parallel, one job per measure on `larger-runner` (or on Modal, below): `uk-budget-data publish-measure <id> --no-stage`, which is `generate --artifacts --reforms <id>`. One measure per job, so a hand-written modifier is always generated alone. Every policy year: there is no `--years`.
+3. **Staged (automatic).** One job collects the new artifacts and runs `uk-budget-data stage-artifacts` on them: `publish reconcile` (status only; `reconciliation.json` goes to the runner's temporary directory, never into the commit), `publish stage` (or `--provisional`, a dispatch choice, for G2's statement figures), `publish index` once results by area are bound, and `publish check`. It marks the new files' review rows **pending**: kind `pending`, the Reconciler named, expiring in 7 days, so the public-file check passes while nothing is signed. It opens **one draft data PR** with the artifacts, the manifest and a summary (each entry's status, reconciliation and revenue by year). A staged entry is the measure "being costed"; the page doesn't show it.
+4. **Approved (María, the Reconciler).** Review the data PR. Then, on its branch:
+
+   ```sh
+   uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
+   # move each reconciliation.json outside the checkout, as at G2
+   uv run uk-budget-data sign-measures --by "María Juaristi" --reviewer juaristi22 \
+     [--household-receipt <id>=receipts/<id>-households.json]
+   git add -A public/data data_inputs/public_data_review.csv
+   git commit -m "Approve and sign" && git push
+   ```
+
+   `sign-measures` is `publish approve` for each staged entry (measures before combined runs), then `publish review-rows`, which replaces the pending rows. Approval is refused, approving nothing further, until every gate passes. Nothing is ever approved or signed automatically.
+5. **Live (Vahid, the Integrator).** Merge the data PR once the required checks pass. Merging deploys. **"Live" means approved in the deployed `public/data/manifest.json`**: the page reads nothing else (#104), so there is no separate status file. `uv run uk-budget-data measure-status` prints the live measures and whether the package is current.
+
+**By hand** (the same steps the workflow takes, in one checkout):
+
+```sh
+export HUGGING_FACE_TOKEN=...   # the read token; never print it
+uv run uk-budget-data publish-measure fuel_duty_freeze       # generate, reconcile and stage, check
+uv run uk-budget-data refresh-combined                       # the approved measures together, staged
+```
+
+Or dispatch the workflow with `measures` (space-separated ids). `publish-measure` refuses a measure the data can't cost (`data_limits`); it writes no results by area, which stay G4's area run.
+
+**The combined run.** Measures interact, so the package total isn't the sum of the measures. The "Refresh the combined run (Budget day)" workflow runs `refresh-combined` on demand, and every 30 minutes on 28 October from 12:30 to 18:00 (London is on GMT that day, so these are UTC times too). It is `generate --combined` over the measures approved in `main`'s manifest, each member bound at the commit its approved receipt was made at, then staged and a draft data PR opened, approved and merged in the same way. Approval needs every member approved. The page shows a package's figures only from a displayable combined run whose members are exactly the displayable measures (#104); until the refreshed run is approved, they show as unavailable. Time the first refresh at Monday's rehearsal: a refresh at 15:30 has to land before a 15:45 cut.
+
+**Two data PRs touching the manifest.** Merge one, then rerun the other's workflow (dispatch with its measures): it regenerates on the new `main`, so the receipts bind its commit.
+
+**Runner.** The compute jobs need more memory than a standard runner has: about 20 GB for one measure over every year (6.4 GB with #112's shared simulations), more with results by area. Their label comes from the dispatch input `runner`, else the repository variable `PUBLISH_MEASURE_RUNNER`, else `larger-runner`, the organisation's GitHub-hosted larger runner (Max, 24 October). Its size and concurrency limit are in the organisation's settings, which need an admin; each compute job prints `nproc` and `free -g`, so the first run records them. publish-measure runs one job per measure with no `max-parallel`, so the larger runner's concurrency limit is the only cap. A label the organisation lacks queues until it times out. The secret is `PE_UK_PRIVATE_HF_READ_TOKEN`, as the Certified data check uses.
+
+**Timing on the runner.** Dispatch "Publish measures (Budget day)" with `timing: true` and one id in `measures`. It generates, reconciles and stages that measure on the runner, runs `publish check`, and writes each step's wall time and peak memory to the run's summary. It opens no pull request and commits nothing. Run it at Monday's rehearsal and record the result in the table below.
+
+**Modal backend (not ready yet).** Dispatch with `backend: modal`, or set the repository variable `PUBLISH_MEASURE_BACKEND=modal`. Each matrix job then runs on a standard runner and calls `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --reforms <id> --backend modal`. It uses the organisation secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, in that step only, and the Modal workspace secret `uk-budget-2026-hf-token`. **It needs two things first:** #112's `--backend modal` on `generate`, and that secret in the Modal workspace (#119). Until then the job stops at "Check the Modal backend is available" with an error saying so; rerun with `backend: runner`. `refresh-combined` has no Modal backend.
+
+**Timings.**
+
+| Run | Wall time | Peak memory | Notes |
+|---|---|---|---|
+| One measure, every year, flat tables (24 October full run, per measure) | about 6–7 min | about 20 GB | From #69's rerun; the artifact path is not yet timed |
+| `publish-measure <id>` on `larger-runner` (timing mode) | not yet measured | | Time it at the rehearsal and record it here |
+| `refresh-combined` | not yet measured | | Time it at the rehearsal and record it here |
+
 ## Rolling re-cuts, and the 07:00 go/no-go (Max, 22 October)
 
 Max, relayed by the UK hub and the coordinator on 22 October: "i think we should keep improving the model as much as we can as long as we can". So there is no single lock. The dashboard adopts each certified re-cut, under d1152 ("latest certified release"). UK time equals UTC from Sunday 25 October.

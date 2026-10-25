@@ -1,0 +1,342 @@
+name: Publish measures (Budget day)
+
+# Budget day, #105, on #104's receipted artifacts: a measure is generated,
+# reconciled and staged when its pull request merges, and goes live when
+# the Reconciler approves it on the data pull request.
+#
+# On a push to main that touches the measure registry, this workflow finds
+# the measures the push added or changed (the registry on HEAD against
+# HEAD^, compared in Python by what each measure is: uk-budget-data
+# changed-measures), generates each one's receipted artifact in parallel
+# (`publish-measure <id> --no-stage`, one measure per job, so a hand-written
+# modifier is always generated alone), then stages them in one job
+# (`stage-artifacts`: reconcile, stage, pending review rows, publish check)
+# and opens ONE draft data pull request. Nothing here approves or signs: the
+# Reconciler runs `uk-budget-data sign-measures` on that branch before it
+# merges. Merging deploys, and approved entries are live.
+#
+# Runner: one measure over every policy year peaks at about 20 GB (6.4 GB
+# with #112's shared simulations), so the compute job runs on the
+# organisation's larger runner, one job per measure. Its label comes from
+# the `runner` input, else the repository variable PUBLISH_MEASURE_RUNNER,
+# else larger-runner. A label the organisation lacks queues until it times
+# out.
+#
+# Backend: the `backend` input, else the repository variable
+# PUBLISH_MEASURE_BACKEND, else `runner`. With `modal`, each matrix job runs
+# on a standard runner and sends its measure to Modal, with the
+# organisation secrets MODAL_TOKEN_ID and MODAL_TOKEN_SECRET and the Modal
+# workspace secret uk-budget-2026-hf-token. That needs `generate --backend
+# modal` (#112) and the secret (#119); until then the job stops at its first
+# check with an error saying so.
+#
+# Timing: dispatch with `timing: true` and one measure to run it end to end
+# on the runner (generate, reconcile and stage, publish check) and print
+# each step's wall time, without opening a pull request.
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/uk_budget_data/reforms.py
+  workflow_dispatch:
+    inputs:
+      measures:
+        description: Measure ids, space separated (empty for those the last push to the branch changed)
+        required: false
+        default: ""
+      provisional:
+        description: Stage as provisional (G2's statement figures) instead of staged for approval
+        type: boolean
+        required: false
+        default: false
+      timing:
+        description: Time one measure end to end on the runner; opens no pull request
+        type: boolean
+        required: false
+        default: false
+      runner:
+        description: Runner label for the simulations (empty for vars.PUBLISH_MEASURE_RUNNER or larger-runner)
+        required: false
+        default: ""
+      backend:
+        description: runner or modal (empty for vars.PUBLISH_MEASURE_BACKEND or runner); modal needs #112 and the Modal secret
+        required: false
+        default: ""
+
+permissions: {}
+
+# One run per commit and set of measures: the same work waits, never doubles
+# up, while dispatches for different measures on one commit run side by side
+# (a group keeps one pending run and cancels an older pending one, so keying
+# on the commit alone would drop a queued dispatch). Data PRs go on a branch
+# per run, so runs never write to one branch.
+concurrency:
+  group: publish-measure-${{ github.sha }}-${{ inputs.measures || 'changed' }}-${{ inputs.timing && 'timing' || 'publish' }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Find the measures to publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      measures: ${{ steps.ids.outputs.measures }}
+      count: ${{ steps.ids.outputs.count }}
+      backend: ${{ steps.backend.outputs.backend }}
+    steps:
+      - name: Backend
+        id: backend
+        env:
+          BACKEND: ${{ inputs.backend || vars.PUBLISH_MEASURE_BACKEND || 'runner' }}
+        run: |
+          case "${BACKEND}" in
+            runner|modal) echo "backend=${BACKEND}" >> "$GITHUB_OUTPUT"; echo "Backend: ${BACKEND}" ;;
+            *) echo "::error::backend must be runner or modal, not '${BACKEND}'"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Measure ids
+        id: ids
+        env:
+          INPUT_MEASURES: ${{ inputs.measures }}
+          TIMING: ${{ inputs.timing }}
+        run: |
+          if [ -n "${INPUT_MEASURES}" ]; then
+            measures=$(python3 -c 'import json, os; print(json.dumps(os.environ["INPUT_MEASURES"].split()))')
+          else
+            uv run uk-budget-data changed-measures --base HEAD^ --head HEAD > changed.json
+            cat changed.json
+            measures=$(python3 -c 'import json; print(json.dumps(json.load(open("changed.json"))["changed"]))')
+          fi
+          count=$(python3 -c 'import json, sys; print(len(json.loads(sys.argv[1])))' "${measures}")
+          if [ "${TIMING}" = true ] && [ "${count}" != 1 ]; then
+            echo "::error::timing runs one measure; pass exactly one id in measures"
+            exit 1
+          fi
+          echo "measures=${measures}" >> "$GITHUB_OUTPUT"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+          echo "Measures: ${measures}"
+
+  timing:
+    name: Time ${{ fromJSON(needs.detect.outputs.measures)[0] }} end to end
+    needs: detect
+    if: inputs.timing && needs.detect.outputs.count == '1'
+    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
+      MEASURE: ${{ fromJSON(needs.detect.outputs.measures)[0] }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Generate, reconcile and stage, check
+        run: |
+          nproc; free -g
+          {
+            echo "## Timing: ${MEASURE} on $(nproc) CPUs, $(free -g | awk '/Mem:/ {print $2}') GB"
+            echo
+            echo "| Step | Wall time |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          step() {
+            local label="$1"; shift
+            local start=$SECONDS
+            /usr/bin/time -v "$@" 2> >(tee -a time.log >&2)
+            echo "| ${label} | $((SECONDS - start)) s |" >> "$GITHUB_STEP_SUMMARY"
+          }
+          total=$SECONDS
+          step "generate --artifacts" uv run uk-budget-data publish-measure "${MEASURE}" --no-stage | tee generated.txt
+          artifact=$(tail -n 1 generated.txt)
+          step "reconcile and stage, publish check" uv run uk-budget-data stage-artifacts "${artifact}" --private-dir "${RUNNER_TEMP}/reconciliation"
+          echo "| **End to end** | **$((SECONDS - total)) s** |" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "Maximum resident set size|Elapsed \(wall clock\)" time.log | tee -a "$GITHUB_STEP_SUMMARY"
+
+  compute:
+    name: Run ${{ matrix.measure }}
+    needs: detect
+    if: ${{ !inputs.timing && needs.detect.outputs.count != '0' }}
+    # Modal does the computing on its side, so its jobs need only a standard
+    # runner. One job per measure; no max-parallel, so the cap is the larger
+    # runner's concurrency limit set in the organisation's settings.
+    runs-on: ${{ needs.detect.outputs.backend == 'modal' && 'ubuntu-latest' || (inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner') }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        measure: ${{ fromJSON(needs.detect.outputs.measures) }}
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
+      MEASURE: ${{ matrix.measure }}
+      BACKEND: ${{ needs.detect.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      # Every policy year, as the runbook says (no --years): a narrower run
+      # drops a scored year.
+      - name: Generate the measure's receipted artifact
+        if: env.BACKEND == 'runner'
+        run: |
+          nproc; free -g
+          /usr/bin/time -v uv run uk-budget-data publish-measure "${MEASURE}" --no-stage
+
+      # The Modal backend is #112's (`generate --backend modal`); this only
+      # calls it. Stop with a clear error until generate takes the flag,
+      # rather than run the measure somewhere else.
+      - name: Check the Modal backend is available
+        if: env.BACKEND == 'modal'
+        env:
+          HAS_MODAL: ${{ secrets.MODAL_TOKEN_ID != '' && secrets.MODAL_TOKEN_SECRET != '' }}
+        run: |
+          if ! uv run uk-budget-data generate --help | grep -q -- '--backend'; then
+            echo "::error::backend modal: generate has no --backend option on this commit. It needs #112 (generate --backend modal) and the Modal secret uk-budget-2026-hf-token (#119). Rerun with backend runner."
+            exit 1
+          fi
+          if [ "${HAS_MODAL}" != true ]; then
+            echo "::error::backend modal: the MODAL_TOKEN_ID and MODAL_TOKEN_SECRET secrets are not available to this repository."
+            exit 1
+          fi
+
+      - name: Generate the measure's receipted artifact on Modal
+        if: env.BACKEND == 'modal'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          uv run --with modal==1.6.2 uk-budget-data generate --artifacts \
+            --reforms "${MEASURE}" --backend modal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.measure }}
+          path: public/data/artifacts/
+          retention-days: 7
+          if-no-files-found: error
+
+  data-pr:
+    name: Stage and open the data pull request
+    needs: [detect, compute]
+    # Stages the measures that ran, even if another one failed; the summary
+    # lists only the entries it carries.
+    if: ${{ !cancelled() && !inputs.timing && needs.detect.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+      PROVISIONAL: ${{ inputs.provisional }}
+    steps:
+      # The commit the artifacts were generated at, so their receipts bind
+      # HEAD; the data PR targets main.
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: artifact-*
+          path: incoming
+          merge-multiple: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      # Only the new artifacts are staged: restaging one main already holds
+      # would supersede its entry.
+      - name: Reconcile and stage; mark review rows pending; publish check
+        id: stage
+        run: |
+          placed=()
+          for d in incoming/*/*/; do
+            rel="${d#incoming/}"; dest="public/data/artifacts/${rel%/}"
+            if [ -e "${dest}" ]; then echo "Already on main: ${dest}"; continue; fi
+            mkdir -p "$(dirname "${dest}")"; mv "${d}" "${dest}"; placed+=("${dest}")
+          done
+          if [ "${#placed[@]}" -eq 0 ]; then echo "Nothing new to stage."; echo "code=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          args=()
+          if [ "${PROVISIONAL}" = true ]; then args+=(--provisional); fi
+          set +e
+          uv run uk-budget-data stage-artifacts "${placed[@]}" "${args[@]}" \
+            --private-dir "${RUNNER_TEMP}/reconciliation" --summary summary.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      # Last, so no step before it can reach the token. An App token lets
+      # the data PR start CI; one opened with the default token does not.
+      - name: Mint an App token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Open the draft data pull request
+        if: hashFiles('summary.md') != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          BRANCH: data/publish-measure-${{ github.run_id }}
+          TITLE: "Data: stage ${{ join(fromJSON(needs.detect.outputs.measures), ', ') }}"
+          SUMMARY: summary.md
+        run: bash scripts/budget_day/open_data_pr.sh
+
+      - name: Fail if a measure was refused or a gate failed
+        if: steps.stage.outputs.code != '0'
+        run: |
+          echo "::error::stage-artifacts reported a refusal or a gate failure; see the summary"
+          exit 1
