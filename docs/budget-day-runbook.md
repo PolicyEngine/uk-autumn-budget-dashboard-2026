@@ -791,6 +791,42 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
   - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
 
+## Fast full run
+
+"Society" results: the nine candidate measures plus `autumn_budget_2026_combined`, every year (2026 to 2031), every flat table in `public/data` (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned`, `income_curve`, and `obr_comparison`). One `generate` writes all of them.
+
+**Measured end to end on 25 October** on an 18-core, 64 GB Mac (policyengine 6.10.2, `microcosm_uk_2024_25`). Other sessions were holding about 37 GB, with 10 to 20 GB of swap in use. Every parallel run's files were byte-identical to the serial run's. The serial run's seven dashboard tables were also byte-identical to the committed `public/data`.
+
+| Configuration | Wall time | Units at once (observed) | Peak RSS, process tree | Swap rise |
+|---|---|---|---|---|
+| `--jobs 1` (serial) | 16.0 min | 1 | 10.3 GB | +5.3 GB |
+| `--jobs auto` | 14.7 min | 1 (it chose 1: "21 GB free, 22.5 GB per unit") | 12.2 GB | 0 |
+| `--jobs 2` (default memory estimate) | about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time | n/a | n/a |
+| **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
+| `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
+
+- **Use on Budget day: `--jobs 2 --unit-memory-gb 4`, about 8 minutes.** Four jobs save only about 30 s more, because the combined run is the long pole. They also put more pressure on a machine others are using.
+- **Why override the estimate.** The default per-unit estimate (17.4 GB + 0.85 GB per year, so 22.5 GB for six years) is a peak footprint that includes compressed pages. On a shared Mac, `auto` and the admission check then fall back to one unit at a time. Two units at once peaked at 12.8 GB RSS, and free memory never fell below 8.4 GB.
+- **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
+
+```bash
+cd <checkout of the release commit>
+export HUGGING_FACE_TOKEN="$(cat ~/.cache/huggingface/token)"   # never echo it
+sysctl vm.swapusage; pgrep -fl uk-budget-data                   # nothing else generating
+top -l 1 -n 0 | grep PhysMem                                    # at least ~15 GB unused or inactive
+uv run uk-budget-data generate --jobs 2 --unit-memory-gb 4      # about 8 min, writes public/data
+git status --short public/data                                  # review the diff before committing
+```
+
+- **Check against a serial run** on a scratch copy when there is time (16 min): `--output-dir /tmp/serial --jobs 1`, then `cmp` each CSV. They must be identical.
+- **Fallbacks, in order:**
+  1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
+  2. If one measure fails or changes late, rerun only the files that need it: `--only age_impact` or `--only household_scatter` with `--reforms`. A full `generate --reforms <ids>` rewrites the shared CSVs with only those measures, so to change one measure, run the full set.
+  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+- **Not covered here:**
+  - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
+  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
+
 ## Adopting a release (each re-cut)
 
 **On 28 October no upgrade is adopted after the 07:00Z go/no-go.** Only an emergency revert to the previous cut is allowed (see "Rolling re-cuts" above). The steps below are how each re-cut is adopted before then.
