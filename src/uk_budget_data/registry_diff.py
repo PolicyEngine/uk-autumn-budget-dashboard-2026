@@ -338,7 +338,7 @@ def _fingerprints_at(
     folder = Path(tempfile.mkdtemp(dir=directory))
     if not _exists(revision, f"{PACKAGE_PATH}/__init__.py", repo):
         registry = folder / "reforms.py"
-        registry.parent.mkdir(parents=True)
+        registry.parent.mkdir(parents=True, exist_ok=True)
         registry.write_text(
             subprocess.run(
                 ["git", "show", f"{revision}:{REGISTRY_PATH}"],
