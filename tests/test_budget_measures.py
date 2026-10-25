@@ -6,8 +6,9 @@ definitions together: until 25 October all seven were in
 ``budget_measures.py``, and any edit there changed every one. Each now has a
 module of its own, named after it, and these tests keep it so. They hold
 for any number of modifiers, so a new measure's module, or a fix to one,
-passes them. ``tests/test_budget_measures_split.py`` checks the split
-itself.
+passes them, provided it keeps the road fuel VAT rate the same in both
+modules that write it. ``tests/test_budget_measures_split.py`` checks the
+split itself.
 """
 
 import inspect
@@ -18,7 +19,10 @@ import pytest
 
 from uk_budget_data import budget_measures
 from uk_budget_data.publication.receipt import CodeRevision
-from uk_budget_data.reforms import get_all_reforms
+from uk_budget_data.reforms import (
+    AUTUMN_BUDGET_2026_COMBINED_ID,
+    get_all_reforms,
+)
 
 PACKAGE = budget_measures.__name__
 NAMES = sorted(
@@ -89,20 +93,29 @@ def test_the_package_itself_defines_nothing():
 
 
 def test_every_registered_modifier_lives_in_a_module_of_its_own():
-    """No measure applies a modifier from anywhere else in the package, or
-    shares a module with another."""
-    registered = registered_modifiers()
-    assert registered
-    assert set(registered) <= set(NAMES)
+    """Every measure's modifier, on either side, is the one function of a
+    module of its own in the package, named after it: none comes from
+    anywhere else, in the package or outside it, where it could share a
+    module with another. The combined measure's reform modifier composes
+    its members' (``publication.combine``); each member's is checked as
+    its own measure's."""
+    checked = 0
     for reform in get_all_reforms():
+        if reform.id == AUTUMN_BUDGET_2026_COMBINED_ID:
+            continue
         for side in ("simulation_modifier", "baseline_simulation_modifier"):
             function = getattr(reform, side)
-            if function is None or not function.__module__.startswith(
-                f"{PACKAGE}."
-            ):
+            if function is None:
                 continue
-            assert function.__module__ == f"{PACKAGE}.{function.__name__}"
+            assert function.__module__ == f"{PACKAGE}.{function.__name__}", (
+                reform.id,
+                side,
+                function.__module__,
+            )
             assert function is modifier(function.__name__)
+            checked += 1
+    assert checked
+    assert set(registered_modifiers()) <= set(NAMES)
 
 
 def test_the_road_fuel_vat_rate_is_the_same_wherever_it_is_written():
