@@ -6,7 +6,6 @@
  * - Amber/orange spectrum: policies that are BAD for households (revenue raisers)
  */
 
-import { POLICIES } from "./policies";
 
 // Policy colours by display name (used in population impact charts), from
 // the Autumn Budget 2025 dashboard's theme: raise revenue in its amber
@@ -32,8 +31,21 @@ export const POLICY_COLORS = {
 };
 
 // Policy colours by measure id (personal impact), the same as by name
+// (#104 builds the measure list from the published catalogue; this map only
+// keeps each current measure's colour by id for the household views)
+const POLICY_NAME_BY_ID = {
+  threshold_freeze_2031_32: "Threshold freeze to 2031-32",
+  badr_lifetime_limit_cut: "Business Asset Disposal Relief restricted",
+  fuel_duty_rise_deferral: "Fuel duty rises deferred",
+  road_fuel_vat_cut: "VAT cut on road fuel",
+  domestic_electricity_zero_vat: "Zero VAT on domestic electricity",
+  warm_home_discount_top_up: "Warm Home Discount top-up",
+  state_pension_income_tax_protection: "State Pension income tax protection",
+  employer_ni_relief_under_25s: "Employer NI relief for under-25s",
+  plan_2_threshold_unfreeze: "Plan 2 student loan threshold unfrozen",
+};
 export const POLICY_COLORS_BY_KEY = Object.fromEntries(
-  POLICIES.map((policy) => [policy.id, POLICY_COLORS[policy.name]]),
+  Object.entries(POLICY_NAME_BY_ID).map(([id, name]) => [id, POLICY_COLORS[name]]),
 );
 
 // Each measure's icon, by measure id (so catalogue data can use it too),
