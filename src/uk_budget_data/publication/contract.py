@@ -111,7 +111,7 @@ def contract() -> dict:
             if (char := chr(codepoint)).isspace()
         ),
         "digest_vectors": digest_vectors(),
-        # Personal impact's definition check (``uk_budget_data.definitions``)
+        # Household impact's definition check (``uk_budget_data.definitions``)
         "definition_identity_fields": list(definitions.IDENTITY_FIELDS),
         "definition_commit_pattern": definitions.FULL_COMMIT.pattern,
         "definition_unregistered": definitions.UNREGISTERED,

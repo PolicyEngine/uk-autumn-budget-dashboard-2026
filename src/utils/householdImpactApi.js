@@ -536,7 +536,7 @@ export function engineDifferences(expected, reported) {
 /**
  * The household API's code does not compute some selected measures from
  * the definitions their published figures were approved on (or could not
- * say). Personal impact is then unavailable for them: `refused` names each,
+ * say). Household impact is then unavailable for them: `refused` names each,
  * with how its definition differs. `unchecked`: the answer reported no
  * definitions at all (a build before #125), so nothing could be checked.
  */

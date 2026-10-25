@@ -139,7 +139,7 @@ describe("Personal impact's live answers", () => {
 
 // W5's page follow-up to #125: each measure's answer must be computed from
 // the definition its receipt approved, checked on both stages.
-describe("Personal impact's definitions", () => {
+describe("Household impact's definitions", () => {
   const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one" };
   const expectedDefinitions = DEFINITIONS;
   const [first, second] = [...HOUSEHOLD_FIXTURE.included].sort();

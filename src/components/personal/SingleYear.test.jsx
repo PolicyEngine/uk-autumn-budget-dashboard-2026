@@ -690,6 +690,117 @@ describe("a household calculation from other definitions", () => {
     expect(household.map((body) => body.include)).toEqual([[], [], ["by_policy", "sweep"]]);
   });
 
+  // Review of 4be6bd9f (findings 1 and 2): a refusal answers the answers,
+  // year and policies sent, and gives way once they change, as #128's
+  // headline does. It never lists a measure no longer selected, nor refuses
+  // one as having no approved definition when it is only no longer selected
+  const NOTICE = "Household impact is unavailable for the selected measures";
+  const UNCHECKED = "Household impact can't be checked right now";
+  const PROMPT = "Choose your answers and press Calculate.";
+  const SELECT = /Select at least one policy/;
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 600));
+  const tab = (selectedPolicies) => (
+    <PersonalImpactTab selectedPolicies={selectedPolicies} policies={POLICIES_FOR_TEST} year={2029} />
+  );
+  const editAnswers = () => fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+  const uncheckedApi = () => {
+    household = [];
+    vi.stubGlobal("fetch", vi.fn(async (url, init = {}) => {
+      const body = JSON.parse(init.body);
+      household.push(body);
+      return json(householdAnswerFor(body));
+    }));
+  };
+
+  it("removing the only selected measure, refused, leaves the prompt to select one", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab({ selectedPolicies: [changedId] });
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    rerender(tab([]));
+    await settle();
+    const region = await results();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(region).getByText(SELECT)).toBeInTheDocument();
+  });
+
+  it("removing the refused measure while others stay asks again without Calculate", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    const rest = SUPPORTED_POLICY_IDS.filter((id) => id !== changedId);
+    rerender(tab(rest));
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(household.at(-1).policies).toEqual(rest);
+  });
+
+  it("an edit after a refusal brings back the prompt, and so does removing the measure then", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    editAnswers();
+    expect(within(await results()).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(await results()).getByText(PROMPT)).toBeInTheDocument();
+    const asked = household.length;
+    rerender(tab(SUPPORTED_POLICY_IDS.filter((id) => id !== changedId)));
+    await settle();
+    const region = await results();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    // The edited answers wait for Calculate
+    expect(household.length).toBe(asked);
+  });
+
+  it("can't-be-checked gives way when every measure is taken out of the bar", async () => {
+    uncheckedApi();
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(UNCHECKED)).toBeInTheDocument();
+    rerender(tab([]));
+    const region = await results();
+    expect(within(region).queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(within(region).getByText(SELECT)).toBeInTheDocument();
+  });
+
+  it("can't-be-checked gives way to the prompt after an edit and a measure taken out", async () => {
+    uncheckedApi();
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(UNCHECKED)).toBeInTheDocument();
+    editAnswers();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const asked = household.length;
+    rerender(tab(rest));
+    await settle();
+    const region = await results();
+    expect(within(region).queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    expect(household.length).toBe(asked);
+  });
+
+  it("a submission restored on coming back that names a removed measure shows the prompt, not a refusal", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    // The calculator is rebuilt (a gate notice replaced it, or the snapshot
+    // changed) with one measure fewer selected
+    first.unmount();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const asked = household.length;
+    render(tab(rest), { wrapper: PublishedMeasures });
+    await settle();
+    const region = await results();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    expect(household.length).toBe(asked);
+  });
+
   // Review of 0608183, finding 2: published before the deploy that
   // registers it, or after a rollback past it
   it("lists a measure the running code doesn't register as unavailable, with the remove action", async () => {

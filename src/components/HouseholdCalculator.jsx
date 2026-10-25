@@ -399,21 +399,26 @@ function HouseholdCalculator({
   const unavailableNames = unmodelled.map((measure) =>
     policies.find((policy) => policy.id === measure.id)?.name ?? measure.name ?? measure.id,
   );
+  // The answers, year or policies differ from those of the result shown
+  const changed =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
   // Measures the API's code does not compute from their approved
-  // definitions (useHouseholdImpact): unavailable, with the remove action
+  // definitions (useHouseholdImpact): unavailable, with the remove action.
+  // A refusal answers the answers, year and policies sent, so it gives way
+  // once they change, as the headline does: it would otherwise list
+  // measures no longer selected, or refuse one as having no approved
+  // definition when it is only no longer selected (the definitions are the
+  // selection's), and a submission restored on coming back is one of those
   const refusedDefinitions =
-    householdResult.status === "error" && householdResult.error?.kind === "definition"
+    !changed && householdResult.status === "error" && householdResult.error?.kind === "definition"
       ? householdResult.error.refused.map((item) => ({
           id: item.id,
           name: policies.find((policy) => policy.id === item.id)?.name ?? item.id,
           why: item.problems,
         }))
       : [];
-  // The answers, year or policies differ from those of the result shown
-  const changed =
-    submitted !== null &&
-    requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
-      requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
   // Busy while the headline is calculated, and while the slower parts are
   // for these same answers; changed answers can be sent once the headline
   // is back, without waiting for the split by policy and the sweep

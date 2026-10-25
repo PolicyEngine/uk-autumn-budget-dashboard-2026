@@ -27,7 +27,7 @@ and their module state), the household calculation (``household_impact``,
 ``personal_impact``, ``publication.combine``), the request's defaults in
 ``api``, and the locked dependencies beyond the versions the page compares.
 A change to any of them since a receipt, or to the image's base layers,
-reaches Personal impact with the definition unchanged. Listing them needs
+reaches Household impact with the definition unchanged. Listing them needs
 git history, which the API image lacks, so ``publish definitions`` lists
 them from the checkout it runs in (``run_check``): the paths committed since
 each receipt's commit that could change a calculation, by the area run's
@@ -464,7 +464,7 @@ def changes_lines(rows: list[dict], changes_since) -> list[str]:
     that could change a calculation, as ``changes_since`` lists them.
 
     A definition binds only a measure's parameter changes and its
-    modifier's own module, so these reach Personal impact with every
+    modifier's own module, so these reach Household impact with every
     definition the same (runbook G5, step 1). Each commit is listed once,
     with the measures whose receipts were made at it.
     """

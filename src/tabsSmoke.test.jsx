@@ -187,7 +187,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
         // The form's first box is the head's age, with its default
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
         // Nothing is asked before Calculate
-        expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
+        expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toEqual([]);
         // Every answer has a default: one press asks the household API in
         // two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
@@ -299,8 +299,9 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
       "fetch",
       vi.fn(async (input, init = {}) => {
         const url = typeof input === "string" ? input : input.url;
-        // The household API never answers here
-        if (url === HOUSEHOLD_API) return new Promise(() => {});
+        // The household API never answers here (every request names the
+        // definitions it expects, so it is told by its route)
+        if (route(url) === HOUSEHOLD_API) return new Promise(() => {});
         return serve(input, init);
       }),
     );
