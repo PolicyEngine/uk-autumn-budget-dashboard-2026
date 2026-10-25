@@ -10,13 +10,11 @@ that:
   versions as the revision's image, so the tagged URL really serves it;
 - ``/api/personal-impact`` answers a plain household with finite numbers
   for every year and policy the image's calculator covers;
-- ``/api/lifecycle/calculate``, the route the Personal impact tab calls,
-  answers a 19-year-old with one row a year, age and year rising by one,
-  starting in 2026 at 19, with no fall in pay before retirement (the
-  under-22 bug cut it by more than half at 22). The start year and the pay
-  path are checked only on an image whose calculator declares its input
-  year (``lifecycle_calculator.INPUT_YEAR``), so a rollback to a revision
-  older than that fix is still checked for shape but not refused for it.
+- ``/api/household-impact``, the route the Personal impact tab calls,
+  answers one household's headline with finite numbers and a change equal
+  to reform minus baseline. Checked only on an image that has the route
+  (``expected_household_impact``), so a rollback to a revision older than
+  it is not refused for lacking it.
 
 It does not check that the answers are right; the household fixtures do
 that (``household_route``), once the team has written them.
@@ -34,6 +32,7 @@ Usage::
 """
 
 import argparse
+import importlib.util
 import json
 import math
 import sys
@@ -45,20 +44,6 @@ from typing import Any, Optional
 from uk_budget_data.runtime_identity import runtime_identity
 
 SMOKE_HOUSEHOLD = {"employment_income": 30_000}
-
-LIFECYCLE_ROUTE = "/api/lifecycle/calculate"
-# A 19-year-old: the under-22 bug divided this salary by 2.2 from age 22.
-SMOKE_LIFECYCLE_HOUSEHOLD = {
-    "current_age": 19,
-    "current_salary": 23_600,
-    "retirement_age": 67,
-    "life_expectancy": 85,
-}
-# The dashboard's year: the inputs describe it, and the first row is in it.
-LIFECYCLE_START_YEAR = 2026
-# The largest year-on-year fall in pay allowed before retirement. The
-# model's age path never falls; the under-22 bug's fall was 54%.
-LIFECYCLE_MAX_PAY_FALL = 0.10
 
 
 def numbers(value: Any):
@@ -188,28 +173,33 @@ def impact_problems(
     return problems
 
 
-def expected_lifecycle() -> dict:
-    """What this build's lifecycle calculator declares: its input year, or
-    None for a calculator older than the declaration."""
-    from uk_budget_data import lifecycle_calculator
+HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
+# The headline alone (no per-measure runs, no sweep): two runs, a few
+# seconds on a warm instance.
+SMOKE_HOUSEHOLD_IMPACT = {
+    "year": 2028,
+    "policies": ["badr_lifetime_limit_cut"],
+    "household": {"employment_income": 30_000, "salary_year": 2028},
+    "include": [],
+}
 
-    return {"input_year": getattr(lifecycle_calculator, "INPUT_YEAR", None)}
+
+def expected_household_impact() -> dict:
+    """Whether this build has the single-year household route: an image
+    older than it declares none, and is not checked for it."""
+    return {
+        "declared": importlib.util.find_spec("uk_budget_data.household_impact")
+        is not None
+    }
 
 
-def lifecycle_problems(body: Any, input_year: Optional[int]) -> list[str]:
-    """Ways a lifecycle answer for ``SMOKE_LIFECYCLE_HOUSEHOLD`` is not sane.
-
-    Always: an object reporting no failure, with ``data`` a non-empty list
-    of rows, every number finite, each row a numeric ``employment_income``,
-    and ``age`` and ``year`` each rising by exactly one from row to row.
-
-    When ``input_year`` is declared (the image's calculator has
-    ``INPUT_YEAR``), also: the first row is ``LIFECYCLE_START_YEAR`` at the
-    household's age, the rows run to its life expectancy, and pay never
-    falls by more than ``LIFECYCLE_MAX_PAY_FALL`` from one working year to
-    the next.
-    """
-    route = LIFECYCLE_ROUTE
+def household_impact_problems(body: Any) -> list[str]:
+    """Ways a single-year answer for ``SMOKE_HOUSEHOLD_IMPACT`` is not a
+    complete calculation: an object reporting no failure, every number
+    finite, a finite baseline, reform and change with the change equal to
+    reform minus baseline (to the penny), and the engine's versions named.
+    Whether the numbers are right is for the tests, not this check."""
+    route = HOUSEHOLD_IMPACT_ROUTE
     if not isinstance(body, dict):
         return [f"{route} did not return an object"]
     markers = error_markers(body)
@@ -217,52 +207,17 @@ def lifecycle_problems(body: Any, input_year: Optional[int]) -> list[str]:
         return [f"{route} reported a failure at {', '.join(markers)}"]
     if not all(math.isfinite(n) for n in numbers(body)):
         return [f"{route} returned a non-finite number"]
-    rows = body.get("data")
-    if (
-        not isinstance(rows, list)
-        or not rows
-        or not all(isinstance(row, dict) for row in rows)
+    net = body.get("net_income")
+    if not isinstance(net, dict) or not all(
+        _finite(net.get(key)) for key in ("baseline", "reform", "change")
     ):
-        return [f"{route} returned no rows"]
-    for key in ("age", "year", "employment_income"):
-        if not all(_finite(row.get(key)) for row in rows):
-            return [f"{route} has a row with no {key}"]
+        return [f"{route} has no baseline, reform and change"]
     problems = []
-    for key in ("age", "year"):
-        values = [row[key] for row in rows]
-        if values != list(range(values[0], values[0] + len(values))):
-            problems.append(f"{route}: {key} does not rise by one a year")
-    if input_year is None or problems:
-        return problems
-
-    household = SMOKE_LIFECYCLE_HOUSEHOLD
-    first = rows[0]
-    if first["year"] != LIFECYCLE_START_YEAR:
-        problems.append(
-            f"{route} starts in {first['year']}, not {LIFECYCLE_START_YEAR}"
-        )
-    if first["age"] != household["current_age"]:
-        problems.append(
-            f"{route} starts at age {first['age']}, not "
-            f"{household['current_age']}"
-        )
-    if rows[-1]["age"] != household["life_expectancy"]:
-        problems.append(
-            f"{route} ends at age {rows[-1]['age']}, not "
-            f"{household['life_expectancy']}"
-        )
-    working = [
-        row for row in rows if row["age"] <= household["retirement_age"]
-    ]
-    for before, after in zip(working, working[1:]):
-        if after["employment_income"] < before["employment_income"] * (
-            1 - LIFECYCLE_MAX_PAY_FALL
-        ):
-            problems.append(
-                f"{route}: pay falls from {before['employment_income']:.0f} "
-                f"at {before['age']} to {after['employment_income']:.0f} "
-                f"at {after['age']}"
-            )
+    if abs(net["reform"] - net["baseline"] - net["change"]) > 0.011:
+        problems.append(f"{route}: the change is not reform minus baseline")
+    engine = body.get("engine")
+    if not isinstance(engine, dict) or not engine.get("policyengine-uk"):
+        problems.append(f"{route} does not name its policyengine-uk version")
     return problems
 
 
@@ -315,13 +270,14 @@ def run_smoke(
     expected: Optional[dict] = None,
     years: Optional[list[str]] = None,
     policies: Optional[list[str]] = None,
-    lifecycle: Optional[dict] = None,
+    household_impact: Optional[dict] = None,
 ) -> dict:
     """Run every check. Returns ``{"pass": bool, "problems": [...]}``.
 
     ``expected`` is the image's identity, ``years``/``policies`` its
-    calculator's coverage and ``lifecycle`` what its lifecycle calculator
-    declares (``expected_lifecycle``); each defaults to this process's own.
+    calculator's coverage and ``household_impact`` whether it
+    has the single-year route (``expected_household_impact``); each
+    defaults to this process's own.
     """
     expected = expected or runtime_identity()
     problems: list[str] = []
@@ -340,18 +296,18 @@ def run_smoke(
     if impact is not None:
         problems += impact_problems(impact.json(), years, policies)
 
-    lifecycle = expected_lifecycle() if lifecycle is None else lifecycle
-    answer = _request(
-        client,
-        "POST",
-        LIFECYCLE_ROUTE,
-        problems,
-        json=SMOKE_LIFECYCLE_HOUSEHOLD,
-    )
-    if answer is not None:
-        problems += lifecycle_problems(
-            answer.json(), lifecycle.get("input_year")
+    if household_impact is None:
+        household_impact = expected_household_impact()
+    if household_impact.get("declared"):
+        single = _request(
+            client,
+            "POST",
+            HOUSEHOLD_IMPACT_ROUTE,
+            problems,
+            json=SMOKE_HOUSEHOLD_IMPACT,
         )
+        if single is not None:
+            problems += household_impact_problems(single.json())
 
     return {"pass": not problems, "problems": problems, "version": reported}
 
@@ -391,8 +347,8 @@ class StdlibClient:
 
 def print_expectations() -> dict:
     """What a revision's image says it is: its identity, the years and
-    policies its calculator covers, and its lifecycle calculator's input
-    year. The pipelines run the same thing inside the image, written out
+    policies its calculator covers, and whether it has the single-year
+    route. The pipelines run the same thing inside the image, written out
     (so an image older than this function answers too); the checker reads
     the result as data."""
     years, policies = expected_coverage()
@@ -400,7 +356,7 @@ def print_expectations() -> dict:
         "identity": runtime_identity(),
         "years": years,
         "policies": policies,
-        "lifecycle": expected_lifecycle(),
+        "household_impact": expected_household_impact(),
     }
 
 
@@ -428,20 +384,15 @@ def read_expectations(path: str, expected_git_sha: str) -> dict:
             or not all(isinstance(v, str) and v for v in values)
         ):
             problems.append(f"names no {key}")
-    # Optional: a file written before the lifecycle check names none, and
-    # its lifecycle answer is then checked for shape only.
-    lifecycle = data.get("lifecycle") if isinstance(data, dict) else None
-    if lifecycle is not None and not (
-        isinstance(lifecycle, dict)
-        and (
-            lifecycle.get("input_year") is None
-            or (
-                isinstance(lifecycle.get("input_year"), int)
-                and not isinstance(lifecycle.get("input_year"), bool)
-            )
-        )
+    # An older image's file may also name a "lifecycle" entry, for a route
+    # this checker no longer calls; it is ignored.
+    # Optional: a file written before the single-year route names none,
+    # and the route is then not checked.
+    single = data.get("household_impact") if isinstance(data, dict) else None
+    if single is not None and not (
+        isinstance(single, dict) and isinstance(single.get("declared"), bool)
     ):
-        problems.append("names a lifecycle input year that is not a year")
+        problems.append("names a household_impact entry that is not declared")
     if problems:
         raise ValueError(
             f"the expectations file {path} " + "; ".join(problems)
@@ -474,7 +425,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             data["identity"],
             data["years"],
             data["policies"],
-            data.get("lifecycle") or {},
+            data.get("household_impact") or {},
         )
     else:
         result = run_smoke(StdlibClient(args.base_url, args.timeout), sha)

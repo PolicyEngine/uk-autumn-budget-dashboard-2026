@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { POLICY_COLORS } from "../utils/policyConfig";
 
@@ -13,10 +13,9 @@ const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onS
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the lifetime chart's "About this model") link to
-    // these
+    // Other views (e.g. the map and Personal impact) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
-    expect(METHOD_SECTIONS.lifetime).toBe("method-lifetime");
+    expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
     for (const id of Object.values(METHOD_SECTIONS)) {
       expect(container.querySelector(`#${id}`)).not.toBeNull();
@@ -77,9 +76,16 @@ describe("MethodologyTab", () => {
     const flow = screen.getByRole("list", { name: "How the numbers are made" });
     expect(within(flow).getAllByRole("listitem")).toHaveLength(5);
 
-    const table = screen.getByRole("table");
+    const [table, notModelled] = screen.getAllByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(MEASURE_MODELLING.length);
+    // The likely measures the model cannot cost, each with its reason
+    const notModelledRows = within(notModelled).getAllByRole("row").slice(1);
+    expect(notModelledRows).toHaveLength(NOT_MODELLED.length);
+    for (const measure of NOT_MODELLED) {
+      expect(within(notModelled).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+      expect(notModelled).toHaveTextContent(measure.why);
+    }
     for (const measure of MEASURE_MODELLING) {
       // Every measure is one the charts colour, by the same name
       expect(POLICY_COLORS[measure.name]).toBeDefined();
@@ -92,14 +98,19 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("holds a marked slot for the single-year calculation", () => {
+  it("describes the household calculation in its slot", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
-      "Single-year calculation",
+      "Household calculation",
     );
-    expect(slot).toHaveTextContent("To follow");
-    expect(slot).toHaveTextContent("same engine and measures as the national figures");
+    expect(slot).not.toHaveTextContent("To follow");
+    expect(slot).toHaveTextContent("same measures as the national figures");
+    expect(slot).toHaveTextContent("OBR's average earnings forecast");
+    expect(slot).not.toHaveTextContent("in the national figures only");
+    expect(slot).toHaveTextContent("Every policy applied");
+    expect(slot).toHaveTextContent("employer NI relief for under-25s");
+    expect(slot).toHaveTextContent("if received");
   });
 
   it("switches views from its links, in place", () => {
@@ -110,7 +121,9 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");
-    fireEvent.click(screen.getByRole("link", { name: "See the Young people tab" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("young");
+    const young = screen.getByRole("link", { name: "See Young people under Population impact" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    fireEvent.click(young);
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
   });
 });

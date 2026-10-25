@@ -112,7 +112,7 @@
   right: 2px;
   width: 6px;
   height: 6px;
-  background: #fbbf24;
+  background: var(--c-diff-medium);
   border-radius: 50%;
 }
 
@@ -128,7 +128,7 @@
   right: 2px;
   width: 6px;
   height: 6px;
-  background: #ef4444;
+  background: var(--c-diff-large);
   border-radius: 50%;
 }
 
@@ -145,7 +145,7 @@
   align-items: center;
   gap: 6px;
   font-size: var(--fs-caption);
-  color: #64748b;
+  color: var(--pe-gray-500);
 }
 
 .legend-dot {
@@ -155,15 +155,15 @@
 }
 
 .legend-dot.diff-small {
-  background: #10b981;
+  background: var(--c-diff-small);
 }
 
 .legend-dot.diff-medium {
-  background: #fbbf24;
+  background: var(--c-diff-medium);
 }
 
 .legend-dot.diff-large {
-  background: #ef4444;
+  background: var(--c-diff-large);
 }
 
 /* Responsive adjustments */
@@ -188,7 +188,7 @@
     position: sticky;
     left: 0;
     z-index: 1;
-    background: #ffffff;
+    background: var(--c-surface);
     white-space: normal;
     min-width: 128px;
     max-width: 150px;
@@ -228,41 +228,7 @@
   margin-left: auto;
 }
 
-.obr-view-switch {
-  display: inline-flex;
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  overflow: hidden;
-}
-
-.obr-view-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* With the switch's 1px border, as tall as the 36px OBR basis pill */
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  background: transparent;
-  color: var(--pe-gray-600);
-  font: inherit;
-  font-size: var(--fs-small);
-  cursor: pointer;
-}
-
-.obr-view-option + .obr-view-option {
-  border-left: 1px solid var(--card-border);
-}
-
-.obr-view-option[aria-pressed="true"] {
-  background: var(--band-teal);
-  color: #fff;
-}
-
-.obr-view-option:focus-visible {
-  outline: 2px solid var(--band-teal);
-  outline-offset: -2px;
-}
+/* .obr-view-switch and .obr-view-option live in ViewSwitch.css */
 
 .comparison-table-wrapper[hidden],
 .comparison-legend[hidden] {

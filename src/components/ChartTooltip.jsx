@@ -21,6 +21,8 @@ export const signed = (text, value) => (value < 0 ? `−${text}` : text);
  *   one value from the hovered point instead of the series
  * @param {boolean} [props.showPlus] - Mark rises with "+" as well as falls
  *   with "−" (for changes)
+ * @param {boolean} [props.showZero] - Keep rows whose value is zero (by
+ *   default they are left out)
  */
 function ChartTooltip({
   active,
@@ -33,6 +35,7 @@ function ChartTooltip({
   grouped = true,
   single,
   showPlus = false,
+  showZero = false,
 }) {
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
@@ -48,11 +51,13 @@ function ChartTooltip({
     : null;
   const rows = singleRows ?? payload
     .filter((entry) => entry.dataKey !== netKey && entry.value !== null && entry.value !== undefined)
-    .filter((entry) => Math.abs(Number(entry.value)) > 1e-9)
+    .filter((entry) => showZero || Math.abs(Number(entry.value)) > 1e-9)
     .map((entry) => ({
       key: String(entry.dataKey),
       name: entry.name,
       value: Number(entry.value),
+      // A value already written out (FloatingTooltip's TooltipRows)
+      text: entry.text,
       color: POLICY_COLORS[entry.name] ?? entry.color ?? entry.fill ?? entry.stroke,
     }));
   const net = netKey ? payload.find((entry) => entry.dataKey === netKey) : null;
@@ -77,7 +82,7 @@ function ChartTooltip({
             <div key={row.key} className="chart-tooltip-row">
               <span className="chart-tooltip-swatch" style={{ background: row.color }} />
               <span className="chart-tooltip-name">{row.name}</span>
-              <span className="chart-tooltip-value">{valueText(row.value)}</span>
+              <span className="chart-tooltip-value">{row.text ?? valueText(row.value)}</span>
             </div>
           ))}
         </div>

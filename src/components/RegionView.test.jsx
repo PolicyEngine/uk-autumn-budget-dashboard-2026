@@ -5,7 +5,11 @@ import { downloadFile } from "../utils/downloadFile";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import { EXPORT_COLUMNS } from "../utils/geography/columns";
 import { parseCsv } from "../utils/publication/csv";
-import { geographyFetch } from "../test/geographyFixture";
+import {
+  AREA_ROUTING_URL,
+  areaRouting,
+  geographyFetch,
+} from "../test/geographyFixture";
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -81,6 +85,19 @@ describe("RegionView", () => {
     const eastOfEngland = within(rowFor("East of England"));
     expect(eastOfEngland.getByText("No change")).toBeInTheDocument();
     expect(eastOfEngland.getByText("0%")).toBeInTheDocument();
+  });
+
+  it("still shows results by region on a release that routes no results by area", async () => {
+    // The area run publishes regions only from an enhanced FRS run, which
+    // does not read the routing.
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ [AREA_ROUTING_URL]: areaRouting("not_available") }),
+    );
+    renderView();
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(within(rowFor("North East")).getByText("+1.23%")).toBeInTheDocument();
+    expect(screen.queryByText(/not available on this release/)).not.toBeInTheDocument();
   });
 
   it("says a withheld region is not published, and shows no figure for it", async () => {

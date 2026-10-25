@@ -1,37 +1,11 @@
 /* Living standards view: the dashboard's cards, section headings and chart
    theme (globals.css), plus the few parts the other views do not have:
-   in-card notes and source lines, the dot plot, forecast tiles and tables,
-   and the provenance line. Colours come from the PolicyEngine tokens. */
+   in-card notes and source lines, the dot plot, and forecast tiles and
+   tables. Colours come from the PolicyEngine tokens. */
 
-/* Provenance: the view's engine, data and demo status, said once */
-.ls-provenance {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 8px 0 0;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.ls-demo-badge {
-  flex: 0 0 auto;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.6;
-  color: #92400e;
-  background: #fef3c7;
-}
-
-/* Sections: two-up rows of cards, 20px apart, and notes under them */
+/* Sections: two-up rows of cards, 20px apart */
 .ls-section > .charts-grid + .charts-grid {
   margin-top: 20px;
-}
-
-.ls-section > .note {
-  margin-top: 16px;
 }
 
 /* Cards */
@@ -46,15 +20,35 @@
   color: var(--pe-gray-800);
 }
 
+/* Controls: compact pills in one controls row */
 .ls-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   margin: 4px 0 12px;
 }
 
 .ls-controls:empty {
   margin: 0;
+}
+
+/* Compact pills, so a card's controls fit one line in a half-width card
+   at 1440 (they wrap on a phone) */
+.ls-controls .pill-select-light .pill-select-toggle {
+  gap: 4px;
+  height: 30px;
+  padding: 0 6px 0 9px;
+  font-size: var(--fs-micro);
+}
+
+.ls-controls .pill-select-light .pill-select-badge {
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--fs-micro);
+}
+
+.ls-controls .obr-view-switch.is-compact .obr-view-option {
+  padding: 0 8px;
 }
 
 /* In-card pill lists open from the pill's left edge, inside the card */
@@ -77,7 +71,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 24px;
+  line-height: 22px;
   flex-shrink: 1;
 }
 
@@ -86,10 +80,36 @@
   flex-shrink: 0;
 }
 
+/* A card's pills wrap onto a second line rather than truncate. A view
+   with no pills of its own keeps another view's in place, hidden, so the
+   card does not jump when the view changes (ViewCard). */
+.ls-controls > .pill-select {
+  flex: 0 1 auto;
+}
+
+.ls-controls-placeholder {
+  display: contents;
+  visibility: hidden;
+}
+
 .ls-card-footer {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* Reading notes inside "About this chart", under the definition */
+.ls-about-notes {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.ls-about-notes li + li {
+  margin-top: 6px;
 }
 
 /* "About this chart" sits at the foot of the card, so in two cards side
@@ -137,11 +157,58 @@
   .charts-grid > div:not(:only-child) > .ls-card-footer {
     grid-row: 7;
   }
+
+  /* A title that wraps beside a one-line title: both start on the same
+     line, rather than the shorter one centred in the taller row */
+  .charts-grid > .ls-card:not(:only-child) h3 {
+    align-self: start;
+  }
 }
 
 /* An empty plot keeps the height of the chart it stands in for */
 .ls-card .plot-empty {
-  min-height: 330px;
+  min-height: 318px;
+}
+
+/* A Recharts plot is at least its chart's height (set inline) and fills
+   its row: beside a taller plot it stretches, so the two x axes stay on
+   one line. The drawing is placed absolutely, so it adds no height of its
+   own and the row never grows from it. */
+.ls-plot-fill {
+  position: relative;
+}
+
+.ls-plot-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* The dot plot fills its row too, its axis at the foot: the axis rule
+   level with the x axis of the chart beside it (48px above the plot's
+   foot, as LsCharts' x axis with its title room) */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  display: flex;
+  flex-direction: column;
+}
+
+.ls-card .chart-plot > .ls-dot-plot {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.ls-card .ls-dot-plot .dot-axis {
+  margin-top: auto;
+  min-height: 48px;
+}
+
+/* The head holds only the "All people" label, which sits on the first
+   row's rule; kept 10px tall (the room the charts keep above their plot),
+   the first row starts level with the plot beside it */
+.ls-card .ls-dot-plot .dot-head,
+.ls-card .ls-dot-plot .dot-head .dot-plot-area {
+  min-height: 10px;
 }
 
 .ls-source {
@@ -149,6 +216,11 @@
   font-size: var(--fs-micro);
   line-height: 1.5;
   color: var(--pe-gray-500);
+}
+
+/* The source line closes "About this chart" */
+.disclosure-content > .ls-source {
+  margin-top: 12px;
 }
 
 .ls-source a {
@@ -160,24 +232,6 @@
   color: var(--pe-gray-600);
 }
 
-/* What the baseline leaves out: the caveats as body text */
-.main-content .ls-caveats {
-  padding: var(--card-padding);
-}
-
-.ls-caveats ul {
-  margin: 0;
-  padding-left: 18px;
-  list-style: disc;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.ls-caveats li + li {
-  margin-top: 6px;
-}
-
 .stat-sub.change-positive,
 .ls-table td.change-positive {
   color: var(--pe-teal-700);
@@ -185,7 +239,7 @@
 
 .stat-sub.change-negative,
 .ls-table td.change-negative {
-  color: #b91c1c;
+  color: var(--c-loss-text);
 }
 
 .ls-section-controls {
@@ -238,61 +292,10 @@
   font-style: italic;
 }
 
-/* About this data */
-.ls-meta-list {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 16px;
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.6;
-  color: var(--pe-gray-600);
-}
-
-.ls-meta-list dt {
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
-.ls-meta-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.ls-meta-list a,
-.ls-meta-notes a {
-  color: var(--pe-teal-700);
-}
-
-.ls-meta-notes {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  list-style: disc;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-.ls-meta-notes li + li {
-  margin-top: 4px;
-}
-
-.ls-technical-notes {
-  margin-top: 12px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-.ls-technical-notes summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
 /* Poverty and income by group: a dot plot drawn in HTML */
 .ls-dot-plot {
-  --dot-cols: minmax(150px, 250px) minmax(0, 1fr) 170px;
-  margin: 8px 0 4px;
+  --dot-cols: minmax(150px, 250px) minmax(0, 1fr) 190px;
+  margin: 0;
   font-size: var(--fs-caption);
   color: var(--pe-gray-700);
 }
@@ -353,15 +356,16 @@
   white-space: nowrap;
 }
 
-.ls-dot-plot .dot-legend {
+/* The two years' dots, in the legend row under the plot */
+.ls-card .dot-legend {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  font-size: var(--fs-micro);
-  color: var(--pe-gray-500);
+  justify-content: center;
+  gap: 20px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
 }
 
-.ls-dot-plot .dot-legend i {
+.ls-card .dot-legend i {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -369,12 +373,12 @@
   margin-right: 3px;
 }
 
-.ls-dot-plot .dot-legend i.from,
+.ls-card .dot-legend i.from,
 .ls-dot-plot .dot.from {
   background: var(--pe-gray-400);
 }
 
-.ls-dot-plot .dot-legend i.to,
+.ls-card .dot-legend i.to,
 .ls-dot-plot .dot.to {
   background: var(--pe-teal-500);
 }
@@ -384,7 +388,7 @@
   top: 50%;
   height: 2px;
   margin-top: -1px;
-  background: #b8c4cc;
+  background: var(--c-axis);
 }
 
 .ls-dot-plot .dot-arrow {
@@ -398,12 +402,12 @@
 
 .ls-dot-plot .dot-arrow.right {
   right: 6px;
-  border-left: 6px solid #8a9aa5;
+  border-left: 6px solid var(--c-no-change);
 }
 
 .ls-dot-plot .dot-arrow.left {
   left: 6px;
-  border-right: 6px solid #8a9aa5;
+  border-right: 6px solid var(--c-no-change);
 }
 
 .ls-dot-plot .dot {
@@ -445,8 +449,12 @@
 }
 
 .ls-dot-plot .dot-chip.bad {
-  background: #fdf0e1;
-  color: #b45309;
+  background: var(--c-loss-soft);
+  color: var(--c-loss-text);
+}
+
+.ls-dot-plot .dot-chip {
+  white-space: nowrap;
 }
 
 .ls-dot-plot .dot-chip.flat {
@@ -464,26 +472,20 @@
 }
 
 @media (max-width: 768px) {
-  .ls-provenance {
-    font-size: var(--fs-caption);
-  }
-
   .ls-section-controls {
     justify-content: flex-start;
   }
+}
 
-  .ls-meta-list {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
+/* A narrow card (a phone, or one of a pair): label on its own line, then
+   the plot and the values */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  container-type: inline-size;
+}
 
-  .ls-meta-list dd {
-    margin-bottom: 8px;
-  }
-
-  /* Phones: label on its own line, then the plot and the values */
+@container (max-width: 640px) {
   .ls-dot-plot {
-    --dot-cols: minmax(0, 1fr) 150px;
+    --dot-cols: minmax(0, 1fr) 176px;
   }
 
   .ls-dot-plot .dot-head,
@@ -510,12 +512,6 @@
     display: none;
   }
 
-  .ls-dot-plot .dot-head .dot-legend {
-    grid-row: 1;
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    margin-bottom: 18px;
-  }
 
   .ls-dot-plot .dot-head .dot-plot-area {
     grid-row: 2;

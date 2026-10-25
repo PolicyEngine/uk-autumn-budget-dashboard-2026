@@ -1,24 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { toChangeAxis } from "./publication/scatter";
 import {
-  CHANGE_AXIS_DOMAIN,
+  allocateDots,
   changeBandLabel,
-  EDGE_STRIP,
   edgeOf,
+  householdsPerDot,
   incomeBandLabel,
+  panelDots,
   parseScatterCsv,
   scatterCsv,
   scatterDots,
   scatterView,
 } from "./householdScatter";
 
+const HEADER =
+  "reform_id,reform_name,year,income_band,change_band,change_band_upper,households,income_basis_year";
 const CSV = [
-  "reform_id,reform_name,year,income_band,change_band,change_band_upper,households",
-  "a,Measure A,2029,20000.0,-150.0,-100.0,151000.0",
-  "a,Measure A,2029,25000.0,-1.0,1.0,98000.0",
-  "a,Measure A,2029,25000.0,5000.0,5000.0,7000.0",
-  "a,Measure A,2030,20000.0,-150.0,-100.0,140000.0",
-  'all_combined,"All, together",2029,20000.0,-200.0,-150.0,250000.0',
+  HEADER,
+  "a,Measure A,2029,20000.0,-150.0,-100.0,151000.0,2027",
+  "a,Measure A,2029,25000.0,-1.0,1.0,98000.0,2027",
+  "a,Measure A,2029,25000.0,5000.0,5000.0,7000.0,2027",
+  "a,Measure A,2030,20000.0,-150.0,-100.0,140000.0,2027",
+  'all_combined,"All, together",2029,20000.0,-200.0,-150.0,250000.0,2027',
 ].join("\n");
 
 const ready = { status: "ready", rows: parseScatterCsv(CSV), error: null };
@@ -36,6 +39,7 @@ describe("parseScatterCsv", () => {
       change_band: -150,
       change_band_upper: -100,
       households: 151000,
+      income_basis_year: 2027,
     });
     expect(rows[4].reform_name).toBe("All, together");
   });
@@ -53,11 +57,15 @@ describe("parseScatterCsv", () => {
   });
 
   it("refuses a value that is not a number", () => {
+    expect(() => parseScatterCsv(`${HEADER}\na,A,2029,x,0,1,1,2027\n`)).toThrow(
+      /income_band/,
+    );
+    // The file before households were banded by one year's income
     expect(() =>
       parseScatterCsv(
-        "reform_id,reform_name,year,income_band,change_band,change_band_upper,households\na,A,2029,x,0,1,1\n",
+        "reform_id,reform_name,year,income_band,change_band,change_band_upper,households\na,A,2029,0,0,1,1\n",
       ),
-    ).toThrow(/income_band/);
+    ).toThrow(/unexpected columns/);
   });
 });
 
@@ -157,8 +165,10 @@ describe("scatterDots", () => {
     { incomeBand: 30000, changeBand: 1, changeBandUpper: 10, households: 4000 },
     { incomeBand: 35000, changeBand: -10, changeBandUpper: -1, households: 40000 },
     { incomeBand: 60000, changeBand: 5000, changeBandUpper: 5000, households: 60000 },
-    { incomeBand: 90000, changeBand: -5000, changeBandUpper: -5000, households: 40000 },
+    { incomeBand: 145000, changeBand: -5000, changeBandUpper: -5000, households: 40000 },
+    { incomeBand: 145000, changeBand: 100, changeBandUpper: 150, households: 45000 },
   ];
+  const total = 40;
   const of = (dots, cell) =>
     dots.filter(
       (dot) =>
@@ -167,69 +177,146 @@ describe("scatterDots", () => {
         dot.changeBandUpper === cell.changeBandUpper,
     );
 
-  it("draws about one dot per 20,000 households, and at least one a cell", () => {
-    const dots = scatterDots(cells);
-    expect(cells.map((cell) => of(dots, cell).length)).toEqual([8, 3, 1, 2, 3, 2]);
+  it("shares the dots out by households, adding up to the total exactly", () => {
+    // 400,000 households over 40 dots: 10,000 a dot
+    expect(householdsPerDot(cells, total)).toBe(10000);
+    const counts = allocateDots(cells, total);
+    expect(counts).toEqual([15, 6, 0, 4, 6, 4, 5]);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(total);
+    expect(allocateDots(cells).reduce((a, b) => a + b, 0)).toBe(500);
   });
 
   it("places the same dots on every call", () => {
-    expect(scatterDots(cells)).toEqual(scatterDots(cells));
+    expect(scatterDots(cells, { total })).toEqual(scatterDots(cells, { total }));
   });
 
-  it("keeps each dot inside its own cell on the symlog axis, and carries the cell's count", () => {
-    for (const dot of scatterDots(cells).filter((d) => !d.edge)) {
-      expect(dot.income).toBeGreaterThan(dot.incomeBand);
+  it("keeps each dot inside its own cell, in £, and carries the cell's count", () => {
+    for (const dot of scatterDots(cells, { total })) {
+      expect(dot.income).toBeGreaterThanOrEqual(dot.incomeBand);
       expect(dot.income).toBeLessThan(dot.incomeBand + 5000);
-      expect(dot.y).toBeCloseTo(toChangeAxis(dot.change));
+      expect(dot.income).toBeLessThanOrEqual(150000);
+      expect(dot.change).toBeGreaterThanOrEqual(dot.changeBand);
+      expect(dot.change).toBeLessThanOrEqual(dot.changeBandUpper);
       expect(cells.map((cell) => cell.households)).toContain(dot.households);
     }
   });
 
-  it("spreads the mirrored half-open bands within their own edges", () => {
-    const dots = scatterDots(cells);
+  it("spreads each band within its own edges", () => {
+    const dots = scatterDots(cells, { total });
     for (const dot of of(dots, cells[0])) {
       expect(dot.change).toBeGreaterThan(-400);
       expect(dot.change).toBeLessThan(-300);
-    }
-    for (const dot of of(dots, cells[2])) {
-      expect(dot.change).toBeGreaterThan(1);
-      expect(dot.change).toBeLessThan(10);
     }
     for (const dot of of(dots, cells[3])) {
       expect(dot.change).toBeGreaterThan(-10);
       expect(dot.change).toBeLessThan(-1);
     }
+    const zero = of(dots, cells[1]);
+    expect(zero).toHaveLength(6);
+    for (const dot of zero) expect(Math.abs(dot.change)).toBeLessThan(1);
+    expect(new Set(zero.map((dot) => dot.income)).size).toBe(6);
   });
 
-  it("draws the no-change band as a line of dots at £0", () => {
-    const zero = of(scatterDots(cells), cells[1]);
-    expect(zero).toHaveLength(3);
-    for (const dot of zero) {
-      expect(dot.y).toBe(0);
-      expect(dot.change).toBe(0);
-      expect(dot.edge).toBeNull();
-    }
-    expect(new Set(zero.map((dot) => dot.income)).size).toBe(3);
-  });
-
-  it("draws the open-ended outer bands in the strips beyond the plotted range", () => {
+  it("counts the open outer bands but leaves them off the plot, as in 2025", () => {
     expect(edgeOf(-5000, -5000)).toBe("lower");
     expect(edgeOf(5000, 5000)).toBe("upper");
     expect(edgeOf(3000, 5000)).toBeNull();
     expect(edgeOf(-1, 1)).toBeNull();
-    const dots = scatterDots(cells);
-    const upper = dots.filter((d) => d.edge === "upper");
-    const lower = dots.filter((d) => d.edge === "lower");
-    expect(upper).toHaveLength(3);
-    expect(lower).toHaveLength(2);
-    for (const dot of upper) {
-      expect(dot.y).toBeGreaterThan(toChangeAxis(5000));
-      expect(dot.y).toBeLessThan(toChangeAxis(5000) + EDGE_STRIP);
-      expect(dot.y).toBeLessThan(CHANGE_AXIS_DOMAIN[1]);
+    const dots = scatterDots(cells, { total });
+    expect(of(dots, cells[4])).toHaveLength(0);
+    expect(of(dots, cells[5])).toHaveLength(0);
+    expect(dots).toHaveLength(total - 6 - 4);
+    for (const dot of dots) expect(Math.abs(dot.change)).toBeLessThan(5000);
+  });
+});
+
+describe("panelDots", () => {
+  const cell = (incomeBand, changeBand, changeBandUpper, households) => ({
+    incomeBand,
+    changeBand,
+    changeBandUpper,
+    households,
+  });
+  // Two income bands, banded by 2027 income. 2027: 300,000 and 100,000
+  // households, so 30 and 10 of 40 dots.
+  const basis = [
+    cell(20000, -1, 1, 200000),
+    cell(20000, 10, 25, 100000),
+    cell(40000, 100, 150, 100000),
+  ];
+  // A later year: the same households, more of them gaining, by more; the
+  // £40,000 band's cell is now too small to publish.
+  const later = [
+    cell(20000, -1, 1, 60000),
+    cell(20000, 25, 50, 180000),
+    cell(20000, 5000, 5000, 70000),
+    cell(30000, 1, 10, 50000),
+  ];
+  const total = 40;
+
+  it("gives each income band the same dots in every year, by its basis-year households", () => {
+    const first = panelDots(basis, basis, { total });
+    const second = panelDots(basis, later, { total });
+    expect(first.map((dot) => dot.key)).toEqual(second.map((dot) => dot.key));
+    const rows = (dots) =>
+      dots.reduce((count, dot) => ({ ...count, [dot.incomeBand]: (count[dot.incomeBand] ?? 0) + 1 }), {});
+    expect(rows(first)).toEqual({ 20000: 30, 40000: 10 });
+    expect(rows(second)).toEqual({ 20000: 30, 40000: 10 });
+    // A band that only appears in a later year gets no dots
+    expect(second.some((dot) => dot.incomeBand === 30000)).toBe(false);
+  });
+
+  it("keeps each dot's income, so it moves only sideways", () => {
+    const first = panelDots(basis, basis, { total });
+    const second = panelDots(basis, later, { total });
+    first.forEach((dot, i) => {
+      expect(second[i].income).toBe(dot.income);
+      expect(dot.income).toBeGreaterThanOrEqual(dot.incomeBand);
+      expect(dot.income).toBeLessThan(dot.incomeBand + 5000);
+    });
+  });
+
+  it("places the k-th dot at the band's k-th weighted quantile of change", () => {
+    const first = panelDots(basis, basis, { total }).filter((d) => d.incomeBand === 20000);
+    // 2027: two thirds no change, then £10 to £25
+    expect(first.slice(0, 20).every((dot) => dot.changeBand === -1)).toBe(true);
+    expect(first.slice(20).every((dot) => dot.changeBand === 10)).toBe(true);
+    const second = panelDots(basis, later, { total }).filter((d) => d.incomeBand === 20000);
+    // Later: about a fifth no change, three fifths £25 to £50, the rest
+    // beyond £5,000 (off the plot, kept but hidden)
+    const bands = second.map((dot) => dot.changeBand);
+    expect(bands.slice(0, 5)).toEqual(Array(5).fill(-1));
+    expect(bands.slice(6, 23)).toEqual(Array(17).fill(25));
+    expect(bands.slice(24)).toEqual(Array(6).fill(5000));
+    expect(second.slice(24).every((dot) => dot.hidden)).toBe(true);
+    // Changes never go down with rank across bands
+    for (const dot of second.filter((d) => !d.hidden)) {
+      expect(dot.change).toBeGreaterThanOrEqual(dot.changeBand);
+      expect(dot.change).toBeLessThanOrEqual(dot.changeBandUpper);
     }
-    for (const dot of lower) {
-      expect(dot.y).toBeLessThan(toChangeAxis(-5000));
-      expect(dot.y).toBeGreaterThan(CHANGE_AXIS_DOMAIN[0]);
-    }
+  });
+
+  it("hides a band's dots in a year with no published cell, keeping them", () => {
+    const second = panelDots(basis, later, { total }).filter((d) => d.incomeBand === 40000);
+    expect(second).toHaveLength(10);
+    expect(second.every((dot) => dot.hidden)).toBe(true);
+  });
+
+  it("is deterministic", () => {
+    expect(panelDots(basis, later, { total })).toEqual(panelDots(basis, later, { total }));
+  });
+});
+
+describe("scatterView across years", () => {
+  it("carries the basis year and its cells", () => {
+    const result = scatterView({
+      data: ready,
+      selectedIds: ["a"],
+      policyIds: POLICY_IDS,
+      year: 2030,
+    });
+    expect(result.basisYear).toBe(2027);
+    // No 2027 cells in this file: the year's own cells share the dots out
+    expect(result.basisPoints).toEqual(result.points);
   });
 });

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./PolicySelector.css";
+import PillChevron from "./PillChevron";
 
 function PolicySelector({ policies, selectedPolicies, onPolicyToggle, disabledReason }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -45,7 +46,7 @@ function PolicySelector({ policies, selectedPolicies, onPolicyToggle, disabledRe
         <span className="policy-selector-label-short" aria-hidden="true">
           selected
         </span>
-        <span className="policy-selector-icon">{isExpanded ? "▲" : "▼"}</span>
+        <PillChevron />
       </button>
 
       {isExpanded && (

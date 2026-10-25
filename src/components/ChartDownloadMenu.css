@@ -90,11 +90,6 @@
     align-items: center;
     min-height: 40px;
   }
-
-  .lifecycle-chart-footer .chart-download-menu {
-    right: auto;
-    left: 0;
-  }
 }
 
 .chart-download-button:disabled {

@@ -36,15 +36,18 @@ import {
   axisWidth,
   legendWrapperStyle,
   legendLabelStyle,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion } from "../utils/chartMotion";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 // Legend items for export
 const LEGEND_ITEMS = [
-  { color: "#319795", label: "Higher net income", type: "rect" },
-  { color: "#D97706", label: "Lower net income", type: "rect" },
+  { color: CHART_COLOURS.gain, label: "Higher net income", type: "rect" },
+  { color: CHART_COLOURS.loss, label: "Lower net income", type: "rect" },
 ];
 
 /**
@@ -54,7 +57,7 @@ const LEGEND_ITEMS = [
  */
 function EmploymentIncomeDiffChart({
   selectedPolicies,
-  selectedYear = 2029,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
   defaultHousehold = EXAMPLE_HOUSEHOLDS[1].id,
   household: controlledHousehold,
   onHouseholdChange,
@@ -112,7 +115,7 @@ function EmploymentIncomeDiffChart({
           </div>
         </div>
         {picker}
-        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+        <div style={{ textAlign: "center", padding: "40px", color: CHART_COLOURS.tick }}>
           Loading example households...
         </div>
       </div>
@@ -191,9 +194,9 @@ function EmploymentIncomeDiffChart({
 
                     format={formatPounds}
 
-                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}`}
+                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}, ${formatYearRange(selectedYear)}`}
 
-                    single={{ key: "difference", label: "Change in net income", color: "#319795" }}
+                    single={{ key: "difference", label: "Change in net income", color: CHART_COLOURS.gain }}
 
                   />
 
@@ -216,33 +219,31 @@ function EmploymentIncomeDiffChart({
                   <span style={legendLabelStyle(narrow)}>{value}</span>
                 )}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               {hasPositive && (
                 <Area
                   type="monotone"
                   dataKey="positive"
-                  stroke="#319795"
+                  stroke={CHART_COLOURS.gain}
                   strokeWidth={2}
-                  fill="#319795"
+                  fill={CHART_COLOURS.gain}
                   fillOpacity={0.6}
                   baseValue={0}
                   connectNulls={false}
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 />
               )}
               {hasNegative && (
                 <Area
                   type="monotone"
                   dataKey="negative"
-                  stroke="#D97706"
+                  stroke={CHART_COLOURS.loss}
                   strokeWidth={2}
-                  fill="#D97706"
+                  fill={CHART_COLOURS.loss}
                   fillOpacity={0.6}
                   baseValue={0}
                   connectNulls={false}
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 />
               )}
               <Customized component={<ChartUnitLabel text="Change in net income" />} />

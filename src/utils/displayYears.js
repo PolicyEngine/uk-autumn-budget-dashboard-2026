@@ -9,8 +9,8 @@
  */
 import budgetYears from "../uk_budget_data/budget_years.json";
 
-/** The first fiscal year shown: 2027 is 2027-28. */
-export const FIRST_DISPLAY_YEAR = 2027;
+/** The first fiscal year shown: 2026 is 2026-27 (the Warm Home Discount top-up's winter). */
+export const FIRST_DISPLAY_YEAR = 2026;
 
 const CONFIG_YEARS = budgetYears.policy_years.filter(
   (year) => year >= FIRST_DISPLAY_YEAR,
@@ -19,8 +19,8 @@ const CONFIG_YEARS = budgetYears.policy_years.filter(
 /** The last fiscal year shown: the config's last policy year. */
 export const LAST_DISPLAY_YEAR = Math.max(...CONFIG_YEARS);
 
-/** The year selected when none is given (2029-30). */
-export const DEFAULT_DISPLAY_YEAR = 2029;
+/** The year selected when none is given (2027-28): the header pill and every chart start here. */
+export const DEFAULT_DISPLAY_YEAR = 2027;
 
 /** Whether a year (number or numeric string) is one the dashboard shows. */
 export const isDisplayYear = (year) => {

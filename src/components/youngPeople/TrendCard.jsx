@@ -3,7 +3,6 @@ import {
   CartesianGrid,
   ComposedChart,
   Customized,
-  Legend,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -11,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../../utils/chartLogo";
+import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -21,28 +20,31 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
-  chartMargin,
-  legendWrapperStyle,
   axisWidth,
   fiscalYearTick,
   shortFiscalYearTick,
+  CHART_COLOURS,
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
-import { changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
+import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
+import { AGE_GROUPS, YOUNG_BAND } from "../../utils/ageImpact";
+import { GROUP_STYLES, changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
+import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
 
-/** The two lines: young people aged 16 to 24, and all ages. */
-export const SERIES = [
-  { key: "young", label: "Aged 16 to 24", color: "#319795" },
-  { key: "all", label: "All ages", color: "#9CA3AF" },
-];
+/** One line per age group, 16 to 24 drawn thicker, all ages dashed. */
+export const SERIES = AGE_GROUPS.map((group) => ({
+  key: group.key,
+  label: group.label,
+  ...GROUP_STYLES[group.key],
+}));
 
 export const TREND_DESCRIPTION =
-  "Average change in household net income per person in each year, in pounds a year, adding up the selected policies' own effects. The shaded year is the one selected above.";
+  "Average change per person in each year, by age group (£ a year). 16 to 24 is thicker; the shaded year is the one selected.";
 
 const UNIT = "Change per person (£ a year)";
 // Room beside the ticks for the rotated axis title
 const TITLE_ROOM = 20;
-// The selected year's shading, as card 1's 16 to 24 band
+// The selected year's shading, as the 16 to 24 band in "Average change by age"
 const SELECTED_FILL = "rgba(49, 151, 149, 0.10)";
 
 /**
@@ -67,15 +69,28 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
   return (
     <g className="young-people-year-shading">
       {selected && !unpublishedYears.includes(selectedYear) && (
-        <rect x={selected.x} y={yAxis.y} width={selected.width} height={yAxis.height} fill={SELECTED_FILL} />
+        // Moved by a transform, so a year change slides the shading
+        <rect
+          x={0}
+          y={yAxis.y}
+          width={selected.width}
+          height={yAxis.height}
+          fill={SELECTED_FILL}
+          style={{
+            transform: `translateX(${selected.x}px)`,
+            transition: prefersReducedMotion()
+              ? undefined
+              : `transform ${CHART_MOTION_MS}ms ease-in-out, width ${CHART_MOTION_MS}ms ease-in-out`,
+          }}
+        />
       )}
       {unpublishedYears.map((year) => {
         const area = band(year);
         if (!area) return null;
         return (
           <g key={year}>
-            <rect x={area.x} y={yAxis.y} width={area.width} height={yAxis.height} fill="#F3F4F6" />
-            <text x={area.centre} y={yAxis.y + 16} textAnchor="middle" fontSize={11} fill="#6B7280">
+            <rect x={area.x} y={yAxis.y} width={area.width} height={yAxis.height} fill={CHART_COLOURS.mutedFill} />
+            <text x={area.centre} y={yAxis.y + 16} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
               <tspan x={area.centre}>Not yet</tspan>
               <tspan x={area.centre} dy={13}>published</tspan>
             </text>
@@ -87,18 +102,21 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
 }
 
 /**
- * How the effect on young people aged 16 to 24 changes year by year, beside
- * all ages, for the selected policies. It shows every year on the page, so
+ * How the effect on each age group changes year by year, 16 to 24
+ * highlighted, for the selected policies. It shows every year on the page, so
  * the year pill only shades one; a year not yet published is labelled, not
  * drawn as zero.
  */
 function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const data = changeByYear(rows, policies, selectedPolicies, DISPLAY_YEARS);
-  const values = data.flatMap((point) => [point.young, point.all]).filter((v) => v !== null);
+  const values = data
+    .flatMap((point) => SERIES.map((series) => point[series.key]))
+    .filter((v) => v !== null);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
   const unpublished = data.filter((point) => !point.published);
-  const suppressed = data.filter((point) => point.published && point.suppressed);
+  const suppressed = data.filter((point) => point.published && point.suppressed.length > 0);
+  const labelOf = (key) => SERIES.find((series) => series.key === key)?.label ?? key;
   const first = fiscalYearTick(DISPLAY_YEARS[0]);
   const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
 
@@ -107,7 +125,13 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     title,
     description: TREND_DESCRIPTION,
     logo: CHART_LOGO,
-    legendItems: SERIES.map((series) => ({ color: series.color, label: series.label, type: "line" })),
+    reservedLegendHeight: 0,
+    legendItems: SERIES.map((series) => ({
+      color: series.color,
+      label: series.label,
+      type: "line",
+      dash: series.dash,
+    })),
   };
   const csvText = () =>
     buildChartCsv({
@@ -116,15 +140,17 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         "£ per person per year; the sum of each selected policy's own effect; each person counts their household's change in net income (not equivalised)",
       columns: [
         { key: "yearLabel", label: "Year" },
-        { key: "young", label: "Aged 16 to 24", decimals: 2 },
-        { key: "all", label: "All ages", decimals: 2 },
+        ...SERIES.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),
       ],
       rows: data
-        .filter((point) => point.published && !point.suppressed)
+        .filter((point) => point.published)
         .map((point) => ({ ...point, yearLabel: fiscalYearTick(point.year) })),
       notes: [
         ...unpublished.map((point) => `${fiscalYearTick(point.year)}: ${NOT_YET_PUBLISHED.toLowerCase()}`),
-        ...suppressed.map((point) => `${fiscalYearTick(point.year)}: too few survey records`),
+        ...suppressed.map(
+          (point) =>
+            `${fiscalYearTick(point.year)}, too few survey records: ${point.suppressed.map(labelOf).join(", ")}`,
+        ),
       ],
     });
   const download = {
@@ -132,7 +158,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     name: "young-people-change-by-year",
     exportOptions,
     csv: csvText,
-    published: data.some((point) => point.young !== null),
+    published: data.some((point) => point.published),
   };
   const yWidth = axisWidth(ticks, signedPounds) + TITLE_ROOM;
 
@@ -145,9 +171,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={chartRef}>
+      <div ref={chartRef} className="chart-plot young-people-plot">
         <ResponsiveContainer width="100%" height={height}>
-          <ComposedChart data={data} margin={{ ...chartMargin(narrow, { top: 16 }), right: 16 }}>
+          <ComposedChart data={data} margin={plotMargin(narrow, { right: 16 })}>
             <CartesianGrid {...GRID_PROPS} />
             <Customized
               component={
@@ -165,7 +191,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               tickLine={false}
               interval={0}
               padding={{ left: 28, right: 28 }}
-              height={28}
+              height={X_AXIS_HEIGHT}
             />
             <YAxis
               domain={domain}
@@ -183,10 +209,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 style: AXIS_TITLE_STYLE,
               }}
             />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Tooltip
               {...TOOLTIP_PROPS}
-              cursor={{ stroke: "#D1D5DB" }}
+              cursor={{ stroke: CHART_COLOURS.axis }}
               content={
                 <ChartTooltip
                   format={pounds}
@@ -196,29 +222,34 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 />
               }
             />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              content={
-                <GroupedLegend
-                  items={SERIES.map((series) => ({ ...series, type: "line" }))}
-                />
-              }
-            />
-            {SERIES.map((series) => (
+            {/* 16 to 24 drawn last, on top */}
+            {[...SERIES.filter((series) => series.key !== YOUNG_BAND), ...SERIES.filter((series) => series.key === YOUNG_BAND)].map((series) => (
               <Line
                 key={series.key}
                 type="linear"
                 dataKey={series.key}
                 name={series.label}
                 stroke={series.color}
-                strokeWidth={series.key === "young" ? 2.5 : 2}
-                dot={{ fill: series.color, stroke: "#ffffff", strokeWidth: 1.5, r: 4 }}
-                animationDuration={500}
+                strokeWidth={series.key === YOUNG_BAND ? 3 : 1.75}
+                strokeDasharray={series.dash}
+                dot={{
+                  fill: series.color,
+                  stroke: CHART_COLOURS.surface,
+                  strokeWidth: 1.5,
+                  r: series.key === YOUNG_BAND ? 4.5 : 3,
+                }}
+                {...chartMotion()}
               />
             ))}
-            <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+      <div className="chart-legend">
+        <GroupedLegend items={SERIES.map((series) => ({ ...series, type: "line" }))} />
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
     </div>
   );

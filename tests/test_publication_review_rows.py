@@ -1957,3 +1957,59 @@ def test_the_build_check_still_fails_on_unlisted_artifacts(base):
         f"{path}: not reviewed" for path, _ in report.unreviewed
     )
     assert {why for _, why in report.unreviewed} == {"delta is staged"}
+
+
+@needs_node
+def test_the_area_routing_status_is_not_reported_as_unreviewed(base):
+    """Both checks accept the area routing status without a row, so the
+    helper writes none for it and doesn't name it; a copy anywhere else
+    needs a row like any other file, and is named."""
+    routing = (REPO / rr.AREA_ROUTING_FILE).read_bytes()
+    elsewhere = f"{DATA}/elsewhere/area-routing.json"
+    with repository(base) as (root, _):
+        (root / rr.AREA_ROUTING_FILE).write_bytes(routing)
+        (root / elsewhere).parent.mkdir()
+        (root / elsewhere).write_bytes(routing)
+        report = run(root)
+        problems = build_check(root)
+        review = review_bytes(root).decode()
+    assert rr.AREA_ROUTING_FILE == "public/data/area-routing.json"
+    assert rr.AREA_ROUTING_FILE == check_public_data.AREA_ROUTING_FILE
+    assert rr.AREA_ROUTING_FILE not in {path for path, _ in report.unreviewed}
+    assert (elsewhere, "in no entry") in report.unreviewed
+    assert sorted(problems) == sorted(
+        f"{path}: not reviewed" for path, _ in report.unreviewed
+    )
+    assert "area-routing.json" not in review
+
+
+@needs_node
+def test_a_row_for_the_area_routing_status_is_removed(base):
+    """Both checks refuse a row for the area routing status, so the helper
+    removes one it finds and says so, and the build check then passes."""
+    routing = (REPO / rr.AREA_ROUTING_FILE).read_bytes()
+    row = (
+        f"{rr.AREA_ROUTING_FILE},static_asset,"
+        f"{hashlib.sha256(routing).hexdigest()},Reconciler,2026-10-23,,"
+        "Whether the release routes results by area.\n"
+    )
+    # A copy anywhere else is an ordinary public file: its row stays.
+    elsewhere = f"{DATA}/elsewhere/area-routing.json"
+    kept = row.replace(rr.AREA_ROUTING_FILE, elsewhere, 1)
+    with repository(base) as (root, manifest):
+        listed_only(root, manifest)
+        (root / rr.AREA_ROUTING_FILE).write_bytes(routing)
+        (root / elsewhere).parent.mkdir()
+        (root / elsewhere).write_bytes(routing)
+        csv_path = root / "data_inputs" / "public_data_review.csv"
+        csv_path.write_text(HEADER + row + kept)
+        before = build_check(root)
+        report = run(root)
+        after = build_check(root)
+        review = review_bytes(root).decode()
+    assert f"{rr.AREA_ROUTING_FILE}: needs no review entry" in before
+    assert report.removed == [rr.AREA_ROUTING_FILE]
+    assert report.unreviewed == []
+    assert after == []
+    assert f"{rr.AREA_ROUTING_FILE}," not in review
+    assert kept in review

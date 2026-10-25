@@ -150,6 +150,7 @@ def make_tables(
                 "change_band": -75.0 if value < 0 else 50.0,
                 "change_band_upper": -50.0 if value < 0 else 75.0,
                 "households": 1000.0,
+                "income_basis_year": min(values),
             }
         )
     return tables
@@ -169,6 +170,8 @@ def make_household_rows(
             "income_change": -50.0 if value < 0 else 50.0,
             "household_weight": 100.0,
             "household_id": household,
+            "reference_income": 20_100.0,
+            "income_basis_year": min(values),
         }
         for year, value in values.items()
         for household in range(1, 11)

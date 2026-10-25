@@ -1,14 +1,36 @@
 /**
- * Data for the two further "Young people" cards: each measure's average
- * change for young people aged 16 to 24 beside its all-ages figure, and
- * the average change in every year shown.
+ * Data for the "Effect of each policy" and "Change by year" cards: each
+ * measure's average change for a chosen age group beside its all-ages
+ * figure, and the average change for every age group in every year shown.
  *
  * Both read only mean_change from public/data/age_impact.csv. A mean
  * change is additive across policies (the other charts on the page add up
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.
  */
-import { ALL_BAND, MIN_SAMPLE_SIZE, YOUNG_BAND } from "../../utils/ageImpact";
+import {
+  AGE_GROUPS,
+  ALL_BAND,
+  MIN_SAMPLE_SIZE,
+  YOUNG_BAND,
+  singleAgeKey,
+} from "../../utils/ageImpact";
+import { CHART_COLOURS } from "../../utils/chartTheme";
+
+/**
+ * A colour per age group for charts that show them all: 16 to 24 in the
+ * page's teal, the other bands blues under 50 and purples from 50, each
+ * darker with age, and all ages in grey (dashed where drawn as a line).
+ */
+export const GROUP_STYLES = {
+  "0-15": { color: CHART_COLOURS.ageChildren },
+  "16-24": { color: CHART_COLOURS.gain },
+  "25-34": { color: CHART_COLOURS.ageYoungAdults },
+  "35-49": { color: CHART_COLOURS.ageAdults },
+  "50-64": { color: CHART_COLOURS.ageOlder },
+  "65+": { color: CHART_COLOURS.agePension },
+  all: { color: CHART_COLOURS.reference, dash: "5 3" },
+};
 
 /** Below this (in £ a year) a mean change counts as no change. */
 const NO_EFFECT = 0.005;
@@ -24,42 +46,43 @@ const findRow = (rows, id, year, band) =>
 
 /**
  * One entry per selected policy with rows in the year: its mean change for
- * people aged 16 to 24 (`young`) and for all people (`all`), sorted by the
- * size of the 16 to 24 figure, largest first. Policies with no effect on
- * either group are listed in `noEffect`; policies whose 16 to 24 row has
- * too few survey records in `suppressed`.
+ * the chosen age group (`group`) and for all people (`all`), sorted by the
+ * size of the group's figure, largest first. Policies with no effect on
+ * either are listed in `noEffect`; policies whose group row has too few
+ * survey records in `suppressed`.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string, name: string}>} policies - Every policy
  * @param {Array<string>} selected - Selected policy ids
  * @param {number} year
+ * @param {string} [band] - The age group's key (default 16 to 24)
  */
-export function measureComparison(rows, policies, selected, year) {
+export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND) {
   const shown = [];
   const noEffect = [];
   const suppressed = [];
   for (const policy of policies) {
     if (!selected.includes(policy.id)) continue;
-    const young = findRow(rows, policy.id, year, YOUNG_BAND);
+    const group = findRow(rows, policy.id, year, band);
     const all = findRow(rows, policy.id, year, ALL_BAND);
-    if (!young || !all) continue;
-    if (young.sample_size < MIN_SAMPLE_SIZE) {
+    if (!group || !all) continue;
+    if (group.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
-    } else if (Math.abs(young.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
+    } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
       noEffect.push(policy.name);
     } else {
-      shown.push({ id: policy.id, name: policy.name, young: young.mean_change, all: all.mean_change });
+      shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
     }
   }
-  shown.sort((a, b) => Math.abs(b.young) - Math.abs(a.young) || Math.abs(b.all) - Math.abs(a.all));
+  shown.sort((a, b) => Math.abs(b.group) - Math.abs(a.group) || Math.abs(b.all) - Math.abs(a.all));
   return { shown, noEffect, suppressed };
 }
 
 /**
- * One point per year: the selected policies' mean changes added up, for
- * people aged 16 to 24 (`young`) and for all people (`all`). A year with
- * no rows is `published: false` with null values, never zero; so is a year
- * whose 16 to 24 rows are too thin (`suppressed: true`).
+ * One point per year: for every age group (AGE_GROUPS, keyed by its key),
+ * the selected policies' mean changes added up. A year with no rows is
+ * `published: false` with null values, never zero; a group whose row in
+ * the year is too thin is null and listed in `suppressed`.
  *
  * @param {Array<Object>} rows
  * @param {Array<{id: string, name: string}>} policies
@@ -68,22 +91,21 @@ export function measureComparison(rows, policies, selected, year) {
  */
 export function changeByYear(rows, policies, selected, years) {
   return years.map((year) => {
-    const point = { year, published: false, suppressed: false, young: null, all: null };
+    const point = { year, published: false, suppressed: [] };
+    for (const group of AGE_GROUPS) point[group.key] = null;
     if (!(rows ?? []).some((row) => row.year === Number(year))) return point;
     point.published = true;
-    let young = 0;
-    let all = 0;
-    for (const policy of policies) {
-      if (!selected.includes(policy.id)) continue;
-      const youngRow = findRow(rows, policy.id, year, YOUNG_BAND);
-      const allRow = findRow(rows, policy.id, year, ALL_BAND);
-      if (youngRow && youngRow.sample_size < MIN_SAMPLE_SIZE) point.suppressed = true;
-      young += youngRow ? youngRow.mean_change : 0;
-      all += allRow ? allRow.mean_change : 0;
-    }
-    if (!point.suppressed) {
-      point.young = young;
-      point.all = all;
+    for (const group of AGE_GROUPS) {
+      let total = 0;
+      let thin = false;
+      for (const policy of policies) {
+        if (!selected.includes(policy.id)) continue;
+        const row = findRow(rows, policy.id, year, group.key);
+        if (row && row.sample_size < MIN_SAMPLE_SIZE) thin = true;
+        total += row ? row.mean_change : 0;
+      }
+      if (thin) point.suppressed.push(group.key);
+      else point[group.key] = total;
     }
     return point;
   });
@@ -116,4 +138,64 @@ export function wrapWords(text, max) {
     else lines.push(word);
   }
   return lines;
+}
+
+/** The single-year view's ages: one bar per year of age, 10 to 40. */
+export const SINGLE_AGE_FIRST = 10;
+export const SINGLE_AGE_LAST = 40;
+
+/**
+ * One bar per single year of age, SINGLE_AGE_FIRST to SINGLE_AGE_LAST: the
+ * selected policies' mean changes added up (`netChange`). A bar is null
+ * where any selected policy has no row for the age (the generator leaves
+ * out an age with too few survey records) or a thin one.
+ *
+ * @param {Array<Object>} rows - Typed age_impact rows
+ * @param {Array<{id: string}>} policies - Every policy
+ * @param {Array<string>} selected - Selected policy ids
+ * @param {number} year
+ */
+export function singleAgeBars(rows, policies, selected, year) {
+  const byKey = new Map();
+  for (const row of rows ?? []) {
+    if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
+  }
+  const chosen = policies.filter((policy) => selected.includes(policy.id));
+  const bars = [];
+  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+    let net = 0;
+    let complete = chosen.length > 0;
+    for (const policy of chosen) {
+      const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
+        complete = false;
+        break;
+      }
+      net += row.mean_change;
+    }
+    bars.push({ age, label: String(age), netChange: complete ? net : null });
+  }
+  return bars;
+}
+
+/**
+ * A y-axis fitted to the data: a nice step (25 to 5,000) giving at most six
+ * intervals, from a little below the minimum to a little above the maximum
+ * (4% of the span either side), always including zero.
+ */
+export function fitRange(min, max) {
+  const low = Math.min(0, min);
+  const high = Math.max(0, max);
+  const pad = Math.max(high - low, 1) * 0.04;
+  const lo = low < 0 ? low - pad : 0;
+  const hi = high > 0 ? high + pad : 0;
+  const span = Math.max(hi - lo, 1);
+  const steps = [25, 50, 100, 200, 250, 400, 500, 1000, 2000, 2500, 5000];
+  const step = steps.find((candidate) => span / candidate <= 6) ?? 10000;
+  const bottom = Math.floor(lo / step) * step;
+  const top = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let tick = bottom; tick <= top + 1e-9; tick += step) ticks.push(tick);
+  if (ticks.length < 2) ticks.push(bottom + step);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
 }

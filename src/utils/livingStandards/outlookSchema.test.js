@@ -1,9 +1,10 @@
 /**
  * The real public/data/living_standards_outlook.json against the shape in
- * PolicyEngine/uk-living-standards-outlook DATA_CONTRACT.md, which the
- * Living standards view reads. The view's own tests use fixtures, and its
- * loader checks only the HTTP status, so a re-copied file of another shape
- * would otherwise reach the page unnoticed.
+ * docs/DATA_CONTRACT.md, which the Living standards view reads. The file is
+ * written by `uk-budget-data living-standards` (and its forecast block by
+ * `uk-budget-data obr-forecast`). The view's loader checks only the HTTP
+ * status, so a file of another shape would otherwise reach the page
+ * unnoticed.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,7 +27,6 @@ const SECTIONS = [
   "inequality",
   "deep_poverty",
   "poverty_by_group",
-  "obr_rhdi",
 ];
 
 // Collects every problem with a path, so one run lists them all.
@@ -193,6 +193,17 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
       string(fc.pre_label, "forecast.pre_label");
       string(fc.post_label, "forecast.post_label");
       if (typeof fc.post_published !== "boolean") fail("forecast.post_published", "is not a boolean");
+      // Optional: the OBR file(s) the series come from. post_source is null
+      // until the Budget forecast is published, and then names its file.
+      const sourceBlock = (v, path) => {
+        const o = object(v, path);
+        string(o.release, `${path}.release`);
+        if (o.url != null) string(o.url, `${path}.url`);
+        if (o.file_sha256 != null && !/^[0-9a-f]{64}$/.test(o.file_sha256)) fail(`${path}.file_sha256`, "is not a SHA-256");
+      };
+      if (fc.pre_source != null) sourceBlock(fc.pre_source, "forecast.pre_source");
+      if (fc.post_published && fc.post_source !== undefined) sourceBlock(fc.post_source, "forecast.post_source");
+      if (fc.post_published === false && fc.post_source != null) fail("forecast.post_source", "is set while post_published is false");
       const keys = [];
       for (const [i, section] of array(fc.sections, "forecast.sections").entries()) {
         const sp = `forecast.sections[${i}]`;
@@ -209,6 +220,7 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
               number(p?.value, `${path}.${side}[${k}].value`);
             });
           }
+          if (s?.post_source != null) string(s.post_source, `${path}.post_source`);
           // Until the Budget forecast is out, post equals pre (the view says so).
           if (fc.post_published === false && JSON.stringify(s?.pre) !== JSON.stringify(s?.post)) {
             fail(path, "post differs from pre while post_published is false");
@@ -277,13 +289,7 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
           series(points, path, rate, { endYear: end });
         }
       }
-      const kept = object(cp.two_child_limit_kept, "child_poverty_by_family.two_child_limit_kept");
-      string(kept.label, "child_poverty_by_family.two_child_limit_kept.label");
-      for (const key of ["baseline", "counterfactual"]) {
-        series(kept[key], `child_poverty_by_family.two_child_limit_kept.${key}`, rate, { endYear: end });
-      }
-      sentences(cp.notes, "child_poverty_by_family.notes", { nonEmpty: true });
-      sentences(cp.sources, "child_poverty_by_family.sources");
+      sentences(cp.notes, "child_poverty_by_family.notes");
     }),
   );
 
@@ -381,9 +387,11 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
     }),
   );
 
+  // Not shown any more: tolerated in the file, checked only when present
   it(
-    "obr_rhdi",
+    "obr_rhdi (optional)",
     run(() => {
+      if (data.obr_rhdi === undefined) return;
       const rhdi = object(data.obr_rhdi, "obr_rhdi");
       for (const key of ["label", "unit", "source"]) string(rhdi[key], `obr_rhdi.${key}`);
       series(rhdi.series, "obr_rhdi.series", (p, where) => {

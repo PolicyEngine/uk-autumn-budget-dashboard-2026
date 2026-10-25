@@ -9,7 +9,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceArea,
   ReferenceLine,
   LabelList,
   Customized,
@@ -33,12 +32,14 @@ import {
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import {
   FIRST_DISPLAY_YEAR,
   LAST_DISPLAY_YEAR,
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
+import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
 
 // Net impact labels, one per year, as on the 2025 dashboard: the signed
 // total in a small white tag. A tag sits just above the year's stack of
@@ -47,6 +48,36 @@ import {
 // chart's SVG, so the SVG and PNG downloads carry them too.
 const formatNetLabel = (value) =>
   value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+
+/**
+ * The selected year's shading behind its bars. One rect, moved by a
+ * transform, so a year change (or Play) slides it to the new year.
+ */
+function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis) return null;
+  const start = xAxis.scale(selectedYear);
+  if (start === undefined || Number.isNaN(start)) return null;
+  const width = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
+  return (
+    <rect
+      className="revenue-year-highlight"
+      x={0}
+      y={yAxis.y}
+      width={width}
+      height={yAxis.height}
+      fill={CHART_COLOURS.gain}
+      fillOpacity={0.08}
+      style={{
+        transform: `translateX(${start}px)`,
+        transition: prefersReducedMotion()
+          ? undefined
+          : `transform ${CHART_MOTION_MS}ms ease-in-out`,
+      }}
+    />
+  );
+}
 
 function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
@@ -102,14 +133,14 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
               height={height}
               rx={4}
               ry={4}
-              fill={unpublished ? "#F9FAFB" : "#ffffff"}
-              stroke="#D1D5DB"
+              fill={unpublished ? CHART_COLOURS.mutedFill : CHART_COLOURS.surface}
+              stroke={CHART_COLOURS.axis}
               strokeWidth={1}
             />
             <text
               x={x}
               y={top + height / 2 - ((lines.length - 1) * (size + 2)) / 2}
-              fill={unpublished ? "#6B7280" : "#111827"}
+              fill={unpublished ? CHART_COLOURS.tick : CHART_COLOURS.text}
               fontSize={size}
               fontWeight={unpublished ? 500 : 600}
               textAnchor="middle"
@@ -184,7 +215,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
       group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
-      ? [{ color: "#000000", label: "Net impact", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net impact", type: "line" }]
       : []),
   ];
 
@@ -230,14 +261,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
             <CartesianGrid {...GRID_PROPS} />
             {/* The year chosen in the title band, shaded behind its bars */}
             {data.some((point) => point.year === selectedYear) && (
-              <ReferenceArea
-                x1={selectedYear}
-                x2={selectedYear}
-                fill="#319795"
-                fillOpacity={0.08}
-                stroke="none"
-                ifOverflow="extendDomain"
-              />
+              <Customized component={<YearHighlight selectedYear={selectedYear} />} />
             )}
             <XAxis
               dataKey="year"
@@ -305,22 +329,22 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
                 fill={POLICY_COLORS[policyName]}
                 name={policyName}
                 stackId="stack"
-                animationDuration={500}
-                animationBegin={0}
-                hide={!hasNonZeroValues(policyName)}
+                {...chartMotion()}
+                // Always mounted (a zero series has no height), so a series that
+                // starts in a later year grows in place instead of remounting
               />
             ))}
             <Line
               type="linear"
               dataKey="netImpact"
-              stroke="#000000"
+              stroke={CHART_COLOURS.net}
               strokeWidth={2}
-              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 4 }}
+              dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: 4 }}
               name="netImpact"
-              animationDuration={500}
+              {...chartMotion()}
               hide={activePolicies.length <= 1}
             />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Customized
               component={
                 <NetImpactLabels

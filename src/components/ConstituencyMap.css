@@ -253,7 +253,7 @@
   line-height: 1.4;
 }
 
-/* Kept as they were: LifecycleCalculator shares these global names. */
+/* Kept as they were: other views share these global names. */
 .tooltip-value {
   font-size: var(--fs-xl);
   font-weight: 700;
@@ -282,7 +282,7 @@
 .tooltip-interval-emphasis {
   font-size: var(--fs-body-lg);
   padding: 4px 8px;
-  background: #fff7e6;
+  background: var(--c-notice-bg);
   border-radius: 4px;
 }
 
@@ -418,4 +418,33 @@
 
 .map-scale-end {
   padding: 0 6px;
+}
+
+/* The card's body: the map view (search box, then map) or the Rankings
+   view (top and bottom 10). On a wide screen it keeps one height, so
+   switching views never moves the card or the scatter beside it. */
+.constituency-body {
+  padding-top: 16px;
+}
+
+.constituency-body .map-search-section {
+  max-width: 100%;
+  margin-bottom: 12px;
+}
+
+.map-content[hidden] {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .constituency-body {
+    height: 440px;
+    /* Never clip: a narrow card's longer names scroll within it */
+    overflow-y: auto;
+  }
+}
+
+/* On a phone the controls stack; the switch keeps its own width */
+.map-top-bar .obr-view-switch {
+  align-self: flex-start;
 }

@@ -60,7 +60,9 @@ import numpy as np
 from policyengine_core.periods import YEAR
 from policyengine_core.reforms import Reform as CoreReform
 from policyengine_uk.model_api import Variable
+from policyengine_uk.utils.data_source import built_from_data
 from policyengine_uk.utils.scenario import _apply_reform_class
+from policyengine_uk.utils.stochastic import splitmix64_uniform
 
 
 class DataLimitedWarning(UserWarning):
@@ -118,26 +120,99 @@ def _warn_if_variable_model_limited(name: str) -> None:
             )
 
 
-# The engine's wealth_tax applies this scale to total_wealth, which adds
-# property, corporate, private pension and savings wealth and nets no debts
-# (variables/contrib/ubi_center/wealth_tax.py and
-# variables/household/wealth/total_wealth.py); net_wealth does the netting.
+# The engine's two wealth-tax scales, and the base each is applied to. Both
+# bases start from total_wealth, which adds property, corporate, private
+# pension and savings wealth and nets no debts
+# (variables/household/wealth/total_wealth.py; net_wealth does the
+# netting): wealth_tax applies its scale to total_wealth
+# (variables/contrib/ubi_center/wealth_tax.py), and
+# non_primary_residence_wealth_tax to total_wealth less
+# main_residence_value (variables/contrib/cec/
+# non_primary_residence_wealth_tax.py). Both count in household_tax and
+# gov_tax.
 WEALTH_TAX = "gov.contrib.ubi_center.wealth_tax"
+NON_PRIMARY_RESIDENCE_WEALTH_TAX = (
+    "gov.contrib.cec.non_primary_residence_wealth_tax"
+)
+_GROSS = (
+    "gross wealth (property, corporate, private pension and savings) with "
+    "no debts netted"
+)
+WEALTH_TAX_SCALES = {
+    WEALTH_TAX: f"the engine's wealth_tax applies to total_wealth: {_GROSS}",
+    NON_PRIMARY_RESIDENCE_WEALTH_TAX: (
+        "the engine's non_primary_residence_wealth_tax applies to "
+        f"total_wealth less main_residence_value: {_GROSS}, less the main "
+        "home's full value rather than its equity"
+    ),
+}
+
+
+def _wealth_tax_scale(path):
+    """The wealth-tax scale ``path`` is or is a part of, or None."""
+    if not isinstance(path, str):
+        return None
+    for scale in WEALTH_TAX_SCALES:
+        if path == scale or path.startswith((scale + ".", scale + "[")):
+            return scale
+    return None
+
+
+def is_wealth_tax_path(path) -> bool:
+    """Whether ``path`` is one of the engine's wealth-tax scales or a part
+    of one."""
+    return _wealth_tax_scale(path) is not None
+
+
+def wealth_tax_paths(*scenarios) -> list:
+    """The paths under a wealth-tax scale that ``scenarios`` (either may be
+    None) change in their ``parameter_changes``, sorted."""
+    return sorted(
+        {
+            path
+            for scenario in scenarios
+            for path in (getattr(scenario, "parameter_changes", None) or {})
+            if is_wealth_tax_path(path)
+        }
+    )
+
+
+def wealth_tax_paths_differing(sim_baseline, sim_reform) -> list:
+    """The paths under a wealth-tax scale where two built simulations'
+    parameters differ, compared as model limits compare theirs: a modifier
+    that edits a scale with no ``parameter_changes`` shows here."""
+    from uk_budget_data.model_limits import parameters_differing
+
+    return parameters_differing(sim_baseline, sim_reform, WEALTH_TAX_SCALES)
+
+
+def wealth_tax_refusal(*paths: str) -> str:
+    """Why a change to ``paths``, each under a wealth-tax scale, is refused.
+
+    The templates refuse such a path. Generation refuses a measure that
+    changes one, in its ``parameter_changes`` or in what its built
+    simulations run."""
+    by_scale: dict = {}
+    for path in paths:
+        by_scale.setdefault(_wealth_tax_scale(path), []).append(path)
+    return " ".join(
+        [
+            f"{', '.join(found)} {'is' if len(found) == 1 else 'are'} under "
+            f"{scale}, which {WEALTH_TAX_SCALES[scale]}."
+            for scale, found in by_scale.items()
+        ]
+        + [
+            "A wealth tax on net assets would be scored on the wrong base "
+            "(the UK hub's budget-triage/JUDGED.md, S4)."
+        ]
+    )
 
 
 def _refuse_wealth_tax(path: str) -> None:
-    """Refuse the engine's wealth-tax scale: it taxes the wrong base for a
+    """Refuse the engine's wealth-tax scales: they tax the wrong base for a
     wealth tax announced on net assets (the UK hub's Budget triage, S4)."""
-    if path == WEALTH_TAX or path.startswith(
-        (WEALTH_TAX + ".", WEALTH_TAX + "[")
-    ):
-        raise ValueError(
-            f"{path} is under {WEALTH_TAX}, which the engine's wealth_tax "
-            "applies to total_wealth: gross wealth (property, corporate, "
-            "private pension and savings) with no debts netted. A wealth tax "
-            "on net assets would be scored on the wrong base (the UK hub's "
-            "budget-triage/JUDGED.md, S4)."
-        )
+    if is_wealth_tax_path(path):
+        raise ValueError(wealth_tax_refusal(path))
 
 
 def _validate_parameter_path(path: str) -> None:
@@ -630,9 +705,29 @@ _BENEFIT_RECEIPT_GATES = {
     "savings_credit": "pension_credit",
 }
 
+# The salt of policyengine-uk's Warm Home Discount receipt draw
+# (warm_home_discount_random_draw, policyengine-uk #2616), so a household
+# draws the same here as it will there.
+RECEIPT_DRAW_SALT = 2
+
+
+def _validated_rate(value, name):
+    rate = _finite_number(value, name)
+    if not 0 <= rate <= 1:
+        raise ValueError(f"{name} must be between 0 and 1")
+    return rate
+
 
 def apply_benefit_receipt_payment(
-    sim, *, amount, eligible_benefits, geography, channel, year
+    sim,
+    *,
+    amount,
+    eligible_benefits,
+    geography,
+    channel,
+    year,
+    pension_credit_receipt_rate=None,
+    other_receipt_rate=None,
 ):
     """Add a lump sum once per household, based on actual annual receipt.
 
@@ -648,6 +743,16 @@ def apply_benefit_receipt_payment(
     Choose an existing household income/benefit channel with a formula and
     the appropriate tax/means-test treatment, e.g. the cost-of-living channel.
     Its native payment is preserved in every year.
+
+    With ``pension_credit_receipt_rate`` and ``other_receipt_rate`` (both or
+    neither), not every eligible household receives the payment, as
+    policyengine-uk #2616 models the Warm Home Discount: a household where
+    any benefit unit receives Pension Credit receives it when its draw is
+    below the first rate, any other eligible household when its draw is
+    below the second. The draw is policyengine-uk's deterministic hash of
+    the household id (``splitmix64_uniform``, salt 2, stored as float32) in
+    a simulation built from data, and 0 in a household situation, so a
+    calculator's household receives it.
     """
     _annual_years(year, year)
     amount = _finite_number(amount, "amount")
@@ -671,6 +776,18 @@ def apply_benefit_receipt_payment(
         raise ValueError(
             "Payment channel must be annual: the payment is a one-off "
             "amount in the year"
+        )
+    if (pension_credit_receipt_rate is None) != (other_receipt_rate is None):
+        raise ValueError(
+            "Give both receipt rates (Pension Credit and other) or neither"
+        )
+    receipt_rates = None
+    if pension_credit_receipt_rate is not None:
+        receipt_rates = (
+            _validated_rate(
+                pension_credit_receipt_rate, "pension_credit_receipt_rate"
+            ),
+            _validated_rate(other_receipt_rate, "other_receipt_rate"),
         )
     benefits = {}
     for name in eligible_benefits:
@@ -710,10 +827,29 @@ def apply_benefit_receipt_payment(
         country = household("country", period)
         if geography == "GB":
             eligible &= country != country.possible_values.NORTHERN_IRELAND
+        if receipt_rates is not None:
+            eligible &= _receives(household, period, *receipt_rates)
         return current + eligible * amount
 
     _replace_formula(sim, channel, formula)
     return sim
+
+
+def _receives(household, period, pension_credit_rate, other_rate):
+    """Whether each household receives a payment with a receipt rate by
+    group, as policyengine-uk #2616's would_receive_warm_home_discount."""
+    if built_from_data(household.simulation):
+        ids = household("household_id", period)
+        draw = splitmix64_uniform(ids, salt=RECEIPT_DRAW_SALT).astype(
+            np.float32
+        )
+    else:
+        draw = np.zeros(household.count, dtype=np.float32)
+    pension_credit = household.any(
+        household.members.benunit("pension_credit", period) > 0
+    )
+    rate = np.where(pension_credit, pension_credit_rate, other_rate)
+    return draw < rate
 
 
 def apply_age_conditioned_allowance(
@@ -781,11 +917,11 @@ def apply_age_conditioned_allowance(
     return sim
 
 
-# The indices a native property surcharge deflates values by, as the names
-# its compiled code reads: up to policyengine-uk 2.139.0 the High Value
-# Council Tax Surcharge reads indices.obr.per_capita.gdp, and from 2.139.1
-# indices.obr.house_prices, comparing against bands it projects in the
-# values' stored precision (high_value_council_tax_surcharge.py).
+# The indices a native property surcharge uses, as the names its compiled
+# code reads: up to policyengine-uk 2.139.0 the High Value Council Tax
+# Surcharge deflates values by indices.obr.per_capita.gdp, and from 2.139.1
+# it projects its bands by indices.obr.house_prices, in the values' stored
+# precision (high_value_council_tax_surcharge.py).
 _PROPERTY_INDICES = {
     "gdp_per_capita": frozenset({"indices", "per_capita", "gdp"}),
     "house_prices": frozenset({"indices", "house_prices"}),
@@ -826,12 +962,12 @@ def _wrapped_native(formula):
 
 
 def _property_band_index(native, year) -> str:
-    """The index the native channel's formula for ``year`` deflates by.
+    """The index the native channel's formula for ``year`` uses.
 
     A band wrapped by this template earlier is followed to the formula it
     wraps: its own code names both indices, since it reads whichever that
     formula does. Refuse a formula that reads neither or both, so that a
-    band never deflates by another index than the native bands do.
+    band never uses another index than the native bands do.
     """
     formula = native.get_formula(str(year))
     wrapped = _wrapped_native(formula)
@@ -848,8 +984,8 @@ def _property_band_index(native, year) -> str:
         raise ValueError(
             f"Property surcharge channel {native.name} in {year} must read "
             "exactly one of the OBR GDP per capita and house price indices: "
-            "a band deflates property values by the index the native "
-            "formula reads, so that it meets the native bands exactly. Its "
+            "a band uses the index the native formula reads, so that it "
+            "meets the native bands exactly. Its "
             f"formula reads {'both' if found else 'neither'}."
         )
     return found[0]

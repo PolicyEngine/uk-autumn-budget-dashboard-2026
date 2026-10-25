@@ -1,31 +1,48 @@
-"""Reform definitions for UK Autumn Budget 2026.
+"""Candidate measures for the UK Autumn Budget 2026 (28 October 2026).
 
-This module contains all policy reforms announced in the November 2025 Budget,
-implemented as Reform objects that can be processed by the data pipeline.
+These are candidates, modelled before the Budget from reporting and
+briefing up to 24 October 2026; none is announced policy. They replaced
+the nine Autumn Budget 2025 placeholder measures on 24 October, all of
+which are already in the policyengine-uk 2.132.6 baseline or had lapsed.
 
-Reforms are organised into:
-- Spending measures (costs to treasury)
-- Tax measures (revenue raisers)
-- Structural reforms (using simulation modifiers)
+Every measure is compared against current law: the installed
+policyengine-uk (2.132.6, through policyengine 6.10.2), with no baseline
+changes of its own, except the Plan 2 measure, whose baseline also counts
+modelled student loan repayments. A measure changes parameters
+(``parameter_changes``, bound by content) or applies a modifier from
+``budget_measures`` (a module of fixed shape, which receipts can bind; this
+module fills caches at run time, so no modifier may live here).
 
-policyengine-uk v2.65.0+ includes the Autumn Budget parameter updates
-(including two-child limit repeal from April 2026 and salary sacrifice pension
-cap of £2,000 from April 2029) with proper fiscal year conversion that ensures
-annual queries return April 30 values. We use a pre-Autumn Budget baseline to
-show the impact of budget policies.
+Year Y is fiscal year Y-(Y+1).
 """
 
+from datetime import date
 from typing import Optional
 
-import numpy as np
-from policyengine_uk import Simulation
-
+from uk_budget_data import budget_measures
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.measure_templates import rate_change, threshold_change
 from uk_budget_data.models import Reform
 
 # Default years for parameter changes: the policy years in
 # budget_years.json, which the page reads too (2026-27 to 2031-32)
 DEFAULT_YEARS = list(POLICY_YEARS)
+
+FUEL_DUTY = "gov.hmrc.fuel_duty.petrol_and_diesel"
+PERSONAL_ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
+BASIC_RATE_BAND = "gov.hmrc.income_tax.rates.uk[1].threshold"
+BADR_LIFETIME_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
+PLAN_2_THRESHOLD = "gov.hmrc.student_loans.thresholds.plan_2"
+
+FUEL_DUTY_DEFERRAL_ID = "fuel_duty_rise_deferral"
+STATE_PENSION_ALLOWANCE_ID = "state_pension_income_tax_protection"
+WARM_HOME_DISCOUNT_ID = "warm_home_discount_top_up"
+ELECTRICITY_VAT_ID = "domestic_electricity_zero_vat"
+EMPLOYER_NI_ID = "employer_ni_relief_under_25s"
+THRESHOLD_FREEZE_ID = "threshold_freeze_2031_32"
+BADR_ID = "badr_lifetime_limit_cut"
+FUEL_VAT_ID = "road_fuel_vat_cut"
+PLAN_2_ID = "plan_2_threshold_unfreeze"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -40,648 +57,291 @@ def _years_from(first_year: int, value) -> dict[str, any]:
 
 
 # =============================================================================
-# PRE-AUTUMN BUDGET BASELINE
+# 1. FUEL DUTY: THE JANUARY AND MARCH 2027 RISES DEFERRED
 # =============================================================================
-# These values represent what parameters would have been WITHOUT the November
-# 2026 Autumn Budget. Used as baseline for comparing budget policy impacts.
-#
-# Income tax thresholds: Would have unfrozen after April 2028
-# Personal allowance and basic rate threshold uprated by CPI from April 2028
-#
-# Fuel duty: 5p cut would have ended March 2026 per Spring Budget 2025
-# Would return to 57.95p then RPI uprating from April 2027
+
+# Current law in policyengine-uk 2.132.6 (petrol_and_diesel.yaml), by the
+# date each rate takes effect: 52.95p to 31 December 2026, 55.95p from
+# 1 January 2027, 57.95p from 1 March 2027, then RPI each April. The 2032
+# step is the engine's own uprating (2031's rate by 2031 RPI growth).
+FUEL_DUTY_CURRENT_LAW = (
+    ("2026-03-23", 0.5295),
+    ("2027-01-01", 0.5595),
+    ("2027-03-01", 0.5795),
+    ("2027-04-01", 0.5975),
+    ("2028-04-01", 0.6154),
+    ("2029-04-01", 0.6326),
+    ("2030-04-01", 0.6509),
+    ("2031-04-01", 0.6659),
+    ("2032-04-01", 0.6812),
+)
+# The research's most likely path: 52.95p held through winter 2026-27 with
+# no April 2027 RPI rise; the 5p restored in 2027-28 in two steps, 3p on
+# 1 September and 2p on 1 December 2027 (Budget 2025's staging, a year
+# on); RPI from April 2028, on 57.95p. So from April 2028 each rate is
+# current law's scaled by 57.95 / 59.75, a year's RPI below it.
+FUEL_DUTY_STAGES = (
+    ("2026-03-23", 0.5295),
+    ("2027-09-01", 0.5595),
+    ("2027-12-01", 0.5795),
+)
+FUEL_DUTY_RPI_FROM = "2028-04-01"
 
 
-def _calculate_pre_autumn_budget_baseline() -> dict:
-    """Calculate pre-Autumn Budget baseline values programmatically.
+def fuel_duty_deferral_schedule() -> tuple:
+    """The candidate's rates by the date each takes effect."""
+    scale = 0.5795 / 0.5975
+    later = tuple(
+        (day, round(rate * scale, 4))
+        for day, rate in FUEL_DUTY_CURRENT_LAW
+        if day >= FUEL_DUTY_RPI_FROM
+    )
+    return FUEL_DUTY_STAGES + later
 
-    Uses OBR inflation forecasts from policyengine-uk to calculate what
-    income tax thresholds and fuel duty rates would have been without
-    the November 2025 Autumn Budget.
-    """
-    from policyengine_uk.system import system
 
-    params = system.parameters
+def fiscal_year_means(schedule, years=DEFAULT_YEARS) -> dict[str, float]:
+    """Day-weighted mean rate in each model year, 6 April to 5 April, as
+    the engine blends the fuel duty parameter (``fiscal_year_blend``)."""
+    steps = [(date.fromisoformat(day), rate) for day, rate in schedule]
+    means = {}
+    for year in years:
+        start, end = date(year, 4, 6), date(year + 1, 4, 6)
+        total = 0.0
+        for k, (day, rate) in enumerate(steps):
+            following = steps[k + 1][0] if k + 1 < len(steps) else end
+            low, high = max(day, start), min(following, end)
+            if high > low:
+                total += (high - low).days * rate
+        means[str(year)] = total / (end - start).days
+    return means
 
-    # Get OBR inflation indices
-    cpi_index = params.gov.economic_assumptions.indices.obr.cpih
-    rpi_index = params.gov.economic_assumptions.indices.obr.rpi
 
-    # Income tax thresholds - CPI uprating from April 2028
-    # (Previous freeze was until April 2028)
-    pa_2027 = 12570  # Personal allowance frozen at this level until Apr 2028
-    threshold_2027 = 37700  # Basic rate threshold frozen until Apr 2028
-
-    cpi_2027 = cpi_index("2027-04-01")
-    # Every policy year from 2028-29. Past the OBR's March 2026 forecast
-    # (to 2030-31) the indices follow policyengine-uk's long-run
-    # assumptions (yoy_growth.yaml), which give 2031-32.
-    threshold_years = [year for year in POLICY_YEARS if year >= 2028]
-
-    # Fuel duty - 5p cut would end March 2026, then RPI uprating
-    fuel_duty_base = 0.5795  # Rate after 5p cut ends (per Spring Budget 2025)
-    rpi_2026 = rpi_index("2026-04-01")
-    fuel_years = [year for year in POLICY_YEARS if year >= 2027]
-
+def fuel_duty_deferral_rates() -> dict[str, float]:
+    """The candidate's annual fuel duty rates, every policy year (the
+    parameter is uprated, so a bounded change would return to the old
+    path: policyengine-uk #2430)."""
     return {
-        # Income tax thresholds - CPI indexed from April 2028
-        "gov.hmrc.income_tax.allowances.personal_allowance.amount": {
-            str(year): round(pa_2027 * cpi_index(f"{year}-04-01") / cpi_2027)
-            for year in threshold_years
-        },
-        "gov.hmrc.income_tax.rates.uk[1].threshold": {
-            str(year): round(
-                threshold_2027 * cpi_index(f"{year}-04-01") / cpi_2027
-            )
-            for year in threshold_years
-        },
-        # Fuel duty - 5p cut ends March 2026, then RPI uprating
-        "gov.hmrc.fuel_duty.petrol_and_diesel": {
-            "2026-03-22": fuel_duty_base,  # 5p cut ends
-            **{
-                f"{year}-04-01": round(
-                    fuel_duty_base * rpi_index(f"{year}-04-01") / rpi_2026, 4
-                )
-                for year in fuel_years
-            },
-        },
+        year: round(rate, 6)
+        for year, rate in fiscal_year_means(
+            fuel_duty_deferral_schedule()
+        ).items()
     }
 
 
-def _pre_budget_fuel_duty_rates() -> dict:
-    """Pre-Budget fuel duty by year: the 5p cut ends in March 2026
-    (57.95p, rounded), then RPI uprating. The rates to 2030-31 follow
-    the blog post's methodology (policy 95147); later policy years carry
-    on from 2030-31 by policyengine-uk's RPI index."""
+def _create_fuel_duty_rise_deferral() -> Reform:
+    return Reform(
+        id=FUEL_DUTY_DEFERRAL_ID,
+        name="Fuel duty rises deferred",
+        description=(
+            "Candidate measure. Fuel duty stays at 52.95p a litre through "
+            "winter 2026-27, with no April 2027 RPI rise; the 5p is restored "
+            "in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI "
+            "uprating resumes in April 2028 from 57.95p. Rates are "
+            "day-weighted to fiscal years. Includes the VAT on the lower "
+            "pump price."
+        ),
+        parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
+        simulation_modifier=budget_measures.pump_vat_on_fuel_duty_deferral,
+    )
+
+
+# =============================================================================
+# 2. NO INCOME TAX FOR PENSIONERS WHOSE ONLY INCOME IS THE STATE PENSION
+# =============================================================================
+
+
+def _create_state_pension_income_tax_protection() -> Reform:
+    return Reform(
+        id=STATE_PENSION_ALLOWANCE_ID,
+        name="State Pension income tax protection",
+        description=(
+            "Candidate measure. From 6 April 2027, people over State Pension "
+            "age get an income tax allowance equal to the full new State "
+            "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
+            "for £1 of income above it, down to the standard personal "
+            "allowance. Someone whose only income is the full new State "
+            "Pension pays no income tax."
+        ),
+        simulation_modifier=(
+            budget_measures.state_pension_income_tax_allowance
+        ),
+    )
+
+
+# =============================================================================
+# 3. WARM HOME DISCOUNT FROM £150 TO £250, WINTER 2026-27
+# =============================================================================
+
+
+def _create_warm_home_discount_top_up() -> Reform:
+    return Reform(
+        id=WARM_HOME_DISCOUNT_ID,
+        name="Warm Home Discount top-up",
+        description=(
+            "Candidate measure. The Warm Home Discount rises from £150 to "
+            "£250 for winter 2026-27 only: £100 more to each household in "
+            "Great Britain receiving Universal Credit or Pension Credit. "
+            "Receipt follows DESNZ's rates: 85% of Pension Credit households "
+            "and 70% of other eligible households. Eligibility is "
+            "approximate, with no high-cost-to-heat test."
+        ),
+        simulation_modifier=budget_measures.warm_home_discount_top_up,
+    )
+
+
+# =============================================================================
+# 4. ZERO VAT ON DOMESTIC ELECTRICITY, 1 OCTOBER 2026 TO 31 MARCH 2028
+# =============================================================================
+
+
+def _create_domestic_electricity_zero_vat() -> Reform:
+    return Reform(
+        id=ELECTRICITY_VAT_ID,
+        name="Zero VAT on domestic electricity",
+        description=(
+            "Candidate measure. VAT on domestic electricity is 0% instead "
+            "of 5% from 1 October 2026 to 31 March 2028: the zero rate to "
+            "March 2027, not in the model's baseline, scored with a "
+            "candidate one-year extension. Applied to electricity spending "
+            "only, day-weighted in 2026-27."
+        ),
+        simulation_modifier=budget_measures.zero_vat_on_domestic_electricity,
+    )
+
+
+# =============================================================================
+# 5. EMPLOYER NI RELIEF FOR UNDER-25S
+# =============================================================================
+
+
+def _create_employer_ni_relief_under_25s() -> Reform:
+    return Reform(
+        id=EMPLOYER_NI_ID,
+        name="Employer NI relief for under-25s",
+        description=(
+            "Candidate measure. From 6 April 2027 employers pay no "
+            "secondary Class 1 National Insurance on earnings up to the "
+            "upper earnings limit (£50,270) for employees under 25, "
+            "extending the under-21 relief to ages 21 to 24. Wages are held "
+            "fixed, so it changes revenue, not household incomes."
+        ),
+        simulation_modifier=budget_measures.employer_ni_relief_ages_21_to_24,
+    )
+
+
+# =============================================================================
+# 6. THRESHOLD FREEZE EXTENDED INTO 2031-32
+# =============================================================================
+
+
+def _create_threshold_freeze_2031_32() -> Reform:
+    changes = threshold_change(PERSONAL_ALLOWANCE, {"2031": 12570})
+    changes.update(threshold_change(BASIC_RATE_BAND, {"2031": 37700}))
+    return Reform(
+        id=THRESHOLD_FREEZE_ID,
+        name="Threshold freeze to 2031-32",
+        description=(
+            "Candidate measure. The income tax personal allowance stays at "
+            "£12,570 and the basic rate band at £37,700 (a higher rate "
+            "threshold of £50,270) for one more year, 2031-32, instead of "
+            "rising with inflation to £12,830 and £38,500. From 2031-32 "
+            "policyengine-uk sets the National Insurance primary threshold "
+            "and upper earnings limit at the personal allowance and higher "
+            "rate threshold, so they stay at £12,570 and £50,270 too; the "
+            "employer secondary threshold is not held."
+        ),
+        parameter_changes=changes,
+    )
+
+
+# =============================================================================
+# 7. BUSINESS ASSET DISPOSAL RELIEF RESTRICTED
+# =============================================================================
+
+
+def _create_badr_lifetime_limit_cut() -> Reform:
+    return Reform(
+        id=BADR_ID,
+        name="Business Asset Disposal Relief restricted",
+        description=(
+            "Candidate measure. From 6 April 2027 the lifetime limit on "
+            "gains qualifying for Business Asset Disposal Relief falls from "
+            "£1 million to £500,000; the relief rate stays at 18%. Gains "
+            "above the limit pay the main capital gains tax rates. The "
+            "model applies the limit to each year's gains."
+        ),
+        parameter_changes=threshold_change(
+            BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
+        ),
+    )
+
+
+# =============================================================================
+# 8. TEMPORARY VAT CUT ON ROAD FUEL
+# =============================================================================
+
+
+def _create_road_fuel_vat_cut() -> Reform:
+    return Reform(
+        id=FUEL_VAT_ID,
+        name="VAT cut on road fuel",
+        description=(
+            "Candidate measure. VAT on petrol and diesel falls from 20% to "
+            "15% from 1 December 2026 to 31 May 2027, fully passed through "
+            "to pump prices; spending on fuel is held fixed. Day-weighted "
+            "to fiscal years."
+        ),
+        simulation_modifier=budget_measures.road_fuel_vat_cut,
+    )
+
+
+# =============================================================================
+# 9. PLAN 2 STUDENT LOAN REPAYMENT THRESHOLD UNFROZEN
+# =============================================================================
+
+# The Plan 2 threshold in 2026-27, before the Budget 2025 freeze.
+PLAN_2_THRESHOLD_2026 = 29385
+
+
+def plan_2_unfrozen_thresholds() -> dict[str, float]:
+    """The Plan 2 threshold uprated by RPI each April from 2027, as the
+    law did before the Budget 2025 freeze (2027-28 to 2029-30), with the
+    engine's RPI index; every policy year from 2027, since the parameter is
+    uprated (policyengine-uk #2430)."""
     from policyengine_uk.system import system
 
-    rates = {
-        "2026": 0.58,  # 5p cut ends, returns to 57.95p rounded
-        "2027": 0.61,  # RPI uprating
-        "2028": 0.63,
-        "2029": 0.64,
-        "2030": 0.66,  # Continued RPI uprating
-    }
-    rpi_index = system.parameters.gov.economic_assumptions.indices.obr.rpi
-    for year in (year for year in POLICY_YEARS if year > 2030):
-        rates[str(year)] = round(
-            rates["2030"]
-            * rpi_index(f"{year}-04-01")
-            / rpi_index("2030-04-01"),
-            2,
-        )
-    return rates
-
-
-# Cache for lazy-loaded baseline
-_PRE_AUTUMN_BUDGET_BASELINE_CACHE: dict | None = None
-
-
-def get_pre_autumn_budget_baseline() -> dict:
-    """Get the pre-Autumn Budget baseline values (lazy-loaded).
-
-    Returns cached values on subsequent calls to avoid repeated
-    Microsimulation initialization.
-    """
-    global _PRE_AUTUMN_BUDGET_BASELINE_CACHE
-    if _PRE_AUTUMN_BUDGET_BASELINE_CACHE is None:
-        _PRE_AUTUMN_BUDGET_BASELINE_CACHE = (
-            _calculate_pre_autumn_budget_baseline()
-        )
-    return _PRE_AUTUMN_BUDGET_BASELINE_CACHE
-
-
-# Alias for backwards compatibility (lazy-loaded)
-PRE_AUTUMN_BUDGET_BASELINE = None  # Set lazily below
-
-
-def _get_pre_ab_baseline_key(key: str) -> dict:
-    """Get a specific key from the pre-AB baseline (lazy-loaded)."""
-    return get_pre_autumn_budget_baseline()[key]
-
-
-# =============================================================================
-# SPENDING MEASURES (costs to treasury)
-# =============================================================================
-
-
-def _create_two_child_limit_repeal() -> Reform:
-    """Create the two-child limit repeal reform.
-
-    Since policyengine-uk v2.63.0+, the two-child limit repeal is in current law
-    (child_count = infinity from April 2026). This reform compares against
-    the pre-budget baseline where the limit was 2.
-
-    policyengine-uk handles the repeal calculation internally.
-
-    Returns:
-        Reform object for the two-child limit repeal.
-    """
-    return Reform(
-        id="two_child_limit",
-        name="2 child limit repeal",
-        description=(
-            "Removes the two-child limit on benefits from April 2026. The limit "
-            "restricts child-related payments in Universal Credit and Tax Credits "
-            "to the first two children in a family. Compares Autumn Budget policy "
-            "(limit removed) against pre-budget baseline (limit of 2)."
-        ),
-        # Baseline: Pre-budget (limit of 2)
-        baseline_parameter_changes={
-            "gov.dwp.tax_credits.child_tax_credit.limit.child_count": (
-                _years_dict(2)
-            ),
-            "gov.dwp.universal_credit.elements.child.limit.child_count": (
-                _years_dict(2)
-            ),
-        },
-        # Reform: Use current law (pe-uk with repeal/infinity)
-        parameter_changes={},
-    )
-
-
-def _create_fuel_duty_freeze() -> Reform:
-    """Create the fuel duty freeze extension reform.
-
-    Compares Autumn Budget policy against pre-budget baseline:
-    - Baseline: 5p cut ends March 2026, then RPI uprating
-    - Reform: Current law (policyengine-uk 2.60.0+) with freeze until Sept 2026,
-      staggered reversal (+1p Sep, +2p Dec, +2p Mar), then RPI uprating
-
-    Note: We hardcode the baseline because policyengine-uk 2.60.0+ has
-    post-budget values baked in. The baseline represents what would have
-    happened without the Autumn Budget (5p cut ending, then RPI).
-
-    See https://policyengine.org/uk/research/fuel-duty-freeze-2025
-    """
-    # Baseline: What would have happened without Autumn Budget
-    # 5p cut ends March 2026 → 57.95p, then RPI uprating
-    # Uses same methodology as blog post policy 95147
-    baseline_rates = _pre_budget_fuel_duty_rates()
-
-    return Reform(
-        id="fuel_duty_freeze",
-        name="Fuel duty freeze extension",
-        description=(
-            "Extends the 5p fuel duty cut until September 2026, then "
-            "implements a staggered reversal. Compares Autumn Budget policy "
-            "(freeze) against pre-budget baseline (5p cut ending March 2026). "
-            "See https://policyengine.org/uk/research/fuel-duty-freeze-2025"
-        ),
-        baseline_parameter_changes={
-            "gov.hmrc.fuel_duty.petrol_and_diesel": baseline_rates
-        },
-        parameter_changes={},  # Use current law (policyengine-uk 2.60.0+)
-    )
-
-
-# =============================================================================
-# TAX MEASURES (revenue raisers)
-# =============================================================================
-
-
-def _create_threshold_freeze_extension() -> Reform:
-    """Create the threshold freeze extension reform.
-
-    policyengine-uk 2.60.0+ has frozen thresholds (Autumn Budget policy).
-    This reform compares against the pre-budget baseline (CPI uprating).
-    - Baseline: CPI-indexed from 2028 (pre-budget)
-    - Reform: Frozen at £12,570 PA and £37,700 threshold (policyengine-uk default)
-    """
-    baseline = get_pre_autumn_budget_baseline()
-    return Reform(
-        id="threshold_freeze_extension",
-        name="Threshold freeze extension",
-        description=(
-            "Extends the freeze on income tax thresholds from April 2028 to "
-            "April 2031. Personal allowance remains at £12,570 and the higher "
-            "rate threshold at £37,700. Compares Autumn Budget policy (freeze) "
-            "against pre-budget baseline (inflation uprating from 2028)."
-        ),
-        baseline_parameter_changes={
-            "gov.hmrc.income_tax.allowances.personal_allowance.amount": (
-                baseline[
-                    "gov.hmrc.income_tax.allowances.personal_allowance.amount"
-                ]
-            ),
-            "gov.hmrc.income_tax.rates.uk[1].threshold": (
-                baseline["gov.hmrc.income_tax.rates.uk[1].threshold"]
-            ),
-        },
-        parameter_changes={},
-    )
-
-
-# =============================================================================
-# INCOME SOURCE TAX RATE INCREASES (from policyengine-uk PR #1395)
-# =============================================================================
-# These reforms compare the new Autumn Budget rates (baked into policyengine-uk)
-# against the pre-budget baseline rates.
-#
-# Dividends: +2pp from April 2026 (basic 8.75%->10.75%, higher 33.75%->35.75%)
-# Savings: +2pp from April 2027 (basic 20%->22%, higher 40%->42%, add 45%->47%)
-# Property: +2pp from April 2027 (basic 20%->22%, higher 40%->42%, add 45%->47%)
-
-
-# The pre-Budget dividend rates (basic 8.75%, higher 33.75%), as parameter
-# changes for every policy year from 2027-28 (OBR fiscal year timing: the
-# first full year of the April 2026 rise). They were a simulation modifier,
-# which policyengine.py's household calculation and the receipts can't take.
-DIVIDEND_BASIC_RATE = "gov.hmrc.income_tax.rates.dividends[0].rate"
-DIVIDEND_HIGHER_RATE = "gov.hmrc.income_tax.rates.dividends[1].rate"
-
-
-def _pre_budget_dividend_rates() -> dict:
-    years = [str(year) for year in POLICY_YEARS if year >= 2027]
+    rpi = system.parameters.gov.economic_assumptions.indices.obr.rpi
+    base = rpi("2026-04-06")
     return {
-        DIVIDEND_BASIC_RATE: {year: 0.0875 for year in years},
-        DIVIDEND_HIGHER_RATE: {year: 0.3375 for year in years},
+        str(year): round(PLAN_2_THRESHOLD_2026 * rpi(f"{year}-04-06") / base)
+        for year in POLICY_YEARS
+        if year >= 2027
     }
 
 
-def _create_dividend_tax_increase() -> Reform:
-    """Create the dividend tax increase reform.
-
-    Increases dividend tax rates by 2pp from April 2026:
-    - Basic rate: 8.75% -> 10.75%
-    - Higher rate: 33.75% -> 35.75%
-    - Additional rate: unchanged at 39.35%
-
-    OBR fiscal impact (Table 3.5):
-    - 2026-27: £0.3bn
-    - 2027-28: £1.0bn
-    - 2028-29: £1.0bn
-    - 2029-30: £1.0bn
-    """
+def _create_plan_2_threshold_unfreeze() -> Reform:
     return Reform(
-        id="dividend_tax_increase_2pp",
-        name="Dividend tax increase (+2pp)",
+        id=PLAN_2_ID,
+        name="Plan 2 student loan threshold unfrozen",
         description=(
-            "Increases dividend tax rates by 2 percentage points from April "
-            "2026. Basic rate: 8.75% → 10.75%, Higher rate: 33.75% → 35.75%. "
-            "OBR estimates £1.0-1.1bn annual yield from 2027-28."
+            "Candidate measure. The Plan 2 student loan repayment threshold "
+            "rises with RPI from April 2027 (to £30,267 in 2027-28), reversing "
+            "the freeze at £29,385 to April 2030. Repayments are modelled, "
+            "replacing those reported in the survey, and the revenue figure "
+            "is the change in modelled repayments."
         ),
-        baseline_parameter_changes=_pre_budget_dividend_rates(),
-        parameter_changes={},  # Uses new rates from policyengine-uk
-    )
-
-
-def _create_savings_tax_increase() -> Reform:
-    """Create the savings income tax increase reform.
-
-    Increases savings income tax rates by 2pp from April 2027:
-    - Basic rate: 20% -> 22%
-    - Higher rate: 40% -> 42%
-    - Additional rate: 45% -> 47%
-
-    OBR fiscal impact (Table 3.5):
-    - 2027-28: £0.0bn (starts April 2027)
-    - 2028-29: £0.5bn
-    - 2029-30: £0.5bn
-    """
-    return Reform(
-        id="savings_tax_increase_2pp",
-        name="Savings income tax increase (+2pp)",
-        description=(
-            "Increases savings income tax rates by 2 percentage points from "
-            "April 2027. Basic: 20% → 22%, Higher: 40% → 42%, Additional: "
-            "45% → 47%. OBR estimates £0.5bn annual yield from 2028-29."
+        parameter_changes=threshold_change(
+            PLAN_2_THRESHOLD, plan_2_unfrozen_thresholds()
         ),
-        baseline_parameter_changes={
-            # Pre-budget rates (20% basic, 40% higher, 45% additional)
-            # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-            "gov.hmrc.income_tax.rates.savings.basic": _years_from(2028, 0.20),
-            "gov.hmrc.income_tax.rates.savings.higher": _years_from(
-                2028, 0.40
-            ),
-            "gov.hmrc.income_tax.rates.savings.additional": _years_from(
-                2028, 0.45
-            ),
-        },
-        parameter_changes={},  # Uses new rates from policyengine-uk v2.60+
-    )
-
-
-def _create_property_tax_increase() -> Reform:
-    """Create the property income tax increase reform.
-
-    Increases property income tax rates by 2pp from April 2027:
-    - Basic rate: 20% -> 22%
-    - Higher rate: 40% -> 42%
-    - Additional rate: 45% -> 47%
-
-    OBR fiscal impact (Table 3.5):
-    - 2027-28: £0.0bn (starts April 2027)
-    - 2028-29: £0.6bn
-    - 2029-30: £0.4bn
-    """
-    return Reform(
-        id="property_tax_increase_2pp",
-        name="Property income tax increase (+2pp)",
-        description=(
-            "Increases property income tax rates by 2 percentage points from "
-            "April 2027. Basic: 20% → 22%, Higher: 40% → 42%, Additional: "
-            "45% → 47%. OBR estimates £0.4-0.6bn annual yield from 2028-29."
+        simulation_modifier=budget_measures.connect_student_loan_repayments,
+        baseline_simulation_modifier=(
+            budget_measures.connect_student_loan_repayments
         ),
-        baseline_parameter_changes={
-            # Pre-budget rates (20% basic, 40% higher, 45% additional)
-            # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-            "gov.hmrc.income_tax.rates.property.basic": _years_from(
-                2028, 0.20
-            ),
-            "gov.hmrc.income_tax.rates.property.higher": _years_from(
-                2028, 0.40
-            ),
-            "gov.hmrc.income_tax.rates.property.additional": _years_from(
-                2028, 0.45
-            ),
-        },
-        parameter_changes={},  # Uses new rates from policyengine-uk v2.60+
     )
 
 
 # =============================================================================
-# STRUCTURAL REFORMS (using simulation modifiers)
-# =============================================================================
-
-
-def _connect_student_loan_variables(sim: Simulation) -> Simulation:
-    """Connect policyengine-uk's modelled student loan repayments to revenue.
-
-    The microdata (policyengine-uk-data) now includes student_loan_plan imputed
-    based on age and reported repayments. This modifier just connects the
-    policyengine-uk student_loan_repayment variable to the tax/revenue totals.
-
-    Note: Requires policyengine-uk-data with student_loan_plan imputation.
-
-    In policyengine-uk 2.125.1 and 2.126.12, ``gov_tax``, ``household_tax`` and
-    ``hbai_household_net_income`` count ``student_loan_repayments``, whose
-    formula returns the modelled ``student_loan_repayment``. The dataset
-    supplies its own ``student_loan_repayments`` values, which mask that
-    formula, so they are deleted here. (Earlier versions listed the
-    components in ``adds``; that attribute is now ``None``.)
-    """
-    variable = sim.tax_benefit_system.variables["student_loan_repayments"]
-    if not variable.formulas:
-        raise RuntimeError(
-            "student_loan_repayments has no formula in this policyengine-uk "
-            "version, so modelled repayments cannot replace the reported ones"
-        )
-    sim.delete_arrays("student_loan_repayments")
-    return sim
-
-
-def _calculate_pre_freeze_thresholds() -> dict:
-    """Calculate what Plan 2 thresholds would be without the freeze.
-
-    Returns baseline (counterfactual) thresholds assuming RPI uprating
-    continued from 2027 instead of the Autumn Budget freeze.
-
-    Current law (policyengine-uk):
-    - 2026: £29,385
-    - 2027-2029: £29,385 (frozen)
-    - 2030+: RPI uprating
-
-    Baseline counterfactual:
-    - 2026: £29,385
-    - 2027-2029: RPI uprating (not frozen)
-    - 2030+: RPI uprating
-    """
-    from policyengine_uk.system import system
-
-    params = system.parameters
-    rpi_index = params.gov.economic_assumptions.indices.obr.rpi
-
-    # Base threshold for 2026 is £29,385 (uprated from £28,470)
-    base_2026 = 29385
-
-    rpi_2026 = rpi_index("2026-04-06")
-
-    return {
-        # Baseline: Continue RPI uprating from 2027 (no freeze), in every
-        # policy year. Use year-only format for parameter changes
-        "gov.hmrc.student_loans.thresholds.plan_2": {
-            str(year): round(base_2026 * rpi_index(f"{year}-04-06") / rpi_2026)
-            for year in POLICY_YEARS
-            if year >= 2027
-        },
-    }
-
-
-def _create_student_loan_freeze() -> Reform:
-    """Create the student loan threshold freeze reform.
-
-    Uses policyengine-uk's student_loan_repayment variable with:
-    - Reform: Current law (frozen thresholds from policyengine-uk)
-    - Baseline: RPI uprating counterfactual
-
-    The freeze saves the government money (more repayments) as graduates
-    pay back more when thresholds don't rise with inflation.
-
-    HMT fiscal impact:
-    - 2026-27: +£5.9bn (one-off revaluation of student loan book)
-    - 2027-28: +£0.3bn
-    - 2028-29: +£0.3bn
-    - 2029-30: +£0.4bn
-    """
-    baseline_thresholds = _calculate_pre_freeze_thresholds()
-
-    return Reform(
-        id="freeze_student_loan_thresholds",
-        name="Freeze student loan repayment thresholds",
-        description=(
-            "Freezes Plan 2 student loan repayment thresholds for 3 years "
-            "from 6 April 2027 through April 2029. Threshold is £29,385 in "
-            "2026, then frozen at that level for 3 years, resuming RPI "
-            "uprating from 2030. In 2026, the government revalued the student "
-            "loan book resulting in a one-off £5.9bn fiscal impact. Ongoing "
-            "annual revenue of ~£0.3bn/year from 2027-2029 as graduates repay "
-            "more when thresholds don't rise with inflation. Reform uses "
-            "current law (frozen thresholds); baseline assumes RPI uprating "
-            "would have continued. HMT costing: +£5.9bn (2026), +£0.3bn/year "
-            "thereafter."
-        ),
-        # Reform: Current law (frozen) - use policyengine-uk default
-        simulation_modifier=_connect_student_loan_variables,
-        # Baseline: RPI uprating counterfactual
-        baseline_parameter_changes=baseline_thresholds,
-        baseline_simulation_modifier=_connect_student_loan_variables,
-    )
-
-
-# Lazy-loaded reform instance
-_FREEZE_STUDENT_LOAN_THRESHOLDS_CACHE: Reform | None = None
-
-
-def get_freeze_student_loan_thresholds() -> Reform:
-    """Get the student loan threshold freeze reform (lazy-loaded)."""
-    global _FREEZE_STUDENT_LOAN_THRESHOLDS_CACHE
-    if _FREEZE_STUDENT_LOAN_THRESHOLDS_CACHE is None:
-        _FREEZE_STUDENT_LOAN_THRESHOLDS_CACHE = _create_student_loan_freeze()
-    return _FREEZE_STUDENT_LOAN_THRESHOLDS_CACHE
-
-
-# Backwards-compatible alias
-FREEZE_STUDENT_LOAN_THRESHOLDS = None  # Set lazily via get function
-
-
-# Rail fare increase rates (per OBR forecasts)
-# Baseline: fares increase by RPI formula each year
-RAIL_FARE_INCREASES = {
-    2026: 0.058,  # 5.8% baseline increase
-    2027: 0.042,  # 4.2%
-    2028: 0.039,  # 3.9%
-    2029: 0.039,  # 3.9%
-    2030: 0.039,  # Assumed same as 2029
-    2031: 0.039,  # Assumed same as 2029
-}
-
-# Treasury cost estimates for rail fare freeze (£bn)
-# Source: Treasury estimate of £145m in 2026-27, £775m total by 2030-31
-RAIL_FREEZE_COSTS = {
-    2026: 0.145,  # £145m
-    2027: 0.155,  # Estimated from total
-    2028: 0.160,  # Estimated from total
-    2029: 0.165,  # Estimated from total
-    2030: 0.150,  # Remaining from £775m total
-    # No Treasury figure past 2030-31: 2031-32 holds 2030-31's cost
-    # (an assumption, flagged for review)
-    2031: 0.150,
-}
-
-
-def _rail_fares_freeze_modifier(sim: Simulation) -> Simulation:
-    """Structural reform: Rail fares freeze for 2026.
-
-    The government announced a one-year freeze on regulated rail fares from
-    March 2026 - the first freeze in 30 years. Without the freeze, fares would
-    have increased by 5.8% under the RPI formula.
-
-    This reform increases rail_subsidy_spending to compensate for the foregone
-    fare revenue. The cost is based on Treasury estimates (£145m in 2026-27,
-    £775m total by 2030-31) and distributed proportionally based on household
-    rail usage.
-
-    Implementation:
-    - Get current rail subsidy values from the model
-    - Add Treasury-estimated cost distributed proportionally by rail usage
-    - Adjust for household weights when setting sample values
-    """
-    for year in POLICY_YEARS:
-        # Get current rail subsidy values and weights
-        current_rail = sim.calculate(
-            "rail_subsidy_spending", year, map_to="household"
-        )
-        weights = sim.calculate("household_weight", year)
-
-        # Convert to numpy arrays for manipulation
-        current_array = np.array(current_rail)
-        weights_array = np.array(weights)
-
-        # Treasury cost estimate for this year (in £)
-        treasury_cost = RAIL_FREEZE_COSTS[year] * 1e9
-
-        # Calculate weighted shares of rail usage
-        weighted_rail = current_array * weights_array
-        total_weighted_rail = weighted_rail.sum()
-
-        # Distribute cost proportionally by rail usage
-        # Need to divide by weight since set_input takes sample values
-        # that will later be weighted
-        share = np.where(
-            total_weighted_rail > 0, weighted_rail / total_weighted_rail, 0
-        )
-        sample_gain = np.where(
-            weights_array > 0, share * treasury_cost / weights_array, 0
-        )
-
-        # Set the reformed rail subsidy
-        reformed_values = current_array + sample_gain
-        sim.set_input("rail_subsidy_spending", year, reformed_values)
-
-    return sim
-
-
-def _create_rail_fares_freeze() -> Reform:
-    """Create the rail fares freeze reform.
-
-    Freezes regulated rail fares for one year from March 2026 - the first
-    freeze in 30 years. Saves passengers an estimated £600 million in
-    2026-27 (per government estimates).
-
-    OBR fiscal impact (Table 3.5):
-    - 2026-27: -£0.2bn (cost)
-    - 2027-28: -£0.2bn (cost)
-    - 2028-29: -£0.2bn (cost)
-    - 2029-30: -£0.2bn (cost)
-
-    Note: Government estimates £600m passenger savings in 2026-27 alone.
-    The ongoing cost reflects the permanent base effect of the freeze.
-    """
-    return Reform(
-        id="rail_fares_freeze",
-        name="Rail fares freeze",
-        description=(
-            "Freezes regulated rail fares for one year from March 2026. "
-            "Without the freeze, fares would have increased by 5.8% under the "
-            "RPI formula. Saves commuters on expensive routes over £300/year. "
-            "See https://policyengine.org/uk/research/rail-fares-freeze-2025"
-        ),
-        simulation_modifier=_rail_fares_freeze_modifier,
-    )
-
-
-def create_salary_sacrifice_cap_reform() -> Reform:
-    """Create a salary sacrifice cap reform.
-
-    Since policyengine-uk v2.65.0+, the salary sacrifice pension cap of £2,000
-    from April 2029 is in current law. This reform compares against the pre-budget
-    baseline where there was no cap (infinity).
-
-    policyengine-uk handles the cap calculation internally including:
-    - Excess above cap returned to employment income
-    - Broad-base haircut (employers spread NI costs across all workers)
-
-    Returns:
-        Reform object configured with the specified parameters.
-
-    OBR costing: £4.9bn in 2029-30 (static), £4.7bn (post-behavioural)
-    """
-    from policyengine_uk.system import system
-
-    params = system.parameters
-    cap_param = params.gov.hmrc.national_insurance.salary_sacrifice_pension_cap
-    haircut_param = (
-        params.gov.contrib.behavioral_responses.salary_sacrifice_broad_base_haircut_rate
-    )
-
-    # Read values from pe-uk for description
-    cap_amount = cap_param("2029-04-06")
-    haircut_rate = haircut_param("2029-04-06")
-
-    return Reform(
-        id="salary_sacrifice_cap",
-        name="Salary sacrifice cap",
-        description=(
-            f"Caps salary sacrifice pension contributions at £{cap_amount:,.0f} "
-            f"per year from April 2029. Contributions above the cap become "
-            f"employment income subject to income tax and NICs. Includes "
-            f"broad-base haircut ({haircut_rate:.2%}) where employers spread "
-            f"increased NI costs across all workers."
-        ),
-        # Baseline: Pre-budget (no cap)
-        baseline_parameter_changes={
-            "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": _years_from(
-                2029, float("inf")
-            ),
-        },
-        # Reform: Use current law (pe-uk with cap)
-        parameter_changes={},
-    )
-
-
-# =============================================================================
-# COMBINED AUTUMN BUDGET REFORM
+# COMBINED PACKAGE
 # =============================================================================
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
@@ -689,202 +349,98 @@ AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
 # reform is simulated whole, so this list does not change what it does; it
 # names its parts, so results by area can check it as a package of them.
 AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
-    "two_child_limit",
-    "salary_sacrifice_cap",
-    "fuel_duty_freeze",
-    "rail_fares_freeze",
-    "threshold_freeze_extension",
-    "freeze_student_loan_thresholds",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
+    FUEL_DUTY_DEFERRAL_ID,
+    STATE_PENSION_ALLOWANCE_ID,
+    WARM_HOME_DISCOUNT_ID,
+    ELECTRICITY_VAT_ID,
+    EMPLOYER_NI_ID,
+    THRESHOLD_FREEZE_ID,
+    BADR_ID,
+    FUEL_VAT_ID,
+    PLAN_2_ID,
+)
+
+_MEASURE_FACTORIES = (
+    _create_fuel_duty_rise_deferral,
+    _create_state_pension_income_tax_protection,
+    _create_warm_home_discount_top_up,
+    _create_domestic_electricity_zero_vat,
+    _create_employer_ni_relief_under_25s,
+    _create_threshold_freeze_2031_32,
+    _create_badr_lifetime_limit_cut,
+    _create_road_fuel_vat_cut,
+    _create_plan_2_threshold_unfreeze,
 )
 
 
-def _create_combined_autumn_budget_reform() -> Reform:
-    """Create a combined reform with all Autumn Budget 2026 provisions.
+def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
+    """One simulation of every candidate measure.
 
-    This reform combines:
-    - Two-child limit repeal (spending)
-    - Salary sacrifice pension cap (revenue)
-    - Fuel duty freeze extension (spending)
-    - Rail fares freeze (spending)
-    - Threshold freeze extension (revenue)
-    - Student loan threshold freeze (revenue)
-    - Dividend tax increase +2pp (revenue)
-    - Savings tax increase +2pp (revenue)
-    - Property tax increase +2pp (revenue)
-
-    Baseline: Pre-budget parameter values
-    Reform: pe-uk current law (Autumn Budget baked in)
-
-    Note: Zero-rate VAT on energy is NOT included as it was not in the budget.
+    Built by ``publication.combine.combine_measures``, as a combined run
+    is: the members' merged parameter changes (it refuses two members
+    changing one parameter) and each member's modifier, in order of measure
+    id. The Plan 2 measure brings its baseline modifier, so the combined
+    baseline counts modelled student loan repayments too.
     """
-    baseline = get_pre_autumn_budget_baseline()
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication.combine import combine_measures
 
-    # Fuel duty baseline: 5p cut ends March 2026, then RPI uprating
-    # (hardcoded because policyengine-uk 2.60.0+ has post-budget values)
-    fuel_duty_baseline = _pre_budget_fuel_duty_rates()
-
-    # Combine all baseline parameter changes
-    combined_baseline_params = {
-        # Fuel duty baseline (pre-budget rates - hardcoded)
-        "gov.hmrc.fuel_duty.petrol_and_diesel": fuel_duty_baseline,
-        # Threshold baseline (CPI-indexed from 2028)
-        "gov.hmrc.income_tax.allowances.personal_allowance.amount": baseline[
-            "gov.hmrc.income_tax.allowances.personal_allowance.amount"
-        ],
-        "gov.hmrc.income_tax.rates.uk[1].threshold": baseline[
-            "gov.hmrc.income_tax.rates.uk[1].threshold"
-        ],
-        # Two-child limit baseline (pre-budget: limit of 2)
-        "gov.dwp.tax_credits.child_tax_credit.limit.child_count": _years_dict(
-            2
-        ),
-        "gov.dwp.universal_credit.elements.child.limit.child_count": _years_dict(
-            2
-        ),
-        # Salary sacrifice pension cap baseline (pre-budget: no cap)
-        "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": _years_from(
-            2029, float("inf")
-        ),
-        # Savings tax baseline (pre-budget rates)
-        # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-        "gov.hmrc.income_tax.rates.savings.basic": _years_from(2028, 0.20),
-        "gov.hmrc.income_tax.rates.savings.higher": _years_from(2028, 0.40),
-        "gov.hmrc.income_tax.rates.savings.additional": _years_from(
-            2028, 0.45
-        ),
-        # Property tax baseline (pre-budget rates)
-        # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-        "gov.hmrc.income_tax.rates.property.basic": _years_from(2028, 0.20),
-        "gov.hmrc.income_tax.rates.property.higher": _years_from(2028, 0.40),
-        "gov.hmrc.income_tax.rates.property.additional": _years_from(
-            2028, 0.45
-        ),
-    }
-
-    # Pre-Budget dividend rates (parameter changes, as the measure states them)
-    combined_baseline_params.update(_pre_budget_dividend_rates())
-
-    # Combined baseline simulation modifier for student loans
-    def combined_baseline_modifier(sim):
-        """Connect student loan variables."""
-        _connect_student_loan_variables(sim)
-        return sim
-
-    # Combined reform simulation modifier (rail fares freeze + student loans)
-    def combined_reform_modifier(sim):
-        """Apply rail fares freeze and connect student loan variables."""
-        _rail_fares_freeze_modifier(sim)
-        _connect_student_loan_variables(sim)
-        return sim
-
-    # Add student loan baseline thresholds (RPI uprating counterfactual)
-    slr_baseline = _calculate_pre_freeze_thresholds()
-    combined_baseline_params.update(slr_baseline)
-
+    combined = combine_measures(members, DataConfig())
     return Reform(
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
-        name="Autumn Budget 2026 (combined)",
+        name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All Autumn Budget 2026 provisions combined: two-child limit "
-            "repeal, salary sacrifice pension cap, fuel duty freeze extension, "
-            "rail fares freeze, threshold freeze extension, student loan "
-            "threshold freeze, and tax rate increases on dividends (+2pp), "
-            "savings (+2pp), and property income (+2pp). Shows full budget "
-            "impact with interactions."
+            "All nine candidate measures simulated together: "
+            + ", ".join(member.name for member in members)
+            + ". Shows the package's impact with interactions."
         ),
-        baseline_parameter_changes=combined_baseline_params,
-        baseline_simulation_modifier=combined_baseline_modifier,
-        simulation_modifier=combined_reform_modifier,
-        # Reform: Use current law (pe-uk with all Autumn Budget changes)
-        parameter_changes={},
+        parameter_changes=combined.parameter_changes,
+        simulation_modifier=combined.simulation_modifier,
+        baseline_parameter_changes=combined.baseline_parameter_changes,
+        baseline_simulation_modifier=combined.baseline_simulation_modifier,
     )
 
 
 # =============================================================================
-# REFORM COLLECTIONS (lazy-loaded to avoid import-time Microsimulation)
+# REFORM COLLECTIONS (lazy-loaded to avoid import-time work)
 # =============================================================================
 
-# Cache for lazy-loaded reforms
 _AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
-_ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
+        members = [factory() for factory in _MEASURE_FACTORIES]
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(),  # Combined first
-            _create_two_child_limit_repeal(),
-            _create_fuel_duty_freeze(),
-            _create_rail_fares_freeze(),
-            _create_threshold_freeze_extension(),
-            _create_dividend_tax_increase(),
-            _create_savings_tax_increase(),
-            _create_property_tax_increase(),
-            get_freeze_student_loan_thresholds(),
-            create_salary_sacrifice_cap_reform(),
+            _create_combined_autumn_budget_reform(members),  # Combined first
+            *members,
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 
-def _get_all_reforms() -> list[Reform]:
-    """Get all available reforms (lazy-loaded)."""
-    global _ALL_REFORMS_CACHE
-    if _ALL_REFORMS_CACHE is None:
-        _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
-            create_salary_sacrifice_cap_reform(),
-        ]
-    return _ALL_REFORMS_CACHE
-
-
 def _get_reform_lookup() -> dict[str, Reform]:
-    """Get the reform lookup dictionary (lazy-loaded)."""
     global _REFORM_LOOKUP_CACHE
     if _REFORM_LOOKUP_CACHE is None:
-        _REFORM_LOOKUP_CACHE = {r.id: r for r in _get_all_reforms()}
+        _REFORM_LOOKUP_CACHE = {
+            r.id: r for r in _get_autumn_budget_2026_reforms()
+        }
     return _REFORM_LOOKUP_CACHE
 
 
-# Public getter functions for backwards compatibility
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms.
-
-    Returns a list of Reform objects for all policies in the November 2025
-    Autumn Budget. Lazy-loaded to avoid import-time initialization.
-    """
+    """The combined package, then the nine candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 
 def get_all_reforms() -> list[Reform]:
-    """Get all available reforms including experimental ones.
-
-    Returns a list of all Reform objects, including both Autumn Budget
-    reforms and experimental reforms like salary sacrifice cap.
-    """
-    return _get_all_reforms()
-
-
-# Module-level aliases that are lazy-loaded on first access
-# Note: These are initially None and populated on first use via get_reform()
-# For most use cases, prefer using get_reform(id) or get_autumn_budget_2026_reforms()
-AUTUMN_BUDGET_2026_REFORMS: list[Reform] | None = None
-ALL_REFORMS: list[Reform] | None = None
+    """Every registered reform: the same list."""
+    return _get_autumn_budget_2026_reforms()
 
 
 def get_reform(reform_id: str) -> Optional[Reform]:
-    """Get a reform by its ID.
-
-    Args:
-        reform_id: The unique identifier of the reform.
-
-    Returns:
-        The Reform object, or None if not found.
-    """
+    """Get a reform by its ID, or None if not found."""
     return _get_reform_lookup().get(reform_id)
 
 

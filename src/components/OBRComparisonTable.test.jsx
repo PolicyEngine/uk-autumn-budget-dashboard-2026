@@ -49,10 +49,50 @@ describe("the OBR comparison table", () => {
     const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
     expect(cells[column]).toHaveTextContent("−£3.6bn");
     expect(cells[column + 1]).toHaveTextContent("—");
-    // A year both costed still pairs them
+    // A year both costed still pairs them, on the static basis by default
     const column2030 = 1 + 2 * DISPLAY_YEARS.indexOf(2030);
     expect(cells[column2030]).toHaveTextContent("−£3.4bn");
+    expect(cells[column2030 + 1]).toHaveTextContent("−£3.3bn");
+  });
+
+  it("starts on the static OBR basis and switches to post-behavioural", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
+      }),
+    );
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
+    const basis = await screen.findByRole("button", { name: "OBR basis: Static" });
+    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    fireEvent.click(basis);
+    fireEvent.click(screen.getByRole("option", { name: /Post-behavioural/ }));
+    const row = screen.getByRole("row", { name: /2 child limit repeal/ });
+    const cells = within(row).getAllByRole("cell");
+    const column2030 = 1 + 2 * DISPLAY_YEARS.indexOf(2030);
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
+  });
+
+  it("keeps the intro to one short sentence with the EFO link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
+      }),
+    );
+    const { container } = render(
+      <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
+    );
+    const link = await screen.findByRole("link", { name: "EFO" });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/",
+    );
+    expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
+      "PolicyEngine's static estimates against the OBR's November 2025 costings (EFO), £bn a year; positive values raise revenue.",
+    );
   });
 });
 
@@ -144,5 +184,31 @@ describe("the OBR comparison at 2031-32", () => {
     const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
     expect(cells[column]).toHaveTextContent("—");
     expect(cells[column + 1]).toHaveTextContent("—");
+  });
+});
+
+describe("before the OBR costs the measures", () => {
+  it("says the comparison is not available and pairs nothing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        // Last year's costings, under last year's ids
+        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": [
+          "reform_id,reform_name,year,value",
+          "threshold_freeze_2031_32,Threshold freeze to 2031-32,2031,3.1",
+        ].join("\n"),
+      }),
+    );
+    render(
+      <OBRComparisonTable selectedPolicies={["threshold_freeze_2031_32"]} />,
+    );
+    expect(
+      await screen.findByText(
+        "Shown once the OBR publishes its costings for these measures.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Table" })).not.toBeInTheDocument();
   });
 });

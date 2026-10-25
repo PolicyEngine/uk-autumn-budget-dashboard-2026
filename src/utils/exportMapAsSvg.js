@@ -19,6 +19,7 @@ import {
 } from "./svgHelpers";
 import { downloadSvg } from "./downloadFile";
 import { LEGEND_INSET, MAP_LEGEND_CLASS } from "./geography/legend";
+import { CHART_COLOURS } from "./chartTheme";
 
 /** The class of the map's zoomable group, whose transform is reset. */
 export const MAP_ZOOM_LAYER_CLASS = "map-zoom-layer";
@@ -72,14 +73,14 @@ const STYLES = {
   cardRadius: 8,
   cardWrap: 40,
   colors: {
-    title: "#374151",
-    description: "#4b5563",
+    title: CHART_COLOURS.text,
+    description: CHART_COLOURS.axisTitle,
     background: "white",
-    cardBorder: "#e5e7eb",
-    cardText: "#4b5563",
-    gain: "#0F766E",
-    loss: "#B45309",
-    neutral: "#4B5563",
+    cardBorder: CHART_COLOURS.grid,
+    cardText: CHART_COLOURS.axisTitle,
+    gain: CHART_COLOURS.gainText,
+    loss: CHART_COLOURS.lossText,
+    neutral: CHART_COLOURS.axisTitle,
   },
 };
 

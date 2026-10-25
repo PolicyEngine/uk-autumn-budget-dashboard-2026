@@ -4,8 +4,9 @@ import { buildChartSvg } from "../utils/exportChartAsSvg";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
-import { useNarrowViewport, TICK_STYLE } from "../utils/chartTheme";
+import { useNarrowViewport, TICK_STYLE, CHART_COLOURS } from "../utils/chartTheme";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import NoBreakYear from "./NoBreakYear";
 import useElementWidth from "../hooks/useElementWidth";
 import "./OBRDumbbellChart.css";
@@ -23,20 +24,20 @@ import "./OBRDumbbellChart.css";
  * obr_behavioural } } }], ...].
  */
 
-export const PE_COLOUR = "#319795";
-export const OBR_COLOUR = "#9CA3AF";
-const PE_LABEL_COLOUR = "#0F766E";
-const OBR_LABEL_COLOUR = "#6B7280";
-const ZERO_LINE = "#374151";
-const GRID = "#E5E7EB";
-const NAME_COLOUR = "#374151";
-const BOTH_LABEL_COLOUR = "#374151";
+export const PE_COLOUR = CHART_COLOURS.gain;
+export const OBR_COLOUR = CHART_COLOURS.obr;
+const PE_LABEL_COLOUR = CHART_COLOURS.gainText;
+const OBR_LABEL_COLOUR = CHART_COLOURS.obrText;
+const ZERO_LINE = CHART_COLOURS.zeroLine;
+const GRID = CHART_COLOURS.grid;
+const NAME_COLOUR = CHART_COLOURS.zeroLine;
+const BOTH_LABEL_COLOUR = CHART_COLOURS.zeroLine;
 // The PolicyEngine dot sits inside the OBR ring when the two coincide
 export const PE_RADIUS = 5;
 export const OBR_RADIUS = 8;
 // A white outline so labels stay legible where they cross a gridline
 const HALO = {
-  stroke: "#ffffff",
+  stroke: CHART_COLOURS.surface,
   strokeWidth: 4,
   strokeLinejoin: "round",
   paintOrder: "stroke",
@@ -44,9 +45,9 @@ const HALO = {
 
 // The comparison table's difference bands and colours
 export const BANDS = [
-  { key: "small", below: 0.5, colour: "#10b981", label: "under £0.5bn" },
-  { key: "medium", below: 2, colour: "#fbbf24", label: "£0.5–2bn" },
-  { key: "large", below: Infinity, colour: "#ef4444", label: "over £2bn" },
+  { key: "small", below: 0.5, colour: CHART_COLOURS.diffSmall, label: "under £0.5bn" },
+  { key: "medium", below: 2, colour: CHART_COLOURS.diffMedium, label: "£0.5–2bn" },
+  { key: "large", below: Infinity, colour: CHART_COLOURS.diffLarge, label: "over £2bn" },
 ];
 
 const MINUS = "−";
@@ -114,6 +115,9 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   const yearLabel = fiscalYear(year);
   const obrKind = showBehavioural ? "post-behavioural" : "static";
+  // Cleared when the year or the OBR basis changes, so it never shows the
+  // last year's figures while the year pill plays
+  const { tip, handlers } = useFloatingTooltip(wrapperRef, `${year}-${showBehavioural}`);
   const chartTitle = `PolicyEngine and OBR estimates, ${yearLabel}`;
   // Only in exported images, which carry no surrounding text
   const description = `Each row shows a measure's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the OBR's ${obrKind} costing. Positive values raise revenue or reduce spending; negative values do the opposite.`;
@@ -242,7 +246,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   // A white backing so a gridline or the zero line never runs through a label
   const backing = (left, cy, w) => (
-    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill="#ffffff" />
+    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill={CHART_COLOURS.surface} />
   );
 
   const fits = (text, side, cx) => {
@@ -256,13 +260,19 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     const w = approxWidth(text, 12);
     // Only where it fits inside the chart
     if (!fits(text, side, cx)) return null;
+    // Drawn at the origin and moved by a transform, so a year change
+    // slides the label with its dot (OBRDumbbellChart.css)
     return (
-      <g key={key}>
-        {backing(side === "left" ? tx - w : tx, cy, w)}
+      <g
+        key={key}
+        className="obr-dumbbell-move"
+        style={{ transform: `translate(${tx}px, ${cy}px)` }}
+      >
+        {backing(side === "left" ? -w : 0, 0, w)}
         <text
           className="obr-dumbbell-value"
-          x={tx}
-          y={cy}
+          x={0}
+          y={0}
           dy="0.35em"
           {...HALO}
           textAnchor={side === "left" ? "end" : "start"}
@@ -303,15 +313,24 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     if (pePart && obrPart) {
       const xPe = x(row.pe);
       const xObr = x(row.obr);
+      // A unit line moved and stretched by a transform, so it slides with
+      // the dots; the stroke keeps its width (non-scaling-stroke)
       parts.push(
         <line
           key="gap"
-          className="obr-dumbbell-gap"
+          className="obr-dumbbell-gap obr-dumbbell-move"
           data-band={row.band.key}
-          x1={xPe}
-          x2={xObr}
-          y1={cy}
-          y2={cy}
+          x1={0}
+          x2={1}
+          y1={0}
+          y2={0}
+          style={{
+            transform: `translate(${Math.min(xPe, xObr)}px, ${cy}px) scaleX(${Math.max(
+              Math.abs(xObr - xPe),
+              0.001,
+            )})`,
+          }}
+          vectorEffect="non-scaling-stroke"
           stroke={row.band.colour}
           strokeWidth={3}
           strokeLinecap="round"
@@ -395,10 +414,11 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="obr-backing"
+          className="obr-dumbbell-dot-move"
           cx={x(row.obr)}
           cy={cy}
           r={OBR_RADIUS}
-          fill="#ffffff"
+          fill={CHART_COLOURS.surface}
         />,
       );
     }
@@ -406,7 +426,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="pe"
-          className="obr-dumbbell-dot pe"
+          className="obr-dumbbell-dot pe obr-dumbbell-dot-move"
           cx={x(row.pe)}
           cy={cy}
           r={PE_RADIUS}
@@ -418,7 +438,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="obr"
-          className="obr-dumbbell-dot obr"
+          className="obr-dumbbell-dot obr obr-dumbbell-dot-move"
           cx={x(row.obr)}
           cy={cy}
           r={OBR_RADIUS - 1}
@@ -433,9 +453,54 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       pePart ? formatBn(row.pe) : "not yet published"
     }, OBR ${obrPart ? formatBn(row.obr) : "not yet published"}`;
 
+    const tooltip = (
+      <TooltipRows
+        label={`${row.name}, ${yearLabel}`}
+        rows={[
+          {
+            key: "pe",
+            name: "PolicyEngine (static)",
+            text: pePart ? formatBn(row.pe) : "Not yet published",
+            color: PE_COLOUR,
+          },
+          {
+            key: "obr",
+            name: `OBR (${obrKind})`,
+            text: obrPart ? formatBn(row.obr) : "Not yet published",
+            color: OBR_COLOUR,
+          },
+          ...(row.band
+            ? [
+                {
+                  key: "difference",
+                  name: "Difference (PolicyEngine − OBR)",
+                  text: formatBn(row.pe - row.obr),
+                  color: row.band.colour,
+                },
+              ]
+            : []),
+        ]}
+      />
+    );
+
     return (
-      <g key={row.id} className="obr-dumbbell-row" data-policy={row.id}>
-        <title>{summary}</title>
+      <g
+        key={row.id}
+        className="obr-dumbbell-row has-tooltip"
+        data-policy={row.id}
+        tabIndex={0}
+        aria-label={`${summary}, ${yearLabel}`}
+        {...handlers(row.id, tooltip)}
+      >
+        {/* The whole row answers the pointer, not just its dots */}
+        <rect
+          className="obr-dumbbell-hit"
+          x={0}
+          y={top + index * rowHeight}
+          width={width}
+          height={rowHeight}
+          fill="transparent"
+        />
         {narrow && backing(0, nameY, approxWidth(row.name, fontSize))}
         <text
           className="obr-dumbbell-name"
@@ -472,7 +537,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
         />
       </div>
 
-      <div ref={wrapperRef} className="obr-dumbbell-plot">
+      <div ref={wrapperRef} className="obr-dumbbell-plot" style={{ position: "relative" }}>
         {hasData ? (
           <div ref={chartRef}>
             <svg
@@ -518,6 +583,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
         ) : (
           <p className="obr-dumbbell-empty">Not yet published</p>
         )}
+        {hasData && <FloatingTooltip tip={tip} />}
       </div>
 
       {hasData && (

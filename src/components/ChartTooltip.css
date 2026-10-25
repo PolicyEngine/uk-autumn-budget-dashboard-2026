@@ -5,7 +5,7 @@
   font-size: 12.5px;
   line-height: 1.35;
   color: var(--pe-gray-800);
-  background: #ffffff;
+  background: var(--c-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
   box-shadow: 0 4px 16px rgba(17, 24, 39, 0.1);
@@ -48,7 +48,7 @@
 
 .chart-tooltip-swatch-line {
   height: 2px;
-  background: #000000;
+  background: var(--c-net);
 }
 
 .chart-tooltip-value {
@@ -72,4 +72,21 @@
     max-width: 260px;
     min-width: 0;
   }
+}
+
+/* A hand-drawn chart's tooltip (FloatingTooltip.jsx), placed in its plot */
+.floating-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* A point that shows a tooltip on keyboard focus */
+.has-tooltip:focus {
+  outline: none;
+}
+
+.has-tooltip:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 2px;
 }

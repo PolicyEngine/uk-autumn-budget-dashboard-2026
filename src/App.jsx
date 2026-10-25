@@ -21,94 +21,22 @@ import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import PopulationImpactView from "./components/PopulationImpactView";
+import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+import { buildBudgetData } from "./utils/budgetData";
+import { POLICIES } from "./utils/policies";
 import Note from "./components/Note";
 import { SUM_OF_MEASURES, combinedValue, totalSource } from "./utils/combinedTotal";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
-} from "./utils/policyConfig";
-import { DISPLAY_YEARS } from "./utils/displayYears";
-
-// Autumn Budget 2026 policy provisions
-const POLICIES = [
-  {
-    id: "two_child_limit",
-    name: "2 child limit repeal",
-    description: "Repeal the two-child limit on benefits",
-    explanation:
-      "Removes the two-child limit in Universal Credit from April 2026, so families receive the child element for every child. The Government estimates this reduces child poverty by 450,000 by 2029-30.",
-  },
-  {
-    id: "fuel_duty_freeze",
-    name: "Fuel duty freeze extension",
-    description: "Freeze fuel duty rates until September 2026",
-    explanation:
-      "Keeps fuel duty at 52.95p a litre until September 2026, then returns it to 57.95p in three steps (1p, 2p, 2p) by March 2027, with RPI uprating after that. Without the policy the 5p cut would end on 22 March 2026.",
-  },
-  {
-    id: "rail_fares_freeze",
-    name: "Rail fares freeze",
-    description: "Freeze regulated rail fares for one year from March 2026",
-    explanation:
-      "Freezes regulated rail fares in England for a year from March 2026, instead of a 5.8% RPI-linked rise. The Government estimates passengers pay £600 million less in 2026-27.",
-  },
-  {
-    id: "threshold_freeze_extension",
-    name: "Threshold freeze extension",
-    description: "Extend the freeze on income tax thresholds to 2030-31",
-    explanation:
-      "Keeps the personal allowance (£12,570), the higher-rate threshold (£50,270), the additional-rate threshold (£125,140) and the NICs secondary threshold frozen from 2027-28 to 2030-31. The OBR estimates 5.2 million more people pay income tax by 2030-31.",
-  },
-  {
-    id: "dividend_tax_increase_2pp",
-    name: "Dividend tax increase (+2pp)",
-    description:
-      "Increase dividend tax rates by 2 percentage points from April 2026",
-    explanation:
-      "Raises the basic and higher dividend tax rates by 2 points from April 2026 (8.75% → 10.75% and 33.75% → 35.75%); the additional rate stays at 39.35%. The OBR estimates £1.0–1.1bn a year from 2027-28.",
-  },
-  {
-    id: "savings_tax_increase_2pp",
-    name: "Savings income tax increase (+2pp)",
-    description:
-      "Increase savings income tax rates by 2 percentage points from April 2027",
-    explanation:
-      "Raises savings income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.5bn a year from 2028-29. Survey data under-record savings income.",
-  },
-  {
-    id: "property_tax_increase_2pp",
-    name: "Property income tax increase (+2pp)",
-    description:
-      "Increase property income tax rates by 2 percentage points from April 2027",
-    explanation:
-      "Raises property income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.4–0.6bn a year from 2028-29. Survey data may not capture all property income.",
-  },
-  {
-    id: "freeze_student_loan_thresholds",
-    name: "Freeze student loan repayment thresholds",
-    description:
-      "Freeze Plan 2 repayment thresholds from 2027-28 to 2029-30",
-    explanation:
-      "Freezes the Plan 2 repayment threshold at £29,385 for three years from April 2027, instead of uprating it with RPI. The OBR estimates £255–355m a year in 2027-28 to 2029-30; its larger 2026-27 figure includes a one-off revaluation of loan balances, which this model leaves out.",
-  },
-  {
-    id: "salary_sacrifice_cap",
-    name: "Salary sacrifice cap",
-    description: "Cap NI-free salary sacrifice pension contributions at £2,000",
-    explanation:
-      "Caps National Insurance-free salary sacrifice pension contributions at £2,000 a year from April 2029; contributions above the cap pay employee and employer NICs. The model assumes employers spread the cost and employees keep their contributions. Compare PolicyEngine and OBR estimates in the Public finances section.",
-  },
-];
+import PolicyCards from "./components/PolicyCards";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them.
+// outlook, and Methodology is text: neither pill applies to them. Young
+// people is a sub-tab of Population impact (PopulationImpactView).
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "personal", label: "Personal impact", year: false, policies: true },
-  { value: "young", label: "Young people", year: true, policies: true },
+  { value: "personal", label: "Personal impact", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
@@ -119,23 +47,44 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 const DEFAULT_VIEW = "dashboard";
 
 // Views whose links keep the chosen policies in the URL
-const POLICY_PARAM_VIEWS = new Set(["dashboard", "young"]);
+const POLICY_PARAM_VIEWS = new Set(["dashboard"]);
 
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
 
-/** The view a page address opens: #young-people, else ?tab=, else the default. */
+/** Whether the band's year pill applies: on the views that use a year. */
+export function yearPillShown(view) {
+  return Boolean(VIEW_BY_KEY[view]?.year);
+}
+
+/**
+ * Whether a page address is an old link to the Young people view
+ * (#young-people or ?tab=young), now Population impact's Young people
+ * sub-tab.
+ */
+export function opensYoungPeople({ search, hash }) {
+  return (
+    hash === `#${YOUNG_PEOPLE_ANCHOR}` || new URLSearchParams(search).get("tab") === "young"
+  );
+}
+
+/** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
-  if (hash === `#${YOUNG_PEOPLE_ANCHOR}`) return "young";
+  if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
   const tab = new URLSearchParams(search).get("tab");
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
+
+// The banner under the intro, and the views it is left off
+export const CANDIDATE_BANNER =
+  "Candidate measures, modelled before the Budget on 28 October; not announced policy.";
+const VIEWS_WITHOUT_CANDIDATE_BANNER = new Set(["living", "methodology"]);
 
 // Preset policy combinations
 const PRESETS = [
   {
     id: "autumn-budget",
-    name: "Autumn Budget 2026",
+    name: "All candidate measures",
     policies: POLICIES.map((p) => p.id),
   },
 ];
@@ -182,11 +131,12 @@ function parseCSV(csvText) {
   return data;
 }
 
-/** Take the open sub-tab (?sub=) out of the address. */
-function dropSubTab() {
+/** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
+function dropSubTab(sub) {
   const params = new URLSearchParams(window.location.search);
-  if (!params.has(SUB_TAB_PARAM)) return;
-  params.delete(SUB_TAB_PARAM);
+  if (!sub && !params.has(SUB_TAB_PARAM)) return;
+  if (sub) params.set(SUB_TAB_PARAM, sub);
+  else params.delete(SUB_TAB_PARAM);
   const search = params.toString();
   window.history.replaceState(
     {},
@@ -199,10 +149,10 @@ function App() {
   const [selectedPolicies, setSelectedPolicies] = useState(
     POLICIES.map((p) => p.id),
   );
-  // Default to 2029 so more policies have visible impact
-  const [selectedYear, setSelectedYear] = useState(2030);
-  // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
-  const [distributionalYear, setDistributionalYear] = useState(2029);
+  // Both start on DEFAULT_DISPLAY_YEAR (2027-28); there is no ?year param
+  const [selectedYear] = useState(DEFAULT_DISPLAY_YEAR);
+  // The year every chart shows, chosen with the header pill
+  const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   // One example household for both household cards, so they always match
   const [exampleHouseholdId, setExampleHouseholdId] = useState(
     EXAMPLE_HOUSEHOLDS[0].id,
@@ -217,6 +167,9 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const policiesParam = params.get("policies");
+    // An old link to the Young people view opens its sub-tab; the hash
+    // stays, so the page scrolls to the section
+    if (opensYoungPeople(window.location)) dropSubTab("young");
     setActiveTab(viewFromLocation(window.location));
 
     if (policiesParam) {
@@ -299,27 +252,19 @@ function App() {
         selectedPolicies.includes(row.reform_id),
       );
 
-      // Build budgetary impact data for chart (2026-2029)
-      // Always include all policy keys for smooth animations
-      const years = [2026, 2027, 2028, 2029, 2030];
+      // One point per shown year, from the years the file covers (the
+      // year list used to be hardcoded and stopped at 2030-31)
       // With every live measure selected, the total is the combined run's
       // when it is current, else the sum of the measures, labelled (#105)
       const source = totalSource(budgetaryData, selectedPolicies);
-      const budgetData = years.map((year) => {
-        const dataPoint = { year };
-        let netImpact = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = budgetaryData.find(
-            (row) => row.reform_id === policy.id && parseInt(row.year) === year,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netImpact += value;
-        });
-        const combined = source === "combined" ? combinedValue(budgetaryData, year) : null;
-        dataPoint.netImpact = combined ?? netImpact;
-        return dataPoint;
+      const budgetData = buildBudgetData(
+        budgetaryData,
+        POLICIES,
+        selectedPolicies,
+      ).map((point) => {
+        if (point.unpublished || source !== "combined") return point;
+        const combined = combinedValue(budgetaryData, point.year);
+        return combined === null ? point : { ...point, netImpact: combined };
       });
 
       // Calculate budgetary impact for 2026 (metrics always show 2026)
@@ -474,12 +419,13 @@ function App() {
     }
   }, []);
 
-  // A link to #young-people from elsewhere on the page opens its view
+  // A link to #young-people from elsewhere on the page opens Population
+  // impact's Young people sub-tab (PopulationImpactView shows it if open)
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
-        dropSubTab();
-        setActiveTab("young");
+        dropSubTab("young");
+        setActiveTab(DEFAULT_VIEW);
       }
     };
     window.addEventListener("hashchange", onHashChange);
@@ -495,14 +441,15 @@ function App() {
   // no year pill), so this runs once the new view is laid out.
   const appRef = useRef(null);
   const tabScrollPending = useRef(false);
-  const handleTabChange = (tab) => {
+  // `sub` opens the new view at one of its sub-tabs (Methodology's links).
+  const handleTabChange = (tab, sub) => {
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
-    if (tab !== activeTab) dropSubTab();
+    if (tab !== activeTab) dropSubTab(sub);
     setActiveTab(tab);
-    // A hash that belongs to the Young people view goes when another view
+    // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
-    if (tab !== "young" && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
+    if (tab !== DEFAULT_VIEW && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
       window.history.replaceState({}, "", window.location.pathname + window.location.search);
     }
     // Choosing the open view changes nothing, so there is nothing to keep
@@ -519,15 +466,21 @@ function App() {
     if (window.scrollY > top) window.scrollTo({ top });
   }, [activeTab]);
 
-  // Open the Methodology view at one of its sections
-  const showMethod = (sectionId) => {
-    handleTabChange("methodology");
-    setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
+  const yearShown = yearPillShown(activeTab);
+
+  // Which policies the charts show, when not all (under Population
+  // impact's sub-tabs)
+  const showingLine = selectedPolicies.length > 0 &&
+    selectedPolicies.length < POLICIES.length && (
+      <p className="showing-line">
+        {selectedPolicies.length === 1
+          ? `Showing: ${
+              POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
+            }`
+          : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
+      </p>
+    );
 
   // With no policies chosen, the policy-driven views offer the full Budget
   const emptyState = (
@@ -553,7 +506,7 @@ function App() {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={view.year ? undefined : "compact"}>
+    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"}>
       <main className="main-content">
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -562,16 +515,17 @@ function App() {
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
 
-          {/* The year applies to every chart on the Population and Young
-              people views, and the revenue chart highlights it; it lives in
-              the band so it can be changed from anywhere. The policy pill
+          {/* The year applies to every chart on Population impact (both
+              sub-tabs) and to Personal impact, and
+              the revenue chart highlights it; it lives in the band so it can
+              be changed from anywhere. The policy pill
               applies to those views and Personal impact. A pill that does
               not apply keeps its place but is hidden, so the band does not
               move. */}
           <div
-            className={`band-year ${view.year ? "" : "is-hidden"}`}
-            aria-hidden={view.year ? undefined : "true"}
-            inert={!view.year}
+            className={`band-year ${yearShown ? "" : "is-hidden"}`}
+            aria-hidden={yearShown ? undefined : "true"}
+            inert={!yearShown}
           >
             <YearSlider
               selectedYear={distributionalYear}
@@ -594,12 +548,20 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          How the Autumn Budget 2026 measures affect the public finances,
-          households across the income distribution, regions and
-          constituencies, example households and individuals, and young
-          people, with the living standards baseline. Choose a year and
-          policies in the bar above.
+          How nine candidate Autumn Budget 2026 measures would affect the
+          public finances and households: by income, area and age, and for
+          your own household, alongside the living standards outlook. Choose
+          a year and policies in the bar above.
         </p>
+
+        {/* Said once, under the intro, on the views that show the
+            measures: Living standards has its own demo line, and
+            Methodology describes them */}
+        {!VIEWS_WITHOUT_CANDIDATE_BANNER.has(activeTab) && (
+          <div className="candidate-banner" role="note">
+            <Note>{CANDIDATE_BANNER}</Note>
+          </div>
+        )}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
@@ -616,18 +578,6 @@ function App() {
           aria-labelledby={tabId(activeTab)}
           className="tab-panel"
         >
-        {/* Which policies the charts below show, when not all */}
-        {POLICY_PARAM_VIEWS.has(activeTab) &&
-          selectedPolicies.length > 0 &&
-          selectedPolicies.length < POLICIES.length && (
-            <p className="showing-line">
-              {selectedPolicies.length === 1
-                ? `Showing: ${
-                    POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
-                  }`
-                : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
-            </p>
-          )}
         {activeTab === "living" ? (
           <LivingStandardsTab />
         ) : activeTab === "methodology" ? (
@@ -636,9 +586,12 @@ function App() {
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
-            onShowMethod={showMethod}
+            year={distributionalYear}
           />
-        ) : activeTab === "young" ? (
+        ) : (
+          // Population impact: All households and Young people sub-tabs
+          <PopulationImpactView note={showingLine}>
+          {(sub) => sub === "young" ? (
           selectedPolicies.length === 0 ? (
             emptyState
           ) : (
@@ -664,15 +617,7 @@ function App() {
                     />
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
-                        data={DISPLAY_YEARS.map(
-                          (year) =>
-                            results.budgetData.find((point) => point.year === year) ?? {
-                              // In the config, not yet in the published files
-                              year,
-                              netImpact: null,
-                              unpublished: true,
-                            },
-                        )}
+                        data={results.budgetData}
                         selectedYear={distributionalYear}
                         netLabel={results.totalSource === "sum-stale" ? SUM_OF_MEASURES : undefined}
                       />
@@ -781,40 +726,10 @@ function App() {
                         title="About selected policies"
                         contentClassName="policy-details-content"
                       >
-                          {[
-                            ["Raise revenue", true],
-                            ["Cost revenue", false],
-                          ].map(([heading, raises]) => {
-                            const items = ALL_POLICY_NAMES.map((name) =>
-                              POLICIES.find((policy) => policy.name === name),
-                            ).filter(
-                              (policy) =>
-                                policy &&
-                                selectedPolicies.includes(policy.id) &&
-                                REVENUE_RAISING_NAMES.has(policy.name) === raises,
-                            );
-                            if (!items.length) return null;
-                            return (
-                              <div key={heading} className="policy-group">
-                                <h3 className="policy-group-heading">{heading}</h3>
-                                <div className="policy-grid">
-                                  {items.map((policy) => (
-                                    <div key={policy.id} className="policy-detail">
-                                      <p className="policy-detail-name">
-                                        <span
-                                          className="policy-detail-swatch"
-                                          style={{ background: POLICY_COLORS[policy.name] }}
-                                          aria-hidden="true"
-                                        />
-                                        {policy.name}
-                                      </p>
-                                      <p className="policy-detail-text">{policy.explanation}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <PolicyCards
+                          policies={POLICIES}
+                          selectedPolicies={selectedPolicies}
+                        />
                       </Disclosure>
                     </section>
                   </>
@@ -822,6 +737,8 @@ function App() {
               </div>
             )}
           </>
+        )}
+          </PopulationImpactView>
         )}
         </div>
         <ReplicationLine />

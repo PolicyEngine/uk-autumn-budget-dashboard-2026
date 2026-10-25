@@ -35,7 +35,10 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
   axisWidth,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion } from "../utils/chartMotion";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -45,8 +48,8 @@ const CHART_TITLE = "Household net income";
 
 // Legend items for export
 const LEGEND_ITEMS = [
-  { color: "#9CA3AF", label: "Before the Budget", type: "line" },
-  { color: "#319795", label: "After the Budget", type: "line" },
+  { color: CHART_COLOURS.before, label: "Before the Budget", type: "line" },
+  { color: CHART_COLOURS.after, label: "After the Budget", type: "line" },
 ];
 
 /**
@@ -56,7 +59,7 @@ const LEGEND_ITEMS = [
  */
 function EmploymentIncomeChart({
   selectedPolicies,
-  selectedYear = 2029,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
   defaultHousehold = DEFAULT_HOUSEHOLD,
   household: controlledHousehold,
   onHouseholdChange,
@@ -110,7 +113,7 @@ function EmploymentIncomeChart({
           </div>
         </div>
         {picker}
-        <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+        <div style={{ textAlign: "center", padding: "40px", color: CHART_COLOURS.tick }}>
           Loading example households...
         </div>
       </div>
@@ -174,7 +177,7 @@ function EmploymentIncomeChart({
 
                     format={formatPounds}
 
-                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}`}
+                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}, ${formatYearRange(selectedYear)}`}
 
                     grouped={false}
 
@@ -196,23 +199,21 @@ function EmploymentIncomeChart({
               <Line
                 type="monotone"
                 dataKey="baseline"
-                stroke="#9CA3AF"
+                stroke={CHART_COLOURS.before}
                 strokeWidth={2.5}
                 dot={false}
                 name="Before the Budget"
-                animationDuration={500}
-                animationBegin={0}
+                {...chartMotion()}
               />
               <Line
                 type="monotone"
                 dataKey="reform"
-                stroke="#319795"
+                stroke={CHART_COLOURS.after}
                 strokeWidth={2.5}
                 strokeDasharray="8 4"
                 dot={false}
                 name="After the Budget"
-                animationDuration={500}
-                animationBegin={0}
+                {...chartMotion()}
               />
               <Customized component={<ChartUnitLabel text="Household net income" />} />
             <Customized component={PolicyEngineLogo} />

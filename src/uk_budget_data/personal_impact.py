@@ -13,6 +13,7 @@ import pickle
 import threading
 import time
 import traceback
+from collections import deque
 from dataclasses import dataclass, field
 from multiprocessing.connection import wait
 from pathlib import Path
@@ -49,14 +50,15 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 
 # Policies to analyse (excluding combined which would double-count)
 POLICY_IDS = [
-    "two_child_limit",
-    "fuel_duty_freeze",
-    "rail_fares_freeze",
-    "threshold_freeze_extension",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
-    "salary_sacrifice_cap",
+    "fuel_duty_rise_deferral",
+    "state_pension_income_tax_protection",
+    "warm_home_discount_top_up",
+    "domestic_electricity_zero_vat",
+    "employer_ni_relief_under_25s",
+    "threshold_freeze_2031_32",
+    "badr_lifetime_limit_cut",
+    "road_fuel_vat_cut",
+    "plan_2_threshold_unfreeze",
 ]
 
 
@@ -597,14 +599,94 @@ def _raise_worker_error(blob, text):
     raise error from remote
 
 
+class FairSlots:
+    """The instance's worker processes, shared by every calculation at once.
+
+    ``size`` processes run at a time across all calculations, so CPU and
+    memory stay bounded however many requests the API admits. A
+    calculation with no process running waits in a queue, first come first
+    served (``acquire``); one already running may start another only when
+    nobody is queued (``try_acquire``). So a new visitor's two-run headline
+    starts as soon as any process finishes, between another visitor's
+    per-policy runs, instead of after that whole calculation, and a
+    calculation that holds slots never waits for one (no deadlock).
+    """
+
+    def __init__(self, size: int):
+        if size < 1:
+            raise ValueError("size must be at least one")
+        self.size = size
+        self._cond = threading.Condition()
+        self._free = size
+        self._queue: deque = deque()
+
+    def try_acquire(self) -> bool:
+        with self._cond:
+            if self._free > 0 and not self._queue:
+                self._free -= 1
+                return True
+            return False
+
+    def acquire(self, timeout: float) -> bool:
+        ticket = object()
+        with self._cond:
+            self._queue.append(ticket)
+            try:
+                got = self._cond.wait_for(
+                    lambda: self._free > 0 and self._queue[0] is ticket,
+                    timeout,
+                )
+                if got:
+                    self._free -= 1
+                return got
+            finally:
+                self._queue.remove(ticket)
+                self._cond.notify_all()
+
+    def release(self) -> None:
+        with self._cond:
+            self._free += 1
+            self._cond.notify_all()
+
+    @property
+    def free(self) -> int:
+        with self._cond:
+            return self._free
+
+
+_slots: Optional[FairSlots] = None
+_slots_lock = threading.Lock()
+
+
+def household_slots() -> FairSlots:
+    """The instance's shared worker slots, ``household_workers()`` of
+    them."""
+    global _slots
+    with _slots_lock:
+        if _slots is None:
+            _slots = FairSlots(household_workers())
+        return _slots
+
+
+# While a calculation waits for its own processes with calls still to
+# start, how often it looks for a slot another calculation freed.
+SLOT_POLL_SECONDS = 0.2
+
+
 def run_in_workers(
-    workers: int, calls: list[tuple[Callable, tuple]], timeout: float
+    workers: int,
+    calls: list[tuple[Callable, tuple]],
+    timeout: float,
+    slots: Optional[FairSlots] = None,
 ) -> list:
     """Run each picklable-by-reference call in its own process, in order.
 
     At most ``workers`` processes run at once, and startup counts towards
     ``timeout``. Each invocation owns its processes and pipes, so concurrent
-    invocations are safe; the API still runs one calculation at a time.
+    invocations are safe. With ``slots``, each process also holds one of
+    the instance's shared slots (``FairSlots``), so concurrent invocations
+    share the instance's processes fairly; time waiting for a slot counts
+    towards ``timeout``.
     Every process is stopped and joined before this function returns or
     raises, including when another call fails or the deadline expires.
     """
@@ -631,6 +713,15 @@ def run_in_workers(
         while next_call < len(calls) or active:
             while next_call < len(calls) and len(active) < workers:
                 remaining()
+                if slots is not None:
+                    if active:
+                        if not slots.try_acquire():
+                            break
+                    elif not slots.acquire(remaining()):
+                        remaining()
+                        raise TimeoutError(
+                            f"No worker was free within {timeout:g} s"
+                        )
                 function, args = calls[next_call]
                 reader, writer = context.Pipe(duplex=False)
                 try:
@@ -667,9 +758,23 @@ def run_in_workers(
                 except BaseException:
                     reader.close()
                     writer.close()
+                    if slots is not None and reader not in active:
+                        slots.release()
                     raise
                 next_call += 1
-            ready = wait(list(active), timeout=remaining())
+            waiting = (
+                slots is not None
+                and next_call < len(calls)
+                and len(active) < workers
+            )
+            ready = wait(
+                list(active),
+                timeout=(
+                    min(remaining(), SLOT_POLL_SECONDS)
+                    if waiting
+                    else remaining()
+                ),
+            )
             remaining()
             for reader in ready:
                 index, process = active[reader]
@@ -689,6 +794,8 @@ def run_in_workers(
                     with _workers_lock:
                         _workers.discard(process)
                     del active[reader]
+                    if slots is not None:
+                        slots.release()
                 if status == "error":
                     _raise_worker_error(*value)
                 remaining()
@@ -702,6 +809,8 @@ def run_in_workers(
         for reader, (_, process) in active.items():
             process.join()
             reader.close()
+            if slots is not None:
+                slots.release()
         with _workers_lock:
             _workers.difference_update(p for _, p in active.values())
 
@@ -709,8 +818,10 @@ def run_in_workers(
 def run_jobs(workers: int, jobs: list) -> list:
     """Each job's metrics, computed in worker processes.
 
-    Concurrent calls are safe because each owns its processes. The API's
-    limiter still runs one calculation at a time to bound CPU and memory.
+    Concurrent calls are safe because each owns its processes, and their
+    processes take the instance's shared slots (``household_slots``), so
+    this route and the household route never run more processes between
+    them than the instance has workers.
     """
     return run_in_workers(
         workers,
@@ -719,6 +830,7 @@ def run_jobs(workers: int, jobs: list) -> list:
             for years, situation, _, scenario in jobs
         ],
         CALCULATION_TIMEOUT_SECONDS,
+        slots=household_slots(),
     )
 
 

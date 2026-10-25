@@ -1,7 +1,7 @@
 // Data loading and formatting helpers for the Living standards view, which
-// reads public/data/living_standards_outlook.json: a copy of outlook.json
-// from PolicyEngine/uk-living-standards-outlook (shape in that repo's
-// DATA_CONTRACT.md).
+// reads public/data/living_standards_outlook.json, written by
+// `uk-budget-data living-standards` (src/uk_budget_data/living_standards/;
+// shape in docs/DATA_CONTRACT.md).
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const OUTLOOK_PATH = "/data/living_standards_outlook.json";
@@ -77,16 +77,19 @@ export function splitSource(text) {
   return { label: label || url, url };
 }
 
-/** End year for headline comparisons (meta.headline_end_year, e.g. "2029-30"). */
+/** End year for headline comparisons (meta.headline_end_year, e.g. "2031-32"). */
 export const headlineYear = (data) => data?.meta?.headline_end_year || null;
 
-/** Start year for headline changes (meta.headline_start_year, e.g. "2025-26"). */
+/**
+ * Start year for headline changes (meta.headline_start_year): 2027-28, the
+ * first year of the dashboard's period and the data's own base year.
+ */
 export const headlineStartYear = (data) => data?.meta?.headline_start_year || null;
 
 /**
- * Headline-start row (2025-26; the first row if absent) and the headline-year
- * row (or the last row) of a projection. Series that also carry the model's
- * 2024-25 point still report change from 2025-26.
+ * Headline-start row (2027-28; the first row if absent) and the headline-year
+ * row (or the last row) of a projection. Series that also carry earlier
+ * model years still report change from 2027-28.
  */
 export function headlineSpan(rows, data) {
   if (!rows || rows.length < 2) return null;
@@ -102,13 +105,33 @@ export const round1 = (v) => (v == null ? v : Math.round(v * 10) / 10);
 
 /** "rises 10.0%" / "falls 1.3pp" / null when the change rounds to zero. */
 export function changeVerb(delta, unit) {
-  if (delta == null || Math.abs(delta) < 0.05) return null;
-  return `${delta > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(delta))}${unit}`;
+  const r = round1(delta);
+  if (r == null || r === 0) return null;
+  return `${r > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(r))}${unit}`;
 }
 
-/** Section notes minus the 2030-31 UC step, which meta.headline_end_year_note states once. */
-export const sectionNotes = (notes) =>
-  (notes || []).filter((n) => !/baseline discontinuity|UC health element protection|^Series end in/i.test(n));
+/**
+ * A change at one decimal place, signed after rounding: "+0.3pp", "−1.2%",
+ * or `zero` ("no change") when it rounds to 0, never "−0.0".
+ */
+export function signedChange(delta, unit, zero = "no change") {
+  const r = round1(delta);
+  if (r == null || Number.isNaN(r)) return "—";
+  if (r === 0) return zero;
+  return `${r > 0 ? "+" : "−"}${formatOneDp(Math.abs(r))}${unit}`;
+}
+
+/** The years a card covers: "2027-28 to 2031-32" (or one year alone). */
+export function periodLabel(from, to) {
+  if (from == null || to == null) return null;
+  const a = typeof from === "number" ? fyLabel(from) : fyDash(from);
+  const b = typeof to === "number" ? fyLabel(to) : fyDash(to);
+  return a === b ? a : `${a} to ${b}`;
+}
+
+/** The first and last x values of chart rows, as a period. */
+export const rowsPeriod = (rows, key = "year", format = (v) => v) =>
+  rows?.length ? periodLabel(format(rows[0][key]), format(rows[rows.length - 1][key])) : null;
 
 /** 2030 -> "30-31", for phone axes. */
 export const fyShortLabel = (start) => `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;

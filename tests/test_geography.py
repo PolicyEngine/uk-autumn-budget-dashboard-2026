@@ -1784,8 +1784,13 @@ def test_a_local_file_without_the_export_marker_is_refused(
     assert "needs a Microcosm export" in capsys.readouterr().out
     with h5py.File(local, "a") as handle:
         handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
-    manifest = publication_manifest(tmp_path, ["two_child_limit"])
-    args += ["--manifest", str(manifest), "--seat-reforms", "two_child_limit"]
+    manifest = publication_manifest(tmp_path, ["warm_home_discount_top_up"])
+    args += [
+        "--manifest",
+        str(manifest),
+        "--seat-reforms",
+        "warm_home_discount_top_up",
+    ]
     assert g._plan(parse_args(args)).microcosm_export
 
 
@@ -1808,7 +1813,7 @@ def test_seat_weights_need_the_lookup_they_were_built_from(
             extra = ["--seat-lookup", str(path)]
         seats.to_csv(path, index=False)
     write_seat_weights(weights_dir / g.SEAT_WEIGHTS_FILE, np.zeros((650, 1)))
-    manifest = publication_manifest(tmp_path, ["two_child_limit"])
+    manifest = publication_manifest(tmp_path, ["warm_home_discount_top_up"])
     enhanced_frs_bundle(monkeypatch)
     parsed = parse_args(
         [
@@ -1818,7 +1823,7 @@ def test_seat_weights_need_the_lookup_they_were_built_from(
             "--levels",
             "constituency",
             "--seat-reforms",
-            "two_child_limit",
+            "warm_home_discount_top_up",
             *extra,
         ]
         + ["--data-dir", str(weights_dir)]

@@ -19,29 +19,18 @@ from uk_budget_data.publication.combine import (
     sample_instants,
 )
 from uk_budget_data.reforms import (
-    _create_combined_autumn_budget_reform,
+    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+    AUTUMN_BUDGET_2026_COMBINED_ID,
     get_reform,
 )
 
 BASIC_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
 HIGHER_RATE = "gov.hmrc.income_tax.rates.uk[1].rate"
-DIVIDEND_BASIC = "gov.hmrc.income_tax.rates.dividends[0].rate"
+ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
+BADR_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
 SAVINGS_BASIC = "gov.hmrc.income_tax.rates.savings.basic"
 YEARS = [2027, 2028]
 CONFIG = DataConfig(years=YEARS)
-
-# The nine members of the hand-built 2025 combined reform.
-HAND_BUILT_MEMBERS = [
-    "two_child_limit",
-    "salary_sacrifice_cap",
-    "fuel_duty_freeze",
-    "rail_fares_freeze",
-    "threshold_freeze_extension",
-    "freeze_student_loan_thresholds",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
-]
 
 
 def measure(key, changes=None, **extra) -> Reform:
@@ -137,57 +126,57 @@ def test_members_without_their_own_baseline_use_the_configured_one():
     }
 
 
-def test_generic_combination_reproduces_the_hand_built_2025_reform():
-    """Differential: same parameter changes and modifiers on both sides."""
-    members = [get_reform(key) for key in HAND_BUILT_MEMBERS]
+def test_the_registered_package_is_the_generic_combination_of_its_members():
+    """Differential: the combined candidate package carries exactly the
+    generic combiner's parameter changes and modifiers, in member order."""
+    members = [
+        get_reform(key) for key in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+    ]
     sides = merged_changes(members, DataConfig())
-    hand_built = _create_combined_autumn_budget_reform()
-    assert (
-        sides["baseline"]["parameter_changes"]
-        == hand_built.baseline_parameter_changes
-    )
-    assert sides["reform"]["parameter_changes"] == (
-        hand_built.parameter_changes or {}
-    )
+    package = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
+    assert package.parameter_changes == sides["reform"]["parameter_changes"]
+    assert (package.baseline_parameter_changes or {}) == sides["baseline"][
+        "parameter_changes"
+    ]
     # Lists in member order (by id), so a dropped or repeated modifier
     # shows.
     assert [m.__name__ for m in sides["baseline"]["modifiers"]] == [
-        "_connect_student_loan_variables",
+        "connect_student_loan_repayments",
     ]
     assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
-        "_connect_student_loan_variables",
-        "_rail_fares_freeze_modifier",
+        "zero_vat_on_domestic_electricity",
+        "employer_ni_relief_ages_21_to_24",
+        "pump_vat_on_fuel_duty_deferral",
+        "connect_student_loan_repayments",
+        "road_fuel_vat_cut",
+        "state_pension_income_tax_allowance",
+        "warm_home_discount_top_up",
     ]
 
 
 def test_the_engine_and_the_combiner_agree_on_two_members_changes():
-    """Differential: a hand-written scenario holding both members' baseline
-    parameter changes and the combiner's give the same parameters.
-
-    The dividend baseline's pre-Budget rates were a modifier until they
-    became parameter changes; either way they must survive beside the
-    savings baseline's changes.
-    """
-    dividend = get_reform("dividend_tax_increase_2pp")
-    savings = get_reform("savings_tax_increase_2pp")
-    instants = ["2027-04-06", "2028-04-30"]
+    """Differential: a hand-written scenario holding both members' parameter
+    changes and the combiner's give the same parameters."""
+    freeze = get_reform("threshold_freeze_2031_32")
+    badr = get_reform("badr_lifetime_limit_cut")
+    instants = ["2027-04-06", "2031-04-30"]
     engine = parameter_snapshot(
         Scenario(
             parameter_changes={
-                **dividend.baseline_parameter_changes,
-                **savings.baseline_parameter_changes,
+                **freeze.parameter_changes,
+                **badr.parameter_changes,
             },
         ),
         instants,
         "engine",
     )
     combined = parameter_snapshot(
-        combine_measures([dividend, savings], CONFIG).to_baseline_scenario(),
+        combine_measures([freeze, badr], CONFIG).to_scenario(),
         instants,
         "combined",
     )
-    assert engine[DIVIDEND_BASIC][0] == 0.0875
-    assert engine[SAVINGS_BASIC][1] == 0.20
+    assert engine[BADR_LIMIT][0] == 500_000
+    assert engine[ALLOWANCE][1] == 12_570
     assert engine == combined
 
 
@@ -245,17 +234,17 @@ def test_a_member_gives_the_same_household_result_combined_as_alone():
 
 
 def test_combination_keeps_each_members_parameters_and_is_consistent():
-    dividend = get_reform("dividend_tax_increase_2pp")
-    savings = get_reform("savings_tax_increase_2pp")
-    combined = combine_measures([dividend, savings], CONFIG)
-    check_consistency(combined, [dividend, savings], CONFIG, YEARS)
-    baseline = parameter_snapshot(
-        combined.to_baseline_scenario(),
-        ["2027-04-06", "2028-04-30"],
+    freeze = get_reform("threshold_freeze_2031_32")
+    badr = get_reform("badr_lifetime_limit_cut")
+    combined = combine_measures([freeze, badr], CONFIG)
+    check_consistency(combined, [freeze, badr], CONFIG, [2027, 2031])
+    reform = parameter_snapshot(
+        combined.to_scenario(),
+        ["2027-04-06", "2031-04-30"],
         "combined",
     )
-    assert baseline[DIVIDEND_BASIC][0] == 0.0875
-    assert baseline[SAVINGS_BASIC][1] == 0.20
+    assert reform[BADR_LIMIT][0] == 500_000
+    assert reform[ALLOWANCE][1] == 12_570
 
 
 def test_a_combination_missing_a_members_change_is_inconsistent():
@@ -280,18 +269,19 @@ def test_a_combination_that_changes_more_than_its_members_is_inconsistent():
 
 def test_a_measure_that_cannot_run_on_a_household_cannot_be_combined():
     broken = measure("broken", simulation_modifier=broken_modifier)
-    savings = get_reform("savings_tax_increase_2pp")
-    combined = combine_measures([broken, savings], CONFIG)
+    badr = get_reform("badr_lifetime_limit_cut")
+    combined = combine_measures([broken, badr], CONFIG)
     with pytest.raises(CombineInconsistent, match="could not be applied"):
-        check_consistency(combined, [broken, savings], CONFIG, YEARS)
+        check_consistency(combined, [broken, badr], CONFIG, YEARS)
 
 
-def test_the_student_loan_measure_now_combines_consistently():
-    """It crashed on policyengine-uk 2.125.1 until its modifier was fixed."""
-    student_loans = get_reform("freeze_student_loan_thresholds")
-    savings = get_reform("savings_tax_increase_2pp")
-    combined = combine_measures([student_loans, savings], CONFIG)
-    check_consistency(combined, [student_loans, savings], CONFIG, YEARS)
+def test_the_student_loan_measure_combines_consistently():
+    """Its modifier deletes the survey's reported repayments; it crashed on
+    policyengine-uk 2.125.1 until it was fixed."""
+    student_loans = get_reform("plan_2_threshold_unfreeze")
+    badr = get_reform("badr_lifetime_limit_cut")
+    combined = combine_measures([student_loans, badr], CONFIG)
+    check_consistency(combined, [student_loans, badr], CONFIG, YEARS)
 
 
 def test_sample_instants_bracket_each_fiscal_year():

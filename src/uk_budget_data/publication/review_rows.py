@@ -3,9 +3,13 @@
 Every file under ``public/`` needs a row in
 ``data_inputs/public_data_review.csv`` with the SHA-256 of the bytes a person
 reviewed (``scripts/check_public_data.py`` in CI, and
-``scripts/check-public-files.mjs`` in the build). The gated publication writes
-its manifest and artifacts under ``public/data/``, so each publish pull
-request carries their rows. The Reconciler writes them with
+``scripts/check-public-files.mjs`` in the build). The one exception is the
+area routing status (``uk_budget_data.area_routing``): the checks accept it
+without a row, as one of the few texts that module writes, and refuse a row
+for it, so this command writes none, removes one it finds, and doesn't
+report the file as lacking one. The gated publication writes its manifest
+and artifacts under ``public/data/``, so each publish pull request carries
+their rows. The Reconciler writes them with
 
     uv run uk-budget-data publish review-rows --reviewer NAME
 
@@ -62,8 +66,9 @@ the artifact outside the checkout until then.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
-and never touches any other row: untouched rows keep their bytes, quoting
-and order. New rows go in path order among the rest.
+and a row for the area routing status, which both checks refuse. It never
+touches any other row: untouched rows keep their bytes, quoting and order.
+New rows go in path order among the rest.
 """
 
 import csv
@@ -83,6 +88,7 @@ from typing import Optional
 from policyengine.disclosure.schema import PUBLIC_COLUMNS
 from pydantic import ValidationError
 
+from uk_budget_data.area_routing import PATH as AREA_ROUTING_PATH
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.receipt import (
@@ -105,6 +111,9 @@ REVIEW_COLUMNS = (
 )
 PUBLIC = "public"
 ARTIFACTS_DIR = "artifacts"
+# The one file under public/ both checks accept without a row, by its path
+# from the repository root, exactly as they spell it.
+AREA_ROUTING_FILE = AREA_ROUTING_PATH.as_posix()
 # A receipt's top-level fields: what build_receipt_document writes, and all
 # that receipt.artifact_sha256 digests.
 RECEIPT_FIELDS = {"schema", "execution_receipt", "dashboard"}
@@ -922,7 +931,8 @@ def _write_text(path: Path, text: str) -> None:
 def _unreviewed(
     data_root: Path, root: Path, manifest: m.Manifest, reviewed: set[str]
 ) -> list[tuple[str, str]]:
-    """Files under the data root that the review list will not cover."""
+    """Files under the data root that the review list will not cover, so
+    both checks refuse them. The area routing status needs no row."""
     owners = {}
     for entry in [s.entry for s in manifest.superseded]:
         owners[entry.artifact] = "a superseded entry"
@@ -933,7 +943,7 @@ def _unreviewed(
         for name in names:
             path = Path(directory) / name
             relative = path.relative_to(root).as_posix()
-            if relative in reviewed:
+            if relative in reviewed or relative == AREA_ROUTING_FILE:
                 continue
             artifact = Path(directory).relative_to(data_root).as_posix()
             found.append((relative, owners.get(artifact, "in no entry")))
@@ -981,6 +991,8 @@ def review_rows(
     prefix = (data_root / ARTIFACTS_DIR).relative_to(root).as_posix() + "/"
 
     def removable(path: str) -> bool:
+        if path == AREA_ROUTING_FILE:
+            return True
         return path.startswith(prefix) and not os.path.lexists(root / path)
 
     text = merge(

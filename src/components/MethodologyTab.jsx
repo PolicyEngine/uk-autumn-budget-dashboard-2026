@@ -1,27 +1,25 @@
 import GeographyMethodology from "./GeographyMethodology";
-import LifecycleAbout from "./LifecycleAbout";
+import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
-import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
+import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
-  ["https://policyengine.org/uk/research/uk-two-child-limit", "two-child limit"],
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty freeze"],
-  ["https://policyengine.org/uk/research/rail-fares-freeze-2025", "rail fares freeze"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
+  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
 ];
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
- * views link with these (the map to `geography`, the lifetime chart to
- * `lifetime`), so a key's id must not change.
+ * views link with these (the map to `geography`, Personal impact to
+ * `singleYear`), so a key's id must not change.
  */
 export const METHOD_SECTIONS = {
   overview: "method-overview",
@@ -31,14 +29,13 @@ export const METHOD_SECTIONS = {
   geography: "method-area",
   young: "method-young",
   personal: "method-personal",
-  lifetime: "method-lifetime",
   singleYear: "method-single-year",
   living: "method-living",
   limitations: "method-limitations",
   versions: "method-versions",
 };
 
-/** The sections in the contents, in page order (the lifetime and single-year blocks sit inside Personal impact). */
+/** The sections in the contents, in page order (the household calculation's block sits inside Personal impact). */
 export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.overview, title: "At a glance" },
   { id: METHOD_SECTIONS.data, title: "Data" },
@@ -64,7 +61,7 @@ const FLOW = [
   },
   {
     title: "Two scenarios",
-    text: "Each measure is run against a pre-Budget baseline, for every fiscal year shown.",
+    text: "Each candidate measure is run against current law, for every fiscal year shown.",
   },
   {
     title: "Static estimates",
@@ -99,14 +96,15 @@ function MethodSection({ id, title, subtitle, children }) {
   );
 }
 
-/** A link to another view, switched to in place. */
-function ViewLink({ tab, hash, onShowTab, children }) {
+/** A link to another view (at one of its sub-tabs), switched to in place. */
+function ViewLink({ tab, sub, hash, onShowTab, children }) {
   return (
     <a
-      href={`?tab=${tab}${hash ? `#${hash}` : ""}`}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        onShowTab(tab);
+        if (sub) onShowTab(tab, sub);
+        else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
             document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
@@ -138,10 +136,11 @@ function SectionLink({ id, children }) {
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the Living standards view keeps its own provenance line.
+ * impact. Living standards states the engine, data, notes and gaps of
+ * that view's own baseline.
  *
  * @param {Object} props
- * @param {(tab: string) => void} props.onShowTab - Switch to another view
+ * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
   const policyNotes = (text) => (
@@ -232,7 +231,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.model}
           title="Model and measures"
-          subtitle="How the Budget measures are represented in the model."
+          subtitle="How the candidate measures are represented in the model."
         >
           <div className="card method-card">
             <FactList
@@ -243,11 +242,11 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Baseline",
-                  "policyengine-uk's current law already includes the Budget measures. Each measure's baseline sets the pre-Budget values back, so the difference between the two runs is the measure.",
+                  "Current law in policyengine-uk, before the Budget. Each candidate measure changes it, so the difference between the two runs is the measure. The Plan 2 measure's baseline also uses modelled student loan repayments.",
                 ],
                 [
                   "Static",
-                  "Households do not change their behaviour in response to a measure, except where a measure's modelling says otherwise (the salary sacrifice cap).",
+                  "Households do not change their behaviour in response to a measure. Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                 ],
                 [
                   "Years",
@@ -289,9 +288,33 @@ function MethodologyTab({ onShowTab }) {
             </table>
             <p className="method-more">
               What each measure does is in the {policyNotes("policy notes on Population impact")}.
-              New measures on Budget day are written as parameter changes where
-              possible, or built from tested measure templates.
+              Measures are written as parameter changes where possible, or
+              built from tested measure templates.
             </p>
+          </div>
+
+          <div className="card method-card method-table-card">
+            <h3 className="method-card-title">Likely but not modelled</h3>
+            <p className="method-more">
+              Reported as likely for the Budget, but outside what the household
+              model can cost, so not on the page.
+            </p>
+            <table className="method-measures">
+              <thead>
+                <tr>
+                  <th scope="col">Measure</th>
+                  <th scope="col">Why it is not modelled</th>
+                </tr>
+              </thead>
+              <tbody>
+                {NOT_MODELLED.map((measure) => (
+                  <tr key={measure.name}>
+                    <th scope="row">{measure.name}</th>
+                    <td>{measure.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </MethodSection>
 
@@ -310,7 +333,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The student loan threshold freeze counts the change in loan repayments. The rail fares freeze counts the Treasury's cost estimate.",
+                  "The Plan 2 student loan measure counts the change in loan repayments. The employer National Insurance relief changes revenue only: with wages fixed, household incomes do not move.",
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
@@ -323,7 +346,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "OBR comparison",
-                  "Our figures are static. The comparison opens on the OBR's post-behavioural costings, which include its estimate of behavioural responses; choose Static to compare like with like.",
+                  "Shown once the OBR publishes its costings for these measures. Our figures are static; the OBR's post-behavioural costings include its estimate of behavioural responses.",
                 ],
               ]}
             />
@@ -361,7 +384,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Household scatter bands",
-                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart's change axis is symmetric-logarithmic, so the small bands near zero and the large ones both show.`,
+                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots, as the 2025 dashboard's sample of households did: each group gets a share in proportion to its households, placed at random within the group. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
                 ],
                 [
                   "Gain, loss, no change",
@@ -410,15 +433,34 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.young}
           title="Young people"
-          subtitle="The definitions behind the Young people tab."
+          subtitle="The definitions behind Population impact's Young people results."
         >
           <div className="card method-card">
             <FactList
               items={[
-                ["Age bands", AGE_BANDS.map((band) => band.label).join(", ") + "."],
+                [
+                  "Age bands",
+                  <>
+                    {AGE_BANDS.map((band) => band.label).join(", ")}, and all ages. The adult
+                    bands are the Office for National Statistics' standard Labour Force
+                    Survey age groups (
+                    <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
+                      {AGE_BAND_SOURCE.label}
+                    </a>
+                    , which splits 16 to 24 into 16 to 17 and 18 to 24). 16 to 24 is the
+                    ONS labour-market definition of young people. Children are under 16, as
+                    in ONS population statistics and DWP&apos;s Households Below Average
+                    Income; unlike HBAI, the bands count 16- to 19-year-olds in full-time non-advanced
+                    education with 16 to 24, not as children.
+                  </>,
+                ],
+                [
+                  "Single year of age",
+                  `Ages 0 to ${SINGLE_AGE_TOP - 1} one year at a time, then ${SINGLE_AGE_TOP} and over together, as in the ONS mid-year population estimates.`,
+                ],
                 [
                   "Who counts",
-                  `People in households with an income decile. An age band with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                  `People in households with an income decile. An age band or single year of age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
                 ],
                 [
                   "Better or worse off",
@@ -431,8 +473,8 @@ function MethodologyTab({ onShowTab }) {
               ]}
             />
             <p className="method-more">
-              <ViewLink tab="young" onShowTab={onShowTab}>
-                See the Young people tab
+              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
+                See Young people under Population impact
               </ViewLink>
               .
             </p>
@@ -442,39 +484,36 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.personal}
           title="Personal impact"
-          subtitle="The models behind Personal impact."
+          subtitle="The calculation behind Personal impact."
         >
-          <div id={METHOD_SECTIONS.lifetime} className="card method-card method-anchor">
-            <h3 className="method-card-title">Lifetime model</h3>
-            <LifecycleAbout />
-          </div>
-          {/* Placeholder: the single-year calculation's method goes here
-              when it lands on Personal impact. */}
-          <div
-            id={METHOD_SECTIONS.singleYear}
-            className="card method-card method-anchor method-placeholder"
-          >
-            <h3 className="method-card-title">
-              Single-year calculation <span className="method-badge">To follow</span>
-            </h3>
-            <p>
-              It uses the same engine and measures as the national figures.
-              Its method will be described here.
+          <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
+            <h3 className="method-card-title">Household calculation</h3>
+            <FactList items={SINGLE_YEAR_METHOD} />
+            <p className="method-more">
+              <ViewLink tab="personal" onShowTab={onShowTab}>
+                See the Personal impact tab
+              </ViewLink>
+              .
             </p>
           </div>
         </MethodSection>
 
-        <MethodSection id={METHOD_SECTIONS.living} title="Living standards">
+        <MethodSection
+          id={METHOD_SECTIONS.living}
+          title="Living standards"
+          subtitle="The separate baseline behind the Living standards tab."
+        >
           <div className="card method-card">
             <p>
               The{" "}
               <ViewLink tab="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
-              view uses a separate baseline, with its engine and data noted on
-              that tab.
+              view runs on a separate baseline from the Budget views, set out
+              below.
             </p>
           </div>
+          <LivingStandardsMethod />
         </MethodSection>
 
         <MethodSection
@@ -499,13 +538,6 @@ function MethodologyTab({ onShowTab }) {
                     Surveys miss or under-record some incomes. The{" "}
                     {policyNotes("policy notes")} say where this affects a
                     measure.
-                  </>,
-                ],
-                [
-                  "Lifetime model",
-                  <>
-                    Personal impact uses a simpler model with its own values
-                    (see <SectionLink id={METHOD_SECTIONS.lifetime}>lifetime model</SectionLink>).
                   </>,
                 ],
               ]}

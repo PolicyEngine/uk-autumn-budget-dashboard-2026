@@ -23,19 +23,66 @@ export function useNarrowViewport() {
   return narrow;
 }
 
+/**
+ * Chart colours by meaning, the same on every tab: the JS mirror of the
+ * --c-* tokens in src/app/globals.css (SVG and PNG exports need literal
+ * values, so charts take these rather than var(--c-*)). chartTheme.test.js
+ * keeps the two equal. Policy colours are in policyConfig.js.
+ */
+export const CHART_COLOURS = {
+  gain: "#319795",
+  gainText: "#0F766E",
+  loss: "#D97706",
+  lossText: "#B45309",
+  lossSoft: "#FDF0E1",
+  lossBorder: "#FDE68A",
+  noChange: "#9CA3AF",
+  before: "#9CA3AF",
+  after: "#319795",
+  reference: "#6B7280",
+  highlight: "#285E61",
+  highlightBand: "#EAF5F4",
+  obr: "#9CA3AF",
+  obrText: "#6B7280",
+  net: "#000000",
+  zeroLine: "#374151",
+  grid: "#E5E7EB",
+  axis: "#D1D5DB",
+  tick: "#6B7280",
+  axisTitle: "#4B5563",
+  text: "#374151",
+  surface: "#FFFFFF",
+  mutedFill: "#F3F4F6",
+  diffSmall: "#10B981",
+  diffMedium: "#FBBF24",
+  diffLarge: "#EF4444",
+  ageChildren: "#8DB8E3",
+  ageYoungAdults: "#5A8FCB",
+  ageAdults: "#3165A8",
+  ageOlder: "#7C5CB8",
+  agePension: "#2E1F5E",
+  marketIncome: "#4A7BA7",
+  pensionContributions: "#B8875A",
+  gainLight: "#81E6D9",
+  lossLight: "#FBBF24",
+  ink: "#1F2937",
+  noticeBg: "#FFF7E6",
+  noticeText: "#7A5A1F",
+};
+
 // Light horizontal gridlines only.
 export const GRID_PROPS = {
   vertical: false,
-  stroke: "#E5E7EB",
+  stroke: CHART_COLOURS.grid,
   strokeDasharray: "0",
 };
 
-export const TICK_STYLE = { fontSize: 12, fill: "#6B7280" };
-export const AXIS_LINE = { stroke: "#D1D5DB" };
+export const TICK_STYLE = { fontSize: 12, fill: CHART_COLOURS.tick };
+export const AXIS_LINE = { stroke: CHART_COLOURS.axis };
 
 export const AXIS_TITLE_STYLE = {
   textAnchor: "middle",
-  fill: "#4B5563",
+  fill: CHART_COLOURS.axisTitle,
   fontSize: 12,
   fontWeight: 500,
 };
@@ -82,7 +129,7 @@ export function legendWrapperStyle(narrow) {
 
 export function legendLabelStyle(narrow) {
   return {
-    color: "#374151",
+    color: CHART_COLOURS.text,
     fontSize: narrow ? "12px" : "13px",
     fontWeight: 400,
   };
@@ -90,7 +137,7 @@ export function legendLabelStyle(narrow) {
 
 export const TOOLTIP_CONTENT_STYLE = {
   background: "white",
-  border: "1px solid #E5E7EB",
+  border: `1px solid ${CHART_COLOURS.grid}`,
   borderRadius: "6px",
   boxShadow: "0 4px 12px rgba(17, 24, 39, 0.08)",
   fontSize: "13px",

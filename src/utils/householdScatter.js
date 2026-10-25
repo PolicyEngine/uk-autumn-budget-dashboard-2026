@@ -10,6 +10,12 @@
  * Cells are published per reform and never added up by the page: one
  * measure shows its own cells, every measure shows the package's, and any
  * other selection shows a notice (as the constituency map does).
+ *
+ * Every year's households are banded by their baseline income in one year,
+ * the basis year (`income_basis_year`, 2027-28), not by that year's own
+ * income, so an income band holds the same households in every year. The
+ * page draws a fixed set of dots per income band (panelDots), so following
+ * a dot from year to year follows the same group of households.
  */
 
 import { fiscalYearLabel } from "./publication/format";
@@ -17,14 +23,10 @@ import { buildChartCsv } from "./chartCsv";
 import { chooseReform } from "./geography/selection";
 import {
   bandLabel,
-  CHANGE_MAX,
-  CHANGE_MIN,
   changeBandLabel as describeChangeBand,
   changeBandMiddle,
   openEdge,
   SCATTER_BINS,
-  toChangeAxis,
-  fromChangeAxis,
 } from "./publication/scatter";
 
 export const SCATTER_FILE = "household_scatter_binned.csv";
@@ -37,6 +39,7 @@ const COLUMNS = [
   "change_band",
   "change_band_upper",
   "households",
+  "income_basis_year",
 ];
 const NUMERIC = new Set([
   "year",
@@ -44,6 +47,7 @@ const NUMERIC = new Set([
   "change_band",
   "change_band_upper",
   "households",
+  "income_basis_year",
 ]);
 
 function splitCsvLine(line) {
@@ -81,7 +85,7 @@ function splitCsvLine(line) {
  * @param {string} text
  * @returns {Array<{reform_id: string, reform_name: string, year: number,
  *   income_band: number, change_band: number, change_band_upper: number,
- *   households: number}>}
+ *   households: number, income_basis_year: number}>}
  */
 export function parseScatterCsv(text) {
   const lines = text
@@ -124,7 +128,9 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
- *   points: Array<Object>}}
+ *   points: Array<Object>, basisYear: number, basisPoints: Array<Object>}}
+ *   `points` are the year's cells; `basisPoints` the basis year's, which
+ *   set how many dots each income band gets in every year.
  */
 export function scatterView({ data, selectedIds, policyIds, year }) {
   if (data.status === "loading") return { kind: "loading" };
@@ -149,26 +155,39 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
     return notice("Household results are not yet published for this measure.");
   }
   const bins = SCATTER_BINS;
-  const points = data.rows
-    // A cell whose count rounds to nothing has no bubble to draw.
-    .filter(
-      (row) =>
-        row.reform_id === choice.reform && row.year === year && row.households > 0,
-    )
-    .map((row) => ({
-      income: row.income_band + bins.income_band_width / 2,
-      change: changeBandMiddle(row.change_band, row.change_band_upper),
-      households: row.households,
-      incomeBand: row.income_band,
-      changeBand: row.change_band,
-      changeBandUpper: row.change_band_upper,
-    }));
+  const cellsIn = (wanted) =>
+    data.rows
+      // A cell whose count rounds to nothing has no dot to draw.
+      .filter(
+        (row) =>
+          row.reform_id === choice.reform && row.year === wanted && row.households > 0,
+      )
+      .map((row) => ({
+        income: row.income_band + bins.income_band_width / 2,
+        change: changeBandMiddle(row.change_band, row.change_band_upper),
+        households: row.households,
+        incomeBand: row.income_band,
+        changeBand: row.change_band,
+        changeBandUpper: row.change_band_upper,
+      }));
+  const points = cellsIn(year);
   if (points.length === 0) {
     return notice(
       `No household results are published for this measure in ${fiscalYearLabel(year)}.`,
     );
   }
-  return { kind: "points", reform: choice.reform, points };
+  const basisYear = data.rows.find(
+    (row) => row.reform_id === choice.reform,
+  ).income_basis_year;
+  const basisPoints = cellsIn(basisYear);
+  return {
+    kind: "points",
+    reform: choice.reform,
+    points,
+    basisYear,
+    // Without the basis year's cells, the year's own share out the dots
+    basisPoints: basisPoints.length > 0 ? basisPoints : points,
+  };
 }
 
 const wholePounds = (value) =>
@@ -194,11 +213,11 @@ export const changeBandLabel = (lower, upper) =>
   describeChangeBand(lower, upper, signedPounds);
 
 /** The cells a chart shows, as a CSV download. */
-export function scatterCsv(points, { title }) {
+export function scatterCsv(points, { title, basisYear }) {
+  const basis = basisYear ? ` in ${fiscalYearLabel(basisYear)}` : "";
   return buildChartCsv({
     title,
-    units:
-      "£ a year (bands of baseline household net income and of its change); households (weighted, rounded to the nearest 1,000)",
+    units: `£ a year (bands of baseline household net income${basis} and of the change in the year's net income); households (weighted, rounded to the nearest 1,000)`,
     columns: [
       { key: "income", label: "Baseline income band" },
       { key: "change", label: "Change band" },
@@ -221,32 +240,39 @@ export function scatterCsv(points, { title }) {
         households: point.households,
       })),
     notes: [
+      ...(basisYear
+        ? [
+            `Households are grouped by their baseline net income in ${fiscalYearLabel(basisYear)} in every year, so an income band holds the same households in each year.`,
+          ]
+        : []),
       `Groups with fewer than ${SCATTER_BINS.min_households} surveyed households are not shown; the outer bands include everything beyond them.`,
       "Gains fall in [lower, upper) and losses in (lower, upper]; the no-change band is (−£1, £1); a band whose two edges are equal is open beyond that edge.",
     ],
   });
 }
 
-/** Households each dot of the scatter stands for. */
-export const HOUSEHOLDS_PER_DOT = 20000;
-
 /**
- * Where the open-ended outer change bands are drawn: a strip beyond the
- * plotted range at each end, this wide on the symlog change axis, marked
- * as "≥ £5,000", so the clamped cells never read as households at exactly
- * that change.
+ * Dots in the cloud: the 2025 dashboard drew 500 households, sampled at
+ * random with probability in proportion to their weight, so each dot stood
+ * for about the same number of households. The cloud keeps that density.
  */
-export const EDGE_STRIP = 0.4;
+export const SCATTER_DOTS = 500;
 
-/** The change axis's ends, on the symlog axis, strips included. */
-export const CHANGE_AXIS_DOMAIN = [
-  toChangeAxis(CHANGE_MIN) - EDGE_STRIP,
-  toChangeAxis(CHANGE_MAX) + EDGE_STRIP,
-];
+/** The change axis, as in 2025: fixed at ±£5,000, linear. */
+export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
+
+/** The income axis, as in 2025: £0 to £150,000. */
+export const INCOME_AXIS_DOMAIN = [0, 150000];
 
 /** Whether a cell is an open-ended outer change band ("lower" or "upper"). */
 export function edgeOf(changeBand, changeBandUpper) {
   return openEdge(changeBand, changeBandUpper);
+}
+
+/** Households each dot stands for: every cell's households over the dots. */
+export function householdsPerDot(cells, total = SCATTER_DOTS) {
+  const households = cells.reduce((sum, cell) => sum + cell.households, 0);
+  return households / total;
 }
 
 // A small seeded generator (mulberry32), so the dots sit in the same
@@ -271,62 +297,178 @@ function hash(text) {
   return h >>> 0;
 }
 
+const cellKey = (cell) => `${cell.incomeBand}:${cell.changeBand}:${cell.changeBandUpper}`;
+
 /**
- * The cells as a dot cloud: each cell becomes about one dot per
- * `perDot` households (at least one), placed at random, deterministically,
- * inside the cell's own rectangle on the symlog change axis, so the cloud
- * reads as density. A dot is never a household: it carries its cell's
- * bands and count, and its place within the cell is arbitrary.
+ * How many of `total` dots each cell gets: in proportion to its households
+ * (largest remainder), as a weighted sample of `total` households would
+ * give on average. The dots add up to `total` exactly; a cell too small for
+ * half a dot may get none, as it would mostly be missed by such a sample.
+ */
+export function allocateDots(cells, total = SCATTER_DOTS) {
+  const households = cells.reduce((sum, cell) => sum + cell.households, 0);
+  if (!(households > 0)) return cells.map(() => 0);
+  const quotas = cells.map((cell) => (cell.households / households) * total);
+  const counts = quotas.map(Math.floor);
+  let left = total - counts.reduce((sum, n) => sum + n, 0);
+  const order = cells
+    .map((cell, i) => ({ i, rest: quotas[i] - counts[i], key: cellKey(cell) }))
+    .sort((a, b) => b.rest - a.rest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  for (const { i } of order) {
+    if (left <= 0) break;
+    counts[i] += 1;
+    left -= 1;
+  }
+  return counts;
+}
+
+/**
+ * The cells as a cloud of about `total` dots, drawn as the 2025 scatter of
+ * sampled households was: income on one axis and change on the other, both
+ * in £ and linear. Each cell gets its share of the dots (allocateDots),
+ * placed at random, deterministically, inside the cell's own extent: its
+ * £5,000 income band and its change band. A dot is never a household: it
+ * carries its cell's bands and count, and its place within the cell is
+ * arbitrary.
  *
- * The no-change band, (−£1, £1), is drawn as a line at £0. The outer change
- * bands, which hold every change beyond ±£5,000, are drawn in a strip of
- * `EDGE_STRIP` beyond the plotted range instead, and marked `edge`.
+ * The open-ended outer change bands (beyond ±£5,000) count towards the
+ * dots, so the density matches, but are not drawn: as in 2025, changes
+ * beyond the axis leave the plot.
  *
  * @param {Array<{incomeBand: number, changeBand: number,
  *   changeBandUpper: number, households: number}>} cells
- * @returns {Array<Object>} dots with `income`, `y` (on the symlog change
- *   axis), `change` (the same place in £), `edge` and the cell's fields
+ * @returns {Array<Object>} dots with `income`, `change` (£) and the
+ *   cell's fields
  */
-export function scatterDots(cells, { perDot = HOUSEHOLDS_PER_DOT, bins = SCATTER_BINS } = {}) {
-  const inset = 0.08;
+export function scatterDots(cells, { total = SCATTER_DOTS, bins = SCATTER_BINS } = {}) {
+  const counts = allocateDots(cells, total);
   const dots = [];
-  for (const cell of cells) {
-    const count = Math.max(1, Math.round(cell.households / perDot));
-    const random = seeded(
-      hash(`${cell.incomeBand}:${cell.changeBand}:${cell.changeBandUpper}`),
-    );
-    const edge = edgeOf(cell.changeBand, cell.changeBandUpper);
-    const zero = cell.changeBand < 0 && cell.changeBandUpper > 0;
-    let low;
-    let high;
-    if (edge === "upper") {
-      low = toChangeAxis(cell.changeBand);
-      high = low + EDGE_STRIP;
-    } else if (edge === "lower") {
-      high = toChangeAxis(cell.changeBand);
-      low = high - EDGE_STRIP;
-    } else if (zero) {
-      low = 0;
-      high = 0;
-    } else {
-      low = toChangeAxis(cell.changeBand);
-      high = toChangeAxis(cell.changeBandUpper);
-    }
+  cells.forEach((cell, index) => {
+    if (edgeOf(cell.changeBand, cell.changeBandUpper)) return;
+    const random = seeded(hash(cellKey(cell)));
     const incomeLow = cell.incomeBand;
-    const incomeWidth = bins.income_band_width;
-    for (let i = 0; i < count; i += 1) {
-      const u = inset + (1 - 2 * inset) * random();
-      const v = inset + (1 - 2 * inset) * random();
-      const y = low + v * (high - low);
+    const incomeWidth = Math.min(
+      bins.income_band_width,
+      bins.income_max - cell.incomeBand,
+    );
+    const low = cell.changeBand;
+    const high = cell.changeBandUpper;
+    for (let i = 0; i < counts[index]; i += 1) {
+      const u = random();
+      const v = random();
       dots.push({
         ...cell,
         income: incomeLow + u * incomeWidth,
-        y,
-        change: fromChangeAxis(y),
-        edge,
-        key: `${cell.incomeBand}:${cell.changeBand}:${cell.changeBandUpper}:${i}`,
+        change: low + v * (high - low),
+        key: `${cellKey(cell)}:${i}`,
       });
     }
+  });
+  return dots;
+}
+
+/** The cells of each income band, in change order (losses first). */
+function byIncomeBand(cells) {
+  const rows = new Map();
+  for (const cell of cells) {
+    if (!rows.has(cell.incomeBand)) rows.set(cell.incomeBand, []);
+    rows.get(cell.incomeBand).push(cell);
   }
+  for (const row of rows.values()) {
+    row.sort(
+      (a, b) => a.changeBand - b.changeBand || a.changeBandUpper - b.changeBandUpper,
+    );
+  }
+  return rows;
+}
+
+// Where a dot whose change band is open-ended, or whose group has no
+// published cells this year, waits: just beyond the change axis, unseen.
+const OFF_PLOT = 5600;
+
+/**
+ * The cloud as a panel of dots that keep their groups across years.
+ *
+ * Every income band is a fixed group of households: those whose baseline
+ * net income in the basis year falls in it (the generator bands every
+ * year's households by that year's income). The band gets its share of
+ * `total` dots once, by its households in the basis year (`basisCells`),
+ * so it has the same dots in every year. Its k-th of n dots stands at the
+ * (k + ½)/n weighted quantile of the band's change distribution in the
+ * year shown (`cells`): the dot finds the change band holding that
+ * quantile, and its place inside that band is set by how far into the
+ * band's households the quantile falls, blended with a fixed jitter of its
+ * own. Its income, within its band, never changes. So from year to year a
+ * dot stays in its row, moves only sideways, and keeps its rank within the
+ * group: as last year's 500 sampled households did, but as groups.
+ *
+ * Dots whose quantile falls in an open-ended band beyond ±£5,000, or whose
+ * band has no published cell in the year (all were too small), are kept
+ * but hidden, so each dot keeps its identity and can come back.
+ *
+ * @param {Array<Object>} basisCells - The basis year's cells.
+ * @param {Array<Object>} cells - The year's cells.
+ * @returns {Array<Object>} one dot per (income band, k), in a fixed order,
+ *   with `key`, `income`, `change`, `hidden` and the cell it sits in
+ *   (`changeBand`, `changeBandUpper`, `households`).
+ */
+export function panelDots(
+  basisCells,
+  cells,
+  { total = SCATTER_DOTS, bins = SCATTER_BINS } = {},
+) {
+  const basisRows = [...byIncomeBand(basisCells).entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([incomeBand, row]) => ({
+      incomeBand,
+      changeBand: 0,
+      changeBandUpper: 0,
+      households: row.reduce((sum, cell) => sum + cell.households, 0),
+    }));
+  const counts = allocateDots(basisRows, total);
+  const yearRows = byIncomeBand(cells);
+  const dots = [];
+  basisRows.forEach(({ incomeBand }, index) => {
+    const n = counts[index];
+    const row = yearRows.get(incomeBand) ?? [];
+    const weight = row.reduce((sum, cell) => sum + cell.households, 0);
+    const incomeWidth = Math.min(bins.income_band_width, bins.income_max - incomeBand);
+    for (let k = 0; k < n; k += 1) {
+      const random = seeded(hash(`${incomeBand}:${k}`));
+      const income = incomeBand + random() * incomeWidth;
+      const jitter = random();
+      const key = `${incomeBand}:${k}`;
+      if (!(weight > 0)) {
+        dots.push({ key, income, change: 0, hidden: true, incomeBand, changeBand: -1, changeBandUpper: 1, households: 0 });
+        continue;
+      }
+      const target = ((k + 0.5) / n) * weight;
+      let before = 0;
+      let cell = row[row.length - 1];
+      for (const candidate of row) {
+        if (target < before + candidate.households) {
+          cell = candidate;
+          break;
+        }
+        before += candidate.households;
+      }
+      const into = Math.min(1, Math.max(0, (target - before) / cell.households));
+      const edge = edgeOf(cell.changeBand, cell.changeBandUpper);
+      const change = edge
+        ? (edge === "upper" ? 1 : -1) * OFF_PLOT
+        : cell.changeBand +
+          ((into + jitter) / 2) * (cell.changeBandUpper - cell.changeBand);
+      dots.push({
+        key,
+        income,
+        change,
+        hidden: Boolean(edge),
+        incomeBand,
+        changeBand: cell.changeBand,
+        changeBandUpper: cell.changeBandUpper,
+        households: cell.households,
+      });
+    }
+  });
   return dots;
 }
