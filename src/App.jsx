@@ -49,8 +49,9 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 // The default view has no ?tab= in the URL; ?tab=dashboard is read too
 const DEFAULT_VIEW = "dashboard";
 
-// Views whose links keep the chosen policies in the URL
-const POLICY_PARAM_VIEWS = new Set(["dashboard"]);
+// Views whose links keep the chosen policies in the URL: the two the
+// selection drives
+const POLICY_PARAM_VIEWS = new Set(["dashboard", "personal"]);
 
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
@@ -140,10 +141,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (activeTab === DEFAULT_VIEW) params.delete("tab");
     else params.set("tab", activeTab);
     if (!unavailable) {
-      // Keep an unavailable personal request explicit across a later
-      // snapshot remount, rather than silently reopening default measures.
-      const blockedPersonal = activeTab === "personal" && selectedPolicies.some((id) => !catalogue.byId.get(id)?.displayable);
-      if ((POLICY_PARAM_VIEWS.has(activeTab) || blockedPersonal) && selectedPolicies.length) params.set("policies", selectedPolicies.join(","));
+      // The selection, an empty one included, stays in the address on the
+      // views it drives, so a later snapshot's remount restores exactly it:
+      // a withdrawn measure shows as unavailable rather than dropping out,
+      // and a newly published one is not added unasked.
+      if (POLICY_PARAM_VIEWS.has(activeTab)) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);

@@ -102,7 +102,7 @@ describe("the view tabs", () => {
     const search = () => new URLSearchParams(window.location.search);
     const expected = {
       dashboard: [null, true],
-      personal: ["personal", false],
+      personal: ["personal", true],
       living: ["living", false],
       methodology: ["methodology", false],
     };
