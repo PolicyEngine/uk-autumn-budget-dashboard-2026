@@ -136,6 +136,7 @@ const UNIT = "Average change per person (£ a year)";
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
 function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
   const [band, setBand] = useState(YOUNG_BAND);
   const GROUPS = groupsFor(band);
@@ -164,8 +165,8 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   // No effect: in the card's More info row, each with its colour and reason
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: policy.color ?? CHART_COLOURS.noChange,
-    reason: noEffectReason(policy.id, selectedYear),
+    color: byId.get(policy.id)?.color ?? CHART_COLOURS.noChange,
+    reason: noEffectReason(policy, selectedYear),
   }));
   const csvText = () =>
     buildChartCsv({
