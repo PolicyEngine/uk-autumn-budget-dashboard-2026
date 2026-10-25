@@ -130,7 +130,7 @@
       "x_variable": "private_pension_income"
     },
     {
-      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay, spending \u00a31,040 a year on electricity; the threshold freeze raises their income tax from 2031-32.",
+      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay, spending \u00a31,040 a year on electricity; the frozen income tax thresholds raise their income tax from 2031-32.",
       "id": "higher_income_saver",
       "label": "Higher earner with savings",
       "x_label": "Employment income",

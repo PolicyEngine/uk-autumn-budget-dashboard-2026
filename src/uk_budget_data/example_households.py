@@ -229,7 +229,7 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "One adult aged 45 who owns their home with a mortgage, with "
             "£3,000 a year of savings interest and £5,000 of dividends on "
             "top of their pay, spending £1,040 a year on electricity; the "
-            "threshold freeze raises their income tax from 2031-32."
+            "frozen income tax thresholds raise their income tax from 2031-32."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
