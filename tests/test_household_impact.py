@@ -1317,14 +1317,16 @@ def test_skips_give_the_same_answer_as_running_every_measure(year):
     one running every measure, for households the rules treat differently
     (scratchpad verification ran 40 generated households x every year)."""
     households = [
-        Answers(),
+        Answers(salary_year=2026),
         Answers(
+            salary_year=2026,
             age=70,
             private_pension_income=12_000,
             petrol_spending=600,
             electricity_spending=0,
         ),
         Answers(
+            salary_year=2026,
             age=24,
             employment_income=32_000,
             student_loan_plan="PLAN_2",

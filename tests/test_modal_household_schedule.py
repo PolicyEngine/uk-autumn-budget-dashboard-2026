@@ -2,7 +2,7 @@
 
 import pytest
 
-modal_household = pytest.importorskip("uk_budget_data.modal_household")
+from uk_budget_data.household_warm import warm_target
 
 
 @pytest.mark.parametrize(
@@ -20,4 +20,4 @@ modal_household = pytest.importorskip("uk_budget_data.modal_household")
     ],
 )
 def test_warm_target(now_uk, expected):
-    assert modal_household.warm_target(now_uk) == expected
+    assert warm_target(now_uk) == expected
