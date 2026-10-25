@@ -1550,3 +1550,12 @@ body {
     transition: none;
   }
 }
+
+/* A muted line at a card's foot (the OBR comparison before its costings) */
+.card-foot-note {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+  border-top: 1px solid var(--card-border);
+}

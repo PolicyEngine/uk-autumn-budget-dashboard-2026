@@ -229,4 +229,43 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
     expect(held).toHaveLength(0);
   });
+
+  it("shows the OBR comparison once: a pending line until the OBR's costings are in, never an empty expander", async () => {
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    const pending = await screen.findByText(/^OBR comparison: available after the OBR publishes/, {}, { timeout: 5000 });
+    expect(pending).toBeInTheDocument();
+    expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Compare with OBR estimates" })).toBeNull();
+    // Still once after the other sub-tab and back (both stay mounted)
+    fireEvent.click(screen.getByRole("tab", { name: "Young people" }));
+    fireEvent.click(screen.getByRole("tab", { name: "All households" }));
+    expect(screen.getAllByText(/^OBR comparison: available after/)).toHaveLength(1);
+  });
+
+  it("keeps a hidden view's progress inside it: nothing of it shows on another view", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input, init = {}) => {
+        const url = typeof input === "string" ? input : input.url;
+        // The household API never answers here
+        if (url === HOUSEHOLD_API) return new Promise(() => {});
+        return serve(input, init);
+      }),
+    );
+    window.history.replaceState({}, "", "/?tab=household");
+    render(<App />);
+    const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(within(household).getByRole("button", { name: /^Calculate/ }));
+    await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    expect(household).not.toBeVisible();
+    for (const node of document.querySelectorAll(".processing-panel, .processing-bar, .skeleton-chip")) {
+      expect(node.closest('[role="tabpanel"]')).toBe(household);
+      expect(node).not.toBeVisible();
+    }
+    const methodology = screen.getByRole("tabpanel", { name: "Methodology" });
+    expect(methodology).toBeVisible();
+    expect(methodology.textContent).not.toMatch(/Calculating your household/);
+  });
 });

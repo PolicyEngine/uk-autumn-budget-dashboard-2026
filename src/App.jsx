@@ -8,7 +8,7 @@ import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
-import OBRComparisonTable from "./components/OBRComparisonTable";
+import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
 import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
@@ -634,18 +634,12 @@ function App() {
                         data={results.budgetData}
                         selectedYear={distributionalYear}
                       />
-                      {/* OBR comparison: an expandable row at the foot of the card */}
-                      <Disclosure
-                        id="obr-comparison"
-                        inCard
-                        title="Compare with OBR estimates"
-                        contentClassName="obr-content"
-                      >
-                        <OBRComparisonTable
-                          selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
-                        />
-                      </Disclosure>
+                      {/* OBR comparison: an expandable row at the foot of the
+                          card once the OBR has costed the measures */}
+                      <ObrComparisonFoot
+                        selectedPolicies={selectedPolicies}
+                        selectedYear={distributionalYear}
+                      />
                     </section>
 
                     {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}

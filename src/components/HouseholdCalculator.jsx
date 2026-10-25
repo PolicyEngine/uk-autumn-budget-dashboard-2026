@@ -385,7 +385,7 @@ function HouseholdCalculator({
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
-    setSubmitted({ inputs, year, policies: householdPolicies });
+    setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now() });
   };
 
   // Whether a field applies to the answers so far (rent only when renting)
@@ -638,6 +638,7 @@ function HouseholdCalculator({
             submitted={submitted !== null}
             changed={changed}
             policyCount={submitted?.policies.length ?? householdPolicies.length}
+            startedAt={submitted?.at ?? null}
           />
         </div>
       </div>
@@ -650,6 +651,7 @@ function HouseholdCalculator({
             year={submitted.year}
             policies={policies}
             changed={changed}
+            startedAt={submitted.at}
           />
         </div>
       )}

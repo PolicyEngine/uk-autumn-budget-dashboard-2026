@@ -4,11 +4,7 @@ import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
-import {
-  DETAIL_CALCULATION_SECONDS,
-  SLOW_CALCULATION_SECONDS,
-  TYPICAL_CALCULATION_SECONDS,
-} from "../../utils/householdTiming";
+import { SLOW_CALCULATION_SECONDS, TYPICAL_CALCULATION_SECONDS } from "../../utils/householdTiming";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -138,19 +134,28 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
 
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
-/** Seconds since `active` turned true, counted while it holds. */
-function useElapsedSeconds(active) {
-  const [seconds, setSeconds] = useState(0);
+/**
+ * Whole seconds since `startedAt` (when Calculate was pressed), counted
+ * while `active` holds; every panel of one calculation counts from the
+ * same moment.
+ */
+function useElapsedSeconds(active, startedAt) {
+  const since = () => (startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0);
+  const [seconds, setSeconds] = useState(since);
   useEffect(() => {
     if (!active) return undefined;
-    const began = Date.now();
-    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - began) / 1000)), 1000);
-    return () => {
-      clearInterval(timer);
-      setSeconds(0);
-    };
-  }, [active]);
-  return seconds;
+    const timer = setInterval(() => setSeconds(since()), 1000);
+    return () => clearInterval(timer);
+    // since reads startedAt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, startedAt]);
+  return active ? seconds : 0;
+}
+
+/** The panels' time line: the usual time and the seconds so far, or that it is late. */
+export function timeText(seconds) {
+  if (seconds > SLOW_CALCULATION_SECONDS) return "Taking longer than usual; still working";
+  return `Usually around ${TYPICAL_CALCULATION_SECONDS} seconds · ${seconds} s of ~${TYPICAL_CALCULATION_SECONDS} s`;
 }
 
 /** "+£88", "−£12" or "No change", from whole pounds. */
@@ -172,17 +177,12 @@ export function progressShare(seconds, typical = TYPICAL_CALCULATION_SECONDS) {
  * fills over the usual time. `compact` sits over a dimmed earlier result.
  */
 function ProcessingPanel({ seconds, compact = false }) {
-  const late = seconds > SLOW_CALCULATION_SECONDS;
   return (
     <div className={`processing-panel ${compact ? "is-compact" : ""}`.trim()} role="status">
       <span className="processing-spinner" aria-hidden="true" />
       <div className="processing-text">
         <p className="processing-title">Calculating your household</p>
-        <p className="processing-time">
-          {late
-            ? "Taking longer than usual; still working"
-            : `Usually about ${TYPICAL_CALCULATION_SECONDS} seconds · ${seconds} s of ~${TYPICAL_CALCULATION_SECONDS} s`}
-        </p>
+        <p className="processing-time">{timeText(seconds)}</p>
         <div className="processing-bar" aria-hidden="true">
           <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
         </div>
@@ -365,6 +365,7 @@ export function SingleYearHeadline({
   submitted = true,
   changed = false,
   policyCount = 0,
+  startedAt = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -372,7 +373,7 @@ export function SingleYearHeadline({
   const yearLabel = fiscalYearTick(data?.year ?? year);
   const running = submitted && status === "loading";
   const showLoading = useDelayed(running);
-  const seconds = useElapsedSeconds(running);
+  const seconds = useElapsedSeconds(running, startedAt);
 
   if (noPolicies) {
     return (
@@ -441,21 +442,18 @@ const SKELETON_TEXT = {
  * so far and a slim bar. Shown after 300ms, so a quick answer never
  * flashes it.
  */
-function PendingSkeleton({ kind }) {
+function PendingSkeleton({ kind, startedAt }) {
   const shown = useDelayed(true);
-  const seconds = useElapsedSeconds(true);
-  const typical = DETAIL_CALCULATION_SECONDS;
-  const late = seconds > Math.max(SLOW_CALCULATION_SECONDS, typical * 1.5);
+  // Part of the same wait as the headline: counted from Calculate
+  const seconds = useElapsedSeconds(true, startedAt);
   const chip = shown && (
     <div className="skeleton-chip" role="status">
       <span className="processing-spinner is-small" aria-hidden="true" />
       <div>
         <p className="skeleton-chip-title">{SKELETON_TEXT[kind]}</p>
-        <p className="skeleton-chip-time">
-          {late ? "Taking longer than usual; still working" : `About ${typical} s · ${seconds} s so far`}
-        </p>
+        <p className="skeleton-chip-time">{timeText(seconds)}</p>
         <div className="processing-bar" aria-hidden="true">
-          <span style={{ transform: `scaleX(${progressShare(seconds, typical)})` }} />
+          <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
         </div>
       </div>
     </div>
@@ -501,7 +499,7 @@ function PendingSkeleton({ kind }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, changed = false }) {
+export function SingleYearDetails({ result, year, policies, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Greyed while a newer answer runs, or after the answers changed
   const stale = result.stale || changed;
@@ -561,7 +559,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
                 <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
               </div>
             ) : (
-              <PendingSkeleton kind="policies" />
+              <PendingSkeleton kind="policies" startedAt={startedAt} />
             )}
           </section>
         </div>
@@ -582,7 +580,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
           </div>
         ) : (
-          <PendingSkeleton kind="earnings" />
+          <PendingSkeleton kind="earnings" startedAt={startedAt} />
         )}
       </section>
     </div>

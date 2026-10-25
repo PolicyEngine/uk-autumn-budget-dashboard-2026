@@ -4,20 +4,24 @@ import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
+import Disclosure from "./Disclosure";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
 export const OBR_UNAVAILABLE =
   "Shown once the OBR publishes its costings for these measures.";
 
-function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
-  const [comparisonData, setComparisonData] = useState(null);
-  // Static by default: like for like with PolicyEngine's static estimates
-  const [showBehavioural, setShowBehavioural] = useState(false);
-  // The comparison shows as a chart or as a table, never both
-  const [view, setView] = useState("chart");
-  const showTable = view === "table";
+/** The card-foot line while the OBR has not costed the selected measures. */
+export const OBR_PENDING_LINE =
+  "OBR comparison: available after the OBR publishes its costings on 28 October.";
 
+/**
+ * PolicyEngine's and the OBR's figures by measure and year, read once from
+ * obr_comparison.csv and budgetary_impact.csv; null until read.
+ */
+export function useObrComparisonData(enabled = true) {
+  const [comparisonData, setComparisonData] = useState(null);
   useEffect(() => {
+    if (!enabled) return;
     // Fetch both OBR comparison data and PolicyEngine budgetary impact data
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/obr_comparison.csv`).then((res) => res.text()),
@@ -80,7 +84,28 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         setComparisonData(data);
       })
       .catch((err) => console.error("Error loading comparison data:", err));
-  }, []);
+  }, [enabled]);
+
+  return comparisonData;
+}
+
+/** Whether the OBR has a figure for any of the selected measures. */
+export function hasObrFigures(data, selectedPolicies) {
+  return (data ?? []).some(
+    (row) =>
+      selectedPolicies.includes(row.reform_id) &&
+      (Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural)),
+  );
+}
+
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data }) {
+  const fetched = useObrComparisonData(!data);
+  const comparisonData = data ?? fetched;
+  // Static by default: like for like with PolicyEngine's static estimates
+  const [showBehavioural, setShowBehavioural] = useState(false);
+  // The comparison shows as a chart or as a table, never both
+  const [view, setView] = useState("chart");
+  const showTable = view === "table";
 
   if (!comparisonData || selectedPolicies.length === 0) return null;
 
@@ -94,10 +119,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // The OBR's costings are joined by measure id. Until it costs these
   // measures (with the Budget on 28 October), none has an OBR figure, so
   // nothing is paired: the comparison says when it will be available.
-  const hasObrFigures = filteredData.some(
-    (row) => Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural),
-  );
-  if (!hasObrFigures) {
+  const hasFigures = hasObrFigures(filteredData, selectedPolicies);
+  if (!hasFigures) {
     return (
       <div className="obr-comparison-section">
         <p className="comparison-description obr-unavailable">
@@ -313,3 +336,22 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 }
 
 export default OBRComparisonTable;
+
+/**
+ * The OBR comparison at the foot of the Public finances card: an expander
+ * once the OBR has costed any selected measure, and until then one muted
+ * line saying when it will be (an expander that opens to "not yet" reads
+ * as broken).
+ */
+export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
+  const data = useObrComparisonData();
+  if (!data || selectedPolicies.length === 0) return null;
+  if (!hasObrFigures(data, selectedPolicies)) {
+    return <p className="card-foot-note obr-pending">{OBR_PENDING_LINE}</p>;
+  }
+  return (
+    <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />
+    </Disclosure>
+  );
+}
