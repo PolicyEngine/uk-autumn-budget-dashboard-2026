@@ -60,7 +60,8 @@ describe("the page's verified publication catalogue", () => {
     const flat = parseTable("budgetary_impact", readFileSync(join(process.cwd(), "public/data/budgetary_impact.csv"), "utf8"));
     expect(flat.length).toBeGreaterThan(0);
     expect(flat.some((row) => row.year === DEFAULT_DISPLAY_YEAR && Number.isFinite(row.value))).toBe(true);
-    expect(readFileSync(join(process.cwd(), "public/data/obr_comparison.csv"), "utf8")).toContain("2025_combined");
+    // The 2026 combined run since #126
+    expect(readFileSync(join(process.cwd(), "public/data/obr_comparison.csv"), "utf8")).toContain("autumn_budget_2026_combined");
     vi.stubGlobal("fetch", async (url) => {
       try { return new Response(readFileSync(join(process.cwd(), "public", String(url)))); }
       catch { return new Response(null, { status: 404 }); }
