@@ -6,6 +6,7 @@ import {
   buildHouseholdRequest,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
@@ -131,7 +132,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
       await Promise.all(
         parts.map(async (include) => {
           try {
-            const raw = await postHouseholdImpact(
+            const raw = await postHouseholdDetail(
               { ...body, include },
               { signal, timeoutMs: DETAIL_TIMEOUT_MS },
             );
