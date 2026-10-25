@@ -476,7 +476,7 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 ## Construction (from G1)
 
 For each coded measure:
-1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module, not in `reforms.py` itself (question 6 in `budget-day-publication.md`). Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
+1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module, not in `reforms.py` itself (question 6 in `budget-day-publication.md`). Register it in `reforms.py`, which imports it. The page lists it from the published manifest, so it needs no frontend change.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
 3. **Declare the taxes it moves** in `DECLARED` in `tests/test_measure_descriptions.py`, and check that its name and description name only those (see "How a measure must be written" above). Without this, the required Python tests fail on the new id.
 4. **Add one numerical test.**
@@ -492,6 +492,7 @@ uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<di
 uv run uk-budget-data publish check
 ```
 
+- **Once results by area are bound** (after G4's first area run), staging unbinds them, and this `publish check` fails until the index is rebuilt. From then on, run `uv run uk-budget-data publish index` before it, after rerunning the area run if an entry it used has changed (G4).
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
 - **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
@@ -584,7 +585,7 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
     --household-receipt receipts/<id>-households.json
   ```
 
-  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. *The household receipt is optional in the code today (`REQUIRE_HOUSEHOLD_CHECKS` in `publish.py`); it becomes required once the specimen households exist.*
+  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. Once results by area are bound, follow the approvals with `uv run uk-budget-data publish index`, then `uv run uk-budget-data publish check`, as at G4. *The household receipt is optional in the code today (`REQUIRE_HOUSEHOLD_CHECKS` in `publish.py`); it becomes required once the specimen households exist.*
 
 ## G4: combined run and publish (14:50)
 
@@ -592,8 +593,9 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
 uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
-# Generate the area tables, then use the final index/check block below.
 ```
+
+Then run the area run (`uk-budget-data geography`, below), and finish with `publish index`, then `publish check` ("Bind the results by area last").
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
@@ -611,6 +613,7 @@ uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 
   `publish index` runs every gate, and refuses area tables made beside an earlier version of any entry (its artifact, receipt or outputs), tables not the ones the area run wrote, and figures for a staged, stale, withdrawn or not-computable entry. It writes `release-index.json` and the manifest's `flat_files` and `flat_aliases`: the manifest's new revision, the SHA-256 of each file, and the manifest key the area run's package alias stands for. The page shows the area views only while the index matches the manifest it loaded and each file's bytes match. With no index, only the area views are unavailable. Run the final `publish check` only after the index has been rebuilt for the last manifest change.
   - **Before simulating**, the area run compares the actual baseline and reform scenario identities with the approved receipts. Any parameter, structural code or baseline mismatch stops before simulation. Its closed-schema `area_provenance.json` records the approved artifact, receipt, execution identity and table digests. `publish index` binds its bytes as `flat_provenance_sha256`; publication, public-file and browser checks verify that record and its aliases against the approved receipts. Review this sidecar as `publication_provenance`, and each CSV as a disclosure table. The sidecar binds only files written by its current run: an untouched `regional.csv` beside a later seats-only run is refused, and composing separate runs requires a future verified merge step.
+  - **Which later commits an area run accepts.** A measure with a `simulation_modifier` (seven of the nine candidates, all in `budget_measures.py`) is bound by the commit its receipt was made at and by its module's whole source. The area run binds it at that commit when HEAD descends from it and every file committed since is one that cannot change a calculation: attestations, `public/`, `data_inputs/public_data_review.csv`, `docs/`, top-level Markdown and the page's own files under `src/` outside `src/uk_budget_data/`. So attestation, artifact, manifest, review-row, docs and UI commits don't block a refresh. Any other change refuses it and names the files, including anything in `src/uk_budget_data/`, `pyproject.toml` or `uv.lock`. Adding the next measure to `budget_measures.py` is such a change, and it also changes every code-bound measure's identity through the module's source. Before the area views can refresh after it, regenerate and re-approve those measures, with fresh attestations for hand-written modifiers. Time one area refresh in the rehearsal.
 - **An open page follows the publication.** On focus, on becoming visible and every five minutes the page checks `manifest.json`. A newer one replaces the figures with its own verified ones, with a notice; a missing, invalid or unreachable one takes them away. A later successful check restores verified results without a page reload. So a withdrawal reaches readers with the page open within five minutes, or when they return to the tab.
 - **The OBR comparison is unavailable this year.** `obr_comparison.csv` is built from `data_inputs/obr_estimates.csv`, which holds the November 2025 costings rather than this Budget, so nothing binds it and the page shows the comparison as unavailable. Showing it needs a 2026 OBR source.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
@@ -662,11 +665,12 @@ uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 
 ## G5: corrections (whenever one arrives)
 
-1. **Fix the measure and commit.**
-2. **Regenerate it.** This writes a new artifact; the old one is untouched until step 5's review rows delete it (its entry stays in `superseded` for audit).
-3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
-4. **Regenerate the combined run**, stage it, and approve both.
-5. **Write the review rows, as at G2, and publish through a pull request.**
+1. **If the fix changes a published measure's definition, withdraw the measure first:** `uv run uk-budget-data publish withdraw <id> --reason "<why>"`, re-index if results by area are bound, and publish. Personal impact asks the household API live for every displayable measure, so once the API is deployed with the fix it would answer with a definition the published figures don't use. Withdrawn, the measure shows as unavailable there until its regenerated entry is approved. Deploy the household API with the fix only after the withdrawal is live.
+2. **Fix the measure and commit.**
+3. **Regenerate it.** This writes a new artifact; the old one is untouched until step 6's review rows delete it (its entry stays in `superseded` for audit).
+4. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
+5. **Regenerate the combined run**, stage it, and approve both.
+6. **Write the review rows, as at G2, and publish through a pull request.**
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
