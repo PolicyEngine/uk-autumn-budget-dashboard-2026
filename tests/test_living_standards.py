@@ -447,7 +447,9 @@ def check_contract(doc: dict) -> None:
     assert group_years == sorted(group_years) and len(group_years) >= 2
     for basis in ("bhc", "ahc"):
         quintiles = dec[basis]["quintile_by_year"]
-        assert [q["year"] for q in quintiles] == [d["year"] for d in dec[basis]["by_year"]]
+        assert [q["year"] for q in quintiles] == [
+            d["year"] for d in dec[basis]["by_year"]
+        ]
         assert all(len(q["real_median"]) == 5 for q in quintiles)
     for key in ("child_poverty_by_family", "deep_poverty"):
         block = doc[key]["projection"]

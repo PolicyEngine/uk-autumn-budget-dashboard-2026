@@ -468,14 +468,14 @@ def build_outlook(
             },
         ),
     }
-    group_years = [y for y in years if "poverty_by_group" in P(y)]
+    poverty_years = [y for y in years if "poverty_by_group" in P(y)]
     suppressed = []
     breakdowns = {}
     for name, (label, glabels) in labels.items():
         cells = {}
         for g in glabels:
             cells[g] = {}
-            for y in group_years:
+            for y in poverty_years:
                 c = P(y)["poverty_by_group"][name][g]
                 small = c["unweighted_households"] < MIN_HOUSEHOLDS
                 if small:
@@ -508,7 +508,7 @@ def build_outlook(
                 }
         breakdowns[name] = {"label": label, "groups": glabels, "cells": cells}
     poverty_by_group = {
-        "years": [fy(y) for y in group_years],
+        "years": [fy(y) for y in poverty_years],
         "measures": {
             "relative_ahc": "Relative poverty (AHC)",
             "median_equivalised_income_bhc": f"Median equivalised income (BHC), {EQ_UNIT}",
