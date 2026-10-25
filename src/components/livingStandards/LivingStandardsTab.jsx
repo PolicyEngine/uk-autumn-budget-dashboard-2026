@@ -30,13 +30,18 @@ const BASELINE_ROWS = [
   {
     id: "incomes",
     title: "Incomes",
-    subtitle: "Household income and inequality over time, and income growth across the distribution.",
+    subtitle: (
+      <>
+        Household income and inequality over time, and income growth across the distribution, under current
+        law (<SourceLink source="obr_efo_march_2026">OBR March 2026 forecast</SourceLink>).
+      </>
+    ),
     blocks: [[IncomesOverTimeCard, GrowthCard]],
   },
   {
     id: "poverty",
     title: "Poverty",
-    subtitle: "Poverty rates and how far below the line people are, and who is in poverty.",
+    subtitle: "Poverty rates, how far below the line people are, and who is in poverty, under current law.",
     blocks: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
 ];
@@ -163,14 +168,6 @@ export default function LivingStandardsTab({ active = true }) {
             ariaLabel="Living standards sections"
             idPrefix="living"
           />
-          <div className="tab-lede">
-            <p>
-              Projections of UK household incomes and poverty under current legislated policy: the baseline against
-              which Autumn Budget 2026 measures are scored. Pre-Budget baseline: the{" "}
-              <SourceLink source="obr_efo_march_2026">OBR&apos;s March 2026 forecast</SourceLink>. Budget measures are
-              not modelled.
-            </p>
-          </div>
           {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
             <SubTabPanel key={value} idPrefix="living" value={value} hidden={value !== sub}>
               {value === "forecast" ? (

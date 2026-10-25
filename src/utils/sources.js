@@ -76,6 +76,11 @@ export const EXTERNAL = { target: "_blank", rel: "noopener noreferrer" };
  * plain text until it does.
  */
 Object.assign(SOURCES, {
+  // The model, named in the intro
+  policyengine_uk_model: {
+    label: "PolicyEngine UK",
+    url: "https://policyengine.org/uk/model",
+  },
   // The forecast the page uses, linked in the intro.
   // Update on Budget day (runbook step): the October 2026 EFO page.
   obr_efo_current: {

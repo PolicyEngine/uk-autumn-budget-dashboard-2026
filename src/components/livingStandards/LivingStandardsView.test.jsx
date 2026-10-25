@@ -57,10 +57,8 @@ describe("the Living standards view", () => {
     const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
     const [baseline, forecast] = within(subTabs).getAllByRole("tab");
     expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
-    // The sub-tab pill comes first, then the intro, once, for both sub-tabs
-    const intro = screen.getByText(/^Projections of UK household incomes and poverty/);
-    expect(subTabs.compareDocumentPosition(intro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByText(/^Projections of UK household incomes and poverty/)).toHaveLength(1);
+    // No tab-level intro: the sections start straight under the sub-tabs
+    expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
     const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
     expect(panel()).toHaveAccessibleName("Baseline outlook");
@@ -105,7 +103,7 @@ describe("the Living standards view", () => {
     expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
     expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
-    expect(screen.getAllByText(/^Projections of UK household incomes and poverty/)).toHaveLength(1);
+    expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
     fireEvent.click(baseline);
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);

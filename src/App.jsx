@@ -554,8 +554,9 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          This dashboard shows how Autumn Budget 2026 measures would affect
-          the public finances and households: by income, area and age, and
+          This dashboard uses <SourceLink source="policyengine_uk_model" /> to
+          show how Autumn Budget 2026 measures would affect the public
+          finances and households: by income, area and age, and
           for your own household, alongside the living standards outlook.
           Measures and costings: <SourceLink source="budget_documents" />;
           forecast: <SourceLink source="obr_efo_current" />. Choose a year and
