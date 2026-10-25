@@ -174,11 +174,11 @@ export function progressShare(seconds, typical = TYPICAL_CALCULATION_SECONDS) {
 /**
  * The calculation in progress, shown once it has run 300ms: a spinner, what
  * is happening, the usual time with the seconds so far, and a slim bar that
- * fills over the usual time. `compact` sits over a dimmed earlier result.
+ * fills over the usual time.
  */
-function ProcessingPanel({ seconds, compact = false }) {
+function ProcessingPanel({ seconds }) {
   return (
-    <div className={`processing-panel ${compact ? "is-compact" : ""}`.trim()} role="status">
+    <div className="processing-panel" role="status">
       <span className="processing-spinner" aria-hidden="true" />
       <div className="processing-text">
         <p className="processing-title">Calculating your household</p>
@@ -384,7 +384,9 @@ export function SingleYearHeadline({
     );
   }
 
-  if (!submitted) {
+  // One state at a time: the prompt (before Calculate, or once the answers
+  // differ from the result's), the processing panel, or the result
+  if (!submitted || changed) {
     return (
       <div className="single-year-headline">
         <div className="card single-year-prompt" role="status">
@@ -394,8 +396,9 @@ export function SingleYearHeadline({
     );
   }
 
-  // The first answer: only the processing panel, nothing empty around it
-  if (running && !data) {
+  // Calculating, the first time or again: only the processing panel, never
+  // an earlier result
+  if (running) {
     return (
       <div className="single-year-headline" aria-busy="true">
         <div className="card processing-card">{showLoading && <ProcessingPanel seconds={seconds} />}</div>
@@ -403,19 +406,12 @@ export function SingleYearHeadline({
     );
   }
 
-  const totals = data ? headlineTotals(data.net) : null;
-  const dimmed = (stale || changed) && status !== "error";
+  const totals = data && !stale ? headlineTotals(data.net) : null;
   return (
-    <div className="single-year-headline" aria-busy={running}>
-      {running && showLoading && <ProcessingPanel seconds={seconds} compact />}
-      {changed && !running && (
-        <p className="single-year-changed" role="status">
-          Answers changed: press Calculate to update.
-        </p>
-      )}
+    <div className="single-year-headline">
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
-      {data && status !== "error" && (
-        <div className={`single-year-result ${dimmed ? "is-stale" : ""}`} aria-busy={dimmed || undefined}>
+      {totals && status !== "error" && (
+        <div className="single-year-result">
           <ResultCard
             totals={totals}
             yearLabel={yearLabel}
@@ -428,71 +424,35 @@ export function SingleYearHeadline({
   );
 }
 
-// The detail stage's skeletons: what each card will look like, with the
-// calculation's progress over it
-const SKELETON_TEXT = {
+// What each detail card says while it is calculated
+const WAITING_TEXT = {
   policies: "Working out each policy's share",
   earnings: "Calculating net income across salaries",
 };
 
 /**
- * A card still being calculated: a skeleton of its final shape (bars for
- * the split by policy, two charts for across earnings) at its final
- * height, under a small chip with a spinner, the usual time, the seconds
- * so far and a slim bar. Shown after 300ms, so a quick answer never
- * flashes it.
+ * A detail card still being calculated: the card at its final height,
+ * empty but for one centred message (a small spinner, what is happening,
+ * the usual time and a short progress line). Across earnings is one card
+ * across the row, so its message is said once. Shown after 300ms, so a
+ * quick answer never flashes it.
  */
 function PendingSkeleton({ kind, startedAt }) {
   const shown = useDelayed(true);
   // Part of the same wait as the headline: counted from Calculate
   const seconds = useElapsedSeconds(true, startedAt);
-  // The chip sits in a layer over the whole card, centred both ways (a
-  // grid, not a translate the fade-in animation would undo)
-  const chip = shown && (
-    <div className="skeleton-overlay">
-      <div className="skeleton-chip" role="status">
-        <span className="processing-spinner is-small" aria-hidden="true" />
-        <div>
-          <p className="skeleton-chip-title">{SKELETON_TEXT[kind]}</p>
-          <p className="skeleton-chip-time">{timeText(seconds)}</p>
-          <div className="processing-bar" aria-hidden="true">
+  return (
+    <div className={`card single-year-card waiting-card is-${kind}`} aria-busy="true">
+      {shown && (
+        <div className="waiting" role="status">
+          <span className="processing-spinner is-small" aria-hidden="true" />
+          <p className="waiting-title">{WAITING_TEXT[kind]}</p>
+          <p className="waiting-time">{timeText(seconds)}</p>
+          <div className="processing-bar waiting-bar" aria-hidden="true">
             <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
           </div>
         </div>
-      </div>
-    </div>
-  );
-  if (kind === "earnings") {
-    return (
-      <div className="skeleton-pair" aria-busy="true">
-        {[0, 1].map((index) => (
-          <div key={index} className="card single-year-card skeleton-card is-chart">
-            <span className="skeleton-line is-title" />
-            <div className="skeleton-chart" aria-hidden="true">
-              <svg viewBox="0 0 300 160" preserveAspectRatio="none">
-                <path className="skeleton-axis" d="M20 10V140H295" />
-                <path
-                  className="skeleton-curve"
-                  d={index === 0 ? "M20 130 C90 110 140 70 295 30" : "M20 120 L80 120 L80 80 L170 80 L170 60 L295 60"}
-                />
-              </svg>
-            </div>
-            {chip}
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="card single-year-card skeleton-card is-bars" aria-busy="true">
-      <span className="skeleton-line is-title" />
-      {[78, 52, 34, 18].map((width) => (
-        <div key={width} className="skeleton-bar-row" aria-hidden="true">
-          <span className="skeleton-line is-label" />
-          <span className="skeleton-line is-bar" style={{ width: `${width}%` }} />
-        </div>
-      ))}
-      {chip}
+      )}
     </div>
   );
 }
@@ -505,8 +465,10 @@ function PendingSkeleton({ kind, startedAt }) {
  */
 export function SingleYearDetails({ result, year, policies, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
-  // Greyed while a newer answer runs, or after the answers changed
-  const stale = result.stale || changed;
+  // Never an earlier result: nothing while the headline is calculated
+  // again, or once the answers differ from the result's
+  if (changed || result.stale || result.status === "loading") return null;
+  const stale = false;
   if (!data || result.status === "error") return null;
   // The figures' own year (see SingleYearHeadline)
   const yearLabel = fiscalYearTick(data.year ?? year);

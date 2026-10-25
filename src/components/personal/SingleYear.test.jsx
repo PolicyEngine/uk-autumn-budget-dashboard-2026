@@ -277,9 +277,10 @@ describe("the household calculation, from the fixture", () => {
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
-    // Another year: the result stays, dimmed, with a note; nothing asked yet
-    expect(await screen.findByText("Answers changed: press Calculate to update.")).toBeInTheDocument();
-    expect(document.querySelector(".single-year-result")).toHaveClass("is-stale");
+    // Another year: the result goes, the prompt comes back; nothing asked yet
+    expect(await screen.findByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household.some((body) => body.year === 2030)).toBe(false);
     toResults();
@@ -303,10 +304,12 @@ describe("Calculate", () => {
     fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(40);
-    // An edit after a result: the result stays, dimmed, and nothing is asked
+    // An edit after a result: the result goes, the prompt comes back, and
+    // nothing is asked
     const asked = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    expect(screen.getByText("Answers changed: press Calculate to update.")).toBeInTheDocument();
+    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
   });
@@ -330,17 +333,12 @@ describe("while a new answer loads", () => {
     };
   }
 
-  const banner = () => headlineCard();
-  const stalePart = () => document.querySelector(".single-year-result.is-stale");
-  const details = (container) => container.querySelector(".single-year-details");
-
-  it("keeps the old figures under their own year, greyed, until the new year's answer arrives", async () => {
+  it("shows only the processing panel while it calculates again, never the earlier result", async () => {
     const server = serveSlowly();
     const { rerender, container } = renderTab();
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    expect(banner()).toHaveTextContent("2029-30");
-    expect(stalePart()).toBeNull();
+    expect(headlineCard()).toHaveTextContent("2029-30");
     server.slowDown();
     const ids = POLICIES_FOR_TEST.map((p) => p.id);
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -348,43 +346,23 @@ describe("while a new answer loads", () => {
     // The button is busy and cannot send twice
     expect(calculateButton()).toBeDisabled();
     expect(calculateButton()).toHaveTextContent("Calculating…");
-    // At once, and still after the debounce and while the request is held
     for (const wait of [0, 600]) {
       await new Promise((resolve) => setTimeout(resolve, wait));
-      expect(banner()).toHaveTextContent("2029-30");
-      expect(banner()).not.toHaveTextContent("2030-31");
-      expect(stalePart()).not.toBeNull();
-      expect(details(container)).toHaveClass("is-stale");
-      expect(screen.getByRole("heading", { name: /Change in net income by policy, 2029-30/ })).toBeInTheDocument();
+      expect(headlineCard()).toBeNull();
+      expect(container.querySelector(".single-year-details")).toBeNull();
+      expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
     }
-    // A compact processing panel over the dimmed result
-    expect(container.querySelector(".processing-panel.is-compact")).toHaveTextContent("Calculating your household");
+    expect(container.querySelector(".processing-panel")).toHaveTextContent("Calculating your household");
+    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually around 60 seconds");
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     server.releaseAll();
-    await waitFor(() => expect(banner()).toHaveTextContent("2030-31"));
-    expect(stalePart()).toBeNull();
-    // The breakdown stage: the old bars stay greyed under their year until it lands
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));
+    expect(container.querySelector(".processing-panel")).toBeNull();
+    // The breakdown stage: its cards wait with one message each
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
-    expect(details(container)).not.toHaveClass("is-stale");
+    expect(container.querySelectorAll(".waiting-card")).toHaveLength(2);
     server.releaseAll();
     await screen.findByRole("heading", { name: /Change in net income by policy, 2030-31/ });
-  });
-
-  it("greys a deselected policy's bar rather than showing it as current", async () => {
-    const server = serveSlowly();
-    const { rerender, container } = renderTab();
-    toResults();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    server.slowDown();
-    const ids = POLICIES_FOR_TEST.map((p) => p.id).slice(1);
-    rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2029} />);
-    toResults();
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(stalePart()).toHaveClass("is-stale");
-    expect(details(container)).toHaveClass("is-stale");
-    expect(details(container)).toHaveAttribute("aria-busy", "true");
-    server.releaseAll();
-    await waitFor(() => expect(stalePart()).toBeNull());
   });
 });
 
