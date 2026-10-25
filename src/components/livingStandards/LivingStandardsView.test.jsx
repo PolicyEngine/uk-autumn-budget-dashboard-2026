@@ -227,16 +227,16 @@ describe("the Living standards view", () => {
     render(<App />);
     const section = await screen.findByRole("region", { name: "Living standards" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
-    expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
-    expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
+    expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
+    expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
     expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
     expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
     // The UC health element fix, with its upstream pull request
-    expect(within(section).getByRole("link", { name: "PolicyEngine/policyengine-uk#2428" })).toHaveAttribute(
+    expect(within(section).getByRole("link", { name: "policyengine-uk #2428" })).toHaveAttribute(
       "href",
       "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
     );
-    expect(within(section).getByText(/For 2030-31 and 2031-32 this baseline applies that fix itself/)).toBeInTheDocument();
+    expect(within(section).getByText(/Patched for 2030-31 and 2031-32/)).toBeInTheDocument();
     expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });

@@ -15,7 +15,7 @@ describe("GeographyMethodology", () => {
     expect(text).toContain("do not add up exactly to the regional ones");
     expect(text).toContain("may come from a different dataset");
     expect(text).toContain("constituency weights, which are estimated for 2025");
-    expect(text).toContain("little change is under 0.1% of income (£10 a year)");
+    expect(text).toContain("little change: under 0.1% of income (£10 a year)");
     expect(text).not.toMatch(/noise/i);
 
     const link = screen.getByRole("link", {

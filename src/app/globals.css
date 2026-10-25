@@ -490,14 +490,16 @@ body {
   padding: 0;
 }
 
-.method-card a {
+.method-card a,
+.method-callout a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
   text-underline-offset: 3px;
 }
 
-.method-card a:hover {
+.method-card a:hover,
+.method-callout a:hover {
   text-decoration-color: currentColor;
 }
 

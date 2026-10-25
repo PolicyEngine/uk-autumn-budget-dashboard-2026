@@ -189,7 +189,7 @@ export const INTERACTION_THRESHOLD = 1;
 /**
  * The per-policy rows (the API's single-measure method): each measure's own
  * change, that measure alone at its Budget setting with the other selected
- * measures at pre-Budget law. Where the combined change differs from the
+ * measures at current law. Where the combined change differs from the
  * sum of those by £1 or more, the difference is a row of its own,
  * "Interaction between policies", so the bars add up to the change. In
  * whole pounds that add up to the headline tile (largest remainder), sorted
@@ -439,9 +439,9 @@ export function areaName(brma) {
 }
 
 /**
- * How the single-year calculation works, in one place: the Methodology
- * tab's single-year card and the page's "How this is calculated" expander
- * both show these, as [term, text].
+ * How the single-year calculation works, in one place: Personal impact's
+ * "About these figures" shows these, as [term, text]; the Methodology tab
+ * links there.
  */
 export const SINGLE_YEAR_METHOD = [
   [

@@ -7,13 +7,15 @@ import { POLICY_COLORS } from "../utils/policyConfig";
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
+  vi.unstubAllGlobals();
+  delete window.matchMedia;
 });
 
 const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onShowTab} />);
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the map and Personal impact) link to these
+    // Other views (e.g. the map and Household impact) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
     expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
@@ -71,10 +73,8 @@ describe("MethodologyTab", () => {
     });
   });
 
-  it("shows the five steps, each measure's modelling and the example households", () => {
+  it("shows each measure's modelling and the example households", () => {
     renderTab();
-    const flow = screen.getByRole("list", { name: "How the numbers are made" });
-    expect(within(flow).getAllByRole("listitem")).toHaveLength(5);
 
     const [table, notModelled] = screen.getAllByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
@@ -98,19 +98,17 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("describes the household calculation in its slot", () => {
+  it("points to the household calculation from its slot", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Household calculation",
     );
-    expect(slot).not.toHaveTextContent("To follow");
-    expect(slot).toHaveTextContent("same measures as the national figures");
-    expect(slot).toHaveTextContent("OBR's average earnings forecast");
-    expect(slot).not.toHaveTextContent("in the national figures only");
-    expect(slot).toHaveTextContent("Every policy applied");
-    expect(slot).toHaveTextContent("Employer NI relief: an employer cost");
-    expect(slot).toHaveTextContent("paid in 2026-27 only");
+    // The calculation is said once, in Household impact's "About these
+    // figures"; this slot points there.
+    expect(slot).toHaveTextContent("About these figures");
+    expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
+    expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
   });
 
   it("switches views from its links, in place", () => {
@@ -121,9 +119,39 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");
-    const young = screen.getByRole("link", { name: "See Young people under Population impact" });
+    const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+  });
+
+  it("renders every section with its icon, so a missing icon import fails", () => {
+    const { container } = renderTab();
+    for (const { id } of METHOD_CONTENTS) {
+      const section = container.querySelector(`section#${id}`);
+      expect(section).not.toBeNull();
+      expect(section.querySelector(".method-section-heading .method-icon svg")).not.toBeNull();
+    }
+    // Every defined term has its icon
+    for (const term of container.querySelectorAll(".method-fact dt")) {
+      expect(term.querySelector("svg")).not.toBeNull();
+    }
+  });
+
+  it("opens each section with a summary, its technical details closed until asked for", () => {
+    const { container } = renderTab();
+    for (const { id } of METHOD_CONTENTS) {
+      const section = container.querySelector(`section#${id}`);
+      expect(section.querySelector(".method-summary")?.textContent.trim()).toBeTruthy();
+      const details = section.querySelector("details.method-details");
+      if (details) expect(details.open).toBe(false);
+    }
+  });
+
+  it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {
+    const { container } = renderTab();
+    expect(container.textContent).not.toMatch(
+      /pre-Budget|before the Budget|after the Budget|28 October|once the OBR|candidate|likely for the Budget/i,
+    );
   });
 });
