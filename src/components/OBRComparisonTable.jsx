@@ -189,7 +189,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       <div className="obr-intro-row">
         <p className="comparison-description">
           PolicyEngine's static estimates against{" "}
-          <SourceLink source="obrBudget2026Costings" />, £bn a year; positive values raise revenue.
+          <SourceLink source="obr_budget_2026_costings" />, £bn a year; positive values raise revenue.
         </p>
       </div>
 

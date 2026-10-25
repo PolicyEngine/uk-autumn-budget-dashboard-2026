@@ -1,4 +1,4 @@
-import { SOURCES } from "../utils/sources";
+import { EXTERNAL, SOURCES } from "../utils/sources";
 
 /**
  * A named source as a link to its page (src/utils/sources.js), opened in a
@@ -9,9 +9,9 @@ export default function SourceLink({ source, children }) {
   const entry = SOURCES[source];
   if (!entry) throw new Error(`Unknown source: ${source}`);
   const text = children ?? entry.label;
-  if (!entry.href) return <>{text}</>;
+  if (!entry.url) return <>{text}</>;
   return (
-    <a href={entry.href} target="_blank" rel="noopener noreferrer">
+    <a href={entry.url} {...EXTERNAL}>
       {text}
     </a>
   );

@@ -208,7 +208,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
             buildChartCsv({
               title: chartTitle,
               units: "£ billion a year; positive values raise revenue",
-              source: `PolicyEngine UK microsimulation; OBR ${obrKind} costings, ${SOURCES.obrBudget2026Costings.label.replace(/^the /, "")}`,
+              source: `PolicyEngine UK microsimulation; OBR ${obrKind} costings, ${SOURCES.obr_budget_2026_costings.label.replace(/^the /, "")}`,
               columns: [
                 { key: "name", label: "Policy" },
                 { key: "pe", label: "PolicyEngine (£bn)", decimals: 4 },

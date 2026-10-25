@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { SOURCES } from "./sources";
 
 describe("the dashboard's sources", () => {
-  const linked = Object.values(SOURCES).filter((source) => source.href);
+  const linked = Object.values(SOURCES).filter((source) => source.url);
 
   it("are all https", () => {
-    for (const source of linked) expect(source.href, source.label).toMatch(/^https:\/\//);
+    for (const source of linked) expect(source.url, source.label).toMatch(/^https:\/\//);
   });
 
   it("each link once", () => {
-    const hrefs = linked.map((source) => source.href);
-    expect(new Set(hrefs).size).toBe(hrefs.length);
+    const urls = linked.map((source) => source.url);
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it("each have a label", () => {
