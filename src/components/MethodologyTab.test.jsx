@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { measureModelling, unavailableMeasures } from "./methodology/measures";
+import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { fiscalYearTick } from "../utils/chartTheme";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
 const MEASURE_MODELLING = measureModelling(catalogue);
-const NOT_MODELLED = unavailableMeasures(catalogue);
+const UNAVAILABLE = unavailableMeasures(catalogue);
 const POLICY_COLORS = catalogue.policyColors;
 
 afterEach(() => {
@@ -81,15 +82,15 @@ describe("MethodologyTab", () => {
     const flow = screen.getByRole("list", { name: "How the numbers are made" });
     expect(within(flow).getAllByRole("listitem")).toHaveLength(5);
 
-    const [table, notModelled] = screen.getAllByRole("table");
+    const [table, unavailable] = screen.getAllByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(MEASURE_MODELLING.length);
-    // The likely measures the model cannot cost, each with its reason
-    const notModelledRows = within(notModelled).getAllByRole("row").slice(1);
-    expect(notModelledRows).toHaveLength(NOT_MODELLED.length);
-    for (const measure of NOT_MODELLED) {
-      expect(within(notModelled).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
-      expect(notModelled).toHaveTextContent(measure.why);
+    // The catalogue's measures without verified results, each with its reason
+    const unavailableRows = within(unavailable).getAllByRole("row").slice(1);
+    expect(unavailableRows).toHaveLength(UNAVAILABLE.length);
+    for (const measure of UNAVAILABLE) {
+      expect(within(unavailable).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+      expect(unavailable).toHaveTextContent(measure.why);
     }
     for (const measure of MEASURE_MODELLING) {
       // Every measure is one the charts colour, by the same name
@@ -101,6 +102,38 @@ describe("MethodologyTab", () => {
     for (const household of EXAMPLE_HOUSEHOLDS) {
       expect(panel).toHaveTextContent(household.definition);
     }
+  });
+
+  it("labels the first year with results as that, not as when a policy starts", () => {
+    // Review of 62febdd, finding 6: results cover every scored year, so a
+    // measure that starts in 2031-32 can have results from 2026-27
+    renderTab();
+    const [table] = screen.getAllByRole("table");
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Measure", "Published description", "Results from"]);
+    for (const measure of MEASURE_MODELLING) {
+      const row = within(table).getByRole("rowheader", { name: measure.name }).closest("tr");
+      expect(row.querySelector(".method-measure-year")).toHaveTextContent(`Results from ${fiscalYearTick(2026)}`);
+    }
+    // The first supported year: an unsupported year has no results
+    const partly = { displayable: [{ description: "From 6 April 2031", years: [2028, 2026, 2027], unsupported_years: [2026] }] };
+    expect(measureModelling(partly)[0].from).toBe(2027);
+  });
+
+  it("lists the measures reported as likely that the model cannot cost", () => {
+    renderTab();
+    const card = screen.getByRole("heading", { name: "Likely but not modelled" }).closest(".method-card");
+    const table = within(card).getByRole("table");
+    expect(within(table).getAllByRole("row").slice(1)).toHaveLength(NOT_MODELLED.length);
+    expect(NOT_MODELLED.length).toBeGreaterThan(0);
+    for (const measure of NOT_MODELLED) {
+      expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+      expect(table).toHaveTextContent(measure.why);
+    }
+    // Text only: no measure the catalogue publishes, and no figure
+    for (const measure of catalogue.measures) {
+      expect(within(table).queryByRole("rowheader", { name: measure.name })).toBeNull();
+    }
+    expect(table.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
   });
 
   it("describes the household calculation in its slot", () => {

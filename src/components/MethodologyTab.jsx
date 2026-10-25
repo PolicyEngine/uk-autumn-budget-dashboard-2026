@@ -2,7 +2,7 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { measureModelling, unavailableMeasures } from "./methodology/measures";
+import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
@@ -141,7 +141,7 @@ function SectionLink({ id, children }) {
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
   const MEASURE_MODELLING = measureModelling(catalogue);
-  const NOT_MODELLED = unavailableMeasures(catalogue);
+  const UNAVAILABLE = unavailableMeasures(catalogue);
   const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
@@ -263,7 +263,7 @@ function MethodologyTab({ onShowTab }) {
                 <tr>
                   <th scope="col">Measure</th>
                   <th scope="col">Published description</th>
-                  <th scope="col">From</th>
+                  <th scope="col">Results from</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,7 +279,7 @@ function MethodologyTab({ onShowTab }) {
                     </th>
                     <td>{measure.how}</td>
                     <td className="method-measure-year">
-                      <span className="method-cell-label">From </span>
+                      <span className="method-cell-label">Results from </span>
                       {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
                     </td>
                   </tr>
@@ -303,6 +303,30 @@ function MethodologyTab({ onShowTab }) {
                 <tr>
                   <th scope="col">Measure</th>
                   <th scope="col">Why results are unavailable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNAVAILABLE.map((measure) => (
+                  <tr key={measure.name}>
+                    <th scope="row">{measure.name}</th>
+                    <td>{measure.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card method-card method-table-card">
+            <h3 className="method-card-title">Likely but not modelled</h3>
+            <p className="method-more">
+              Reported as likely for the Budget, but outside what the household
+              model can cost, so not on the page.
+            </p>
+            <table className="method-measures">
+              <thead>
+                <tr>
+                  <th scope="col">Measure</th>
+                  <th scope="col">Why it is not modelled</th>
                 </tr>
               </thead>
               <tbody>
