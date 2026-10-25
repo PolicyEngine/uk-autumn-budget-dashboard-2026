@@ -28,11 +28,13 @@ def expand(field: str, low: int, high: int) -> list[int]:
     return values
 
 
-def test_publish_measure_runs_on_a_registry_push_and_on_dispatch():
+def test_publish_measure_runs_on_a_package_push_and_on_dispatch():
+    # Not only reforms.py: a modifier or template change must trigger too,
+    # and changed-measures decides which measures it reached
     workflow = load("publish-measure.yml")
     assert workflow["on"]["push"] == {
         "branches": ["main"],
-        "paths": ["src/uk_budget_data/reforms.py"],
+        "paths": ["src/uk_budget_data/**", "uv.lock", "pyproject.toml"],
     }
     assert "measures" in workflow["on"]["workflow_dispatch"]["inputs"]
     assert workflow["permissions"] == {}
