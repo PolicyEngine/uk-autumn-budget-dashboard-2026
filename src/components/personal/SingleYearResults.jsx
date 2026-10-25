@@ -234,47 +234,55 @@ export function SingleYearDetails({ result, year, policies }) {
   // under their own year, until the new answer arrives
   return (
     <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
-      <SectionHeading
-        title="Breakdown of household net income"
-        subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
-      />
-      <section className="report-section">
-        {data.programmes ? (
-          <ProgrammeTable
-            programmes={data.programmes}
-            totals={totals}
-            bars={bars?.all}
-            yearLabel={yearLabel}
-            engine={data.engine}
+      {/* The breakdown and the split by policy side by side on a wide
+          screen, stacked on a narrow one */}
+      <div className="single-year-pair">
+        <div className="single-year-pair-col">
+          <SectionHeading
+            title="Breakdown of household net income"
+            subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
           />
-        ) : (
-          <div className="card single-year-card">
-            <p className="single-year-quiet">The breakdown is not available for this answer.</p>
-          </div>
-        )}
-      </section>
+          <section className="report-section">
+            {data.programmes ? (
+              <ProgrammeTable
+                programmes={data.programmes}
+                totals={totals}
+                bars={bars?.all}
+                yearLabel={yearLabel}
+                engine={data.engine}
+              />
+            ) : (
+              <div className="card single-year-card">
+                <p className="single-year-quiet">The breakdown is not available for this answer.</p>
+              </div>
+            )}
+          </section>
+        </div>
 
-      <SectionHeading
-        title="Change by policy"
-        subtitle="How much each selected policy adds to or takes from your household's net income."
-      />
-      <section className="report-section">
-        {bars ? (
-          <PolicyBars
-            rows={bars.rows}
-            noEffect={bars.noEffect}
-            underAPound={bars.underAPound}
-            notes={bars.notes}
-            yearLabel={yearLabel}
+        <div className="single-year-pair-col">
+          <SectionHeading
+            title="Change by policy"
+            subtitle="How much each selected policy adds to or takes from your household's net income."
           />
-        ) : detailFailed ? (
-          <div className="card single-year-card">
-            <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
-          </div>
-        ) : (
-          <Pending text="Working out each policy's share…" />
-        )}
-      </section>
+          <section className="report-section">
+            {bars ? (
+              <PolicyBars
+                rows={bars.rows}
+                noEffect={bars.noEffect}
+                underAPound={bars.underAPound}
+                notes={bars.notes}
+                yearLabel={yearLabel}
+              />
+            ) : detailFailed ? (
+              <div className="card single-year-card">
+                <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
+              </div>
+            ) : (
+              <Pending text="Working out each policy's share…" />
+            )}
+          </section>
+        </div>
+      </div>
 
       <SectionHeading
         title="Across earnings"

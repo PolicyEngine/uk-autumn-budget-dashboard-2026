@@ -453,6 +453,7 @@
 }
 
 /* ---------- The form: one list of questions, each opening in place ---------- */
+/* The form, then the headline below it, both the full width */
 .household-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -460,16 +461,9 @@
   align-items: start;
 }
 
-/* Desktop: the list on the left, the headline beside it, kept in view */
 @media (min-width: 1024px) {
   .household-layout {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     gap: 32px;
-  }
-
-  .household-results {
-    position: sticky;
-    top: calc(var(--sticky-offset, 72px) + 16px);
   }
 }
 

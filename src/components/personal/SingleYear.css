@@ -507,3 +507,43 @@
   font-size: 1rem;
   color: var(--pe-gray-700);
 }
+
+/* The breakdown and the split by policy: side by side on a wide screen,
+   each column's heading and card on two shared rows, so the headings and
+   the cards' tops line up and both cards are as tall as the taller one.
+   Stacked on a phone or tablet. */
+.single-year-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 56px;
+}
+
+.single-year-pair-col {
+  min-width: 0;
+}
+
+@media (min-width: 1025px) {
+  .single-year-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    column-gap: 20px;
+    row-gap: 0;
+  }
+
+  .single-year-pair-col {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .single-year-pair-col > .report-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .single-year-pair-col > .report-section > .card {
+    flex: 1 1 auto;
+  }
+}
