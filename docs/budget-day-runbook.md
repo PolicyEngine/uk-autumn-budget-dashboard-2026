@@ -535,11 +535,30 @@ uv run uk-budget-data publish check
   - W3 saw HTTP 403.
   - uk-data #536 records a 200 answer that is an HTML page titled "No Access - Office for Budget Responsibility" instead of the workbook.
   - On 15 October, from W5's machine, the March 2026 EFO receipts workbook downloaded by script, but the expenditure workbook got that "No Access" page.
+  - On 25 October (dry run), curl got that "No Access" page for all three workbooks below, with HTTP 200 and `text/html` (88,552 bytes each).
 
-  A browser download works.
-- **What:** the EFO's detailed forecast tables, at least receipts and expenditure. W3 lists the full set.
-- **Where the files go:** to W3's Budget-day ingest in policyengine-uk-data, which records each file's SHA-256, vintage, units, geography and year coverage. Today the OBR loader's fallback reads committed workbooks from `storage/obr_efo/` (uk-data #536). W3 to confirm the path for the Budget-day files.
+  A browser download works: on 25 October each workbook took under a second.
+- **What:** three of the EFO's *detailed forecast tables* workbooks, each its own link on the EFO page (each appears twice there, as an "xlsx" icon and as its title):
+  - **economy**, for the Living standards tab (next section);
+  - **receipts** and **expenditure**, for the OBR targets in policyengine-uk-data.
+
+  The page also offers aggregates, policy, debt interest and a zip of all of them; none is needed. Take the single workbooks, not the zip: an unzipped file's modification time is not its download time.
+- **Check each file is a workbook**, not the "No Access" page saved as `.xlsx`: `file <file>` must say "Microsoft Excel 2007+", not "HTML document".
 - **Record:** each file's name and SHA-256 (`shasum -a 256 <file>`) in the coverage ledger as it lands, so the ingest's record can be checked against what was downloaded.
+- **Receipts and expenditure go to policyengine-uk-data's ingest** (`policyengine_uk_data/targets/obr_sources.py`). In a policyengine-uk-data checkout, dry run first; it writes nothing and prints each workbook's title, SHA-256 and every OBR target's old and new value:
+
+  ```sh
+  uv run python -m policyengine_uk_data.targets.obr_sources ingest \
+    --vintage october_2026 --label "October 2026" \
+    --receipts <receipts xlsx> --expenditure <expenditure xlsx> \
+    --receipts-url https://obr.uk/download/<receipts page>/ \
+    --expenditure-url https://obr.uk/download/<expenditure page>/ \
+    --first-year 2025 --last-year 2031 --dry-run
+  ```
+
+  The `--*-url` values are the obr.uk download pages the files came from (on the EFO page, the links' addresses without the `?tmstv=` query); every target cites them. The ingest refuses a workbook whose title doesn't name the vintage. Then run it again without `--dry-run`: it moves the files under `storage/obr_efo/october_2026/` and writes the vintage's manifest; pointing `sources.yaml` at that manifest adopts it, in a policyengine-uk-data pull request. About 40 s, nearly all start-up.
+
+  Dry run, 25 October, on the March 2026 workbooks (`--vintage march_2026 --label "March 2026" --first-year 2024 --last-year 2030`): both files matched the committed manifest's SHA-256 (receipts `f65b6cb7…`, expenditure `700bfd70…`), all 168 target-years were unchanged, and it ended "a rehearsal, nothing to write".
 
 **Treasury tables come from gov.uk by script.** On 15 October `assets.publishing.service.gov.uk` served a spreadsheet to both curl's and python-requests' user agents (HTTP 200, the right content type), so gov.uk does not refuse scripted downloads. The importer below reads a workbook from a local path and fetches nothing itself. If gov.uk does refuse on the day, download Table 4.1 in a browser the same way and pass its path.
 
@@ -568,14 +587,16 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
      --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
    ```
 
-   It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending.
+   It takes about 2 seconds. It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending, with a new SHA-256 and a 14-day expiry.
 3. **Check what it printed:**
-   - every series: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, with the table and column it read each from; CPI after housing costs and social rent recomputed by PolicyEngine;
+   - every series, with its values for 2027 to 2030: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, then CPI after housing costs and social rent recomputed by PolicyEngine. The console prints values only; the table and column each was read from are in each series' `post_source` in `public/data/living_standards_outlook.json`;
    - the file name and SHA-256 match the download;
-   - any "kept at the pre-Budget value" line (only mortgage interest 2030 may say this, if the OBR stops forecasting it before 2030).
+   - any "kept at the pre-Budget value" line. Only mortgage interest 2030 may say this, and on the March 2026 tables it does, because the OBR stops forecasting it after 2030 Q1. That line is expected; any other series saying it is not.
 
    If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
 4. **Commit** both files and the review row in a pull request; the page then reads "OBR March 2026 (pre-Budget)" against the new label.
+
+**Rehearsing with the March tables.** Loading the March 2026 economy workbook (SHA-256 `fde1de4b…`, the same bytes as `data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx`) under a test `--label` gives post equal to pre: on 25 October all 40 values of the 10 series matched, and the Forecast changes sub-tab showed the test label, "no change" on each headline and the post line drawn over the pre line. Don't commit a rehearsal. Undo it with `git checkout -- public/data/living_standards_outlook.json data_inputs/public_data_review.csv` and `rm data_inputs/living_standards/obr_forecast_post.json`.
 
 **This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
 
