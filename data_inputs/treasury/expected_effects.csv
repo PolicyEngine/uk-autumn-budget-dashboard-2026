@@ -1,1 +1,10 @@
 measure_id,direction,from_year,to_year,reviewer,note
+badr_lifetime_limit_cut,positive,2027,,,"Lifetime limit cut to £500,000 from 6 April 2027 raises CGT on qualifying disposals; no effect before 2027-28"
+domestic_electricity_zero_vat,negative,2026,2027,,"Zero VAT on domestic electricity, 1 October 2026 to 31 March 2028: VAT receipts fall in 2026-27 (182 days) and 2027-28; nothing after"
+employer_ni_relief_under_25s,negative,2027,,,"Zero employer Class 1 rate for employees aged 21 to 24 up to the upper secondary threshold from April 2027: employer NI receipts fall"
+fuel_duty_rise_deferral,negative,2026,,,"Deferred fuel duty rises keep duty, and the VAT on it, lower than current law in every year from 2026-27"
+plan_2_threshold_unfreeze,negative,2027,,,"Plan 2 threshold rises with RPI from April 2027 instead of staying frozen: modelled repayments fall"
+road_fuel_vat_cut,negative,2026,2027,,"5-point VAT cut on petrol and diesel for 121 days of 2026-27 and 61 of 2027-28: VAT receipts fall; nothing after"
+state_pension_income_tax_protection,negative,2027,,,"Personal allowance raised to the full new State Pension for people over State Pension age from 2027-28: income tax falls"
+threshold_freeze_2031_32,positive,2031,2031,,"Personal allowance and basic rate band held at 2030-31 values in 2031-32 instead of uprated: income tax and NI rise in 2031-32 only (the last model year)"
+warm_home_discount_top_up,negative,2026,2026,,"£100 top-up paid once, winter 2026-27, to receiving UC and Pension Credit households: spending rises in 2026-27 only"
