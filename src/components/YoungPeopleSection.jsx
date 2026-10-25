@@ -80,7 +80,7 @@ const OUTCOMES = [
 const MEAN_DESCRIPTION =
   "Average change per person, £ a year, by age group; bars add each policy's own effect.";
 const SINGLE_AGE_DESCRIPTION =
-  `Average change per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}).`;
+  `Average change per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}); bars add each policy's own effect.`;
 const SHARES_DESCRIPTION =
   "Share of people better or worse off (a change over 0.01%), by age group.";
 const SHARES_SINGLE_DESCRIPTION =
@@ -315,9 +315,28 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   const data = meanChangeByBand(rows, policies, selectedPolicies, selectedYear);
   const singleData = singleAgeBars(rows, policies, selectedPolicies, selectedYear);
   const bandAxis = useBandDomain(rows, policies, selectedPolicies);
-  // The single-year axis fits the year shown, with a little headroom
-  const singleValues = singleData.map((point) => point.netChange).filter((value) => value !== null);
-  const singleAxis = fitRange(Math.min(0, ...singleValues), Math.max(0, ...singleValues));
+  // The single-year axis fits the year shown's stacks, gains above zero and
+  // losses below, with a little headroom (never mirrored)
+  const stackEnds = singleData
+    .filter((point) => point.netChange !== null)
+    .map((point) => point.parts.reduce(
+      ([low, high], part) => (part.value < 0 ? [low + part.value, high] : [low, high + part.value]),
+      [0, 0],
+    ));
+  const singleAxis = fitRange(
+    Math.min(0, ...stackEnds.map(([low]) => low)),
+    Math.max(0, ...stackEnds.map(([, high]) => high)),
+  );
+  // A policy's part too small to see is drawn as a thin sliver (its real
+  // value stays in the tooltip)
+  const sliver = (singleAxis.domain[1] - singleAxis.domain[0]) * 0.006;
+  const singleDrawn = singleData.map((point) => {
+    const drawn = { ...point };
+    for (const part of point.parts) {
+      if (part.value !== 0 && Math.abs(part.value) < sliver) drawn[part.name] = Math.sign(part.value) * sliver;
+    }
+    return drawn;
+  });
   const { domain, ticks } = single ? singleAxis : bandAxis;
 
   // Measures with an effect in any shown year, so the legend (and the
@@ -347,13 +366,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     description,
     logo: CHART_LOGO,
     reservedLegendHeight: 0,
-    legendItems: single
-      ? [
-          { color: SIGN_COLOURS.gain, label: "Gain", type: "rect" },
-          { color: SIGN_COLOURS.loss, label: "Loss", type: "rect" },
-          { color: YOUNG_SWATCH, label: "16 to 24 shaded", type: "rect" },
-        ]
-      : [
+    legendItems: [
           ...activeNames.map((name) => ({
             color: POLICY_COLORS[name],
             label: name,
@@ -363,7 +376,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           ...(activeNames.length > 1
             ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
-        ],
+    ],
   };
   const selectedNames = policies
     .filter((policy) => selectedPolicies.includes(policy.id))
@@ -377,8 +390,10 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           units: `${units}; the sum of each selected policy's own effect`,
           columns: [
             { key: "label", label: "Age" },
+            ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
             { key: "netChange", label: "Net change", decimals: 2 },
           ],
+          // The real values, not the slivers drawn
           rows: published ? singleData.filter((point) => point.netChange !== null) : [],
           notes: missingAges.length
             ? [`Not shown, too few survey records: ages ${missingAges.map((p) => p.label).join(", ")}`]
@@ -438,7 +453,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : single ? (
           <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={singleData} margin={plotMargin(narrow)} barCategoryGap="14%">
+            <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
               <XAxis
@@ -466,13 +481,21 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
                 content={<SingleAgeTooltip yearLabel={yearLabel} />}
               />
-              <Bar dataKey="netChange" name="Net change" {...chartMotion()}>
-                {singleData.map((point) => (
-                  <Cell key={point.label} fill={signColour(point.netChange ?? 0)} />
-                ))}
-              </Bar>
+              {/* Each policy's own part, gains stacked above zero and losses
+                  below, in the policy colours */}
+              {ALL_POLICY_NAMES.map((name) => (
+                <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+              ))}
+              {/* The net change: a dark dot per age */}
+              <Scatter
+                dataKey="netChange"
+                shape={netDot}
+                legendType="none"
+                tooltipType="none"
+                {...chartMotion()}
+              />
               <Customized component={<ChartUnitLabel text={UNIT} />} />
-            </BarChart>
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
@@ -553,14 +576,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       </div>
       <div className="chart-legend">
         {published &&
-          (single ? (
-            <RowLegend items={SINGLE_AGE_LEGEND} />
-          ) : (
-            <GroupedLegend
-              names={activeNames}
-              netLabel={activeNames.length > 1 ? "Net change" : undefined}
-            />
-          ))}
+          <GroupedLegend names={activeNames} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

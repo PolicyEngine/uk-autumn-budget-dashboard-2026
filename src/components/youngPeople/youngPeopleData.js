@@ -178,7 +178,9 @@ export function singleAgeBars(rows, policies, selected, year) {
     }
     // Each policy's own change, for the tooltip, largest first
     parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [] });
+    // Each policy's own change under its name too, for the stacked bars
+    const byName = complete ? Object.fromEntries(parts.map((part) => [part.name, part.value])) : {};
+    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...byName });
   }
   return bars;
 }
