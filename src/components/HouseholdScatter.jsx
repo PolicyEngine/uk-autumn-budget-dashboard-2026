@@ -13,7 +13,7 @@ import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
   clampToAxis,
-  fitChangeAxis,
+  fitChangeAxisAcrossYears,
   householdsPerDot,
   INCOME_AXIS_DOMAIN,
   panelDots,
@@ -58,10 +58,12 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 // and colour scale (see HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
 
+// The dots' colours, as colourFor draws them; the key under the plot
+// carries them, and the hollow dot for groups beyond the axis
 const KEY = [
-  { label: "Gains", color: CHART_COLOURS.gain },
-  { label: "Losses", color: CHART_COLOURS.loss },
-  { label: "No change", color: CHART_COLOURS.noChange },
+  { label: "Gain", color: CHART_COLOURS.gain },
+  { label: "Loss", color: CHART_COLOURS.loss },
+  { label: "Little change", color: CHART_COLOURS.noChange },
 ];
 
 const number = (value) =>
@@ -70,9 +72,8 @@ const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
 const describe = (perDot, basisLabel) =>
-  `Net income change against ${basisLabel} baseline income. Each dot stands for about ${roundedThousands(perDot)} households, grouped by their ${basisLabel} income, so a dot keeps its row across years. Green: gains; amber: losses; grey: little change; hollow: beyond the axis.`;
-const DESCRIPTION_LOADING =
-  "Net income change against baseline income. Each dot stands for a group of households, grouped by their income in the first year shown. Green: gains; amber: losses; grey: little change.";
+  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households.`;
+const DESCRIPTION_LOADING = "Change in net income by baseline income.";
 
 // Dots move between years and selections as the other charts' bars do:
 // about 850ms, easing in and out, and not at all under reduced motion.
@@ -241,13 +242,21 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
   const chartTitle = `${CHART_TITLE}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
-  // The change axis fits the dots of the year and selection shown; dots
-  // beyond it sit at its edge, hollow
-  const { dots, changeAxis } = useMemo(() => {
+  // The change axis is fitted once per selection, across every year, so
+  // it stays put while the year changes; dots beyond it sit at its edge,
+  // hollow
+  const reform = ready ? view.reform : null;
+  const yearPoints = ready ? view.yearPoints : null;
+  const basisPoints = ready ? view.basisPoints : null;
+  const changeAxis = useMemo(
+    () => fitChangeAxisAcrossYears(basisPoints ?? [], yearPoints ?? []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reform, data],
+  );
+  const dots = useMemo(() => {
     const placed = ready ? panelDots(view.basisPoints, view.points) : [];
-    const axis = fitChangeAxis(placed);
-    return { dots: clampToAxis(placed, axis.domain), changeAxis: axis };
-  }, [ready, view]);
+    return clampToAxis(placed, changeAxis.domain);
+  }, [ready, view, changeAxis]);
   const shown = useTweenedDots(dots);
   const description = ready
     ? describe(householdsPerDot(view.basisPoints), basisLabel)
@@ -262,7 +271,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
   const exportOptions = {
     title: chartTitle,
     description,
-    legendItems: KEY.map((item) => ({ ...item, type: "rect" })),
+    legendItems: KEY.map((item) => ({ ...item, type: "circle" })),
     logo: CHART_LOGO,
     // No Recharts legend: the whole SVG is the plot, so crop nothing
     reservedLegendHeight: 0,
@@ -356,6 +365,21 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
           </div>
         )}
       </div>
+
+      {ready && (
+        <ul className="scatter-legend chart-legend" aria-label="Key">
+          {KEY.map((item) => (
+            <li key={item.label}>
+              <span className="scatter-legend-dot" style={{ background: item.color }} aria-hidden="true" />
+              {item.label}
+            </li>
+          ))}
+          <li>
+            <span className="scatter-legend-dot is-hollow" aria-hidden="true" />
+            Beyond the axis
+          </li>
+        </ul>
+      )}
 
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

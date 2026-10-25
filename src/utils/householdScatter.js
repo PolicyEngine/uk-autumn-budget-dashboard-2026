@@ -180,10 +180,16 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
     (row) => row.reform_id === choice.reform,
   ).income_basis_year;
   const basisPoints = cellsIn(basisYear);
+  // Every year's cells for this selection, so the change axis can be fitted
+  // once across years and stay put while the year changes
+  const years = [
+    ...new Set(data.rows.filter((row) => row.reform_id === choice.reform).map((row) => row.year)),
+  ].sort((a, b) => a - b);
   return {
     kind: "points",
     reform: choice.reform,
     points,
+    yearPoints: years.map(cellsIn).filter((cells) => cells.length > 0),
     basisYear,
     // Without the basis year's cells, the year's own share out the dots
     basisPoints: basisPoints.length > 0 ? basisPoints : points,
@@ -304,6 +310,16 @@ export function fitChangeAxis(dots) {
     domain: [low === 0 ? -step / 2 : low, high === 0 ? step / 2 : high],
     ticks,
   };
+}
+
+/**
+ * The change axis for a selection, fitted once across all its years: the
+ * dots of every year (each placed as panelDots places them) pooled, then
+ * fitChangeAxis. Kept while the year changes, so dots slide on one scale.
+ */
+export function fitChangeAxisAcrossYears(basisCells, yearCells) {
+  const pooled = yearCells.flatMap((cells) => panelDots(basisCells, cells));
+  return fitChangeAxis(pooled);
 }
 
 /**
