@@ -349,6 +349,8 @@ export default function ConstituencyMap({
   // Whether the page shows the results by region, so a notice can link
   // to them.
   showRegionLink = true,
+  // The folder under the base path with the results by area (a drill's own)
+  dataDir,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
   const [panel, setPanel] = usePanelParam();
@@ -375,7 +377,13 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
+  } = useConstituencyView({
+    selectedPolicies,
+    policies,
+    selectedYear,
+    outcome,
+    dataDir,
+  });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);

@@ -27,9 +27,10 @@ export function useConstituencyView({
   policies = [],
   selectedYear,
   outcome,
+  dataDir,
 }) {
-  const constituency = useGeographyData("constituency");
-  const regional = useGeographyData("regional");
+  const constituency = useGeographyData("constituency", dataDir);
+  const regional = useGeographyData("regional", dataDir);
   const boundaries = useConstituencyBoundaries();
   const routing = useAreaRouting();
 

@@ -29,6 +29,19 @@ import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
 import PolicyCards from "./components/PolicyCards";
+import PillSelect from "./components/PillSelect";
+import NotCalculated from "./components/NotCalculated";
+import {
+  CURRENT_SCENARIO,
+  DRILL_BY_ID,
+  OUTPUTS,
+  SCENARIO_OPTIONS,
+  SCENARIO_PARAM,
+  scenarioDataDir,
+  scenarioDataPath,
+  scenarioFromSearch,
+  scenarioHas,
+} from "./utils/drills";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
@@ -160,6 +173,16 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  // The scenario Population impact shows (?scenario=): Current, or one of
+  // the past mock-Budget drills. Household impact, Living standards and
+  // Methodology always use the current measures.
+  const [scenario, setScenario] = useState(CURRENT_SCENARIO);
+  const drill = DRILL_BY_ID[scenario];
+  // A drill's measures and which of them are chosen; Current keeps its own
+  // choice in selectedPolicies, so returning to it restores that choice
+  const scenarioPolicies = drill ? drill.measures : POLICIES;
+  const [drillSelected, setDrillSelected] = useState([]);
+  const shownPolicies = drill ? drillSelected : selectedPolicies;
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
   useScrollReveal(mainRef);
@@ -180,13 +203,21 @@ function App() {
     // stays, so the page scrolls to the section
     if (opensYoungPeople(window.location)) dropSubTab("young");
     setActiveTab(viewFromLocation(window.location));
+    const linkedScenario = scenarioFromSearch(window.location.search);
+    setScenario(linkedScenario);
+    const linkedDrill = DRILL_BY_ID[linkedScenario];
+    const scenarioIds = linkedDrill
+      ? linkedDrill.measures.map((measure) => measure.id)
+      : validPolicyIds;
+    if (linkedDrill) setDrillSelected(scenarioIds);
 
     if (policiesParam) {
-      // Filter to only include valid policy IDs
+      // Filter to only include the scenario's policy IDs
       const policies = policiesParam
         .split(",")
-        .filter((id) => validPolicyIds.includes(id));
-      setSelectedPolicies(policies);
+        .filter((id) => scenarioIds.includes(id));
+      if (linkedDrill) setDrillSelected(policies);
+      else setSelectedPolicies(policies);
     }
   }, []);
 
@@ -202,11 +233,13 @@ function App() {
     } else {
       params.set("tab", activeTab);
     }
-    if (POLICY_PARAM_VIEWS.has(activeTab) && selectedPolicies.length > 0) {
-      params.set("policies", selectedPolicies.join(","));
+    if (POLICY_PARAM_VIEWS.has(activeTab) && shownPolicies.length > 0) {
+      params.set("policies", shownPolicies.join(","));
     } else {
       params.delete("policies");
     }
+    if (scenario === CURRENT_SCENARIO) params.delete(SCENARIO_PARAM);
+    else params.set(SCENARIO_PARAM, scenario);
 
     // Re-add personal param if it was there
     if (personalParam) {
@@ -215,19 +248,25 @@ function App() {
 
     const newUrl = `${params.toString() ? `?${params.toString()}` : window.location.pathname}${window.location.hash}`;
     window.history.replaceState({}, "", newUrl);
-  }, [selectedPolicies, activeTab]);
+  }, [shownPolicies, scenario, activeTab]);
 
-  // Run analysis when policies or year change
+  // Run analysis when the scenario, policies or year change. A later run
+  // supersedes an earlier one still loading.
+  const analysisRun = useRef(0);
   useEffect(() => {
-    if (selectedPolicies.length === 0) {
+    if (shownPolicies.length === 0) {
       setResults(null);
       return;
     }
 
     runAnalysis();
-  }, [selectedPolicies, selectedYear]);
+  }, [shownPolicies, selectedYear, scenario]);
 
   const runAnalysis = async () => {
+    const run = ++analysisRun.current;
+    const selectedPolicies = shownPolicies;
+    const POLICIES = scenarioPolicies;
+    const dataPath = scenarioDataPath(scenario);
     try {
       // Fetch all CSVs in parallel
       const [
@@ -236,10 +275,13 @@ function App() {
         winnersLosersRes,
         metricsRes,
       ] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/distributional_impact.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/winners_losers.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/metrics.csv`),
+        fetch(`${dataPath}/budgetary_impact.csv`),
+        fetch(`${dataPath}/distributional_impact.csv`),
+        fetch(`${dataPath}/winners_losers.csv`),
+        // A drill publishes no metrics file; its runs leave them empty
+        drill
+          ? Promise.resolve({ text: async () => "reform_id" })
+          : fetch(`${dataPath}/metrics.csv`),
       ]);
 
       const budgetaryData = parseCSV(await budgetaryRes.text());
@@ -361,6 +403,7 @@ function App() {
         0,
       );
 
+      if (run !== analysisRun.current) return;
       setResults({
         metrics: {
           budgetaryImpact2026,
@@ -382,8 +425,11 @@ function App() {
     }
   };
 
+  // The policy pill chooses among the scenario's measures on Population
+  // impact; on Household impact it chooses among the current ones
+  const pillScenario = activeTab === "household" ? CURRENT_SCENARIO : scenario;
   const handlePolicyToggle = (policyId) => {
-    setSelectedPolicies((prev) => {
+    (pillScenario === CURRENT_SCENARIO ? setSelectedPolicies : setDrillSelected)((prev) => {
       if (prev.includes(policyId)) {
         return prev.filter((id) => id !== policyId);
       } else {
@@ -393,7 +439,17 @@ function App() {
   };
 
   const handlePresetClick = (presetPolicies) => {
-    setSelectedPolicies(presetPolicies);
+    if (drill) setDrillSelected(scenarioPolicies.map((policy) => policy.id));
+    else setSelectedPolicies(presetPolicies);
+  };
+
+  // Choose a scenario: a drill opens with all its measures chosen
+  const handleScenarioChange = (next) => {
+    if (next === scenario) return;
+    const nextDrill = DRILL_BY_ID[next];
+    if (nextDrill) setDrillSelected(nextDrill.measures.map((measure) => measure.id));
+    setResults(null);
+    setScenario(next);
   };
 
   const titleSentinelRef = useRef(null);
@@ -482,16 +538,29 @@ function App() {
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
-  const showingLine = selectedPolicies.length > 0 &&
-    selectedPolicies.length < POLICIES.length && (
+  const showingLine = shownPolicies.length > 0 &&
+    shownPolicies.length < scenarioPolicies.length && (
       <p className="showing-line">
-        {selectedPolicies.length === 1
+        {shownPolicies.length === 1
           ? `Showing: ${
-              POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
+              scenarioPolicies.find((policy) => policy.id === shownPolicies[0])?.name
             }`
-          : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
+          : `Showing ${shownPolicies.length} of ${scenarioPolicies.length} policies`}
       </p>
     );
+  // A drill view says once that its measures are a rehearsal's
+  const drillLine = drill && (
+    <p className="showing-line drill-line">
+      <strong>MOCK drill</strong>, {drill.date}: mock measures from a Budget
+      rehearsal, not real policy.
+    </p>
+  );
+  const populationNote = (drillLine || showingLine) && (
+    <>
+      {drillLine}
+      {showingLine}
+    </>
+  );
 
   // With no policies chosen, the policy-driven views offer the full Budget
   const emptyState = (
@@ -533,6 +602,19 @@ function App() {
               applies to those views and Household impact. A pill that does
               not apply keeps its place but is hidden, so the band does not
               move. */}
+          {/* Current or a past drill: applies to Population impact only */}
+          <div
+            className={`band-scenario ${activeTab === "dashboard" ? "" : "is-hidden"}`}
+            aria-hidden={activeTab === "dashboard" ? undefined : "true"}
+            inert={activeTab !== "dashboard"}
+          >
+            <PillSelect
+              options={SCENARIO_OPTIONS}
+              value={scenario}
+              onChange={handleScenarioChange}
+              name="Scenario"
+            />
+          </div>
           <div
             className={`band-year ${yearShown ? "" : "is-hidden"}`}
             aria-hidden={yearShown ? undefined : "true"}
@@ -549,8 +631,8 @@ function App() {
             inert={!view.policies}
           >
             <PolicySelector
-              policies={POLICIES}
-              selectedPolicies={selectedPolicies}
+              policies={pillScenario === CURRENT_SCENARIO ? POLICIES : scenarioPolicies}
+              selectedPolicies={pillScenario === CURRENT_SCENARIO ? selectedPolicies : drillSelected}
               onPolicyToggle={handlePolicyToggle}
             />
           </div>
@@ -591,17 +673,26 @@ function App() {
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
+          <>
+          {drill && (
+            <p className="showing-line">
+              Household impact uses the current measures, not {drill.label}&rsquo;s.
+            </p>
+          )}
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             year={distributionalYear}
             active={activeTab === value}
           />
+          </>
         ) : (
           // Population impact: All households and Young people sub-tabs
-          <PopulationImpactView note={showingLine} active={activeTab === value}>
+          <PopulationImpactView note={populationNote} active={activeTab === value}>
           {(sub) => sub === "young" ? (
-          selectedPolicies.length === 0 ? (
+          !scenarioHas(scenario, OUTPUTS.young) ? (
+            <NotCalculated />
+          ) : selectedPolicies.length === 0 ? (
             emptyState
           ) : (
             // Young people (16 to 24): results by age, #young-people
@@ -613,7 +704,7 @@ function App() {
           )
         ) : (
           <>
-            {selectedPolicies.length === 0 ? (
+            {shownPolicies.length === 0 ? (
               emptyState
             ) : (
               <div className="results-container">
@@ -627,14 +718,17 @@ function App() {
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
                         data={results.budgetData}
+                        unpublishedLabel={drill ? "Not calculated" : undefined}
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the
                           card once the OBR has costed the measures */}
-                      <ObrComparisonFoot
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                      />
+                      {!drill && (
+                        <ObrComparisonFoot
+                          selectedPolicies={selectedPolicies}
+                          selectedYear={distributionalYear}
+                        />
+                      )}
                     </section>
 
                     {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
@@ -649,12 +743,14 @@ function App() {
                       <div className="charts-grid">
                         <WaterfallChart
                           rawData={results.rawWinnersLosers}
-                          selectedPolicies={selectedPolicies}
+                          policies={scenarioPolicies}
+                          selectedPolicies={shownPolicies}
                           selectedYear={distributionalYear}
                         />
                         <DistributionalChart
                           rawData={results.rawDistributional}
-                          selectedPolicies={selectedPolicies}
+                          policies={scenarioPolicies}
+                          selectedPolicies={shownPolicies}
                           selectedYear={distributionalYear}
                         />
                       </div>
@@ -670,6 +766,28 @@ function App() {
                       title="Where and who"
                       subtitle="Average change by constituency, and how changes vary between households."
                     />
+                    {drill && !scenarioHas(scenario, OUTPUTS.map) ? (
+                      // A drill without results by area
+                      <section id="constituencies" className="report-section">
+                        <NotCalculated />
+                      </section>
+                    ) : drill ? (
+                      // A drill with its own constituency table, no scatter
+                      <section
+                        id="constituencies"
+                        className="report-section charts-grid charts-row-2"
+                      >
+                        <ConstituencyMap
+                          key={scenario}
+                          selectedPolicies={shownPolicies}
+                          selectedYear={distributionalYear}
+                          policies={scenarioPolicies}
+                          showRegionLink={false}
+                          dataDir={scenarioDataDir(scenario)}
+                        />
+                        <NotCalculated cell />
+                      </section>
+                    ) : (
                     <section
                       id="constituencies"
                       className="report-section charts-grid charts-row-2"
@@ -686,6 +804,7 @@ function App() {
                         selectedYear={distributionalYear}
                       />
                     </section>
+                    )}
 
                     {/* Row 3: example households, one chooser above both
                         charts */}
@@ -693,6 +812,12 @@ function App() {
                       title="Example households"
                       subtitle="Net income of five example households across their incomes."
                     />
+                    {drill ? (
+                      <section id="household" className="report-section">
+                        <NotCalculated />
+                      </section>
+                    ) : (
+                    <>
                     <div className="example-household-picker">
                       <HouseholdPicker
                         value={exampleHouseholdId}
@@ -718,6 +843,8 @@ function App() {
                         showPicker={false}
                       />
                     </section>
+                    </>
+                    )}
 
                     {/* Policy Details Footer */}
                     <SectionHeading
@@ -730,8 +857,8 @@ function App() {
                         contentClassName="policy-details-content"
                       >
                         <PolicyCards
-                          policies={POLICIES}
-                          selectedPolicies={selectedPolicies}
+                          policies={scenarioPolicies}
+                          selectedPolicies={shownPolicies}
                         />
                       </Disclosure>
                     </section>

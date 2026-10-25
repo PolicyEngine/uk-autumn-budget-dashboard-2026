@@ -7,6 +7,7 @@
  */
 
 import { POLICIES } from "./policies";
+import { DRILLS } from "./drills";
 
 // Policy colours by display name (used in population impact charts), from
 // the Autumn Budget 2025 dashboard's theme: raise revenue in its amber
@@ -30,6 +31,25 @@ export const POLICY_COLORS = {
   "Employer NI relief for under-25s": "#99F6E4", // Teal 200
   "Plan 2 student loan threshold unfrozen": "#14B8A6", // Teal 500
 };
+
+// The drills' mock measures (utils/drills.js) take the same two families:
+// raise revenue in amber, cost revenue in teal, shades alternating down
+// each drill's stack. A drill measure named like a current one keeps its
+// colour.
+const DRILL_RAISE_SHADES = ["#78350F", "#B45309", "#92400E", "#D97706", "#F59E0B", "#FBBF24"];
+const DRILL_COST_SHADES = ["#115E59", "#2DD4BF", "#0F766E", "#5EEAD4", "#0D9488", "#99F6E4", "#14B8A6", "#134E4A"];
+DRILLS.forEach((drill) => {
+  let raise = 0;
+  let cost = 0;
+  drill.measures.forEach((measure) => {
+    if (POLICY_COLORS[measure.name]) return;
+    POLICY_COLORS[measure.name] = measure.raises
+      ? DRILL_RAISE_SHADES[raise++ % DRILL_RAISE_SHADES.length]
+      : DRILL_COST_SHADES[cost++ % DRILL_COST_SHADES.length];
+  });
+});
+
+const DRILL_MEASURES = DRILLS.flatMap((drill) => drill.measures);
 
 // Policy colours by measure id (personal impact), the same as by name
 export const POLICY_COLORS_BY_KEY = Object.fromEntries(
@@ -61,6 +81,7 @@ export const POLICY_ICONS = {
   state_pension_income_tax_protection: POLICY_TYPE_ICONS.pension,
   employer_ni_relief_under_25s: POLICY_TYPE_ICONS.employerNi,
   plan_2_threshold_unfreeze: POLICY_TYPE_ICONS.studentLoan,
+  ...Object.fromEntries(DRILL_MEASURES.map((measure) => [measure.id, measure.icon])),
 };
 
 // Order: revenue raisers first (positive for gov), then costs (negative for gov)
@@ -83,7 +104,20 @@ export const ALL_POLICY_NAMES = [
 export const REVENUE_RAISING_NAMES = new Set([
   "Threshold freeze to 2031-32",
   "Business Asset Disposal Relief restricted",
+  ...DRILL_MEASURES.filter((measure) => measure.raises).map((measure) => measure.name),
 ]);
+
+// Every measure name the charts can show, current and drill, in the
+// legends' order: all revenue raisers, then all costs. Only one scenario's
+// measures carry values at a time.
+export const ALL_MEASURE_NAMES = [
+  ...new Set([
+    ...ALL_POLICY_NAMES.filter((name) => REVENUE_RAISING_NAMES.has(name)),
+    ...DRILL_MEASURES.filter((measure) => measure.raises).map((measure) => measure.name),
+    ...ALL_POLICY_NAMES.filter((name) => !REVENUE_RAISING_NAMES.has(name)),
+    ...DRILL_MEASURES.filter((measure) => !measure.raises).map((measure) => measure.name),
+  ]),
+];
 
 // The id of the run that simulates every measure together
 // (reforms.AUTUMN_BUDGET_2026_COMBINED_ID). Statistics that cannot be added

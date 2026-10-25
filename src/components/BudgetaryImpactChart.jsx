@@ -19,7 +19,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
-import { POLICY_COLORS, ALL_POLICY_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { POLICY_COLORS, ALL_MEASURE_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -79,7 +79,23 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
   );
 }
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear }) {
+// A tag in two lines: its first word or two, then the rest ("Not yet" /
+// "published")
+const splitTag = (text) => {
+  const words = text.split(" ");
+  const cut = words.length > 2 ? 2 : 1;
+  return [words.slice(0, cut).join(" "), words.slice(cut).join(" ")].filter(Boolean);
+};
+
+function NetImpactLabels({
+  xAxisMap,
+  yAxisMap,
+  data,
+  narrow,
+  show,
+  selectedYear,
+  unpublishedLabel = NOT_YET_PUBLISHED,
+}) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -93,11 +109,11 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear 
   return (
     <g className="net-impact-labels">
       {data.map((point) => {
-        const gains = ALL_POLICY_NAMES.reduce(
+        const gains = ALL_MEASURE_NAMES.reduce(
           (sum, name) => sum + Math.max(0, point[name] || 0),
           0,
         );
-        const costs = ALL_POLICY_NAMES.reduce(
+        const costs = ALL_MEASURE_NAMES.reduce(
           (sum, name) => sum + Math.min(0, point[name] || 0),
           0,
         );
@@ -107,11 +123,11 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear 
         // always shows, so the empty year is never read as zero.
         if (!show && !unpublished) return null;
         if (crowded && !unpublished && point.year !== selectedYear) return null;
-        const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
+        const text = unpublished ? unpublishedLabel : formatNetLabel(net);
         // On a phone the not-yet-published tag takes two lines, in smaller
         // type, so it fits its year's band beside the last bar
         const twoLine = unpublished && narrow;
-        const lines = twoLine ? ["Not yet", "published"] : [text];
+        const lines = twoLine ? splitTag(text) : [text];
         const size = twoLine ? 10 : fontSize;
         const longest = Math.max(...lines.map((line) => line.length));
         const width = Math.ceil(longest * size * 0.6) + (twoLine ? 6 : 10);
@@ -174,7 +190,9 @@ const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
 
-function BudgetaryImpactChart({ data, selectedYear }) {
+// `unpublishedLabel` tags a year without results (a drill says it did not
+// calculate that year)
+function BudgetaryImpactChart({ data, selectedYear, unpublishedLabel }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -190,7 +208,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     return data.some((d) => Math.abs(d[policyName] || 0) > 0.001);
   };
 
-  const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
+  // The series this scenario draws: the measures its points carry
+  const seriesNames = ALL_MEASURE_NAMES.filter((name) => data.some((d) => name in d));
+  const activePolicies = ALL_MEASURE_NAMES.filter(hasNonZeroValues);
 
   // Y-axis domain: at least +/-10bn, widened to the next £5bn so the
   // tallest stacked bar sits under the top tick rather than above it.
@@ -198,7 +218,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     Math.max(
       0,
       ...data.map((d) =>
-        ALL_POLICY_NAMES.reduce((sum, name) => {
+        ALL_MEASURE_NAMES.reduce((sum, name) => {
           const v = d[name] || 0;
           return sign * v > 0 ? sum + Math.abs(v) : sum;
         }, 0),
@@ -328,7 +348,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 />
               }
             />
-            {ALL_POLICY_NAMES.map((policyName) => (
+            {seriesNames.map((policyName) => (
               <Bar
                 key={policyName}
                 dataKey={policyName}
@@ -360,6 +380,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                   data={data}
                   narrow={narrow}
                   selectedYear={selectedYear}
+                  unpublishedLabel={unpublishedLabel}
                   show
                 />
               }

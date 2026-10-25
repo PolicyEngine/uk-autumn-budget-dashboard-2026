@@ -21,7 +21,7 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { ALL_MEASURE_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import { POLICIES } from "../utils/policies";
 import {
   useNarrowViewport,
@@ -57,7 +57,7 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
 const FLIP_SIGN_POLICIES = [];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, policies = POLICIES }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -77,7 +77,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     return waterfallDeciles.map((decile) => {
       const dataPoint = { decile };
       let netChange = 0;
-      POLICIES.forEach((policy) => {
+      policies.forEach((policy) => {
         const isSelected = selectedPolicies.includes(policy.id);
         const dataRow = waterfallSelectedYear.find(
           (row) => row.reform_id === policy.id && row.decile === decile,
@@ -93,7 +93,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       dataPoint.netChange = netChange;
       return dataPoint;
     });
-  }, [rawData, selectedPolicies, selectedYear]);
+  }, [rawData, selectedPolicies, selectedYear, policies]);
 
   // The measures with a non-zero effect in any shown year, not just this
   // one: the legend (and so the plot's height) stays the same from year to
@@ -109,10 +109,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         )
         .map((row) => row.reform_id),
     );
-    return ALL_POLICY_NAMES.filter((name) =>
-      ids.has(POLICIES.find((policy) => policy.name === name)?.id),
+    return ALL_MEASURE_NAMES.filter((name) =>
+      ids.has(policies.find((policy) => policy.name === name)?.id),
     );
-  }, [rawData, selectedPolicies]);
+  }, [rawData, selectedPolicies, policies]);
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -136,7 +136,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         let positiveSum = 0;
         let negativeSum = 0;
 
-        POLICIES.forEach((policy) => {
+        policies.forEach((policy) => {
           const isSelected = selectedPolicies.includes(policy.id);
           const dataRow = yearData.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
@@ -218,7 +218,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     legendItems,
     logo: CHART_LOGO,
   };
-  const selectedPolicyNames = POLICIES.filter((policy) =>
+  const selectedPolicyNames = policies.filter((policy) =>
     selectedPolicies.includes(policy.id),
   ).map((policy) => policy.name);
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
@@ -313,7 +313,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   />
                 }
               />
-              {ALL_POLICY_NAMES.map((policyName) => (
+              {ALL_MEASURE_NAMES.filter((name) => policies.some((policy) => policy.name === name)).map((policyName) => (
                 <Bar
                   key={policyName}
                   dataKey={policyName}

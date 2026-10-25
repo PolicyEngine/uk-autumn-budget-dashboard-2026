@@ -1,0 +1,251 @@
+reform_id,reform_name,year,decile,value
+mock_fuel_duty_freeze,Fuel duty freeze,2026,1st,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,2nd,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,3rd,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,4th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,5th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,6th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,7th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,8th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,9th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2026,10th,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2027,1st,0.2616288158954345
+mock_fuel_duty_freeze,Fuel duty freeze,2027,2nd,0.15921551199513756
+mock_fuel_duty_freeze,Fuel duty freeze,2027,3rd,0.08533539757748584
+mock_fuel_duty_freeze,Fuel duty freeze,2027,4th,0.23803588680625073
+mock_fuel_duty_freeze,Fuel duty freeze,2027,5th,0.09289775829703387
+mock_fuel_duty_freeze,Fuel duty freeze,2027,6th,0.08621143580926566
+mock_fuel_duty_freeze,Fuel duty freeze,2027,7th,0.09219940964242723
+mock_fuel_duty_freeze,Fuel duty freeze,2027,8th,0.07882324082395353
+mock_fuel_duty_freeze,Fuel duty freeze,2027,9th,0.05580919731643903
+mock_fuel_duty_freeze,Fuel duty freeze,2027,10th,0.04745430449649179
+mock_fuel_duty_freeze,Fuel duty freeze,2028,1st,0.31278178362044096
+mock_fuel_duty_freeze,Fuel duty freeze,2028,2nd,0.20549304870552998
+mock_fuel_duty_freeze,Fuel duty freeze,2028,3rd,0.10565033021464162
+mock_fuel_duty_freeze,Fuel duty freeze,2028,4th,0.2940310087513186
+mock_fuel_duty_freeze,Fuel duty freeze,2028,5th,0.1148332503519586
+mock_fuel_duty_freeze,Fuel duty freeze,2028,6th,0.10737300010521507
+mock_fuel_duty_freeze,Fuel duty freeze,2028,7th,0.11681868110396663
+mock_fuel_duty_freeze,Fuel duty freeze,2028,8th,0.09998499002694548
+mock_fuel_duty_freeze,Fuel duty freeze,2028,9th,0.06514945529796905
+mock_fuel_duty_freeze,Fuel duty freeze,2028,10th,0.05870953814705728
+mock_fuel_duty_freeze,Fuel duty freeze,2029,1st,0.3047135284613385
+mock_fuel_duty_freeze,Fuel duty freeze,2029,2nd,0.1853661746286204
+mock_fuel_duty_freeze,Fuel duty freeze,2029,3rd,0.11656607817413307
+mock_fuel_duty_freeze,Fuel duty freeze,2029,4th,0.2837524976569429
+mock_fuel_duty_freeze,Fuel duty freeze,2029,5th,0.11314597003682376
+mock_fuel_duty_freeze,Fuel duty freeze,2029,6th,0.10350843293945441
+mock_fuel_duty_freeze,Fuel duty freeze,2029,7th,0.11295705461655382
+mock_fuel_duty_freeze,Fuel duty freeze,2029,8th,0.0966682892578438
+mock_fuel_duty_freeze,Fuel duty freeze,2029,9th,0.0651382077658149
+mock_fuel_duty_freeze,Fuel duty freeze,2029,10th,0.055980894715724726
+mock_fuel_duty_freeze,Fuel duty freeze,2030,1st,0.2936842251454956
+mock_fuel_duty_freeze,Fuel duty freeze,2030,2nd,0.17485224243144415
+mock_fuel_duty_freeze,Fuel duty freeze,2030,3rd,0.11275925474585748
+mock_fuel_duty_freeze,Fuel duty freeze,2030,4th,0.26699244202663386
+mock_fuel_duty_freeze,Fuel duty freeze,2030,5th,0.10800407965008753
+mock_fuel_duty_freeze,Fuel duty freeze,2030,6th,0.10397071284638161
+mock_fuel_duty_freeze,Fuel duty freeze,2030,7th,0.10707040429014018
+mock_fuel_duty_freeze,Fuel duty freeze,2030,8th,0.0929827748587213
+mock_fuel_duty_freeze,Fuel duty freeze,2030,9th,0.06188364199730895
+mock_fuel_duty_freeze,Fuel duty freeze,2030,10th,0.05330451714368429
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,1st,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,2nd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,3rd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,4th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,5th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,6th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,7th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,8th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,9th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,10th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,1st,0.26426225226301714
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,2nd,0.20734934955504322
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,3rd,0.1269389536668467
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,4th,0.1642359200201129
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,5th,0.11059689230082141
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,6th,0.12548560130316483
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,7th,0.10017414949990246
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,8th,0.0952411709984067
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,9th,0.0637458724091675
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,10th,0.04829552866516636
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,1st,0.08631906492072987
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,2nd,0.07112486970106652
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,3rd,0.04248338714933287
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,4th,0.054798534303158425
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,5th,0.03693906017202767
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,6th,0.04042048364681855
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,7th,0.035380318909577164
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,8th,0.031827763127558695
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,9th,0.020853067135196298
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,10th,0.016161451862641424
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,1st,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,2nd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,3rd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,4th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,5th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,6th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,7th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,8th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,9th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,10th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,1st,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,2nd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,3rd,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,4th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,5th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,6th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,7th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,8th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,9th,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,10th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,1st,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,2nd,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,3rd,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,4th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,5th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,6th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,7th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,8th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,9th,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,10th,0.0
+mock_child_benefit_increase,Child Benefit increase,2027,1st,0.18635662521199012
+mock_child_benefit_increase,Child Benefit increase,2027,2nd,0.19834354255068581
+mock_child_benefit_increase,Child Benefit increase,2027,3rd,0.18936070870782531
+mock_child_benefit_increase,Child Benefit increase,2027,4th,0.10806992532505619
+mock_child_benefit_increase,Child Benefit increase,2027,5th,0.09596679692469842
+mock_child_benefit_increase,Child Benefit increase,2027,6th,0.05059864276824359
+mock_child_benefit_increase,Child Benefit increase,2027,7th,0.052034326240465306
+mock_child_benefit_increase,Child Benefit increase,2027,8th,0.048284228933787025
+mock_child_benefit_increase,Child Benefit increase,2027,9th,0.03251431458362375
+mock_child_benefit_increase,Child Benefit increase,2027,10th,0.00374856157672236
+mock_child_benefit_increase,Child Benefit increase,2028,1st,0.18929954066822877
+mock_child_benefit_increase,Child Benefit increase,2028,2nd,0.19695584433800017
+mock_child_benefit_increase,Child Benefit increase,2028,3rd,0.18874983164696826
+mock_child_benefit_increase,Child Benefit increase,2028,4th,0.1102521774051598
+mock_child_benefit_increase,Child Benefit increase,2028,5th,0.09745343202478107
+mock_child_benefit_increase,Child Benefit increase,2028,6th,0.0468916806573511
+mock_child_benefit_increase,Child Benefit increase,2028,7th,0.05559118439423828
+mock_child_benefit_increase,Child Benefit increase,2028,8th,0.04650737559396623
+mock_child_benefit_increase,Child Benefit increase,2028,9th,0.03166395592448482
+mock_child_benefit_increase,Child Benefit increase,2028,10th,0.0037597031462430546
+mock_child_benefit_increase,Child Benefit increase,2029,1st,0.18833112366679772
+mock_child_benefit_increase,Child Benefit increase,2029,2nd,0.20210022265563138
+mock_child_benefit_increase,Child Benefit increase,2029,3rd,0.19223330709930003
+mock_child_benefit_increase,Child Benefit increase,2029,4th,0.10766375580206441
+mock_child_benefit_increase,Child Benefit increase,2029,5th,0.09586308833382483
+mock_child_benefit_increase,Child Benefit increase,2029,6th,0.04797816085423406
+mock_child_benefit_increase,Child Benefit increase,2029,7th,0.054446422817194966
+mock_child_benefit_increase,Child Benefit increase,2029,8th,0.04496939075336471
+mock_child_benefit_increase,Child Benefit increase,2029,9th,0.03170101036115592
+mock_child_benefit_increase,Child Benefit increase,2029,10th,0.003541133152358372
+mock_child_benefit_increase,Child Benefit increase,2030,1st,0.18729102309640702
+mock_child_benefit_increase,Child Benefit increase,2030,2nd,0.1999738683245923
+mock_child_benefit_increase,Child Benefit increase,2030,3rd,0.19979582732047668
+mock_child_benefit_increase,Child Benefit increase,2030,4th,0.11151802125923327
+mock_child_benefit_increase,Child Benefit increase,2030,5th,0.09154456608989042
+mock_child_benefit_increase,Child Benefit increase,2030,6th,0.0475030832292498
+mock_child_benefit_increase,Child Benefit increase,2030,7th,0.053053662087142045
+mock_child_benefit_increase,Child Benefit increase,2030,8th,0.04367410731066624
+mock_child_benefit_increase,Child Benefit increase,2030,9th,0.0304551707382966
+mock_child_benefit_increase,Child Benefit increase,2030,10th,0.003373319771440479
+mock_nics_threshold_rise,National Insurance threshold rise,2026,1st,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,2nd,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,3rd,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,4th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,5th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,6th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,7th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,8th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,9th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2026,10th,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2027,1st,0.030532372414306834
+mock_nics_threshold_rise,National Insurance threshold rise,2027,2nd,0.03371439830060815
+mock_nics_threshold_rise,National Insurance threshold rise,2027,3rd,0.03833129481871165
+mock_nics_threshold_rise,National Insurance threshold rise,2027,4th,0.04950037538082653
+mock_nics_threshold_rise,National Insurance threshold rise,2027,5th,0.0581118243261792
+mock_nics_threshold_rise,National Insurance threshold rise,2027,6th,0.06211722484812189
+mock_nics_threshold_rise,National Insurance threshold rise,2027,7th,0.06658128971879892
+mock_nics_threshold_rise,National Insurance threshold rise,2027,8th,0.062196415662874774
+mock_nics_threshold_rise,National Insurance threshold rise,2027,9th,0.0496381825864612
+mock_nics_threshold_rise,National Insurance threshold rise,2027,10th,0.010385795241987681
+mock_nics_threshold_rise,National Insurance threshold rise,2028,1st,0.03191991078900186
+mock_nics_threshold_rise,National Insurance threshold rise,2028,2nd,0.03394307347956032
+mock_nics_threshold_rise,National Insurance threshold rise,2028,3rd,0.038384551407009145
+mock_nics_threshold_rise,National Insurance threshold rise,2028,4th,0.04907898517454864
+mock_nics_threshold_rise,National Insurance threshold rise,2028,5th,0.06076432836044228
+mock_nics_threshold_rise,National Insurance threshold rise,2028,6th,0.06599419997833314
+mock_nics_threshold_rise,National Insurance threshold rise,2028,7th,0.06523000591024924
+mock_nics_threshold_rise,National Insurance threshold rise,2028,8th,0.06559267695825588
+mock_nics_threshold_rise,National Insurance threshold rise,2028,9th,0.05397798618219262
+mock_nics_threshold_rise,National Insurance threshold rise,2028,10th,0.03685711557365224
+mock_nics_threshold_rise,National Insurance threshold rise,2029,1st,0.03851810170713641
+mock_nics_threshold_rise,National Insurance threshold rise,2029,2nd,0.03467514343227229
+mock_nics_threshold_rise,National Insurance threshold rise,2029,3rd,0.03930959930786301
+mock_nics_threshold_rise,National Insurance threshold rise,2029,4th,0.04885945311834795
+mock_nics_threshold_rise,National Insurance threshold rise,2029,5th,0.061677754270337434
+mock_nics_threshold_rise,National Insurance threshold rise,2029,6th,0.06494452836490142
+mock_nics_threshold_rise,National Insurance threshold rise,2029,7th,0.06441457567104424
+mock_nics_threshold_rise,National Insurance threshold rise,2029,8th,0.06508414966868133
+mock_nics_threshold_rise,National Insurance threshold rise,2029,9th,0.0560845384994059
+mock_nics_threshold_rise,National Insurance threshold rise,2029,10th,0.034930952073648366
+mock_nics_threshold_rise,National Insurance threshold rise,2030,1st,0.038894363614636586
+mock_nics_threshold_rise,National Insurance threshold rise,2030,2nd,0.0331872578144991
+mock_nics_threshold_rise,National Insurance threshold rise,2030,3rd,0.039086139072790495
+mock_nics_threshold_rise,National Insurance threshold rise,2030,4th,0.04928052217980696
+mock_nics_threshold_rise,National Insurance threshold rise,2030,5th,0.06528602622352826
+mock_nics_threshold_rise,National Insurance threshold rise,2030,6th,0.06415564183113334
+mock_nics_threshold_rise,National Insurance threshold rise,2030,7th,0.06645268117623429
+mock_nics_threshold_rise,National Insurance threshold rise,2030,8th,0.06847694082161328
+mock_nics_threshold_rise,National Insurance threshold rise,2030,9th,0.05975825548784464
+mock_nics_threshold_rise,National Insurance threshold rise,2030,10th,0.037640209701882636
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,1st,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,2nd,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,3rd,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,4th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,5th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,6th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,7th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,8th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,9th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,10th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,1st,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,2nd,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,3rd,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,4th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,5th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,6th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,7th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,8th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,9th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,10th,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,1st,-0.14999472916263165
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,2nd,-0.005881890300888569
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,3rd,-0.004716685910232574
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,4th,-0.01463847591912209
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,5th,-0.0141316261462328
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,6th,-0.0047468671945472265
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,7th,-0.009230600746680454
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,8th,-0.01635088632317209
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,9th,-0.012598958132730879
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,10th,-0.0059402613636165506
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,1st,-0.15027272772724784
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,2nd,-0.00672538882578691
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,3rd,-0.004720524446158862
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,4th,-0.014651212909770641
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,5th,-0.01399477825490617
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,6th,-0.009046723146925503
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,7th,-0.005018777069784465
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,8th,-0.016696174590143466
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,9th,-0.01291779031266655
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,10th,-0.005865247851770464
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,1st,-0.15136486811013447
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,2nd,-0.00759475727136496
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,3rd,-0.0048058602122177455
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,4th,-0.005113867569417655
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,5th,-0.022324516511710534
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,6th,-0.00916059132647476
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,7th,-0.0030829805671645566
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,8th,-0.018578577902855067
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,9th,-0.012819270706133706
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,10th,-0.005894319306838565

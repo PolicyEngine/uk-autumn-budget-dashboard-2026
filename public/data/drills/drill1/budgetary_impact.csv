@@ -1,0 +1,26 @@
+reform_id,reform_name,year,value
+mock_fuel_duty_freeze,Fuel duty freeze,2026,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2027,-1.7184102234208707
+mock_fuel_duty_freeze,Fuel duty freeze,2028,-2.1695776403098925
+mock_fuel_duty_freeze,Fuel duty freeze,2029,-2.150055165486462
+mock_fuel_duty_freeze,Fuel duty freeze,2030,-2.0970578959757993
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,-1.8814611859672636
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,-0.6422537864581719
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,0.0
+mock_child_benefit_increase,Child Benefit increase,2026,0.0
+mock_child_benefit_increase,Child Benefit increase,2027,-1.2067285390920146
+mock_child_benefit_increase,Child Benefit increase,2028,-1.2286258299501154
+mock_child_benefit_increase,Child Benefit increase,2029,-1.249896987503929
+mock_child_benefit_increase,Child Benefit increase,2030,-1.268060918224817
+mock_nics_threshold_rise,National Insurance threshold rise,2026,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2027,-0.7889301706114608
+mock_nics_threshold_rise,National Insurance threshold rise,2028,-0.9402626965511162
+mock_nics_threshold_rise,National Insurance threshold rise,2029,-0.9588796897358262
+mock_nics_threshold_rise,National Insurance threshold rise,2030,-1.015408379898253
+mock_hvcts_extension,Council tax surcharge from £1.5m,2026,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2027,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,0.2687137463505768
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,0.2752936987357473
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,0.28206274392404534

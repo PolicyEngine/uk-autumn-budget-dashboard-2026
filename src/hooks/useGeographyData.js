@@ -60,6 +60,9 @@ export const LOADING = Object.freeze({
 
 const basePath = () => process.env.NEXT_PUBLIC_BASE_PATH || "";
 
+/** The folder under the base path that holds the page's own data files. */
+export const DEFAULT_DATA_DIR = "/data";
+
 // The files of results by area the build ships (next.config.ts), or null
 // when not set (tests, dev without the config): then every file is fetched.
 const publishedFiles = () => {
@@ -78,12 +81,20 @@ const failure = (status, error) =>
  */
 export async function loadGeographyFile(
   name,
-  { fetchImpl = fetch, base = basePath(), published = publishedFiles() } = {},
+  {
+    fetchImpl = fetch,
+    base = basePath(),
+    published = publishedFiles(),
+    dataDir = DEFAULT_DATA_DIR,
+  } = {},
 ) {
   const { file, level } = FILES[name];
-  // Not in this build: not published, and not requested
-  if (published && !published.includes(file)) return failure("unavailable", null);
-  const url = `${base}/data/${file}`;
+  // Not in this build: not published, and not requested. The build's list
+  // covers public/data itself; a drill's folder (dataDir) is fetched as is.
+  if (dataDir === DEFAULT_DATA_DIR && published && !published.includes(file)) {
+    return failure("unavailable", null);
+  }
+  const url = `${base}${dataDir}/${file}`;
   let response;
   try {
     response = await fetchImpl(url, { cache: "no-cache" });
@@ -179,8 +190,8 @@ export async function loadAreaRouting({
 }
 
 const LOADERS = {
-  regional: () => loadGeographyFile("regional"),
-  constituency: () => loadGeographyFile("constituency"),
+  regional: (dataDir) => loadGeographyFile("regional", { dataDir }),
+  constituency: (dataDir) => loadGeographyFile("constituency", { dataDir }),
   boundaries: () => loadBoundaries(),
   routing: () => loadAreaRouting(),
 };
@@ -188,7 +199,7 @@ const LOADERS = {
 // One entry per resource and base path: its settled state, and who to tell.
 const entries = new Map();
 
-function entryFor(key, name) {
+function entryFor(key, name, dataDir) {
   let entry = entries.get(key);
   if (!entry) {
     entry = { state: null, listeners: new Set() };
@@ -200,22 +211,22 @@ function entryFor(key, name) {
     const load = Object.hasOwn(LOADERS, name)
       ? LOADERS[name]
       : async () => failure("error", `${name} is not a geography resource`);
-    load().then(settle, () =>
+    load(dataDir).then(settle, () =>
       settle(failure("error", "the file could not be loaded")),
     );
   }
   return entry;
 }
 
-function useCachedResource(name) {
-  const key = `${basePath()}|${name}`;
+function useCachedResource(name, dataDir = DEFAULT_DATA_DIR) {
+  const key = `${basePath()}${dataDir}|${name}`;
   const subscribe = useCallback(
     (onChange) => {
-      const entry = entryFor(key, name);
+      const entry = entryFor(key, name, dataDir);
       entry.listeners.add(onChange);
       return () => entry.listeners.delete(onChange);
     },
-    [key, name],
+    [key, name, dataDir],
   );
   const getSnapshot = () => entries.get(key)?.state ?? LOADING;
   return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
@@ -225,11 +236,12 @@ function useCachedResource(name) {
  * The state of one file of results by area.
  *
  * @param {"regional"|"constituency"} name
+ * @param {string} [dataDir] - The folder under the base path (a drill's own)
  * @returns {{status: "loading"|"ready"|"unavailable"|"error",
  *   table: Object|null, error: string|null}}
  */
-export function useGeographyData(name) {
-  return useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`);
+export function useGeographyData(name, dataDir = DEFAULT_DATA_DIR) {
+  return useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`, dataDir);
 }
 
 /** The constituency boundaries: `{status, features, error}`. */

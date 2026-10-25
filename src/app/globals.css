@@ -236,8 +236,8 @@ body {
      at the right. A pill that does not apply to the view is hidden but
      keeps its place. Narrower screens use two fixed rows (below). */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-areas: "title year policy";
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "title scenario year policy";
   align-items: center;
   column-gap: 16px;
   row-gap: 8px;
@@ -272,6 +272,10 @@ body {
 /* The band's controls */
 .band-year {
   grid-area: year;
+}
+
+.band-scenario {
+  grid-area: scenario;
 }
 
 .band-policy {
@@ -611,6 +615,18 @@ body {
 
 .showing-line {
   margin: 0 0 24px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
+}
+
+/* A drill's one MOCK line, then the showing line close under it */
+.drill-line:has(+ .showing-line) {
+  margin-bottom: 4px;
+}
+
+/* In place of a chart a drill did not calculate */
+.not-calculated {
+  margin: 0;
   font-size: var(--fs-small);
   color: var(--pe-gray-500);
 }
@@ -1218,12 +1234,16 @@ body {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title policy"
-      "year .";
+      "year scenario";
     align-content: center;
   }
 
   .band-year {
     justify-self: start;
+  }
+
+  .band-scenario {
+    justify-self: end;
   }
 
   /* A view without the year pill (Household impact, Living standards,
@@ -1238,7 +1258,8 @@ body {
     grid-template-areas: "title policy";
   }
 
-  .app[data-band="compact"] .band-year {
+  .app[data-band="compact"] .band-year,
+  .app[data-band="compact"] .band-scenario {
     display: none;
   }
 }
@@ -1347,14 +1368,16 @@ body {
   }
 
   .title-row {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto auto minmax(0, 1fr);
     grid-template-areas:
-      "title title"
-      "year policy";
+      "title title title"
+      "year scenario policy";
+    column-gap: 8px;
     row-gap: 6px;
   }
 
-  .band-policy {
+  .band-policy,
+  .band-scenario {
     justify-self: start;
   }
 
@@ -1726,4 +1749,10 @@ body {
 
 .example-household-picker .household-picker {
   margin: 0;
+}
+
+/* Beside a chart, in a grid's second column: the line alone */
+.charts-grid > .not-calculated-cell {
+  align-self: start;
+  padding: 16px 0;
 }

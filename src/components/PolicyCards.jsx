@@ -1,5 +1,5 @@
 import {
-  ALL_POLICY_NAMES,
+  ALL_MEASURE_NAMES,
   POLICY_COLORS,
   POLICY_ICONS,
   REVENUE_RAISING_NAMES,
@@ -26,7 +26,7 @@ const FactIcon = ({ name }) => (
  */
 function PolicyCards({ policies, selectedPolicies }) {
   return GROUPS.map(([heading, raises, arrow]) => {
-    const items = ALL_POLICY_NAMES.map((name) =>
+    const items = ALL_MEASURE_NAMES.map((name) =>
       policies.find((policy) => policy.name === name),
     ).filter(
       (policy) =>
