@@ -10,7 +10,12 @@ export default function useElementWidth() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
-    const update = () => setWidth(el.getBoundingClientRect().width);
+    // A hidden view (display: none) measures 0: keep the last width, so the
+    // chart is laid out as before when the view is shown again
+    const update = () => {
+      const next = el.getBoundingClientRect().width;
+      if (next > 0) setWidth(next);
+    };
     update();
     if (typeof ResizeObserver === "undefined") return undefined;
     const ro = new ResizeObserver(update);
