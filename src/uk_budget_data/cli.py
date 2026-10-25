@@ -7,6 +7,10 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.constituencies import (
+    add_constituencies_parser,
+    run_constituencies,
+)
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.living_standards.commands import (
     add_living_standards_parsers,
@@ -177,6 +181,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_constituencies_parser(subparsers)
     add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
@@ -337,6 +342,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "constituencies":
+        return run_constituencies(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
@@ -355,6 +362,10 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  constituencies - geography's seats pass on the published "
+            "local-area cut, a fresh process per measure"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"
