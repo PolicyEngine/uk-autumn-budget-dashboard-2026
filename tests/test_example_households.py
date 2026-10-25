@@ -113,6 +113,41 @@ def test_the_pensioners_get_exactly_the_full_new_state_pension():
     assert np.all(np.diff(curves[2026]) > 0)
 
 
+def test_every_household_spends_the_average_on_electricity():
+    """Without it the zero VAT on domestic electricity misses every
+    example household (it did until 25 October 2026)."""
+    from uk_budget_data.household_impact import ELECTRICITY_SPENDING
+
+    for household in EXAMPLE_HOUSEHOLDS:
+        inputs = household.household_inputs
+        assert inputs["electricity_consumption"] == ELECTRICITY_SPENDING
+        assert "£1,040" in household.definition
+
+
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_zero_vat_on_electricity_reaches_every_household(household):
+    """5% VAT on £1,040 including VAT is £1,040 x 5 / 105 = £49.52."""
+    from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.reforms import (
+        ELECTRICITY_VAT_ID,
+        get_autumn_budget_2026_reforms,
+    )
+
+    (reform,) = [
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == ELECTRICITY_VAT_ID
+    ]
+    calculator = IncomeCurveCalculator(num_points=3)
+    baseline = calculator.simulate(household, None, [2027])[2027]
+    reformed = calculator.simulate(household, reform.to_scenario(), [2027])[
+        2027
+    ]
+    assert reformed - baseline == pytest.approx(
+        [1_040 * 5 / 105] * 3, abs=0.01
+    )
+
+
 class _Reform:
     def __init__(self, id, baseline, reform):
         self.id = id

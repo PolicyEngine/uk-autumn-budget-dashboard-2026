@@ -98,7 +98,7 @@
   ],
   "income_curve_households": [
     {
-      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month.",
+      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month and spending \u00a31,040 a year on electricity.",
       "id": "single_renter",
       "label": "Single adult renting",
       "x_label": "Employment income",
@@ -106,7 +106,7 @@
       "x_variable": "employment_income"
     },
     {
-      "definition": "A couple aged 35 and 33 with children aged 3, 6 and 8 and one earner, renting a three-bedroom home privately in Manchester for \u00a31,441 a month and spending \u00a3957 a year on petrol.",
+      "definition": "A couple aged 35 and 33 with children aged 3, 6 and 8 and one earner, renting a three-bedroom home privately in Manchester for \u00a31,441 a month and spending \u00a3957 a year on petrol and \u00a31,040 on electricity.",
       "id": "couple_three_children",
       "label": "Couple with three children",
       "x_label": "Earner's employment income",
@@ -114,7 +114,7 @@
       "x_variable": "employment_income"
     },
     {
-      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month.",
+      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month and spending \u00a31,040 a year on electricity.",
       "id": "lone_parent",
       "label": "Lone parent with two children",
       "x_label": "Employment income",
@@ -122,7 +122,7 @@
       "x_variable": "employment_income"
     },
     {
-      "definition": "A couple aged 70 and 68 who own their home outright, each on the full new State Pension (\u00a3241.30 a week in 2026-27); the older partner has the private pension.",
+      "definition": "A couple aged 70 and 68 who own their home outright, each on the full new State Pension (\u00a3241.30 a week in 2026-27); the older partner has the private pension; they spend \u00a31,040 a year on electricity.",
       "id": "pensioner_couple",
       "label": "Pensioner couple",
       "x_label": "Older partner's private pension income",
@@ -130,7 +130,7 @@
       "x_variable": "private_pension_income"
     },
     {
-      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay.",
+      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay, spending \u00a31,040 a year on electricity.",
       "id": "higher_income_saver",
       "label": "Higher earner with savings",
       "x_label": "Employment income",
