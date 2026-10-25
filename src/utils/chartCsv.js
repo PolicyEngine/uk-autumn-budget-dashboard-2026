@@ -126,8 +126,8 @@ export function householdIncomeCsv(data, { year, household }) {
     units: householdUnits(household),
     columns: [
       { key: "income", label: household.x_label, decimals: 0 },
-      { key: "baseline", label: "Net income before the Budget", decimals: 2 },
-      { key: "reform", label: "Net income after the Budget", decimals: 2 },
+      { key: "baseline", label: "Net income before the selected policies", decimals: 2 },
+      { key: "reform", label: "Net income after the selected policies", decimals: 2 },
     ],
     rows: data,
   });

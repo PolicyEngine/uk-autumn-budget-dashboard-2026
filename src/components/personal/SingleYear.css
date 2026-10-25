@@ -1,4 +1,4 @@
-/* Personal impact: the household's results */
+/* Household impact: the household's results */
 
 .personal-lede,
 .single-year-lede {
@@ -39,12 +39,17 @@
   .single-year-updating::before { animation: none; }
 }
 
-/* The last figures, while newer inputs load: greyed under their own year */
-.single-year-stale.is-stale,
+/* The last figures, while newer inputs load or after the answers changed:
+   dimmed under their own year */
+.single-year-result,
+.single-year-details .report-section {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.single-year-result.is-stale,
 .single-year-details.is-stale .report-section {
   opacity: 0.45;
   filter: grayscale(0.6);
-  transition: opacity 0.15s ease;
 }
 
 .single-year-quiet {
@@ -73,42 +78,6 @@
 
 /* What the figures assume: one muted line of short items under the
    headline, separated by dots */
-.single-year-assumptions {
-  display: block;
-  margin: 12px 0 0;
-  font-size: var(--fs-caption);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.single-year-assumption {
-  display: inline;
-}
-
-.single-year-assumption + .single-year-assumption::before {
-  content: " · ";
-  white-space: pre;
-  color: var(--pe-gray-400);
-}
-
-.single-year-assumption dt,
-.single-year-assumption dd {
-  display: inline;
-  margin: 0;
-}
-
-.single-year-assumption dt {
-  white-space: pre;
-}
-
-.single-year-assumption dd {
-  color: var(--pe-gray-800);
-}
-
-.single-year-assumption-detail {
-  color: var(--pe-gray-500);
-}
-
 .single-year-error ul {
   margin: 4px 0 8px;
   padding-left: 18px;
@@ -506,4 +475,648 @@
   width: 14px;
   font-size: 1rem;
   color: var(--pe-gray-700);
+}
+
+/* The breakdown and the split by policy: side by side on a wide screen,
+   each column's heading and card on two shared rows, so the headings and
+   the cards' tops line up and both cards are as tall as the taller one.
+   Stacked on a phone or tablet. */
+.single-year-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 56px;
+}
+
+.single-year-pair-col {
+  min-width: 0;
+}
+
+@media (min-width: 1025px) {
+  .single-year-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    column-gap: 20px;
+    row-gap: 0;
+  }
+
+  .single-year-pair-col {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .single-year-pair-col > .report-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .single-year-pair-col > .report-section > .card {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- The headline: hero card, "based on" strip, and the Calculate states ---------- */
+.single-year-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The result card: head (label, year and policies), body (the figure
+   beside before and after), foot (what it is based on) */
+.result-card {
+  position: relative;
+  padding: 0;
+  overflow: visible;
+  border-left: 3px solid var(--pe-gray-300);
+}
+
+.result-card.is-gain {
+  border-left-color: var(--c-gain);
+}
+
+.result-card.is-loss {
+  border-left-color: var(--c-loss);
+}
+
+.result-card p {
+  margin: 0;
+}
+
+.result-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 20px 28px 0;
+}
+
+.result-card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.result-card-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.result-pill.is-link {
+  color: var(--pe-teal-700);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.result-pill.is-link:hover {
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
+}
+
+.result-pill.is-link:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.result-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 24px 40px;
+  align-items: center;
+  padding: 16px 28px 24px;
+}
+
+/* A very light tint behind the figure only */
+.result-card-hero {
+  padding: 16px 20px;
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+}
+
+.result-card.is-gain .result-card-hero {
+  background: var(--pe-teal-50);
+}
+
+.result-card.is-loss .result-card-hero {
+  background: var(--c-loss-soft);
+}
+
+.result-figure {
+  line-height: 1.1;
+}
+
+.result-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-700);
+}
+
+.result-card.is-gain .result-value {
+  color: var(--c-gain-text);
+}
+
+.result-card.is-loss .result-value {
+  color: var(--c-loss-text);
+}
+
+.result-unit {
+  font-size: var(--fs-body-lg);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.result-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px !important;
+  padding: 2px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-600);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.result-chip.is-gain {
+  color: var(--c-gain-text);
+  border-color: var(--pe-teal-200);
+}
+
+.result-chip.is-loss {
+  color: var(--c-loss-text);
+  border-color: var(--c-loss-border);
+}
+
+/* Before and after, on one scale */
+.result-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-bar-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-bar-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.result-bar-value {
+  min-width: 7ch;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--pe-gray-800);
+}
+
+.result-bar-track {
+  position: relative;
+  height: 10px;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.result-bar-fill,
+.result-bar-diff {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.result-bar-fill {
+  background: var(--pe-gray-300);
+  border-radius: 999px;
+}
+
+.result-bar-row.is-after .result-bar-fill {
+  background: var(--pe-teal-500);
+}
+
+/* The difference: at least a few pixels, so a small change still shows */
+.result-bar-diff {
+  min-width: 4px;
+  background: var(--c-gain-text);
+  transition-delay: 0.2s;
+}
+
+.result-card.is-loss .result-bar-diff {
+  background: var(--c-loss);
+}
+
+.result-bars.is-grown .result-bar-fill,
+.result-bars.is-grown .result-bar-diff {
+  transform: scaleX(1);
+}
+
+/* Foot: what the figure is based on */
+.result-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 28px;
+  background: var(--pe-gray-50);
+  border-top: 1px solid var(--card-border);
+  border-radius: 0 0 var(--card-radius) 0;
+}
+
+.result-foot-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--pe-gray-400);
+}
+
+.result-foot-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 0;
+}
+
+.result-foot-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-caption);
+}
+
+.result-foot-item dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--pe-gray-500);
+}
+
+.result-foot-icon {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+.result-foot-item dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.result-card-more {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-teal-700);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.result-card-more:hover {
+  text-decoration: underline;
+}
+
+.result-card-more:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+/* A detail card while it is calculated: empty at its final height, with
+   one centred message and no box of its own */
+.waiting-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waiting-card.is-policies {
+  min-height: 300px;
+}
+
+.waiting-card.is-earnings {
+  min-height: 420px;
+}
+
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  text-align: center;
+  animation: single-year-fade-in 0.3s ease-out both;
+}
+
+.waiting p {
+  margin: 0;
+}
+
+.waiting-title {
+  margin-top: 6px !important;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.waiting-time {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.waiting-bar.processing-bar {
+  width: 120px;
+  height: 3px;
+  margin: 6px auto 0;
+}
+
+.processing-spinner.is-small {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-width: 2px;
+}
+
+/* Before Calculate */
+.single-year-prompt.card {
+  margin: 0;
+  padding: 28px;
+  font-size: var(--fs-body);
+  text-align: center;
+  color: var(--pe-gray-500);
+}
+
+/* The calculation in progress */
+.processing-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 28px;
+}
+
+.processing-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  animation: single-year-fade-in 0.3s ease-out both;
+}
+
+.processing-panel p {
+  margin: 0;
+}
+
+.processing-title {
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.processing-time {
+  margin-top: 4px !important;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-500);
+}
+
+.processing-bar {
+  width: 240px;
+  max-width: 100%;
+  height: 4px;
+  margin: 12px auto 0;
+  overflow: hidden;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+}
+
+.processing-bar span {
+  display: block;
+  height: 100%;
+  background: var(--pe-teal-500);
+  border-radius: inherit;
+  transform-origin: left center;
+  transition: transform 1s linear;
+}
+
+/* A calculator inside the spinning ring */
+.processing-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  color: var(--pe-teal-700);
+}
+
+.processing-icon .processing-spinner {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
+.processing-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--pe-teal-100);
+  border-top-color: var(--pe-teal-500);
+  border-radius: 50%;
+  animation: calculate-spin 0.9s linear infinite;
+}
+
+@keyframes calculate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The lines over the cards: the prompt, the progress, the changed note */
+.single-year-changed {
+  margin: 0 0 12px;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.single-year-changed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  color: var(--pe-gray-700);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.single-year-changed::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pe-teal-500);
+}
+
+/* New cards and charts fade in rather than pop */
+.result-card,
+.single-year-details .report-section > .card,
+.single-year-details .charts-grid > div {
+  animation: single-year-fade-in 0.3s ease-out both;
+}
+
+@keyframes single-year-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+
+/* No effect: listed in the card's More info row */
+.no-effect-title {
+  margin: 0;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.no-effect-list {
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+}
+
+.no-effect-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--pe-gray-100);
+}
+
+.no-effect-item:last-child {
+  border-bottom: none;
+}
+
+.no-effect-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.no-effect-name {
+  font-size: var(--fs-small);
+  color: var(--pe-gray-800);
+}
+
+.no-effect-reason {
+  grid-column: 2;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+@media (max-width: 768px) {
+  .result-card-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .result-card-head,
+  .result-card-body,
+  .result-card-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .result-value {
+    font-size: 2rem;
+  }
+
+  .result-foot-items {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .result-card-more {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .processing-panel,
+  .result-card,
+  .waiting,
+  .single-year-details .report-section > .card,
+  .single-year-details .charts-grid > div {
+    animation: none;
+  }
+
+  .processing-spinner {
+    animation-duration: 2.4s;
+  }
+
+  .result-bar-fill,
+  .result-bar-diff,
+  .processing-bar span,
+  .single-year-result,
+  .single-year-details .report-section {
+    transition: none;
+  }
+}
+
+/* A phone's one-column breakdown: what the net row's figures are */
+.breakdown-net-label {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-gray-500);
 }
