@@ -106,6 +106,18 @@ export function householdApiUrl() {
   return url ? url.trim() : null;
 }
 
+/**
+ * An optional second URL for the slow parts (the sweep and the split by
+ * policy): the same API run with its simulations fanned out on Modal
+ * (`modal_household.py`). Null when unset, and then every request goes to
+ * householdApiUrl().
+ */
+export const HOUSEHOLD_DETAIL_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL";
+export function householdDetailApiUrl() {
+  const url = process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL;
+  return url ? url.trim() : null;
+}
+
 /** An error the Household impact view can explain: `kind` says which. */
 export class HouseholdApiError extends Error {
   /**
@@ -261,9 +273,9 @@ function fieldErrors(detail) {
  */
 export async function postHouseholdImpact(
   body,
-  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl } = {},
+  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, url: urlOverride } = {},
 ) {
-  const url = householdApiUrl();
+  const url = urlOverride ?? householdApiUrl();
   if (!url) {
     throw new HouseholdApiError(
       "config",
@@ -536,4 +548,22 @@ export function consistentRound(values, total) {
     diff -= step;
   }
   return rounded.map((value) => (Object.is(value, -0) ? 0 : value));
+}
+
+/**
+ * A detail part (sweep or split by policy): from the detail URL when the
+ * build has one, falling back to the main API if that service cannot be
+ * reached, errs or times out. Answers the page rejects ("invalid") are not
+ * retried: the main API would refuse them too.
+ */
+export async function postHouseholdDetail(body, options = {}) {
+  const detailUrl = householdDetailApiUrl();
+  if (!detailUrl) return postHouseholdImpact(body, options);
+  try {
+    return await postHouseholdImpact(body, { ...options, url: detailUrl });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    if (!(error instanceof HouseholdApiError) || error.kind === "invalid") throw error;
+    return postHouseholdImpact(body, options);
+  }
 }
