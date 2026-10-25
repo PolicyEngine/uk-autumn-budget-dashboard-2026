@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
-import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
@@ -8,10 +7,11 @@ import OBRDumbbellChart from "./OBRDumbbellChart";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import Disclosure from "./Disclosure";
+import SourceLink from "./SourceLink";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
-export const OBR_UNAVAILABLE =
-  "Shown once the OBR publishes its costings for these measures.";
+export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
 
 function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const catalogue = useMeasureCatalogue();
@@ -76,10 +76,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // The OBR's costings are joined by measure id. Until it costs these
   // measures (with the Budget on 28 October), none has an OBR figure, so
   // nothing is paired: the comparison says when it will be available.
-  const hasObrFigures = filteredData.some(
-    (row) => Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural),
-  );
-  if (!hasObrFigures) {
+  const hasFigures = hasObrFigures(filteredData, selectedPolicies);
+  if (!hasFigures) {
     return (
       <div className="obr-comparison-section">
         <p className="comparison-description obr-unavailable">
@@ -148,16 +146,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       {/* Intro across the full width; the controls sit below it */}
       <div className="obr-intro-row">
         <p className="comparison-description">
-          PolicyEngine's static estimates against the OBR's November 2025
-          costings (
-          <a
-            href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            EFO
-          </a>
-          ), £bn a year; positive values raise revenue.
+          PolicyEngine's static estimates against{" "}
+          <SourceLink source="obr_budget_2026_costings" />, £bn a year; positive values raise revenue.
         </p>
       </div>
 
@@ -175,46 +165,17 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             ]}
           />
         )}
-        <div className="obr-view-switch" role="group" aria-label="Show as">
-          <button
-            type="button"
-            className="obr-view-option"
-            aria-pressed={!showTable}
-            aria-label="Chart"
-            title="Chart"
-            onClick={() => setView("chart")}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <path
-                d="M2 14h12M4 11V7M8 11V3M12 11V6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Chart</span>
-          </button>
-          <button
-            type="button"
-            className="obr-view-option"
-            aria-pressed={showTable}
-            aria-label="Table"
-            title="Table"
-            onClick={() => setView("table")}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <path
-                d="M2.5 3h11v10h-11zM2.5 6.5h11M2.5 9.75h11M6.5 3v10"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>Table</span>
-          </button>
-        </div>
+        <PillSelect
+          variant="light"
+          name="Show as"
+          prefix="Show"
+          value={showTable ? "table" : "chart"}
+          onChange={setView}
+          options={[
+            { value: "chart", label: "Chart" },
+            { value: "table", label: "Table" },
+          ]}
+        />
       </div>
 
       {!showTable && (
@@ -244,8 +205,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             <tr>
               {years.map((year) => (
                 <React.Fragment key={year}>
-                  <th className="source-header pe">PE</th>
-                  <th className="source-header obr">OBR</th>
+                  <th className="source-header pe">PolicyEngine (static)</th>
+                  <th className="source-header obr">OBR ({showBehavioural ? "post-behavioural" : "static"})</th>
                 </React.Fragment>
               ))}
             </tr>
@@ -297,3 +258,65 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 }
 
 export default OBRComparisonTable;
+
+/**
+ * The OBR comparison at the foot of the Public finances card: an expander
+ * once the OBR has costed any selected measure, and until then one muted
+ * line saying when it will be (an expander that opens to "not yet" reads
+ * as broken).
+ */
+/** Whether the OBR has a figure for any of the selected measures. */
+export function hasObrFigures(rows, selectedPolicies) {
+  return (rows ?? []).some(
+    (row) =>
+      selectedPolicies.includes(row.reform_id) &&
+      (Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural)),
+  );
+}
+
+/**
+ * The OBR rows bound to the approved results, or null while none are: no
+ * OBR file is bindable until a verified route for the Budget's costings
+ * exists, so today this stays null.
+ */
+function useVerifiedObrRows(catalogue) {
+  const [state, setState] = useState({ catalogue: null, rows: null });
+  useEffect(() => {
+    let live = true;
+    loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
+      .then((text) => {
+        const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+        const rows = parseDashboardCsv(text).map((row) => ({
+          reform_id: row.reform_id,
+          obr_static: numeric(row.obr_static_value),
+          obr_behavioural: numeric(row.obr_post_behavioural_value),
+        }));
+        if (live) setState({ catalogue, rows });
+      })
+      .catch(() => {
+        if (live) setState({ catalogue, rows: null });
+      });
+    return () => {
+      live = false;
+    };
+  }, [catalogue]);
+  return state.catalogue === catalogue ? state.rows : null;
+}
+
+/**
+ * The OBR comparison as an expander at the foot of the revenue card, shown
+ * only once the OBR has costed a selected measure and its figures are bound
+ * to the approved results. Until then nothing shows (an expander that opens
+ * to "not yet" reads as broken).
+ */
+export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
+  const catalogue = useMeasureCatalogue();
+  const rows = useVerifiedObrRows(catalogue);
+  if (!rows || selectedPolicies.length === 0) return null;
+  if (!hasObrFigures(rows, selectedPolicies)) return null;
+  return (
+    <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} />
+    </Disclosure>
+  );
+}

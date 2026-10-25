@@ -100,13 +100,14 @@ def gini(values, weights):
     return float(1 - np.sum(wf * (lorenz + lorenz_prev)))
 
 
-def decile_medians(values, weights):
-    """Person-weighted decile groups (ranked within the year), median of each."""
+def decile_medians(values, weights, groups=10):
+    """Person-weighted income groups (ranked within the year), median of each:
+    deciles by default, quintiles with ``groups=5``."""
     order = np.argsort(values, kind="stable")
     v, w = values[order], weights[order].astype(np.float64)
     cw = np.cumsum(w) / w.sum()
-    group = np.minimum((cw * 10 - 1e-12).astype(int), 9)
-    return [wmedian(v[group == d], w[group == d]) for d in range(10)]
+    group = np.minimum((cw * groups - 1e-12).astype(int), groups - 1)
+    return [wmedian(v[group == d], w[group == d]) for d in range(groups)]
 
 
 def rate(flag, weight, mask):
@@ -197,6 +198,15 @@ def tenure_groups(tenure):
     return np.array([TENURE[t] for t in tenure], dtype=object)
 
 
+# The poverty measures given for each group, as "Poverty over time" offers
+GROUP_POVERTY_MEASURES = (
+    "relative_ahc",
+    "absolute_ahc",
+    "relative_bhc",
+    "absolute_bhc",
+)
+
+
 def poverty_by_group(a):
     w = a["weight"]
     breakdowns = {
@@ -213,7 +223,7 @@ def poverty_by_group(a):
         for g in sorted(set(labels)):
             mask = labels == g
             cells[g] = {
-                "relative_ahc": rate(a["relative_ahc"], w, mask),
+                **{m: rate(a[m], w, mask) for m in GROUP_POVERTY_MEASURES},
                 "median_equivalised_income_bhc": wmedian(
                     a["eq_bhc"][mask], w[mask]
                 ),
@@ -235,6 +245,7 @@ def baseline_year(sim, year, snapshot_years=()):
         )
         res[f"median_equivalised_income_{basis}"] = wmedian(inc, w)
         res[f"decile_medians_{basis}"] = decile_medians(inc, w)
+        res[f"quintile_medians_{basis}"] = decile_medians(inc, w, groups=5)
         order = np.argsort(inc, kind="stable")
         cw = np.cumsum(w[order]) / w.sum()
         quint = np.minimum((cw * 5 - 1e-12).astype(int), 4)
@@ -295,9 +306,10 @@ def baseline_year(sim, year, snapshot_years=()):
     return res
 
 
-def group_years(policyengine_uk: str) -> tuple[int, int]:
-    """poverty_by_group snapshot years: the base year and the end year."""
-    return (BASE_YEAR, headline_end_year(policyengine_uk))
+def group_years(policyengine_uk: str) -> tuple[int, ...]:
+    """poverty_by_group snapshot years: every year from the base year to the
+    end year, so the page can compare any two of them."""
+    return tuple(range(BASE_YEAR, headline_end_year(policyengine_uk) + 1))
 
 
 def run_projections(log=print) -> dict:

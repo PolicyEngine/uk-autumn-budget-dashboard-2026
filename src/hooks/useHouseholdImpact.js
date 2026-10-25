@@ -25,7 +25,7 @@ export function clearHouseholdImpactCache() {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Personal impact results for the wizard's answers, in two stages: the
+ * The Household impact results for the wizard's answers, in two stages: the
  * headline and programmes, then the per-policy split and earnings sweep.
  *
  * @param {Object} params

@@ -14,7 +14,7 @@ function ReplicationLine() {
     policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION,
   });
   return (
-    <p className="replication-line">
+    <p id="replication" className="replication-line">
       Replication code:{" "}
       <a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer">
         {REPO}

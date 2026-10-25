@@ -1,5 +1,5 @@
 /**
- * Example young people for the Personal impact form ("Start from an
+ * Example young people for the Household impact form ("Start from an
  * example"). A preset fills the form; every value stays editable.
  *
  * Earnings: ONS, Annual Survey of Hours and Earnings (ASHE) 2025
@@ -36,6 +36,7 @@ export const YOUNG_PERSON_PRESETS = [
   {
     id: "renter-22",
     label: "A 22-year-old renting",
+    description: "£25,000, renting at £900 a month, no student loan",
     inputs: {
       ...COMMON,
       current_age: 22,
@@ -52,6 +53,7 @@ export const YOUNG_PERSON_PRESETS = [
   {
     id: "apprentice-19",
     label: "A 19-year-old apprentice",
+    description: "£23,600, renting a room at £600 a month",
     inputs: {
       ...COMMON,
       current_age: 19,
@@ -67,6 +69,7 @@ export const YOUNG_PERSON_PRESETS = [
   {
     id: "graduate-23",
     label: "A 23-year-old graduate",
+    description: "£32,300 with a Plan 2 student loan",
     inputs: {
       ...COMMON,
       current_age: 23,

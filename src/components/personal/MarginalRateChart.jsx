@@ -20,6 +20,9 @@ import {
   axisWidth,
   useNarrowViewport,
   CHART_COLOURS,
+  sweepAxis,
+  BEFORE_DASH,
+  REFERENCE_DASH,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
@@ -28,6 +31,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS, earningsChartHeight } from "./EarningsChart";
+import TitleIcon from "../TitleIcon";
 
 const Y_TICKS = [0, 0.25, 0.5, 0.75, 1];
 const pct = (value) => `${Math.round(value * 100)}%`;
@@ -91,7 +95,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
     return rows;
   }, [rates]);
   const title = `Marginal tax rate across earnings, ${yearLabel}`;
-  const xTicks = roundTicks(sweep.max);
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
   // The API's own rates at your salary, else the step that holds it
   const own = sweep.own;
   const yours =
@@ -130,7 +134,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
     <div className="card single-year-card single-year-mtr">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="percent" />
+            <span className="title-text">{title}</span>
+          </h3>
           {yours && (
             <p className="chart-description">
               At {formatPounds(salary)} your marginal tax rate is {pct(yours.before)} before and{" "}
@@ -152,7 +159,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               tick={TICK_STYLE}
               tickFormatter={formatPoundsShort}
               ticks={xTicks}
-              domain={[0, xTicks[xTicks.length - 1]]}
+              domain={xDomain}
               // As the earnings chart beside it: axis line 44 px from the foot
               height={44}
               label={{
@@ -177,7 +184,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               <ReferenceLine
                 x={salary}
                 stroke={CHART_COLOURS.text}
-                strokeDasharray="4 3"
+                strokeDasharray={REFERENCE_DASH}
                 label={{ value: "You", position: "insideTopRight", fill: CHART_COLOURS.text, fontSize: 13, fontWeight: 600 }}
               />
             )}
@@ -187,7 +194,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               name="Before"
               stroke={BEFORE_COLOUR}
               strokeWidth={2}
-              strokeDasharray="6 4"
+              strokeDasharray={BEFORE_DASH}
               dot={<EdgeMarker />}
               activeDot={false}
               isAnimationActive={false}
