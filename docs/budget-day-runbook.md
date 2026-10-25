@@ -485,8 +485,7 @@ For each coded measure:
 ## G2: provisional numbers (13:15)
 
 ```sh
-uv run uk-budget-data generate --artifacts --reforms <ids> \
-  --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --artifacts --reforms <ids>
 uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish check
@@ -495,6 +494,7 @@ uv run uk-budget-data publish check
 - **Once results by area are bound** (after G4's first area run), staging unbinds them, and this `publish check` fails until the index is rebuilt. From then on, run `uv run uk-budget-data publish index` before it, after rerunning the area run if an entry it used has changed (G4).
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
+- **Years: leave `--years` out.** It defaults to the policy years in `src/uk_budget_data/budget_years.json`, 2026 to 2031. Narrowing it drops a scored year: `threshold_freeze_2031_32` changes only 2031-32, so a run without 2031 has nothing to score for it. The area run's `--years` has the same default.
 - **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
@@ -590,7 +590,7 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
 ## G4: combined run and publish (14:50)
 
 ```sh
-uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --combined <all coded ids>
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 ```
