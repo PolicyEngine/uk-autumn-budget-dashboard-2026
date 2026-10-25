@@ -22,6 +22,7 @@ requires its current receipt rules; this module never reimplements a digest.
 
 import json
 import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -49,6 +50,20 @@ BASIS_STATUSES = ("pre_budget", "updated")
 # manifest file.
 ARTIFACTS_PREFIX = "public/data/artifacts/"
 MANIFEST_PATH = "public/data/manifest.json"
+# Suffixes of the page's own files under src/, outside the Python package
+# (is_non_calculation_path). Python reads nothing there.
+FRONTEND_SUFFIXES = (
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".css",
+    ".svg",
+    ".json",
+    ".csv",
+    ".geojson",
+)
+_FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 # Dashboard fields that describe one generation run rather than what was
 # generated, left out of the artifact digest.
 VOLATILE_DASHBOARD_FIELDS = ("generated_at", "generator_argv")
@@ -177,6 +192,69 @@ def is_publication_path(path: str) -> bool:
     """Whether a changed path is one the publication commands write."""
     return path == MANIFEST_PATH or (
         path.startswith(ARTIFACTS_PREFIX) and ".." not in path.split("/")
+    )
+
+
+def is_non_calculation_path(path: str) -> bool:
+    """Whether a committed path cannot change what a measure calculates.
+
+    These are what the commits after an approval touch: attestations,
+    published files, the disclosure review, docs and the page. Everything
+    else, including any path not listed here, could change a calculation.
+    """
+    parts = path.split("/")
+    if not path or any(part in ("", ".", "..") for part in parts):
+        return False
+    if parts[:3] == ["data_inputs", "publication", "attestations"]:
+        return len(parts) == 4 and parts[3].endswith(".json")
+    if path == "data_inputs/public_data_review.csv":
+        return True
+    if parts[0] in ("public", "docs"):
+        return len(parts) > 1
+    if len(parts) == 1:
+        return path.endswith(".md")
+    # On a case-insensitive filesystem src/UK_Budget_Data is the package.
+    return (
+        parts[0] == "src"
+        and parts[1].casefold() != "uk_budget_data"
+        and path.endswith(FRONTEND_SUFFIXES)
+    )
+
+
+def calculation_changes_since(
+    git_sha: str, repo_root: Path = Path(".")
+) -> list[str]:
+    """The paths committed since ``git_sha`` that could change a calculation.
+
+    ``git_sha`` must be a full commit sha that HEAD descends from. A rename
+    counts as both of its paths, so moving code out of the package counts.
+    """
+    if not isinstance(git_sha, str) or not _FULL_COMMIT.fullmatch(git_sha):
+        raise ValueError(
+            f"the approved receipt records no full commit sha ({git_sha!r})"
+        )
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", *args], cwd=repo_root, capture_output=True, text=True
+        )
+
+    if git("merge-base", "--is-ancestor", git_sha, "HEAD").returncode != 0:
+        raise ValueError(
+            f"the approved commit {git_sha[:12]} is not an ancestor of HEAD"
+        )
+    changed = git("diff", "--name-only", "--no-renames", "-z", git_sha, "HEAD")
+    if changed.returncode != 0:
+        raise ValueError(
+            f"git could not list the changes since {git_sha[:12]}: "
+            + changed.stderr.strip()
+        )
+    return sorted(
+        {
+            path
+            for path in changed.stdout.split("\0")
+            if path and not is_non_calculation_path(path)
+        }
     )
 
 

@@ -339,6 +339,7 @@ class World:
         personal=None,
         with_tables=None,
         modifier_templates=None,
+        git_sha=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -351,9 +352,10 @@ class World:
         key's default name). An artifact recording a data limit is
         receipt-only, as generation writes it; ``with_tables=True`` writes
         one with its tables anyway, as generation did before, to test that
-        the gates refuse it.
+        the gates refuse it. ``git_sha`` is the commit the receipt records
+        (and binds code-bound identities to), by default a stand-in.
         """
-        revision = self.revision(clean)
+        revision = self.revision(clean, sha=git_sha or "a" * 40)
         scenario = Scenario(
             parameter_changes={
                 RATE_PATH: {str(y): rate for y in sorted(values)}

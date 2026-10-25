@@ -2084,6 +2084,50 @@ def _area_identities(reform_id: str, years, revision):
     return identities[:2]
 
 
+def _approved_revision(
+    reform_id: str, document: dict, revision, checked: dict
+):
+    """The revision to bind the current code-bound scenarios at.
+
+    A code-bound identity includes the commit its receipt was made at, so
+    committing the measure's attestation, or the published files, would
+    otherwise end every area run. The approved commit stands in for HEAD
+    when HEAD descends from it and nothing committed since could change a
+    calculation (``publication_receipt.calculation_changes_since``). The
+    modifier's own module source is hashed from the checkout either way.
+
+    This certifies only the repository's code. The installed packages and
+    the dataset are separate concerns that it does not certify; the area
+    run's Microcosm data is uncertified by design.
+    """
+    approved = document["execution_receipt"]
+    if all(
+        approved[side].get("binding") != "code_revision"
+        for side in ("baseline", "reform")
+    ):
+        return revision
+    sha = (document.get("dashboard") or {}).get("git_sha")
+    if sha == revision.git_sha:
+        return revision
+    if sha not in checked:
+        try:
+            checked[sha] = publication_receipt.calculation_changes_since(sha)
+        except ValueError as error:
+            checked[sha] = error
+    changes = checked[sha]
+    if isinstance(changes, ValueError):
+        raise ValueError(f"{reform_id}: {changes}") from changes
+    if changes:
+        raise ValueError(
+            f"{reform_id}: calculation code changed since the approved "
+            f"commit {sha[:12]} ({', '.join(changes[:5])}); regenerate and "
+            "approve before the area run"
+        )
+    return publication_receipt.CodeRevision(
+        sha, revision.tree_clean, revision.dirty_paths
+    )
+
+
 def area_provenance(
     manifest: publication_manifest.Manifest,
     manifest_bytes: bytes,
@@ -2097,8 +2141,11 @@ def area_provenance(
     This runs during planning, before any microsimulation. Each scenario's
     semantic identity (including structural code bindings and composition)
     must equal the approved artifact's receipt. Names are presentation labels.
+    Code-bound scenarios are bound at the approved commit when only
+    non-calculation files have been committed since (``_approved_revision``).
     """
     revision = publication_receipt.code_revision()
+    checked = {}
     reforms = {}
     for reform_id in reform_ids:
         key = manifest_key(reform_id)
@@ -2131,7 +2178,8 @@ def area_provenance(
             problems.append("requested years are not approved and supported")
         if problems:
             raise ValueError(f"{reform_id}: " + "; ".join(problems))
-        actual = _area_identities(reform_id, years, revision)
+        bound = _approved_revision(reform_id, document, revision, checked)
+        actual = _area_identities(reform_id, years, bound)
         approved = document["execution_receipt"]
         identities = {}
         for side, identity in zip(("baseline", "reform"), actual):

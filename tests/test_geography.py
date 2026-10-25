@@ -1528,6 +1528,7 @@ def publication_manifest(
             reference = world.ready(
                 key,
                 {year: -1.0 for year in years},
+                git_sha=r.code_revision().git_sha,
                 baseline_identity=baseline_identity,
                 reform_identity=reform_identity,
                 modifier_templates=measure_templates_proof(
@@ -1550,6 +1551,7 @@ def publication_manifest(
             reference = world.write(
                 key,
                 {year: -float(len(members)) for year in years},
+                git_sha=r.code_revision().git_sha,
                 members=[records[member] for member in members],
                 measure_ids=list(members),
                 member_outputs={
