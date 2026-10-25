@@ -14,6 +14,7 @@ import {
   MIN_SAMPLE_SIZE,
   YOUNG_BAND,
   singleAgeKey,
+  wholeSelectionRun,
 } from "../../utils/ageImpact";
 import { CHART_COLOURS } from "../../utils/chartTheme";
 
@@ -165,6 +166,7 @@ export function singleAgeBars(rows, policies, selected, year) {
   for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
     let net = 0;
     let complete = chosen.length > 0;
+    const parts = [];
     for (const policy of chosen) {
       const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
       if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
@@ -172,8 +174,11 @@ export function singleAgeBars(rows, policies, selected, year) {
         break;
       }
       net += row.mean_change;
+      parts.push({ id: policy.id, name: policy.name, value: row.mean_change });
     }
-    bars.push({ age, label: String(age), netChange: complete ? net : null });
+    // Each policy's own change, for the tooltip, largest first
+    parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [] });
   }
   return bars;
 }
@@ -210,4 +215,25 @@ export function noEffectReason(id, year) {
   if (id === "threshold_freeze_2031_32" && year < 2031) return "Starts in 2031-32";
   if (id === "warm_home_discount_top_up" && year !== 2026) return "Paid in 2026-27 only";
   return null;
+}
+
+/**
+ * Better off, unchanged and worse off for each single year of age,
+ * SINGLE_AGE_FIRST to SINGLE_AGE_LAST, from the whole selection's run (as
+ * for the age groups): `{ run, groups: [{ key, label, row, suppressed }] }`,
+ * or null when the selection has no such run or the year no rows. An age
+ * with fewer than MIN_SAMPLE_SIZE survey records is suppressed.
+ */
+export function sharesBySingleAge(rows, policies, selected, year) {
+  const run = wholeSelectionRun(policies, selected);
+  if (!run) return null;
+  const yearRows = (rows ?? []).filter((row) => row.year === Number(year) && row.reform_id === run);
+  if (!yearRows.length) return null;
+  const groups = [];
+  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+    const row = yearRows.find((candidate) => candidate.age_band === singleAgeKey(age)) ?? null;
+    const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
+    groups.push({ key: String(age), label: String(age), age, row: usable, suppressed: !usable });
+  }
+  return { run, groups };
 }

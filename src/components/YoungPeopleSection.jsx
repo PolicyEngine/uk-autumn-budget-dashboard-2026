@@ -27,6 +27,7 @@ import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import SectionHeading from "./SectionHeading";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
+import { getPolicyColor } from "../utils/policyConfig";
 import Note from "./Note";
 import PillSelect from "./PillSelect";
 import MeasuresCard from "./youngPeople/MeasuresCard";
@@ -53,7 +54,7 @@ import {
   meanChangeByBand,
   sharesByGroup,
 } from "../utils/ageImpact";
-import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, sharesBySingleAge, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -80,6 +81,8 @@ const SINGLE_AGE_DESCRIPTION =
   `Average change in household net income per person, for each single year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}, in pounds a year. Each person counts their household's change, so children show their household's; each bar adds up the selected policies' own effects.`;
 const SHARES_DESCRIPTION =
   "The share of people whose household net income rises or falls by more than 0.01%, by age group and for all ages.";
+const SHARES_SINGLE_DESCRIPTION =
+  "The share of people whose household net income rises or falls by more than 0.01%, for each single year of age from 10 to 40.";
 
 /** The two views of "Average change by age". */
 const AGE_VIEWS = [
@@ -254,18 +257,29 @@ function SingleAgeTick({ x, y, payload }) {
 }
 
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
-function SingleAgeTooltip({ yearLabel, ...props }) {
-  const point = props.payload?.[0]?.payload;
-  if (!point || point.netChange === null) return null;
+/** An age's net change, then each policy's own part of it, largest first. */
+function SingleAgeTooltip({ active, payload, yearLabel }) {
+  const point = payload?.[0]?.payload;
+  if (!active || !point || point.netChange === null) return null;
   return (
-    <ChartTooltip
-      {...props}
-      format={(value) => `${pounds(value)} a year`}
-      showPlus
-      showZero
-      labelFormat={(label) => `Age ${label}, ${yearLabel}`}
-      single={{ key: "netChange", label: "Net change", color: signColour(point.netChange) }}
-    />
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">
+        Age {point.label}, {yearLabel}
+      </p>
+      <p className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: signColour(point.netChange) }} aria-hidden="true" />
+        <strong>Net change {signedPounds(point.netChange)} a year</strong>
+      </p>
+      {point.parts.length > 1 &&
+        point.parts
+          .filter((part) => Math.round(part.value) !== 0)
+          .map((part) => (
+            <p key={part.id} className="chart-tooltip-row">
+              <span className="chart-tooltip-swatch" style={{ background: getPolicyColor(part.id) }} aria-hidden="true" />
+              {part.name} {signedPounds(part.value)}
+            </p>
+          ))}
+    </div>
   );
 }
 
@@ -528,6 +542,12 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
+      {published && single && (
+        <p className="chart-footnote">
+          Single years of age rest on fewer households; a few large changes, such as capital gains under
+          Business Asset Disposal Relief, can move one age&apos;s average.
+        </p>
+      )}
     </div>
   );
 }
@@ -554,9 +574,13 @@ function GroupTick({ x, y, payload, narrow }) {
 
 function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
+  // By age group or by single year of age, as "Average change by age"
+  const [view, setView] = useState("band");
+  const single = view === "single";
+  const description = single ? SHARES_SINGLE_DESCRIPTION : SHARES_DESCRIPTION;
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const shares = sharesByGroup(rows, policies, selectedPolicies, selectedYear);
+  const shares = (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear);
   const data = shares
     ? shares.groups
         .filter((group) => !group.suppressed)
@@ -567,10 +591,10 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
 
   const title = `Better and worse off, ${yearLabel}`;
-  const exportName = `young-people-better-worse-off-${selectedYear}`;
+  const exportName = `young-people-better-worse-off-${single ? "single-age-" : ""}${selectedYear}`;
   const exportOptions = {
     title,
-    description: SHARES_DESCRIPTION,
+    description,
     logo: CHART_LOGO,
     reservedLegendHeight: 0,
     legendItems: OUTCOMES.map((outcome) => ({
@@ -581,17 +605,18 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   };
   const csvText = () =>
     buildChartCsv({
-      title: `People better off, unchanged and worse off by age group, ${yearLabel}`,
+      title: `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
-        { key: "group", label: "Age group" },
+        { key: "group", label: single ? "Age" : "Age group" },
         ...OUTCOMES.map((outcome) => ({
           key: outcome.key,
           label: `${outcome.label} (%)`,
           decimals: 2,
         })),
       ],
-      rows: data,
+      // The real shares, not the widened ones drawn
+      rows: data.map((row) => ({ group: row.group, ...row.real })),
       notes: thin.length
         ? [`Not shown, too few survey records: ${thin.map((group) => group.label).join(", ")}`]
         : [],
@@ -612,7 +637,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           <h3>
             <NoBreakYear text={title} />
           </h3>
-          <p className="chart-description">{SHARES_DESCRIPTION}</p>
+          <p className="chart-description">{description}</p>
         </div>
         <ChartDownloadMenu
           download={download}
@@ -622,9 +647,69 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           }
         />
       </div>
+      <div className="chart-controls young-people-controls">
+        <PillSelect
+          variant="light"
+          prefix="Show"
+          name="Better and worse off shown"
+          value={view}
+          onChange={setView}
+          options={AGE_VIEWS}
+          stableWidth
+        />
+      </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : data.length && single ? (
+          // One 100% column per age, 16 to 24 shaded, as in the single-age
+          // average chart
+          <ResponsiveContainer width="100%" height={height}>
+            <BarChart data={data} margin={plotMargin(narrow)} barCategoryGap="10%">
+              <CartesianGrid {...GRID_PROPS} />
+              <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
+              <XAxis
+                dataKey="group"
+                ticks={narrow ? SINGLE_AGE_TICKS_NARROW : SINGLE_AGE_TICKS}
+                interval={0}
+                tick={<SingleAgeTick />}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                height={X_AXIS_HEIGHT}
+                label={{ value: "Age", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                tickFormatter={(value) => `${value}%`}
+                tick={TICK_STYLE}
+                axisLine={false}
+                tickLine={false}
+                width={44}
+                label={{
+                  value: "Share of people",
+                  angle: -90,
+                  position: "insideLeft",
+                  style: { ...AXIS_TITLE_STYLE, textAnchor: "middle" },
+                }}
+              />
+              <Tooltip
+                {...TOOLTIP_PROPS}
+                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                content={<SharesTooltip yearLabel={yearLabel} />}
+              />
+              {OUTCOMES.map((outcome) => (
+                <Bar
+                  key={outcome.key}
+                  dataKey={outcome.key}
+                  name={outcome.label}
+                  fill={outcome.color}
+                  stackId="share"
+                  {...chartMotion()}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
         ) : data.length ? (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart
