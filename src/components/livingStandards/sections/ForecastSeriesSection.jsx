@@ -73,17 +73,12 @@ function ForecastCard({ series, forecast, published, view }) {
   const sourceText = forecastSourceText(forecast, derived);
   const csv = () => forecastCsv(series, rows, published, names, sourceText);
   const period = rowsPeriod(rows);
+  // The basis and the source are said once, in the section's intro; a card
+  // says only what is its own: a series PolicyEngine derives
   const common = {
     title: series.label,
     period,
-    about: `Annual growth rate (%), calendar years: growth in the annual average.${
-      published ? "" : " The Budget forecast is not yet published."
-    }`,
-    notes: [
-      series.source && (published ? `Pre-Budget: ${series.source}` : series.source),
-      published && series.post_source && `Budget: ${series.post_source}`,
-    ],
-    source: <ForecastSource forecast={forecast} derived={derived} />,
+    summary: derived ? "A PolicyEngine derivation from the OBR forecast, not an OBR series." : null,
     sourceText,
   };
 

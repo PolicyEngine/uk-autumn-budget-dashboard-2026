@@ -73,9 +73,10 @@ describe("Forecast changes once the Budget forecast is published", () => {
   it("draws both forecasts, shows both values and the change, and drops the 'will add' line", async () => {
     await renderForecast(publishedOutlook());
     expect(screen.queryByText(/once the OBR publishes/)).toBeNull();
-    expect(
-      screen.getByText(/compares the OBR March 2026 forecast with the OBR October 2026 forecast/),
-    ).toBeInTheDocument();
+    // The basis and both releases, once, in the section's intro
+    const intro = screen.getByText(/compares the OBR March 2026 forecast with the OBR October 2026 forecast/);
+    expect(intro).toHaveTextContent(POST_RELEASE);
+    expect(intro).toHaveTextContent(/pre-Budget: OBR/);
 
     // Every chart: pre-Budget grey and dashed, the Budget forecast teal and solid
     const cards = document.querySelectorAll(".ls-card");
@@ -90,18 +91,14 @@ describe("Forecast changes once the Budget forecast is published", () => {
     expect(legendText).toContain("OBR March 2026 (pre-Budget)");
     expect(legendText).toContain(POST_LABEL);
 
-    // Tiles: "2.3% → 2.6%" and "+0.3pp"; a change that rounds to zero reads "no change"
-    expect(screen.getByText(`${pct(cpiPre())} → ${pct(cpiPre() + 0.003)}`)).toBeInTheDocument();
-    expect(screen.getByText("+0.3pp")).toBeInTheDocument();
+    // Tiles: "March 2026 2.3% → October 2026 2.6%" and "+0.3pp"; a change that
+    // rounds to zero reads "no change"
+    expect(
+      screen.getByText((_, el) => el?.classList?.contains("forecast-tile-compare") && el.textContent.includes(`${pct(cpiPre())} → October 2026 ${pct(cpiPre() + 0.003)}`)),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/\+0\.3pp/)).toBeInTheDocument();
     expect(screen.getAllByText("no change").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/[−-]0\.0pp/)).toBeNull();
-
-    // The source names both releases, inside About this chart
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
-    fireEvent.click(within(cpi).getByRole("button", { name: "About this chart" }));
-    const source = cpi.querySelector(".disclosure-content .ls-source");
-    expect(source).toHaveTextContent(POST_RELEASE);
-    expect(source).toHaveTextContent(/pre-Budget: OBR/);
   });
 
   it("shows pre, post and difference columns as tables", async () => {

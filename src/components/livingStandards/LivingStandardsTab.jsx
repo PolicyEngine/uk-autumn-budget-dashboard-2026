@@ -12,6 +12,8 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
+import SourceLink from "../SourceLink";
+import { ForecastSource } from "./sources";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
 import { GrowthCard, IncomesOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
@@ -91,8 +93,8 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
             title="Forecast changes"
             subtitle={
               forecast.post_published
-                ? `The OBR economic forecast behind the baseline. This compares the ${forecastName(forecast.pre_label)} forecast with the ${forecastName(forecast.post_label)} forecast.`
-                : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
+                ? <>The OBR economic forecast behind the baseline: calendar-year growth in the annual average. This compares the {forecastName(forecast.pre_label)} forecast with the {forecastName(forecast.post_label)} forecast. <ForecastSource forecast={forecast} /></>
+                : <>The OBR economic forecast behind the baseline: calendar-year growth in the annual average, from the OBR&apos;s <SourceLink source="obr_efo_march_2026">Economic and fiscal outlook, March 2026</SourceLink>. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October.</>
             }
           />
           <section id="living-forecast" className="report-section">

@@ -606,6 +606,13 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* A source named in a section's intro reads as a link */
+.section-heading p a {
+  color: var(--c-gain-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Sections */
 .report-section {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);

@@ -565,3 +565,123 @@
     gap: 5px;
   }
 }
+
+/* Forecast headline tiles: icon and name, the figure with a small line of
+   the series beside it, and the Budget tag or comparison */
+.forecast-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 700px) {
+  .forecast-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.forecast-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--c-surface);
+}
+
+.forecast-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pe-teal-50, #e6fffa);
+  color: var(--c-gain-text);
+}
+
+.forecast-tile-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.forecast-tile-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.forecast-tile-name a:hover {
+  text-decoration: underline;
+}
+
+.forecast-tile-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.forecast-tile-value {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-tile-sub {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
+.forecast-tile-spark-zero {
+  stroke: var(--pe-gray-200);
+  stroke-width: 1;
+}
+
+.forecast-tile-spark-pre {
+  fill: none;
+  stroke: var(--c-before);
+  stroke-width: 1.6;
+}
+
+.forecast-tile-spark-post {
+  fill: none;
+  stroke: var(--c-after);
+  stroke-width: 1.8;
+}
+
+.forecast-tile-spark-dot {
+  fill: var(--c-after);
+}
+
+.forecast-tile-tag {
+  align-self: flex-start;
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pe-gray-100);
+  font-size: 0.7rem;
+  color: var(--pe-gray-500);
+}
+
+.forecast-tile-compare {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--pe-gray-600);
+}
+
+.forecast-tile-delta {
+  font-weight: 600;
+}
