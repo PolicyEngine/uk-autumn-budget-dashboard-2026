@@ -802,7 +802,7 @@ Or dispatch the workflow with `measures` (space-separated ids). `publish-measure
 
 **Timing on the runner.** Dispatch "Publish measures (Budget day)" with `timing: true` and one id in `measures`. It generates, reconciles and stages that measure on the runner, runs `publish check`, and writes each step's wall time and peak memory to the run's summary. It opens no pull request and commits nothing. Run it at Monday's rehearsal and record the result in the table below.
 
-**Modal backend (not ready yet).** Dispatch with `backend: modal`, or set the repository variable `PUBLISH_MEASURE_BACKEND=modal`. Each matrix job then runs on a standard runner and calls `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --reforms <id> --backend modal`. It uses the organisation secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, in that step only, and the Modal workspace secret `uk-budget-2026-hf-token`. **It needs two things first:** #112's `--backend modal` on `generate`, and that secret in the Modal workspace (#119). Until then the job stops at "Check the Modal backend is available" with an error saying so; rerun with `backend: runner`. `refresh-combined` has no Modal backend.
+**Modal backend.** Dispatch with `backend: modal`, or set the repository variable `PUBLISH_MEASURE_BACKEND=modal`. Each matrix job then runs on a standard runner and calls `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --reforms <id> --backend modal`. It uses the organisation secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, in that step only, and the Modal workspace secret `pe-uk-private-hf-read-token`, which exists (#119). If `generate` has no `--backend` option on the commit, or the secret is missing, the job stops at "Check the Modal backend is available" with an error saying so; rerun with `backend: runner`. `refresh-combined` has no Modal backend.
 
 **Timings.**
 
@@ -938,9 +938,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   uv run --with modal==1.6.2 uk-budget-data generate --backend modal
   ```
 
-  - **Who sets it up:** whoever owns the Modal workspace (Anthony):
-    1. create the secret with `modal secret create uk-budget-2026-hf-token HUGGING_FACE_TOKEN=<read-only token>`;
-    2. give the runner a Modal token (`modal token new`), as the person running the command.
+  - **The secret already exists:** `pe-uk-private-hf-read-token` in the `policyengine` workspace (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`, created by Anthony). It was checked on Modal on 25 October and reads the certified data (#119). The person running the command needs only a Modal token (`modal token new`).
   - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
   - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
   - **`--artifacts` runs on Modal too; `geography` stays local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally, so a release's artifacts are made either all on Modal or all locally ("Budget day on Modal" below).
@@ -977,10 +975,10 @@ git status --short public/data                                  # review the dif
 - **Fallbacks, in order:**
   1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
   2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
-  3. Modal (`--backend modal`) is about 5 min, but it is not runnable on the real data yet. The workspace has no `uk-budget-2026-hf-token` secret ("Budget day on Modal").
+  3. Modal (`--backend modal`): 8.4 min end to end for the ten flat units on the real data, 25 October, every CSV byte-identical to `main`'s ("Budget day on Modal").
 - **Not covered here:**
   - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
-  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
+  - **Receipted `--artifacts`/`--combined` runs.** Timed on Modal on 25 October ("Budget day on Modal"): 5.4 min for the nine measures, 6.7 min for the combined run.
 
 ## Budget day on Modal
 
@@ -1020,7 +1018,7 @@ the Reconciler signs (sign-measures) and merges: nothing here approves
 
   | Needed | Owner | State on 25 October |
   |---|---|---|
-  | Modal workspace secret `uk-budget-2026-hf-token` (key `HUGGING_FACE_TOKEN`, an organisation read-only token) | Anthony | missing; the job stops with "Modal secret missing" |
+  | Modal workspace secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a read-only token for `populace-uk-private`) | Anthony | exists; reads the certified data on Modal (checked 25 October) |
   | Repository secrets `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` (for the workflow) | Anthony | not checked from here; the job stops with an error if they are absent |
   | Running the Microcosm data on Modal | Vahid | decided on 25 October ([#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119#issuecomment-6398276075)), as PolicyEngine/uk-cgt-reform already does |
   | Repository variable `PUBLISH_MEASURE_BACKEND=modal` (Budget day only) | whoever runs Budget day | unset (the workflow defaults to the larger runner) |
@@ -1033,6 +1031,17 @@ the Reconciler signs (sign-measures) and merges: nothing here approves
   ```
 
   Each container builds an invented dataset (`synthetic_dataset`, 300 households, fixed seed) and runs the measure's receipted path up to the receipt, which the gate refuses because the invented dataset is not a bundle dataset; that refusal is the expected outcome. A second call sends an artifact-shaped directory back and writes it locally twice (written, then unchanged).
+- **Measured on the real data, 25 October** (bundle's Microcosm dataset, years 2026 to 2031, `main` at 63c61a1 with #104 and #133 merged in; a dry run into scratch directories, nothing published):
+
+  | Run | Modal, end to end | Before |
+  |---|---|---|
+  | Flat CSVs, `generate --backend modal` (ten units: nine measures and the package) | 8.4 min | about 30 min serial, about 14 min with #112 |
+  | Receipted measures, `generate --artifacts --backend modal` (nine containers) | 5.4 min | about 30 min serial |
+  | Combined run, `generate --combined <nine ids> --backend modal` (one container) | 6.7 min | not timed locally |
+
+  - **The numbers match `main`.** Every flat CSV is byte-identical to `main`'s `public/data`, except `obr_comparison.csv`: `main`'s copy still lists the 2025 Budget's measures. Every cell the receipted artifacts share with `main` is identical (the combined run's `age_impact` differs by at most 3e-7). The artifacts' `household_scatter_binned.csv` also keeps cells that `main`'s file leaves out (50, 13 and 61 extra cells for three measures), all low or zero counts. That comes from #104's artifact path, not from Modal.
+  - **Ran with:** `pe-uk-private-hf-read-token`, no retries, at most 16 containers, nothing kept warm, an ephemeral app stopped at the end.
+
 - **Measured on 25 October** (smoke test, synthetic data, years 2026 and 2027):
 
   | What | Time |
