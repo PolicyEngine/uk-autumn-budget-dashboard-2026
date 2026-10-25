@@ -930,7 +930,7 @@ What it does, in order:
 
 The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here.
 
-Needs the Modal secret `uk-budget-2026-hf-token` (key `HUGGING_FACE_TOKEN`, an organisation read token; owner Anthony). Decision to run the data on Modal: issue #119.
+Uses the workspace's existing Modal secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`; created by Anthony). It was checked on Modal on 25 October: it reads the local-area cut. Decisions to run the data on Modal and to use this secret: issue #119.
 
 ```
 UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
