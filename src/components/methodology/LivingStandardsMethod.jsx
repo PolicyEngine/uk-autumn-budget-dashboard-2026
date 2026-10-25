@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
+import { Tag } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, OBR_EFO_TITLE, OBR_EFO_URL, plainWords } from "../livingStandards/sources";
 
@@ -80,7 +81,7 @@ export default function LivingStandardsMethod() {
           items={[
             ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
             ["Data", dataset],
-            ["Status", "Unvalidated."],
+            ["Status", <Tag key="status" tone="warning">Unvalidated.</Tag>],
             meta.headline_start_year &&
               meta.headline_end_year && ["Period", periodLabel(meta.headline_start_year, meta.headline_end_year)],
             meta.real_price_base && [
@@ -119,7 +120,7 @@ export default function LivingStandardsMethod() {
         <div className="card method-card">
           <h3 className="method-card-title">What the baseline leaves out</h3>
           <p className="method-lead">Gaps and simplifications that change how the projections read.</p>
-          <ul className="method-list">
+          <ul className="method-list method-list-caveats">
             {caveats.map((c) => (
               <li key={c}>{text(c)}</li>
             ))}

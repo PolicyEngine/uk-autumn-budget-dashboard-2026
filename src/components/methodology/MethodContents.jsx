@@ -46,7 +46,7 @@ function currentSection(sections) {
  * phone. One nav landmark holds both; CSS shows one of them.
  *
  * @param {Object} props
- * @param {Array<{id: string, title: string}>} props.sections
+ * @param {Array<{id: string, title: string, icon?: import("react").ComponentType}>} props.sections
  */
 function MethodContents({ sections }) {
   const [current, setCurrent] = useState(sections[0]?.id);
@@ -73,7 +73,7 @@ function MethodContents({ sections }) {
         On this page
       </p>
       <ol className="method-contents-list">
-        {sections.map(({ id, title }) => (
+        {sections.map(({ id, title, icon: Icon }) => (
           <li key={id}>
             <a
               href={`#${id}`}
@@ -84,7 +84,8 @@ function MethodContents({ sections }) {
                 goToSection(id);
               }}
             >
-              {title}
+              {Icon && <Icon className="method-contents-icon" aria-hidden="true" strokeWidth={1.75} />}
+              <span>{title}</span>
             </a>
           </li>
         ))}

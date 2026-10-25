@@ -236,7 +236,7 @@ describe("the view tabs", () => {
       "Population impact",
       "Figures by area",
       "Young people",
-      "Personal impact",
+      "Household impact",
       "Living standards",
       "Limitations",
       "Versions and replication",

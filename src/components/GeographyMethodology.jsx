@@ -1,5 +1,6 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
 import FactList from "./methodology/FactList";
 import "./GeographyMethodology.css";
 
@@ -28,6 +29,7 @@ function GeographyMethodology() {
         checks.
       </p>
       <FactList
+        className="method-checklist"
         items={[
           [
             "At least 10 households",
@@ -36,6 +38,7 @@ function GeographyMethodology() {
               and no single household dominates it: each figure is checked
               against dominance and p% rules before it is published.
             </>,
+            ShieldCheck,
           ],
           [
             "90% intervals",
@@ -45,6 +48,7 @@ function GeographyMethodology() {
               fixed leaves out some of the uncertainty, so the intervals
               understate it.
             </>,
+            Ruler,
           ],
           [
             "Rounding",
@@ -52,6 +56,7 @@ function GeographyMethodology() {
               Figures are rounded to the precision the data supports, so a
               less certain figure has fewer digits.
             </>,
+            Hash,
           ],
           [
             "Approximate",
@@ -60,6 +65,7 @@ function GeographyMethodology() {
               interval understates the uncertainty, so read it as a rough
               guide.
             </>,
+            TriangleAlert,
           ],
           [
             "Not published",
@@ -68,6 +74,7 @@ function GeographyMethodology() {
               of survey respondents. The map hatches these constituencies, and
               the tables mark them.
             </>,
+            EyeOff,
           ],
           [
             "Map colours",
@@ -80,6 +87,7 @@ function GeographyMethodology() {
               category or two neighbouring ones; otherwise it is too uncertain
               to classify.
             </>,
+            Palette,
           ],
           [
             "Constituencies and regions",
@@ -87,6 +95,7 @@ function GeographyMethodology() {
               Constituency figures do not add up exactly to the regional ones,
               and may come from a different dataset.
             </>,
+            Layers,
           ],
           [
             "Later years",
@@ -96,6 +105,7 @@ function GeographyMethodology() {
               keep each household&apos;s 2025 split across constituencies,
               scaled to that year&apos;s household weights.
             </>,
+            CalendarClock,
           ],
         ]}
       />

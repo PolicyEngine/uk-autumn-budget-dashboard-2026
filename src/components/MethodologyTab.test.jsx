@@ -13,7 +13,7 @@ const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onS
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the map and Personal impact) link to these
+    // Other views (e.g. the map and Household impact) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
     expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
@@ -104,10 +104,10 @@ describe("MethodologyTab", () => {
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Household calculation",
     );
-    // The calculation is said once, in Personal impact's "About these
+    // The calculation is said once, in Household impact's "About these
     // figures"; this slot points there.
     expect(slot).toHaveTextContent("About these figures");
-    expect(within(slot).getByRole("link", { name: "Personal impact tab" })).toBeInTheDocument();
+    expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
     expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
   });
 

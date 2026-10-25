@@ -10,6 +10,28 @@ import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
+import { BackToTop, Callout, IconChip, Tag } from "./methodology/MethodUi";
+import ExpandableText from "./methodology/ExpandableText";
+import {
+  Briefcase,
+  Calculator,
+  ChartColumn,
+  Compass,
+  Database,
+  FileCheck,
+  GitBranch,
+  House,
+  Info,
+  MapPinned,
+  PersonStanding,
+  Scale,
+  Sigma,
+  TrendingUp,
+  TriangleAlert,
+  User,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
@@ -18,7 +40,7 @@ const RESEARCH = [
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
- * views link with these (the map to `geography`, Personal impact to
+ * views link with these (the map to `geography`, Household impact to
  * `singleYear`), so a key's id must not change.
  */
 export const METHOD_SECTIONS = {
@@ -35,40 +57,70 @@ export const METHOD_SECTIONS = {
   versions: "method-versions",
 };
 
-/** The sections in the contents, in page order (the household calculation's block sits inside Personal impact). */
+/** The sections in the contents, in page order (the household calculation's block sits inside Household impact). */
 export const METHOD_CONTENTS = [
-  { id: METHOD_SECTIONS.overview, title: "At a glance" },
-  { id: METHOD_SECTIONS.data, title: "Data" },
-  { id: METHOD_SECTIONS.model, title: "Model and measures" },
-  { id: METHOD_SECTIONS.population, title: "Population impact" },
-  { id: METHOD_SECTIONS.geography, title: "Figures by area" },
-  { id: METHOD_SECTIONS.young, title: "Young people" },
-  { id: METHOD_SECTIONS.personal, title: "Personal impact" },
-  { id: METHOD_SECTIONS.living, title: "Living standards" },
-  { id: METHOD_SECTIONS.limitations, title: "Limitations" },
-  { id: METHOD_SECTIONS.versions, title: "Versions and replication" },
+  { id: METHOD_SECTIONS.overview, title: "At a glance", icon: Compass },
+  { id: METHOD_SECTIONS.data, title: "Data", icon: Database },
+  { id: METHOD_SECTIONS.model, title: "Model and measures", icon: Calculator },
+  { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn },
+  { id: METHOD_SECTIONS.geography, title: "Figures by area", icon: MapPinned },
+  { id: METHOD_SECTIONS.young, title: "Young people", icon: Users },
+  { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
+  { id: METHOD_SECTIONS.living, title: "Living standards", icon: TrendingUp },
+  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
+  { id: METHOD_SECTIONS.versions, title: "Versions and replication", icon: GitBranch },
 ];
+
+const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, icon }) => [id, icon]));
+
+// Which views each section's notes apply to, shown as tags under its title
+const SECTION_SCOPE = {
+  [METHOD_SECTIONS.overview]: ["All views"],
+  [METHOD_SECTIONS.data]: ["National figures", "Living standards"],
+  [METHOD_SECTIONS.model]: ["Population impact", "Household impact"],
+  [METHOD_SECTIONS.population]: ["Population impact", "National figures"],
+  [METHOD_SECTIONS.geography]: ["Population impact", "Area figures"],
+  [METHOD_SECTIONS.young]: ["Population impact"],
+  [METHOD_SECTIONS.personal]: ["Household impact"],
+  [METHOD_SECTIONS.living]: ["Living standards"],
+  [METHOD_SECTIONS.limitations]: ["Population impact"],
+  [METHOD_SECTIONS.versions]: ["All views"],
+};
+
+// An icon for each example household, by its id
+const HOUSEHOLD_ICONS = {
+  single_renter: User,
+  couple_three_children: Users,
+  lone_parent: PersonStanding,
+  pensioner_couple: UsersRound,
+  higher_income_saver: Briefcase,
+};
 
 // How the national figures are made, as the steps of the flow at the top
 const FLOW = [
   {
     title: "Survey data",
+    icon: Database,
     text: "Microcosm UK 2024-25: households from the Family Resources Survey, with calibrated weights.",
   },
   {
     title: "Tax-benefit model",
+    icon: Calculator,
     text: "PolicyEngine UK works out each household's taxes, benefits and net income in each year.",
   },
   {
     title: "Two scenarios",
+    icon: Scale,
     text: "Each candidate measure is run against current law, for every fiscal year shown.",
   },
   {
     title: "Static estimates",
+    icon: Sigma,
     text: "The difference is the measure's effect, with behavioural responses left out.",
   },
   {
     title: "Published figures",
+    icon: FileCheck,
     text: "Figures pass disclosure checks, and a named reviewer signs off each public data file; a file awaiting sign-off is marked pending.",
   },
 ];
@@ -81,17 +133,34 @@ const SCATTER_CHANGE_EDGES = SCATTER_BINS.change_edges
   .join(", ");
 const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
-/** A section of the view: its title outside the cards, then its cards. */
+/**
+ * A section of the view: a header row (icon, title, subtitle and the views
+ * it applies to) outside the cards, then its cards and a link back to the
+ * top.
+ */
 function MethodSection({ id, title, subtitle, children }) {
+  const scope = SECTION_SCOPE[id] ?? [];
   return (
     <section id={id} className="method-section" aria-labelledby={`${id}-title`}>
-      <div className="section-heading">
-        <h2 id={`${id}-title`} tabIndex={-1}>
-          {title}
-        </h2>
-        {subtitle && <p>{subtitle}</p>}
+      <div className="section-heading method-section-heading">
+        <IconChip icon={SECTION_ICONS[id]} />
+        <div className="method-section-titles">
+          <h2 id={`${id}-title`} tabIndex={-1}>
+            {title}
+          </h2>
+          {subtitle && <p>{subtitle}</p>}
+          {scope.length > 0 && (
+            <p className="method-tags">
+              <span className="visually-hidden">Applies to: </span>
+              {scope.map((label) => (
+                <Tag key={label}>{label}</Tag>
+              ))}
+            </p>
+          )}
+        </div>
       </div>
       {children}
+      {id !== METHOD_SECTIONS.overview && <BackToTop targetId={METHOD_SECTIONS.overview} />}
     </section>
   );
 }
@@ -136,7 +205,7 @@ function SectionLink({ id, children }) {
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the household calculation with Personal impact's "About
+ * impact, and the household calculation with Household impact's "About
  * these figures". Living standards states the engine, data, notes and gaps
  * of that view's projections.
  *
@@ -166,7 +235,7 @@ function MethodologyTab({ onShowTab }) {
               model applied to a representative survey of UK households. Each
               candidate measure is compared with current law, household by
               household, and the results are weighted up to the whole
-              country. Personal impact applies the same model and measures to
+              country. Household impact applies the same model and measures to
               one household&apos;s answers. Living standards uses the same
               model and data to project incomes and poverty with no Budget
               measures applied.
@@ -174,8 +243,9 @@ function MethodologyTab({ onShowTab }) {
             <ol className="method-flow" aria-label="How the numbers are made">
               {FLOW.map((step, index) => (
                 <li key={step.title} className="method-flow-step">
-                  <span className="method-flow-number" aria-hidden="true">
-                    {index + 1}
+                  <span className="method-flow-marker" aria-hidden="true">
+                    <step.icon strokeWidth={1.75} />
+                    <span className="method-flow-number">{index + 1}</span>
                   </span>
                   <span className="method-flow-title">{step.title}</span>
                   <span className="method-flow-text">{step.text}</span>
@@ -280,10 +350,14 @@ function MethodologyTab({ onShowTab }) {
                       />
                       {measure.name}
                     </th>
-                    <td>{measure.how}</td>
+                    <td>
+                      <ExpandableText text={measure.how} />
+                    </td>
                     <td className="method-measure-year">
-                      <span className="method-cell-label">From </span>
-                      {fiscalYearTick(measure.from)}
+                      <Tag tone="teal">
+                        <span className="method-cell-label">From </span>
+                        {fiscalYearTick(measure.from)}
+                      </Tag>
                     </td>
                   </tr>
                 ))}
@@ -296,13 +370,13 @@ function MethodologyTab({ onShowTab }) {
             </p>
           </div>
 
-          <div className="card method-card method-table-card">
+          <div className="card method-card method-table-card method-muted-card">
             <h3 className="method-card-title">Likely but not modelled</h3>
             <p className="method-more">
               Reported as likely for the Budget, but outside what the household
               model can cost, so not on the page.
             </p>
-            <table className="method-measures">
+            <table className="method-measures method-measures-muted">
               <thead>
                 <tr>
                   <th scope="col">Measure</th>
@@ -312,7 +386,13 @@ function MethodologyTab({ onShowTab }) {
               <tbody>
                 {NOT_MODELLED.map((measure) => (
                   <tr key={measure.name}>
-                    <th scope="row">{measure.name}</th>
+                    <th scope="row">
+                      <span className="method-row-name">{measure.name}</span>
+                      {/* The card's title already says it, so the tag stays out of the row's name */}
+                      <span aria-hidden="true">
+                        <Tag tone="muted">Not modelled</Tag>
+                      </span>
+                    </th>
                     <td>{measure.why}</td>
                   </tr>
                 ))}
@@ -412,13 +492,17 @@ function MethodologyTab({ onShowTab }) {
               Five households, each with a fixed set of circumstances. Each
               chart varies one income, from £0 up to the top of its axis.
             </p>
-            <FactList
-              className="method-facts-wide"
-              items={EXAMPLE_HOUSEHOLDS.map((household) => [
-                household.label,
-                household.definition,
-              ])}
-            />
+            <ul className="method-households">
+              {EXAMPLE_HOUSEHOLDS.map((household) => (
+                <li key={household.id} className="method-household">
+                  <IconChip icon={HOUSEHOLD_ICONS[household.id] ?? User} size="sm" />
+                  <div>
+                    <h4 className="method-household-name">{household.label}</h4>
+                    <p className="method-household-text">{household.definition}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
             <p className="method-more">
               <ViewLink tab="dashboard" hash="household" onShowTab={onShowTab}>
                 See the example household charts
@@ -487,8 +571,8 @@ function MethodologyTab({ onShowTab }) {
 
         <MethodSection
           id={METHOD_SECTIONS.personal}
-          title="Personal impact"
-          subtitle="The calculation behind Personal impact."
+          title="Household impact"
+          subtitle="The calculation behind Household impact."
         >
           <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
             <h3 className="method-card-title">Household calculation</h3>
@@ -496,7 +580,7 @@ function MethodologyTab({ onShowTab }) {
               How one household&apos;s figures are worked out is under
               &ldquo;About these figures&rdquo;, below the results on the{" "}
               <ViewLink tab="personal" onShowTab={onShowTab}>
-                Personal impact tab
+                Household impact tab
               </ViewLink>
               .
             </p>
@@ -526,27 +610,23 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           subtitle="What to bear in mind when reading the figures."
         >
-          <div className="card method-card">
-            <FactList
-              items={[
-                [
-                  "Measures added up",
-                  "Each measure is also simulated on its own. Where several are selected, the revenue, decile and age charts add up their separate effects, so they leave out interactions between measures. The household scatter and the shares better and worse off come from a run of the whole selection, so they include them, and show nothing for a selection with no such run.",
-                ],
-                [
-                  "Pre-Budget basis",
-                  "The economic assumptions and the weights are pre-Budget: they are not yet rebased on the Budget's OBR forecast.",
-                ],
-                [
-                  "Survey coverage",
-                  <>
-                    Surveys miss or under-record some incomes. The{" "}
-                    {policyNotes("policy notes")} say where this affects a
-                    measure.
-                  </>,
-                ],
-              ]}
-            />
+          <div className="method-callouts">
+            <Callout icon={Info} title="Measures added up">
+              Each measure is also simulated on its own. Where several are
+              selected, the revenue, decile and age charts add up their
+              separate effects, so they leave out interactions between
+              measures. The household scatter and the shares better and worse
+              off come from a run of the whole selection, so they include
+              them, and show nothing for a selection with no such run.
+            </Callout>
+            <Callout icon={TriangleAlert} tone="warning" title="Pre-Budget basis">
+              The economic assumptions and the weights are pre-Budget: they
+              are not yet rebased on the Budget&apos;s OBR forecast.
+            </Callout>
+            <Callout icon={Info} title="Survey coverage">
+              Surveys miss or under-record some incomes. The{" "}
+              {policyNotes("policy notes")} say where this affects a measure.
+            </Callout>
           </div>
         </MethodSection>
 
