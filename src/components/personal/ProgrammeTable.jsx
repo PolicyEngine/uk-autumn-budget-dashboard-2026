@@ -178,7 +178,10 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
               {!narrow && <td className="num">{money(totals.after)}</td>}
               <td className="num">
                 {narrow ? (
-                  `${money(totals.before)} → ${money(totals.after)}`
+                  <>
+                    <span className="breakdown-net-label">Before → After</span>
+                    {`${money(totals.before)} → ${money(totals.after)}`}
+                  </>
                 ) : (
                   <span className="visually-hidden">See the headline above.</span>
                 )}

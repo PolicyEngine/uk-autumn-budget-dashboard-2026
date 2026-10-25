@@ -816,7 +816,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0 0 6px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1024,6 +1024,23 @@
   border-radius: 50%;
   cursor: help;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* A 40px tap target around the small circle on a touch screen */
+@media (pointer: coarse) {
+  .info-icon {
+    position: relative;
+  }
+
+  .info-icon::before {
+    content: "";
+    position: absolute;
+    inset: -13px;
+  }
+
+  .household-field .stepper-button {
+    width: 40px;
+  }
 }
 
 .info-icon:hover,

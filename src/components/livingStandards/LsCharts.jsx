@@ -69,7 +69,8 @@ const tickWidth = (ticks, format) => axisWidth(ticks?.length ? ticks : [0], form
 // chart has one, so the legend sits 12-16px under the axis.
 const X_AXIS_HEIGHT = 26;
 const X_TITLE_HEIGHT = 18;
-const plotHeight = (narrow) => (narrow ? 280 : 300);
+// Shorter on a phone, where the forecast charts stack ten deep
+const plotHeight = (narrow) => (narrow ? 210 : 300);
 // Room for the unit label above the plot, and for the last x tick at the right
 const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
 
@@ -134,6 +135,9 @@ export function LsLineChart({
             axisLine={AXIS_LINE}
             tickLine={false}
             height={X_AXIS_HEIGHT}
+            // The first year clear of the y axis's 0 label
+            padding={{ left: 12, right: 4 }}
+            tickMargin={6}
             {...xTicks}
           />
           <YAxis

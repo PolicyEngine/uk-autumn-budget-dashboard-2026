@@ -1337,6 +1337,36 @@ body {
   }
 }
 
+/* A phone: the title has the first row to itself, never cut off, and the
+   two pills share the second; a smaller title on the narrowest screens */
+@media (max-width: 480px) {
+  :root {
+    --title-row-height: 92px;
+  }
+
+  .title-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "title title"
+      "year policy";
+    row-gap: 6px;
+  }
+
+  .band-policy {
+    justify-self: start;
+  }
+
+  .title-row h1 {
+    font-size: var(--fs-body-lg);
+  }
+
+  .app[data-band="compact"] .title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title policy";
+  }
+}
+
+
 /* The page fills the window without overshooting it: the shell's main
    grows to the window, the app grows inside it, and the replication line
    sits at the bottom of the content column, just above the footer. */

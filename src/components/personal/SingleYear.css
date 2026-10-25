@@ -1112,3 +1112,11 @@
     transition: none;
   }
 }
+
+/* A phone's one-column breakdown: what the net row's figures are */
+.breakdown-net-label {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
