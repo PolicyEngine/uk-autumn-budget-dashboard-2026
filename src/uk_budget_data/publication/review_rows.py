@@ -1053,11 +1053,24 @@ def review_rows(
     )
 
     prefix = (data_root / ARTIFACTS_DIR).relative_to(root).as_posix() + "/"
+    from uk_budget_data.publication.release_index import (
+        AREA_FILES,
+        AREA_PROVENANCE_FILE,
+        INDEX_FILE,
+    )
+
+    # What `publish index --without-area` deletes: their rows go with them.
+    area = {
+        (data_root / name).relative_to(root).as_posix()
+        for name in (*AREA_FILES, AREA_PROVENANCE_FILE, INDEX_FILE)
+    }
 
     def removable(path: str) -> bool:
         if path == AREA_ROUTING_FILE:
             return True
-        return path.startswith(prefix) and not os.path.lexists(root / path)
+        return (path.startswith(prefix) or path in area) and not (
+            os.path.lexists(root / path)
+        )
 
     text = merge(
         header,

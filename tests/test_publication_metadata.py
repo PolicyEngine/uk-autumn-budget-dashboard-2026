@@ -27,6 +27,7 @@ from uk_budget_data.publication.release_index import (
     identity_core,
     manifest_identity_problems,
     release_index_problems,
+    unbind_area_results,
     write_area_provenance,
     write_release_index,
 )
@@ -592,6 +593,155 @@ def test_a_later_approval_makes_the_index_stale_until_reindexed(world):
     write_release_index(manifest, **args)
     assert check(manifest, **args) == []
     assert _build_index_problems(world) == []
+
+
+SECOND = "ab2026_mock_beta"
+
+
+def _package_snapshot(world):
+    """Two approved measures and their approved package, an area run over
+    all three (the package by its alias) and the index binding it: results
+    by area as G4 leaves them."""
+    references, records = {}, {}
+    for key, value in ((KEY, -1.0), (SECOND, -0.5)):
+        references[key] = world.ready(key, {2027: value})
+        receipt = read_receipt(references[key].path)
+        records[key] = {
+            "id": key,
+            "baseline": receipt["execution_receipt"]["baseline"],
+            "reform": receipt["execution_receipt"]["reform"],
+        }
+    members = sorted(records)
+    package = "combined--" + "+".join(members)
+    references[package] = world.write(
+        package,
+        {2027: -1.5},
+        members=[records[member] for member in members],
+        measure_ids=members,
+        member_outputs={
+            member: references[member].outputs_sha256 for member in members
+        },
+    )
+    world.reconcile(references[package])
+    manifest = m.Manifest()
+    args = {"data_root": world.data_root, "inputs": world.inputs}
+    for key, reference in references.items():
+        stage(manifest, reference.path, **args)
+        approve(manifest, key, "Reviewer", **args)
+    m.save_manifest(manifest, world.data_root)
+    _area_run(world, manifest, {KEY: KEY, SECOND: SECOND, ALIAS: package})
+    write_release_index(manifest, **args)
+    assert check(manifest, **args) == []
+    return manifest, args, package
+
+
+def _withdraw(world, manifest, key):
+    """``publish withdraw``, as the command saves it."""
+    from uk_budget_data.publication.publish import withdraw
+
+    withdraw(manifest, key, "A correction changes its definition")
+    m.save_manifest(manifest, world.data_root)
+
+
+def test_a_g5_withdrawal_is_refused_by_the_index_while_areas_hold_its_rows(
+    world,
+):
+    """Review of 428d209, finding 4: withdraw, then re-index, stops here."""
+    from uk_budget_data.publication.publish import PublishError
+
+    manifest, args, package = _package_snapshot(world)
+    _withdraw(world, manifest, KEY)
+    assert manifest.combined[package].status == m.STALE
+    with pytest.raises(PublishError) as refused:
+        write_release_index(manifest, **args)
+    problems = " ".join(refused.value.problems)
+    assert f"{KEY} stands for {KEY}, which is withdrawn" in problems
+    assert f"{ALIAS} stands for {package}, which is stale" in problems
+    assert "release index: manifest revision differs" in check(
+        manifest, **args
+    )
+
+
+def test_g5_without_area_takes_the_area_views_down_and_passes_check(world):
+    manifest, args, _ = _package_snapshot(world)
+    _withdraw(world, manifest, KEY)
+    revision = manifest.revision
+    unbind_area_results(manifest, data_root=world.data_root)
+    assert manifest.revision == revision + 1
+    assert manifest.flat_files == manifest.flat_aliases == {}
+    assert manifest.flat_provenance_sha256 is None
+    assert m.load_manifest(world.data_root) == manifest
+    for name in (*AREA_FILES, AREA_PROVENANCE_FILE, INDEX_FILE):
+        assert not (world.data_root / name).exists()
+    assert check(manifest, **args) == []
+    assert _build_index_problems(world) == []
+    # Rerunning it changes nothing but the revision
+    unbind_area_results(manifest, data_root=world.data_root)
+    assert check(manifest, **args) == []
+
+
+def test_g5_area_rerun_over_the_approved_subset_binds_again(world):
+    """With the package stale, the area run covers what is still approved:
+    here regions only, for the other measure."""
+    manifest, args, _ = _package_snapshot(world)
+    _withdraw(world, manifest, KEY)
+    _area_run(world, manifest, {SECOND: SECOND})
+    write_release_index(manifest, **args)
+    assert manifest.flat_aliases == {}
+    assert check(manifest, **args) == []
+    assert _build_index_problems(world) == []
+
+
+def test_g5_review_rows_drop_the_rows_of_the_area_files_taken_down(world):
+    manifest, args, _ = _package_snapshot(world)
+    for name in ("budgetary_impact.csv", "obr_comparison.csv"):
+        (world.data_root / name).unlink(missing_ok=True)
+    for entry in manifest.entries().values():
+        (world.data_root / entry.artifact / "reconciliation.json").unlink(
+            missing_ok=True
+        )
+    review_csv = world.root / "data_inputs" / "public_data_review.csv"
+    review_csv.parent.mkdir(exist_ok=True)
+    with review_csv.open("w", newline="") as handle:
+        csv.writer(handle).writerow(REVIEW_COLUMNS)
+    review_rows(
+        reviewer="Reviewer", data_root=world.data_root, review_csv=review_csv
+    )
+    _withdraw(world, manifest, KEY)
+    unbind_area_results(manifest, data_root=world.data_root)
+    report = review_rows(
+        reviewer="Reviewer", data_root=world.data_root, review_csv=review_csv
+    )
+    assert {
+        "public/data/release-index.json",
+        f"public/data/{AREA_PROVENANCE_FILE}",
+    } <= set(report.removed)
+    with review_csv.open() as handle:
+        paths = {row["path"] for row in csv.DictReader(handle)}
+    for name in (*AREA_FILES, AREA_PROVENANCE_FILE, INDEX_FILE):
+        assert f"public/data/{name}" not in paths
+
+
+def test_publish_index_without_area_runs_from_the_command_line(world):
+    from argparse import Namespace
+
+    from uk_budget_data.publication.commands import run_publish
+
+    manifest, args, _ = _package_snapshot(world)
+    _withdraw(world, manifest, KEY)
+    said = []
+    code = run_publish(
+        Namespace(
+            action="index",
+            without_area=True,
+            data_root=world.data_root,
+            inputs=world.inputs,
+        ),
+        out=said.append,
+    )
+    assert code == 0, said
+    assert "taken off the page" in said[0]
+    assert check(m.load_manifest(world.data_root), **args) == []
 
 
 def test_index_refuses_area_results_made_for_an_earlier_version(world):

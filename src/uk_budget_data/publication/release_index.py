@@ -516,6 +516,43 @@ def _flat_problems(
     return sorted(set(problems))
 
 
+def unbind_area_results(
+    manifest: m.Manifest, *, data_root: Path
+) -> m.Manifest:
+    """Take the results by area off the page, for a correction (G5).
+
+    A withdrawal leaves the bound area tables holding the withdrawn
+    entry's rows, and a stale package's, so ``write_release_index``
+    refuses them until the area run is rerun. This is the quick way past
+    that: it deletes the index, the area tables and their provenance, and
+    saves the manifest without a flat binding (raising its revision). With
+    no index the area views show as unavailable, and nothing else on the
+    page changes. It authorises no figure, so it runs no gate; run
+    ``publish check`` after it. The area run and ``publish index`` bring
+    the views back.
+    """
+    from uk_budget_data.publication.publish import PublishError
+
+    problems = identity_problems(manifest)
+    if not m.manifest_path(data_root).exists():
+        problems.append("save the manifest before unbinding it")
+    if problems:
+        raise PublishError("release index", problems)
+    working = manifest.model_copy(deep=True)
+    working.flat_files = {}
+    working.flat_aliases = {}
+    working.flat_provenance_sha256 = None
+    # The index first, so no later state pairs it with these files. Each
+    # step leaves the area views unavailable, and rerunning finishes it.
+    (data_root / INDEX_FILE).unlink(missing_ok=True)
+    m.save_manifest(working, data_root)
+    for name in (*AREA_FILES, AREA_PROVENANCE_FILE):
+        (data_root / name).unlink(missing_ok=True)
+    for field in type(manifest).model_fields:
+        setattr(manifest, field, getattr(working, field))
+    return manifest
+
+
 def write_release_index(
     manifest: m.Manifest, *, data_root: Path, inputs: Path
 ) -> m.Manifest:

@@ -114,8 +114,15 @@ def add_publish_parser(subparsers) -> None:
     withdrawing.add_argument("--reason", required=True)
 
     actions.add_parser("check", help="Re-run every gate (used by CI)")
-    actions.add_parser(
+    indexing = actions.add_parser(
         "index", help="Bind every flat CSV to this approved manifest snapshot"
+    )
+    indexing.add_argument(
+        "--without-area",
+        action="store_true",
+        help="Instead, take the results by area off the page: delete the "
+        "index, the area tables and their provenance, and save the manifest "
+        "without a flat binding (G5)",
     )
     actions.add_parser("status", help="List manifest entries")
 
@@ -216,10 +223,21 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
 
     if action == "index":
         from uk_budget_data.publication.release_index import (
+            unbind_area_results,
             write_release_index,
         )
 
         try:
+            if getattr(parsed, "without_area", False):
+                manifest = unbind_area_results(
+                    m.load_manifest(data_root), data_root=data_root
+                )
+                out(
+                    "results by area taken off the page at manifest revision "
+                    f"{manifest.revision}; run publish check, then the "
+                    "review rows"
+                )
+                return 0
             manifest = write_release_index(
                 m.load_manifest(data_root), data_root=data_root, inputs=inputs
             )

@@ -666,7 +666,23 @@ Then run the area run (`uk-budget-data geography`, below), and finish with `publ
 
 ## G5: corrections (whenever one arrives)
 
-1. **If the fix changes a published measure's definition, withdraw the measure first:** `uv run uk-budget-data publish withdraw <id> --reason "<why>"`, re-index if results by area are bound, and publish. Personal impact asks the household API live for every displayable measure, so once the API is deployed with the fix it would answer with a definition the published figures don't use. Withdrawn, the measure shows as unavailable there until its regenerated entry is approved. Deploy the household API with the fix only after the withdrawal is live.
+1. **If the fix changes a published measure's definition, withdraw the measure first.** Personal impact asks the household API live for every displayable measure, so once the API is deployed with the fix it would answer with a definition the published figures don't use. Withdrawn, the measure shows as unavailable there until its regenerated entry is approved. Deploy the household API with the fix only after the withdrawal is live.
+
+   ```sh
+   uv run uk-budget-data publish withdraw <id> --reason "<why>"
+   ```
+
+   The withdrawal also makes stale any combined run that includes the measure. **Once results by area are bound** (the manifest has `flat_files`), the area tables still hold rows for the withdrawn measure and the stale package, so `publish index` refuses them and `publish check` fails. Take one of these two routes before checking:
+
+   - **Quick: take the area views down.** This deletes `release-index.json`, `regional.csv`, `constituency.csv` and `area_provenance.json`, and saves the manifest without a flat binding. The area views show as unavailable; nothing else on the page changes. Bring them back later with the area run and `publish index`, as at G4.
+
+     ```sh
+     uv run uk-budget-data publish index --without-area
+     ```
+
+   - **Or rerun the area run over what is still approved**, then `uv run uk-budget-data publish index`. It defaults to the approved ids, so the withdrawn measure and the stale package drop out. With no approved package, constituency results need `--seat-reforms <approved ids>`; or pass `--levels region` and delete `constituency.csv`, since the index refuses a table the run didn't write. Use this route only once the rehearsal has timed an area run.
+
+   Then run `uv run uk-budget-data publish check`, write the review rows (`publish review-rows`, as at G2; they drop the rows of any area files taken down), and publish through a pull request.
 2. **Fix the measure and commit.**
 3. **Regenerate it.** This writes a new artifact; the old one is untouched until step 6's review rows delete it (its entry stays in `superseded` for audit).
 4. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
