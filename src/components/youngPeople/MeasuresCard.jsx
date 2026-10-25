@@ -122,7 +122,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
 
 export const measuresDescription = (band) => {
   const label = groupLabel(band).replace(/^Aged /, "");
-  return `Average change per person from each policy, £ a year: ${label} against all ages.`;
+  return `Each policy's average change per person: ${label} vs all ages.`;
 };
 
 const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));

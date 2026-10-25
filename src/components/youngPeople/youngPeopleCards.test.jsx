@@ -143,7 +143,7 @@ describe("young people cards", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
     fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
     fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
-    expect(screen.getByText(/65 and over against all ages/)).toBeInTheDocument();
+    expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
   });
 
   it("shows a year with no rows as not yet published", () => {
