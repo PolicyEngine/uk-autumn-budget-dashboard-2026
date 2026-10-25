@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  DETAIL_INCLUDE,
+  DETAIL_PARTS,
   DETAIL_TIMEOUT_MS,
   HEADLINE_INCLUDE,
   buildHouseholdRequest,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
@@ -23,8 +24,9 @@ export function clearHouseholdImpactCache() {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Household impact results for the wizard's answers, in two stages: the
- * headline and programmes, then the per-policy split and earnings sweep.
+ * The Household impact results for the wizard's answers: the headline and
+ * programmes first, then the earnings sweep and the per-policy split, asked
+ * for at once and each shown as it arrives.
  *
  * @param {Object} params
  * @param {Object} params.inputs - The wizard's answers
@@ -120,27 +122,41 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
         });
         if (complete) return;
       }
-      try {
-        const raw = await postHouseholdImpact(
-          { ...body, include: DETAIL_INCLUDE },
-          { signal, timeoutMs: DETAIL_TIMEOUT_MS },
-        );
-        if (signal.aborted) return;
-        const merged = mergeStages(first, normaliseHouseholdImpact(raw));
-        cache.set(key, { data: merged, complete: true });
-        setState({
-          key,
-          dataKey: key,
-          status: "ready",
-          data: merged,
-          error: null,
-          detailStatus: "ready",
-          detailError: null,
-        });
-      } catch (error) {
-        if (signal.aborted) return;
-        setState((prev) => ({ ...prev, detailStatus: "error", detailError: error }));
-      }
+      // The sweep and the split by policy, asked for at once: each part is
+      // shown as soon as its own answer arrives
+      let merged = first;
+      let failure = null;
+      const parts = DETAIL_PARTS.filter((include) =>
+        include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
+      );
+      await Promise.all(
+        parts.map(async (include) => {
+          try {
+            const raw = await postHouseholdDetail(
+              { ...body, include },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS },
+            );
+            if (signal.aborted) return;
+            merged = mergeStages(merged, normaliseHouseholdImpact(raw));
+            const complete = merged.byPolicy !== null && merged.sweep !== null;
+            cache.set(key, { data: merged, complete });
+            setState((prev) => ({
+              ...prev,
+              key,
+              dataKey: key,
+              status: "ready",
+              data: merged,
+              error: null,
+              detailStatus: complete ? "ready" : prev.detailStatus,
+            }));
+          } catch (error) {
+            if (signal.aborted) return;
+            failure = failure ?? error;
+          }
+        }),
+      );
+      if (signal.aborted || !failure) return;
+      setState((prev) => ({ ...prev, detailStatus: "error", detailError: failure }));
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
