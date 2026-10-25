@@ -107,6 +107,22 @@ const ICONS = {
       <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
     </>
   ),
+  // Young people: a graduation cap
+  cap: (
+    <>
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12v5c3 2 9 2 12 0v-5" />
+    </>
+  ),
+  // Forecast changes: two arrows round
+  refresh: (
+    <>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </>
+  ),
   // Methodology: an open book
   book: (
     <>

@@ -3,63 +3,101 @@
    a grey track with the chosen segment raised in white and teal text, no
    underline, no full-width bar, and it does not stick. */
 .sub-tabs {
-  display: inline-flex;
+  display: flex;
   max-width: 100%;
-  gap: 2px;
+  gap: 4px;
   margin: 0 0 32px;
-  padding: 3px;
-  background: var(--pe-gray-100);
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
+  padding: 0;
+  border-bottom: 1px solid var(--card-border);
   /* Choosing a sub-tab scrolls the control back to just under the sticky
      band and view tabs; SubTabs.jsx reads this */
   scroll-margin-top: calc(var(--sticky-offset) + 12px);
 }
 
+/* The main tabs' family, one step down: 40px tall, a smaller font, the
+   same icon, tint and teal underline for the chosen one */
 .sub-tab {
-  flex: 0 1 auto;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  min-height: 34px;
+  min-height: 40px;
   padding: 0 14px;
   font-family: inherit;
-  font-size: var(--fs-small);
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
   color: var(--pe-gray-600);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: calc(var(--pe-radius-md) - 3px);
+  border: none;
+  border-radius: 6px 6px 0 0;
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.sub-tab-icon {
+  display: inline-flex;
+  color: var(--pe-gray-500);
 }
 
 .sub-tab:hover {
+  color: var(--band-teal);
+  background: var(--pe-teal-50);
+}
+
+.sub-tab:hover .sub-tab-icon,
+.sub-tab[aria-selected="true"] .sub-tab-icon {
   color: var(--band-teal);
 }
 
 .sub-tab[aria-selected="true"] {
   color: var(--band-teal);
-  background: var(--pe-surface);
-  border-color: var(--card-border);
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+  background: var(--pe-teal-50);
+}
+
+.sub-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--band-teal);
 }
 
 .sub-tabs .sub-tab:focus-visible {
   outline: 2px solid var(--band-teal);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
-/* A phone: the segments share the column and may wrap their labels */
-@media (max-width: 480px) {
+/* A phone: a full-width segmented pair, both visible */
+@media (max-width: 600px) {
   .sub-tabs {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
     margin-bottom: 24px;
+    border-bottom: none;
   }
 
   .sub-tab {
-    flex: 1 1 0;
-    min-height: 40px;
-    padding: 6px 10px;
-    white-space: normal;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 0.875rem;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+  }
+
+  .sub-tab[aria-selected="true"] {
+    border-color: var(--band-teal);
+  }
+
+  .sub-tab[aria-selected="true"]::after {
+    display: none;
   }
 }

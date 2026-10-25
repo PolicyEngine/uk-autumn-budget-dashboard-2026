@@ -4,8 +4,8 @@ import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 
 /** Population impact's sub-tabs; the first, All households, is the default. */
 export const POPULATION_SUB_TABS = [
-  { value: "all", label: "All households" },
-  { value: "young", label: "Young people" },
+  { value: "all", label: "All households", icon: "users" },
+  { value: "young", label: "Young people", icon: "cap" },
 ];
 
 const SUB_TAB_VALUES = POPULATION_SUB_TABS.map((tab) => tab.value);

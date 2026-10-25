@@ -71,8 +71,8 @@ function Row({ row, data }) {
 }
 
 const SUB_TABS = [
-  { value: "baseline", label: "Baseline outlook" },
-  { value: "forecast", label: "Forecast changes" },
+  { value: "baseline", label: "Baseline outlook", icon: "trend" },
+  { value: "forecast", label: "Forecast changes", icon: "refresh" },
 ];
 const SUB_TAB_VALUES = SUB_TABS.map((t) => t.value);
 
