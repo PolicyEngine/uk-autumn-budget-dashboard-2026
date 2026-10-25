@@ -16,6 +16,8 @@ module fills caches at run time, so no modifier may live here).
 Year Y is fiscal year Y-(Y+1).
 """
 
+import os
+import re
 from datetime import date
 from typing import Optional
 
@@ -373,6 +375,239 @@ _MEASURE_FACTORIES = (
 )
 
 
+# =============================================================================
+# DRILL 5 (MOCK DATA, 26 October 2026; do not merge)
+# =============================================================================
+# Six of the nine candidates above plus nine new measures: the fifteen most
+# probable measures PolicyEngine UK can model, from Manifold's UK Autumn
+# Budget 2026 markets and reporting up to 25 October 2026. Select them with
+# UK_BUDGET_MEASURE_SET=drill5; without it, nothing below is registered.
+# Specifics are mock values where reporting gives none (issue: Drill 5).
+
+UC_STANDARD_ALLOWANCE = "gov.dwp.universal_credit.standard_allowance.amount"
+UC_CLAIMANT_TYPES = (
+    "SINGLE_YOUNG",
+    "SINGLE_OLD",
+    "COUPLE_YOUNG",
+    "COUPLE_OLD",
+)
+NI_SECONDARY_THRESHOLD = (
+    "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold"
+)
+CGT_BASIC_RATE = "gov.hmrc.cgt.basic_rate"
+CGT_HIGHER_RATE = "gov.hmrc.cgt.higher_rate"
+HVCTS_FIRST_THRESHOLD = (
+    "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold"
+)
+LHA_FREEZE = "gov.dwp.LHA.freeze"
+DIVIDEND_RATES = tuple(
+    f"gov.hmrc.income_tax.rates.dividends[{band}].rate" for band in (0, 1, 2)
+)
+
+UC_BELOW_CPI_ID = "uc_standard_allowance_below_cpi"
+STATE_PENSION_EXTENDED_ID = "state_pension_income_tax_protection_extended"
+NI_SECONDARY_THRESHOLD_ID = "employer_ni_secondary_threshold_raised"
+CGT_RATES_ID = "cgt_main_rates_up_2pp"
+HVCTS_ID = "council_tax_surcharge_from_1_5m"
+LHA_RESET_ID = "lha_reset_april_2027"
+DIVIDEND_RATES_ID = "dividend_rates_up_1pp"
+GAS_VAT_ID = "domestic_gas_zero_vat"
+
+# Measures that are alternatives to another drill 5 measure, so the drill's
+# combined run leaves them out (the extension replaces the base protection).
+DRILL5_ALTERNATIVES = (STATE_PENSION_EXTENDED_ID,)
+
+
+def _current_law(path: str, year: int):
+    from policyengine_uk.system import system
+
+    node = system.parameters
+    for part in re.split(r"\.(?![^\[]*\])", path):
+        match = re.fullmatch(r"(\w+)\[(\d+)\]", part)
+        if match:
+            node = getattr(node, match.group(1)).brackets[int(match.group(2))]
+        else:
+            node = getattr(node, part)
+    return node(f"{year}-04-06")
+
+
+def _create_uc_standard_allowance_below_cpi() -> Reform:
+    changes = {}
+    for claimant in UC_CLAIMANT_TYPES:
+        path = f"{UC_STANDARD_ALLOWANCE}.{claimant}"
+        changes.update(
+            threshold_change(
+                path,
+                {
+                    str(y): round(_current_law(path, y) * 0.99, 2)
+                    for y in POLICY_YEARS
+                    if y >= 2027
+                },
+            )
+        )
+    return Reform(
+        id=UC_BELOW_CPI_ID,
+        name="UC standard allowance uprated below CPI",
+        description=(
+            "Drill 5 mock measure. The Universal Credit standard allowance "
+            "rises by one point less than CPI in April 2027, so from "
+            "2027-28 every claimant type's allowance is 1% below current "
+            "law."
+        ),
+        parameter_changes=changes,
+    )
+
+
+def _create_state_pension_income_tax_protection_extended() -> Reform:
+    return Reform(
+        id=STATE_PENSION_EXTENDED_ID,
+        name="State Pension income tax protection, extended",
+        description=(
+            "Drill 5 mock measure, an alternative to the State Pension "
+            "income tax protection. People over State Pension age get a "
+            "personal allowance of the full new State Pension from 2027-28, "
+            "kept whatever their other income or State Pension increments."
+        ),
+        simulation_modifier=(
+            budget_measures.state_pension_income_tax_allowance_untapered
+        ),
+    )
+
+
+def _create_employer_ni_secondary_threshold_raised() -> Reform:
+    return Reform(
+        id=NI_SECONDARY_THRESHOLD_ID,
+        name="Employer NI threshold raised by £1,000",
+        description=(
+            "Drill 5 mock measure. The employer National Insurance "
+            "secondary threshold rises by £1,000 a year from April 2027 "
+            "(£5,000 to £6,000 in 2027-28)."
+        ),
+        parameter_changes=threshold_change(
+            NI_SECONDARY_THRESHOLD,
+            {
+                str(y): _current_law(NI_SECONDARY_THRESHOLD, y) + 1000 / 52
+                for y in POLICY_YEARS
+                if y >= 2027
+            },
+        ),
+    )
+
+
+def _create_cgt_main_rates_up_2pp() -> Reform:
+    changes = rate_change(CGT_BASIC_RATE, _years_from(2027, 0.20))
+    changes.update(rate_change(CGT_HIGHER_RATE, _years_from(2027, 0.26)))
+    return Reform(
+        id=CGT_RATES_ID,
+        name="Capital gains tax main rates up 2 points",
+        description=(
+            "Drill 5 mock measure. From 6 April 2027 the main capital gains "
+            "tax rates rise from 18% and 24% to 20% and 26%."
+        ),
+        parameter_changes=changes,
+    )
+
+
+def _create_council_tax_surcharge_from_1_5m() -> Reform:
+    return Reform(
+        id=HVCTS_ID,
+        name="Council tax surcharge from £1.5m",
+        description=(
+            "Drill 5 mock measure. The High Value Council Tax Surcharge "
+            "starts at £1.5 million instead of £2 million (2026 prices, "
+            "uprated as current law), so homes from £1.5 million pay the "
+            "first band's £2,500 from April 2028."
+        ),
+        parameter_changes=threshold_change(
+            HVCTS_FIRST_THRESHOLD,
+            {
+                str(y): round(_current_law(HVCTS_FIRST_THRESHOLD, y) * 0.75)
+                for y in POLICY_YEARS
+                if y >= 2028
+            },
+        ),
+    )
+
+
+def _create_lha_reset_april_2027() -> Reform:
+    return Reform(
+        id=LHA_RESET_ID,
+        name="Local Housing Allowance reset in April 2027",
+        description=(
+            "Drill 5 mock measure. Local Housing Allowance rates are reset "
+            "to the 30th percentile of local rents in April 2027, then "
+            "frozen in cash terms again."
+        ),
+        parameter_changes={LHA_FREEZE: {"2027": False}},
+    )
+
+
+def _create_dividend_rates_up_1pp() -> Reform:
+    changes = {}
+    for path in DIVIDEND_RATES:
+        changes.update(
+            rate_change(
+                path,
+                {
+                    str(y): round(_current_law(path, y) + 0.01, 4)
+                    for y in POLICY_YEARS
+                    if y >= 2027
+                },
+            )
+        )
+    return Reform(
+        id=DIVIDEND_RATES_ID,
+        name="Dividend tax rates up 1 point",
+        description=(
+            "Drill 5 mock measure. From 6 April 2027 each dividend tax rate "
+            "rises by one point (basic 10.75% to 11.75%)."
+        ),
+        parameter_changes=changes,
+    )
+
+
+def _create_domestic_gas_zero_vat() -> Reform:
+    return Reform(
+        id=GAS_VAT_ID,
+        name="Zero VAT on domestic gas",
+        description=(
+            "Drill 5 mock measure. No VAT on household gas bills, instead "
+            "of 5%, from 1 April 2027 to 31 March 2028."
+        ),
+        simulation_modifier=budget_measures.zero_vat_on_domestic_gas,
+    )
+
+
+_DRILL5_MEASURE_FACTORIES = (
+    _create_fuel_duty_rise_deferral,
+    _create_warm_home_discount_top_up,
+    _create_uc_standard_allowance_below_cpi,
+    _create_state_pension_income_tax_protection,
+    _create_state_pension_income_tax_protection_extended,
+    _create_domestic_electricity_zero_vat,
+    _create_employer_ni_secondary_threshold_raised,
+    _create_employer_ni_relief_under_25s,
+    _create_cgt_main_rates_up_2pp,
+    _create_council_tax_surcharge_from_1_5m,
+    _create_lha_reset_april_2027,
+    _create_dividend_rates_up_1pp,
+    _create_domestic_gas_zero_vat,
+    _create_threshold_freeze_2031_32,
+    _create_badr_lifetime_limit_cut,
+)
+
+
+def get_drill5_measures() -> list[Reform]:
+    """The fifteen drill 5 measures, without a combined run."""
+    return [factory() for factory in _DRILL5_MEASURE_FACTORIES]
+
+
+def _measure_factories():
+    if os.environ.get("UK_BUDGET_MEASURE_SET") == "drill5":
+        return _DRILL5_MEASURE_FACTORIES
+    return _MEASURE_FACTORIES
+
+
 def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
     """One simulation of every candidate measure.
 
@@ -412,9 +647,10 @@ _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
-        members = [factory() for factory in _MEASURE_FACTORIES]
+        members = [factory() for factory in _measure_factories()]
+        combined = [m for m in members if m.id not in DRILL5_ALTERNATIVES]
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(members),  # Combined first
+            _create_combined_autumn_budget_reform(combined),  # Combined first
             *members,
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
