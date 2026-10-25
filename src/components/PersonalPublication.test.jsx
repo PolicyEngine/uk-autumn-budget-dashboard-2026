@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PersonalImpactTab from "./PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -32,6 +32,30 @@ function show(value) {
 }
 
 describe("Personal impact's publication gate", () => {
+  it("offers to remove only the unavailable selected measures", () => {
+    // Review of 62febdd, finding 4: a withdrawn selection had no way out
+    const value = buildMeasureCatalogue({
+      manifest: {
+        ...base, snapshotSha256: "a".repeat(64),
+        measures: {
+          alpha: { ...base.measures.alpha, years: [year], unsupported_years: [] },
+          beta: { ...base.measures.beta, status: "withdrawn", years: [year], unsupported_years: [] },
+        },
+        combined: {},
+      },
+      tablesByKey: { alpha: {} },
+    });
+    const remove = vi.fn();
+    render(
+      <MeasureCatalogueProvider catalogue={value}>
+        <PersonalImpactTab selectedPolicies={["alpha", "beta"]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Remove .* from the selection$/ }));
+    expect(remove).toHaveBeenCalledWith(["beta"]);
+  });
+
   it("keeps the live single-year calculator for a verified published measure", () => {
     show(catalogue());
     expect(screen.getByTestId("live-calculator")).toHaveAttribute("data-policies", "alpha");

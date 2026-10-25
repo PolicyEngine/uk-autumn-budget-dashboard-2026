@@ -134,6 +134,24 @@ describe("an open page follows the publication", () => {
     expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
   });
 
+  it("lets the reader remove a withdrawn measure and keep the rest", async () => {
+    // Review of 62febdd, finding 4: the selector cannot offer a withdrawn
+    // measure, so the notice must, or the selection never recovers
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    const next = twoMeasures("withdrawn");
+    next.revision += 1;
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    const notice = (await screen.findByText("Some selected measures are unavailable")).closest(".publication-unavailable");
+    fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
+    await screen.findByTestId("distributional-figures");
+    expect(rowIds()).toEqual(new Set(["alpha"]));
+    expect(new URLSearchParams(window.location.search).get("policies")).toBe("alpha");
+    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+  });
+
   it("replaces an approved measure's figures with its newly verified artifact", async () => {
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);

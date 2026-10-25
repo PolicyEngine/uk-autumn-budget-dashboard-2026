@@ -1,5 +1,5 @@
 import HouseholdCalculator from "./HouseholdCalculator";
-import UnavailableNotice from "./publication/UnavailableNotice";
+import UnavailableNotice, { RemoveUnavailable } from "./publication/UnavailableNotice";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./PersonalImpactTab.css";
 
@@ -7,13 +7,17 @@ import "./PersonalImpactTab.css";
  * Personal impact: one household's answers, then its net income in the
  * year chosen in the title band before and after the selected policies.
  */
-function PersonalImpactTab({ selectedPolicies = [], policies = [], year }) {
+function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemoveUnavailable }) {
   const catalogue = useMeasureCatalogue();
   const unavailable = selectedPolicies.filter((id) => !isCatalogueRowDisplayable(catalogue, id, year));
   if (!catalogue.manifest || unavailable.length) {
+    const names = unavailable.map((id) => catalogue.byId.get(id)?.name ?? id);
     return (
       <UnavailableNotice reason="Personal impact is unavailable for the selected measures">
-        <p>{unavailable.map((id) => catalogue.byId.get(id)?.name ?? id).join(", ") || "No verified Budget measures are published yet."}</p>
+        <p>{names.join(", ") || "No verified Budget measures are published yet."}</p>
+        {catalogue.manifest && onRemoveUnavailable && (
+          <RemoveUnavailable names={names} onRemove={() => onRemoveUnavailable(unavailable)} />
+        )}
       </UnavailableNotice>
     );
   }

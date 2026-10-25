@@ -27,7 +27,7 @@ import { DISPLAY_YEARS } from "./utils/displayYears";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
-import UnavailableNotice from "./components/publication/UnavailableNotice";
+import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import Note from "./components/Note";
 import PolicyCards from "./components/PolicyCards";
@@ -160,6 +160,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     setSelectedPolicies((previous) => previous.includes(policyId) ? previous.filter((id) => id !== policyId) : [...previous, policyId]);
   };
   const handlePresetClick = setSelectedPolicies;
+  // Only on the reader's request: an unavailable measure leaves the selection
+  const removeFromSelection = (ids) => setSelectedPolicies((previous) => previous.filter((id) => !ids.includes(id)));
 
   const titleSentinelRef = useRef(null);
   const [titleStuck, setTitleStuck] = useState(false);
@@ -370,7 +372,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {viewUnavailable && BUDGET_VIEWS.has(activeTab) ? (
           <UnavailableNotice reason={viewUnavailable.reason}>
             {viewUnavailable.detail && <p>{viewUnavailable.detail}</p>}
-            <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+            {unavailable ? (
+              <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+            ) : (
+              <>
+                <p>No figures are shown for a selection while any of it is unavailable.</p>
+                <RemoveUnavailable
+                  names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
+                  onRemove={() => removeFromSelection(unavailableIds)}
+                />
+              </>
+            )}
           </UnavailableNotice>
         ) : activeTab === "living" ? (
           <LivingStandardsTab />
@@ -381,6 +393,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             year={distributionalYear}
+            onRemoveUnavailable={removeFromSelection}
           />
         ) : (
           // Population impact: All households and Young people sub-tabs
