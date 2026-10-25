@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-25T14:33:18+00:00",
+    "generated_at": "2026-10-25T14:38:15+00:00",
     "policyengine": "6.10.2",
     "policyengine_uk": "2.132.6",
     "dataset": {
@@ -126,7 +126,7 @@
       }
     },
     "notes": [
-      "Model figures are unvalidated demo output from the Microcosm dataset.",
+      "Model projections; not yet validated against outturn.",
       "Income outturn is HBAI, published in real terms; BHC cash values are recovered with OBR CPI, and AHC outturn is shown in real terms only.",
       "Poverty and inequality outturn is the HBAI admin-linked series, which starts in 2021-22.",
       "The 2024-25 model point uses the weights solved for 2025, scaled for population, so it carries 2025 composition and caseloads (UC \u00a374bn).",

@@ -763,7 +763,7 @@ CAVEATS = [
 def notes(validation: dict) -> list[str]:
     """meta.notes: one plain sentence each, at most 160 characters."""
     out = [
-        "Model figures are unvalidated demo output from the Microcosm dataset.",
+        "Model projections; not yet validated against outturn.",
         "Income outturn is HBAI, published in real terms; BHC cash values are recovered with OBR CPI, and AHC outturn is shown in real terms only.",
         "Poverty and inequality outturn is the HBAI admin-linked series, which starts in 2021-22.",
         (
