@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "data_limits_registry_sha256": "e73b1002109291b7f55387f85b6c6a2cabd662223aa792f8dfd65cc65e897123",
     "dataset_years": [
       2024,
       2025,
@@ -40,7 +40,7 @@
       "metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
       "winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30"
     },
-    "generated_at": "2026-10-24T13:47:34.890597+00:00",
+    "generated_at": "2026-10-25T16:26:34.152821+00:00",
     "generator_argv": [
       "test"
     ],
@@ -129,7 +129,7 @@
     },
     "runtime": {
       "platform": "darwin",
-      "python_version": "3.13.15"
+      "python_version": "3.13.9"
     },
     "schema_version": 1,
     "supported_years": [

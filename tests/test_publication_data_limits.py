@@ -18,7 +18,7 @@ from tests.fixed_shape_measures import (
     sdlt_from_purchases_read_at_build,
 )
 from tests.publication_support import World, make_household_rows, make_tables
-from tests.test_data_limits import RAISED_SURCHARGE
+from tests.purchase_helpers import RAISED_SURCHARGE
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module

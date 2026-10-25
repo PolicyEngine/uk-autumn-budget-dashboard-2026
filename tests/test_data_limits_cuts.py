@@ -11,6 +11,7 @@ adoption that brings a cut without its record, or skips a limit, fails
 here.
 """
 
+import functools
 from unittest import mock
 
 import pytest
@@ -29,6 +30,8 @@ from uk_budget_data.data_limits import (
     coverage_problems,
     limits_for_paths,
     limits_touched,
+    record,
+    record_problems,
 )
 from uk_budget_data.measure_templates import _call_formula
 
@@ -82,15 +85,25 @@ def test_each_recorded_input_is_an_input_of_the_installed_model(name):
     assert not variable.adds and not variable.subtracts
 
 
-@pytest.mark.parametrize("name", sorted(NO_LONGER_MISSING))
-def test_an_input_no_longer_missing_left_the_model_or_is_checked_on_data(
-    name,
-):
-    """Gone from the model, or no longer a plain input: otherwise only the
-    certified data can show it is carried again (checked there)."""
-    variable = system.variables.get(name)
-    if variable is not None and not variable.formulas:
-        pytest.skip("carried by the data: checked with the certified data")
+def test_an_input_no_longer_missing_was_listed_and_its_limit_removed():
+    """Whether it left the model or the data carry it again (checked with
+    the certified data below), it is an input a cut listed, its limit went
+    in the same adoption PR, and it says why."""
+    records = data_limits.NEWLY_MISSING_INPUTS
+    listed = {name for names in records.values() for name in names}
+    limited = {limit.missing_input for limit in data_limits.DATA_LIMITS}
+    for name, why in data_limits.NO_LONGER_MISSING.items():
+        assert name in listed, f"{name} is in no cut's list"
+        assert name not in limited, f"{name} still has a limit"
+        assert why.strip(), f"{name} says nothing about why"
+
+
+def test_the_released_check_refuses_an_unlisted_or_still_limited_input():
+    """Not vacuous while NO_LONGER_MISSING is empty."""
+    for released in ({"never_listed": "why"}, {"pip_dl_points": "why"}):
+        with mock.patch.object(data_limits, "NO_LONGER_MISSING", released):
+            with pytest.raises(AssertionError):
+                test_an_input_no_longer_missing_was_listed_and_its_limit_removed()
 
 
 @pytest.mark.certified_data
@@ -263,6 +276,7 @@ HELD = [
         "gov.dft.bus.uncapped_single_fares.fare",
         ["bus_uncapped_single_fares"],
     ),
+    ("gov.dft.bus.default_single_fare_share", ["bus_uncapped_single_fares"]),
     ("gov.dft.bus.ridership_index", []),
     (f"{ANNUAL_ALLOWANCE}.default", PENSION_LIMITS),
     (f"{ANNUAL_ALLOWANCE}.taper", PENSION_LIMITS),
@@ -302,6 +316,38 @@ def test_a_change_is_held_by_the_limits_whose_input_it_acts_through(
     assert keys(limits_for_paths([path])) == [
         key for key in BY_KEY if key in held
     ]
+
+
+@pytest.mark.parametrize(
+    "path, held", [(path, held) for path, held in HELD if len(held) > 1]
+)
+def test_the_receipt_accepts_each_limit_an_overlapping_path_falls_under(
+    path, held
+):
+    """The annual allowance, Universal Credit capital and the capital
+    sources fall under several limits, and each records the path: the
+    receipt check took a path to belong to one limit only, so these
+    measures could not be staged at all (review of #132)."""
+    records = [record(BY_KEY[key], [path]) for key in held]
+    assert record_problems(records) == []
+
+
+@pytest.mark.parametrize(
+    "path, value, held",
+    [
+        (f"{ANNUAL_ALLOWANCE}.default", 50_000, PENSION_LIMITS),
+        (f"{UC_CAPITAL}.limit", 20_000, PROPERTY_DEBT_LIMITS),
+    ],
+)
+def test_a_measure_held_by_several_limits_passes_the_receipt_check(
+    path, value, held
+):
+    touched = limits_touched(
+        one_adult(),
+        one_adult(Scenario(parameter_changes={path: {"2027": value}})),
+    )
+    assert touched_keys(touched) == [key for key in BY_KEY if key in held]
+    assert record_problems(touched) == []
 
 
 @pytest.mark.parametrize("path", sorted({path for path, _ in HELD}))
@@ -373,9 +419,11 @@ def test_the_models_own_construction_reads_three_of_the_inputs():
     """Not vacuous: policyengine-uk 2.147.2 builds every simulation through
     the Universal Credit rebalancing, which calculates the capital tests
     and earnings, so counting the constructor's own reads would hold every
-    measure (all 9 on main, before this was fixed)."""
+    measure (all 9 on main, before this was fixed). It fetches the holders
+    of more of them besides (converting a situation to a dataset fetches
+    every input's)."""
     with mock.patch.object(data_limits, "_model_constructors", frozenset):
-        assert build_reads() == CONSTRUCTION_READS
+        assert CONSTRUCTION_READS < build_reads()
 
 
 def test_building_a_household_counts_none_of_the_models_own_reads():
@@ -402,6 +450,146 @@ def test_a_modifier_reading_a_new_input_while_built_is_counted():
     assert build_reads(Scenario(simulation_modifier=modifier)) == {
         "directly_held_shares"
     }
+
+
+def bus_rider(scenario=None):
+    return Simulation(
+        situation={
+            "people": {
+                "p": {
+                    "age": {"2027": 40},
+                    "other_local_bus_trips": {"2027": 200},
+                }
+            },
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {
+                "h": {"members": ["p"], "region": {"2027": "NORTH_EAST"}}
+            },
+        },
+        scenario=scenario,
+    )
+
+
+@pytest.mark.parametrize(
+    "variable, build, read",
+    [
+        ("pip_dl_category", one_adult, "pip_dl_points"),
+        ("pip_m_category", one_adult, "pip_m_points"),
+        (
+            "person_bus_fare_spending",
+            bus_rider,
+            "local_bus_uncapped_single_fare",
+        ),
+    ],
+)
+def test_a_modifier_reading_through_the_supplied_input_helpers_is_counted(
+    variable, build, read
+):
+    """policyengine-uk reads these three only through ``supplied_input`` and
+    ``supplied_input_periods``, which fetch the holder and skip
+    ``Holder.get_array``; with nothing supplied they read nothing more. So
+    a modifier pricing from the default at build counted nothing (review of
+    #132)."""
+
+    def modifier(sim):
+        sim.calculate(variable, 2027)
+        return sim
+
+    sim = data_limits.watched_build(
+        build, Scenario(simulation_modifier=modifier)
+    )
+    assert read in data_limits._build_reads(sim)
+
+
+def test_the_models_construction_still_counts_none_of_its_own_fetches():
+    """Counting fetched holders too adds none of the construction's own."""
+    assert build_reads() == frozenset()
+    assert data_limits._build_reads(data_limits.watched_build(bus_rider)) == (
+        frozenset()
+    )
+
+
+SHARES_MODIFIER = """
+def modify(sim):
+    sim.calculate("directly_held_shares", 2027)
+    return sim
+"""
+
+
+def modifier_from(filename):
+    namespace = {}
+    exec(compile(SHARES_MODIFIER, filename, "exec"), namespace)
+    return namespace["modify"]
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "/x/src/uk_budget_data/budget_measures/a_measure.py",
+        "/x/site-packages/policyengine_uk/scenarios/a_scenario.py",
+    ],
+)
+def test_the_scenarios_modifier_counts_wherever_its_code_is(filename):
+    """The modifier the constructor calls is the measure's, even when
+    policyengine-uk ships it (a built-in scenario): told by the call, not
+    by its file (review of #132). One applied before the data load can't
+    read a value yet; a formula it replaces is the case below."""
+    scenario = Scenario(simulation_modifier=modifier_from(filename))
+    assert "directly_held_shares" in build_reads(scenario)
+
+
+NESTED_MODIFIER = """
+def modify(sim):
+    Simulation(situation=SITUATION)
+    return sim
+"""
+
+
+def test_a_shipped_modifier_building_another_simulation_counts_none():
+    """What the construction of a simulation the modifier builds reads is
+    still the model's own, as it would be from a measure's file."""
+    namespace = {
+        "Simulation": Simulation,
+        "SITUATION": {
+            "people": {"p": {"age": {"2027": 40}}},
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {"h": {"members": ["p"]}},
+        },
+    }
+    exec(
+        compile(
+            NESTED_MODIFIER,
+            "/x/site-packages/policyengine_uk/scenarios/nested.py",
+            "exec",
+        ),
+        namespace,
+    )
+    scenario = Scenario(simulation_modifier=namespace["modify"])
+    assert build_reads(scenario) == frozenset()
+
+
+def test_a_partial_or_callable_object_as_modifier_counts_too():
+    shipped = modifier_from("/x/site-packages/policyengine_uk/s.py")
+
+    def shipped_code(function):
+        function.__code__ = function.__code__.replace(
+            co_filename="/x/site-packages/policyengine_uk/p.py"
+        )
+        return function
+
+    class Modifier:
+        @shipped_code
+        def __call__(self, sim):
+            return shipped(sim)
+
+    @shipped_code
+    def with_year(sim, year):
+        sim.calculate("directly_held_shares", year)
+        return sim
+
+    for modifier in (functools.partial(with_year, year=2027), Modifier()):
+        scenario = Scenario(simulation_modifier=modifier)
+        assert "directly_held_shares" in build_reads(scenario)
 
 
 def test_a_formula_replaced_before_the_data_counts_when_the_build_runs_it():
@@ -476,7 +664,7 @@ def test_a_change_to_a_parameter_from_year_0_is_held_and_others_compare():
 def registry():
     """Patch the record and limits for one test."""
 
-    def patch(records, limited=(), released=None):
+    def patch(records, limited=(), released=None, against=None):
         limits = tuple(
             data_limits.DataLimit(f"k_{name}", (), name, "r")
             for name in limited
@@ -486,6 +674,12 @@ def registry():
             NEWLY_MISSING_INPUTS=records,
             DATA_LIMITS=limits,
             NO_LONGER_MISSING=released or {},
+            RECORD_ROOT="root",
+            LISTED_AGAINST=(
+                {cut: "root" for cut in records}
+                if against is None
+                else against
+            ),
         )
 
     return patch
@@ -510,6 +704,46 @@ def test_an_input_a_skipped_cut_listed_still_needs_its_limit(registry):
     with registry({"skipped": ("a",), "installed": ()}):
         [problem] = coverage_problems("installed")
     assert problem.startswith("a, which skipped newly leaves")
+
+
+def test_the_root_needs_no_record(registry):
+    with registry({}):
+        assert coverage_problems("root") == []
+
+
+def test_a_chain_of_recorded_cuts_to_the_root_passes(registry):
+    with registry(
+        {"new": (), "mid": ()}, against={"new": "mid", "mid": "root"}
+    ):
+        assert coverage_problems("new") == []
+
+
+def test_a_cut_listed_against_one_never_recorded_fails(registry):
+    """The cut in between was certified and never adopted: what it newly
+    left at the defaults is in neither list (review of #132)."""
+    with registry({"new": ()}, against={"new": "between"}):
+        [problem] = coverage_problems("new")
+    assert problem.startswith("new lists the inputs it newly leaves")
+    assert "against between, which has no record" in problem
+
+
+def test_a_record_naming_no_predecessor_fails(registry):
+    with registry({"new": ()}, against={}):
+        [problem] = coverage_problems("new")
+    assert problem.startswith("new has no LISTED_AGAINST entry")
+
+
+def test_a_chain_that_loops_fails(registry):
+    with registry({"a": (), "b": ()}, against={"a": "b", "b": "a"}):
+        [problem] = coverage_problems("a")
+    assert "loop" in problem
+
+
+def test_the_record_links_each_cut_back_to_the_root():
+    assert set(data_limits.LISTED_AGAINST) == set(NEWLY_MISSING_INPUTS)
+    for cut in NEWLY_MISSING_INPUTS:
+        assert data_limits._chain_problems(cut) == []
+    assert data_limits.LISTED_AGAINST[A133] == data_limits.RECORD_ROOT
 
 
 def test_an_input_no_longer_missing_needs_no_limit(registry):
@@ -550,6 +784,8 @@ def test_problems_are_exactly_the_unheld_inputs_and_a_missing_record(
         NEWLY_MISSING_INPUTS=records,
         DATA_LIMITS=limits,
         NO_LONGER_MISSING={n: "why" for n in released},
+        RECORD_ROOT="root",
+        LISTED_AGAINST={cut: "root" for cut in records},
     ):
         problems = coverage_problems(installed)
     unheld = {

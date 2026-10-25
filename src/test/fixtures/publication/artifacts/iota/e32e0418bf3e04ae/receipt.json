@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "data_limits_registry_sha256": "e73b1002109291b7f55387f85b6c6a2cabd662223aa792f8dfd65cc65e897123",
     "dataset_years": [
       2024,
       2025,
@@ -29,38 +29,43 @@
     ],
     "digests": {
       "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
-      "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
-      "receipt_sha256": "e1078e5f2072c780c24e337a31d7d0b60b4e4229eaa8bec8ad9887d048c66455"
+      "outputs_sha256": "8f5d21927f2c9293120acd7a89b80a20b9df01cc9a9cfdeb45cde2138239054c",
+      "receipt_sha256": "e7e468f691f12d0e0039f9720471db0c8257e67874d62c57a7a059e906e01841"
     },
     "files": {
-      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
-      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
-      "household_scatter_binned.csv": "43b8d1378ec99f5c2d48a694c2abdca7cfea0381fdc3d67923de9e21b1a187ad",
-      "income_curve.csv": "87b54f14232ed77c6a103fc284c303151422d9864aad917f2a835141966e516c",
-      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
-      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
+      "budgetary_impact.csv": "bffba30939ec96988e2221bd383d58b8cbbdb64d393e858faddec52914f950eb",
+      "distributional_impact.csv": "4f34cc2bfa775aad6eefc6abd2e6d6e2e6cc5c355b64d30c42c24ae39313b3d0",
+      "household_scatter_binned.csv": "401e01c04e1f41b34ecbe0fcab07204f3daa62d1b9c85c030e46410b00667a96",
+      "income_curve.csv": "7f1c002504d1913dc907e7bf2f5bb2d5e9d3796421c5ebdd4160308d031bb1f4",
+      "metrics.csv": "befeaa4af25739e9557d61fca966db6f116a650f35d8c96443ee6ad1520ebcbe",
+      "winners_losers.csv": "376f401df6c398a58ce39f425f2ed589d871795802d840183cdf8bcd6bf516f1"
     },
-    "generated_at": "2026-10-24T13:47:34.448334+00:00",
-    "generation_id": "0e49f7c6f2334092bc45da6c80e7c18b",
+    "generated_at": "2026-10-25T16:26:35.058743+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "delta",
+    "key": "iota",
     "measure_ids": [
-      "delta"
+      "iota"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [],
+    "model_limits": [
+      {
+        "key": "vat_consumption_coverage",
+        "parameters": [
+          "variable:vat"
+        ],
+        "reason": "The installed model grosses household VAT up to receipts by a single factor of 0.38 (gov.simulation.microdata_vat_coverage). policyengine-uk #2187 divides instead by survey consumption coverage times the household share of VAT receipts, 0.67 \u00d7 0.7 = 0.469, so this model's VAT is about 23% higher (the UK hub's notice 59 puts it about 24% high on Microcosm), and a measure that moves a VAT rate, the VAT base or the consumption VAT is charged on can be overstated by as much. A measure built with the VAT base template is held too, though the term the template adds is not grossed. #2187 is not in this model. Until a pair with it is adopted, such measures are held at provisional."
+      }
+    ],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
-      "reform": [
-        null
-      ]
+      "reform": []
     },
-    "name": "Delta",
+    "name": "Iota",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.2",
@@ -73,7 +78,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "delta baseline"
+      "name": "iota baseline"
     },
     "certificate": {
       "bundle_version": "6.10.2",
@@ -113,18 +118,18 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
+    "outputs_sha256": "8f5d21927f2c9293120acd7a89b80a20b9df01cc9a9cfdeb45cde2138239054c",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
-      "binding": "code_revision",
+      "binding": "content",
       "kind": "reform",
-      "name": "delta",
-      "reform_sha256": "06ec53a980e3e571631b4b2dcd92cba283fe63a0457095c4cb5d99ae67a3e9f1",
+      "name": "iota",
+      "reform_sha256": "31e95e90307d202d10b25a4f63e7a0479a29d78eb0cca3408f34990e11a85609",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
       "platform": "darwin",
-      "python_version": "3.13.15"
+      "python_version": "3.13.9"
     },
     "schema_version": 1,
     "supported_years": [

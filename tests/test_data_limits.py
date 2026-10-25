@@ -52,10 +52,7 @@ from uk_budget_data.measure_templates import (
 
 SURCHARGE = "gov.hmrc.stamp_duty.residential.purchase.additional"
 SURCHARGE_RATE = f"{SURCHARGE}.rate[1].rate"
-# A rate for that band that no installed model has as law, so setting it
-# is a change on any: 5% in policyengine-uk 2.132.6, 7% from April 2025
-# in 2.147.2 (Finance Act 2025 s. 50).
-RAISED_SURCHARGE = 0.09
+RAISED_SURCHARGE = purchase_helpers.RAISED_SURCHARGE
 NON_RESIDENTIAL = "gov.hmrc.stamp_duty.non_residential.purchase"
 INCOME_TAX = "gov.hmrc.income_tax.rates.uk[0].rate"
 BY_KEY = {limit.key: limit for limit in DATA_LIMITS}
@@ -2927,9 +2924,11 @@ def test_a_build_read_is_recorded_only_against_its_own_limit():
 
 @pytest.mark.certified_data
 def test_building_a_certified_simulation_reads_no_limited_input():
-    """The build watch counts every read of a limited input, the model's
-    own included; building a certified simulation, with or without a
-    template, makes none, so the watch flags only what a measure reads."""
+    """The build watch counts every read of a limited input (a holder
+    fetched or its values read) except those policyengine-uk's own
+    construction makes; building a certified simulation, with or without
+    a template, makes none, so the watch flags only what a measure
+    reads."""
     from uk_budget_data.pipeline import build_microsimulation
 
     plain = data_limits.watched_build(build_microsimulation, None)

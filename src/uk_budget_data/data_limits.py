@@ -127,7 +127,10 @@ DATA_LIMITS = (
             "everyone's points at its default of -1 (not assessed) and keeps "
             "the recorded award. A change to the points needed for the "
             "standard or enhanced rate therefore moves no one. Changes to "
-            "the rates themselves are not affected."
+            "the rates themselves are not affected. A measure that changes "
+            "the recorded awards cannot be costed either: the model carries "
+            "a recorded award into later years that have none, unless newer "
+            "points replace it."
         ),
     ),
     DataLimit(
@@ -140,7 +143,10 @@ DATA_LIMITS = (
             "everyone's points at its default of -1 (not assessed) and keeps "
             "the recorded award. A change to the points needed for the "
             "standard or enhanced rate therefore moves no one. Changes to "
-            "the rates themselves are not affected."
+            "the rates themselves are not affected. A measure that changes "
+            "the recorded awards cannot be costed either: the model carries "
+            "a recorded award into later years that have none, unless newer "
+            "points replace it."
         ),
     ),
     DataLimit(
@@ -150,6 +156,10 @@ DATA_LIMITS = (
             "gov.dft.bus.reference_fares",
             # The table that stands in for the missing fares.
             "gov.dft.bus.uncapped_single_fares",
+            # The share of boardings bought as single tickets, where the
+            # data carry none: it acts only by scaling the cap's change to
+            # single fares, priced from that table.
+            "gov.dft.bus.default_single_fare_share",
         ),
         missing_input="local_bus_uncapped_single_fare",
         reason=(
@@ -172,7 +182,9 @@ DATA_LIMITS = (
             "The certified data record no salary sacrifice returned to "
             "ordinary pay, and the model's default is none. A measure that "
             "returns sacrificed pay to income, or changes how the model "
-            "counts it, cannot be costed. The pension salary sacrifice cap "
+            "counts it, cannot be costed, nor can one that changes recorded "
+            "employment income or employee pension contributions, to both "
+            "of which the model adds it. The pension salary sacrifice cap "
             "does not act through it in this model."
         ),
     ),
@@ -340,9 +352,14 @@ REGISTRY_SHA256 = hashlib.sha256(
 # (the bundle's ``data_releases.uk.build_id``). Every input listed for any
 # cut needs a limit above until it is no longer missing
 # (``NO_LONGER_MISSING``): a cut skipped by the dashboard lists inputs its
-# successor won't. ``coverage_problems`` checks it, and
-# tests/test_data_limits_cuts.py fails an installed cut with no record.
-# Not part of REGISTRY_SHA256: the record changes no receipt.
+# successor won't. So each record also names the cut its list was taken
+# against (``LISTED_AGAINST``, the previous certified pair in the same
+# evidence), and the chain from the installed cut must reach
+# ``RECORD_ROOT`` through recorded cuts only: a cut certified in between
+# and never adopted would otherwise drop its inputs from every list.
+# ``coverage_problems`` checks it, and tests/test_data_limits_cuts.py fails
+# an installed cut with no record. Not part of REGISTRY_SHA256: the record
+# changes no receipt.
 NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
     # policyengine-uk 2.147.2 with Microcosm UK 2024-25 national, 23 Oct
     # 2026: policyengine.py#715's budget-inputs evidence, accepted on
@@ -365,6 +382,18 @@ NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# The cut the dashboard ran when the record began (policyengine 6.10.x,
+# policyengine-uk 2.132.6): the limits registered before the record cover
+# what its data lack.
+RECORD_ROOT = "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71"
+
+# For each recorded cut, the cut its newly missing inputs were listed
+# against. a133's budget-inputs and attribution evidence compare it with
+# the 19 October cut (policyengine.py#715).
+LISTED_AGAINST: dict[str, str] = {
+    "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a": RECORD_ROOT,
+}
+
 # Inputs a cut listed above that are no longer missing, with why: the
 # certified data carry them again (the lift tripwire in
 # tests/test_data_limits.py fails, and the limit is removed in the same
@@ -379,17 +408,19 @@ def coverage_problems(build_id: str) -> list[str]:
     their defaults, with ``build_id`` the installed cut: empty when they
     do.
 
-    A problem is the installed cut having no record, or an input any
-    recorded cut lists having neither a limit nor a ``NO_LONGER_MISSING``
-    entry.
+    A problem is the installed cut having no record (unless it is
+    ``RECORD_ROOT``), a break in the chain of cuts each record was listed
+    against before it reaches ``RECORD_ROOT``, or an input any recorded cut
+    lists having neither a limit nor a ``NO_LONGER_MISSING`` entry.
     """
     problems = []
-    if build_id not in NEWLY_MISSING_INPUTS:
+    if build_id != RECORD_ROOT and build_id not in NEWLY_MISSING_INPUTS:
         problems.append(
             f"the installed data cut {build_id} has no record in "
             "NEWLY_MISSING_INPUTS: copy newly_missing_inputs from its "
             "certification's budget-inputs.json (an empty tuple if none)"
         )
+    problems += _chain_problems(build_id)
     limited = {limit.missing_input for limit in DATA_LIMITS}
     for cut, names in NEWLY_MISSING_INPUTS.items():
         for name in sorted(set(names) - limited - set(NO_LONGER_MISSING)):
@@ -399,6 +430,31 @@ def coverage_problems(build_id: str) -> list[str]:
                 "through, with the default in its reason"
             )
     return problems
+
+
+def _chain_problems(build_id: str) -> list[str]:
+    """Why the recorded cuts don't link the installed cut back to
+    ``RECORD_ROOT``, each through the cut its list was taken against."""
+    cut, seen = build_id, set()
+    while cut in NEWLY_MISSING_INPUTS and cut != RECORD_ROOT:
+        if cut in seen:
+            return [f"the cuts LISTED_AGAINST names loop at {cut}"]
+        seen.add(cut)
+        against = LISTED_AGAINST.get(cut)
+        if against is None:
+            return [
+                f"{cut} has no LISTED_AGAINST entry: name the cut its "
+                "budget-inputs.json compared it with (the previous pair)"
+            ]
+        if against != RECORD_ROOT and against not in NEWLY_MISSING_INPUTS:
+            return [
+                f"{cut} lists the inputs it newly leaves at their defaults "
+                f"against {against}, which has no record: copy that cut's "
+                "newly_missing_inputs too, or the inputs it newly left are "
+                "in no list"
+            ]
+        cut = against
+    return []
 
 
 def _under(path: str, prefix: str) -> bool:
@@ -2833,11 +2889,22 @@ def _calculated_before(sim, name) -> bool:
 # rebalancing, ``add_universal_credit_reform``, which calculates the health
 # element and with it the capital tests; for a situation, its conversion
 # to a dataset, ``UKSingleYearDataset.from_simulation``). A read counts
-# when a measure's code lies between it and the construction: a modifier
-# the constructor calls, or a formula one replaced. A read made outside the
-# construction (the build function asking for a value, say) counts too.
-# tests/test_data_limits.py checks that building the certified data reads
-# nothing else.
+# when a measure's code lies between it and the construction: a formula a
+# measure replaced, or the scenario's modifier, which the constructor calls
+# (told by the call, not by where its code is, so a modifier policyengine-uk
+# ships counts too). A read made outside the construction (the build
+# function asking for a value, say) counts too. What the construction runs
+# of its own accord is excluded on purpose, as the model's: the Universal
+# Credit rebalancing, and the structural reforms a parameter switches on
+# (``create_structural_reforms_from_parameters``), whose parameters the
+# limits name where they matter. A replacement formula written in
+# policyengine-uk's own code is not told from the model's. A read is the
+# holder fetched as well as its values read: policyengine-uk's
+# supplied-input helpers (``supplied_input``, ``supplied_input_periods``)
+# fetch the holder and read its storage without ``Holder.get_array``, and
+# when nothing was supplied they read nothing more, the answer still
+# depending on the input being missing. tests/test_data_limits.py checks
+# that building the certified data reads nothing else.
 
 _BUILD_ATTRIBUTE = "_data_limit_build_reads"
 
@@ -2867,13 +2934,27 @@ class BuildRecord:
             pass
 
 
+def _built_read(name, frame):
+    if (
+        _BUILD.records
+        and name in _MISSING_INPUTS
+        and not _model_own_read(frame)
+    ):
+        for record in _BUILD.records:
+            record.reads.add(name)
+
+
 def _built_get_array(self, *args, **kwargs):
-    if _BUILD.records:
-        name = getattr(getattr(self, "variable", None), "name", None)
-        if name in _MISSING_INPUTS and not _model_own_read(sys._getframe(1)):
-            for record in _BUILD.records:
-                record.reads.add(name)
+    _built_read(
+        getattr(getattr(self, "variable", None), "name", None),
+        sys._getframe(1),
+    )
     return _ENGINE["get_array"](self, *args, **kwargs)
+
+
+def _built_get_holder(self, variable_name):
+    _built_read(variable_name, sys._getframe(1))
+    return _ENGINE["get_holder"](self, variable_name)
 
 
 def _model_constructors() -> frozenset:
@@ -2889,17 +2970,49 @@ def _model_constructors() -> frozenset:
     return frozenset(found)
 
 
+def _code_of(function):
+    """The code object a call of ``function`` runs: a function's or bound
+    method's own, a partial's target's, or a callable object's ``__call__``."""
+    while isinstance(function, functools.partial):
+        function = function.func
+    code = getattr(function, "__code__", None)
+    if code is None:
+        call = getattr(type(function), "__call__", None)
+        code = getattr(call, "__code__", None)
+    return code
+
+
+def _calls_scenario_modifier(constructor, callee) -> bool:
+    """Whether a policyengine-uk constructor's frame is running its
+    scenario's modifier in ``callee``, the frame it called: the modifier
+    of the part applied before the data load or after it."""
+    if callee is None:
+        return False
+    for name in ("before_data_load", "after_data_load"):
+        part = constructor.f_locals.get(name)
+        modifier = getattr(part, "simulation_modifier", None)
+        if modifier is not None and callee.f_code is _code_of(modifier):
+            return True
+    return False
+
+
 def _model_own_read(frame) -> bool:
     """Whether a read made while a simulation is built is the model's own:
     a policyengine-uk constructor lies between it and the nearest measure's
-    code outwards (see "the build" above)."""
+    code outwards, and the read is not inside the scenario's modifier the
+    constructor calls (see "the build" above)."""
     constructors = _model_constructors()
     constructing = False
+    callee = None
     while frame is not None:
         code = frame.f_code
         if _measure_path(code.co_filename):
             return constructing
-        constructing = constructing or code in constructors
+        if code in constructors:
+            if not constructing and _calls_scenario_modifier(frame, callee):
+                return False
+            constructing = True
+        callee = frame
         frame = frame.f_back
     return False
 
@@ -2908,16 +3021,19 @@ def _model_own_read(frame) -> bool:
 def building():
     """Watch a simulation being built: yields a :class:`BuildRecord` of the
     inputs a data limit names that the build read, directly or through a
-    calculation. Every read of an input's value goes through
-    ``Holder.get_array``: the engine's calculation looks there first, and
-    its other caches only hold what an earlier read returned. Not while a
-    watch runs."""
+    calculation. Every read of an input's value fetches its holder
+    (``Population.get_holder``), and the engine's calculation reads it
+    through ``Holder.get_array``, which it looks in first; its other caches
+    only hold what an earlier read returned. Both count, so a read through
+    policyengine-uk's supplied-input helpers, which skip ``get_array``,
+    counts too. Not while a watch runs."""
     with _HOOK_LOCK:
         if _WATCHING:
             raise RuntimeError("a simulation is built while a watch runs")
         engine = _engine_parts()
         if not _BUILDING:
             engine["holder"].get_array = _built_get_array
+            engine["population"].get_holder = _built_get_holder
         record = BuildRecord()
         _BUILDING.append(record)
         _BUILD.records.append(record)
@@ -2929,6 +3045,7 @@ def building():
             _BUILDING.remove(record)
             if not _BUILDING:
                 engine["holder"].get_array = engine["get_array"]
+                engine["population"].get_holder = engine["get_holder"]
 
 
 def watched_build(build, *args, **kwargs):
@@ -3224,7 +3341,10 @@ def record_problems(records) -> list[str]:
             or not paths
             or paths != sorted(set(paths))
             or any(
-                limits_for_paths([path]) != [limit]
+                # A path may fall under several limits (the annual
+                # allowance, UC capital and its sources are under more
+                # than one): each of them records it
+                limit not in limits_for_paths([path])
                 and not _formula_path(path)
                 and not _build_path(path, limit)
                 and not _input_path(path, limit)
