@@ -121,7 +121,7 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");
-    const young = screen.getByRole("link", { name: "See Young people under Population impact" });
+    const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
@@ -140,23 +140,16 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("starts each section after the first collapsed on a phone, and opens it from the jump menu", () => {
-    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
-    renderTab();
-    const data = document.getElementById(`${METHOD_SECTIONS.data}-body`);
-    expect(data).not.toBeVisible();
-    expect(document.getElementById(`${METHOD_SECTIONS.overview}`)).toHaveTextContent("Survey data");
-    const nav = screen.getByRole("navigation", { name: "Methodology contents" });
-    fireEvent.change(within(nav).getByRole("combobox"), {
-      target: { value: METHOD_SECTIONS.data },
-    });
-    expect(data).toBeVisible();
-    const toggle = within(document.getElementById(METHOD_SECTIONS.data)).getByRole("button", {
-      name: "Hide details",
-    });
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    fireEvent.click(toggle);
-    expect(data).not.toBeVisible();
+  it("opens each section with a summary, its technical details closed until asked for", () => {
+    const { container } = renderTab();
+    for (const { id } of METHOD_CONTENTS) {
+      const section = container.querySelector(`section#${id}`);
+      expect(section.querySelector(".method-summary")?.textContent.trim()).toBeTruthy();
+      const details = section.querySelector("details.method-details");
+      if (details) expect(details.open).toBe(false);
+    }
+    // Each later section names the step of the flow it explains
+    expect(document.getElementById(METHOD_SECTIONS.data)).toHaveTextContent("Step 1");
   });
 
   it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {

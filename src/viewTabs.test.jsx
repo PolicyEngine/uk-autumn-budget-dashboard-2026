@@ -217,7 +217,7 @@ describe("the view tabs", () => {
   it("open Young people from Methodology's link", () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     render(<App />);
-    fireEvent.click(screen.getByRole("link", { name: "See Young people under Population impact" }));
+    fireEvent.click(screen.getByRole("link", { name: "Young people results" }));
     expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
       "aria-selected",
       "true",

@@ -23,11 +23,6 @@ function GeographyMethodology() {
 
   return (
     <div className="geography-method">
-      <p className="method-lead">
-        The figures by region and by constituency are estimated from a
-        survey of households. Before a figure is published, it passes these
-        checks.
-      </p>
       <FactList
         className="method-checklist"
         items={[

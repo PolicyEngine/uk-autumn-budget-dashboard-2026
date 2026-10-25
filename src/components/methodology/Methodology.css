@@ -965,11 +965,6 @@
   color: var(--c-loss-text);
 }
 
-/* The section toggle shows only on a phone */
-.method-section-toggle {
-  display: none;
-}
-
 @media (max-width: 899px) {
   /* Only the jump menu sticks here: the title band and tabs scroll away */
   .app:has(.methodology-tab) .title-row,
@@ -989,38 +984,6 @@
     margin-top: 32px;
   }
 
-  .method-section-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 40px;
-    margin: -4px 0 4px;
-    padding: 0 12px;
-    border: 1px solid var(--card-border);
-    border-radius: 999px;
-    background: var(--pe-surface);
-    font: inherit;
-    font-size: var(--fs-small);
-    font-weight: 600;
-    color: var(--pe-teal-700);
-    cursor: pointer;
-  }
-
-  .method-section-toggle svg {
-    width: 16px;
-    height: 16px;
-    transition: transform var(--pe-transition-fast);
-  }
-
-  .method-section-toggle[aria-expanded="true"] svg {
-    transform: rotate(180deg);
-  }
-
-  .method-section-toggle:focus-visible {
-    outline: 2px solid var(--pe-teal-500);
-    outline-offset: 2px;
-  }
-
   /* 40px tap areas */
   .method-clamp-toggle,
   .method-back a {
@@ -1038,8 +1001,191 @@
   }
 }
 
-@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
-  .method-section-toggle svg {
+/* Flow: the step a section explains, a summary that reads on its own, and
+   the technical details behind a toggle ------------------------------- */
+
+.method-stage {
+  margin: 0 0 2px !important;
+  font-size: var(--fs-micro) !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-teal-700) !important;
+}
+
+.method-section-heading {
+  align-items: center;
+}
+
+.method-summary {
+  padding: 20px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--pe-surface);
+}
+
+.method-summary > p {
+  max-width: 70ch;
+  margin: 0;
+  font-size: var(--fs-body-lg);
+  line-height: 1.65;
+  color: var(--pe-gray-700);
+}
+
+.method-summary a,
+.method-details a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.method-summary a:hover,
+.method-details a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-summary .method-card-title {
+  margin-bottom: 6px;
+}
+
+.method-section > .method-summary + *,
+.method-section > .card + .card {
+  margin-top: 16px;
+}
+
+/* The stepper sits under the At a glance summary */
+#method-overview .method-flow {
+  margin-top: 24px;
+}
+
+.method-details {
+  margin-top: 12px;
+}
+
+.method-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--pe-surface);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  cursor: pointer;
+  list-style: none;
+}
+
+.method-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.method-details > summary:hover {
+  border-color: var(--pe-teal-300);
+}
+
+.method-details > summary:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.method-details > summary svg {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--pe-transition-fast);
+}
+
+.method-details[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.method-details-body {
+  margin-top: 12px;
+  padding: 20px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--pe-surface);
+}
+
+.method-details-body > .card {
+  border: 0;
+  padding: 0;
+}
+
+.method-details-body > .card + .card {
+  margin-top: 24px;
+}
+
+.method-details-title {
+  margin: 24px 0 10px;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-details-title:first-child {
+  margin-top: 0;
+}
+
+/* Two short sections side by side on a wide screen */
+.method-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+  margin-top: 48px;
+}
+
+.methodology-tab .method-pair .method-section + .method-section {
+  margin-top: 0;
+}
+
+/* Not modelled: a compact table */
+.method-measures-compact tbody th,
+.method-measures-compact td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+@media (max-width: 1100px) {
+  .method-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .methodology-tab .method-pair .method-section + .method-section {
+    margin-top: 48px;
+  }
+}
+
+@media (max-width: 899px) {
+  .method-summary,
+  .method-details-body {
+    padding: 16px;
+  }
+
+  .method-pair {
+    margin-top: 32px;
+  }
+
+  .methodology-tab .method-pair .method-section + .method-section {
+    margin-top: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-details > summary svg {
     transition: none;
   }
+}
+
+.method-details-body .method-more {
+  margin: 0 0 12px;
+}
+
+.method-details-body > .method-facts + .method-more {
+  margin: 16px 0 0;
 }
