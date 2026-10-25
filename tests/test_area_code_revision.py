@@ -525,6 +525,34 @@ def test_a_package_is_refused_when_its_member_s_code_changed(
     assert path in report.refused[PACKAGE]
 
 
+def test_a_package_is_refused_when_its_member_s_receipt_is_not_its_entry_s(
+    documented_state,
+):
+    """Review of 15439f4, finding 5: generation read a member's receipt
+    without checking it against the member's manifest entry, as the area
+    run does. A receipt edited to name a later commit with no calculation
+    change since would be bound there; now it is refused before
+    simulating."""
+    world = documented_state.world
+    entry = documented_state.manifest.measures["alpha"]
+    path = world.data_root / entry.artifact / "receipt.json"
+    original = path.read_bytes()
+    edited = json.loads(original)
+    edited["dashboard"]["git_sha"] = documented_state.attested
+    try:
+        path.write_text(json.dumps(edited))
+        report = generate(
+            world,
+            documented_state.repo,
+            combined=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+        )
+    finally:
+        path.write_bytes(original)
+    assert report.written == []
+    assert "member alpha" in report.refused[PACKAGE]
+    assert "artifact identity differs" in report.refused[PACKAGE]
+
+
 # --- the allowlist, over generated commits ----------------------------
 
 NAME = st.from_regex(r"[a-z0-9é][a-z0-9_ é-]{0,9}", fullmatch=True)

@@ -2112,40 +2112,6 @@ def _approved_revision(
         raise ValueError(f"{reform_id}: {error}") from error
 
 
-def _approved_document(
-    label: str,
-    key: str,
-    entry: publication_manifest.Entry,
-    data_root: Path,
-) -> dict:
-    """The receipt a manifest entry names, refused unless it is exactly the
-    artifact the entry records."""
-    receipt_path = data_root / entry.artifact / "receipt.json"
-    if receipt_path.is_symlink() or not receipt_path.is_file():
-        raise ValueError(f"{label}: no regular approved receipt")
-    document = json.loads(receipt_path.read_bytes())
-    if not isinstance(document, dict):
-        raise ValueError(f"{label}: approved receipt is not an object")
-    problems = publication_receipt.document_problems(document)
-    if publication_receipt.artifact_sha256(document) != entry.artifact_sha256:
-        problems.append("approved artifact identity differs")
-    dashboard = document.get("dashboard") or {}
-    if dashboard.get("key") != key:
-        problems.append("approved receipt key differs")
-    for digest in (
-        "receipt_sha256",
-        "outputs_sha256",
-        "execution_identity_sha256",
-    ):
-        if (dashboard.get("digests") or {}).get(digest) != getattr(
-            entry, digest
-        ):
-            problems.append(f"approved {digest} differs")
-    if problems:
-        raise ValueError(f"{label}: " + "; ".join(problems))
-    return document
-
-
 def _member_revisions(
     reform_id: str,
     document: dict,
@@ -2170,7 +2136,7 @@ def _member_revisions(
             raise ValueError(f"{label}: no manifest entry to bind it at")
         revisions[member] = _approved_revision(
             label,
-            _approved_document(label, member, entry, data_root),
+            publication_receipt.entry_receipt(label, member, entry, data_root),
             revision,
             checked,
         )
@@ -2200,7 +2166,9 @@ def area_provenance(
     for reform_id in reform_ids:
         key = manifest_key(reform_id)
         entry = manifest.entries()[key]
-        document = _approved_document(reform_id, key, entry, data_root)
+        document = publication_receipt.entry_receipt(
+            reform_id, key, entry, data_root
+        )
         if set(years) - (set(entry.years) - set(entry.unsupported_years)):
             raise ValueError(
                 f"{reform_id}: requested years are not approved and supported"
