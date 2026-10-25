@@ -557,9 +557,9 @@ function HouseholdCalculator({
             id={panelId}
             role="region"
             aria-labelledby={labelId}
-            className={`collapse ${more.expanded ? "is-expanded" : ""}`}
+            className={`expander-body ${more.expanded ? "is-expanded" : ""}`}
           >
-            <div className="collapse-inner">
+            <div className="expander-inner">
             <div className="household-more-panel">
             {section.groups.map((group) => {
               if (!group.fields.some(fieldApplies)) return null;

@@ -840,7 +840,7 @@
 }
 
 /* The placeholders sit back, so the chip reads clearly */
-.skeleton-card > :not(.skeleton-chip) {
+.skeleton-card > :not(.skeleton-overlay) {
   opacity: 0.6;
 }
 
@@ -929,32 +929,32 @@
   }
 }
 
-/* The status chip over a skeleton */
-.skeleton-chip {
+/* The status chip, in a layer over its card, centred both ways */
+.skeleton-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.skeleton-chip {
+  box-sizing: border-box;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  width: max-content;
-  max-width: min(360px, 90%);
+  width: min(360px, 100%);
   padding: 12px 14px;
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--pe-shadow-sm);
-  transform: translate(-50%, -50%);
   animation: single-year-fade-in 0.3s ease-out both;
 }
 
 .skeleton-chip > div {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.skeleton-chip .processing-bar {
-  min-width: 200px;
 }
 
 .skeleton-chip p {

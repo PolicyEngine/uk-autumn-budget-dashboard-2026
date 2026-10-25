@@ -42,8 +42,8 @@ function Disclosure({ title, inCard = false, id, className = "", contentClassNam
         </svg>
       </button>
       {mounted && (
-        <div id={contentId} className={`collapse ${expanded ? "is-expanded" : ""}`}>
-          <div className="collapse-inner">
+        <div id={contentId} className={`expander-body ${expanded ? "is-expanded" : ""}`}>
+          <div className="expander-inner">
             <div className={`disclosure-content ${contentClassName}`.trim()}>{children}</div>
           </div>
         </div>

@@ -255,4 +255,24 @@ describe("the personal impact form", () => {
     render(<HouseholdCalculator />);
     expect(moreToggle()).toHaveAttribute("aria-expanded", "true");
   });
+
+  it("shows More details' boxes when opened, focusable, in a container no utility class hides", () => {
+    render(<HouseholdCalculator />);
+    openMore();
+    for (const name of ["Savings interest", "Petrol"]) {
+      const input = box(name);
+      expect(input).toBeVisible();
+      input.focus();
+      expect(document.activeElement).toBe(input);
+    }
+    const credit = select("Universal Credit");
+    expect(credit).toBeVisible();
+    credit.focus();
+    expect(document.activeElement).toBe(credit);
+    // Tailwind's "collapse" utility is visibility: collapse: the expander
+    // must never carry that class
+    const panel = document.getElementById(moreToggle().getAttribute("aria-controls"));
+    expect(panel).not.toHaveClass("collapse");
+    expect(panel.querySelector(".collapse")).toBeNull();
+  });
 });

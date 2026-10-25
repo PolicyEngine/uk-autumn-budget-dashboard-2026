@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // How long an expander takes to open or close (the CSS transition on
-// .collapse matches it)
+// .expander-body matches it; not ".collapse", which Tailwind makes visibility: collapse)
 export const COLLAPSE_MS = 250;
 
 /**
@@ -13,7 +13,7 @@ export const COLLAPSE_MS = 250;
  *
  * @param {boolean} open
  * @returns {{ mounted: boolean, expanded: boolean }} - Render the content
- *   while `mounted`, inside `.collapse` with `is-expanded` while `expanded`
+ *   while `mounted`, inside `.expander-body` with `is-expanded` while `expanded`
  */
 export default function useCollapse(open) {
   const [mounted, setMounted] = useState(open);

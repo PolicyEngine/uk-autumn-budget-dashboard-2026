@@ -446,14 +446,18 @@ function PendingSkeleton({ kind, startedAt }) {
   const shown = useDelayed(true);
   // Part of the same wait as the headline: counted from Calculate
   const seconds = useElapsedSeconds(true, startedAt);
+  // The chip sits in a layer over the whole card, centred both ways (a
+  // grid, not a translate the fade-in animation would undo)
   const chip = shown && (
-    <div className="skeleton-chip" role="status">
-      <span className="processing-spinner is-small" aria-hidden="true" />
-      <div>
-        <p className="skeleton-chip-title">{SKELETON_TEXT[kind]}</p>
-        <p className="skeleton-chip-time">{timeText(seconds)}</p>
-        <div className="processing-bar" aria-hidden="true">
-          <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
+    <div className="skeleton-overlay">
+      <div className="skeleton-chip" role="status">
+        <span className="processing-spinner is-small" aria-hidden="true" />
+        <div>
+          <p className="skeleton-chip-title">{SKELETON_TEXT[kind]}</p>
+          <p className="skeleton-chip-time">{timeText(seconds)}</p>
+          <div className="processing-bar" aria-hidden="true">
+            <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
+          </div>
         </div>
       </div>
     </div>

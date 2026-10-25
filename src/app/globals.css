@@ -1528,26 +1528,41 @@ body {
 }
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
-.collapse {
+.expander-body {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
   transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
 }
 
-.collapse.is-expanded {
+.expander-body.is-expanded {
   grid-template-rows: 1fr;
   opacity: 1;
 }
 
-.collapse-inner {
+.expander-inner {
   min-height: 0;
   overflow: hidden;
 }
 
+/* Once open, the content may overflow (an "i" note's tooltip) */
+.expander-body.is-expanded > .expander-inner {
+  animation: expander-reveal 0s 0.25s forwards;
+}
+
+@keyframes expander-reveal {
+  to {
+    overflow: visible;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .collapse {
+  .expander-body {
     transition: none;
+  }
+
+  .expander-body.is-expanded > .expander-inner {
+    animation-delay: 0s;
   }
 }
 
