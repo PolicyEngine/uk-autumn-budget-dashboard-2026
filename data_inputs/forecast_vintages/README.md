@@ -1,0 +1,78 @@
+# Forecast vintages inputs
+
+The Forecast vintages tab reads `public/data/obr_forecast_vintages.json`. `uk-budget-data forecast-vintages` writes it from the files here (`src/uk_budget_data/forecast_vintages/`), and sets its row in `data_inputs/public_data_review.csv` to pending. It holds no PolicyEngine figures: every value is the OBR's or the ONS's.
+
+```bash
+uv run uk-budget-data forecast-vintages --fetch   # refresh ONS and house prices, then build
+uv run uk-budget-data forecast-vintages           # build from the files committed here
+```
+
+## OBR files
+
+obr.uk refuses scripted downloads (`docs/budget-day-runbook.md`), so these come from Internet Archive captures of their obr.uk addresses, read through the archive's `id_` route, which returns the captured bytes unaltered. They are committed unedited. The build refuses any whose SHA-256 differs from the one pinned in `sources.py` (and listed here). `--fetch` downloads one only if it is missing, and keeps it only if the bytes match.
+
+| File | What | Address | Capture | SHA-256 |
+|---|---|---|---|---|
+| `obr/historical-official-forecasts-database-spring-2026.xlsx` | Historical official forecasts database, Spring 2026 | [obr.uk](https://obr.uk/docs/dlm_uploads/Historical_official_forecasts_database_Spring_2026.xlsx) | [20260328182841](https://web.archive.org/web/20260328182841id_/https://obr.uk/docs/dlm_uploads/Historical_official_forecasts_database_Spring_2026.xlsx) | `e00b17cb7ec8dfddc4bfd4d212c1e93362147fff81d74a10480e599b26e634db` |
+| `obr/efo-november-2016-economy-tables.xlsx` | Economic and fiscal outlook, November 2016: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Supplementary_Economy_Tables-2.xlsx) | [20190916205059](https://web.archive.org/web/20190916205059id_/https://obr.uk/docs/dlm_uploads/Supplementary_Economy_Tables-2.xlsx) | `369861f1d9e8b85333d067dadd9d33344336eb4734f6884d5906fa06dd54a4e3` |
+| `obr/efo-march-2017-economy-tables.xlsx` | Economic and fiscal outlook, March 2017: economy tables (Table 1.5) | [obr.uk](https://obr.uk//docs/dlm_uploads/SupplementaryEconomytablesMarch2017.xlsx) | [20220516082559](https://web.archive.org/web/20220516082559id_/https://obr.uk//docs/dlm_uploads/SupplementaryEconomytablesMarch2017.xlsx) | `9b1162ac2a8d2ea3c7dcab39ac906c65f0f7dab18a59c76c59271ae8c34637c9` |
+| `obr/efo-november-2017-economy-tables.xlsx` | Economic and fiscal outlook, November 2017: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/November_2017_EFO_Supplementary_economy_tables-1.xlsx) | [20230129124833](https://web.archive.org/web/20230129124833id_/https://obr.uk/docs/dlm_uploads/November_2017_EFO_Supplementary_economy_tables-1.xlsx) | `55fe1eb88dae0492ab296c17a4ee21e4588ac31af856c213ef668255ecb39d4a` |
+| `obr/efo-october-2018-economy-tables.xlsx` | Economic and fiscal outlook, October 2018: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Supplementary_economy_tables_October_2018-3.xlsx) | [20191023140751](https://web.archive.org/web/20191023140751id_/https://obr.uk/docs/dlm_uploads/Supplementary_economy_tables_October_2018-3.xlsx) | `895d83acea27b78a8e12ac0b6b0bc0e5229762f24d3bea21959e7e36787c181e` |
+| `obr/efo-march-2019-economy-tables.xlsx` | Economic and fiscal outlook, March 2019: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_March_2019.xlsx) | [20190723141118](https://web.archive.org/web/20190723141118id_/https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_March_2019.xlsx) | `0372cbbcb79d546f2768bf6187e39003f57eb3f2c8c05c46406b91bee4e94113` |
+| `obr/efo-march-2020-economy-tables.xlsx` | Economic and fiscal outlook, March 2020: economy tables (Table 1.5) | [obr.uk](https://obr.uk//docs/dlm_uploads/Economy_supplementary_tables_March_2020_EFO.xlsx) | [20220519013811](https://web.archive.org/web/20220519013811id_/https://obr.uk//docs/dlm_uploads/Economy_supplementary_tables_March_2020_EFO.xlsx) | `7aff9506d1752dcdf232580514570178dd15d2b87ed4f583a71284156f94577b` |
+| `obr/efo-march-2021-supplementary-tables.zip`, workbook `Economy_supplementary_tables_EFO_March_2021.xlsx` | Economic and fiscal outlook, March 2021: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/EFO_March_2021_Supplementary_tables.zip) | [20230129123015](https://web.archive.org/web/20230129123015id_/https://obr.uk/docs/dlm_uploads/EFO_March_2021_Supplementary_tables.zip) | `3836109e626bc20734b60979b6390276b043af6d9400466b517eade7d9dac568` |
+| `obr/efo-march-2022-economy-tables.xlsx` | Economic and fiscal outlook, March 2022: economy tables (Table 1.5) | [obr.uk](https://obr.uk//docs/dlm_uploads/Economy_Supplementary_Tables_March_2022.xlsx) | [20220519024139](https://web.archive.org/web/20220519024139id_/https://obr.uk//docs/dlm_uploads/Economy_Supplementary_Tables_March_2022.xlsx) | `768d65a73db9a197993c14e9d03b463b457235ad47a9b9cf4a05f2e3e82ce17d` |
+| `obr/efo-november-2022-economy-tables.xlsx` | Economic and fiscal outlook, November 2022: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_November_2022.xlsx) | [20221117122504](https://web.archive.org/web/20221117122504id_/https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_November_2022.xlsx) | `279db66221080e0e1050c98b26f14b2a1f5248598da3ef2a8f0f6974fbd4d3c3` |
+| `obr/efo-march-2023-economy-tables.xlsx` | Economic and fiscal outlook, March 2023: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_March_2023.xlsx) | [20230315133847](https://web.archive.org/web/20230315133847id_/https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_March_2023.xlsx) | `04f55d49a89573eb5f89d3fbf7f4e262b10da53bed9f65ccf5d84ff695fda764` |
+| `obr/efo-november-2023-economy-tables.xlsx` | Economic and fiscal outlook, November 2023: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_November_2023.xlsx) | [20231122205250](https://web.archive.org/web/20231122205250id_/https://obr.uk/docs/dlm_uploads/Economy_supplementary_tables_November_2023.xlsx) | `fe1273a3fcbfa63144a503513132a5cbce223dedd6befd98a06515c881c63a84` |
+| `obr/efo-march-2024-economy-tables.xlsx` | Economic and fiscal outlook, March 2024: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Detailed_forecast_tables_Economy_March_2024.xlsx) | [20240306134030](https://web.archive.org/web/20240306134030id_/https://obr.uk/docs/dlm_uploads/Detailed_forecast_tables_Economy_March_2024.xlsx) | `c787d8777c9d84e66e854e293a1d0c50c87c5986a869d2b9c0f24ed2302b1e7d` |
+| `obr/efo-october-2024-economy-tables.xlsx` | Economic and fiscal outlook, October 2024: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_October_2024.xlsx) | [20241030143907](https://web.archive.org/web/20241030143907id_/https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_October_2024.xlsx) | `6d55f6195a9c95688b02fe13890542e20a8b98c4a8ed5eaddc6550996e781149` |
+| `obr/efo-march-2025-economy-tables.xlsx` | Economic and fiscal outlook, March 2025: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_March_2025.xlsx) | [20250326135827](https://web.archive.org/web/20250326135827id_/https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_March_2025.xlsx) | `b9009c5e2a28e5b6979e4ecdce0599b10778493db00de66d1c5b3209e7162f44` |
+| `obr/efo-november-2025-economy-tables.xlsx` | Economic and fiscal outlook, November 2025: economy tables (Table 1.5) | [obr.uk](https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_November_2025.xlsx) | [20251126134517](https://web.archive.org/web/20251126134517id_/https://obr.uk/docs/dlm_uploads/Economy_Detailed_forecast_tables_November_2025.xlsx) | `bf2ad1bd633d73efa484b260b62aa4c6d2c0f3b2e4c64fa15e5f7204612e88d6` |
+| `../living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx` | Economic and fiscal outlook, March 2026: economy tables (Table 1.5) | [obr.uk](https://obr.uk/download/march-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/) | none: the Living standards inputs' copy | `fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510` |
+
+The database gives every variable but one: each sheet is one variable, each row one forecast, June 2010 (the OBR's first) to March 2026. Quarterly real household disposable income per head comes from Table 1.5 of each forecast's economy tables. Tables with its per-person index by total population were not found for forecasts before November 2016, or for March 2018, November 2020 and October 2021 (no capture of their economy tables was found).
+
+## ONS series and house prices
+
+Saved unedited from each series' JSON route (`https://www.ons.gov.uk/<series page>/data`) and from HM Land Registry's UK House Price Index download. `--fetch` replaces them and records each one's address, release date, time of download and SHA-256 in `retrieved.json`; the build refuses a file that differs from that record.
+
+| Series | Dataset | What | File |
+|---|---|---|---|
+| [ABMI](https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/abmi/qna) | QNA | GDP, chained volume measure, £m | `ons/abmi-qna.json` |
+| [BKTL](https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/bktl/ukea) | UKEA | GDP at market prices, current prices, £m | `ons/bktl-ukea.json` |
+| [CRXX](https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/crxx/ukea) | UKEA | Households' real disposable income per head, chained volume measure, £ | `ons/crxx-ukea.json` |
+| [NRJR](https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/nrjr/ukea) | UKEA | Households' and NPISH real disposable income, chained volume measure, £m | `ons/nrjr-ukea.json` |
+| [ROYJ](https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/royj/ukea) | UKEA | Wages and salaries, £m | `ons/royj-ukea.json` |
+| [D7BT](https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7bt/mm23) | MM23 | CPI index, 2015 = 100 | `ons/d7bt-mm23.json` |
+| [CHAW](https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/chaw/mm23) | MM23 | RPI index, January 1987 = 100 | `ons/chaw-mm23.json` |
+| [MGSX](https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms) | LMS | Unemployment rate, aged 16 and over, % | `ons/mgsx-lms.json` |
+| [MGRZ](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/mgrz/lms) | LMS | In employment, aged 16 and over, thousands | `ons/mgrz-lms.json` |
+| [MGRN](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/mgrn/lms) | LMS | Employees, thousands | `ons/mgrn-lms.json` |
+| [J5II](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/j5ii/pusf) | PUSF | Public sector net borrowing excluding public sector banks, £m (negative is borrowing) | `ons/j5ii-pusf.json` |
+| [ANBT](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/anbt/pusf) | PUSF | Public sector current receipts, £m | `ons/anbt-pusf.json` |
+| [IL65](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/il65/pusf) | PUSF | Of which, public sector banks, £m | `ons/il65-pusf.json` |
+| [KX5Q](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/kx5q/pusf) | PUSF | Total managed expenditure excluding public sector banks, £m | `ons/kx5q-pusf.json` |
+| [JW2T](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/jw2t/pusf) | PUSF | Current budget deficit excluding public sector banks, £m (negative is a deficit) | `ons/jw2t-pusf.json` |
+| [JW2Z](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/jw2z/pusf) | PUSF | Net investment excluding public sector banks, £m (negative is investment) | `ons/jw2z-pusf.json` |
+| [HF6X](https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/hf6x/pusf) | PUSF | Public sector net debt excluding public sector banks, % of GDP | `ons/hf6x-pusf.json` |
+| [UK House Price Index](https://landregistry.data.gov.uk/app/ukhpi) | HM Land Registry | Average price, all property types, United Kingdom, monthly | `hpi/ukhpi-united-kingdom-average-price.csv` |
+
+## Checks
+
+Each variable's outturn is set against the database's own outturn row (outturn as available at the March 2026 forecast) over the last eight periods both have, and the build stops if they differ by more than the variable's tolerance (in `variables.py`): a percentage point for growth rates, rates and shares of GDP; 2 per cent for employment; 2.5 per cent for nominal GDP, receipts and spending; 5 per cent for borrowing; £5 billion for the current budget. The largest gap for each variable, and the periods compared, are in the published file (`check`). Quarterly income per head is set against the March 2026 Table 1.5 to its launch quarter: its tolerance is 1.5 percentage points of growth on a year earlier, since Table 1.5 divides households' and non-profit institutions' income (NRJR) by the whole population (EBAQ), while CRXX is households' income alone, per head.
+
+Each forecast's values must run from its launch period without gaps, and no forecast after March 2026 is taken.
+
+## The published file
+
+`public/data/obr_forecast_vintages.json`:
+
+- `meta`: `newest_vintage` (March 2026); `parliament`, the start and end periods the page labels, by frequency; `launch_rules`; `left_out`, the database's variables the tab does not show and why; `gaps`; `sources`, every OBR file (address, Internet Archive capture, SHA-256), ONS series (page, release date, time of download, SHA-256) and the House Price Index.
+- `variables`: one per variable, in the order of `variables.py`, each with `id`, `label`, `group`, `frequency` (`calendar`, `fiscal` or `quarterly`), `units` (the unit pills it offers: `level`, `index`, `pct`, each saying which measure it reads), `default_unit`, `notes`, and the measures `level` and `share` (`null` where there is no share of GDP). A measure has:
+  - `unit`, `kind` (`growth`: the forecasts are percentage changes on a year earlier; `index`: the forecasts are an index whose ratios carry the outturn on; `level`: the forecasts are in the outturn's units), `decimals`;
+  - `outturn`: `{period: value}`, in `unit`;
+  - `vintages`: each forecast's `id`, `label`, `year`, `month`, `launch` (its last period of outturn) and `values` (`{period: value}` from its launch on, as the OBR published them);
+  - `outturn_source`, `forecast_source` and `check` (the outturn set against the OBR's own).
+
+Periods are `"2024"`, `"2024-25"` or `"2024Q2"`. A period with no value is absent, never zero.
