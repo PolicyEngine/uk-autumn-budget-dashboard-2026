@@ -7,22 +7,36 @@
  * Population impact; these are modelling facts only.
  *
  * `name` matches the measure's name on the page (POLICY_COLORS keys), so
- * the table's swatches are the charts' colours.
+ * the table's swatches are the charts' colours. A long `how` is a list: its
+ * first line sums the measure up and the rest are one point each.
  */
 export const MEASURE_MODELLING = [
   {
     name: "Threshold freeze to 2031-32",
-    how: "Sets the 2031-32 personal allowance and basic rate band to their 2030-31 values. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the allowance and higher rate threshold, so they are held too, as they were frozen alongside them to 2030-31. The employer secondary threshold is not held: it rises to £5,100 as in current law.",
+    how: [
+      "Holds the 2031-32 personal allowance and basic rate band at their 2030-31 values.",
+      "From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the allowance and higher rate threshold, so they are held too, as they were frozen alongside them to 2030-31.",
+      "The employer secondary threshold is not held: it rises to £5,100 as in current law.",
+    ],
+    sources: ["hmrc_income_tax_rates", "hmrc_ni_rates"],
     from: 2031,
   },
   {
     name: "Business Asset Disposal Relief restricted",
-    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+    how: [
+      "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value).",
+      "Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate.",
+      "So the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+    ],
     from: 2027,
   },
   {
     name: "Fuel duty rises deferred",
-    how: "Sets the duty rate in each year to the deferred path, weighted by days from 6 April as the model blends it, and lowers VAT by 20% of the duty change on each litre bought.",
+    how: [
+      "Sets the duty rate in each year to the deferred path.",
+      "Weighted by days from 6 April, as the model blends it.",
+      "Lowers VAT by 20% of the duty change on each litre bought.",
+    ],
     from: 2026,
   },
   {
@@ -32,12 +46,19 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Zero VAT on domestic electricity",
-    how: "Removes the 5% VAT from electricity spending: for 182 days of 2026-27 and all of 2027-28. Gas and other reduced-rate goods are unchanged.",
+    how: [
+      "Removes the 5% VAT from electricity spending: for 182 days of 2026-27 and all of 2027-28.",
+      "Gas and other reduced-rate goods are unchanged.",
+    ],
     from: 2026,
   },
   {
     name: "Warm Home Discount top-up",
-    how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616). There is no high-cost-to-heat test, and legacy benefits are not counted.",
+    how: [
+      "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit.",
+      "Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616).",
+      "There is no high-cost-to-heat test, and legacy benefits are not counted.",
+    ],
     sources: ["desnz_whd_ia", "pe_uk_2616"],
     from: 2026,
   },
@@ -48,13 +69,22 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Employer NI relief for under-25s",
-    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline; apprentices are not identified.",
+    how: [
+      "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24.",
+      "The model charges under-21s in full, so the existing under-21 relief is not in its baseline.",
+      "Apprentices are not identified.",
+    ],
     sources: ["hmrc_employer_rates"],
     from: 2027,
   },
   {
     name: "Plan 2 student loan threshold unfrozen",
-    how: "Sets the Plan 2 threshold to rise with RPI from 2027-28. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
+    how: [
+      "Sets the Plan 2 threshold to rise with RPI from 2027-28.",
+      "Repayments are modelled, replacing those reported in the survey.",
+      "The revenue figure is the change in modelled repayments.",
+    ],
+    sources: ["student_loan_thresholds"],
     from: 2027,
   },
 ];

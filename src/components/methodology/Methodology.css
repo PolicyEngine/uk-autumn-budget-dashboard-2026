@@ -204,15 +204,24 @@
   color: var(--pe-gray-800);
 }
 
+/* A term's icon: a small tinted chip, as the section headers' */
 .method-fact-icon {
   display: inline-flex;
   flex: none;
-  color: var(--pe-teal-600);
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -3px;
+  border-radius: var(--pe-radius-sm);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-100);
+  color: var(--pe-teal-700);
 }
 
 .method-fact-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 /* The area checks: icon first, term in normal case */
@@ -827,4 +836,131 @@
   margin-top: 6px;
   font-size: var(--fs-caption);
   color: var(--pe-gray-500);
+}
+
+/* A short lead line, then one bullet per idea */
+.method-fact-lead {
+  margin: 0 0 6px;
+  color: var(--pe-gray-800);
+}
+
+.method-points {
+  margin: 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.method-points > li {
+  position: relative;
+  max-width: 75ch;
+  line-height: 1.6;
+}
+
+.method-points > li + li {
+  margin-top: 4px;
+}
+
+.method-points > li::before {
+  content: "";
+  position: absolute;
+  top: 0.68em;
+  left: -13px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pe-teal-400);
+}
+
+.method-card .method-lead + .method-points-lead {
+  margin: -8px 0 20px;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-700);
+}
+
+.method-callout-text p {
+  margin: 0 0 6px;
+}
+
+/* The scatter's band edges as a row of chips */
+.method-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.method-chips .method-tag {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Measure notes: a summary line, the rest as bullets on demand */
+.method-clamp-summary {
+  display: block;
+}
+
+.method-points-more {
+  margin-top: 6px;
+  font-size: var(--fs-small);
+}
+
+/* Likely but not modelled: an icon before each name */
+.method-row-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.method-row-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 3px;
+  color: var(--pe-gray-400);
+}
+
+/* Living standards: a small heading and icon lists */
+.method-subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-subhead svg {
+  width: 16px;
+  height: 16px;
+  color: var(--pe-teal-600);
+}
+
+.method-card .method-list-icons {
+  margin-top: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.method-card .method-list-icons li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 75ch;
+  padding-left: 0;
+}
+
+.method-card .method-list-icons li::before {
+  content: none;
+}
+
+.method-card .method-list-icons svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 3px;
+  color: var(--pe-teal-600);
+}
+
+.method-card .method-list-caveats svg {
+  color: var(--c-loss-text);
 }

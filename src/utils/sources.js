@@ -4,6 +4,10 @@
  * checked to load the page it names on 25 October 2026.
  */
 export const SOURCES = {
+  obr_fiscal_risks: {
+    label: "OBR, Fiscal risks and sustainability – July 2026",
+    url: "https://obr.uk/frs/fiscal-risks-and-sustainability-july-2026/",
+  },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",
     url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
@@ -47,6 +51,26 @@ export const SOURCES = {
   hmrc_employer_rates: {
     label: "HMRC, Rates and thresholds for employers 2026 to 2027",
     url: "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027",
+  },
+  hmrc_income_tax_rates: {
+    label: "HMRC, Income Tax rates and allowances",
+    url: "https://www.gov.uk/government/publications/rates-and-allowances-income-tax/income-tax-rates-and-allowances-current-and-past",
+  },
+  hmrc_ni_rates: {
+    label: "HMRC, Rates and allowances: National Insurance contributions",
+    url: "https://www.gov.uk/government/publications/rates-and-allowances-national-insurance-contributions/rates-and-allowances-national-insurance-contributions",
+  },
+  student_loan_thresholds: {
+    label: "GOV.UK, Repaying your student loan: how much you repay",
+    url: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
+  },
+  policyengine_uk: {
+    label: "policyengine-uk",
+    url: "https://github.com/PolicyEngine/policyengine-uk",
+  },
+  constituency_method_note: {
+    label: "Method note for constituency figures",
+    url: "https://github.com/PolicyEngine/microcosm/issues/1131",
   },
   pe_uk_2616: {
     label: "policyengine-uk #2616",

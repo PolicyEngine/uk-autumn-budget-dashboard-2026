@@ -33,21 +33,22 @@ function GeographyMethodology() {
         items={[
           [
             "At least 10 households",
-            <>
-              Every published figure rests on at least 10 survey households,
-              and no single household dominates it: each figure is checked
-              against dominance and p% rules before it is published.
-            </>,
+            {
+              points: [
+                "Every published figure rests on at least 10 survey households.",
+                "No single household dominates it: each figure is checked against dominance and p% rules before it is published.",
+              ],
+            },
             ShieldCheck,
           ],
           [
             "90% intervals",
-            <>
-              Each figure comes with a 90% interval, from resampling survey
-              households with their weights held fixed. Holding the weights
-              fixed leaves out some of the uncertainty, so the intervals
-              understate it.
-            </>,
+            {
+              points: [
+                "Each figure comes with a 90% interval, from resampling survey households with their weights held fixed.",
+                "Holding the weights fixed leaves out some of the uncertainty, so the intervals understate it.",
+              ],
+            },
             Ruler,
           ],
           [
@@ -78,15 +79,15 @@ function GeographyMethodology() {
           ],
           [
             "Map colours",
-            <>
-              The map groups figures into categories with breaks fixed in
-              advance: little change is under {percent.small} of income (
-              {pounds.small} a year) either way, a small change is up to{" "}
-              {percent.large} ({pounds.large}), and a large change is more. A
-              constituency is coloured only when its interval lies within one
-              category or two neighbouring ones; otherwise it is too uncertain
-              to classify.
-            </>,
+            {
+              lead: "The map groups figures into categories with breaks fixed in advance:",
+              points: [
+                `little change: under ${percent.small} of income (${pounds.small} a year) either way;`,
+                `small change: up to ${percent.large} (${pounds.large});`,
+                "large change: more.",
+                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify.",
+              ],
+            },
             Palette,
           ],
           [
@@ -99,12 +100,12 @@ function GeographyMethodology() {
           ],
           [
             "Later years",
-            <>
-              Constituency figures from the national dataset use its
-              constituency weights, which are estimated for 2025. Later years
-              keep each household&apos;s 2025 split across constituencies,
-              scaled to that year&apos;s household weights.
-            </>,
+            {
+              points: [
+                "Constituency figures from the national dataset use its constituency weights, which are estimated for 2025.",
+                "Later years keep each household's 2025 split across constituencies, scaled to that year's household weights.",
+              ],
+            },
             CalendarClock,
           ],
         ]}
