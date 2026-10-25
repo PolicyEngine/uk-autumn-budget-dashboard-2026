@@ -116,12 +116,12 @@ describe("Household impact's results", () => {
 });
 
 describe("the household calculation, from the fixture", () => {
-  it("asks for the headline first, then the breakdown, with the wizard's answers", async () => {
+  it("asks for the headline first, then the sweep and the split by policy at once, with the wizard's answers", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    expect(household.map((body) => body.include)).toEqual([[], ["by_policy", "sweep"]]);
+    expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
     const [first] = household;
     expect(first.year).toBe(2029);
     expect(first.household).toMatchObject({
@@ -523,6 +523,35 @@ describe("the household calculation's errors", () => {
     fail = false;
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
     expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
+  });
+
+  it("shows the earnings charts as soon as the sweep arrives, while the split by policy is still running", async () => {
+    let finishByPolicy;
+    const byPolicyAsked = new Promise((resolve) => {
+      finishByPolicy = resolve;
+    });
+    serve((body) =>
+      body.include.includes("by_policy")
+        ? byPolicyAsked.then(() => json(householdAnswerFor(body)))
+        : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
+    finishByPolicy();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+  });
+
+  it("keeps the earnings charts when only the split by policy fails", async () => {
+    serve((body) =>
+      body.include.includes("by_policy") ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
   });
 
   it("keeps the headline when only the breakdown fails", async () => {

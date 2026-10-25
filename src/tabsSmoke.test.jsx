@@ -190,7 +190,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["by_policy", "sweep"]]);
+        expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
           true,
         );
@@ -246,17 +246,19 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(personal).not.toBeVisible();
     held.shift()();
-    // The second stage follows while the view is hidden
-    await waitFor(() => expect(held).toHaveLength(1));
+    // The second stage (the sweep and the split by policy, asked for at
+    // once) follows while the view is hidden
+    await waitFor(() => expect(held).toHaveLength(2));
     held.shift()();
-    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2));
+    held.shift()();
+    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
     expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
     await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
-    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
+    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
 
