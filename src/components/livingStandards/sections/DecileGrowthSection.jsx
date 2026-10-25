@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
 import { LsBarChart } from "../LsCharts";
 import { PALETTE, rangeAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -32,13 +33,14 @@ const GROUPINGS = {
  * The By decile or By quintile view: card parts for the Growth across the
  * distribution card. A file without quintiles gives no quintile view.
  */
-export default function useDecileView(data, grouping = "decile") {
+export default function useDecileView(data, grouping = "decile", range = null, setRange = null) {
   const dec = data.income_by_decile;
   const g = GROUPINGS[grouping];
   const [basis, setBasis] = useState("bhc");
   const byYear = dec[basis]?.[g.key] || [];
-  const first = byYear.find((r) => r.year === headlineStartYear(data)) || byYear[0];
-  const end = byYear.find((r) => r.year === headlineYear(data)) || byYear[byYear.length - 1];
+  const [fromYear, toYear] = range ?? [headlineStartYear(data), headlineYear(data)];
+  const first = byYear.find((r) => r.year === fromYear) || byYear[0];
+  const end = byYear.find((r) => r.year === toYear) || byYear[byYear.length - 1];
 
   if (!first || !end || !dec[g.groups]) return null;
   const rows = dec[g.groups].map((d, i) => ({ decile: d, growth: (end.real_median[i] / first.real_median[i] - 1) * 100 }));
@@ -54,6 +56,10 @@ export default function useDecileView(data, grouping = "decile") {
   ];
 
   const controls = (
+    <>
+    {setRange && (
+      <YearRangeSelect years={byYear.map((r) => r.year)} from={first.year} to={end.year} onChange={setRange} />
+    )}
     <PillSelect
       variant="light"
       prefix="Housing costs"
@@ -62,6 +68,7 @@ export default function useDecileView(data, grouping = "decile") {
       onChange={setBasis}
       options={Object.keys(dec.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
     />
+    </>
   );
 
   return {

@@ -297,9 +297,10 @@ def baseline_year(sim, year, snapshot_years=()):
     return res
 
 
-def group_years(policyengine_uk: str) -> tuple[int, int]:
-    """poverty_by_group snapshot years: the base year and the end year."""
-    return (BASE_YEAR, headline_end_year(policyengine_uk))
+def group_years(policyengine_uk: str) -> tuple[int, ...]:
+    """poverty_by_group snapshot years: every year from the base year to the
+    end year, so the page can compare any two of them."""
+    return tuple(range(BASE_YEAR, headline_end_year(policyengine_uk) + 1))
 
 
 def run_projections(log=print) -> dict:

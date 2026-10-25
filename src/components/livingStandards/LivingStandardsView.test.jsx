@@ -167,6 +167,13 @@ describe("the Living standards view", () => {
     choose(growth, "Distribution view", "By quintile");
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
 
+    // The two years compared: chosen in one card, kept in the address and
+    // followed by every card comparing two years
+    choose(who, "Compare from", "2029-30");
+    expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
+    expect(await heading(/^Who is in poverty, 2029-30 to 2031-32$/)).toBeInTheDocument();
+    expect(await heading(/^Growth across the distribution, 2029-30 to 2031-32$/)).toBeInTheDocument();
+
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
     expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);
     expect(document.body.textContent).not.toMatch(/(rises|falls) 0\.0/);

@@ -12,6 +12,8 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../Floating
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
+import { useYearRange } from "../../../utils/livingStandards/yearRange";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
@@ -121,8 +123,12 @@ function breakdownsFor(data, from, to) {
 
 export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;
-  const from = headlineStartYear(data) || pbg?.years?.[0];
-  const to = headlineYear(data) || pbg?.years?.[pbg.years.length - 1];
+  const years = pbg?.years ?? [];
+  // The two years compared: chosen by the reader, 2027-28 to 2031-32 at first
+  const [[from, to], setRange] = useYearRange(years, [
+    headlineStartYear(data) || years[0],
+    headlineYear(data) || years[years.length - 1],
+  ]);
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
@@ -207,6 +213,7 @@ export default function WhoIsInPovertySection({ data }) {
       }}
       controls={
         <>
+          {years.length > 2 && <YearRangeSelect years={years} from={from} to={to} onChange={setRange} />}
           <PillSelect
             variant="light"
             prefix="Breakdown"
