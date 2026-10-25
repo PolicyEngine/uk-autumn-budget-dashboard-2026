@@ -52,8 +52,9 @@ const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
 // The default view has no ?tab= in the URL; ?tab=dashboard is read too
 const DEFAULT_VIEW = "dashboard";
 
-// Views whose links keep the chosen policies in the URL
-const POLICY_PARAM_VIEWS = new Set(["dashboard"]);
+// Views whose links keep the chosen policies in the URL: both use the
+// policy pill, so a shared Household impact link keeps its selection too
+const POLICY_PARAM_VIEWS = new Set(["dashboard", "household"]);
 
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;

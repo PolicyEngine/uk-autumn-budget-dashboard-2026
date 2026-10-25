@@ -46,8 +46,12 @@ import TitleIcon from "./TitleIcon";
 // gains when the net is positive, and just below its stack of costs when
 // negative, so it never covers a bar or the net line. They are part of the
 // chart's SVG, so the SVG and PNG downloads carry them too.
-const formatNetLabel = (value) =>
-  value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+// A net that rounds to zero (a year before a measure starts) has no sign.
+const formatNetLabel = (value) => {
+  const shown = Math.abs(value).toFixed(1);
+  if (Number(shown) === 0) return `£${shown}bn`;
+  return value < 0 ? `-£${shown}bn` : `+£${shown}bn`;
+};
 
 /**
  * The selected year's shading behind its bars. One rect, moved by a

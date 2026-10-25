@@ -35,6 +35,9 @@ import {
   axisWidth,
   CHART_COLOURS,
   zeroBasedAxis,
+  tickDecimals,
+  fixedNoNegativeZero,
+  NO_HOUSEHOLD_CHANGE,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
@@ -71,8 +74,6 @@ const FLIP_SIGN_POLICIES = [];
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
-
-  const formatPercent = (value) => `${value.toFixed(1)}%`;
 
   // Remove "st", "nd", "rd", "th" from decile labels
   const formatDecile = (value) => {
@@ -175,6 +176,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
+  // Enough decimals that no two ticks read alike (0.02% steps need two)
+  const percentDecimals = tickDecimals(yAxisTicks, 1);
+  const formatPercent = (value) => `${fixedNoNegativeZero(value, percentDecimals)}%`;
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -236,6 +240,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     exportOptions,
     csv: () => decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear }),
     published,
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -256,7 +261,13 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
 
       <div ref={chartRef}>
-        {published ? (
+        {published && activePolicies.length === 0 ? (
+          // Only measures that change no household's income (an employer
+          // cost) are selected: a note, not an empty plot of zero ticks
+          <div className="plot-empty" style={{ minHeight: narrow ? 320 : 480 }} role="status">
+            <p>{NO_HOUSEHOLD_CHANGE}</p>
+          </div>
+        ) : published ? (
           <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
             <ComposedChart
               data={data}

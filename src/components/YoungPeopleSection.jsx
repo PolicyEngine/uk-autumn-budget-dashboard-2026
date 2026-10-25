@@ -47,6 +47,7 @@ import {
   fiscalYearTick,
   CHART_COLOURS,
   zeroBasedAxis,
+  NO_HOUSEHOLD_CHANGE,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
@@ -353,6 +354,17 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       ),
     [rows, policies, selectedPolicies],
   );
+  // Whether any selected policy moves anyone's income in any shown year (an
+  // employer cost alone moves none): if not, a note in place of the plot
+  const anyChange = useMemo(
+    () =>
+      DISPLAY_YEARS.some((year) =>
+        meanChangeByBand(rows, policies, selectedPolicies, year).some((point) =>
+          policies.some((policy) => Math.abs(point[policy.name] ?? 0) > 0.01),
+        ),
+      ),
+    [rows, policies, selectedPolicies],
+  );
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
@@ -419,6 +431,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     exportOptions,
     csv: csvText,
     published,
+    image: anyChange,
   };
   const notShown = single
     ? missingAges.length > 0 && `ages ${missingAges.map((p) => p.label).join(", ")}`
@@ -452,6 +465,10 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : !anyChange ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{NO_HOUSEHOLD_CHANGE}</p>
+          </div>
         ) : single ? (
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">

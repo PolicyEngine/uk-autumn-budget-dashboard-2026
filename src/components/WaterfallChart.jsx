@@ -35,6 +35,9 @@ import {
   axisWidth,
   CHART_COLOURS,
   zeroBasedAxis,
+  tickDecimals,
+  fixedNoNegativeZero,
+  NO_HOUSEHOLD_CHANGE,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
@@ -185,11 +188,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     );
   }
 
+  // Whole pounds, unless the ticks are closer than £1 apart
+  const poundDecimals = tickDecimals(yAxisTicks, 0, 2);
   const formatCurrency = (value) => {
     const absVal = Math.abs(value).toLocaleString("en-GB", {
-      maximumFractionDigits: 0,
+      minimumFractionDigits: poundDecimals,
+      maximumFractionDigits: poundDecimals,
     });
-    return value < 0 ? `-£${absVal}` : `£${absVal}`;
+    return value < 0 && Number(absVal) !== 0 ? `-£${absVal}` : `£${absVal}`;
   };
 
 
@@ -228,6 +234,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     exportOptions,
     csv: () => decileCsv(data, selectedPolicyNames, { kind: "absolute", year: selectedYear }),
     published,
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -248,7 +255,13 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
 
       <div ref={chartRef}>
-        {published ? (
+        {published && activePolicies.length === 0 ? (
+          // Only measures that change no household's income (an employer
+          // cost) are selected: a note, not an empty plot of zero ticks
+          <div className="plot-empty" style={{ minHeight: narrow ? 320 : 480 }} role="status">
+            <p>{NO_HOUSEHOLD_CHANGE}</p>
+          </div>
+        ) : published ? (
           <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
             <ComposedChart
               data={data}

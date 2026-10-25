@@ -86,7 +86,7 @@ describe("the view tabs", () => {
     const search = () => new URLSearchParams(window.location.search);
     const expected = {
       dashboard: [null, true],
-      household: ["household", false],
+      household: ["household", true],
       living: ["living", false],
       methodology: ["methodology", false],
     };
