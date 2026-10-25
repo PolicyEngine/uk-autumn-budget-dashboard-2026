@@ -1655,3 +1655,33 @@ body {
   visibility: hidden !important;
   user-select: none;
 }
+
+/* Scroll reveal (useScrollReveal): cards below the fold fade and rise in
+   once, opacity and transform only, so layout and chart sizes never move */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 420ms cubic-bezier(0.33, 1, 0.68, 1) var(--reveal-delay, 0ms),
+    transform 420ms cubic-bezier(0.33, 1, 0.68, 1) var(--reveal-delay, 0ms);
+}
+
+.reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

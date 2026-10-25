@@ -14,6 +14,7 @@ import HouseholdScatter from "./components/HouseholdScatter";
 import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import SourceLink from "./components/SourceLink";
+import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
@@ -158,6 +159,9 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Cards fade and rise in as they scroll into view
+  const mainRef = useRef(null);
+  useScrollReveal(mainRef);
   // The views opened so far: each stays mounted once opened, hidden while
   // another is shown, so its state, open expanders and any calculation in
   // flight carry on
@@ -513,7 +517,7 @@ function App() {
   return (
     // A view without the year pill has a one-row band on a phone
     <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"}>
-      <main className="main-content">
+      <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
             selector still in reach. The sentinel tells it when it is stuck. */}
