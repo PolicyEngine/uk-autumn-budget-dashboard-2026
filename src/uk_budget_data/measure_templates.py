@@ -703,6 +703,8 @@ _BENEFIT_RECEIPT_GATES = {
     "universal_credit": None,
     "guarantee_credit": "in_receipt_of_guarantee_credit",
     "savings_credit": "pension_credit",
+    "housing_benefit": None,
+    "esa_income": None,
 }
 
 # The salt of policyengine-uk's Warm Home Discount receipt draw
@@ -732,8 +734,10 @@ def apply_benefit_receipt_payment(
     """Add a lump sum once per household, based on actual annual receipt.
 
     Receipt on a payment date is approximated by annual receipt. Only
-    ``universal_credit``, ``guarantee_credit`` and ``savings_credit`` are
-    supported. Universal Credit is natively gated by ``would_claim_uc``.
+    ``universal_credit``, ``guarantee_credit``, ``savings_credit``,
+    ``housing_benefit`` and ``esa_income`` are supported. Universal Credit is
+    natively gated by ``would_claim_uc`` and Housing Benefit by
+    ``would_claim_housing_benefit``; income-related ESA is a reported award.
     The two Pension Credit components are entitlement amounts: guarantee
     credit additionally requires ``in_receipt_of_guarantee_credit``, which
     enforces eligibility and take-up, and savings credit requires positive

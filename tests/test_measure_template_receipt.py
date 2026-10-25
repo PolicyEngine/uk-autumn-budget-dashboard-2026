@@ -3,6 +3,9 @@
 import pytest
 from policyengine_uk import Simulation
 
+from uk_budget_data.budget_measures.warm_home_discount_top_up import (
+    warm_home_discount_top_up,
+)
 from uk_budget_data.measure_templates import apply_benefit_receipt_payment
 
 
@@ -83,4 +86,63 @@ def test_payment_universal_credit_selector_requires_actual_receipt(claim):
     _payment(sim, "universal_credit")
     assert sim.calculate("cost_of_living_support_payment", 2027)[0] == (
         native + (120 if claim else 0)
+    )
+
+
+def _legacy_household(*, claim_hb, esa=None, income=14000, age=75):
+    benunit = {
+        "members": ["p"],
+        "would_claim_pc": {2026: False},
+        "would_claim_uc": {2026: False},
+        "would_claim_housing_benefit": {2026: claim_hb},
+    }
+    if esa is not None:
+        benunit["esa_income"] = {2026: esa}
+    return {
+        "people": {
+            "p": {
+                "age": {2026: age},
+                "private_pension_income": {2026: income},
+            }
+        },
+        "benunits": {"b": benunit},
+        "households": {
+            "h": {
+                "members": ["p"],
+                "region": {2026: "LONDON"},
+                "rent": {2026: 9600},
+                "tenure_type": {2026: "RENT_PRIVATELY"},
+            }
+        },
+    }
+
+
+@pytest.mark.parametrize("claim", [False, True])
+def test_warm_home_discount_top_up_reaches_housing_benefit_alone(claim):
+    # A pensioner renting in London on £14,000 of private pension: above
+    # Pension Credit, but Housing Benefit of £9,338.70 when claimed.
+    sim = Simulation(situation=_legacy_household(claim_hb=claim))
+    assert sim.calculate("pension_credit", 2026)[0] == 0
+    assert sim.calculate("universal_credit", 2026)[0] == 0
+    assert bool(sim.calculate("housing_benefit", 2026)[0] > 0) is claim
+    native = sim.calculate("cost_of_living_support_payment", 2026)[0]
+    warm_home_discount_top_up(sim)
+    assert sim.calculate("cost_of_living_support_payment", 2026)[0] == (
+        native + (100 if claim else 0)
+    )
+
+
+@pytest.mark.parametrize("award", [0, 3000])
+def test_warm_home_discount_top_up_reaches_income_related_esa_alone(award):
+    sim = Simulation(
+        situation=_legacy_household(
+            claim_hb=False, esa=award, income=0, age=40
+        )
+    )
+    assert sim.calculate("universal_credit", 2026)[0] == 0
+    assert sim.calculate("housing_benefit", 2026)[0] == 0
+    native = sim.calculate("cost_of_living_support_payment", 2026)[0]
+    warm_home_discount_top_up(sim)
+    assert sim.calculate("cost_of_living_support_payment", 2026)[0] == (
+        native + (100 if award else 0)
     )
