@@ -912,6 +912,88 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
     The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
   - **The 14 October cut, only if a release ever falls back to it** (UK hub, S6, 22 October). That cut predates Microcosm's weight-index fix (0f0bb869), so it carries a +0.72% calibration-year weight skew. No dashboard release has used it: 6.10.0's cut has the fix, and so do later re-cuts. So a revert to the dashboard's previous cut doesn't carry it.
 
+## Faster generation on Budget day
+
+Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microcosm national dataset). The draft PR "Faster generation" holds the details.
+
+- **Where the time goes.** One measure is two microsimulations, built once and read for every year:
+  - **Building them:** about 15 s each, all inside policyengine-uk's `Simulation.__init__` (the UC reform, enum encoding, uprating). Loading the dataset itself is not the cost.
+  - **The example households' income curve** was the largest part: about 17 s per measure and year. It now runs one household simulation per scenario for every year. The rows are identical to the bit, and it is about four times faster.
+  - **Everything else** (budgetary, distributional, winners and losers, age, scatter): about 5 s per year, mostly `gov_balance` and net income.
+  - **Memory:** about 19 GB per measure over two years and 22.5 GB over six as peak footprint (compressed pages included), but about 6.5 GB resident at its peak with another measure running beside it ("Fast full run" below).
+- **One pass writes every flat file.** `generate` now writes `household_scatter_binned.csv` from the same simulations, beside `age_impact.csv` and `income_curve.csv`, so `--only age_impact`, `--only household_scatter` and `income-curve` are needed only to rerun one file.
+- **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
+
+  ```bash
+  uv run uk-budget-data generate --jobs auto
+  uv run uk-budget-data generate --artifacts --reforms <ids> --jobs auto
+  uv run uk-budget-data geography --jobs auto
+  ```
+
+  - **One worker process per measure,** started from a forkserver that has already imported the engine. The data-limit watch, the model-limit check and the receipt each read one measure's two simulations, so a measure is never split across workers.
+  - **The same bytes as a serial run.** Results are written in measure order, and each artifact gets the same digest. Only `receipt.json`'s run fields (`generated_at`, `generator_argv`) differ.
+  - **`auto` never pushes the machine into swap.** It takes as many workers as the free memory holds at the per-measure estimate, after keeping 6 GB back. A measure starts only when its memory is free, and one still starting up counts at its whole estimate. With more than 30 GB of swap already in use, measures run one at a time. The estimate is 6.5 GB for `generate` (measured resident peak) and the footprint above for `geography` (not yet measured side by side). `--unit-memory-gb` overrides it.
+  - **Before a heavy run,** check `sysctl vm.swapusage` and `pgrep -fl uk-budget-data`. Other generations share the machine.
+- **Expected times for the whole run** (10 measures × 6 years). These are scaled from the measured figures, not timed end to end:
+
+  | Step | Before (serial) | Now, `--jobs 1` | Now, 2 jobs | Modal, about 10 containers |
+  |---|---|---|---|---|
+  | Flat CSVs, with age_impact and the binned scatter | 33 min, plus 12–23 min (age) and 10–24 min (scatter) | about 17 min | about 9 min | about 5 min |
+  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | local only |
+  | `geography` (simulation part; the estimate and checks add about 3 min) | about 24 min | about 24 min | about 12 min | local only |
+
+  - **How many jobs fit.** On a quiet 64 GB laptop `auto` should pick 2 workers for six years. On 24 October, with other agents' sessions holding memory and 16 GB of swap, it picked 1.
+  - **Modal** sends each measure to its own container. Each container downloads the dataset (about 1.5 GB) on its first run. 10 measures need 10 containers, so 20 containers buy nothing over 10.
+- **`--backend modal`** (flat CSVs and `--only` only, opt-in):
+
+  ```bash
+  uv run --with modal==1.6.2 uk-budget-data generate --backend modal
+  ```
+
+  - **Who sets it up:** whoever owns the Modal workspace (Anthony):
+    1. create the secret with `modal secret create uk-budget-2026-hf-token HUGGING_FACE_TOKEN=<read-only token>`;
+    2. give the runner a Modal token (`modal token new`), as the person running the command.
+  - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
+  - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
+  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
+
+## Fast full run
+
+"Society" results: the nine candidate measures plus `autumn_budget_2026_combined`, every year (2026 to 2031), every flat table in `public/data` (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned`, `income_curve`, and `obr_comparison`). One `generate` writes all of them.
+
+**Measured end to end on 25 October** on an 18-core, 64 GB Mac (policyengine 6.10.2, `microcosm_uk_2024_25`). Other sessions were holding about 37 GB, with 10 to 20 GB of swap in use. Every parallel run's files were byte-identical to the serial run's. The serial run's seven dashboard tables were also byte-identical to the committed `public/data`.
+
+| Configuration | Wall time | Units at once (observed) | Peak RSS, process tree | Swap rise |
+|---|---|---|---|---|
+| `--jobs 1` (serial) | 16.0 min | 1 | 10.3 GB | +5.3 GB |
+| `--jobs auto` | 14.7 min | 1 (it chose 1: "21 GB free, 22.5 GB per unit") | 12.2 GB | 0 |
+| `--jobs 2` (old 22.5 GB estimate) | not timed end to end: expected to be about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time (seen in the interrupted runs) | n/a | n/a |
+| **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
+| `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
+
+- **Use on Budget day: `--jobs 2`, about 8 minutes.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
+- **The per-unit estimate is now 6.5 GB** (it was 22.5 GB, a peak footprint that counts compressed pages). With 22.5 GB, `auto` and the admission check fell back to one unit at a time on this Mac. Two units at once peaked at 12.8 GB RSS (6.4 GB each), three at 16.4 GB, swap rose no more than in the serial run, and free memory never fell below 8.4 GB. With 6.5 GB and 21 GB free, `auto` picks 2 and the admission check lets a second unit start while the first ramps up, but not a third. The table's `--unit-memory-gb 4` rows are how this was measured before the change; 4 and 6.5 both admit two units on this machine.
+- **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
+
+```bash
+cd <checkout of the release commit>
+export HUGGING_FACE_TOKEN="$(cat ~/.cache/huggingface/token)"   # never echo it
+sysctl vm.swapusage; pgrep -fl uk-budget-data                   # nothing else generating
+top -l 1 -n 0 | grep PhysMem                                    # at least ~15 GB unused or inactive
+uv run uk-budget-data generate --jobs 2                         # about 8 min, writes public/data
+git status --short public/data                                  # review the diff before committing
+```
+
+- **Check against a serial run** on a scratch copy when there is time (16 min): `--output-dir /tmp/serial --jobs 1`, then `cmp` each CSV. They must be identical.
+- **Fallbacks, in order:**
+  1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
+  2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
+  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+- **Not covered here:**
+  - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
+  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
+
 ## Adopting a release (each re-cut)
 
 **On 28 October no upgrade is adopted after the 07:00Z go/no-go.** Only an emergency revert to the previous cut is allowed (see "Rolling re-cuts" above). The steps below are how each re-cut is adopted before then.

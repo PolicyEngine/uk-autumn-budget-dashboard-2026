@@ -297,6 +297,31 @@ def test_income_curve_defaults_to_every_policy_year():
     assert parse_args(["income-curve"]).years == list(POLICY_YEARS)
 
 
+def test_one_simulation_for_every_year_gives_the_per_year_rows():
+    """The flat run asks for every year at once; the rows must be those of
+    one call per year, value for value and in the same order."""
+    from policyengine_uk.utils.scenario import Scenario
+
+    from uk_budget_data.calculators import IncomeCurveCalculator
+
+    calculator = IncomeCurveCalculator(num_points=3)
+    reform = Scenario(
+        parameter_changes={
+            "gov.hmrc.income_tax.rates.uk[0].rate": {
+                "2026": 0.21,
+                "2027": 0.22,
+            }
+        }
+    )
+    per_year = [
+        row
+        for year in YEARS
+        for row in calculator.calculate(None, reform, "m", "M", year)
+    ]
+    together = calculator.calculate(None, reform, "m", "M", list(YEARS))
+    assert [repr(row) for row in together] == [repr(row) for row in per_year]
+
+
 def test_each_household_names_a_registered_measure():
     from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 

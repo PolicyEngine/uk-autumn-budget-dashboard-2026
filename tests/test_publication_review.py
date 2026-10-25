@@ -1237,7 +1237,9 @@ def test_the_income_curve_uses_the_run_baseline_through_the_processor(world):
         processor = _processor_with_spies(reform, config)
         processor.process(baseline, reformed, baseline_scenario)
         calls = processor.income_curve_calc.calls
-        assert len(calls) == len(config.years)
+        # One call for every year at once, on the population's baseline.
+        assert len(calls) == 1
+        assert calls[0][4] == list(config.years)
         curves[reform.id] = (
             [call[0] for call in calls],
             built[id(baseline)],

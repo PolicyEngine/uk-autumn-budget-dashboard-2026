@@ -113,7 +113,7 @@ class TestLegacyGeographyFlag:
         monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
         seen = {}
 
-        def capture(reforms, config, skip_input_check):
+        def capture(reforms, config, skip_input_check, **options):
             seen["dir"] = config.legacy_geography_dir
             raise FileNotFoundError("stop here")
 
