@@ -115,6 +115,11 @@ def add_publish_parser(subparsers) -> None:
 
     actions.add_parser("check", help="Re-run every gate (used by CI)")
     actions.add_parser("status", help="List manifest entries")
+    actions.add_parser(
+        "definitions",
+        help="Compare this code's definition of each displayed measure "
+        "with its approved receipt, as the household API reports it",
+    )
 
     rows = actions.add_parser(
         "review-rows",
@@ -211,6 +216,11 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
     if action == "review-rows":
         return run_review_rows(parsed, out)
 
+    if action == "definitions":
+        from uk_budget_data.definitions import run_check
+
+        return run_check(data_root, out)
+
     manifest = m.load_manifest(data_root)
     if action == "status":
         out(f"revision {manifest.revision}")
@@ -254,7 +264,8 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         else:
             out(
                 "usage: uk-budget-data publish "
-                "{reconcile,stage,approve,withdraw,check,status,review-rows}"
+                "{reconcile,stage,approve,withdraw,check,status,"
+                "definitions,review-rows}"
             )
             return 2
     except PublishError as error:
