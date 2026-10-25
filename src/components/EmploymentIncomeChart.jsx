@@ -65,6 +65,8 @@ function EmploymentIncomeChart({
   defaultHousehold = DEFAULT_HOUSEHOLD,
   household: controlledHousehold,
   onHouseholdChange,
+  // Off where one picker above the pair drives both charts
+  showPicker = true,
 }) {
   const [ownHousehold, setOwnHousehold] = useState(defaultHousehold);
   // A parent can control the choice so the two household cards stay in step
@@ -102,7 +104,9 @@ function EmploymentIncomeChart({
   const { domain: xDomain, ticks: xTicks } = sweepAxis(household.x_max);
   const yMax = Math.max(1, ...data.map((point) => Math.max(point.baseline, point.reform)));
   const yTicks = roundTicks(yMax);
-  const picker = <HouseholdPicker value={household.id} onChange={setHouseholdId} />;
+  const picker = showPicker ? (
+    <HouseholdPicker value={household.id} onChange={setHouseholdId} />
+  ) : null;
 
   if (loading) {
     return (

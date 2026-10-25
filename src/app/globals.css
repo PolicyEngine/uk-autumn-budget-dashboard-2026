@@ -1277,7 +1277,7 @@ body {
   .title-row .policy-selector-toggle {
     width: auto;
     min-width: 0;
-    height: 34px;
+    height: 40px;
     gap: 6px;
     padding: 0 12px 0 5px;
   }
@@ -1684,4 +1684,13 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Example households: one chooser above the pair of charts */
+.example-household-picker {
+  margin: 0 0 16px;
+}
+
+.example-household-picker .household-picker {
+  margin: 0;
 }

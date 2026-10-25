@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
-import ViewSwitch, { ListIcon, MapIcon } from "./ViewSwitch";
+import PillSelect from "./PillSelect";
 import ConstituencyRankings, { TABLE_SIZE } from "./ConstituencyRankings";
 import {
   APPROXIMATE_MARK,
@@ -110,8 +110,8 @@ const CHART_TITLE = "Constituency-level impacts";
 const PANELS = ["map", "rankings"];
 const PANEL_PARAM = "map";
 const PANEL_OPTIONS = [
-  { value: "map", label: "Map", icon: <MapIcon /> },
-  { value: "rankings", label: "Rankings", icon: <ListIcon /> },
+  { value: "map", label: "Map" },
+  { value: "rankings", label: "Rankings" },
 ];
 
 // Excel reads a CSV as UTF-8 only with a byte-order mark ("Ynys Môn").
@@ -796,11 +796,13 @@ export default function ConstituencyMap({
           then the logo. */}
       <div className="chart-controls">
         <div className="map-top-bar">
-          <ViewSwitch
-            label="Show constituencies as"
-            options={PANEL_OPTIONS}
+          <PillSelect
+            variant="light"
+            name="Show constituencies as"
+            prefix="Show"
             value={panel}
             onChange={setPanel}
+            options={PANEL_OPTIONS}
           />
           {view.kind === "rows" &&
             (onMap ? (

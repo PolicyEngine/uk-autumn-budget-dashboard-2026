@@ -15,6 +15,7 @@ import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import SourceLink from "./components/SourceLink";
 import useScrollReveal from "./hooks/useScrollReveal";
+import HouseholdPicker from "./components/HouseholdPicker";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
@@ -685,12 +686,18 @@ function App() {
                       />
                     </section>
 
-                    {/* Row 3: example households. Each card has its own
-                        household chooser, starting on different ones. */}
+                    {/* Row 3: example households, one chooser above both
+                        charts */}
                     <SectionHeading
                       title="Example households"
-                      subtitle="Net income of five example households across their incomes. Choose a household in either chart."
+                      subtitle="Net income of five example households across their incomes."
                     />
+                    <div className="example-household-picker">
+                      <HouseholdPicker
+                        value={exampleHouseholdId}
+                        onChange={setExampleHouseholdId}
+                      />
+                    </div>
                     <section
                       id="household"
                       className="report-section charts-grid charts-row-3"
@@ -700,12 +707,14 @@ function App() {
                         selectedYear={distributionalYear}
                         household={exampleHouseholdId}
                         onHouseholdChange={setExampleHouseholdId}
+                        showPicker={false}
                       />
                       <EmploymentIncomeDiffChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                         household={exampleHouseholdId}
                         onHouseholdChange={setExampleHouseholdId}
+                        showPicker={false}
                       />
                     </section>
 

@@ -52,8 +52,8 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  height: 30px;
-  padding: 0 2px;
+  height: 40px;
+  padding: 0 4px;
   border: 1px solid var(--pe-gray-300);
   border-radius: 999px;
   background: var(--pe-surface);
@@ -86,13 +86,12 @@
   margin: 0;
 }
 
-/* Compact pills, so a card's controls fit one line in a half-width card
-   at 1440 (they wrap on a phone) */
+/* The page's one control height, 40px; two a row in a half-width card */
 .ls-controls .pill-select-light .pill-select-toggle {
-  gap: 4px;
-  height: 30px;
-  padding: 0 6px 0 9px;
-  font-size: var(--fs-micro);
+  gap: 6px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  font-size: var(--fs-caption);
 }
 
 .ls-controls .pill-select-light .pill-select-badge {

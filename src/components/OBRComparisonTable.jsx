@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
-import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
@@ -207,46 +206,17 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             ]}
           />
         )}
-        <div className="obr-view-switch" role="group" aria-label="Show as">
-          <button
-            type="button"
-            className="obr-view-option"
-            aria-pressed={!showTable}
-            aria-label="Chart"
-            title="Chart"
-            onClick={() => setView("chart")}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <path
-                d="M2 14h12M4 11V7M8 11V3M12 11V6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Chart</span>
-          </button>
-          <button
-            type="button"
-            className="obr-view-option"
-            aria-pressed={showTable}
-            aria-label="Table"
-            title="Table"
-            onClick={() => setView("table")}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <path
-                d="M2.5 3h11v10h-11zM2.5 6.5h11M2.5 9.75h11M6.5 3v10"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>Table</span>
-          </button>
-        </div>
+        <PillSelect
+          variant="light"
+          name="Show as"
+          prefix="Show"
+          value={showTable ? "table" : "chart"}
+          onChange={setView}
+          options={[
+            { value: "chart", label: "Chart" },
+            { value: "table", label: "Table" },
+          ]}
+        />
       </div>
 
       {!showTable && (
