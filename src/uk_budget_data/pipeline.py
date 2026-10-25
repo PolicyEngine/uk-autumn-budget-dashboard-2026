@@ -4,6 +4,7 @@ This module provides the main pipeline for generating all dashboard data
 from a list of reforms.
 """
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -15,7 +16,6 @@ from policyengine_uk.system import system
 from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
 from rich.markup import escape
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
@@ -169,6 +169,20 @@ class ReformProcessor:
 
         scenario = self.reform.to_scenario()
 
+        # Income curve: against the population's own baseline. Every year
+        # at once: one household simulation per scenario reads them all,
+        # the same values as a simulation per year (checked to the bit for
+        # every measure on 24 October 2026), about four times faster.
+        all_income_curve.extend(
+            self.income_curve_calc.calculate(
+                baseline_scenario,
+                scenario,
+                reform_id,
+                reform_name,
+                list(self.config.years),
+            )
+        )
+
         for year in self.config.years:
             # Distributional (also returns dataframe for other calcs)
             distributional, decile_df = self.distributional_calc.calculate(
@@ -194,12 +208,6 @@ class ReformProcessor:
                     baseline, reformed, reform_id, reform_name, year
                 )
             )
-
-            # Income curve: against the population's own baseline.
-            income_curve = self.income_curve_calc.calculate(
-                baseline_scenario, scenario, reform_id, reform_name, year
-            )
-            all_income_curve.extend(income_curve)
 
             # Household scatter (sampled to ~2k households per reform/year)
             household_scatter = self.household_scatter_calc.calculate(
@@ -283,21 +291,32 @@ class DataPipeline:
         self,
         reforms: Optional[list[Reform]] = None,
         config: Optional[DataConfig] = None,
+        household_scatter: bool = False,
     ):
         """Initialize the pipeline.
 
         Args:
             reforms: List of reforms to process. Defaults to Autumn Budget.
             config: Data configuration. Uses defaults if not provided.
+            household_scatter: Also write ``household_scatter_binned.csv``
+                from the same simulations, as ``generate --only
+                household_scatter`` writes it.
         """
         self.reforms = reforms or get_autumn_budget_2026_reforms()
         self.config = config or DataConfig()
+        self.household_scatter = household_scatter
 
-    def run(self, skip_input_check: bool = False) -> dict[str, pd.DataFrame]:
+    def run(
+        self, skip_input_check: bool = False, runner=None
+    ) -> dict[str, pd.DataFrame]:
         """Run the pipeline and generate all data.
 
         Args:
             skip_input_check: Skip checking for input files.
+            runner: Runs the measures (``parallel.SerialRunner`` by default:
+                one after another, here). Each measure is one unit: its two
+                simulations are built once and every table is read from
+                them, whichever runner runs it.
 
         Returns:
             Dict mapping output name to DataFrame.
@@ -308,8 +327,6 @@ class DataPipeline:
             if not skip_input_check:
                 check_input_data(self.config)
 
-        results = []
-
         # Dataset selection is delegated to policyengine.py. With no explicit
         # path it resolves the dataset pinned by the installed release bundle
         # (the certified enhanced FRS on HuggingFace), which needs
@@ -317,95 +334,20 @@ class DataPipeline:
         dataset_path = (
             str(self.config.dataset_path) if self.config.dataset_path else None
         )
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            for reform in self.reforms:
-                task = progress.add_task(
-                    f"Processing {reform.name}...", total=None
-                )
-
-                # Create simulations
-                baseline_scenario = reform.baseline_scenario_for(self.config)
-                reform_scenario = reform.to_scenario()
-
-                # Generation refuses a measure that changes a wealth-tax
-                # scale or leaves out a scored year of an uprated amount;
-                # this flat path has no gate, so it says so loudly, in the
-                # same order, and runs it.
-                def warn(reason):
-                    console.print(
-                        f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
-                        f"{escape(reason)} Generation refuses it."
-                    )
-
-                wealth_tax = wealth_tax_paths(
-                    baseline_scenario, reform_scenario
-                )
-                if wealth_tax:
-                    warn(wealth_tax_refusal(*wealth_tax))
-                for gap in missing_scored_years(
-                    getattr(baseline_scenario, "parameter_changes", None),
-                    reform_scenario.parameter_changes,
-                    self.config.years,
-                    system,
-                ):
-                    warn(gap.reason)
-
-                # Built under data_limits.building, so a modifier that
-                # reads a limited input while its simulation is built
-                # counts.
-                baseline = data_limits.watched_build(
-                    build_microsimulation, dataset_path, baseline_scenario
-                )
-                reformed = data_limits.watched_build(
-                    build_microsimulation, dataset_path, reform_scenario
-                )
-                # A modifier that edits a wealth-tax scale, which the built
-                # simulations show and generation refuses.
-                if not wealth_tax and all(
-                    hasattr(sim, "tax_benefit_system")
-                    for sim in (baseline, reformed)
-                ):
-                    built = wealth_tax_paths_differing(baseline, reformed)
-                    if built:
-                        warn(wealth_tax_refusal(*built))
-
-                # Process reform, watching what code that differs between
-                # the two reads while it runs (data_limits.observing).
-                processor = ReformProcessor(reform, self.config)
-                with data_limits.observing(baseline, reformed) as observed:
-                    result = processor.process(
-                        baseline, reformed, baseline_scenario
-                    )
-                results.append(result)
-                # This flat path has no publication gate, so say loudly when
-                # the data cannot cost a measure: its rows are not costings.
-                for limit in data_limits.limits_touched(
-                    baseline, reformed, observed
-                ):
-                    console.print(
-                        f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
-                        f"{reform.name}: {limit['reason']} Its rows in these "
-                        "CSVs are not costings; publish it through the gated "
-                        "path, which lists it as not computable."
-                    )
-                for limit in model_limits.limits_touched(baseline, reformed):
-                    console.print(
-                        f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
-                        f"{reform.name}: {limit['reason']} Publish it through "
-                        "the gated path, which holds it at provisional."
-                    )
-
-                progress.remove_task(task)
-                console.print(f"[green]✓[/green] {reform.name}")
+        tables = FLAT | (SCATTER if self.household_scatter else frozenset())
+        outcomes = flat_units(
+            self.reforms, self.config, dataset_path, tables, runner
+        )
+        results = [outcome.result for outcome in outcomes]
 
         # Aggregate and save
         aggregated = aggregate_results(results, config=self.config)
         self._save_all(aggregated)
+        if self.household_scatter:
+            save_scatter(
+                [cell for o in outcomes for cell in o.scatter_cells],
+                self.config.output_dir,
+            )
 
         return aggregated
 
@@ -579,6 +521,8 @@ def generate_all_data(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
     skip_input_check: bool = False,
+    runner=None,
+    household_scatter: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Generate all dashboard data for the given reforms.
 
@@ -588,60 +532,256 @@ def generate_all_data(
         reforms: List of reforms to process. Defaults to Autumn Budget 2026.
         config: Data configuration. Uses defaults if not provided.
         skip_input_check: Skip checking for input files.
+        runner: Runs the measures (see ``DataPipeline.run``).
+        household_scatter: Also write ``household_scatter_binned.csv`` from
+            the same simulations.
 
     Returns:
         Dict mapping output name to DataFrame.
     """
-    pipeline = DataPipeline(reforms=reforms, config=config)
-    return pipeline.run(skip_input_check=skip_input_check)
+    pipeline = DataPipeline(
+        reforms=reforms, config=config, household_scatter=household_scatter
+    )
+    return pipeline.run(skip_input_check=skip_input_check, runner=runner)
+
+
+# -- one measure's work: the unit a runner runs ------------------------------
+
+# The tables a unit reads from its two simulations. FLAT is every flat CSV,
+# age_impact.csv included; AGE and SCATTER alone are ``generate --only``.
+FLAT = frozenset({"flat"})
+AGE = frozenset({"age_impact"})
+SCATTER = frozenset({"household_scatter"})
+
+
+@dataclass(frozen=True)
+class FlatUnit:
+    """One measure for the flat CSVs: what a worker needs to run it."""
+
+    reform: object  # a Reform, or parallel.RegisteredReform
+    config: DataConfig
+    dataset_path: Optional[str]
+    tables: frozenset
+
+
+@dataclass
+class FlatOutcome:
+    """What one measure's unit made, and the lines it has to say."""
+
+    reform_id: str
+    result: Optional[ReformResult] = None
+    age_rows: list = field(default_factory=list)
+    scatter_cells: list = field(default_factory=list)
+    messages: list = field(default_factory=list)
+
+
+def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
+    """Build one measure's two simulations once and read every requested
+    table from them, under the same data-limit watch and model-limit check
+    as before. Runs here or in a worker; it prints nothing, so that the
+    parent says each measure's lines in measure order."""
+    from uk_budget_data.parallel import resolve_reform
+
+    reform = resolve_reform(unit.reform)
+    config = unit.config
+    dataset_path = unit.dataset_path
+    flat = "flat" in unit.tables
+    outcome = FlatOutcome(reform_id=reform.id)
+    say = outcome.messages.append
+
+    baseline_scenario = reform.baseline_scenario_for(config)
+    reform_scenario = reform.to_scenario()
+
+    def warn(reason):
+        say(
+            f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
+            f"{escape(reason)} Generation refuses it."
+        )
+
+    wealth_tax = None
+    if flat:
+        # Generation refuses a measure that changes a wealth-tax scale or
+        # leaves out a scored year of an uprated amount; this flat path has
+        # no gate, so it says so loudly, in the same order, and runs it.
+        wealth_tax = wealth_tax_paths(baseline_scenario, reform_scenario)
+        if wealth_tax:
+            warn(wealth_tax_refusal(*wealth_tax))
+        for gap in missing_scored_years(
+            getattr(baseline_scenario, "parameter_changes", None),
+            reform_scenario.parameter_changes,
+            config.years,
+            system,
+        ):
+            warn(gap.reason)
+
+    # Built under data_limits.building, so a modifier that reads a limited
+    # input while its simulation is built counts.
+    baseline = data_limits.watched_build(
+        build_microsimulation, dataset_path, baseline_scenario
+    )
+    reformed = data_limits.watched_build(
+        build_microsimulation, dataset_path, reform_scenario
+    )
+    # A modifier that edits a wealth-tax scale, which the built simulations
+    # show and generation refuses.
+    if (
+        flat
+        and not wealth_tax
+        and all(
+            hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
+        )
+    ):
+        built = wealth_tax_paths_differing(baseline, reformed)
+        if built:
+            warn(wealth_tax_refusal(*built))
+    survey = None
+    if "household_scatter" in unit.tables:
+        survey = scatter_survey_households(baseline, dataset_path)
+
+    # Every table is read while the watch runs, from the same two runs.
+    with data_limits.observing(baseline, reformed) as observed:
+        if flat:
+            outcome.result = ReformProcessor(reform, config).process(
+                baseline, reformed, baseline_scenario
+            )
+        elif "age_impact" in unit.tables:
+            calculator = AgeImpactCalculator()
+            for year in config.years:
+                outcome.age_rows.extend(
+                    calculator.calculate(
+                        baseline, reformed, reform.id, reform.name, year
+                    )
+                )
+        if survey is not None:
+            outcome.scatter_cells = _scatter_cells(
+                reform, config, dataset_path, baseline, reformed, survey
+            )
+
+    # This flat path has no publication gate, so say loudly when the data
+    # cannot cost a measure, or the model mis-costs it.
+    for limit in data_limits.limits_touched(baseline, reformed, observed):
+        if flat:
+            say(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']} Its rows in these "
+                "CSVs are not costings; publish it through the gated "
+                "path, which lists it as not computable."
+            )
+        else:
+            say(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+    for limit in model_limits.limits_touched(baseline, reformed):
+        if flat:
+            say(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']} Publish it through "
+                "the gated path, which holds it at provisional."
+            )
+        else:
+            say(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+    # The observation holds both simulations: free them together.
+    del baseline, reformed, observed
+    say(f"[green]✓[/green] {reform.name}")
+    return outcome
+
+
+def flat_units(
+    reforms: list[Reform],
+    config: DataConfig,
+    dataset_path: Optional[str],
+    tables: frozenset,
+    runner=None,
+) -> list[FlatOutcome]:
+    """Run one unit per measure and say each measure's lines, in measure
+    order. Results come back in measure order whatever the runner."""
+    from uk_budget_data.parallel import SerialRunner, portable
+
+    runner = runner or SerialRunner()
+    units = [
+        FlatUnit(portable(reform, runner), config, dataset_path, tables)
+        for reform in reforms
+    ]
+
+    def report(index, outcome):
+        for message in outcome.messages:
+            console.print(message)
+
+    return runner.map(run_flat_unit, units, on_result=report)
+
+
+def _scatter_cells(reform, config, dataset_path, baseline, reformed, survey):
+    """One measure's binned scatter cells, as ``generate_household_scatter``
+    bins them: every year's households banded by their basis-year income."""
+    from uk_budget_data.geography import household_values
+    from uk_budget_data.publication.tables import (
+        bin_scatter,
+        scatter_basis_year,
+    )
+
+    basis_year = scatter_basis_year(config.years)
+    reference = household_values(baseline, "household_net_income", basis_year)
+    rows = []
+    for year in config.years:
+        rows.extend(
+            household_scatter_rows(
+                reform,
+                year,
+                household_values(baseline, "household_net_income", year),
+                household_values(reformed, "household_net_income", year),
+                household_values(baseline, "household_weight", year),
+                survey,
+                config.household_scatter_max_income,
+                reference_incomes=reference,
+                basis_year=basis_year,
+            )
+        )
+    return bin_scatter(rows)
+
+
+SCATTER_COLUMNS = [
+    "reform_id",
+    "reform_name",
+    "year",
+    "income_band",
+    "change_band",
+    "change_band_upper",
+    "households",
+    "income_basis_year",
+]
+
+
+def save_scatter(cells: list[dict], output_dir: Path) -> pd.DataFrame:
+    """Write ``household_scatter_binned.csv`` from binned cells."""
+    frame = pd.DataFrame(cells, columns=SCATTER_COLUMNS)
+    path = output_dir / HOUSEHOLD_SCATTER_FILE
+    save_csv(frame, path)
+    console.print(f"[green]Saved {len(frame)} cells to {path}[/green]")
+    return frame
 
 
 def generate_age_impact(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
+    runner=None,
 ) -> pd.DataFrame:
     """Write only ``age_impact.csv``: results by age band.
 
     Builds the same two simulations per reform as the full run, on the same
     baselines, but runs only the age calculator, so it is quick to rerun
     after the other files exist. ``uk-budget-data generate --only
-    age_impact`` calls it.
+    age_impact`` calls it. The full run writes the same file from its own
+    simulations, so it needs no second pass.
     """
     reforms = reforms or get_autumn_budget_2026_reforms()
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
-    calculator = AgeImpactCalculator()
-    rows = []
-    for reform in reforms:
-        baseline = data_limits.watched_build(
-            build_microsimulation,
-            dataset_path,
-            reform.baseline_scenario_for(config),
-        )
-        reformed = data_limits.watched_build(
-            build_microsimulation, dataset_path, reform.to_scenario()
-        )
-        with data_limits.observing(baseline, reformed) as observed:
-            for year in config.years:
-                rows.extend(
-                    calculator.calculate(
-                        baseline, reformed, reform.id, reform.name, year
-                    )
-                )
-        # As the full flat run does: say when the data or the model cannot
-        # cost a measure, since this path has no publication gate either.
-        for limit in data_limits.limits_touched(baseline, reformed, observed):
-            console.print(
-                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
-                f"{reform.name}: {limit['reason']}"
-            )
-        for limit in model_limits.limits_touched(baseline, reformed):
-            console.print(
-                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
-                f"{reform.name}: {limit['reason']}"
-            )
-        console.print(f"[green]✓[/green] {reform.name}")
-    frame = pd.DataFrame(rows)
+    outcomes = flat_units(reforms, config, dataset_path, AGE, runner)
+    frame = pd.DataFrame([row for o in outcomes for row in o.age_rows])
     save_csv(frame, config.output_dir / "age_impact.csv")
     console.print(
         f"[green]Saved {len(frame)} rows to "
@@ -736,6 +876,7 @@ def household_scatter_rows(
 def generate_household_scatter(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
+    runner=None,
 ) -> pd.DataFrame:
     """Write only ``household_scatter_binned.csv``: the binned scatter.
 
@@ -744,84 +885,17 @@ def generate_household_scatter(
     (``publication.tables.bin_scatter``): cells with fewer than the floor
     of survey households are left out, and counts are rounded. No
     household row is written anywhere. ``uk-budget-data generate --only
-    household_scatter`` calls it.
+    household_scatter`` calls it; the full run writes the same file from
+    its own simulations.
     """
-    from uk_budget_data.geography import household_values
-    from uk_budget_data.publication.tables import (
-        bin_scatter,
-        scatter_basis_year,
-    )
-
     reforms = reforms or get_autumn_budget_2026_reforms()
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
-    basis_year = scatter_basis_year(config.years)
-    binned = []
-    for reform in reforms:
-        baseline = data_limits.watched_build(
-            build_microsimulation,
-            dataset_path,
-            reform.baseline_scenario_for(config),
-        )
-        reformed = data_limits.watched_build(
-            build_microsimulation, dataset_path, reform.to_scenario()
-        )
-        survey = scatter_survey_households(baseline, dataset_path)
-        rows = []
-        with data_limits.observing(baseline, reformed) as observed:
-            # Every year's households are banded by their basis-year
-            # baseline income, so each stays in its income band.
-            reference = household_values(
-                baseline, "household_net_income", basis_year
-            )
-            for year in config.years:
-                rows.extend(
-                    household_scatter_rows(
-                        reform,
-                        year,
-                        household_values(
-                            baseline, "household_net_income", year
-                        ),
-                        household_values(
-                            reformed, "household_net_income", year
-                        ),
-                        household_values(baseline, "household_weight", year),
-                        survey,
-                        config.household_scatter_max_income,
-                        reference_incomes=reference,
-                        basis_year=basis_year,
-                    )
-                )
-        binned.extend(bin_scatter(rows))
-        for limit in data_limits.limits_touched(baseline, reformed, observed):
-            console.print(
-                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
-                f"{reform.name}: {limit['reason']}"
-            )
-        for limit in model_limits.limits_touched(baseline, reformed):
-            console.print(
-                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
-                f"{reform.name}: {limit['reason']}"
-            )
-        del baseline, reformed, observed, rows
-        console.print(f"[green]✓[/green] {reform.name}")
-    frame = pd.DataFrame(
-        binned,
-        columns=[
-            "reform_id",
-            "reform_name",
-            "year",
-            "income_band",
-            "change_band",
-            "change_band_upper",
-            "households",
-            "income_basis_year",
-        ],
+    outcomes = flat_units(reforms, config, dataset_path, SCATTER, runner)
+    return save_scatter(
+        [cell for o in outcomes for cell in o.scatter_cells],
+        config.output_dir,
     )
-    path = config.output_dir / HOUSEHOLD_SCATTER_FILE
-    save_csv(frame, path)
-    console.print(f"[green]Saved {len(frame)} cells to {path}[/green]")
-    return frame
 
 
 def generate_income_curve(

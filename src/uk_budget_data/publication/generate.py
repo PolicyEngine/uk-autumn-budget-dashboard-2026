@@ -226,6 +226,172 @@ def _refuse_unscored_years(
         raise ReceiptUnavailable(subject, " ".join(gap.reason for gap in gaps))
 
 
+@dataclass
+class ArtifactRun:
+    """One artifact's run: everything needed to make it, here or in a
+    worker process (``--jobs``). The measure is carried as
+    ``parallel.portable`` gives it; a combined run carries its members and
+    is composed again where it runs, since a composed measure's modifiers
+    cannot be pickled."""
+
+    reform: object
+    key: str
+    identities: tuple
+    members: Optional[list]
+    measure_ids: list
+    config: DataConfig
+    revision: CodeRevision
+    basis: object
+    argv: Optional[list]
+    artifacts_root: Path
+    dataset_path: Optional[str]
+    build: Callable
+    process: Callable
+    member_outputs: Optional[dict] = None
+    composition: object = None
+    uses_config_baseline: bool = False
+    modifier_templates: object = None
+    combine_members: Optional[list] = None
+
+
+@dataclass
+class ArtifactOutcome:
+    """What one run wrote, or why it was refused, and its progress line."""
+
+    key: str
+    reference: Optional[ArtifactRef] = None
+    refused: Optional[str] = None
+    progress: list = field(default_factory=list)
+
+
+def _run_reform(job: ArtifactRun) -> Reform:
+    from uk_budget_data.parallel import resolve_reform
+
+    if job.combine_members is None:
+        return resolve_reform(job.reform)
+    from uk_budget_data.publication import combine
+
+    ordered = [resolve_reform(member) for member in job.combine_members]
+    combined = combine.combine_measures(ordered, job.config)
+    return combined.model_copy(update={"id": job.key})
+
+
+def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
+    """Build one run's two simulations, process them under the data-limit
+    watch, check the model limits and write its artifact. A run that cannot
+    be receipted is refused, not raised; any other failure raises."""
+    outcome = ArtifactOutcome(key=job.key)
+    try:
+        reference, limited = _write_run(job)
+    except ReceiptUnavailable as error:
+        outcome.refused = error.reason
+        outcome.progress.append(f"{job.key}: REFUSED: {error.reason}")
+        return outcome
+    outcome.reference = reference
+    note = " (not computable on current data: receipt only)"
+    outcome.progress.append(
+        f"{job.key}: {'wrote' if reference.created else 'unchanged'} "
+        f"{reference.path}{note if limited else ''}"
+    )
+    return outcome
+
+
+def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
+    config = job.config
+    reform = _run_reform(job)
+    key = job.key
+    baseline_identity, reform_identity = job.identities
+    baseline_scenario = _scenarios(
+        key,
+        lambda: reform.baseline_scenario_for(config, job.uses_config_baseline),
+    )
+    reform_scenario = _scenarios(key, reform.to_scenario)
+    _refuse_wealth_tax_base(key, baseline_scenario, reform_scenario)
+    _refuse_unscored_years(
+        key, baseline_scenario, reform_scenario, config.years
+    )
+    # Built under data_limits.building: a modifier that reads a limited
+    # input while its simulation is built carries it past the watch, so
+    # the build is watched too.
+    baseline = data_limits.watched_build(
+        job.build, job.dataset_path, baseline_scenario
+    )
+    reformed = data_limits.watched_build(
+        job.build, job.dataset_path, reform_scenario
+    )
+    _refuse_wealth_tax_built(key, baseline, reformed)
+    # What the code that differs reads is watched while the run makes the
+    # figures; a measure the data cannot cost is then published as not
+    # computable.
+    with data_limits.observing(baseline, reformed) as observed:
+        result = job.process(
+            reform, config, baseline, reformed, baseline_scenario
+        )
+    limits = _limits(
+        baseline, reformed, baseline_scenario, reform_scenario, observed
+    )
+    # A measure the installed model mis-costs is held at provisional.
+    held = _model_limits(
+        baseline, reformed, baseline_scenario, reform_scenario
+    )
+    configured_identity: list = []
+
+    def config_baseline():
+        # Bound when a run first records it, so a configured baseline that
+        # no requested run uses cannot stop the others.
+        if not configured_identity:
+            try:
+                configured_identity.append(
+                    _config_baseline_identity(config, job.revision)
+                )
+            except ValueError as error:  # a malformed Scenario included
+                if is_code_defect(error):
+                    raise
+                raise ReceiptUnavailable(
+                    "configured baseline", str(error).splitlines()[0]
+                ) from error
+        return configured_identity[0]
+
+    def build_receipt(file_digests):
+        inputs = ReceiptInputs(
+            key=key,
+            measure_ids=job.measure_ids,
+            years=list(config.years),
+            baseline_identity=baseline_identity,
+            reform_identity=reform_identity,
+            file_digests=file_digests,
+            basis=job.basis,
+            revision=job.revision,
+            config_baseline_identity=(
+                config_baseline() if job.uses_config_baseline else None
+            ),
+            members=job.members,
+            member_outputs=job.member_outputs,
+            composition=job.composition,
+            data_limits=limits,
+            model_limits=held,
+            name=reform.name,
+            modifier_templates=(
+                job.modifier_templates
+                if job.modifier_templates is not None
+                else measure_templates_proof(reform, config, job.revision)
+            ),
+        )
+        if job.argv is not None:
+            inputs.generator_argv = job.argv
+        return build_receipt_document(baseline, reformed, inputs)
+
+    # A run the data cannot cost writes its receipt alone: its tables hold
+    # no figure the page may show, so none is published.
+    reference = write_artifact(
+        None if limits else result_tables(result, list(config.years)),
+        key,
+        build_receipt,
+        job.artifacts_root,
+    )
+    return reference, bool(limits)
+
+
 def _refuse_wealth_tax_base(
     subject: str, baseline_scenario, reform_scenario
 ) -> None:
@@ -264,6 +430,7 @@ def generate_artifacts(
     build: Callable = _default_build,
     process: Callable = _default_process,
     on_progress: Callable[[str], None] = lambda message: None,
+    runner=None,
 ) -> GenerationReport:
     """Write one artifact per measure and per combined set.
 
@@ -278,135 +445,86 @@ def generate_artifacts(
         process: Runs the calculators for (reform, config, baseline, reform
             simulation, baseline scenario) and returns a ReformResult.
         on_progress: Called with a line of progress text.
+        runner: Runs the artifacts (``parallel.SerialRunner`` by default).
+            Each run is one unit; the standalone measures run first, then
+            the combined sets, which record their members' outputs. Lines
+            and the report come in the same order whatever the runner.
 
     A combined run records the outputs each member had when it was made:
     the member's artifact from this run if it was generated here, otherwise
     its entry in the manifest beside ``artifacts_root``. A combined run
     whose members are in neither can be written but never staged.
     """
+    from uk_budget_data.parallel import SerialRunner, portable
+
+    runner = runner or SerialRunner()
     report = GenerationReport()
     manifest = load_manifest(artifacts_root.parent)
     written_outputs: dict[str, str] = {}
     revision = code_revision(repo_root)
     basis = load_basis(repo_root / BASIS_PATH)
-    configured_identity: list = []
-
-    def baseline_for(reform: Reform, uses_config_baseline: bool):
-        return reform.baseline_scenario_for(config, uses_config_baseline)
-
-    def config_baseline():
-        # Bound when a run first records it, so a configured baseline that
-        # no requested run uses cannot stop the others.
-        if not configured_identity:
-            try:
-                configured_identity.append(
-                    _config_baseline_identity(config, revision)
-                )
-            except ValueError as error:  # a malformed Scenario included
-                if is_code_defect(error):
-                    raise
-                raise ReceiptUnavailable(
-                    "configured baseline", str(error).splitlines()[0]
-                ) from error
-        return configured_identity[0]
-
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
+    common = dict(
+        config=config,
+        revision=revision,
+        basis=basis,
+        argv=argv,
+        artifacts_root=artifacts_root,
+        dataset_path=dataset_path,
+        build=build,
+        process=process,
+    )
 
-    def run(
-        reform: Reform,
-        key: str,
-        identities,
-        members,
-        measure_ids,
-        member_outputs=None,
-        composition=None,
-        uses_config_baseline=False,
-        modifier_templates=None,
-    ):
-        baseline_identity, reform_identity = identities
-        baseline_scenario = _scenarios(
-            key, lambda: baseline_for(reform, uses_config_baseline)
-        )
-        reform_scenario = _scenarios(key, reform.to_scenario)
-        _refuse_wealth_tax_base(key, baseline_scenario, reform_scenario)
-        _refuse_unscored_years(
-            key, baseline_scenario, reform_scenario, config.years
-        )
-        # Built under data_limits.building: a modifier that reads a limited
-        # input while its simulation is built carries it past the watch,
-        # so the build is watched too.
-        baseline = data_limits.watched_build(
-            build, dataset_path, baseline_scenario
-        )
-        reformed = data_limits.watched_build(
-            build, dataset_path, reform_scenario
-        )
-        _refuse_wealth_tax_built(key, baseline, reformed)
-        # What the code that differs reads is watched while the run makes
-        # the figures; a measure the data cannot cost is then published as
-        # not computable.
-        with data_limits.observing(baseline, reformed) as observed:
-            result = process(
-                reform, config, baseline, reformed, baseline_scenario
-            )
-        limits = _limits(
-            baseline, reformed, baseline_scenario, reform_scenario, observed
-        )
-        # A measure the installed model mis-costs is held at provisional.
-        held = _model_limits(
-            baseline, reformed, baseline_scenario, reform_scenario
-        )
+    def run_all(slots: list) -> None:
+        """Run the jobs among ``slots`` (a job, or an outcome already
+        decided), reporting each slot in order as soon as it and every slot
+        before it are done, so a serial run reports as it goes."""
+        positions = [
+            i for i, slot in enumerate(slots) if isinstance(slot, ArtifactRun)
+        ]
+        done = {
+            i: slot
+            for i, slot in enumerate(slots)
+            if not isinstance(slot, ArtifactRun)
+        }
+        reported = 0
 
-        def build_receipt(file_digests):
-            inputs = ReceiptInputs(
-                key=key,
-                measure_ids=measure_ids,
-                years=list(config.years),
-                baseline_identity=baseline_identity,
-                reform_identity=reform_identity,
-                file_digests=file_digests,
-                basis=basis,
-                revision=revision,
-                config_baseline_identity=(
-                    config_baseline() if uses_config_baseline else None
-                ),
-                members=members,
-                member_outputs=member_outputs,
-                composition=composition,
-                data_limits=limits,
-                model_limits=held,
-                name=reform.name,
-                modifier_templates=(
-                    modifier_templates
-                    if modifier_templates is not None
-                    else measure_templates_proof(reform, config, revision)
-                ),
-            )
-            if argv is not None:
-                inputs.generator_argv = argv
-            return build_receipt_document(baseline, reformed, inputs)
+        def report_ready():
+            nonlocal reported
+            while reported < len(slots) and reported in done:
+                outcome = done[reported]
+                if outcome.reference is not None:
+                    report.written.append(outcome.reference)
+                    written_outputs[outcome.key] = (
+                        outcome.reference.outputs_sha256
+                    )
+                if outcome.refused is not None:
+                    report.refused[outcome.key] = outcome.refused
+                for line in outcome.progress:
+                    on_progress(line)
+                reported += 1
 
-        # A run the data cannot cost writes its receipt alone: its tables
-        # hold no figure the page may show, so none is published.
-        reference = write_artifact(
-            None if limits else result_tables(result, list(config.years)),
-            key,
-            build_receipt,
-            artifacts_root,
-        )
-        report.written.append(reference)
-        written_outputs[key] = reference.outputs_sha256
-        note = " (not computable on current data: receipt only)"
-        on_progress(
-            f"{key}: {'wrote' if reference.created else 'unchanged'} "
-            f"{reference.path}{note if limits else ''}"
-        )
+        def finished(index, outcome):
+            done[positions[index]] = outcome
+            report_ready()
 
+        report_ready()
+        runner.map(
+            run_artifact, [slots[i] for i in positions], on_result=finished
+        )
+        report_ready()
+
+    slots: list = []
     for reform in reforms:
         if reform.id.startswith(COMBINED_PREFIX):
-            report.refused[reform.id] = (
-                f"a measure id may not start with {COMBINED_PREFIX!r}"
+            slots.append(
+                ArtifactOutcome(
+                    key=reform.id,
+                    refused=(
+                        f"a measure id may not start with {COMBINED_PREFIX!r}"
+                    ),
+                )
             )
             continue
         try:
@@ -414,18 +532,29 @@ def generate_artifacts(
                 reform.id,
                 lambda: measure_identities(reform, config, revision),
             )
-            run(
-                reform,
-                reform.id,
-                identities,
-                None,
-                [reform.id],
-                uses_config_baseline=not reform.has_custom_baseline(),
-            )
         except ReceiptUnavailable as error:
-            report.refused[reform.id] = error.reason
-            on_progress(f"{reform.id}: REFUSED: {error.reason}")
+            slots.append(
+                ArtifactOutcome(
+                    key=reform.id,
+                    refused=error.reason,
+                    progress=[f"{reform.id}: REFUSED: {error.reason}"],
+                )
+            )
+            continue
+        slots.append(
+            ArtifactRun(
+                reform=portable(reform, runner),
+                key=reform.id,
+                identities=identities,
+                members=None,
+                measure_ids=[reform.id],
+                uses_config_baseline=not reform.has_custom_baseline(),
+                **common,
+            )
+        )
+    run_all(slots)
 
+    slots = []
     for members in combined_sets or []:
         from uk_budget_data.publication import combine
 
@@ -441,12 +570,12 @@ def generate_artifacts(
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
                 key,
-                baseline_for(combined, uses_config),
+                combined.baseline_scenario_for(config, uses_config),
                 combined.to_scenario(),
             )
             _refuse_unscored_years(
                 key,
-                baseline_for(combined, uses_config),
+                combined.baseline_scenario_for(config, uses_config),
                 combined.to_scenario(),
                 config.years,
             )
@@ -454,7 +583,9 @@ def generate_artifacts(
                 combined, ordered, config, list(config.years)
             )
             # Bind each side with the phase its combined Scenario runs in.
-            combined_baseline = baseline_for(combined, uses_config)
+            combined_baseline = combined.baseline_scenario_for(
+                config, uses_config
+            )
             return combined, combined_identities(
                 ordered,
                 config,
@@ -476,7 +607,6 @@ def generate_artifacts(
                 records,
                 composition,
             ) = _scenarios(key, prepare)
-            combined = combined.model_copy(update={"id": key})
             snapshot = {
                 member: written_outputs.get(member)
                 or (
@@ -486,23 +616,40 @@ def generate_artifacts(
                 )
                 for member in ids
             }
-            run(
-                combined,
-                key,
-                (baseline_identity, reform_identity),
-                records,
-                ids,
-                member_outputs=(snapshot if all(snapshot.values()) else None),
-                composition=composition,
-                uses_config_baseline=uses_config,
-                modifier_templates=combined_templates_proof(
-                    ordered, config, revision
-                ),
+            slots.append(
+                ArtifactRun(
+                    reform=None,
+                    combine_members=[portable(m, runner) for m in ordered],
+                    key=key,
+                    identities=(baseline_identity, reform_identity),
+                    members=records,
+                    measure_ids=ids,
+                    member_outputs=(
+                        snapshot if all(snapshot.values()) else None
+                    ),
+                    composition=composition,
+                    uses_config_baseline=uses_config,
+                    modifier_templates=combined_templates_proof(
+                        ordered, config, revision
+                    ),
+                    **common,
+                )
             )
         except ReceiptUnavailable as error:
-            report.refused[key] = error.reason
-            on_progress(f"{key}: REFUSED: {error.reason}")
+            slots.append(
+                ArtifactOutcome(
+                    key=key,
+                    refused=error.reason,
+                    progress=[f"{key}: REFUSED: {error.reason}"],
+                )
+            )
         except (combine.CombineConflict, combine.CombineInconsistent) as error:
-            report.refused[key] = str(error)
-            on_progress(f"{key}: REFUSED: {error}")
+            slots.append(
+                ArtifactOutcome(
+                    key=key,
+                    refused=str(error),
+                    progress=[f"{key}: REFUSED: {error}"],
+                )
+            )
+    run_all(slots)
     return report
