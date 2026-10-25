@@ -32,9 +32,10 @@ RemoteArtifacts = Callable[[Sequence, bool], Iterable]
 
 SECRET_MISSING = (
     "Modal secret missing: the policyengine workspace needs the secret "
-    "'uk-budget-2026-hf-token' (key HUGGING_FACE_TOKEN, an organisation "
-    "read token) before measures can run on the bundle's dataset. Owner: "
-    "Anthony. Until then, run locally with --jobs 1."
+    "'pe-uk-private-hf-read-token' (key HUGGING_FACE_TOKEN, a read-only "
+    "token for populace-uk-private) before measures can run on the "
+    "bundle's dataset. Owner: Anthony. Until then, run locally with "
+    "--jobs 1."
 )
 
 

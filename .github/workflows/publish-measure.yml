@@ -31,7 +31,7 @@ name: Publish measures (Budget day)
 # on a standard runner and sends its measure to Modal (`generate --artifacts
 # --backend modal`: one container, 32 GB), with the organisation secrets
 # MODAL_TOKEN_ID and MODAL_TOKEN_SECRET and the Modal workspace secret
-# uk-budget-2026-hf-token. Until those exist the job stops with "Modal
+# pe-uk-private-hf-read-token. Until those exist the job stops with "Modal
 # secret missing". Set PUBLISH_MEASURE_BACKEND=modal for Budget day so every
 # measure push goes to Modal; see the runbook, "Budget day on Modal".
 #
@@ -242,7 +242,7 @@ jobs:
           HAS_MODAL: ${{ secrets.MODAL_TOKEN_ID != '' && secrets.MODAL_TOKEN_SECRET != '' }}
         run: |
           if ! uv run uk-budget-data generate --help | grep -q -- '--backend'; then
-            echo "::error::backend modal: generate has no --backend option on this commit. It needs #112 (generate --backend modal) and the Modal secret uk-budget-2026-hf-token (#119). Rerun with backend runner."
+            echo "::error::backend modal: generate has no --backend option on this commit. It needs #112 (generate --backend modal) and the Modal secret pe-uk-private-hf-read-token (#119). Rerun with backend runner."
             exit 1
           fi
           if [ "${HAS_MODAL}" != true ]; then
@@ -257,8 +257,8 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           if ! uv run --with modal==1.6.2 modal secret list --json \
-              | python3 -c 'import json, sys; sys.exit(0 if any(s.get("Name", s.get("name")) == "uk-budget-2026-hf-token" for s in json.load(sys.stdin)) else 1)'; then
-            echo "::error::Modal secret missing: the policyengine Modal workspace has no uk-budget-2026-hf-token (key HUGGING_FACE_TOKEN, an organisation read token). Owner: Anthony. Rerun with backend runner meanwhile."
+              | python3 -c 'import json, sys; sys.exit(0 if any(s.get("Name", s.get("name")) == "pe-uk-private-hf-read-token" for s in json.load(sys.stdin)) else 1)'; then
+            echo "::error::Modal secret missing: the policyengine Modal workspace has no pe-uk-private-hf-read-token (key HUGGING_FACE_TOKEN, a read-only token for populace-uk-private). Owner: Anthony. Rerun with backend runner meanwhile."
             exit 1
           fi
           uv run --with modal==1.6.2 uk-budget-data generate --artifacts \

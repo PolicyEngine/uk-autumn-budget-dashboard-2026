@@ -51,8 +51,11 @@ from pathlib import Path
 import modal
 
 APP_NAME = "uk-budget-2026-generate"
-# The Modal secret holding HUGGING_FACE_TOKEN (read-only), and nothing else
-HF_SECRET = "uk-budget-2026-hf-token"
+# The Modal secret holding HUGGING_FACE_TOKEN (read-only), and nothing else:
+# the workspace's existing fine-grained read token for
+# policyengine/populace-uk-private, created by Anthony (decision on #119,
+# 25 October). It reads the certified data, so no new secret is needed.
+HF_SECRET = "pe-uk-private-hf-read-token"
 # One receipted measure peaked at 14-17 GB locally on 25 October; leave
 # headroom.
 MEMORY_MB = 32 * 1024
@@ -60,8 +63,11 @@ CPU = 2.0
 # One measure takes about 3 minutes locally; a cold container also downloads
 # the dataset.
 TIMEOUT_S = 45 * 60
-RETRIES = 1
-MAX_CONTAINERS = 20
+# No retries: a failed measure fails the run and is rerun on purpose, never
+# paid for twice silently.
+RETRIES = 0
+# At most 16 containers at once: a ceiling on what a run can cost.
+MAX_CONTAINERS = 16
 PACKAGE_IGNORE = ["**/__pycache__/**"]
 # Where the container finds the repository's inputs (budget years, the
 # publication basis, measure inputs); its working directory.
@@ -184,6 +190,7 @@ class Generator:
     cpu=CPU,
     memory=8 * 1024,
     timeout=TIMEOUT_S,
+    retries=0,
     max_containers=MAX_CONTAINERS,
 )
 class SmokeGenerator:
