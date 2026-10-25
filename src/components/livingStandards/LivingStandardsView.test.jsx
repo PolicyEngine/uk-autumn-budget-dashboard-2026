@@ -178,9 +178,10 @@ describe("the Living standards view", () => {
     choose(incomes, "Income view", "Inequality");
     expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
-    choose(growth, "Distribution view", "By quintile");
+    // Quintiles only: no view switch, the sentence and axis by fifths
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
+    expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
+    expect(within(growth).queryByText(/tenth/)).not.toBeInTheDocument();
 
     // The two years compared: chosen in one card, kept in the address and
     // followed by every card comparing two years
