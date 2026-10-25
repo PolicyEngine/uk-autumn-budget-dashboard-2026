@@ -1,0 +1,234 @@
+/* Effect of each policy: one row per policy, a ring (all ages) and a dot
+   (the chosen group) on one £ axis, the group's value and gap at the right */
+.measure-dumbbell {
+  --md-cols: minmax(120px, 34%) minmax(0, 1fr) 118px;
+  position: relative;
+  font-size: 0.8rem;
+}
+
+.measure-dumbbell-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--md-cols);
+  align-items: center;
+  column-gap: 14px;
+  min-height: 44px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.measure-dumbbell-row:not(.measure-dumbbell-axis):hover,
+.measure-dumbbell-row.is-active {
+  background: var(--pe-gray-50);
+}
+
+.measure-dumbbell-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
+}
+
+.measure-dumbbell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--pe-gray-700);
+  line-height: 1.3;
+}
+
+.measure-dumbbell-swatch {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.measure-dumbbell-plot {
+  position: relative;
+  height: 28px;
+}
+
+.measure-dumbbell-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--pe-gray-100);
+}
+
+.measure-dumbbell-grid.is-zero {
+  border-left: 1px solid var(--pe-gray-500);
+}
+
+.measure-dumbbell-link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--c-no-change);
+}
+
+.measure-dumbbell-link.more {
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-link.less {
+  background: var(--c-loss);
+}
+
+.measure-dumbbell-ring,
+.measure-dumbbell-dot {
+  position: absolute;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.measure-dumbbell-ring {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid var(--c-before);
+  background: var(--c-surface);
+}
+
+.measure-dumbbell-dot {
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.measure-dumbbell-values strong {
+  color: var(--pe-gray-800);
+  font-weight: 600;
+}
+
+.measure-dumbbell-gap {
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
+.measure-dumbbell-gap.more {
+  color: var(--c-gain-text);
+}
+
+.measure-dumbbell-gap.less {
+  color: var(--c-loss-text);
+}
+
+.measure-dumbbell-axis {
+  min-height: 28px;
+}
+
+.measure-dumbbell-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.measure-dumbbell-unit {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
+.measure-dumbbell-tip {
+  position: absolute;
+  z-index: 5;
+  left: 34%;
+  bottom: calc(100% - 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-size: 0.75rem;
+  color: var(--pe-gray-700);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.measure-dumbbell-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+  font-size: 0.8rem;
+  color: var(--pe-gray-700);
+}
+
+.measure-dumbbell-legend i {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+.measure-dumbbell-legend i.dot {
+  width: 9px;
+  height: 9px;
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-legend i.ring {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--c-before);
+}
+
+/* Phones: the name with its value and gap on one line, then the plot
+   across the full width */
+@media (max-width: 600px) {
+  .measure-dumbbell-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name values"
+      "plot plot";
+    row-gap: 2px;
+  }
+
+  .measure-dumbbell-name {
+    grid-area: name;
+  }
+
+  .measure-dumbbell-values {
+    grid-area: values;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .measure-dumbbell-plot {
+    grid-area: plot;
+  }
+
+  .measure-dumbbell-axis {
+    grid-template-areas: "plot plot";
+  }
+
+  .measure-dumbbell-axis .measure-dumbbell-name,
+  .measure-dumbbell-axis .measure-dumbbell-values {
+    display: none;
+  }
+
+  .measure-dumbbell-tip {
+    left: 6px;
+  }
+}

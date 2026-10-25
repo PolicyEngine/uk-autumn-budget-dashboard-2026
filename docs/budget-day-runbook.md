@@ -59,7 +59,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | Where | What it says | Shown today? | Who fixes it |
   |---|---|---|---|
   | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures | **No.** Removed by #26 (15 October), which also tests that no static page names another year's Budget | Done. The briefing export (#22) writes this year's from an approved manifest |
-  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | **24 October (branch `ab2026-candidates`):** regenerated on the ten candidate 2026 measures (`reforms.py`), replacing last year's nine; the salary sacrifice cap candidate was dropped later that day (nine measures), and the combined package regenerated without it. `obr_comparison.csv` still holds last year's OBR rows, under last year's ids, so it pairs with nothing: the comparison says it is not available until the OBR publishes on 28 October | Yes, with the candidate banner under the intro | Budget day replaces the candidates with the announced measures |
+  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | **24 October (branch `ab2026-candidates`):** regenerated on the ten candidate 2026 measures (`reforms.py`), replacing last year's nine; the salary sacrifice cap candidate was dropped later that day (nine measures), and the combined package regenerated without it. `obr_comparison.csv` was regenerated on 25 October on the same nine measures and combined run; its OBR columns are empty, so the comparison says it is not available until the OBR publishes on 28 October | Yes, with the candidate banner under the intro | Budget day replaces the candidates with the announced measures |
   | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
   | The Personal impact tab's hand-typed calculator | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | No | Deleted in #69: the tab now calls `/api/household-impact` (policyengine.py) |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
@@ -124,6 +124,15 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     The couple's request also sent `monthly_rent: 950`, but no `tenure`, so the default (owned with a mortgage) applied and no rent was counted. The repeated breakdown wasn't answered from the route's per-process cache (`_cached_household_impact` in `api.py`), which would have returned it at once. The image runs one uvicorn process, so another instance answering it would explain this, but that isn't established. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
   - **Concurrent household calculations share the workers.** `/api/household-impact` admits up to `HOUSEHOLD_CONCURRENT_REQUESTS` requests per instance at once (default 4; 1 when `HOUSEHOLD_WORKERS` is 1), and their runs share the instance's `HOUSEHOLD_WORKERS` processes run by run (`FairSlots` in `personal_impact.py`; `/api/personal-impact` takes the same slots), so a second visitor's headline starts as soon as any run finishes instead of after the first visitor's whole calculation, and memory stays bounded by the workers. Measured on 24 October on a laptop with 2 workers, three different full requests at once: before, 23, 47 and 73 s (each queued behind the last); after, 54, 58 and 59 s. Three visitors asking in the page's two stages: headlines in 4–11 s either way, the last breakdown at 68 s before and 53 s after. The page now waits 90 s for a headline and 200 s for a breakdown; the server gives up at 280 s with a 504.
     **Cloud Run setting needed:** `--concurrency` should match what an instance can serve in time. With `--cpu 2` and `HOUSEHOLD_WORKERS=2`, set `--concurrency 4` (equal to `HOUSEHOLD_CONCURRENT_REQUESTS`), so a fifth visitor goes to another instance rather than queueing; the deploy does not set it today, so Cloud Run's default of 80 applies. Not changed in `cloudbuild.yaml` here: it is a cost decision (more instances), Max's call through the coordinator.
+  - **Capacity for Budget week (#141, decided 25 October; recorded on #119).** `cloudbuild.yaml` deploys with `--cpu 8 --memory 8Gi --min-instances 1 --cpu-boost` and `HOUSEHOLD_WORKERS=8`.
+    - **Why:** a full answer runs 11 simulations (9 measures alone, then the sweep's two sides). On 2 workers that took about 6 rounds of about 12 s, so the split by policy took about 85 s. On 8 it is estimated at about 35 s; this is to be measured after the deploy.
+    - **Memory:** each worker peaks near 0.4 GB, so 8 workers and the parent fit in 8 GiB. The 2 GiB revisions peaked at about 1.35 GiB.
+    - **Cost:** `--min-instances 1` keeps one 8 vCPU instance always on. After Budget week, set it back to `--min-instances 0` (and optionally `--cpu 2 --memory 2Gi`, `HOUSEHOLD_WORKERS=2`) in `cloudbuild.yaml` through a PR, then run the deploy workflow.
+    - **Rollback:** the rollback workflow moves traffic to an earlier revision, which keeps that revision's own CPU and memory (2 vCPU, 2 GiB). A rollback is therefore also a capacity rollback, and is safe.
+  - **Fewer runs: measures that cannot move the household are skipped (#147).** `household_impact.provably_unaffected` leaves a measure out of the split by policy when it is exactly £0 for this household and year: the employer NI relief always (an employer cost), the Warm Home Discount top-up outside 2026-27, the threshold freeze before 2031-32, Plan 2 without a Plan 2 borrower, the State Pension protection with no one at State Pension age, BADR (the answers carry no capital gains), the fuel measures with no fuel spending (the road fuel VAT cut also from 2028-29), and electricity VAT with no electricity spending or from 2028-29. The default household's split falls from 9 runs to 3 in 2027-28. Each rule was checked against the full run (40 generated households x every policy year, identical; `tests/test_household_impact.py` keeps a slow version). A new measure has no rule until one is added and checked.
+  - **Optional: the slow parts on Modal (#147, not deployed).** `src/uk_budget_data/modal_household.py` serves the same API on Modal, each simulation in its own one-core container, all at once. Measured on 25 October (default household, all nine measures, 2027-28, end to end over HTTPS): warm, headline 7-10 s, sweep 8-9 s, split by policy 10-14 s; cold (first request after idle) about 45 s, then warm. The page uses it when the build sets `NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL` (the sweep and the split go there, falling back to Cloud Run on any failure).
+    - **No survey data:** the household route builds one synthetic household, so no dataset and no Hugging Face token go to Modal.
+    - **Cost rules:** no warm containers by default (`HOUSEHOLD_MODAL_MIN_CONTAINERS=0`), one core and 1 GiB each, at most 12 containers, 300 s timeout. Keeping them warm is a decision with a price: 12 warm containers cost about $0.66 an hour ($0.0473 per core-hour + $0.008 per GiB-hour), so a 10-hour Budget day is about $7 and a full week warm about $110. Deploy: `uv run --with modal modal deploy src/uk_budget_data/modal_household.py`; stop: `uv run --with modal modal app stop uk-budget-household`, then check `modal app list` shows no tasks.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
   - **Time the regeneration** (regenerate, stage, reconcile: the fifth row of the table under "How long one adoption takes" below), as that section says, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
 
@@ -134,7 +143,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **`parameter_changes`**, wherever the measure can be expressed that way.
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
-- **A new modifier gets a module of its own.** The receipt binds a modifier's whole module, so adding a function to a module, or editing one, changes the definition of every modifier there: each must be regenerated, and attested again where it needs attestation (see G5, "Which displayed measures a fix changes"). `budget_measures.py` holds the seven modifiers on `main`; don't add an eighth to it.
+- **Each modifier has a module of its own, named after it, in `src/uk_budget_data/budget_measures/`.** The receipt binds a modifier's whole module (its source, and the default arguments of every function in it), so adding a function to a module, or editing one, changes the definition of every modifier there: each must be regenerated, and attested again where it needs attestation (see G5, "Which displayed measures a fix changes"). So a new modifier goes in a new module, `budget_measures/<its name>.py`, holding that one function, with any constant it uses written in that module; `reforms.py` imports it as `from uk_budget_data.budget_measures.<its name> import <its name>`. A helper two modifiers share goes outside the package, as the templates in `measure_templates.py` do: a change there reaches every measure whose modifier calls it, and no definition shows it (G5's "Which displayed measures a fix changes", under "Code national generation also runs"). `tests/test_budget_measures.py` fails on a module holding more than one function or one not named after it, on a registered modifier from anywhere else (in the package or outside it; only the combined measure's composition of its members' is exempt), on a road fuel VAT rate that differs between the two modules writing it or a missing fuel module, and on a module the receipt can't bind; a new module, or a fix to one that keeps those, passes it. `tests/test_budget_measures_split.py` checks the split itself, each module only while its source is the one the split wrote: a later fix skips that module's comparison, saying so. (Until 25 October all seven were in one `budget_measures.py`, and any edit there changed all seven definitions.)
 
 **Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: a measure declares the taxes whose rules its code changes, not every tax the model moves.
 
@@ -493,7 +502,7 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 ## Construction (from G1)
 
 For each coded measure:
-1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module of its own, not in `reforms.py` itself (question 6 in `budget-day-publication.md`) and not added to `budget_measures.py`, where it would change the definitions of all seven modifiers there. Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
+1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module of its own, `src/uk_budget_data/budget_measures/<its name>.py`, never in `reforms.py` itself (question 6 in `budget-day-publication.md`) and never added to another modifier's module, where it would change that modifier's definition too. Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
 3. **Declare the taxes it moves** in `DECLARED` in `tests/test_measure_descriptions.py`, and check that its name and description name only those (see "How a measure must be written" above). Without this, the required Python tests fail on the new id.
 4. **Add one numerical test.**
@@ -572,6 +581,12 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **Totals check.** The importer (#16) checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
+
+**Wording on the day: config only.** The page says nothing that stops being true on Budget day; when the OBR's post forecast or its costings are loaded, the same components show them, labelled from config. The only text edits on the day are two keys in `src/utils/sources.js`, as soon as they are published, with labels to match (the page's text comes from the labels):
+- `obr_efo_current`: the October 2026 EFO page ("OBR, Economic and fiscal outlook – October 2026");
+- `budget_documents`: the Autumn Budget 2026 document and its policy costings on gov.uk.
+
+Check each URL loads, then deploy. A test fails if a view other than Methodology says "pre-Budget", "28 October" or "candidate".
 
 ## Budget day: OBR forecast (Living standards tab, from 13:40)
 
@@ -697,9 +712,10 @@ uv run uk-budget-data publish check
 An approval or an exception carries over only where the outputs are byte-identical.
 
 **Which displayed measures a fix changes.** Before deploying the household API with a fix, run `uv run uk-budget-data publish definitions` on the fixed commit (#125). For each displayed measure, it recomputes the measure's receipt identities from this code at the commit its receipt was made at. It lists every measure whose definition differs from its approved receipt, and exits 1 if any does. It takes a few seconds and needs no data.
-- **A fix anywhere in `budget_measures.py` lists all seven measures with a modifier, not only the one fixed.** The receipt binds a modifier's whole module, and every modifier is in that file: `fuel_duty_rise_deferral`, `state_pension_income_tax_protection`, `warm_home_discount_top_up`, `domestic_electricity_zero_vat`, `employer_ni_relief_under_25s`, `road_fuel_vat_cut` and `plan_2_threshold_unfreeze` (both sides). A comment counts.
+- **A fix in a modifier's module lists the measures that use that modifier, and only those.** The receipt binds a modifier's whole module, and each modifier has a module of its own (since 25 October; before, all seven shared `budget_measures.py`, and a fix there listed all seven). A comment counts. `connect_student_loan_repayments` is on both sides of `plan_2_threshold_unfreeze`, so a fix there lists that measure once, with both sides.
   - **Regenerate or withdraw every listed measure before the deploy.** A listed measure left as it is shows as unavailable in Personal impact once the page compares definitions.
-  - **Two of them need a fresh two-person attestation:** `employer_ni_relief_under_25s` and `plan_2_threshold_unfreeze` have hand-written modifiers, and while a data limit is active (two are) each regenerated receipt is held until attested again (`attestations.py`: an attestation binds the whole receipt document). Budget the reviewers' time, or withdraw them.
+  - **Two need a fresh two-person attestation when listed:** `employer_ni_relief_under_25s` and `plan_2_threshold_unfreeze` have hand-written modifiers, and while a data limit is active each regenerated receipt is held until attested again (`attestations.py`: an attestation binds the whole receipt document). Budget the reviewers' time, or withdraw them.
+  - **The split itself changed all seven definitions once**, through each modifier's module: its name, its source, and its module defaults, which now hold only that function's own (none, for `connect_student_loan_repayments`). Nothing else changed: `tests/test_budget_measures_split.py` checks that the function sources and defaults are as they were, and that each measure gives the same figures. Receipts made before it differ from it; the next regeneration (Monday's rehearsal, or at the latest the final cut's) absorbs it.
 - **It can't see a fix outside the measures' own module.** A receipt binds everything else only through its commit. List what has changed since each displayed measure's receipt with `git diff --name-only <receipt commit> HEAD -- src pyproject.toml uv.lock data_inputs Dockerfile` (the commit is the one `publish definitions` prints, from the receipt's `dashboard.git_sha`). The image's base layers (`python:3.13-slim` and `uv:latest` in the `Dockerfile`) can change with no commit at all; the deploy smoke checks the served packages' versions, not those layers.
   - **Code national generation also runs** (`measure_templates.py`, `reforms.py`, `models.py`, the scenario helpers in `personal_impact.py`, or anything else a modifier calls): regenerate every measure it reaches, as for a fix in its own module. The page can't tell these apart.
   - **Code only the household route runs** (`household_impact.py`, which only `api.py` imports, and the request defaults in `api.py`): no receipt changes. The deploy changes Personal impact's answers for every measure it reaches, and nothing on the page marks it.
@@ -793,6 +809,88 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 
     The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
   - **The 14 October cut, only if a release ever falls back to it** (UK hub, S6, 22 October). That cut predates Microcosm's weight-index fix (0f0bb869), so it carries a +0.72% calibration-year weight skew. No dashboard release has used it: 6.10.0's cut has the fix, and so do later re-cuts. So a revert to the dashboard's previous cut doesn't carry it.
+
+## Faster generation on Budget day
+
+Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microcosm national dataset). The draft PR "Faster generation" holds the details.
+
+- **Where the time goes.** One measure is two microsimulations, built once and read for every year:
+  - **Building them:** about 15 s each, all inside policyengine-uk's `Simulation.__init__` (the UC reform, enum encoding, uprating). Loading the dataset itself is not the cost.
+  - **The example households' income curve** was the largest part: about 17 s per measure and year. It now runs one household simulation per scenario for every year. The rows are identical to the bit, and it is about four times faster.
+  - **Everything else** (budgetary, distributional, winners and losers, age, scatter): about 5 s per year, mostly `gov_balance` and net income.
+  - **Memory:** about 19 GB per measure over two years and 22.5 GB over six as peak footprint (compressed pages included), but about 6.5 GB resident at its peak with another measure running beside it ("Fast full run" below).
+- **One pass writes every flat file.** `generate` now writes `household_scatter_binned.csv` from the same simulations, beside `age_impact.csv` and `income_curve.csv`, so `--only age_impact`, `--only household_scatter` and `income-curve` are needed only to rerun one file.
+- **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
+
+  ```bash
+  uv run uk-budget-data generate --jobs auto
+  uv run uk-budget-data generate --artifacts --reforms <ids> --jobs auto
+  uv run uk-budget-data geography --jobs auto
+  ```
+
+  - **One worker process per measure,** started from a forkserver that has already imported the engine. The data-limit watch, the model-limit check and the receipt each read one measure's two simulations, so a measure is never split across workers.
+  - **The same bytes as a serial run.** Results are written in measure order, and each artifact gets the same digest. Only `receipt.json`'s run fields (`generated_at`, `generator_argv`) differ.
+  - **`auto` never pushes the machine into swap.** It takes as many workers as the free memory holds at the per-measure estimate, after keeping 6 GB back. A measure starts only when its memory is free, and one still starting up counts at its whole estimate. With more than 30 GB of swap already in use, measures run one at a time. The estimate is 6.5 GB for `generate` (measured resident peak) and the footprint above for `geography` (not yet measured side by side). `--unit-memory-gb` overrides it.
+  - **Before a heavy run,** check `sysctl vm.swapusage` and `pgrep -fl uk-budget-data`. Other generations share the machine.
+- **Expected times for the whole run** (10 measures × 6 years). These are scaled from the measured figures, not timed end to end:
+
+  | Step | Before (serial) | Now, `--jobs 1` | Now, 2 jobs | Modal, about 10 containers |
+  |---|---|---|---|---|
+  | Flat CSVs, with age_impact and the binned scatter | 33 min, plus 12–23 min (age) and 10–24 min (scatter) | about 17 min | about 9 min | about 5 min |
+  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | local only |
+  | `geography` (simulation part; the estimate and checks add about 3 min) | about 24 min | about 24 min | about 12 min | local only |
+
+  - **How many jobs fit.** On a quiet 64 GB laptop `auto` should pick 2 workers for six years. On 24 October, with other agents' sessions holding memory and 16 GB of swap, it picked 1.
+  - **Modal** sends each measure to its own container. Each container downloads the dataset (about 1.5 GB) on its first run. 10 measures need 10 containers, so 20 containers buy nothing over 10.
+- **`--backend modal`** (flat CSVs and `--only` only, opt-in):
+
+  ```bash
+  uv run --with modal==1.6.2 uk-budget-data generate --backend modal
+  ```
+
+  - **Who sets it up:** whoever owns the Modal workspace (Anthony):
+    1. create the secret with `modal secret create uk-budget-2026-hf-token HUGGING_FACE_TOKEN=<read-only token>`;
+    2. give the runner a Modal token (`modal token new`), as the person running the command.
+  - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
+  - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
+  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
+
+## Fast full run
+
+"Society" results: the nine candidate measures plus `autumn_budget_2026_combined`, every year (2026 to 2031), every flat table in `public/data` (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned`, `income_curve`, and `obr_comparison`). One `generate` writes all of them.
+
+**Measured end to end on 25 October** on an 18-core, 64 GB Mac (policyengine 6.10.2, `microcosm_uk_2024_25`). Other sessions were holding about 37 GB, with 10 to 20 GB of swap in use. Every parallel run's files were byte-identical to the serial run's. The serial run's seven dashboard tables were also byte-identical to the committed `public/data`.
+
+| Configuration | Wall time | Units at once (observed) | Peak RSS, process tree | Swap rise |
+|---|---|---|---|---|
+| `--jobs 1` (serial) | 16.0 min | 1 | 10.3 GB | +5.3 GB |
+| `--jobs auto` | 14.7 min | 1 (it chose 1: "21 GB free, 22.5 GB per unit") | 12.2 GB | 0 |
+| `--jobs 2` (old 22.5 GB estimate) | not timed end to end: expected to be about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time (seen in the interrupted runs) | n/a | n/a |
+| **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
+| `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
+
+- **Use on Budget day: `--jobs 2`, about 8 minutes.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
+- **The per-unit estimate is now 6.5 GB** (it was 22.5 GB, a peak footprint that counts compressed pages). With 22.5 GB, `auto` and the admission check fell back to one unit at a time on this Mac. Two units at once peaked at 12.8 GB RSS (6.4 GB each), three at 16.4 GB, swap rose no more than in the serial run, and free memory never fell below 8.4 GB. With 6.5 GB and 21 GB free, `auto` picks 2 and the admission check lets a second unit start while the first ramps up, but not a third. The table's `--unit-memory-gb 4` rows are how this was measured before the change; 4 and 6.5 both admit two units on this machine.
+- **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
+
+```bash
+cd <checkout of the release commit>
+export HUGGING_FACE_TOKEN="$(cat ~/.cache/huggingface/token)"   # never echo it
+sysctl vm.swapusage; pgrep -fl uk-budget-data                   # nothing else generating
+top -l 1 -n 0 | grep PhysMem                                    # at least ~15 GB unused or inactive
+uv run uk-budget-data generate --jobs 2                         # about 8 min, writes public/data
+git status --short public/data                                  # review the diff before committing
+```
+
+- **Check against a serial run** on a scratch copy when there is time (16 min): `--output-dir /tmp/serial --jobs 1`, then `cmp` each CSV. They must be identical.
+- **Fallbacks, in order:**
+  1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
+  2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
+  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+- **Not covered here:**
+  - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
+  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
 
 ## Adopting a release (each re-cut)
 

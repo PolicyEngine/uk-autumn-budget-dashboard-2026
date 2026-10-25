@@ -1,5 +1,5 @@
 /**
- * The Personal impact form's defaults, with their sources. Every field has
+ * The Household impact form's defaults, with their sources. Every field has
  * one, so the results show before anything is changed.
  *
  * Salary: ONS, Annual Survey of Hours and Earnings (ASHE) 2026 provisional,

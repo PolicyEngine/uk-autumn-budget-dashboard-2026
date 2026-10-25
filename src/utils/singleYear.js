@@ -1,14 +1,20 @@
 /**
- * What Personal impact shows, worked out from the API's answer
+ * What Household impact shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.
  */
+import {
+  CHANGE_BY_POLICY_NOTE,
+  COUNCIL_TAX_NOTE,
+  EVERY_POLICY_NOTE,
+  WHO_IS_A_CHILD_NOTE,
+} from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
 import { getPolicyColor } from "./policyConfig";
 import { CHART_COLOURS } from "./chartTheme";
 
-const MINUS = "−";
+export const MINUS = "−";
 
 /** "£1,234", whole pounds, a true minus. */
 export function money(value) {
@@ -183,7 +189,7 @@ export const INTERACTION_THRESHOLD = 1;
 /**
  * The per-policy rows (the API's single-measure method): each measure's own
  * change, that measure alone at its Budget setting with the other selected
- * measures at pre-Budget law. Where the combined change differs from the
+ * measures at current law. Where the combined change differs from the
  * sum of those by £1 or more, the difference is a row of its own,
  * "Interaction between policies", so the bars add up to the change. In
  * whole pounds that add up to the headline tile (largest remainder), sorted
@@ -229,6 +235,23 @@ export function policyRows(byPolicy, total, policies) {
     noEffect: byPolicy.measures
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
+    // Every measure that leaves the household's net income where it was,
+    // with its colour and, for an employer cost or a top-up paid only in a
+    // year not offered, why
+    noEffectItems: byPolicy.measures
+      .filter((row) => row.status === "not_affected")
+      .map((row) => ({
+        id: row.id,
+        name: nameOf(row),
+        color: getPolicyColor(row.id),
+        reason:
+          row.noteKind === "employer_cost"
+            ? row.note
+            : row.id === "warm_home_discount_top_up"
+              ? // The top-up is paid in 2026-27, which the year pill does not offer
+                "Paid in 2026-27 only"
+              : null,
+      })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount
     notes: byPolicy.measures
@@ -416,9 +439,9 @@ export function areaName(brma) {
 }
 
 /**
- * How the single-year calculation works, in one place: the Methodology
- * tab's single-year card and the page's "How this is calculated" expander
- * both show these, as [term, text].
+ * How the single-year calculation works, in one place: Personal impact's
+ * "About these figures" shows these, as [term, text]; the Methodology tab
+ * links there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
@@ -427,7 +450,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "One year",
-    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under pre-Budget law and with the selected policies.",
+    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under current law and with the selected policies.",
   ],
   [
     "Salary",
@@ -435,7 +458,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Change by policy",
-    "Each policy's bar is that policy on its own: switched to its Budget setting, with every other selected policy held at pre-Budget law, against the same baseline. Policies can interact, so their own effects need not add up to the combined change; a difference of £1 or more is shown as “Interaction between policies”, so the bars add up to the change in the tiles.",
+    CHANGE_BY_POLICY_NOTE,
   ],
   [
     "Marginal tax rate",
@@ -443,14 +466,14 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Every policy applied",
-    "Each side is a policyengine-uk simulation of your household with the policies' parameter changes and their changes to the model's formulas, as in the national figures: the fuel duty deferral includes the VAT on the lower pump price, and the VAT changes apply to the petrol, diesel and electricity spending you enter. The employer NI relief for under-25s changes what employers pay, with wages held fixed, so it is £0 for every household (an employer cost). The Warm Home Discount top-up is shown for a household that would get it, if received: not every eligible household receives it, and the national figures pay it to 85% of Pension Credit households and 70% of other eligible households (DESNZ receipt rates).",
+    EVERY_POLICY_NOTE,
   ],
   [
     "Who counts as a child",
-    "Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19, as you answer for each. Child Benefit counts such a young person until 20; Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
+    WHO_IS_A_CHILD_NOTE,
   ],
   [
     "Council Tax",
-    "Estimated from your band and your region's average Band D for 2026-27 (MHCLG for England, tax-base weighted by region; the Welsh and Scottish governments), grown to the chosen year with policyengine-uk's OBR Council Tax forecast, and taken off net income. Northern Ireland has domestic rates, which are not modelled. No selected policy changes it.",
+    COUNCIL_TAX_NOTE,
   ],
 ];

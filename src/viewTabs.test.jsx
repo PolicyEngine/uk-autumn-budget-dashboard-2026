@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import App, { CANDIDATE_BANNER, VIEWS, opensYoungPeople, viewFromLocation } from "./App";
+import App, { VIEWS, opensYoungPeople, viewFromLocation } from "./App";
 
 beforeEach(() => {
   // An empty CSV for every data file: these tests are about the views
@@ -27,7 +27,7 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
-      "Personal impact",
+      "Household impact",
       "Living standards",
       "Methodology",
     ]);
@@ -39,7 +39,7 @@ describe("the view tabs", () => {
     // The intro holds for every view, and sits above the tabs
     const intro = container.querySelector(".dashboard-intro");
     expect(intro).toHaveTextContent(
-      "How nine candidate Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook. Choose a year and policies in the bar above.",
+      /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook\. Costings are our own; forecast: .+\. Choose a year and policies in the bar above\.$/,
     );
     expect(intro.compareDocumentPosition(viewList())).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -47,30 +47,21 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Population impact" })).toBeInTheDocument();
   });
 
-  it("say once, under the intro, that the measures are candidates, except on Living standards and Methodology", () => {
+  it("shows no candidate banner on any view", () => {
     const { container } = render(<App />);
-    const withBanner = { dashboard: true, personal: true, living: false, methodology: false };
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
-      const banners = screen.queryAllByText(CANDIDATE_BANNER);
-      expect(banners).toHaveLength(withBanner[view.value] ? 1 : 0);
-      if (banners.length) {
-        // Directly under the intro, above the tabs
-        const banner = container.querySelector(".candidate-banner");
-        expect(banner.previousElementSibling).toBe(container.querySelector(".dashboard-intro"));
-      }
+      expect(container.querySelector(".candidate-banner")).toBeNull();
+      expect(screen.queryByText(/not announced policy/)).toBeNull();
     });
-    expect(CANDIDATE_BANNER).toBe(
-      "Candidate measures, modelled before the Budget on 28 October; not announced policy.",
-    );
   });
 
   it("show the year and policy pills only where they apply", () => {
     const { container } = render(<App />);
     const expected = {
       dashboard: [true, true],
-      // The year drives Personal impact's household calculation
-      personal: [true, true],
+      // The year drives Household impact's household calculation
+      household: [true, true],
       living: [false, false],
       methodology: [false, false],
     };
@@ -83,7 +74,7 @@ describe("the view tabs", () => {
     });
   });
 
-  it("show the year pill on Personal impact, whatever an old ?sub= link says", () => {
+  it("show the year pill on Household impact, whatever an old ?sub= link says", () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     const { container } = render(<App />);
     expect(shown(band(container).querySelector(".band-year"))).toBe(true);
@@ -95,7 +86,7 @@ describe("the view tabs", () => {
     const search = () => new URLSearchParams(window.location.search);
     const expected = {
       dashboard: [null, true],
-      personal: ["personal", false],
+      household: ["household", false],
       living: ["living", false],
       methodology: ["methodology", false],
     };
@@ -107,7 +98,9 @@ describe("the view tabs", () => {
 
   it("open the view an old or new link names", () => {
     for (const [url, label] of [
-      ["/?tab=personal", "Personal impact"],
+      ["/?tab=household", "Household impact"],
+      // An old link: the view it named, at its new address
+      ["/?tab=personal", "Household impact"],
       ["/?tab=living", "Living standards"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
@@ -118,6 +111,7 @@ describe("the view tabs", () => {
       expect(screen.getByRole("tab", { name: label })).toHaveAttribute("aria-selected", "true");
       unmount();
     }
+    expect(viewFromLocation({ search: "?tab=personal", hash: "" })).toBe("household");
     expect(viewFromLocation({ search: "?tab=living", hash: "#young-people" })).toBe("dashboard");
     expect(viewFromLocation({ search: "?tab=young", hash: "" })).toBe("dashboard");
     expect(opensYoungPeople({ search: "?tab=young", hash: "" })).toBe(true);
@@ -146,27 +140,26 @@ describe("the view tabs", () => {
     expect(panel.firstElementChild).toBe(subList());
     expect(subTabs().map((tab) => tab.textContent)).toEqual(["All households", "Young people"]);
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByRole("heading", { name: "Young people (under 25)" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Change by age" })).toBeNull();
     // The default sub-tab has no ?sub=
     expect(window.location.search).not.toContain("sub=");
 
     fireEvent.click(subTabs()[1]);
     expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
-    expect(
-      await screen.findByRole("heading", { name: "Young people (under 25)" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
+    expect(await screen.findByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
     // The year and policy pills drive both sub-tabs
     expect(shown(band(document.body).querySelector(".band-year"))).toBe(true);
     expect(shown(band(document.body).querySelector(".band-policy"))).toBe(true);
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(true);
 
-    // Another view drops ?sub=; coming back opens All households
+    // Another view drops ?sub=; the view stays mounted, so coming back
+    // shows the sub-tab left open, and its ?sub= again
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(window.location.search).not.toContain("sub=");
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
-    expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
+    expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
   });
 
   it("open the Young people sub-tab from the old links, keeping the hash", () => {
@@ -217,7 +210,7 @@ describe("the view tabs", () => {
   it("open Young people from Methodology's link", () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     render(<App />);
-    fireEvent.click(screen.getByRole("link", { name: "See Young people under Population impact" }));
+    fireEvent.click(screen.getByRole("link", { name: "Young people results" }));
     expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -236,25 +229,24 @@ describe("the view tabs", () => {
       "Population impact",
       "Figures by area",
       "Young people",
-      "Personal impact",
+      "Household impact",
       "Living standards",
       "Limitations",
-      "Versions and replication",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
     expect(within(panel).getByRole("heading", { level: 3, name: "Household calculation" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    expect(panel).toHaveTextContent("Methods and sources: our research on the");
+    // No leftover link to last year's research
+    expect(panel).not.toHaveTextContent("our research on the");
+    expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
     // Said once on the page
     for (const phrase of [
-      /Methods and sources/g,
       /dominance and p% rules/g,
-      /interactions between measures are not included/g,
-      /line at the foot of the page/g,
+      /leave out interactions between measures/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);
     }

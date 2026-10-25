@@ -13,6 +13,7 @@ import {
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import Disclosure from "../Disclosure";
 import { downloadFile } from "../../utils/downloadFile";
+import TitleIcon from "../TitleIcon";
 
 const changeClass = (value) => {
   const rounded = Math.round(value);
@@ -27,7 +28,7 @@ const changeClass = (value) => {
  * (as negative amounts), benefits and pension contributions, then net
  * income. Each top row opens to its taxes or benefits, closed at first.
  * Net income shows its before and after only: its change is the headline
- * sentence above (each fact once). On a phone the table is Item | Change,
+ * card above (each fact once). On a phone the table is Item | Change,
  * and each row opens to its before and after too.
  *
  * Whole pounds that agree with the rest of the page (roundProgrammeGroups):
@@ -140,7 +141,10 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
     <div className="card single-year-card breakdown-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="list" />
+            <span className="title-text">{title}</span>
+          </h3>
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>
@@ -174,9 +178,12 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
               {!narrow && <td className="num">{money(totals.after)}</td>}
               <td className="num">
                 {narrow ? (
-                  `${money(totals.before)} → ${money(totals.after)}`
+                  <>
+                    <span className="breakdown-net-label">Before → After</span>
+                    {`${money(totals.before)} → ${money(totals.after)}`}
+                  </>
                 ) : (
-                  <span className="visually-hidden">The change is in the sentence above.</span>
+                  <span className="visually-hidden">See the headline above.</span>
                 )}
               </td>
             </tr>

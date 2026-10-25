@@ -152,10 +152,15 @@ steps:
         echo "$$tag" > /workspace/candidate_tag
         # HOUSEHOLD_WORKERS: the worker processes one household calculation
         # uses. Keep it equal to --cpu: more would only share the vCPUs and
-        # use more memory.
+        # use more memory. 8 vCPU / 8 GiB / 8 workers for Budget week (#141):
+        # a full answer runs 11 simulations, which took about 6 rounds on 2.
+        # Each worker peaks near 0.4 GB, so 8 fit in 8 GiB with headroom.
+        # --min-instances 1 keeps one instance warm (no 30 s cold start) and
+        # costs an always-on instance: set it back to 0 after Budget week.
         common="--image $$image --region ${_REGION} --platform managed \
-          --no-invoker-iam-check --memory 2Gi --cpu 2 --timeout 300 \
-          --update-env-vars HOUSEHOLD_WORKERS=2 \
+          --no-invoker-iam-check --memory 8Gi --cpu 8 --timeout 300 \
+          --min-instances 1 --cpu-boost \
+          --update-env-vars HOUSEHOLD_WORKERS=8 \
           --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
         # A failed lookup stops the build; only a confirmed absence creates.

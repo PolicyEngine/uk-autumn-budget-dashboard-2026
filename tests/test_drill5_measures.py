@@ -3,8 +3,19 @@
 import pytest
 from policyengine_uk import Simulation
 
-from uk_budget_data import budget_measures, reforms
+from uk_budget_data import reforms
+from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
+    state_pension_income_tax_allowance,
+)
+from uk_budget_data.budget_measures.state_pension_income_tax_allowance_untapered import (
+    state_pension_income_tax_allowance_untapered,
+)
+from uk_budget_data.budget_measures.zero_vat_on_domestic_gas import (
+    zero_vat_on_domestic_gas,
+)
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.publication.receipt import CodeRevision
+from uk_budget_data.publication.template_proof import pure_templates
 
 LATER_YEARS = [str(y) for y in POLICY_YEARS if y >= 2027]
 
@@ -86,6 +97,18 @@ def test_combined_run_leaves_out_alternatives(monkeypatch):
     monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
 
 
+def test_drill5_modifiers_are_proved_pure_templates():
+    """Ported to modules of their own, both stay template-only, so the
+    drill needs no attestation beyond main's two hand-written modifiers."""
+    revision = CodeRevision("0" * 40, tree_clean=True)
+    assert pure_templates(
+        state_pension_income_tax_allowance_untapered, revision
+    ) == ["apply_age_conditioned_allowance"]
+    assert pure_templates(zero_vat_on_domestic_gas, revision) == [
+        "apply_vat_base_change"
+    ]
+
+
 def _pensioner(private_pension):
     return {
         "people": {
@@ -102,9 +125,9 @@ def _pensioner(private_pension):
 
 def test_extended_protection_keeps_allowance_with_other_income():
     base = Simulation(situation=_pensioner(20_000))
-    budget_measures.state_pension_income_tax_allowance(base)
+    state_pension_income_tax_allowance(base)
     extended = Simulation(situation=_pensioner(20_000))
-    budget_measures.state_pension_income_tax_allowance_untapered(extended)
+    state_pension_income_tax_allowance_untapered(extended)
     assert extended.calculate("personal_allowance", 2028)[0] == 13370
     assert base.calculate("personal_allowance", 2028)[0] < 13370
 
@@ -123,7 +146,7 @@ def test_gas_vat_cut_lowers_vat_in_2027_only():
     }
     before = Simulation(situation=situation)
     after = Simulation(situation=situation)
-    budget_measures.zero_vat_on_domestic_gas(after)
+    zero_vat_on_domestic_gas(after)
     assert after.calculate("household_net_income", 2027)[0] == pytest.approx(
         before.calculate("household_net_income", 2027)[0] + 50, abs=1
     )
