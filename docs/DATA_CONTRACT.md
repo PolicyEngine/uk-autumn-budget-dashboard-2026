@@ -117,15 +117,15 @@ JRF-style very deep poverty: people below 40% (and 50%) of the model's own media
 ```
 
 ### `poverty_by_group`
-Relative AHC poverty and median equivalised BHC income by tenure, family type and region, for 2027-28 and 2031-32 (`years[0]` is the base year). The disability breakdown was removed on 21 October 2026: it recorded disability-benefit receipt, not HBAI's self-reported definition. Region stays in the file but is not shown on the page: it is not validated against official regional figures.
+Poverty rates (relative and absolute, AHC and BHC, as `poverty` gives them) and median equivalised BHC income by tenure, family type and region, for every year from 2027-28 to 2031-32 (`years[0]` is the base year). A suppressed cell is null for every measure. The disability breakdown was removed on 21 October 2026: it recorded disability-benefit receipt, not HBAI's self-reported definition. Region stays in the file but is not shown on the page: it is not validated against official regional figures.
 ```json
 {
-  "years": ["2027-28", "2031-32"],
-  "measures": {"relative_ahc": "...", "median_equivalised_income_bhc": "..."},
+  "years": ["2027-28", "2028-29", "2029-30", "2030-31", "2031-32"],
+  "measures": {"relative_ahc": "...", "absolute_ahc": "...", "relative_bhc": "...", "absolute_bhc": "...", "median_equivalised_income_bhc": "..."},
   "min_unweighted_households": 100,
   "breakdowns": {
     "tenure": {"label": "Tenure", "groups": {"owned_outright": "Owned outright"},
-               "cells": {"owned_outright": {"2027-28": {"relative_ahc": 0.089, "median_equivalised_income_bhc": {"nominal": 0, "real": 0},
+               "cells": {"owned_outright": {"2027-28": {"relative_ahc": 0.089, "absolute_ahc": 0.081, "relative_bhc": 0.10, "absolute_bhc": 0.09, "median_equivalised_income_bhc": {"nominal": 0, "real": 0},
                                                           "people_millions": 0.0, "unweighted_households": 37727, "suppressed": false}}}},
     "family_type": {}, "region": {}
   },

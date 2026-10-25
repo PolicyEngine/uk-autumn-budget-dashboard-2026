@@ -31,6 +31,8 @@ import { CSV_SOURCES, PeSource } from "../sources";
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
   absolute_ahc: { label: "Absolute poverty (AHC)", badge: "Absolute (AHC)", noun: "absolute poverty rate" },
+  relative_bhc: { label: "Relative poverty (BHC)", badge: "Relative (BHC)", noun: "relative poverty rate (BHC)" },
+  absolute_bhc: { label: "Absolute poverty (BHC)", badge: "Absolute (BHC)", noun: "absolute poverty rate (BHC)" },
 };
 
 /** Row labels as plural, sentence-case nouns. */
@@ -83,19 +85,19 @@ function breakdownsFor(data, from, to) {
     if (!b) continue;
     out[id] = {
       label: b.label,
-      measures: ["relative_ahc"],
+      measures: Object.keys(pbg.measures ?? {}).filter((m) => MEASURES[m]),
       reference: "All people",
       children: false,
-      rows: () =>
+      rows: (m) =>
         Object.entries(b.groups).map(([g, label]) => {
           const cell = (y) => {
             const c = b.cells[g]?.[y];
-            return c && !c.suppressed ? pct(c.relative_ahc) : null;
+            return c && !c.suppressed ? pct(c[m]) : null;
           };
           const name = PLURAL[g] || label;
           return { id: g, label: name, subject: name, a: cell(from), z: cell(to) };
         }),
-      all: () => pct(at(data.poverty?.projection?.relative_ahc?.all, to)),
+      all: (m) => pct(at(data.poverty?.projection?.[m]?.all, to)),
     };
   }
   const cp = data.child_poverty_by_family;
@@ -230,12 +232,8 @@ export default function WhoIsInPovertySection({ data }) {
             name="Poverty measure"
             value={measure}
             onChange={setMeasure}
-            options={Object.entries(MEASURES).map(([id, x]) => ({
-              value: id,
-              label: x.label,
-              badge: x.badge,
-              ...(b.measures.includes(id) ? {} : { disabled: true, title: "Not available for this breakdown" }),
-            }))}
+            // Only the measures this breakdown has: none shown greyed out
+            options={b.measures.map((id) => ({ value: id, label: MEASURES[id].label, badge: MEASURES[id].badge }))}
           />
         </>
       }

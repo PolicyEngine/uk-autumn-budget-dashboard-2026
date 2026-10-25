@@ -198,6 +198,15 @@ def tenure_groups(tenure):
     return np.array([TENURE[t] for t in tenure], dtype=object)
 
 
+# The poverty measures given for each group, as "Poverty over time" offers
+GROUP_POVERTY_MEASURES = (
+    "relative_ahc",
+    "absolute_ahc",
+    "relative_bhc",
+    "absolute_bhc",
+)
+
+
 def poverty_by_group(a):
     w = a["weight"]
     breakdowns = {
@@ -214,7 +223,10 @@ def poverty_by_group(a):
         for g in sorted(set(labels)):
             mask = labels == g
             cells[g] = {
-                "relative_ahc": rate(a["relative_ahc"], w, mask),
+                **{
+                    m: rate(a[m], w, mask)
+                    for m in GROUP_POVERTY_MEASURES
+                },
                 "median_equivalised_income_bhc": wmedian(
                     a["eq_bhc"][mask], w[mask]
                 ),
