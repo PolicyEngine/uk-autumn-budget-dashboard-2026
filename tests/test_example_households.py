@@ -284,3 +284,36 @@ def test_income_curve_defaults_to_every_policy_year():
     from uk_budget_data.cli import parse_args
 
     assert parse_args(["income-curve"]).years == list(POLICY_YEARS)
+
+
+def test_each_household_names_a_registered_measure():
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+    registered = {reform.id for reform in get_autumn_budget_2026_reforms()}
+    shown = [household.measure_id for household in EXAMPLE_HOUSEHOLDS]
+    assert set(shown) <= registered
+    # One household per measure, so each chart shows something different
+    assert len(set(shown)) == len(shown)
+
+
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_each_households_measure_changes_its_net_income(household):
+    """The measure a household is chosen for moves its net income somewhere
+    on its grid, in the year it starts; none of the charts is flat at £0
+    for its own measure."""
+    from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+    (reform,) = [
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == household.measure_id
+    ]
+    year = household.measure_year
+    calculator = IncomeCurveCalculator(num_points=11)
+    before = calculator.simulate(
+        household, reform.baseline_scenario_for(DataConfig()), [year]
+    )[year]
+    after = calculator.simulate(household, reform.to_scenario(), [year])[year]
+    assert np.max(np.abs(after - before)) >= 10
