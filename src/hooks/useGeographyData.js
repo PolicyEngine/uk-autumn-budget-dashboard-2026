@@ -188,12 +188,14 @@ const LOADERS = {
 const entries = new Map();
 
 // A failure is kept only while something shows it: the next view to mount
-// loads the file again, so one network error does not last the session.
+// loads the file again, so one network error does not last the session. A
+// missing routing file is tried again too: it may be mid-deploy.
 const RETRY = new Set(["error", "stale"]);
+const retries = (name, status) => RETRY.has(status) || (name === "routing" && status === "unavailable");
 
 function entryFor(key, name, catalogue) {
   let entry = entries.get(key);
-  if (entry && RETRY.has(entry.state?.status) && entry.listeners.size === 0) {
+  if (entry && retries(name, entry.state?.status) && entry.listeners.size === 0) {
     entries.delete(key);
     entry = undefined;
   }
@@ -253,9 +255,9 @@ export const useConstituencyBoundaries = () => useCachedResource("boundaries");
 
 /**
  * Whether the release routes results by area: `{status, routing, error}`,
- * fetched once and shared.
+ * fetched once per publication snapshot and shared.
  */
-export const useAreaRouting = () => useCachedResource("routing");
+export const useAreaRouting = () => useCachedResource("routing", useMeasureCatalogue());
 
 /** Forget every fetched file (for tests). */
 export function resetGeographyCache() {

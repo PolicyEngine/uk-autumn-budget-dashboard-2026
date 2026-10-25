@@ -19,7 +19,8 @@ import {
   geographyFixture,
 } from "../test/geographyFixture";
 
-import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+import { geographyCatalogue, GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 vi.mock("../utils/publication/flat", async (importOriginal) => {
   const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
@@ -229,6 +230,41 @@ describe("useAreaRouting", () => {
     const { result } = renderHook(() => useAreaRouting());
     await waitFor(() => expect(result.current.status).toBe("unavailable"));
     expect(result.current.routing).toBeNull();
+  });
+
+  it("tries a missing file again on the next view, under the same publication", async () => {
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: 404 }));
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("unavailable"));
+    first.unmount();
+    vi.stubGlobal("fetch", geographyFetch());
+    const second = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(second.result.current.status).toBe("ready"));
+    expect(second.result.current.routing.areaViews).toBe("available");
+  });
+
+  it("keeps an answer for its publication and reads routing again for a newer one", async () => {
+    const before = geographyFetch({ [AREA_ROUTING_URL]: areaRouting("not_available") });
+    vi.stubGlobal("fetch", before);
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+    const after = geographyFetch();
+    vi.stubGlobal("fetch", after);
+    const same = renderHook(() => useAreaRouting());
+    expect(same.result.current.routing.areaViews).toBe("not_available");
+    expect(after.calls).toEqual([]);
+    same.unmount();
+    const newer = buildMeasureCatalogue({
+      manifest: { ...geographyCatalogue.manifest, revision: 2, snapshotSha256: "b".repeat(64) },
+      tablesByKey: geographyCatalogue.tablesByKey,
+    });
+    const next = renderHookReact(() => useAreaRouting(), {
+      wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={newer}>{children}</MeasureCatalogueProvider>,
+    });
+    await waitFor(() => expect(next.result.current.status).toBe("ready"));
+    expect(next.result.current.routing.areaViews).toBe("available");
+    expect(after.calls).toEqual([AREA_ROUTING_URL]);
   });
 
   it("reads every answer the public file checks accept, as written", async () => {
