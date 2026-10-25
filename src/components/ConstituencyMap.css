@@ -2,72 +2,23 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: white;
-  padding: 16px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /* The card (white, border, radius, padding) comes from the page layout */
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   height: 100%;
 }
 
-/* Header section */
-.map-header {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 4px;
-}
-
-.map-header h2 {
-  margin: 0 0 6px 0;
-  color: #374151;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.map-header .chart-description {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-/* Which measure the map shows */
-.map-policy-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 8px 12px;
-  background: #f0fdfa;
-  border-left: 3px solid #319795;
-  border-radius: 4px;
-}
-
-.map-policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
-.map-policy-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #0f766e;
-}
-
-/* Kept as they were: other components' .policy-label and .policy-name
-   share these global names. */
-.policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
 .policy-name {
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: #319795;
+  color: var(--pe-teal-500);
 }
 
 .constituency-map-wrapper .publication-unavailable a {
-  color: #0f766e;
+  color: var(--pe-teal-700);
   font-weight: 500;
   text-decoration: underline;
 }
@@ -90,9 +41,9 @@
 
 .map-search-label {
   display: block;
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 8px 0;
 }
 
@@ -103,15 +54,15 @@
 .constituency-search {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--pe-gray-300);
   border-radius: 5px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   transition: all 0.2s ease;
 }
 
 .constituency-search:focus {
   outline: none;
-  border-color: #319795;
+  border-color: var(--pe-teal-500);
   box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
 }
 
@@ -121,7 +72,7 @@
   width: 100%;
   margin-top: 4px;
   background: white;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--pe-gray-300);
   border-radius: 5px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   max-height: 200px;
@@ -134,7 +85,7 @@
   padding: 10px 12px;
   background: none;
   border: none;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--pe-gray-100);
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -145,19 +96,19 @@
 
 .search-result-item:hover,
 .search-result-item:focus-visible {
-  background: #f9fafb;
+  background: var(--pe-gray-50);
 }
 
 .result-name {
   font-weight: 500;
-  font-size: 0.875rem;
-  color: #374151;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
   margin-bottom: 2px;
 }
 
 .result-value {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
 }
 
 /* Map content container */
@@ -215,14 +166,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--pe-gray-500);
   transition: all 0.2s ease;
   padding: 0;
 }
 
 .zoom-control-btn:hover {
-  background: #f3f4f6;
-  color: #319795;
+  background: var(--pe-gray-100);
+  color: var(--pe-teal-500);
 }
 
 .zoom-control-btn svg {
@@ -242,8 +193,8 @@
   left: 50%;
   top: 50%;
   background: white;
-  border: 2px solid #319795;
-  border-radius: 8px;
+  border: 2px solid var(--pe-teal-500);
+  border-radius: var(--pe-radius-md);
   padding: 12px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
@@ -280,19 +231,19 @@
   border: none;
   cursor: pointer;
   font-size: 20px;
-  color: #9ca3af;
+  color: var(--pe-gray-400);
   line-height: 1;
   transition: color 0.2s ease;
 }
 
 .tooltip-close:hover {
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .constituency-tooltip h4 {
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 8px 0;
   padding-right: 20px;
 }
@@ -302,25 +253,18 @@
   line-height: 1.4;
 }
 
-/* Kept as they were: LifecycleCalculator shares these global names. */
+/* Kept as they were: other views share these global names. */
 .tooltip-value {
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   margin: 4px 0;
   line-height: 1;
 }
 
 .tooltip-label {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
   margin: 4px 0 0 0;
-}
-
-.tooltip-value-secondary {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 8px 0 4px 0;
-  line-height: 1;
 }
 
 .constituency-tooltip .tooltip-value {
@@ -329,34 +273,34 @@
 }
 
 .tooltip-interval {
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 /* An approximate figure's interval is the thing to read. */
 .tooltip-interval-emphasis {
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   padding: 4px 8px;
-  background: #fff7e6;
+  background: var(--c-notice-bg);
   border-radius: 4px;
 }
 
 .tooltip-detail {
-  font-size: 0.8125rem;
-  color: #4b5563;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
 }
 
 .tooltip-note {
-  font-size: 0.875rem;
-  color: #374151;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
 }
 
 .tooltip-region {
-  font-size: 0.8125rem;
-  color: #4b5563;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
   padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pe-gray-200);
 }
 
 /* Loading state */
@@ -366,8 +310,8 @@
   justify-content: center;
   height: 400px;
   margin: 0;
-  font-size: 1.25rem;
-  color: #6b7280;
+  font-size: var(--fs-section);
+  color: var(--pe-gray-500);
   /* Shown only if loading takes more than 300ms, to avoid a flash. */
   opacity: 0;
   animation: constituency-loading-in 0s linear 300ms forwards;
@@ -391,10 +335,6 @@
     max-width: 100%;
   }
 
-  .map-top-bar .outcome-toggle {
-    align-self: flex-start;
-  }
-
   .map-controls-container {
     top: 8px;
     right: 8px;
@@ -414,4 +354,97 @@
     width: 12px;
     height: 12px;
   }
+}
+
+/* Before results are published: the grey map with the notice over it */
+.map-template-canvas {
+  position: relative;
+  margin-top: 8px;
+}
+
+.map-template-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+}
+
+.map-template-overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 360px);
+}
+
+.map-template-overlay .publication-unavailable {
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.08);
+}
+
+.map-template .constituency-search:disabled {
+  background: var(--pe-gray-50);
+  cursor: not-allowed;
+}
+
+/* Without the boundaries, the notice sits in flow */
+.map-template-empty .map-template-overlay {
+  position: static;
+  transform: none;
+  width: auto;
+}
+
+/* The template plot matches the scatter beside it */
+.map-template-svg {
+  max-height: 380px;
+}
+
+/* Colour scale without values */
+.map-scale-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.map-scale-swatch {
+  width: 28px;
+  height: 10px;
+}
+
+.map-scale-end {
+  padding: 0 6px;
+}
+
+/* The card's body: the map view (search box, then map) or the Rankings
+   view (top and bottom 10). On a wide screen it keeps one height, so
+   switching views never moves the card or the scatter beside it. */
+.constituency-body {
+  padding-top: 16px;
+}
+
+.constituency-body .map-search-section {
+  max-width: 100%;
+  margin-bottom: 12px;
+}
+
+.map-content[hidden] {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .constituency-body {
+    height: 440px;
+    /* Never clip: a narrow card's longer names scroll within it */
+    overflow-y: auto;
+  }
+}
+
+/* On a phone the controls stack; the switch keeps its own width */
+.map-top-bar .obr-view-switch {
+  align-self: flex-start;
 }

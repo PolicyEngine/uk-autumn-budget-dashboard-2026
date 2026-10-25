@@ -1,0 +1,64 @@
+/* A view's sub-tabs: a compact segmented pill control, left-aligned in
+   the page column. It is secondary to the underline view tabs above it:
+   a grey track with the chosen segment raised in white and teal text, no
+   underline, no full-width bar, and it does not stick. */
+.sub-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 2px;
+  margin: 0 0 32px;
+  padding: 3px;
+  background: var(--pe-gray-100);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  /* Choosing a sub-tab scrolls the control back to just under the sticky
+     band and view tabs; SubTabs.jsx reads this */
+  scroll-margin-top: calc(var(--sticky-offset) + 12px);
+}
+
+.sub-tab {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(var(--pe-radius-md) - 3px);
+  cursor: pointer;
+}
+
+.sub-tab:hover {
+  color: var(--band-teal);
+}
+
+.sub-tab[aria-selected="true"] {
+  color: var(--band-teal);
+  background: var(--pe-surface);
+  border-color: var(--card-border);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+
+.sub-tabs .sub-tab:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 1px;
+}
+
+/* A phone: the segments share the column and may wrap their labels */
+@media (max-width: 480px) {
+  .sub-tabs {
+    display: flex;
+    margin-bottom: 24px;
+  }
+
+  .sub-tab {
+    flex: 1 1 0;
+    padding: 6px 10px;
+    white-space: normal;
+  }
+}

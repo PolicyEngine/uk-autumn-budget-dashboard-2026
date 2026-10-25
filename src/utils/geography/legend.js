@@ -24,6 +24,7 @@ import {
   approximateFill,
   approximatePatternId,
 } from "./palette";
+import { CHART_COLOURS } from "../chartTheme";
 
 const FONT = "system-ui, -apple-system, sans-serif";
 const HATCH_SIZE = 4;
@@ -144,7 +145,7 @@ export function legendEntries(outcome) {
   return { categories, tiers };
 }
 
-function text(group, content, { x, y, size, weight = 400, fill = "#374151" }) {
+function text(group, content, { x, y, size, weight = 400, fill = CHART_COLOURS.text }) {
   return group
     .append("text")
     .attr("x", x)
@@ -173,9 +174,9 @@ export function drawMapLegend(group, { outcome }) {
   const background = group
     .append("rect")
     .attr("rx", 6)
-    .attr("fill", "#FFFFFF")
+    .attr("fill", CHART_COLOURS.surface)
     .attr("fill-opacity", 0.92)
-    .attr("stroke", "#E5E7EB");
+    .attr("stroke", CHART_COLOURS.grid);
   const left = PADDING;
   let right = 0;
   const write = (content, options) => {
@@ -197,7 +198,7 @@ export function drawMapLegend(group, { outcome }) {
     x: left,
     y: top,
     size: 10,
-    fill: "#4B5563",
+    fill: CHART_COLOURS.axisTitle,
   });
   top += 8;
   const row = (entry) => {
@@ -220,7 +221,7 @@ export function drawMapLegend(group, { outcome }) {
       .attr("width", 12)
       .attr("height", 12)
       .attr("fill", entry.halves ? "none" : entry.fill)
-      .attr("stroke", entry.stroke ?? "#D1D5DB")
+      .attr("stroke", entry.stroke ?? CHART_COLOURS.axis)
       .attr("stroke-width", 0.5);
     write(entry.label, { x: left + 18, y: top, size: 11 });
   };

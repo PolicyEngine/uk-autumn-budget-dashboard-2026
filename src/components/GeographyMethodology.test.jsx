@@ -1,18 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import GeographyMethodology, { METHOD_NOTE_URL } from "./GeographyMethodology";
 
 describe("GeographyMethodology", () => {
-  it("opens on request and explains the checks, intervals and tiers", () => {
+  it("explains the checks, intervals and tiers", () => {
     const { container } = render(<GeographyMethodology />);
-    const toggle = screen.getByRole("button", {
-      name: "How these figures are estimated",
-    });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(container.textContent).not.toContain("dominance");
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
     const text = container.textContent;
     expect(text).toContain("at least 10 survey households");
     expect(text).toContain("dominance and p% rules");

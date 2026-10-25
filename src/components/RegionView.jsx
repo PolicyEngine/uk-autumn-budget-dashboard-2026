@@ -26,7 +26,10 @@ import {
 } from "../utils/geography/selection";
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
+import { CHART_LOGO } from "../utils/chartLogo";
+import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./RegionView.css";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 
 const TITLE = "Results by region";
 
@@ -68,34 +71,13 @@ function RegionRow({ region, row }) {
   );
 }
 
-function DownloadIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
 /**
  * Results by region for the selected measure and year: one row per region
  * or nation, with the published value, its 90% interval, its direction,
  * support band and tier. Withheld figures say "Not
  * published"; a region with no row says "No data". Nothing is summed.
  */
-function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] }) {
+function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR, policies = [] }) {
   const regional = useGeographyData("regional");
   const [outcome, setOutcome] = useState("relative_change");
   const titleId = useId();
@@ -162,9 +144,9 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
     >
       <div className="chart-header">
         <div>
-          <h2 id={titleId}>
-            {TITLE}, {yearLabel}
-          </h2>
+          <h3 id={titleId}>
+            {TITLE}, <span className="nowrap">{yearLabel}</span>
+          </h3>
           <p className="chart-description">
             The average change in household net income in each region and
             nation, with its 90% interval. Figures are rounded to the precision
@@ -173,22 +155,13 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
           </p>
         </div>
         {rows && (
-          <div className="region-export">
-            <button
-              type="button"
-              className="region-export-button"
-              onClick={() => exportFile("csv")}
-            >
-              <DownloadIcon /> CSV
-            </button>
-            <button
-              type="button"
-              className="region-export-button"
-              onClick={() => exportFile("txt")}
-            >
-              <DownloadIcon /> TXT
-            </button>
-          </div>
+          <ChartDownloadMenu
+            chartTitle={`${TITLE}, ${yearLabel}`}
+            formats={{
+              csv: () => exportFile("csv"),
+              txt: () => exportFile("txt"),
+            }}
+          />
         )}
       </div>
 
@@ -257,6 +230,10 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
             published are withheld to protect survey respondents'
             confidentiality.
           </p>
+          <div className="card-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={CHART_LOGO.href} alt="PolicyEngine" />
+          </div>
         </>
       )}
     </div>

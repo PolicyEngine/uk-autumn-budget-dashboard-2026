@@ -9,13 +9,37 @@ import json
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Optional
+
+
+def household_impact_answer(baseline=25_000.0, reform=24_895.2) -> dict:
+    """A /api/household-impact headline of the real route's shape."""
+    return {
+        "year": 2029,
+        "net_income": {
+            "baseline": baseline,
+            "reform": reform,
+            "change": round(reform - baseline, 2),
+        },
+        "by_policy": None,
+        "sweep": None,
+        "engine": {"policyengine": "6.10.1", "policyengine-uk": "2.132.6"},
+    }
 
 
 @contextmanager
-def serving(version: dict, impact: dict, health_status: int = 200):
-    """Serve /api/health, /api/version and /api/personal-impact; yield the
-    base URL. Each POST body is recorded on ``server.posted``."""
+def serving(
+    version: dict,
+    impact: dict,
+    health_status: int = 200,
+    household_impact: Optional[dict] = None,
+):
+    """Serve /api/health, /api/version, /api/personal-impact and
+    /api/household-impact; yield the base URL.
+    Each POST body is recorded on ``server.posted``."""
     posted = []
+    if household_impact is None:
+        household_impact = household_impact_answer()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -42,6 +66,8 @@ def serving(version: dict, impact: dict, health_status: int = 200):
             posted.append(json.loads(self.rfile.read(length) or b"null"))
             if self.path == "/api/personal-impact":
                 self._send(200, impact)
+            elif self.path == "/api/household-impact":
+                self._send(200, household_impact)
             else:
                 self._send(404, {"detail": "not found"})
 

@@ -20,6 +20,7 @@ from policyengine_uk.utils.scenario import Scenario
 
 from tests.publication_support import World, make_household_rows, make_tables
 from uk_budget_data import scored_years
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generation
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
@@ -170,12 +171,17 @@ def test_leaving_out_the_first_year_starts_the_change_a_year_later(change):
 @given(
     st.sampled_from(NOT_UPRATED),
     st.sets(st.integers(2020, 2035), min_size=1),
-    st.lists(st.integers(2024, 2032), min_size=1, unique=True),
+    st.lists(st.integers(2024, 2030), min_size=1, unique=True),
 )
 @settings(max_examples=40, deadline=None)
-def test_a_parameter_without_uprating_is_never_flagged(path, written, scored):
+def test_a_parameter_without_uprating_is_not_flagged_in_its_stated_years(
+    path, written, scored
+):
     """The frozen personal allowance and higher rate threshold, and a rate:
-    a stated value resumes after a bounded change."""
+    within their stated years (to 2030-31) a stated value resumes after a
+    bounded change. The thresholds' projected years, from 2031-32, are
+    checked (test_a_threshold_projected_past_its_stated_years_is_checked_there).
+    """
     changes = {path: {str(year): 1 for year in written}}
     assert missing_scored_years(changes, changes, scored, system) == []
 
@@ -352,26 +358,23 @@ def test_the_check_finds_the_years_the_engine_builds_from_the_old_path():
         assert reported.get(path, ()) == old_path, path
 
 
-def test_only_forecast_inputs_are_projected_without_uprating_in_the_scored_years():
-    """The check reads ``uprating`` metadata. Processing also projects the
-    income tax and NICs thresholds past their last stated year, and the
-    installed engines return those to the old path after a bounded change
-    too, but they are stated through 2030-31, the last default scored
-    year. If a parameter is projected without ``uprating`` metadata within
-    the default scored years, extend the check to it (unless the engine
-    resumes it from the changed amount, as policyengine-uk 2.145.0 does
-    for the thresholds)."""
+def _projected_without_uprating(last_year):
+    """Each gov parameter, other than an economic forecast input, that
+    policyengine-uk projects past its last stated value without ``uprating``
+    metadata, with the first year it is projected in, from a year no later
+    than ``last_year``."""
     from policyengine_core.parameters import Parameter
     from policyengine_uk.tax_benefit_system import (
         projected_timelines,
         statutory_parameters,
     )
 
-    last_year = max(DataConfig().years)
     projected = projected_timelines()
-    within = []
+    found = {}
     for leaf in statutory_parameters().gov.get_descendants():
         if not isinstance(leaf, Parameter) or not leaf.values_list:
+            continue
+        if leaf.name.startswith(FORECAST_INPUTS):
             continue
         try:
             if uprating(leaf.name) is not None:
@@ -387,26 +390,73 @@ def test_only_forecast_inputs_are_projected_without_uprating_in_the_scored_years
             ),
             default=None,
         )
-        # Fiscal year Y is read at 30 April Y.
-        if first is not None and first <= f"{last_year}-04-30":
-            within.append(leaf.name)
-    assert all(
-        name.startswith("gov.economic_assumptions.statutory_uprating_inputs.")
-        for name in within
-    ), within
+        # Fiscal year Y is read at 30 April Y: the first fiscal year that
+        # reads a projected value
+        if first is None:
+            continue
+        year = int(first[:4]) + (1 if first[5:] > "04-30" else 0)
+        if year <= last_year:
+            found[leaf.name] = year
+    return found
+
+
+FORECAST_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs."
+
+
+@pytest.mark.parametrize("path", [ALLOWANCE, HIGHER_RATE_THRESHOLD])
+def test_a_threshold_projected_past_its_stated_years_is_checked_there(path):
+    """The personal allowance and higher-rate threshold are stated through
+    2030-31 and projected from 2031-32, a policy year. After a change
+    bounded to earlier years the engine returns them to the old path in
+    the projected years, as it does an uprated amount, so a change that
+    stops at 2030 leaves out 2031. Within the stated years the stated
+    values resume, so nothing is left out there."""
+    last = max(POLICY_YEARS)
+    assert missing_scored_years(
+        {path: {"2030": 13_000}}, None, POLICY_YEARS, system
+    ) == [ScoredYearGap("baseline", path, (last,))]
+    assert (
+        missing_scored_years(
+            {path: {"2028": 13_000}},
+            None,
+            [2026, 2027, 2028, 2029, 2030],
+            system,
+        )
+        == []
+    )
+
+
+def test_every_parameter_projected_without_uprating_in_the_policy_years_is_checked():
+    """Whatever else the engine projects without ``uprating`` metadata
+    within the policy years (the National Insurance thresholds, say), a
+    change stopping the year before it is projected leaves that year out."""
+    last = max(POLICY_YEARS)
+    projected = _projected_without_uprating(last)
+    assert projected, "expected the thresholds at least"
+    unchecked = []
+    for path, first in projected.items():
+        value = system.parameters.get_child(path)(f"{first - 1}-04-30")
+        gaps = missing_scored_years(
+            {path: {str(first - 1): value}}, None, POLICY_YEARS, system
+        )
+        if not any(first in gap.years for gap in gaps):
+            unchecked.append(path)
+    assert unchecked == []
 
 
 @pytest.mark.parametrize(
     "reform", get_autumn_budget_2026_reforms(), ids=lambda reform: reform.id
 )
 def test_no_registered_measure_leaves_out_a_scored_year(reform):
+    """Every registered measure states each uprated or projected amount it
+    changes for every policy year, 2031-32 included."""
     config = DataConfig()
     baseline = reform.baseline_scenario_for(config)
     assert (
         missing_scored_years(
             getattr(baseline, "parameter_changes", None),
             reform.to_scenario().parameter_changes,
-            config.years,
+            POLICY_YEARS,
             system,
         )
         == []

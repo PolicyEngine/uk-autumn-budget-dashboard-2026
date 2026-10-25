@@ -1,7 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import "./YearSlider.css";
+import PillChevron from "./PillChevron";
+import { DISPLAY_YEARS } from "../utils/displayYears";
 
-const YEARS = [2026, 2027, 2028, 2029, 2030];
+// The years the dashboard shows (from 2026-27; see utils/displayYears.js)
+const YEARS = DISPLAY_YEARS;
+
+// Play shows each year for 2.25s: long enough for the charts' 850ms
+// tween (utils/chartMotion.js) to settle and the year to be read
+export const PLAY_STEP_MS = 2250;
 
 function YearSlider({ selectedYear, onYearChange }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -19,7 +26,7 @@ function YearSlider({ selectedYear, onYearChange }) {
           }
           return YEARS[currentIndex + 1];
         });
-      }, 1500); // Change year every 1.5 seconds
+      }, PLAY_STEP_MS);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -34,71 +41,158 @@ function YearSlider({ selectedYear, onYearChange }) {
     };
   }, [isPlaying, onYearChange]);
 
-  const handleSliderChange = (e) => {
-    const index = parseInt(e.target.value);
-    onYearChange(YEARS[index]);
-    setIsPlaying(false);
-  };
-
-  const handlePlayPause = () => {
-    // If at the last year and clicking play, restart from beginning
-    if (!isPlaying && currentIndex >= YEARS.length - 1) {
-      onYearChange(YEARS[0]);
-    }
-    setIsPlaying(!isPlaying);
-  };
-
   const currentIndex = YEARS.indexOf(selectedYear);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(currentIndex);
+  const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const listId = useId();
 
-  const handleYearClick = (index) => {
+  const label = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+
+  const close = (returnFocus) => {
+    setOpen(false);
+    if (returnFocus) buttonRef.current?.focus();
+  };
+
+  // Close on a click outside.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointer = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    return () => document.removeEventListener("mousedown", onPointer);
+  }, [open]);
+
+  // Focus the list when it opens, on the selected year.
+  useEffect(() => {
+    if (open) listRef.current?.focus();
+  }, [open]);
+
+  const startPlaying = () => {
+    // From the last year, play restarts at the first
+    if (currentIndex >= YEARS.length - 1) onYearChange(YEARS[0]);
+    setIsPlaying(true);
+    close(true);
+  };
+
+  const choose = (index) => {
     onYearChange(YEARS[index]);
     setIsPlaying(false);
+    close(true);
   };
+
+  const handleToggle = () => {
+    if (isPlaying) {
+      // While playing, the button is the pause control
+      setIsPlaying(false);
+      return;
+    }
+    setActiveIndex(currentIndex);
+    setOpen((value) => !value);
+  };
+
+  const handleListKeyDown = (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.min(YEARS.length - 1, index + 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.max(0, index - 1));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setActiveIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setActiveIndex(YEARS.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      choose(activeIndex);
+    } else if (event.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  const optionId = (index) => `${listId}-year-${index}`;
 
   return (
-    <div className="year-slider">
+    <div className="year-picker" ref={rootRef}>
       <button
-        className="play-button"
-        onClick={handlePlayPause}
-        aria-label={isPlaying ? "Pause" : "Play"}
+        ref={buttonRef}
+        type="button"
+        className="policy-selector-toggle year-picker-toggle"
+        aria-haspopup={isPlaying ? undefined : "listbox"}
+        aria-expanded={isPlaying ? undefined : open}
+        aria-controls={open ? listId : undefined}
+        aria-pressed={isPlaying ? true : undefined}
+        aria-label={
+          isPlaying
+            ? `Playing, ${label(selectedYear)}: pause`
+            : `Year, ${label(selectedYear)}`
+        }
+        onClick={handleToggle}
       >
-        {isPlaying ? "⏸" : "▶"} {isPlaying ? "Pause" : "Play"}
+        {/* The same parts as the policy pill: badge, label, chevron */}
+        <span className="policy-selector-count year-picker-badge">
+          {label(selectedYear)}
+        </span>
+        <span className="policy-selector-label">{isPlaying ? "playing" : "year"}</span>
+        {isPlaying ? (
+          <span className="policy-selector-icon pill-chevron" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
+              <path
+                d="M5.5 4v8M10.5 4v8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+        ) : (
+          <PillChevron />
+        )}
       </button>
-      <div className="slider-container">
-        <div className="slider-track">
-          <div
-            className="slider-progress"
-            style={{ width: `${(currentIndex / (YEARS.length - 1)) * 100}%` }}
-          />
-          <div
-            className="slider-thumb"
-            style={{ left: `${(currentIndex / (YEARS.length - 1)) * 100}%` }}
-          />
+
+      {open && (
+        <div className="year-picker-dropdown">
+          <button type="button" className="year-picker-play" onClick={startPlaying}>
+            ▶ Play through years
+          </button>
+          <ul
+            ref={listRef}
+            id={listId}
+            className="year-picker-list"
+            role="listbox"
+            aria-label="Year"
+            tabIndex={-1}
+            aria-activedescendant={optionId(activeIndex)}
+            onKeyDown={handleListKeyDown}
+          >
+            {YEARS.map((year, index) => (
+              <li
+                key={year}
+                id={optionId(index)}
+                role="option"
+                aria-selected={index === currentIndex}
+                className={`year-picker-option ${index === activeIndex ? "is-active" : ""}`}
+                onClick={() => choose(index)}
+                onMouseEnter={() => setActiveIndex(index)}
+              >
+                <span className="year-picker-check" aria-hidden="true">
+                  {index === currentIndex ? "✓" : ""}
+                </span>
+                {label(year)}
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="year-labels">
-          {YEARS.map((year, index) => (
-            <button
-              key={year}
-              type="button"
-              className={`year-label ${index === currentIndex ? "active" : ""}`}
-              onClick={() => handleYearClick(index)}
-            >
-              {year}-{(year + 1).toString().slice(-2)}
-            </button>
-          ))}
-        </div>
-        {/* Hidden range input for keyboard accessibility */}
-        <input
-          type="range"
-          min="0"
-          max={YEARS.length - 1}
-          value={currentIndex}
-          onChange={handleSliderChange}
-          className="slider-input-hidden"
-          step="1"
-          aria-label="Select year"
-        />
-      </div>
+      )}
     </div>
   );
 }

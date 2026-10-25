@@ -9,18 +9,21 @@ change"). A one-year rise in a benefit rate is gone the next year, and a
 two-year freeze scores savings for two years only. So a measure on such an
 amount gives it a value for every scored year from its first changed year.
 
-A parameter without ``uprating`` metadata is not checked: a stated value
-resumes after a bounded change, as the frozen personal allowance and
-thresholds do through 2030-31. Past their last stated year the installed
-engines index those thresholds, and a bounded change there also returns
-them to the old path (policyengine-uk 2.145.0 resumes them from the
-changed amount instead); ``tests/test_scored_years.py`` fails if anything
-other than an economic forecast input is projected that way within the
-default scored years. Changes made by simulation modifiers are not seen
-here.
+A parameter without ``uprating`` metadata is checked only in the years
+the engine projects it past its last stated value. Within its stated
+years a stated value resumes after a bounded change, as the frozen
+personal allowance and thresholds do through 2030-31. Past them the
+installed engines index those thresholds, and a bounded change there also
+returns them to the old path (policyengine-uk 2.145.0 resumes them from
+the changed amount instead), so from 2031-32, a policy year, a change to
+them must write every scored year too. Economic forecast inputs
+(``gov.economic_assumptions.statutory_uprating_inputs``) are left out:
+a macro scenario sets them over its own span. Changes made by simulation
+modifiers are not seen here.
 """
 
 from dataclasses import dataclass
+from functools import lru_cache
 from inspect import signature
 from typing import Mapping, Optional
 
@@ -103,17 +106,47 @@ def _touches(assignments, start: Instant, stop: Instant) -> bool:
     )
 
 
+# Economic forecast inputs: a macro scenario sets them over its own span
+FORECAST_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs."
+
+
+@lru_cache(maxsize=None)
+def _projected_from(path: str) -> Optional[Instant]:
+    """The first day the engine projects a gov parameter past its last
+    stated value, or None (not projected, a forecast input, or an engine
+    without ``statutory_parameters``)."""
+    if path.split(".")[0] != "gov" or path.startswith(FORECAST_INPUTS):
+        return None
+    try:
+        from policyengine_uk.tax_benefit_system import statutory_parameters
+
+        stated = statutory_parameters().get_child(path).values_list
+    except (ImportError, KeyError, AttributeError, IndexError, ValueError):
+        return None
+    last = max((entry.instant_str for entry in stated), default="")
+    later = [
+        entry.instant_str
+        for entry in projected_timelines().get(path) or []
+        if entry.instant_str > last
+    ]
+    return instant(min(later)) if later else None
+
+
 def _missing(path: str, values, scored: list[int], system, reading) -> tuple:
     """The scored years one change leaves out: none unless the parameter
-    is uprated (see ``missing_scored_years``). ``reading`` is the engine's
-    key reading, passed to its reader."""
+    is uprated, or, in the years the engine projects it, projected (see
+    the module notes). ``reading`` is the engine's key reading, passed to
+    its reader."""
     try:
         parameter = system.parameters.get_child(path)
     except (KeyError, AttributeError, IndexError, ValueError):
         return ()
     metadata = getattr(parameter, "metadata", None) or {}
+    projected_from = None
     if metadata.get("uprating") is None:
-        return ()
+        projected_from = _projected_from(path)
+        if projected_from is None:
+            return ()
     try:
         assignments = read_parameter_changes({path: values}, **reading)
     except (KeyError, TypeError, ValueError):
@@ -144,7 +177,9 @@ def _missing(path: str, values, scored: list[int], system, reading) -> tuple:
     return tuple(
         year
         for year in scored
-        if year >= first and not _covers(assignments, *window(year))
+        if year >= first
+        and not _covers(assignments, *window(year))
+        and (projected_from is None or window(year)[0] >= projected_from)
     )
 
 

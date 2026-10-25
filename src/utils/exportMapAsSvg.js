@@ -19,6 +19,7 @@ import {
 } from "./svgHelpers";
 import { downloadSvg } from "./downloadFile";
 import { LEGEND_INSET, MAP_LEGEND_CLASS } from "./geography/legend";
+import { CHART_COLOURS } from "./chartTheme";
 
 /** The class of the map's zoomable group, whose transform is reset. */
 export const MAP_ZOOM_LAYER_CLASS = "map-zoom-layer";
@@ -72,14 +73,14 @@ const STYLES = {
   cardRadius: 8,
   cardWrap: 40,
   colors: {
-    title: "#374151",
-    description: "#4b5563",
+    title: CHART_COLOURS.text,
+    description: CHART_COLOURS.axisTitle,
     background: "white",
-    cardBorder: "#e5e7eb",
-    cardText: "#4b5563",
-    gain: "#0F766E",
-    loss: "#B45309",
-    neutral: "#4B5563",
+    cardBorder: CHART_COLOURS.grid,
+    cardText: CHART_COLOURS.axisTitle,
+    gain: CHART_COLOURS.gainText,
+    loss: CHART_COLOURS.lossText,
+    neutral: CHART_COLOURS.axisTitle,
   },
 };
 
@@ -307,11 +308,24 @@ export async function exportMapAsSvg(
   filename = "map",
   options = {},
 ) {
+  const built = await buildMapSvg(svgElement, options);
+  if (!built) return false;
+  downloadSvg(built.svg, filename);
+  return true;
+}
+
+/**
+ * Build the map's export SVG without downloading it, for the SVG and PNG
+ * downloads alike. Takes the same options as exportMapAsSvg.
+ *
+ * @returns {Promise<{svg: string, width: number, height: number}|null>}
+ */
+export async function buildMapSvg(svgElement, options = {}) {
   const { title, description, logo, tooltip } = options;
 
   if (!svgElement) {
     console.error("exportMapAsSvg: No SVG element provided");
-    return false;
+    return null;
   }
 
   // Clone the SVG
@@ -433,11 +447,11 @@ export async function exportMapAsSvg(
     createTooltipCard(clonedSvg, tooltip, cardX, cardY);
   }
 
-  // Serialize and download
-  const svgString = serializeSvg(clonedSvg);
-  downloadSvg(svgString, filename);
-
-  return true;
+  return {
+    svg: serializeSvg(clonedSvg),
+    width: Number(clonedSvg.getAttribute("width")) || width,
+    height: Number(clonedSvg.getAttribute("height")) || 0,
+  };
 }
 
 export default exportMapAsSvg;

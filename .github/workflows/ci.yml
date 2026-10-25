@@ -17,13 +17,17 @@ jobs:
   python-test-parts:
     name: Python tests (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # Three parts on three runners at once. Two parts stopped fitting: on 23
+    # Four parts on four runners at once. Two parts stopped fitting: on 23
     # October, after #90 and #96, "the rest" took 29 of its 30 minutes
     # (1,937 tests, 28:25 of pytest at 4473f83), so the next test added
     # crossed the limit. The model-limit and template files, about half of
     # that part's worker-seconds on CI, now run on their own; data limits
-    # took 12 minutes. A test file named in no part runs in "the rest", and
-    # tests/test_ci_parts.py checks that the parts partition the suite.
+    # took 12 minutes. On 24 October the household route began applying all
+    # ten measures through policyengine-uk Simulation (hh-all-measures), and
+    # "the rest" hit 30 minutes at 54%: the household route files took about
+    # 4,100 worker-seconds of it, so they run as a fourth part. A test file
+    # named in no part runs in "the rest", and tests/test_ci_parts.py checks
+    # that the parts partition the suite.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -46,6 +50,14 @@ jobs:
               tests/test_property_band_index.py
               tests/test_native_measure_regressions.py
               tests/test_measure_keys.py
+          - part: household
+            tests: >-
+              tests/test_household_impact_all_measures.py
+              tests/test_household_impact.py
+              tests/test_household_calculator_route.py
+              tests/test_household_route_parity.py
+              tests/test_household_impact_api.py
+              tests/test_household_route.py
           - part: the rest
             tests: >-
               tests/ --ignore=tests/test_data_limits.py
@@ -63,6 +75,12 @@ jobs:
               --ignore=tests/test_property_band_index.py
               --ignore=tests/test_native_measure_regressions.py
               --ignore=tests/test_measure_keys.py
+              --ignore=tests/test_household_impact_all_measures.py
+              --ignore=tests/test_household_impact.py
+              --ignore=tests/test_household_calculator_route.py
+              --ignore=tests/test_household_route_parity.py
+              --ignore=tests/test_household_impact_api.py
+              --ignore=tests/test_household_route.py
     steps:
       - uses: actions/checkout@v6
 
@@ -229,6 +247,19 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
+      # The five tabs render on the real data in jsdom (src/tabsSmoke.test.jsx,
+      # Frontend tests); this checks the build just made serves the page,
+      # each tab's address and every data file they fetch with HTTP 200,
+      # under the base path. In this job, so it adds no runner to the queue.
+      - name: Serve the build and check the page and its data files
+        run: |
+          bun run start > next-start.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl --silent --output /dev/null http://127.0.0.1:3000/uk/autumn-budget-2026 && break
+            sleep 1
+          done
+          scripts/smoke-built-site.sh http://127.0.0.1:3000/uk/autumn-budget-2026 \
+            || { cat next-start.log; exit 1; }
 
   app-test:
     name: Frontend tests

@@ -205,6 +205,7 @@ def _processor_with_spies(reform, config):
     processor.metrics_calc = _Spy([])
     processor.income_curve_calc = _Spy([])
     processor.household_scatter_calc = _Spy([])
+    processor.age_calc = _Spy([])
     processor._calculate_constituency = lambda *args: ([], [])
     return processor
 
@@ -259,6 +260,7 @@ def _stub_processor(config):
     processor.metrics_calc = _StubCalculator([])
     processor.income_curve_calc = _StubCalculator([])
     processor.household_scatter_calc = _StubCalculator([])
+    processor.age_calc = _StubCalculator([])
     calls = []
 
     def legacy(baseline, reformed, reform_id, year):

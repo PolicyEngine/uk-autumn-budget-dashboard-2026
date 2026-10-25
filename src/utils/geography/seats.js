@@ -26,6 +26,7 @@ import {
 } from "./palette";
 import { regionForBoundary } from "./regions";
 import { lookupRow } from "./rows";
+import { CHART_COLOURS } from "../chartTheme";
 
 export const NO_DATA_NOTE = "No figure is published for this constituency.";
 
@@ -59,7 +60,7 @@ export function seatStates(features, table, { reform, year, outcome }) {
   );
 }
 
-const PLAIN_STROKE = Object.freeze({ stroke: "#FFFFFF", strokeWidth: 0.05 });
+const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 
 /**
  * How a seat is drawn. `fill` is an attribute value: a colour, a dotted

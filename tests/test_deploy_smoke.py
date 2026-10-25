@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
 
-from tests.smoke_server import serving
+from tests.smoke_server import household_impact_answer, serving
 from uk_budget_data import deploy_smoke
 from uk_budget_data.api import app as real_app
 from uk_budget_data.deploy_smoke import (
@@ -64,9 +64,22 @@ def coverage(monkeypatch):
 
 
 def fake_api(
-    version=None, impact=None, health_status=200, impact_status=200
+    version=None,
+    impact=None,
+    health_status=200,
+    impact_status=200,
+    household_impact=None,
+    household_impact_status=200,
 ) -> TestClient:
     app = FastAPI()
+
+    @app.post("/api/household-impact")
+    def household_impact_route(body: dict):
+        if household_impact_status != 200:
+            raise HTTPException(status_code=household_impact_status)
+        if household_impact is None:
+            return household_impact_answer()
+        return household_impact
 
     @app.get("/api/health")
     def health():
@@ -355,3 +368,132 @@ def test_a_server_error_is_a_problem_not_a_crash(tmp_path):
         result = deploy_smoke.run_smoke(client, SHA, BUILD, YEARS, POLICIES)
     assert not result["pass"]
     assert "/api/health returned HTTP 503" in result["problems"]
+
+
+# --- an older image's expectations -------------------------------------------
+
+
+def test_an_older_images_lifecycle_entry_is_ignored(tmp_path):
+    """A rollback to an image from before the hand-typed lifecycle model
+    was removed writes a "lifecycle" entry. The checker no longer calls
+    that route, so the entry neither refuses nor strengthens the check."""
+    for lifecycle in ({"input_year": 2026}, {"input_year": None}, [2026]):
+        with serving(BUILD, GOOD_ANSWER) as (url, server):
+            code = deploy_smoke.main(
+                [
+                    "--base-url",
+                    url,
+                    "--expect-git-sha",
+                    SHA,
+                    "--expectations",
+                    _expectations(tmp_path, lifecycle=lifecycle),
+                ]
+            )
+        assert code == 0
+        assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD]
+
+
+def test_the_expectations_name_no_lifecycle_entry():
+    assert "lifecycle" not in deploy_smoke.print_expectations()
+
+
+# --- the single-year route ----------------------------------------------------
+
+
+def test_a_good_single_year_answer_passes():
+    assert (
+        deploy_smoke.household_impact_problems(household_impact_answer()) == []
+    )
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        ([], "did not return an object"),
+        ({"detail": "boom"}, "reported a failure at detail"),
+        (
+            {**household_impact_answer(), "net_income": {"baseline": 1.0}},
+            "has no baseline, reform and change",
+        ),
+        (
+            {
+                **household_impact_answer(),
+                "net_income": {"baseline": 1.0, "reform": 2.0, "change": 5.0},
+            },
+            "the change is not reform minus baseline",
+        ),
+        (
+            {**household_impact_answer(), "engine": {}},
+            "does not name its policyengine-uk version",
+        ),
+    ],
+)
+def test_an_incomplete_single_year_answer_fails(body, message):
+    problems = deploy_smoke.household_impact_problems(body)
+    assert any(message in problem for problem in problems), problems
+
+
+def test_the_single_year_route_is_checked_when_the_image_has_it():
+    result = run_smoke(
+        fake_api(household_impact_status=404),
+        SHA,
+        BUILD,
+        household_impact={"declared": True},
+    )
+    assert "/api/household-impact returned HTTP 404" in result["problems"]
+
+
+def test_an_image_without_the_single_year_route_is_not_refused_for_it():
+    result = run_smoke(
+        fake_api(household_impact_status=404),
+        SHA,
+        BUILD,
+        household_impact={"declared": False},
+    )
+    assert result["pass"], result["problems"]
+
+
+def test_this_build_declares_the_single_year_route():
+    assert deploy_smoke.expected_household_impact() == {"declared": True}
+    assert deploy_smoke.print_expectations()["household_impact"] == {
+        "declared": True
+    }
+
+
+def test_the_real_single_year_route_passes_the_check(monkeypatch):
+    """The smoke request against the real app, its calculation stubbed:
+    the request is valid and the answer's shape passes."""
+    from uk_budget_data import api, household_impact
+
+    def calculate(answers, policies, year, include, workers):
+        assert include == ()
+        return household_impact_answer()
+
+    monkeypatch.setattr(
+        household_impact, "calculate_household_impact", calculate
+    )
+    api._cached_household_impact.cache_clear()
+    response = TestClient(real_app).post(
+        deploy_smoke.HOUSEHOLD_IMPACT_ROUTE,
+        json=deploy_smoke.SMOKE_HOUSEHOLD_IMPACT,
+    )
+    api._cached_household_impact.cache_clear()
+    assert response.status_code == 200, response.text
+    assert deploy_smoke.household_impact_problems(response.json()) == []
+
+
+@pytest.mark.parametrize("entry", [{"declared": "yes"}, [True], {}])
+def test_a_malformed_single_year_expectation_is_refused(tmp_path, entry):
+    path = tmp_path / "expectations.json"
+    path.write_text(
+        json.dumps(
+            {
+                "identity": BUILD,
+                "years": YEARS,
+                "policies": POLICIES,
+                "household_impact": entry,
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="household_impact"):
+        deploy_smoke.read_expectations(str(path), SHA)

@@ -9,28 +9,43 @@ ran first and the rebuild discarded its edits. ``publication.combine``
 relies on the new order: a combined scenario carries its members' merged
 parameter changes itself, and its modifier runs only their modifiers.
 
-The dividend measure's baseline sets the pre-Budget dividend rates with a
-modifier (``reforms._set_pre_budget_dividend_rates``), because those rates
-sit in a parameter scale. Here the engine alone keeps them beside other
-parameter changes.
+A modifier that set the 2025 placeholder dividend measure's pre-Budget
+rates stays here as a reference modifier that edits parameters.
 """
 
 import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data.reforms import _set_pre_budget_dividend_rates, get_reform
+from uk_budget_data.reforms import get_reform
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 
 
-def _situation():
+def _reference_pre_budget_dividend_rates(sim):
+    """The modifier the dividend measure's baseline used before it stated
+    its pre-Budget rates as parameter changes: every annualised dividend
+    rate from 2027 set to its pre-Budget value. Kept as the reference the
+    parameter changes are checked against."""
+    dividends = (
+        sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
+    )
+    for entry in dividends.brackets[0].rate.values_list:
+        if entry.instant_str >= "2027":
+            entry.value = 0.0875
+    for entry in dividends.brackets[1].rate.values_list:
+        if entry.instant_str >= "2027":
+            entry.value = 0.3375
+    return sim
+
+
+def _situation(year=2027):
     return {
         "people": {
-            "p": {"age": {2027: 50}, "dividend_income": {2027: 60_000}}
+            "p": {"age": {year: 50}, "dividend_income": {year: 60_000}}
         },
         "benunits": {"b": {"members": ["p"]}},
-        "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
     }
 
 
@@ -39,7 +54,7 @@ def test_the_engine_keeps_the_dividend_baseline_beside_parameter_changes(
     before_data_load,
 ):
     scenario = Scenario(
-        simulation_modifier=_set_pre_budget_dividend_rates,
+        simulation_modifier=_reference_pre_budget_dividend_rates,
         parameter_changes={ALLOWANCE: {"2027": 13_000}},
     )
     scenario.applied_before_data_load = before_data_load
@@ -68,7 +83,7 @@ def test_the_modifier_gives_exactly_the_tax_of_the_same_rates_as_changes():
     by_modifier = Simulation(
         situation=_situation(),
         scenario=Scenario(
-            simulation_modifier=_set_pre_budget_dividend_rates,
+            simulation_modifier=_reference_pre_budget_dividend_rates,
             parameter_changes={ALLOWANCE: {"2027": 13_000}},
         ),
     )
@@ -83,26 +98,28 @@ def test_the_modifier_gives_exactly_the_tax_of_the_same_rates_as_changes():
     )
 
 
-def test_the_combined_measure_baseline_keeps_the_pre_budget_dividend_rates():
-    """The combined Autumn Budget measure's baseline has both parameter
-    changes and the dividend modifier. On 2.125.1 the parameter rebuild
-    discarded the modifier, so the combined baseline already had the
-    post-Budget rates and the combined figure left out the dividend rise."""
-    scenario = get_reform("autumn_budget_2026_combined").to_baseline_scenario()
+def test_the_combined_package_keeps_its_parameter_changes_with_its_modifiers():
+    """The combined candidate package carries its members' parameter
+    changes and one modifier that runs theirs. On 2.125.1 the parameter
+    rebuild would have discarded a modifier's edits; on this engine both
+    hold: the 2031-32 allowance is frozen, and the State Pension
+    allowance's wrapper still runs."""
+    scenario = get_reform("autumn_budget_2026_combined").to_scenario()
     assert scenario.parameter_changes and scenario.simulation_modifier
-    sim = Simulation(situation=_situation(), scenario=scenario)
-    dividends = sim.tax_benefit_system.parameters(
-        "2027-06-01"
-    ).gov.hmrc.income_tax.rates.dividends
-    assert dividends.rates[0] == pytest.approx(0.0875)
-    assert dividends.rates[1] == pytest.approx(0.3375)
+    sim = Simulation(situation=_situation(2031), scenario=scenario)
+    allowance = sim.tax_benefit_system.parameters(
+        "2031-06-01"
+    ).gov.hmrc.income_tax.allowances.personal_allowance.amount
+    assert allowance == pytest.approx(12_570)
+    formula = sim.tax_benefit_system.get_variable("personal_allowance")
+    assert formula.__module__ == "uk_budget_data.measure_templates"
 
 
 def test_the_modifier_changes_the_tax_the_engine_computes():
     with_rates = Simulation(
         situation=_situation(),
         scenario=Scenario(
-            simulation_modifier=_set_pre_budget_dividend_rates,
+            simulation_modifier=_reference_pre_budget_dividend_rates,
             parameter_changes={ALLOWANCE: {"2027": 13_000}},
         ),
     )

@@ -96,6 +96,48 @@
     "approved",
     "provisional"
   ],
+  "income_curve_households": [
+    {
+      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month.",
+      "id": "single_renter",
+      "label": "Single adult renting",
+      "x_label": "Employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A couple aged 35 and 33 with children aged 3, 6 and 8 and one earner, renting a three-bedroom home privately in Manchester for \u00a31,441 a month and spending \u00a3957 a year on petrol.",
+      "id": "couple_three_children",
+      "label": "Couple with three children",
+      "x_label": "Earner's employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month.",
+      "id": "lone_parent",
+      "label": "Lone parent with two children",
+      "x_label": "Employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A couple aged 70 and 68 who own their home outright, each on the full new State Pension (\u00a3241.30 a week in 2026-27); the older partner has the private pension.",
+      "id": "pensioner_couple",
+      "label": "Pensioner couple",
+      "x_label": "Older partner's private pension income",
+      "x_max": 60000,
+      "x_variable": "private_pension_income"
+    },
+    {
+      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay.",
+      "id": "higher_income_saver",
+      "label": "Higher earner with savings",
+      "x_label": "Employment income",
+      "x_max": 150000,
+      "x_variable": "employment_income"
+    }
+  ],
   "manifest_file": "manifest.json",
   "manifest_schema": "uk-budget-dashboard/publication-manifest/v1",
   "measure_templates": [
@@ -1645,9 +1687,42 @@
   "name_whitespace": "\t\n\u000b\f\r\u001c\u001d\u001e\u001f \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000",
   "receipt_file": "receipt.json",
   "scatter_bins": {
-    "change_band_width": 100.0,
-    "change_max": 2000.0,
-    "change_min": -2000.0,
+    "change_edges": [
+      -5000.0,
+      -3000.0,
+      -2000.0,
+      -1500.0,
+      -1000.0,
+      -750.0,
+      -500.0,
+      -400.0,
+      -300.0,
+      -200.0,
+      -150.0,
+      -100.0,
+      -75.0,
+      -50.0,
+      -25.0,
+      -10.0,
+      -1.0,
+      1.0,
+      10.0,
+      25.0,
+      50.0,
+      75.0,
+      100.0,
+      150.0,
+      200.0,
+      300.0,
+      400.0,
+      500.0,
+      750.0,
+      1000.0,
+      1500.0,
+      2000.0,
+      3000.0,
+      5000.0
+    ],
     "income_band_width": 5000.0,
     "income_max": 150000.0,
     "income_min": 0.0,
@@ -1663,6 +1738,65 @@
     "not_computable"
   ],
   "tables": {
+    "age_impact": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "age_band",
+          "str"
+        ],
+        [
+          "people",
+          "float"
+        ],
+        [
+          "sample_size",
+          "int"
+        ],
+        [
+          "mean_change",
+          "float"
+        ],
+        [
+          "mean_equivalised_change",
+          "float"
+        ],
+        [
+          "pct_better_off",
+          "float"
+        ],
+        [
+          "pct_worse_off",
+          "float"
+        ],
+        [
+          "pct_unchanged",
+          "float"
+        ],
+        [
+          "people_directly_affected",
+          "float"
+        ]
+      ],
+      "file": "age_impact.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "age_band"
+      ],
+      "required": false
+    },
     "budgetary_impact": {
       "columns": [
         [
@@ -1866,8 +2000,16 @@
           "float"
         ],
         [
+          "change_band_upper",
+          "float"
+        ],
+        [
           "households",
           "float"
+        ],
+        [
+          "income_basis_year",
+          "int"
         ]
       ],
       "file": "household_scatter_binned.csv",
@@ -1875,7 +2017,8 @@
         "reform_id",
         "year",
         "income_band",
-        "change_band"
+        "change_band",
+        "change_band_upper"
       ],
       "required": true
     },
@@ -1894,7 +2037,15 @@
           "int"
         ],
         [
-          "employment_income",
+          "household",
+          "str"
+        ],
+        [
+          "x_variable",
+          "str"
+        ],
+        [
+          "income",
           "float"
         ],
         [
@@ -1910,7 +2061,8 @@
       "key": [
         "reform_id",
         "year",
-        "employment_income"
+        "household",
+        "income"
       ],
       "required": true
     },
