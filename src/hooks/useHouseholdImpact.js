@@ -160,11 +160,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const parts = DETAIL_PARTS.filter((include) =>
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
-      // The detail service's answer is used only if it matches the headline;
-      // otherwise the part is asked of the main API
+      // The detail service's answer is used only if it reports the
+      // headline's build commit and matches it; otherwise the part is asked
+      // of the main API
       const accept = (raw) => {
         try {
-          return stageMismatch(first, normaliseHouseholdImpact(raw)) === null;
+          return stageMismatch(first, normaliseHouseholdImpact(raw), { sameBuild: true }) === null;
         } catch {
           return false;
         }
@@ -177,7 +178,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept },
             );
             if (signal.aborted || refused) return;
-            // Refused unless from the headline's own package versions
+            // Refused unless from the headline's own package versions and,
+            // where both report one, its build commit
             merged = mergeStages(merged, normaliseHouseholdImpact(raw));
             const complete = merged.byPolicy !== null && merged.sweep !== null;
             cache.set(key, { data: merged, complete });

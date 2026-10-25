@@ -17,6 +17,12 @@ decision with a price (see the runbook), not a default.
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop uk-budget-household   # when done
 
+Deploy from a clean checkout of the commit Cloud Run serves. The image
+reports the checkout's commit (``GIT_SHA``) only when the files it copies
+are exactly that commit's, and the page uses this service's sweep and split
+by policy only under a headline that reports the same commit; otherwise it
+asks Cloud Run for them.
+
 Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
 ``warm_schedule`` runs every 10 minutes and sets how many ``Household``
 containers stay warm from ``WARM_WINDOWS`` (UK time): 2 by default, 12 for
@@ -49,6 +55,7 @@ MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
 
 from uk_budget_data.household_warm import warm_target  # noqa: E402
+from uk_budget_data.runtime_identity import checkout_commit  # noqa: E402
 
 
 def build_image() -> modal.Image:
@@ -57,6 +64,12 @@ def build_image() -> modal.Image:
     if not modal.is_local():
         return modal.Image.debian_slim()
     root = Path(__file__).resolve().parents[2]
+    commit = checkout_commit(root)
+    if commit is None:
+        print(
+            "No build commit: the files this deploy copies differ from the "
+            "checkout's HEAD, so the page will not use its breakdowns."
+        )
     return (
         modal.Image.debian_slim(
             python_version=(root / ".python-version").read_text().strip()
@@ -68,7 +81,10 @@ def build_image() -> modal.Image:
                 "OMP_NUM_THREADS": "1",
                 "HOUSEHOLD_RUNNER": "modal",
                 "HOUSEHOLD_WORKERS": "1",
-                "GIT_SHA": os.environ.get("GIT_SHA", ""),
+                # The checkout's own commit, or none if the files copied
+                # below differ from it: the page uses this service's
+                # breakdowns only under a headline from the same commit
+                "GIT_SHA": commit or "",
             }
         )
         .workdir("/root")
