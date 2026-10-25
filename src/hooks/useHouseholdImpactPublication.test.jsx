@@ -31,16 +31,17 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const first = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-one" }));
   await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
   expect(first.result.current.data.net.change).toBe(change);
-  expect(requests).toHaveLength(2);
+  // The headline, then the sweep and the split by policy at once (#141)
+  expect(requests).toHaveLength(3);
   first.unmount();
 
   change += 111;
   const second = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-two" }));
   expect(second.result.current.data).toBeNull();
   await waitFor(() => expect(second.result.current.detailStatus).toBe("ready"));
-  expect(requests).toHaveLength(4);
-  expect(requests[2]).toEqual(requests[0]);
-  expect(requests[3]).toEqual(requests[1]);
+  expect(requests).toHaveLength(6);
+  const byInclude = (list) => [...list].sort((a, b) => JSON.stringify(a.include).localeCompare(JSON.stringify(b.include)));
+  expect(byInclude(requests.slice(3))).toEqual(byInclude(requests.slice(0, 3)));
   expect(second.result.current.data.net.change).toBe(change);
   second.unmount();
 
@@ -48,7 +49,7 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const reopened = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-two" }));
   await waitFor(() => expect(reopened.result.current.detailStatus).toBe("ready"));
   expect(reopened.result.current.data.net.change).toBe(change);
-  expect(requests).toHaveLength(4);
+  expect(requests).toHaveLength(6);
 });
 
 // Review of 428d209, finding 2: requests were unbound to the approved
@@ -71,7 +72,7 @@ describe("Personal impact's live answers", () => {
     const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
     expect(hook.result.current.status).toBe("ready");
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
   });
 
   it("refuses an answer from other package versions than the published figures", async () => {
@@ -93,7 +94,8 @@ describe("Personal impact's live answers", () => {
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
     expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
     expect(hook.result.current.data).toBeNull();
-    expect(requests).toHaveLength(2);
+    // Both parts of the breakdown were asked for at once
+    expect(requests).toHaveLength(3);
   });
 
   it("asks only after a check of the live publication that started after the request", async () => {
@@ -110,7 +112,16 @@ describe("Personal impact's live answers", () => {
     });
     const hook = renderHook(() => useHouseholdImpact({ ...params, confirmPublication }));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
-    expect(log).toEqual(["check snapshot-one", "post", "check snapshot-one", "post"]);
+    // Every request (the headline, then the two parts of the breakdown at
+    // once) follows a check of its own
+    expect(log[0]).toBe("check snapshot-one");
+    expect(log.filter((entry) => entry === "post")).toHaveLength(3);
+    log.forEach((_, index) => {
+      const upTo = log.slice(0, index + 1);
+      expect(upTo.filter((entry) => entry === "post").length).toBeLessThanOrEqual(
+        upTo.filter((entry) => entry === "check snapshot-one").length,
+      );
+    });
   });
 
   it("drops the request when the snapshot it was made under is no longer live", async () => {

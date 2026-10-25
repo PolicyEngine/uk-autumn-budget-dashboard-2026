@@ -8,6 +8,7 @@ import {
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
@@ -157,7 +158,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         parts.map(async (include) => {
           try {
             if (!(await current()) || signal.aborted || refused) return;
-            const raw = await postHouseholdImpact(
+            const raw = await postHouseholdDetail(
               { ...body, include },
               { signal, timeoutMs: DETAIL_TIMEOUT_MS },
             );
