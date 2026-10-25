@@ -382,13 +382,17 @@ function HouseholdCalculator({
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
   });
-  const running =
-    submitted !== null && (householdResult.status === "loading" || householdResult.detailStatus === "loading");
   // The answers, year or policies differ from those of the result shown
   const changed =
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+  // Busy while the headline is calculated, and while the slower parts are
+  // for these same answers; changed answers can be sent once the headline
+  // is back, without waiting for the split by policy and the sweep
+  const running =
+    submitted !== null &&
+    (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
 
   const resultsRef = useRef(null);
   const calculate = (event) => {

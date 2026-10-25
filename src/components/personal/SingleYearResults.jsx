@@ -5,7 +5,7 @@ import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
-import { SLOW_CALCULATION_SECONDS, TYPICAL_CALCULATION_SECONDS } from "../../utils/householdTiming";
+import { STAGE_TIMES } from "../../utils/householdTiming";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -154,9 +154,10 @@ function useElapsedSeconds(active, startedAt) {
 }
 
 /** The panels' time line: the usual time, or that it is running late. */
-export function timeText(seconds) {
-  if (seconds > SLOW_CALCULATION_SECONDS) return "Taking longer than usual; still working";
-  return `Usually around ${TYPICAL_CALCULATION_SECONDS} seconds`;
+export function timeText(seconds, stage = "headline") {
+  const times = STAGE_TIMES[stage];
+  if (seconds > times.slow) return "Taking longer than usual; still working";
+  return times.text;
 }
 
 /** "+£88", "−£12" or "No change", from whole pounds. */
@@ -167,7 +168,7 @@ const signedPounds = (value) =>
  * How far the progress bar is after `seconds`: eased towards 90% over the
  * usual time, then holding there until the answer arrives.
  */
-export function progressShare(seconds, typical = TYPICAL_CALCULATION_SECONDS) {
+export function progressShare(seconds, typical = STAGE_TIMES.headline.typical) {
   const t = Math.min(1, seconds / typical);
   return 0.9 * (1 - (1 - t) ** 2);
 }
@@ -451,9 +452,9 @@ function PendingSkeleton({ kind, startedAt }) {
         <div className="waiting" role="status">
           <span className="processing-spinner is-small" aria-hidden="true" />
           <p className="waiting-title">{WAITING_TEXT[kind]}</p>
-          <p className="waiting-time">{timeText(seconds)}</p>
+          <p className="waiting-time">{timeText(seconds, "detail")}</p>
           <div className="processing-bar waiting-bar" aria-hidden="true">
-            <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
+            <span style={{ transform: `scaleX(${progressShare(seconds, STAGE_TIMES.detail.typical)})` }} />
           </div>
         </div>
       )}
