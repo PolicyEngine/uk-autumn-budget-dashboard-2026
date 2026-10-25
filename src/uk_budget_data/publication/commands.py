@@ -115,6 +115,24 @@ def add_publish_parser(subparsers) -> None:
 
     actions.add_parser("check", help="Re-run every gate (used by CI)")
     actions.add_parser("status", help="List manifest entries")
+    compare = actions.add_parser(
+        "definitions",
+        help="Compare this code's definition of each displayed measure "
+        "with its approved receipt, as the household API reports it",
+    )
+    compare.add_argument(
+        "--api",
+        metavar="URL",
+        help="Compare the definitions the household API at URL serves "
+        "instead (a deployed revision, by its service or tag URL)",
+    )
+    compare.add_argument(
+        "--timeout",
+        type=float,
+        default=300.0,
+        help="Seconds to wait for the API's answer (one household "
+        "calculation; default 300)",
+    )
 
     rows = actions.add_parser(
         "review-rows",
@@ -211,6 +229,18 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
     if action == "review-rows":
         return run_review_rows(parsed, out)
 
+    if action == "definitions":
+        from uk_budget_data.definitions import api_reporter, run_check
+
+        if parsed.api:
+            return run_check(
+                data_root,
+                out,
+                api_reporter(parsed.api, parsed.timeout),
+                where=f"the API at {parsed.api}",
+            )
+        return run_check(data_root, out)
+
     manifest = m.load_manifest(data_root)
     if action == "status":
         out(f"revision {manifest.revision}")
@@ -254,7 +284,8 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         else:
             out(
                 "usage: uk-budget-data publish "
-                "{reconcile,stage,approve,withdraw,check,status,review-rows}"
+                "{reconcile,stage,approve,withdraw,check,status,"
+                "definitions,review-rows}"
             )
             return 2
     except PublishError as error:
