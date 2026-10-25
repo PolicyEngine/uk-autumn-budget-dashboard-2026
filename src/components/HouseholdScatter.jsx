@@ -12,7 +12,8 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
-  CHANGE_AXIS_DOMAIN,
+  clampToAxis,
+  fitChangeAxis,
   householdsPerDot,
   INCOME_AXIS_DOMAIN,
   panelDots,
@@ -34,9 +35,14 @@ import TitleIcon from "./TitleIcon";
 // dot size and colours. Its dots were sampled households; these are fixed
 // shares of groups of households, which keep their rows across years.
 const CHART_TITLE = "Household income impacts";
-const CHANGE_TICKS = [-5000, -2500, 0, 2500, 5000];
 const INCOME_TICKS = [0, 20000, 40000, 60000, 80000, 100000, 120000, 140000];
 const thousands = (value) => `${value / 1000}`;
+// Change ticks in pounds: "−£500", "£0", "£2.5k"
+const changeTick = (value) => {
+  const abs = Math.abs(value);
+  const text = abs >= 1000 ? `£${abs / 1000}k` : `£${abs}`;
+  return value < 0 ? `\u2212${text}` : text;
+};
 // 2025: Recharts' default scatter symbol (area 64, so r ≈ 4.5) at an
 // opacity of 0.5 to 0.95 by household weight, which its Cell set as both
 // `opacity` and `fill-opacity` (so a dot showed at about its square).
@@ -64,7 +70,7 @@ const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
 const describe = (perDot, basisLabel) =>
-  `Net income change against ${basisLabel} baseline income. Each dot stands for about ${roundedThousands(perDot)} households, grouped by their ${basisLabel} income, so a dot keeps its row across years. Green: gains; amber: losses; grey: little change.`;
+  `Net income change against ${basisLabel} baseline income. Each dot stands for about ${roundedThousands(perDot)} households, grouped by their ${basisLabel} income, so a dot keeps its row across years. Green: gains; amber: losses; grey: little change; hollow: beyond the axis.`;
 const DESCRIPTION_LOADING =
   "Net income change against baseline income. Each dot stands for a group of households, grouped by their income in the first year shown. Green: gains; amber: losses; grey: little change.";
 
@@ -137,7 +143,7 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
       {dots.map((dot) => {
         const cx = xAxis.scale(dot.change);
         const cy = yAxis.scale(dot.income);
-        // Off the plot (beyond ±£5,000), as in 2025, or fading out: not drawn
+        // Fading out, or (mid-tween) beyond the axis: not drawn
         if (dot.opacity <= 0.01 || cx < left || cx > right) return null;
         return (
           <circle
@@ -146,10 +152,11 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             cx={cx}
             cy={cy}
             r={DOT_RADIUS}
-            fill={colourFor(dot)}
+            fill={dot.clamped ? "none" : colourFor(dot)}
             fillOpacity={DOT_OPACITY}
-            opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
-            strokeWidth={0}
+            stroke={dot.clamped ? colourFor(dot) : undefined}
+            opacity={(dot.clamped ? 0.9 : DOT_OPACITY) * Math.min(1, dot.opacity)}
+            strokeWidth={dot.clamped ? 1.5 : 0}
             onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
           />
         );
@@ -198,9 +205,9 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
 /**
  * Households by baseline net income and the change in it, drawn as the
  * 2025 dashboard drew its 500 sampled households: change on the x axis
- * (fixed ±£5,000, ticks every £2,500), baseline household net income on
- * the y axis (£0 to £150,000), uniform dots coloured by gain, loss or no
- * change, and changes beyond ±£5,000 off the plot.
+ * (fitted to the dots shown: fitChangeAxis), baseline household net income
+ * on the y axis (£0 to £150,000), uniform dots coloured by gain, loss or no
+ * change, and changes beyond the axis drawn hollow at its edge.
  *
  * The dots come from the binned cells in household_scatter_binned.csv
  * (£5,000 income bands by change bands). Every year's households are
@@ -234,10 +241,13 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
   const chartTitle = `${CHART_TITLE}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
-  const dots = useMemo(
-    () => (ready ? panelDots(view.basisPoints, view.points) : []),
-    [ready, view],
-  );
+  // The change axis fits the dots of the year and selection shown; dots
+  // beyond it sit at its edge, hollow
+  const { dots, changeAxis } = useMemo(() => {
+    const placed = ready ? panelDots(view.basisPoints, view.points) : [];
+    const axis = fitChangeAxis(placed);
+    return { dots: clampToAxis(placed, axis.domain), changeAxis: axis };
+  }, [ready, view]);
   const shown = useTweenedDots(dots);
   const description = ready
     ? describe(householdsPerDot(view.basisPoints), basisLabel)
@@ -294,21 +304,21 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
-            <ScatterChart margin={{ top: 6, right: narrow ? 12 : 16, left: 0, bottom: 0 }}>
+            <ScatterChart margin={{ top: 6, right: narrow ? 22 : 20, left: 0, bottom: 0 }}>
               <CartesianGrid {...GRID} />
               <XAxis
                 type="number"
                 dataKey="change"
                 name="Income change"
-                domain={CHANGE_AXIS_DOMAIN}
+                domain={changeAxis.domain}
                 allowDataOverflow
-                ticks={CHANGE_TICKS}
+                ticks={changeAxis.ticks}
                 interval={0}
-                tickFormatter={thousands}
+                tickFormatter={changeTick}
                 tick={TICK}
                 height={44}
                 label={{
-                  value: "Net income change (£k)",
+                  value: "Net income change (£ a year)",
                   position: "insideBottom",
                   offset: 4,
                   style: AXIS_TITLE,

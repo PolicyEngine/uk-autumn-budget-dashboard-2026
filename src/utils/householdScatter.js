@@ -258,8 +258,70 @@ export function scatterCsv(points, { title, basisYear }) {
  */
 export const SCATTER_DOTS = 500;
 
-/** The change axis, as in 2025: fixed at ±£5,000, linear. */
+/**
+ * The widest change axis: ±£5,000, the 2025 dashboard's fixed axis. The
+ * axis drawn is fitted to the dots (fitChangeAxis) and never wider.
+ */
 export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
+
+// Tick steps the fitted change axis may use, in £
+const CHANGE_STEPS = [10, 25, 50, 100, 250, 500, 1000, 2500];
+// The share of dots at each end the fit may leave outside the axis: they
+// are drawn at the edge, hollow, rather than widening it for everyone
+const CHANGE_TRIM = 0.01;
+
+function quantile(sorted, q) {
+  if (sorted.length === 0) return 0;
+  const at = Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))));
+  return sorted[at];
+}
+
+/**
+ * The change axis fitted to the dots shown: from the 1st to the 99th
+ * percentile of their changes, always including £0, rounded out to a tick
+ * step chosen for about four to six ticks, and never wider than ±£5,000.
+ * A side that would end at £0 gets half a step of room so dots at zero are
+ * not cut. Dots beyond the axis (including the open-ended bands past
+ * ±£5,000) are clamped to its edge by clampToAxis.
+ *
+ * @param {Array<{change: number, hidden?: boolean, edge?: string}>} dots
+ * @returns {{domain: [number, number], ticks: number[]}}
+ */
+export function fitChangeAxis(dots) {
+  const changes = dots
+    .filter((dot) => !dot.hidden || dot.edge)
+    .map((dot) => (dot.edge ? (dot.edge === "upper" ? 1 : -1) * Infinity : dot.change))
+    .sort((a, b) => a - b);
+  const lowData = Math.max(CHANGE_AXIS_DOMAIN[0], Math.min(0, quantile(changes, CHANGE_TRIM)));
+  const highData = Math.min(CHANGE_AXIS_DOMAIN[1], Math.max(0, quantile(changes, 1 - CHANGE_TRIM)));
+  const range = Math.max(highData - lowData, CHANGE_STEPS[0]);
+  const step = CHANGE_STEPS.find((s) => range / s <= 5) ?? CHANGE_STEPS[CHANGE_STEPS.length - 1];
+  const low = Math.floor(lowData / step) * step;
+  const high = Math.ceil(highData / step) * step;
+  const ticks = [];
+  for (let t = low; t <= high + 1e-9; t += step) ticks.push(Math.round(t));
+  return {
+    domain: [low === 0 ? -step / 2 : low, high === 0 ? step / 2 : high],
+    ticks,
+  };
+}
+
+/**
+ * Dots beyond the fitted axis, and dots in the open-ended bands past
+ * ±£5,000, placed at the axis edge and marked `clamped`, so every group
+ * stays on the plot without one far change setting the scale for all.
+ */
+export function clampToAxis(dots, [low, high]) {
+  return dots.map((dot) => {
+    if (dot.hidden && !dot.edge) return dot;
+    if (dot.edge) {
+      return { ...dot, hidden: false, clamped: true, change: dot.edge === "upper" ? high : low };
+    }
+    if (dot.change < low) return { ...dot, clamped: true, change: low };
+    if (dot.change > high) return { ...dot, clamped: true, change: high };
+    return dot;
+  });
+}
 
 /** The income axis, as in 2025: £0 to £150,000. */
 export const INCOME_AXIS_DOMAIN = [0, 150000];
@@ -463,6 +525,7 @@ export function panelDots(
         income,
         change,
         hidden: Boolean(edge),
+        edge: edge || undefined,
         incomeBand,
         changeBand: cell.changeBand,
         changeBandUpper: cell.changeBandUpper,
