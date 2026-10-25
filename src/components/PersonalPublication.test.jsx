@@ -6,13 +6,15 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { fixtureJson } from "../test/publicationFixture";
 
 vi.mock("./HouseholdCalculator", () => ({
-  default: ({ selectedPolicies, publicationKey }) => (
-    <div data-testid="live-calculator" data-policies={selectedPolicies.join(",")} data-snapshot={publicationKey}>£123,456</div>
+  default: ({ selectedPolicies, publicationKey, expectedEngine }) => (
+    <div data-testid="live-calculator" data-policies={selectedPolicies.join(",")} data-snapshot={publicationKey} data-engine={JSON.stringify(expectedEngine)}>£123,456</div>
   ),
 }));
 afterEach(cleanup);
 
 const base = fixtureJson("manifest.json");
+// What the fixture's receipts record (receiptEngine)
+const ENGINE = { policyengine: "6.10.2", "policyengine-uk": "2.132.6", "policyengine-core": "3.33.3" };
 const year = base.measures.alpha.years.find((value) => !base.measures.alpha.unsupported_years.includes(value));
 function catalogue({ status = "approved", verified = true, supported = true, manifest = true } = {}) {
   return buildMeasureCatalogue({
@@ -20,7 +22,7 @@ function catalogue({ status = "approved", verified = true, supported = true, man
       ...base, snapshotSha256: "a".repeat(64),
       measures: { alpha: { ...base.measures.alpha, status, years: [year], unsupported_years: supported ? [] : [year] } }, combined: {},
     } : null,
-    tablesByKey: verified ? { alpha: {} } : {},
+    tablesByKey: verified ? { alpha: { engine: ENGINE } } : {},
   });
 }
 function show(value) {
@@ -43,7 +45,7 @@ describe("Personal impact's publication gate", () => {
         },
         combined: {},
       },
-      tablesByKey: { alpha: {} },
+      tablesByKey: { alpha: { engine: ENGINE } },
     });
     const remove = vi.fn();
     render(
@@ -60,6 +62,35 @@ describe("Personal impact's publication gate", () => {
     show(catalogue());
     expect(screen.getByTestId("live-calculator")).toHaveAttribute("data-policies", "alpha");
     expect(screen.getByTestId("live-calculator")).toHaveAttribute("data-snapshot", "a".repeat(64));
+    // The versions the household API's answers must come from
+    expect(JSON.parse(screen.getByTestId("live-calculator").dataset.engine)).toEqual(ENGINE);
+  });
+
+  it.each([
+    ["no recorded versions", {}],
+    ["different versions", { ...ENGINE, policyengine: "6.10.1" }],
+  ])("withholds the calculator when the selected receipts name %s", (_, other) => {
+    // Review of 428d209, finding 2: the household API is compared with one
+    // set of published versions, so selected receipts must agree on it
+    const value = buildMeasureCatalogue({
+      manifest: {
+        ...base, snapshotSha256: "a".repeat(64),
+        measures: {
+          alpha: { ...base.measures.alpha, years: [year], unsupported_years: [] },
+          beta: { ...base.measures.beta, years: [year], unsupported_years: [] },
+        },
+        combined: {},
+      },
+      tablesByKey: { alpha: { engine: ENGINE }, beta: { engine: other } },
+    });
+    render(
+      <MeasureCatalogueProvider catalogue={value}>
+        <PersonalImpactTab selectedPolicies={["alpha", "beta"]} policies={value.measures} year={year} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+    expect(screen.getByText("Personal impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
   });
 
   it("never renders held, unpublished, unverified or unsupported measures as numbers", () => {

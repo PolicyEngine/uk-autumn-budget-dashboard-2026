@@ -26,6 +26,8 @@ import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
+import { fixtureJson } from "./test/publicationFixture";
+import { receiptEngine } from "./utils/publication/load";
 
 // The receipt fixture's supported year follows the engine's projection
 // end (currently beyond the dashboard's Budget-year window). Exercise the
@@ -80,6 +82,16 @@ let consoleErrors;
 
 const publicationFetch = dashboardFixtureFetch();
 
+// The household API must run the model versions the approved receipts
+// record, or Personal impact shows nothing: answer with alpha's.
+const PUBLISHED_ENGINE = receiptEngine(
+  fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
+);
+function publishedAnswerFor(body) {
+  const answer = householdAnswerFor(body);
+  return { ...answer, engine: { ...answer.engine, ...PUBLISHED_ENGINE } };
+}
+
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
@@ -87,7 +99,7 @@ function serve(input, init = {}) {
     const ok = url === HOUSEHOLD_API && method === "POST";
     requests.push({ url, status: ok ? 200 : 404, body: init.body });
     return ok
-      ? new Response(JSON.stringify(householdAnswerFor(init.body)), {
+      ? new Response(JSON.stringify(publishedAnswerFor(init.body)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })

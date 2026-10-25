@@ -62,7 +62,22 @@ export async function loadManifest(
 }
 
 /**
- * Fetch one entry's artifact and return its verified, typed tables.
+ * The package versions a verified receipt records: its wrapper, model and
+ * core, by package name, as the household API reports its own.
+ */
+export function receiptEngine(receipt) {
+  const execution = receipt?.execution_receipt ?? {};
+  const engine = {};
+  for (const part of ["wrapper", "model", "core"]) {
+    const { name, version } = execution[part] ?? {};
+    if (typeof name === "string" && typeof version === "string") engine[name] = version;
+  }
+  return engine;
+}
+
+/**
+ * Fetch one entry's artifact and return its verified, typed tables, with
+ * the package versions its receipt records as `engine`.
  *
  * @throws {Error} naming the first check that failed.
  */
@@ -106,6 +121,7 @@ export async function loadArtifact(
       loaded[tableForFile(fileName)] = parseTable(table, text);
     }),
   );
+  loaded.engine = receiptEngine(receipt);
   return loaded;
 }
 

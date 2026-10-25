@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import {
+  EngineMismatchError,
   atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
+  engineDifferences,
+  mergeStages,
   normaliseHouseholdImpact,
   requestKey,
   statePensionFor,
@@ -178,6 +182,66 @@ describe("normaliseHouseholdImpact", () => {
     const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, by_policy: null, sweep: null });
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
+  });
+});
+
+// Review of 428d209, finding 2: a breakdown from one deployment was merged
+// under a headline from another, and kept the headline's engine label.
+describe("the household answer's package versions", () => {
+  const ENGINE = HOUSEHOLD_FIXTURE.engine;
+  const stage = (engine, change, parts) => normaliseHouseholdImpact({
+    ...HOUSEHOLD_FIXTURE,
+    engine,
+    net_income: { ...HOUSEHOLD_FIXTURE.net_income, change },
+    ...parts,
+  });
+
+  it("refuses to merge stages from different package versions", () => {
+    const headline = stage(ENGINE, 100, { by_policy: null, sweep: null });
+    const detail = stage({ ...ENGINE, "policyengine-uk": "9.9.9" }, 999, {});
+    expect(() => mergeStages(headline, detail)).toThrow(EngineMismatchError);
+    try {
+      mergeStages(headline, detail);
+    } catch (error) {
+      expect(error.packages).toEqual(["policyengine-uk"]);
+      expect(error.kind).toBe("engine");
+    }
+    // The same versions merge as before
+    const merged = mergeStages(headline, stage(ENGINE, 100, {}));
+    expect(merged.byPolicy).not.toBeNull();
+    expect(merged.engine).toEqual(ENGINE);
+  });
+
+  const versions = fc.dictionary(
+    fc.constantFrom("policyengine", "policyengine-uk", "policyengine-core"),
+    fc.stringMatching(/^[0-9]{1,2}\.[0-9]{1,3}\.[0-9]{1,2}$/),
+    { minKeys: 1 },
+  );
+
+  it("names exactly the expected packages the API reports otherwise", () => {
+    fc.assert(fc.property(versions, versions, fc.dictionary(fc.constantFrom("uk_budget_data"), fc.string()), (expected, other, extra) => {
+      // Matching versions, plus packages no receipt records: nothing differs
+      expect(engineDifferences(expected, { ...expected, ...extra })).toEqual([]);
+      const reported = { ...expected, ...other };
+      const differ = engineDifferences(expected, reported);
+      expect(differ).toEqual(Object.keys(expected).filter((name) => reported[name] !== expected[name]).sort());
+      // A package the API leaves out always differs
+      for (const name of Object.keys(expected)) {
+        const missing = { ...reported };
+        delete missing[name];
+        expect(engineDifferences(expected, missing)).toContain(name);
+      }
+    }));
+  });
+
+  it("merges two stages exactly when their versions agree", () => {
+    fc.assert(fc.property(versions, versions, (first, second) => {
+      const headline = stage(first, 1, { by_policy: null, sweep: null });
+      const detail = stage(second, 1, {});
+      const agree = JSON.stringify(Object.entries(first).sort()) === JSON.stringify(Object.entries(second).sort());
+      if (agree) expect(mergeStages(headline, detail).engine).toEqual(first);
+      else expect(() => mergeStages(headline, detail)).toThrow(EngineMismatchError);
+    }));
   });
 });
 

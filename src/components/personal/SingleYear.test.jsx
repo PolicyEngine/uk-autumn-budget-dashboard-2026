@@ -9,6 +9,10 @@ import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixtu
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
+// The receipts' model versions, which the household fixture's answer runs:
+// Personal impact shows nothing when the two differ.
+const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
+const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
 const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
 
 let household;
@@ -54,7 +58,7 @@ const testCatalogue = buildMeasureCatalogue({
     }])),
     combined: {},
   },
-  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, {}])),
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE }])),
 });
 function PublishedMeasures({ children }) {
   return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;

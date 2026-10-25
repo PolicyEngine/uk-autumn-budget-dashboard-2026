@@ -31,6 +31,24 @@ export function isCatalogueRowDisplayable(catalogue, id, year) {
   return true;
 }
 
+/**
+ * The one set of package versions the selected measures' verified receipts
+ * record, or null when one has none recorded, is not verified, or they
+ * disagree. Personal impact asks the household API live, and compares its
+ * versions with these.
+ */
+export function publishedEngine(catalogue, ids) {
+  let engine = null;
+  for (const id of ids) {
+    const recorded = catalogue?.tablesByKey && Object.hasOwn(catalogue.tablesByKey, id) ? catalogue.tablesByKey[id]?.engine : null;
+    if (!recorded || !Object.keys(recorded).length) return null;
+    const key = JSON.stringify(Object.entries(recorded).sort(([a], [b]) => (a < b ? -1 : 1)));
+    if (engine !== null && engine.key !== key) return null;
+    engine = { key, value: recorded };
+  }
+  return engine?.value ?? null;
+}
+
 /** Only an explicit publication manifest supplies catalogue membership. */
 export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [], tablesByKey = null, failures = {} } = {}) {
   const rows = [...budgetary, ...distributional, ...winnersLosers, ...metrics];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
@@ -27,6 +27,7 @@ import { DISPLAY_YEARS } from "./utils/displayYears";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
+import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import Note from "./components/Note";
@@ -149,7 +150,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       else params.delete("policies");
     }
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, activeTab, locationReady]);
+  }, [selectedPolicies, activeTab, locationReady, unavailable]);
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
@@ -556,6 +557,12 @@ function App() {
   const [error, setError] = useState(null);
   const [updated, setUpdated] = useState(false);
   const current = useRef(null);
+  const confirmer = useRef(null);
+  // Stable for the page's life: each Personal impact request waits on it
+  const confirmPublication = useCallback(
+    (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
+    [],
+  );
   useEffect(() => {
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const controller = new AbortController();
@@ -565,7 +572,7 @@ function App() {
       setError(null);
     };
     let initialComplete = false;
-    loadDashboard(base, { signal: controller.signal })
+    const initial = loadDashboard(base, { signal: controller.signal })
       .then((result) => { if (!controller.signal.aborted) show(result); })
       .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
       .finally(() => { initialComplete = true; });
@@ -574,28 +581,37 @@ function App() {
     // figures with its own verified ones. A missing, invalid or unreachable
     // manifest takes them away until a later check verifies publication again.
     // Under the same manifest, artifacts that failed to verify are tried again.
-    let checking = false;
-    const recheck = async () => {
-      if (checking || controller.signal.aborted || !initialComplete) return;
-      checking = true;
+    // Each check resolves to the live snapshot it found, or null for none.
+    const run = async () => {
       try {
         const live = await loadManifest(base, { signal: controller.signal });
         const catalogue = current.current?.catalogue;
         const shown = catalogue?.manifest?.snapshotSha256 ?? null;
         const failed = Object.keys(catalogue?.failures ?? {}).length > 0;
-        if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return;
+        if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return shown;
         const next = await loadDashboard(base, { signal: controller.signal });
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return null;
         show(next);
-        if ((next.catalogue.manifest?.snapshotSha256 ?? null) !== shown) setUpdated(true);
+        const found = next.catalogue.manifest?.snapshotSha256 ?? null;
+        if (found !== shown) setUpdated(true);
+        return found;
       } catch (failure) {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return null;
         current.current = null;
         setPublished(null);
         setError(failure.message);
-      } finally {
-        checking = false;
+        return null;
       }
+    };
+    // One check at a time; one asked for mid-check runs when it ends
+    const check = serialisedChecks(run);
+    const recheck = () => { if (!controller.signal.aborted && initialComplete) check(); };
+    // A household request waits for a check that started after it was made:
+    // true only if the snapshot it was made under is still the live one.
+    confirmer.current = async (snapshot) => {
+      await initial;
+      if (controller.signal.aborted) return false;
+      return (await check()) === snapshot;
     };
     const onVisible = () => { if (document.visibilityState === "visible") recheck(); };
     const timer = setInterval(recheck, RECHECK_MS);
@@ -603,6 +619,7 @@ function App() {
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       controller.abort();
+      confirmer.current = null;
       clearInterval(timer);
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", onVisible);
@@ -619,9 +636,11 @@ function App() {
   // One snapshot per mount: a newer one starts the views afresh
   const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
   return (
-    <MeasureCatalogueProvider catalogue={shown.catalogue}>
-      <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
-    </MeasureCatalogueProvider>
+    <PublicationCheckContext.Provider value={confirmPublication}>
+      <MeasureCatalogueProvider catalogue={shown.catalogue}>
+        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+      </MeasureCatalogueProvider>
+    </PublicationCheckContext.Provider>
   );
 }
 
