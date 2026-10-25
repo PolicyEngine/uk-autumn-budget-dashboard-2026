@@ -7,7 +7,6 @@ import {
   Cell,
   ComposedChart,
   Customized,
-  LabelList,
   Line,
   ReferenceArea,
   ReferenceLine,
@@ -27,6 +26,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import SectionHeading from "./SectionHeading";
+import { formatShare, visibleSegments } from "../utils/shareFormat";
 import Note from "./Note";
 import PillSelect from "./PillSelect";
 import MeasuresCard from "./youngPeople/MeasuresCard";
@@ -101,7 +101,41 @@ const UNIT = "Average change per person (£ a year)";
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const signedPounds = (value) =>
   value < 0 ? `-£${Math.abs(Math.round(value)).toLocaleString("en-GB")}` : pounds(value);
-const percent = (value) => `${value.toFixed(1)}%`;
+const percent = formatShare;
+const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
+
+/** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
+function SplitTick({ x, y, payload, data, narrow }) {
+  const row = data.find((point) => point.group === payload.value);
+  if (!row) return null;
+  return (
+    <text x={x + 4} y={y} dominantBaseline="middle" fontSize={narrow ? 10 : 11} fill={CHART_COLOURS.tick}>
+      <tspan fill={CHART_COLOURS.gain}>▲</tspan>
+      {` ${formatShare(row.real.pct_better_off)}  `}
+      <tspan fill={CHART_COLOURS.loss}>▼</tspan>
+      {` ${formatShare(row.real.pct_worse_off)}`}
+    </text>
+  );
+}
+
+/** The real shares of a hovered group, each to the page's rule. */
+function SharesTooltip({ active, payload, label, yearLabel }) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">
+        {label === "All ages" ? label : `Aged ${String(label).toLowerCase()}`}, {yearLabel}
+      </p>
+      {OUTCOMES.map((outcome) => (
+        <p key={outcome.key} className="chart-tooltip-row">
+          <span className="chart-tooltip-swatch" style={{ background: outcome.color }} aria-hidden="true" />
+          {outcome.label} {formatShare(row.real[outcome.key])}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 /** Ticks for a symmetric domain: steps of 50, 100, 250, 500 or 1,000. */
 function niceDomain(maxAbs) {
@@ -140,10 +174,10 @@ function useAgeImpactRows() {
 /** A legend of one row of swatches, in the grouped legend's style. */
 function RowLegend({ items = OUTCOMES }) {
   return (
-    <div className="grouped-legend is-columns young-people-outcome-legend">
+    <div className="grouped-legend is-flat">
       <ul className="grouped-legend-items">
         {items.map((item) => (
-          <li key={item.key}>
+          <li key={item.key} className="grouped-legend-item">
             <span
               className="grouped-legend-swatch"
               style={{ background: item.color }}
@@ -526,7 +560,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const data = shares
     ? shares.groups
         .filter((group) => !group.suppressed)
-        .map((group) => ({ group: group.label, key: group.key, ...pick(group.row) }))
+        // Real shares kept on the row; a tiny non-zero share drawn at a
+        // visible minimum width
+        .map((group) => visibleSegments({ group: group.label, key: group.key, ...pick(group.row) }, OUTCOME_KEYS))
     : [];
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
 
@@ -630,18 +666,22 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 tickLine={false}
                 interval={0}
               />
+              {/* Each row's better / worse split, at its right */}
+              <YAxis
+                yAxisId="split"
+                orientation="right"
+                type="category"
+                dataKey="group"
+                tick={<SplitTick data={data} narrow={narrow} />}
+                width={narrow ? 108 : 112}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={
-                  <ChartTooltip
-                    format={percent}
-                    grouped={false}
-                    labelFormat={(label) =>
-                      `${label === "All ages" ? label : `Aged ${label.toLowerCase()}`}, ${yearLabel}`
-                    }
-                  />
-                }
+                content={<SharesTooltip yearLabel={yearLabel} />}
               />
               {OUTCOMES.map((outcome) => (
                 <Bar
@@ -652,15 +692,6 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   stackId="share"
                   {...chartMotion()}
                 >
-                  {/* The share on the segment, where it fits */}
-                  <LabelList
-                    dataKey={outcome.key}
-                    position="center"
-                    formatter={(value) => (value >= (narrow ? 14 : 8) ? `${Math.round(value)}%` : "")}
-                    fill={outcome.key === "pct_unchanged" ? CHART_COLOURS.text : CHART_COLOURS.surface}
-                    fontSize={12}
-                    fontWeight={600}
-                  />
                 </Bar>
               ))}
             </BarChart>
