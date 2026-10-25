@@ -898,6 +898,22 @@ What it does, in order:
 - With the package left out, all measures together read "Results by constituency are not yet published for the full package."
 - While `public/data/constituency.csv` is absent, the view reads "Results by constituency are not yet published." On a release that routes no results by area, it reads "Results by constituency are not available on this release.", and the command refuses to run.
 
+### Results by constituency on Modal
+
+The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here.
+
+Needs the Modal secret `uk-budget-2026-hf-token` (key `HUGGING_FACE_TOKEN`, an organisation read token; owner Anthony). Decision to run the data on Modal: issue #119.
+
+```
+UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
+  uv run --with modal==1.6.2 uk-budget-data constituencies --backend modal
+```
+
+- **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 11 at once, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends.
+- **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, every unit hitting its timeout, about $11. Check with `uvx --from modal modal billing report --for today` before and after.
+- **No reuse:** every Modal run simulates every measure again.
+- **Smoke test (no secret, no data):** `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. On 25 October: ten units fanned out in 23 s end to end (1–2 s in each container), the release read them all back in 8 s, 53 s in all including the image build.
+
 ## Data and model limitations: say these wherever a measure depends on them
 
 The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`), and a third, on capital gains tax, on uk-data 1.59.1 (below). The data line has since changed (see "The data line changed" above): once they are re-measured on the adopted Microcosm build, state the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.

@@ -689,3 +689,99 @@ def test_the_page_finds_each_package_by_its_suffix():
     for package, members in g.PACKAGES.items():
         assert package.endswith(suffix)
         assert not any(member.endswith(suffix) for member in members)
+
+
+# -- --backend modal, with a stand-in session -------------------------------
+
+
+class FakeModalSession:
+    """Runs what the Modal containers run, here: each unit through
+    ``constituencies_remote.simulate_here`` with its files under a
+    stand-in Volume, then the release through ``release_here``."""
+
+    def __init__(self, world, volume):
+        from uk_budget_data import constituencies_remote as remote
+
+        self.world, self.volume, self.remote = world, volume, remote
+        self.specs = []
+
+    def __call__(self):
+        import contextlib
+
+        @contextlib.contextmanager
+        def session():
+            yield self
+
+        return session()
+
+    def simulate(self, specs):
+        for spec in specs:
+            self.specs.append(spec)
+            assert "dataset" not in spec and "arrays" not in spec
+            if spec["reform"] in self.world.fail:
+                yield RuntimeError("a stand-in container failure")
+                continue
+            result = self.remote.simulate_here(
+                spec,
+                root=str(self.volume),
+                dataset=str(self.world.cut),
+                data_inputs=str(self.world.inputs),
+            )
+            yield {**result, "container": {"wall_s": 1.5, "max_rss": 3 * c.GB}}
+
+    def release(self, spec):
+        result, files = self.remote.release_here(
+            spec, root=str(self.volume), data_inputs=str(self.world.inputs)
+        )
+        result["container"] = {"wall_s": 2.0, "max_rss": 4 * c.GB}
+        return {"result": result, "files": files}
+
+
+def test_the_modal_backend_writes_the_same_table(
+    world, capsys, tmp_path, monkeypatch
+):
+    from uk_budget_data import modal_constituencies_runner as runner
+
+    assert world.run(years=("2026",)) == 0, printed(capsys)
+    local = (world.out / "constituency.csv").read_bytes()
+    (world.out / "constituency.csv").unlink()
+
+    volume = tmp_path / "volume"
+    fake = FakeModalSession(world, volume)
+    real_execute = runner.execute
+    monkeypatch.setattr(
+        runner,
+        "execute",
+        lambda *args, **kwargs: real_execute(*args, session=fake, **kwargs),
+    )
+    assert world.run("--backend", "modal", years=("2026",)) == 0, printed(
+        capsys
+    )
+    # No local process ran: every step ran in the stand-in session.
+    assert world.steps == []
+    assert [s["reform"] for s in fake.specs] == [*MEASURES, PKG]
+    remote = (world.out / "constituency.csv").read_bytes()
+    assert remote == local
+    # The arrays and the audit stay on the Volume, never in the output.
+    assert [p.name for p in world.out.iterdir()] == ["constituency.csv"]
+    assert any(volume.rglob("disclosure_audit.csv"))
+    out = printed(capsys)
+    assert "validate_public, 0 problems" in out
+
+
+def test_a_failed_modal_unit_writes_no_table(
+    world, capsys, tmp_path, monkeypatch
+):
+    from uk_budget_data import modal_constituencies_runner as runner
+
+    fake = FakeModalSession(world, tmp_path / "volume")
+    world.fail.add(MEASURES[0])
+    real_execute = runner.execute
+    monkeypatch.setattr(
+        runner,
+        "execute",
+        lambda *args, **kwargs: real_execute(*args, session=fake, **kwargs),
+    )
+    assert world.run("--backend", "modal", years=("2026",)) == 1
+    assert not (world.out / "constituency.csv").exists()
+    assert "failed on Modal" in printed(capsys)

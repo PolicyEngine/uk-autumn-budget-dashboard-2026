@@ -1290,6 +1290,15 @@ def add_constituencies_parser(subparsers) -> None:
         ),
     )
     parser.add_argument(
+        "--backend",
+        choices=("local", "modal"),
+        default="local",
+        help="Where the measures run: here, a fresh process each (local), "
+        "or on Modal, a container each and the release in one more "
+        "(modal; needs `uv run --with modal==1.6.2` and the Modal secret, "
+        "see uk_budget_data.modal_constituencies)",
+    )
+    parser.add_argument(
         "--data-inputs-dir",
         type=Path,
         default=Path("./data_inputs"),
@@ -1460,7 +1469,16 @@ def _run(parsed: argparse.Namespace, *, api) -> int:
     release: list[Step] = []
     swap_at_start = swap_used()
     try:
-        code = _execute(run, units, dataset_spec, directory, steps, release)
+        if getattr(parsed, "backend", "local") == "modal":
+            from uk_budget_data import modal_constituencies_runner
+
+            code = modal_constituencies_runner.execute(
+                run, units, dataset_spec, directory, steps, release
+            )
+        else:
+            code = _execute(
+                run, units, dataset_spec, directory, steps, release
+            )
     except KeyboardInterrupt:
         console.print(
             "[red]Interrupted. Run the same command again to resume: the "
@@ -1592,8 +1610,15 @@ def _execute(
             f"[red]Error: the release wrote no table ({escape(status)}).[/red]"
         )
         return 1
-    for written in result["written"]:
-        table = Path(written)
+    return report_tables(
+        run, [Path(p) for p in result["written"]], release_name
+    )
+
+
+def report_tables(run: RunPlan, tables: list[Path], release_name: str) -> int:
+    """Check each written table with ``validate_public`` and print its
+    review row, as a local run does after its release."""
+    for table in tables:
         problems = validate_public(table)
         if problems:
             raise ConstituencyRunError(
