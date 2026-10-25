@@ -1120,3 +1120,23 @@
   font-weight: 500;
   color: var(--pe-gray-500);
 }
+
+/* Under the waterfall: policies under £1, notes, and those with no effect */
+.result-card-notes {
+  padding: 0 28px 16px;
+}
+
+.result-card-notes .single-year-quiet {
+  margin: 0 0 8px;
+}
+
+.waterfall-pending {
+  margin: 4px 0 0;
+}
+
+@media (max-width: 600px) {
+  .result-card-notes {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

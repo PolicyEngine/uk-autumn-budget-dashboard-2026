@@ -160,7 +160,9 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
         expect(
           await within(panel).findByText(/^Change in your net income$/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
-        await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
+        await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
+          timeout: 5000,
+        });
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
@@ -227,7 +229,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
     expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
-    await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
+    await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
