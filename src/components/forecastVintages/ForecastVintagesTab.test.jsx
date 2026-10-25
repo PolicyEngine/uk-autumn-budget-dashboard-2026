@@ -1,13 +1,16 @@
 /**
- * The OBR forecasts view on the committed file
+ * The forecast vintages view on the committed file
  * (public/data/obr_forecast_vintages.json), and on files it must refuse:
- * a view whose data cannot be shown says so and shows no figure.
+ * a view whose data cannot be shown says so and shows no figure. Most
+ * cases render it as the OBR forecasts tab; the last ones mount it as
+ * another view's sub-tab.
  */
 import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import ForecastVintagesTab, { pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesTab";
+import ForecastVintagesTab from "./ForecastVintagesTab";
+import ForecastVintagesView, { pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
 import { resetForecastVintages } from "../../utils/forecastVintages/load";
 import { buildView } from "../../utils/forecastVintages/view";
 
@@ -168,7 +171,7 @@ describe("the chart", () => {
     fireEvent.click(screen.getByRole("button", { name: `Measure: ${RHDI.label}` }));
     fireEvent.click(screen.getByRole("option", { name: PSNB.label }));
     expect(screen.getByRole("heading", { level: 3, name: PSNB.label })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("psnb");
+    expect(new URLSearchParams(window.location.search).get("variable")).toBe("psnb");
     expect(option("Annual totals")).toBeDisabled();
     expect(screen.queryByText("Quarterly annualised (×4)")).toBeNull();
     const units = within(screen.getByRole("group", { name: "Unit" })).getAllByRole("button");
@@ -176,7 +179,7 @@ describe("the chart", () => {
   });
 
   it("opens the measure a link names", async () => {
-    window.history.replaceState({}, "", "/?tab=forecasts&sub=cpi");
+    window.history.replaceState({}, "", "/?tab=forecasts&variable=cpi");
     await renderTab();
     const cpi = DATA.variables.find((v) => v.id === "cpi");
     expect(screen.getByRole("heading", { level: 3, name: cpi.label })).toBeInTheDocument();
@@ -294,5 +297,71 @@ describe("the CSV download", () => {
     expect(first.slice(2).every((cell) => cell === "")).toBe(true);
     expect(text).not.toMatch(/PolicyEngine/);
     expect(lines[lines.length - 1]).toBe("# A note.");
+  });
+});
+
+describe("as another view's sub-tab", () => {
+  const SIBLING = { href: "?tab=outlook&sub=forecast", label: "Forecast changes" };
+  const choose = (variable) => {
+    fireEvent.click(screen.getByRole("button", { name: /^Measure: / }));
+    fireEvent.click(screen.getByRole("option", { name: variable.label }));
+  };
+  const heading = (variable) => screen.getByRole("heading", { level: 3, name: variable.label });
+
+  async function renderView(props) {
+    vi.stubGlobal("fetch", respond(TEXT));
+    const view = render(<ForecastVintagesView {...props} />);
+    await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
+    return view;
+  }
+
+  it("keeps the measure in ?variable=, leaving the holding view's ?sub= alone", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages");
+    await renderView({ related: SIBLING });
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+    choose(PSNB);
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=psnb");
+    choose(RHDI);
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+  });
+
+  it("takes ?variable= out of the address while hidden, and puts it back when shown", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages");
+    const { rerender } = await renderView({ related: SIBLING });
+    choose(PSNB);
+    rerender(<ForecastVintagesView active={false} related={SIBLING} />);
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+    rerender(<ForecastVintagesView active related={SIBLING} />);
+    expect(heading(PSNB)).toBeInTheDocument();
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=psnb");
+  });
+
+  it("opens the measure a link brings when shown again", async () => {
+    const cpi = DATA.variables.find((v) => v.id === "cpi");
+    window.history.replaceState({}, "", "/?tab=outlook");
+    const { rerender } = await renderView({ active: false, related: SIBLING });
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=cpi");
+    rerender(<ForecastVintagesView active related={SIBLING} />);
+    expect(heading(cpi)).toBeInTheDocument();
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=cpi");
+  });
+
+  it("opens the default for a measure it does not have, and writes nothing", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=nonsense");
+    await renderView({ related: SIBLING });
+    expect(heading(RHDI)).toBeInTheDocument();
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+  });
+
+  it("links to the sibling it is given, or to nothing", async () => {
+    const onShow = vi.fn();
+    const { unmount } = await renderView({ related: { ...SIBLING, onShow } });
+    const link = screen.getByRole("link", { name: "Forecast changes" });
+    expect(link).toHaveAttribute("href", "?tab=outlook&sub=forecast");
+    fireEvent.click(link);
+    expect(onShow).toHaveBeenCalledTimes(1);
+    unmount();
+    await renderView({});
+    expect(screen.queryByText(/forecast behind PolicyEngine's living standards baseline/)).toBeNull();
   });
 });
