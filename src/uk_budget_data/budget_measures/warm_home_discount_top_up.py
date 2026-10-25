@@ -24,6 +24,11 @@ from uk_budget_data.measure_templates import apply_benefit_receipt_payment
 # drawn by household as policyengine-uk's would_receive_warm_home_discount
 # draws it (#2616, open). Once a bundle includes both, the top-up can follow
 # the model's own receipt.
+#
+# The receipt draw happens in this modifier: deterministic and reproducible,
+# but a draw made at run time rather than stored in the data. Once Microcosm
+# stores warm_home_discount_random_draw as an input, the top-up switches to
+# the model's own receipt and this in-modifier draw is removed.
 def warm_home_discount_top_up(
     sim,
     amount=100,
