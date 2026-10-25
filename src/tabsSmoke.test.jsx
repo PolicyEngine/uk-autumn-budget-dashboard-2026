@@ -161,7 +161,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["by_policy", "sweep"]]);
+        expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
           true,
         );
