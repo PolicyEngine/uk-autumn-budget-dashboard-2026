@@ -332,6 +332,7 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
@@ -393,6 +394,25 @@ function HouseholdCalculator({
   const running =
     submitted !== null &&
     (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
+
+  // Once a household has been calculated, the title bar's year or policies
+  // rerun it, with the same answers, without a second Calculate. Not while
+  // the answers are being edited (the reader presses Calculate then), and
+  // only while this view is shown: a change made on another view (Play
+  // through years runs five) is caught up once, on coming back, rather than
+  // calculated for every year passed through.
+  const answersEdited =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year: 0, policies: [] })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: 0, policies: [] }));
+  useEffect(() => {
+    if (!active || submitted === null || answersEdited || householdPolicies.length === 0) return;
+    const samePolicies = submitted.policies.join(",") === selectionKey;
+    if (submitted.year === year && samePolicies) return;
+    setSubmitted({ inputs: submitted.inputs, year, policies: householdPolicies, at: Date.now() });
+    // Only the bar's year and policies (and coming back to the view) rerun it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, selectionKey, active]);
 
   const resultsRef = useRef(null);
   const calculate = (event) => {

@@ -281,25 +281,18 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate, then asks again for another year only on Calculate", async () => {
+  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
     // Before Calculate: the empty cards and a prompt, and no request
     expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
     expect(headlineCard()).toBeNull();
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household).toEqual([]);
-    toResults();
-    await screen.findByText(HEADLINE);
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
-    // Another year: the result goes, the prompt comes back; nothing asked yet
-    expect(await screen.findByText("Choose your answers and press Calculate.")).toBeInTheDocument();
-    expect(headlineCard()).toBeNull();
-    expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household.some((body) => body.year === 2030)).toBe(false);
+    expect(household).toEqual([]);
+    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -329,6 +322,57 @@ describe("Calculate", () => {
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("a change in the title bar after a result", () => {
+  const props = {
+    selectedPolicies: POLICIES_FOR_TEST.map((policy) => policy.id),
+    policies: POLICIES_FOR_TEST,
+  };
+
+  it("reruns the same household for the new year, without a second Calculate", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} />);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));
+    const later = household.slice(asked);
+    expect(later[0].year).toBe(2030);
+    expect(later[0].include).toEqual([]);
+    // The same answers as the first calculation
+    expect(later[0].household).toEqual(household[0].household);
+  });
+
+  it("does not rerun while the answers are being edited", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household.length).toBe(asked);
+    // The reader is asked to press Calculate
+    expect(headlineCard()).toBeNull();
+  });
+
+  it("waits until the view is shown again when the year changes elsewhere", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} active={false} />);
+    rerender(<PersonalImpactTab {...props} year={2031} active={false} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household.length).toBe(asked);
+    rerender(<PersonalImpactTab {...props} year={2031} active />);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2031-32"));
+    expect(household.slice(asked).map((body) => body.year)).not.toContain(2030);
   });
 });
 

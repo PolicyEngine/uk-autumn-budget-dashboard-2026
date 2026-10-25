@@ -595,6 +595,7 @@ function App() {
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             year={distributionalYear}
+            active={activeTab === value}
           />
         ) : (
           // Population impact: All households and Young people sub-tabs
