@@ -1,4 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import TitleIcon from "./TitleIcon";
+
+// Each view's icon, drawn as the chart titles' are
+const TAB_ICONS = {
+  dashboard: "users",
+  household: "house",
+  living: "trend",
+  methodology: "book",
+};
 
 /**
  * The page's views as an underline tab bar under the intro: one tab per
@@ -97,6 +106,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
               className="view-tab"
               onClick={() => onChange(tab.value)}
             >
+              <TitleIcon name={TAB_ICONS[tab.value]} bare size={18} className="view-tab-icon" />
               {tab.label}
             </button>
           );

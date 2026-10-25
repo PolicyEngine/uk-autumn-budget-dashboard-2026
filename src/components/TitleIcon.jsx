@@ -107,21 +107,28 @@ const ICONS = {
       <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
     </>
   ),
+  // Methodology: an open book
+  book: (
+    <>
+      <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2Z" />
+      <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7Z" />
+    </>
+  ),
 };
 
 /**
  * A chart card's title icon: a small tinted chip before the title text,
  * hidden from screen readers (the title says what the chart is).
  */
-export default function TitleIcon({ name }) {
+export default function TitleIcon({ name, bare = false, size = 16, className }) {
   const icon = ICONS[name];
   if (!icon) return null;
   return (
-    <span className="title-icon" aria-hidden="true">
+    <span className={className ?? (bare ? undefined : "title-icon")} aria-hidden="true">
       <svg
         viewBox="0 0 24 24"
-        width="16"
-        height="16"
+        width={size}
+        height={size}
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"

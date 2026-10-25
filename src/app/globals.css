@@ -309,14 +309,17 @@ body {
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
-  background: var(--page-bg);
+  /* A strip of its own: the page's main navigation */
+  background: var(--pe-surface);
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
 }
 
 .view-tabs {
   display: flex;
-  gap: 28px;
+  gap: 4px;
   height: var(--view-tabs-height);
-  border-bottom: 1px solid var(--card-border);
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
   overflow-y: hidden;
@@ -351,37 +354,98 @@ body {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   height: 100%;
-  padding: 0 2px;
+  padding: 0 16px;
   font-family: inherit;
-  font-size: var(--fs-body);
-  font-weight: 500;
+  font-size: 1rem;
+  /* One weight for every tab, so choosing one never moves the others */
+  font-weight: 600;
   white-space: nowrap;
   color: var(--pe-gray-600);
   background: transparent;
   border: none;
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.view-tab-icon {
+  display: inline-flex;
+  color: var(--pe-gray-500);
 }
 
 .view-tab:hover {
   color: var(--band-teal);
+  background: var(--pe-teal-50);
 }
 
-/* One weight for every tab, so choosing one never moves the others */
+.view-tab:hover .view-tab-icon,
+.view-tab[aria-selected="true"] .view-tab-icon {
+  color: var(--band-teal);
+}
+
 .view-tab[aria-selected="true"] {
   color: var(--band-teal);
+  background: var(--pe-teal-50);
 }
 
 /* The underline sits on the bar's rule */
 .view-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 8px;
+  right: 8px;
   bottom: 0;
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
+}
+
+/* On a phone all four views show at once, two by two, and the bar
+   scrolls with the page: only the band sticks */
+@media (max-width: 600px) {
+  :root {
+    --view-tabs-height: 0px;
+  }
+
+  .view-tabs-bar {
+    position: static;
+    padding-block: 8px;
+  }
+
+  .view-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    height: auto;
+    overflow: visible;
+    mask-image: none !important;
+  }
+
+  .view-tab {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+  }
+
+  .view-tab[aria-selected="true"] {
+    border-color: var(--band-teal);
+  }
+
+  .view-tab[aria-selected="true"]::after {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .view-tab {
+    gap: 6px;
+    padding: 0 6px;
+    font-size: 0.875rem;
+  }
 }
 
 /* One keyboard focus ring for every button and link on the page; the
@@ -1253,9 +1317,6 @@ body {
     font-size: var(--fs-body-lg);
   }
 
-  .view-tabs {
-    gap: 22px;
-  }
 
   .preset-buttons {
     flex-direction: column;
