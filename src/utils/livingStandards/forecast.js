@@ -1,3 +1,4 @@
+import { zeroBasedAxis } from "../chartTheme";
 // Helpers for the forecast tab. Values arrive as fractions; shown in percent.
 
 import { formatOneDp, round1, signedChange } from "./outlook";
@@ -42,17 +43,9 @@ export function toRows(series, published) {
   });
 }
 
-/** Tidy y-axis domain and ticks around the drawn values. */
+/** The y axis for the drawn values, from 0 (chartTheme.zeroBasedAxis). */
 export function percentAxis(values) {
-  const dataMin = Math.min(...values);
-  const dataMax = Math.max(...values);
-  const range = dataMax - dataMin;
-  const step = range <= 2 ? 0.5 : range <= 5 ? 1 : 2;
-  const yMin = Math.floor(dataMin / step - 1) * step;
-  const yMax = Math.ceil(dataMax / step + 1) * step;
-  const ticks = [];
-  for (let v = yMin; v <= yMax + step * 0.01; v += step) ticks.push(Math.round(v * 10) / 10);
-  return { domain: [yMin, yMax], ticks };
+  return zeroBasedAxis(values, { pad: 0.1 });
 }
 
 /** "OBR March 2026 (pre-Budget)" -> "OBR March 2026". */

@@ -154,3 +154,27 @@ export function fiscalYearTick(year) {
   const y = Number(year);
   return `${y}-${(y + 1).toString().slice(-2)}`;
 }
+
+/**
+ * Every y axis on the dashboard includes 0: an axis over
+ * [min(0, data min), max(0, data max)] with about five round steps (1, 2,
+ * 2.5 or 5 x 10^n), padded by `pad` of the span on the side away from 0,
+ * so a small move is never drawn as a large one. Where values go negative,
+ * 0 stays inside the axis. Returns { domain, ticks }.
+ */
+export function zeroBasedAxis(values, { pad = 0.05 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  let lo = Math.min(0, ...vals);
+  let hi = Math.max(0, ...vals);
+  const span = hi - lo || 1;
+  if (lo < 0) lo -= span * pad;
+  if (hi > 0 || lo === 0) hi += span * pad;
+  const raw = (hi - lo) / 5;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  const start = Math.floor(lo / step) * step;
+  const end = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
