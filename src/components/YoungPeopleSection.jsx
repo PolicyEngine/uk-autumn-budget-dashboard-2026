@@ -485,6 +485,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
             <GroupedLegend
               names={activeNames}
               netLabel={activeNames.length > 1 ? "Net change" : undefined}
+                    framing="household"
             />
           ))}
       </div>

@@ -338,6 +338,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                   <GroupedLegend
                     names={activePolicies}
                     netLabel={activePolicies.length > 1 ? "Net change" : undefined}
+                    framing="household"
                   />
                 }
               />

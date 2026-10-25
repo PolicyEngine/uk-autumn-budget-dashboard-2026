@@ -1,110 +1,67 @@
-/* Legend: never wider than its container; the layout (split / columns /
-   stacked) and each column's width come from legendLayout, shared with the
-   SVG/PNG export. Gaps as in legendLayout.js. */
+/* Chart legends (GroupedLegend.jsx): a flowing grid across the card,
+   each group's name a small tag at the start of its run, the net line
+   last; a short ungrouped legend on one centred row. */
 .grouped-legend {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  font-size: 12.5px;
-  line-height: 1.35;
+  padding-top: 12px;
+  font-size: 0.8rem;
+  line-height: 1.3;
   color: var(--pe-gray-700);
 }
 
-.grouped-legend-groups {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 12px 32px;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.grouped-legend.is-stacked .grouped-legend-groups {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.grouped-legend-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.grouped-legend-heading {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--pe-gray-500);
-}
-
-/* A group's sub-columns: two when it has more than three items */
-.grouped-legend-columns {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.grouped-legend.is-stacked .grouped-legend-columns {
-  flex-direction: column;
-  gap: 6px;
-}
-
-.grouped-legend-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-sizing: border-box;
+.grouped-legend ul {
   margin: 0;
   padding: 0;
   list-style: none;
-  text-align: left;
-  min-width: 0;
-  max-width: 100%;
 }
 
-.grouped-legend-items li {
+.grouped-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 5px 16px;
+}
+
+.grouped-legend-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
 .grouped-legend-label {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grouped-legend-tag {
+  display: flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-400);
 }
 
 .grouped-legend-swatch {
+  flex: none;
   width: 10px;
   height: 10px;
-  flex: 0 0 auto;
-  margin-top: 3px;
+  border-radius: 2px;
 }
 
 .grouped-legend-swatch-line {
-  flex: 0 0 auto;
-  margin-top: 3px;
+  flex: none;
 }
 
-.grouped-legend-net {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-}
-
+/* The net line: a short line with a dot, as the chart draws it */
 .grouped-legend-line {
   position: relative;
+  flex: none;
   width: 14px;
   height: 2px;
   background: var(--c-net);
@@ -121,16 +78,24 @@
   background: var(--c-net);
 }
 
-/* A short ungrouped legend: one centred row, 16px between items, 6px
-   between swatch and text; it wraps only when it must (a phone) */
+/* A short ungrouped legend: one centred row */
 .grouped-legend.is-flat .grouped-legend-items {
-  flex-direction: row;
+  display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px 16px;
 }
 
-.grouped-legend.is-flat .grouped-legend-items li {
-  align-items: center;
-  gap: 6px;
+.grouped-legend.is-flat .grouped-legend-label {
+  white-space: normal;
+}
+
+@media (max-width: 600px) {
+  .grouped-legend-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .grouped-legend-label {
+    white-space: normal;
+  }
 }

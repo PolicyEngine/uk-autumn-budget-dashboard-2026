@@ -328,6 +328,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   <GroupedLegend
                     names={activePolicies}
                     netLabel={activePolicies.length > 1 ? "Net change" : undefined}
+                    framing="household"
                   />
                 }
               />
