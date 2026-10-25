@@ -135,7 +135,6 @@ def test_definitions_do_not_depend_on_the_household(year, income, include):
         "definition=x",
         f"definition={MEASURES[0]}:abc",
         f"definition={MEASURES[0]}:{COMMIT.upper()}",
-        f"definition=no_such_measure:{COMMIT}",
         f"definition={MEASURES[0]}:{COMMIT}&definition={MEASURES[0]}:{OTHER}",
     ],
 )
@@ -146,6 +145,28 @@ def test_a_malformed_definition_is_a_400_before_any_calculation(
     assert response.status_code == 400
     assert "definition" in response.json()["detail"]
     assert _fake_calculation == []
+
+
+@pytest.mark.parametrize(
+    "unknown", ["added_since_this_revision", "autumn_budget_2026_combined"]
+)
+def test_a_measure_this_revision_does_not_register_is_reported_not_refused(
+    unknown,
+):
+    """Review of #125, round 2: the page names every displayed measure, and
+    a wave can add one while the previous API revision still serves (or
+    after a rollback). A 400 would fail every Personal impact request; the
+    unknown measure is reported unavailable and the rest still bind. A
+    combined run is not a measure the household calculation registers."""
+    pairs = [(unknown, COMMIT), (MEASURES[0], COMMIT)]
+    response = client.post(f"{ROUTE}?{_query(pairs)}", json=REQUEST)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["definitions"] == {
+        unknown: {"git_sha": COMMIT, "error": definitions.UNREGISTERED},
+        MEASURES[0]: definitions.measure_definition(MEASURES[0], COMMIT),
+    }
+    assert body["net_income"] == ANSWER["net_income"]
 
 
 def test_a_measure_the_running_code_cannot_bind_is_reported_not_refused(

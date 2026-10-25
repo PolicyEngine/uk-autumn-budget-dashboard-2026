@@ -356,7 +356,44 @@ def test_another_module_source_is_a_different_definition(
 @given(pairs=st.dictionaries(st.sampled_from(MEASURES), commits, max_size=5))
 def test_requests_parse_back_to_what_was_named(pairs):
     values = [f"{m}:{sha}" for m, sha in pairs.items()]
-    assert definitions.parse_requested(values, MEASURES) == pairs
+    assert definitions.parse_requested(values) == pairs
+
+
+@given(
+    measure_id=st.text(
+        st.characters(blacklist_characters=":", blacklist_categories=["Cs"]),
+        min_size=1,
+    ),
+    sha=commits,
+)
+def test_any_well_formed_measure_id_parses(measure_id, sha):
+    """Whether the running code registers it is ``definitions_for``'s to
+    report, per measure: a measure added after this revision is named by a
+    page that is already newer."""
+    assert definitions.parse_requested([f"{measure_id}:{sha}"]) == {
+        measure_id: sha
+    }
+
+
+def test_a_measure_the_running_code_does_not_register_is_reported_alone():
+    reported = definitions.definitions_for(
+        {"added_since": COMMIT, MEASURES[0]: COMMIT}, MEASURES
+    )
+    assert reported["added_since"] == {
+        "git_sha": COMMIT,
+        "error": definitions.UNREGISTERED,
+    }
+    assert reported[MEASURES[0]] == definitions.measure_definition(
+        MEASURES[0], COMMIT
+    )
+
+
+def test_without_known_measures_every_named_one_is_computed():
+    """The deploy pipelines' snippets name only registered measures and
+    call it without ``known``, in old images too."""
+    assert definitions.definitions_for({MEASURES[0]: COMMIT}) == {
+        MEASURES[0]: definitions.measure_definition(MEASURES[0], COMMIT)
+    }
 
 
 @pytest.mark.parametrize(
@@ -370,17 +407,15 @@ def test_requests_parse_back_to_what_was_named(pairs):
         f"{MEASURES[0]}:{COMMIT}0",
         f"{MEASURES[0]}:{COMMIT.upper()}",
         f"{MEASURES[0]}: {COMMIT}",
-        f"no_such_measure:{COMMIT}",
-        f"autumn_budget_2026_combined:{COMMIT}",
     ],
 )
 def test_a_malformed_request_is_refused(value):
     with pytest.raises(ValueError):
-        definitions.parse_requested([value], MEASURES)
+        definitions.parse_requested([value])
 
 
 def test_a_measure_named_twice_is_refused():
     with pytest.raises(ValueError, match="named twice"):
         definitions.parse_requested(
-            [f"{MEASURES[0]}:{COMMIT}", f"{MEASURES[0]}:{COMMIT}"], MEASURES
+            [f"{MEASURES[0]}:{COMMIT}", f"{MEASURES[0]}:{COMMIT}"]
         )

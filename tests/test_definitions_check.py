@@ -139,3 +139,171 @@ def test_the_command_line_runs_it(tmp_path, capsys):
     _publish(tmp_path, {MEASURES[0]: _receipt(MEASURES[0])})
     assert main(["publish", "--data-root", str(tmp_path), "definitions"]) == 0
     assert "1 of 1 displayed measures" in capsys.readouterr().out
+
+
+# --- --api: the definitions a deployed revision serves ----------------------
+
+
+class _Answer:
+    def __init__(self, status_code, body):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self):
+        if isinstance(self._body, Exception):
+            raise self._body
+        return self._body
+
+
+class _Recording:
+    """The real household route (its calculation faked: definitions don't
+    depend on it), recording what it was asked."""
+
+    def __init__(self, monkeypatch):
+        from fastapi.testclient import TestClient
+
+        from uk_budget_data import api
+
+        monkeypatch.setattr(
+            household_impact,
+            "calculate_household_impact",
+            lambda *args, **kwargs: {"net_income": {}},
+        )
+        api._cached_household_impact.cache_clear()
+        self.client = TestClient(api.app)
+        self.calls = []
+
+    def request(self, method, route, **kwargs):
+        self.calls.append((method, route))
+        return self.client.request(method, route, **kwargs)
+
+
+def _api_run(data_root, client):
+    lines = []
+    code = definitions.run_check(
+        data_root,
+        lines.append,
+        definitions.api_reporter("https://api.example", client=client),
+        where="the API at https://api.example",
+    )
+    return code, lines
+
+
+def _local_lines(lines):
+    return lines[:-1], lines[-1]
+
+
+@pytest.mark.parametrize("changed", [None, 0, -1])
+def test_the_api_reports_what_the_running_code_does(
+    tmp_path, monkeypatch, changed
+):
+    """Differential: through the real route, the API mode prints the local
+    check's report line for line, a changed definition included."""
+    receipts = {key: _receipt(key) for key in MEASURES}
+    if changed is not None:
+        reform = receipts[MEASURES[changed]]["execution_receipt"]["reform"]
+        reform["reform_sha256"] = "1" * 64
+    _publish(tmp_path, receipts)
+    local_code, local = _run(tmp_path)
+    definitions._definition.cache_clear()
+    api_code, served = _api_run(tmp_path, _Recording(monkeypatch))
+    assert api_code == local_code == (0 if changed is None else 1)
+    assert served[:-1] == local[:-1]
+    assert served[-1] == local[-1].replace(
+        "in this code", "in the API at https://api.example"
+    )
+
+
+def test_it_asks_once_for_every_compared_measure(tmp_path, monkeypatch):
+    _publish(tmp_path, {key: _receipt(key) for key in MEASURES})
+    client = _Recording(monkeypatch)
+    assert _api_run(tmp_path, client)[0] == 0
+    [(method, route)] = client.calls
+    assert method == "POST"
+    named = sorted(route.partition("?")[2].split("&"))
+    assert named == sorted(f"definition={key}%3A{COMMIT}" for key in MEASURES)
+
+
+def test_a_measure_the_api_does_not_register_differs(tmp_path, monkeypatch):
+    """The API reports a measure added after its revision per measure; the
+    check lists it rather than refusing the rest."""
+    added = {
+        "execution_receipt": {"baseline": {}, "reform": {}},
+        "dashboard": {"key": "added_since", "git_sha": COMMIT},
+    }
+    _publish(
+        tmp_path, {"added_since": added, MEASURES[0]: _receipt(MEASURES[0])}
+    )
+    code, lines = _api_run(tmp_path, _Recording(monkeypatch))
+    assert code == 1
+    assert f"DIFFERS added_since (approved, receipt {COMMIT[:12]}):" in lines
+    assert (
+        f"  - the running code cannot bind it: {definitions.UNREGISTERED}"
+        in lines
+    )
+    assert f"same    {MEASURES[0]} (approved, receipt {COMMIT[:12]})" in lines
+
+
+NO_DEFINITIONS = "no definitions in its answer (a revision without them)"
+
+
+class _Fixed:
+    def __init__(self, answer):
+        self.answer = answer
+
+    def request(self, method, route, **kwargs):
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        return self.answer
+
+
+@pytest.mark.parametrize(
+    "answer, reason",
+    [
+        (_Answer(404, {"detail": "Not Found"}), "HTTP 404"),
+        (_Answer(503, {}), "HTTP 503"),
+        (_Answer(200, {"net_income": {}}), NO_DEFINITIONS),
+        (_Answer(200, {"definitions": []}), NO_DEFINITIONS),
+        (_Answer(200, ValueError("not JSON")), NO_DEFINITIONS),
+        (TimeoutError("timed out"), "no answer: TimeoutError: timed out"),
+    ],
+)
+def test_an_api_that_gives_no_definitions_fails(tmp_path, answer, reason):
+    _publish(tmp_path, {MEASURES[0]: _receipt(MEASURES[0])})
+    code, lines = _api_run(tmp_path, _Fixed(answer))
+    assert code == 1
+    assert lines == [
+        "REFUSED the API at https://api.example gave no definitions to "
+        f"compare: {reason}"
+    ]
+
+
+def test_with_nothing_to_compare_the_api_is_not_asked(tmp_path):
+    _publish(tmp_path, {MEASURES[0]: None})
+    code, lines = _api_run(tmp_path, _Fixed(AssertionError("asked")))
+    assert code == 1
+    assert any("no receipt" in line for line in lines)
+
+
+def test_the_command_line_asks_the_named_api(tmp_path, monkeypatch, capsys):
+    from uk_budget_data import deploy_smoke
+
+    recording = _Recording(monkeypatch)
+    opened = []
+
+    def client(base_url, timeout):
+        opened.append((base_url, timeout))
+        return recording
+
+    monkeypatch.setattr(deploy_smoke, "StdlibClient", client)
+    _publish(tmp_path, {MEASURES[0]: _receipt(MEASURES[0])})
+    argv = ["publish", "--data-root", str(tmp_path), "definitions"]
+    assert main([*argv, "--api", "https://tag---api.run.app"]) == 0
+    assert opened == [("https://tag---api.run.app", 300.0)]
+    assert main([*argv, "--api", "https://x", "--timeout", "30"]) == 0
+    assert opened[-1] == ("https://x", 30.0)
+    out = capsys.readouterr().out
+    assert (
+        "1 of 1 displayed measures have the approved definition in the "
+        "API at https://tag---api.run.app" in out
+    )

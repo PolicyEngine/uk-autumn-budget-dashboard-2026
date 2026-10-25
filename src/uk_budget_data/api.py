@@ -518,7 +518,9 @@ def _household_impact(
     # Before the calculation: with one worker its runs share this process,
     # and a warning from a bound module would leave it unbindable
     # (uk_budget_data.definitions).
-    bound = definitions.definitions_for(requested or {})
+    bound = definitions.definitions_for(
+        requested or {}, household_impact.measure_ids()
+    )
     results = copy.deepcopy(_cached_household_impact(key))
     results["definitions"] = bound
     return results
@@ -555,9 +557,7 @@ async def calculate_household_impact(
     are refused with a 422 naming the field.
     """
     try:
-        requested = definitions.parse_requested(
-            definition, household_impact.measure_ids()
-        )
+        requested = definitions.parse_requested(definition)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     try:

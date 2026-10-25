@@ -19,16 +19,17 @@ needs no git history to do it. The household API reports them beside its
 answers (``?definition=<id>:<commit>``), and the page compares them with
 the approved receipt.
 
-Not covered: everything ``receipt.is_non_calculation_path`` counts as
-calculation code except the bound modifiers' own modules and the parameter
-values. A receipt binds the rest only through the commit: code a modifier
+Not covered: the rest of the calculation code (the paths a receipt binds
+only through its commit) beyond the bound modifiers' own modules and the
+parameter values. That is: code a modifier
 calls in another module (the registered templates in ``measure_templates``,
 and their module state), the household calculation (``household_impact``,
 ``personal_impact``, ``publication.combine``), the request's defaults in
 ``api``, and the locked dependencies beyond the versions the page compares.
-A change to any of them since a receipt reaches Personal impact with the
-definition unchanged; listing them needs git history, which the API image
-lacks, so the runbook's G5 has whoever deploys list them.
+A change to any of them since a receipt, or to the image's base layers,
+reaches Personal impact with the definition unchanged; listing them needs
+git history, which the API image lacks, so the runbook's G5 has whoever
+deploys list them.
 
 A warning issued from a frame in a bound module leaves a
 ``__warningregistry__`` in it, and the receipt API then refuses to bind
@@ -42,7 +43,8 @@ import copy
 import functools
 import json
 import re
-from collections.abc import Iterable
+import urllib.parse
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from uk_budget_data.models import DataConfig
@@ -60,6 +62,15 @@ IDENTITY_FIELDS = ("kind", "representation", "reform_sha256", "binding")
 FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 # A request names a measure and its approved commit: "<id>:<commit>".
 SEPARATOR = ":"
+# A measure a request or receipt names that the running code doesn't
+# register: a measure added since this revision, or one it has dropped.
+UNREGISTERED = "not a measure the running code registers"
+
+# The deploy and rollback pipelines' expectations snippets
+# (cloudbuild*.yaml) call ``definitions_for`` and ``FULL_COMMIT`` inside the
+# image they check, including older images on a rollback: keep both names
+# and ``definitions_for``'s form while revisions that have them can be
+# rolled back to.
 
 
 def identity_core(identity) -> dict:
@@ -69,14 +80,17 @@ def identity_core(identity) -> dict:
     return {name: identity.get(name) for name in IDENTITY_FIELDS}
 
 
-def parse_requested(values: Iterable[str], known: Iterable[str]) -> dict:
+def parse_requested(values: Iterable[str]) -> dict:
     """``<id>:<commit>`` values as ``{id: commit}``.
 
     Raises ValueError for a value of another form, a commit that is not a
-    full sha, a measure the calculation doesn't know, or a measure named
-    twice.
+    full sha, or a measure named twice. A measure the running code doesn't
+    register is not refused here: ``definitions_for`` reports it as that
+    measure's ``error``, so the page can name a measure added after the
+    revision answering it (the API still serving the previous revision
+    while a new one deploys, or rolled back to an older one) and get the
+    others' definitions.
     """
-    known = set(known)
     requested = {}
     for value in values:
         measure_id, separator, git_sha = value.partition(SEPARATOR)
@@ -88,10 +102,6 @@ def parse_requested(values: Iterable[str], known: Iterable[str]) -> dict:
             raise ValueError(
                 f"definition {value!r}: the commit must be a full "
                 "lowercase sha (40 or 64 hex digits)"
-            )
-        if measure_id not in known:
-            raise ValueError(
-                f"definition {value!r}: not a measure the calculation knows"
             )
         if measure_id in requested:
             raise ValueError(f"definition: {measure_id} is named twice")
@@ -145,16 +155,21 @@ def measure_definition(measure_id: str, git_sha: str) -> dict:
         return {"git_sha": git_sha, "error": error.reason}
 
 
-def definitions_for(requested: dict) -> dict:
+def definitions_for(requested: dict, known: Iterable[str] = None) -> dict:
     """``{id: measure_definition(id, commit)}`` for ``{id: commit}``.
 
-    A measure whose definition fails for any other reason is reported with
-    that reason, as ``measure_definition`` reports a refusal, so one
-    measure never fails the request: the page shows it unavailable and
-    still checks the others.
+    A measure not in ``known`` (when given: the measures the household
+    calculation registers) is reported as ``UNREGISTERED``, and one whose
+    definition fails for any other reason with that reason, as
+    ``measure_definition`` reports a refusal, so one measure never fails
+    the request: the page shows it unavailable and still checks the others.
     """
+    known = None if known is None else set(known)
     reported = {}
     for measure_id, git_sha in requested.items():
+        if known is not None and measure_id not in known:
+            reported[measure_id] = {"git_sha": git_sha, "error": UNREGISTERED}
+            continue
         try:
             reported[measure_id] = measure_definition(measure_id, git_sha)
         except Exception as error:
@@ -201,21 +216,79 @@ def differences(approved: dict, reported) -> list[str]:
     return problems
 
 
-def manifest_report(data_root: Path) -> list[dict]:
-    """For each single measure the page displays (approved or
-    provisional), whether the running code's definition at its receipt's
-    commit is the one approved.
+class ApiUnanswered(Exception):
+    """The household API gave no definitions to compare."""
 
-    Each row is ``{key, status, git_sha, problems}``. Combined runs are
-    left out: the household calculation combines the selected single
-    measures, each bound by its own receipt.
+
+def api_reporter(
+    base_url: str, timeout: float = 300.0, client=None
+) -> Callable[[dict], dict]:
+    """``definitions_for`` as the household API at ``base_url`` answers it:
+    one request naming every measure at its commit, with the deploy smoke's
+    household (the definitions don't depend on it), as the page asks.
+
+    The returned function raises ``ApiUnanswered`` when the API answers
+    with anything but a 200 carrying ``definitions`` (a revision before
+    them answers without).
+    """
+    from uk_budget_data.deploy_smoke import (
+        HOUSEHOLD_IMPACT_ROUTE,
+        SMOKE_HOUSEHOLD_IMPACT,
+        StdlibClient,
+    )
+
+    client = client or StdlibClient(base_url, timeout)
+
+    def report(requested: dict) -> dict:
+        query = urllib.parse.urlencode(
+            [
+                ("definition", f"{measure_id}{SEPARATOR}{git_sha}")
+                for measure_id, git_sha in sorted(requested.items())
+            ]
+        )
+        try:
+            response = client.request(
+                "POST",
+                f"{HOUSEHOLD_IMPACT_ROUTE}?{query}",
+                json=SMOKE_HOUSEHOLD_IMPACT,
+            )
+        except Exception as error:  # noqa: BLE001 - reported, not raised
+            raise ApiUnanswered(
+                f"no answer: {type(error).__name__}: {error}"
+            ) from error
+        if response.status_code != 200:
+            raise ApiUnanswered(f"HTTP {response.status_code}")
+        try:
+            served = response.json().get("definitions")
+        except (ValueError, AttributeError):
+            served = None
+        if not isinstance(served, dict):
+            raise ApiUnanswered(
+                "no definitions in its answer (a revision without them)"
+            )
+        return served
+
+    return report
+
+
+def manifest_report(
+    data_root: Path, report: Callable[[dict], dict] = None
+) -> list[dict]:
+    """For each single measure the page displays (approved or
+    provisional), whether the definition at its receipt's commit is the one
+    approved: computed by the running code, or as ``report`` gives it
+    (``api_reporter``: a deployed revision's).
+
+    Each row is ``{key, status, git_sha, problems}``, in key order.
+    Combined runs are left out: the household calculation combines the
+    selected single measures, each bound by its own receipt.
     """
     from uk_budget_data.publication import manifest as m
     from uk_budget_data.publication.artifacts import read_receipt
     from uk_budget_data.publication.publish import artifact_dir
 
     manifest = m.load_manifest(data_root)
-    rows = []
+    rows, compared = [], {}
     for key, entry in sorted(manifest.measures.items()):
         if entry.status not in m.DISPLAYABLE:
             continue
@@ -227,29 +300,49 @@ def manifest_report(data_root: Path) -> list[dict]:
             continue
         approved = receipt_definition(document)
         row["git_sha"] = approved["git_sha"]
-        if get_reform(key) is None:
-            problems = ["not a measure the running code registers"]
+        if report is None and get_reform(key) is None:
+            rows.append({**row, "problems": [UNREGISTERED]})
         elif not isinstance(approved["git_sha"], str) or not (
             FULL_COMMIT.fullmatch(approved["git_sha"])
         ):
-            problems = ["its receipt records no full commit sha"]
-        else:
-            problems = differences(
-                approved, measure_definition(key, approved["git_sha"])
+            rows.append(
+                {**row, "problems": ["its receipt records no full commit sha"]}
             )
-        rows.append({**row, "problems": problems})
-    return rows
+        else:
+            compared[key] = (row, approved)
+    if compared:
+        reported = (report or definitions_for)(
+            {
+                key: approved["git_sha"]
+                for key, (_, approved) in compared.items()
+            }
+        )
+        for key, (row, approved) in compared.items():
+            rows.append(
+                {**row, "problems": differences(approved, reported.get(key))}
+            )
+    return sorted(rows, key=lambda row: row["key"])
 
 
-def run_check(data_root: Path, out=print) -> int:
+def run_check(
+    data_root: Path,
+    out=print,
+    report: Callable[[dict], dict] = None,
+    where: str = "this code",
+) -> int:
     """``publish definitions``: print the report; 1 if any displayed
-    measure's definition is not the approved one, else 0."""
+    measure's definition is not the approved one, or ``report`` (the
+    household API, ``where``) gave none, else 0."""
     from uk_budget_data.publication import manifest as m
 
     if not m.manifest_path(data_root).exists():
         out("no manifest yet: no published measure to compare")
         return 0
-    rows = manifest_report(data_root)
+    try:
+        rows = manifest_report(data_root, report)
+    except ApiUnanswered as error:
+        out(f"REFUSED {where} gave no definitions to compare: {error}")
+        return 1
     for row in rows:
         commit = (row["git_sha"] or "?")[:12]
         if row["problems"]:
@@ -261,6 +354,6 @@ def run_check(data_root: Path, out=print) -> int:
     unbound = sum(1 for row in rows if row["problems"])
     out(
         f"{len(rows) - unbound} of {len(rows)} displayed measures have the "
-        "approved definition in this code"
+        f"approved definition in {where}"
     )
     return 1 if unbound else 0
