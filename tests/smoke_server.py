@@ -36,8 +36,10 @@ def serving(
 ):
     """Serve /api/health, /api/version, /api/personal-impact and
     /api/household-impact; yield the base URL.
-    Each POST body is recorded on ``server.posted``."""
+    Each POST body is recorded on ``server.posted``, and each POST's
+    query string on ``server.queries``."""
     posted = []
+    queries = []
     if household_impact is None:
         household_impact = household_impact_answer()
 
@@ -64,15 +66,18 @@ def serving(
         def do_POST(self):
             length = int(self.headers.get("Content-Length") or 0)
             posted.append(json.loads(self.rfile.read(length) or b"null"))
-            if self.path == "/api/personal-impact":
+            path, _, query = self.path.partition("?")
+            queries.append(query)
+            if path == "/api/personal-impact":
                 self._send(200, impact)
-            elif self.path == "/api/household-impact":
+            elif path == "/api/household-impact":
                 self._send(200, household_impact)
             else:
                 self._send(404, {"detail": "not found"})
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     server.posted = posted
+    server.queries = queries
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

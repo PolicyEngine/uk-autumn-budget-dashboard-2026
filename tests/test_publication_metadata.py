@@ -680,6 +680,51 @@ def test_g5_without_area_takes_the_area_views_down_and_passes_check(world):
     assert check(manifest, **args) == []
 
 
+@pytest.mark.parametrize("stop_at", ["area file", "manifest save"])
+def test_g5_without_area_stopped_part_way_fails_check_until_rerun(
+    world, monkeypatch, stop_at
+):
+    """Review of 15439f4, finding 6: stopped after saving the manifest, the
+    old order left the withdrawn rows in area files that publish check
+    accepted. Now no area file outlives the binding, and every state part
+    way fails check until the command is rerun."""
+    from pathlib import Path
+
+    from uk_budget_data.publication import release_index
+
+    manifest, args, _ = _package_snapshot(world)
+    _withdraw(world, manifest, KEY)
+    unlink, save = Path.unlink, release_index.m.save_manifest
+
+    def stopped(*_args, **_kwargs):
+        raise OSError("interrupted")
+
+    if stop_at == "area file":
+        monkeypatch.setattr(
+            Path,
+            "unlink",
+            lambda path, *a, **k: (
+                stopped()
+                if path.name == AREA_FILES[0]
+                else unlink(path, *a, **k)
+            ),
+        )
+    else:
+        monkeypatch.setattr(release_index.m, "save_manifest", stopped)
+    with pytest.raises(OSError, match="interrupted"):
+        unbind_area_results(manifest, data_root=world.data_root)
+    monkeypatch.setattr(Path, "unlink", unlink)
+    monkeypatch.setattr(release_index.m, "save_manifest", save)
+    saved = m.load_manifest(world.data_root)
+    assert saved.flat_files, "the saved manifest still binds the area files"
+    assert not (world.data_root / INDEX_FILE).exists()
+    assert check(saved, **args) != []
+    unbind_area_results(saved, data_root=world.data_root)
+    for name in (*AREA_FILES, AREA_PROVENANCE_FILE, INDEX_FILE):
+        assert not (world.data_root / name).exists()
+    assert check(saved, **args) == []
+
+
 def test_g5_area_rerun_over_the_approved_subset_binds_again(world):
     """With the package stale, the area run covers what is still approved:
     here regions only, for the other measure."""

@@ -16,7 +16,8 @@ export const usePublicationCheck = () => useContext(PublicationCheckContext);
  * found): one runs at a time, and a call during a run queues exactly one
  * further run, which starts when that one ends. So every call resolves with
  * the result of a run that started after the call, and a trigger mid-check
- * (a focus, say) is never lost. `run` must not reject.
+ * (a focus, say) is never lost. A run that rejects, or throws, rejects the
+ * calls it answers; the queued run still starts after it.
  *
  * @param {() => Promise<any>} run
  * @returns {() => Promise<any>}
@@ -24,15 +25,16 @@ export const usePublicationCheck = () => useContext(PublicationCheckContext);
 export function serialisedChecks(run) {
   let running = null;
   let queued = null;
+  const next = () => {
+    queued = null;
+    return check();
+  };
   const check = () => {
     if (running) {
-      queued ??= running.then(() => {
-        queued = null;
-        return check();
-      });
+      queued ??= running.then(next, next);
       return queued;
     }
-    running = run().finally(() => {
+    running = new Promise((resolve) => resolve(run())).finally(() => {
       running = null;
     });
     return running;

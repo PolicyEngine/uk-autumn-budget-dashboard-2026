@@ -40,7 +40,6 @@ from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
     ArtifactError,
     ArtifactRef,
-    read_receipt,
     write_artifact,
 )
 from uk_budget_data.publication.manifest import load_manifest
@@ -53,6 +52,7 @@ from uk_budget_data.publication.receipt import (
     build_receipt_document,
     code_revision,
     combined_identities,
+    entry_receipt,
     is_code_defect,
     load_basis,
     measure_identities,
@@ -483,8 +483,11 @@ def generate_artifacts(
             if member in written_outputs or member not in manifest.measures:
                 continue
             try:
-                document = read_receipt(
-                    artifacts_root.parent / manifest.measures[member].artifact
+                document = entry_receipt(
+                    "its manifest entry's receipt",
+                    member,
+                    manifest.measures[member],
+                    artifacts_root.parent,
                 )
                 revisions[member] = approved_revision(
                     document, revision, checked_commits, repo_root

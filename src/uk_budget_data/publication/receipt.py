@@ -758,6 +758,44 @@ def load_execution_receipt(document: dict):
     return api.ExecutionReceipt.model_validate(document["execution_receipt"])
 
 
+def entry_receipt(
+    label: str,
+    key: str,
+    entry,
+    data_root: Path,
+) -> dict:
+    """The receipt a manifest entry names, refused unless it is exactly the
+    artifact the entry records: its own digest, key and recorded digests.
+
+    The area run and combined generation both read members through this,
+    so neither binds a member at a commit its entry doesn't record.
+    """
+    receipt_path = data_root / entry.artifact / "receipt.json"
+    if receipt_path.is_symlink() or not receipt_path.is_file():
+        raise ValueError(f"{label}: no regular receipt file")
+    document = json.loads(receipt_path.read_bytes())
+    if not isinstance(document, dict):
+        raise ValueError(f"{label}: the receipt is not an object")
+    problems = document_problems(document)
+    if artifact_sha256(document) != entry.artifact_sha256:
+        problems.append("artifact identity differs from the entry")
+    dashboard = document.get("dashboard") or {}
+    if dashboard.get("key") != key:
+        problems.append("receipt key differs from the entry")
+    for digest in (
+        "receipt_sha256",
+        "outputs_sha256",
+        "execution_identity_sha256",
+    ):
+        if (dashboard.get("digests") or {}).get(digest) != getattr(
+            entry, digest
+        ):
+            problems.append(f"{digest} differs from the entry")
+    if problems:
+        raise ValueError(f"{label}: " + "; ".join(problems))
+    return document
+
+
 def document_problems(document: dict) -> list[str]:
     """Ways a stored receipt document fails to describe itself consistently.
 

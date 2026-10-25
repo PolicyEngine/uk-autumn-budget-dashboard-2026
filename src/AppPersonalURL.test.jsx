@@ -126,6 +126,72 @@ describe("a later snapshot keeps the reader's selection", () => {
     expect(householdCalls(calls)).toEqual([]);
   });
 
+  // Review of 15439f4, finding 2: the default is every displayable measure,
+  // not a list pinned at the first snapshot the reader saw, and a chosen
+  // selection survives a view without the policy pill.
+  // The year pill shares the count class, so read the policy pill's
+  const selectedCount = () => Number(document.querySelector(".band-policy .policy-selector-count")?.textContent);
+
+  it("adds a newly published measure to a default selection", async () => {
+    const calls = [];
+    open("/", await serve({ beta: "staged" }), calls);
+    await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
+    const before = selectedCount();
+    expect(policies()).toBeNull();
+    await publish(await serve({}, 1), calls);
+    await waitFor(() => expect(selectedCount()).toBe(before + 1));
+    expect(policies()).toBeNull();
+    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+  });
+
+  it("drops a withdrawn measure from a default selection without blocking the figures", async () => {
+    const calls = [];
+    open("/", await serve(), calls);
+    await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
+    const before = selectedCount();
+    await publish(await serve({ beta: "withdrawn" }, 1), calls);
+    await waitFor(() => expect(selectedCount()).toBe(before - 1));
+    expect(policies()).toBeNull();
+    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText(/Select policies to analyse their impact/)).toBeNull();
+  });
+
+  it("keeps a chosen selection across a view without the policy pill and a later snapshot", async () => {
+    const calls = [];
+    open("/?policies=alpha", await serve(), calls);
+    await waitFor(() => expect(selectedCount()).toBe(1));
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    expect(policies()).toBe("alpha");
+    await publish(await serve({}, 1), calls);
+    expect(policies()).toBe("alpha");
+    fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
+    expect(selectedCount()).toBe(1);
+    expect(policies()).toBe("alpha");
+  });
+
+  it("writes a selection to the address only once the reader chooses one", async () => {
+    const calls = [];
+    open("/", await serve(), calls);
+    await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
+    const all = selectedCount();
+    expect(policies()).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    await waitFor(() => expect(selectedCount()).toBe(all - 1));
+    expect(policies().split(",")).toHaveLength(all - 1);
+  });
+
+  it("hands the selection back to the publication when the reader picks every measure", async () => {
+    const calls = [];
+    open("/?policies=", await serve({ beta: "staged" }), calls);
+    fireEvent.click(await screen.findByRole("button", { name: "All candidate measures" }));
+    await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
+    const before = selectedCount();
+    expect(policies()).toBeNull();
+    await publish(await serve({}, 1), calls);
+    await waitFor(() => expect(selectedCount()).toBe(before + 1));
+  });
+
   it("keeps an empty population selection empty", async () => {
     const calls = [];
     open("/?policies=", await serve(), calls);
