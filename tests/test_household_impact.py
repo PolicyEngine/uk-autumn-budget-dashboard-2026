@@ -213,7 +213,10 @@ def test_a_modifier_that_isnt_module_level_is_refused():
     name = household_impact.modifier_name(
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
-    assert name == "uk_budget_data.budget_measures:road_fuel_vat_cut"
+    assert (
+        name
+        == "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut"
+    )
     assert household_impact.resolve_modifier(name) is (
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
@@ -256,7 +259,7 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": {},
         "modifiers": [
             student_loans,
-            "uk_budget_data.budget_measures:road_fuel_vat_cut",
+            "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut",
         ],
     }
 
@@ -417,13 +420,21 @@ def test_the_programme_table_adds_up_to_net_income(name):
 
 def test_the_runs_it_asks_for(monkeypatch):
     """Headline: two runs. By policy: one more per measure. Sweep: two
-    runs with axes over the head's employment income."""
+    runs with axes over the head's employment income, and two with the head
+    earning OWN_RATE_STEP more, for the marginal rate at their income."""
     calls = []
 
     def run_scenario(
         people, benunit, household, year, side, axes=None, only=False
     ):
-        calls.append({"year": year, "side": side, "axes": axes})
+        calls.append(
+            {
+                "year": year,
+                "side": side,
+                "axes": axes,
+                "head_pay": people[0]["employment_income"],
+            }
+        )
         net = 40_000.0 + 100 * len(calls)
         if axes is not None:
             return {"household_net_income": [net] * axes[0]["count"]}
@@ -458,12 +469,19 @@ def test_the_runs_it_asks_for(monkeypatch):
     )
     # The headline's two runs are reused (household_impact._RUNS): only the
     # singles and the sweep are asked for
-    assert len(calls) == 4
+    assert len(calls) == 6
     assert [call["side"] for call in calls[0:2]] == [
         sides.singles[id_] for id_ in sides.included
     ]
     assert calls[2]["axes"][0]["name"] == "employment_income"
     assert calls[2]["side"] == sides.before
+    assert [call["side"] for call in calls[4:6]] == [sides.before, sides.after]
+    assert all(call["axes"] is None for call in calls[4:6])
+    assert all(
+        call["head_pay"]
+        == calls[0]["head_pay"] + household_impact.OWN_RATE_STEP
+        for call in calls[4:6]
+    )
     assert result["net_income"] == {
         "baseline": 40_100.0,
         "reform": 40_200.0,
@@ -478,7 +496,7 @@ def test_the_runs_it_asks_for(monkeypatch):
         include=("by_policy", "sweep"),
         skip_unaffected=False,
     )
-    assert len(calls) == 6
+    assert len(calls) == 8
     assert result["engine"] == runtime_identity()["packages"]
 
 
@@ -875,6 +893,31 @@ def test_the_sweep_runs_from_zero_past_the_heads_income():
         rate["baseline"] == pytest.approx(0.62, abs=0.005) for rate in taper
     )
     assert result["by_policy"] is None
+
+
+def test_the_rate_at_your_salary_is_not_averaged_across_the_taper_end():
+    """Issue #118: a £110k earner in 2026, grown to £124,353 in 2031-32,
+    is £787 below the end of the Personal Allowance taper. The sweep step
+    holding that salary (about £5k wide) crosses the end of the taper and
+    averaged 60% before and 57% after; at the salary itself the rate is
+    40% + 20% (taper) + 2% National Insurance on both sides."""
+    answers = Answers(employment_income=110_000, salary_year=2026)
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], year=2031, include=("sweep",)
+    )
+    own = result["sweep"]["own_point"]
+    assert 124_000 < own["employment_income"] < 125_140
+    assert own["baseline_marginal_rate"] == pytest.approx(0.62, abs=0.005)
+    assert own["reform_marginal_rate"] == pytest.approx(0.62, abs=0.005)
+
+
+def test_the_rate_at_your_salary_is_over_the_next_step():
+    people = [{"employment_income": 30_000.0}, {"employment_income": 20_000.0}]
+    raised = household_impact.with_pay_rise(people, 100)
+    assert raised[0]["employment_income"] == 30_100
+    assert raised[1]["employment_income"] == 20_000
+    assert people[0]["employment_income"] == 30_000
+    assert household_impact.own_rate(1_000, 1_072, 100) == pytest.approx(0.28)
 
 
 def test_salary_in_the_chosen_year_is_returned():

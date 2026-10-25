@@ -1,35 +1,18 @@
 import { useRef, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
-import GroupedLegend from "../GroupedLegend";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import {
-  GRID_PROPS,
-  TICK_STYLE,
-  AXIS_LINE,
-  AXIS_TITLE_STYLE,
-  fiscalYearTick,
-  CHART_COLOURS,
-} from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
 import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
-import { measureComparison, niceRange, pounds, signedPounds, wrapWords } from "./youngPeopleData";
-import { chartMotion } from "../../utils/chartMotion";
-import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
+import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } from "./youngPeopleData";
+import { NoEffectList } from "../personal/PolicyBars";
+import { getPolicyColor } from "../../utils/policyConfig";
+import "./MeasureDumbbell.css";
+import TitleIcon from "../TitleIcon";
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -43,37 +26,108 @@ export const groupsFor = (band) => [
   { key: "all", label: "All ages", color: CHART_COLOURS.reference },
 ];
 
+/** £ a year with a sign, the minus a true minus: "+£6", "−£4". */
+const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(value)}`);
+
+/**
+ * Each policy as a row: a hollow ring for all ages and a filled dot for the
+ * chosen group on one £ axis (zero line drawn), joined by a thin line
+ * coloured by which is larger; the group's value and its gap to all ages at
+ * the right. Hovering or focusing a row shows both values and the ratio.
+ */
+function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
+  const [active, setActive] = useState(null);
+  const [lo, hi] = domain;
+  const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
+  return (
+    <div className="measure-dumbbell" role="table" aria-label={`Effect of each policy, ${yearLabel}`}>
+      {rows.map((row) => {
+        const gap = row.group - row.all;
+        const close = Math.abs(gap) < 1;
+        const tone = close ? "flat" : gap > 0 ? "more" : "less";
+        const ratio =
+          row.all !== 0 && Math.sign(row.all) === Math.sign(row.group)
+            ? Math.round((row.group / row.all - 1) * 100)
+            : null;
+        const ratioText =
+          ratio === null
+            ? null
+            : ratio === 0
+              ? "about the same as the average person"
+              : `${Math.abs(ratio)}% ${ratio > 0 ? "more" : "less"} than the average person`;
+        const left = Math.min(row.group, row.all);
+        const right = Math.max(row.group, row.all);
+        return (
+          <div
+            key={row.id}
+            className={`measure-dumbbell-row${active === row.id ? " is-active" : ""}`}
+            role="row"
+            tabIndex={0}
+            onMouseEnter={() => setActive(row.id)}
+            onMouseLeave={() => setActive(null)}
+            onFocus={() => setActive(row.id)}
+            onBlur={() => setActive(null)}
+            aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
+          >
+            <span className="measure-dumbbell-name" role="rowheader">
+              <span className="measure-dumbbell-swatch" style={{ background: getPolicyColor(row.id) }} aria-hidden="true" />
+              {row.name}
+            </span>
+            <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
+              {ticks.map((tick) => (
+                <span key={tick} className={`measure-dumbbell-grid${tick === 0 ? " is-zero" : ""}`} style={{ left: pos(tick) }} />
+              ))}
+              {!close && (
+                <span className={`measure-dumbbell-link ${tone}`} style={{ left: pos(left), width: `calc(${pos(right)} - ${pos(left)})` }} />
+              )}
+              <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />
+              <span className="measure-dumbbell-dot" style={{ left: pos(row.group) }} />
+            </span>
+            <span className="measure-dumbbell-values" role="cell">
+              <strong>{signedPounds(row.group)}</strong>
+              <span className={`measure-dumbbell-gap ${tone}`}>
+                {close ? "≈ all ages" : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs all ages`}
+              </span>
+            </span>
+            {active === row.id && (
+              <span className="measure-dumbbell-tip" role="tooltip">
+                <strong>
+                  {row.name}, {yearLabel}
+                </strong>
+                <span>
+                  {groupName}: {signedPounds(row.group)} a year
+                </span>
+                <span>All ages: {signedPounds(row.all)} a year</span>
+                {ratioText && <span>{ratioText}</span>}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      <div className="measure-dumbbell-row measure-dumbbell-axis" aria-hidden="true">
+        <span className="measure-dumbbell-name" />
+        <span className="measure-dumbbell-plot">
+          {ticks.map((tick) => (
+            <span key={tick} className="measure-dumbbell-tick" style={{ left: pos(tick) }}>
+              {signedPounds(tick)}
+            </span>
+          ))}
+        </span>
+        <span className="measure-dumbbell-values" />
+      </div>
+      <p className="measure-dumbbell-unit">{UNIT}</p>
+    </div>
+  );
+}
+
 export const measuresDescription = (band) => {
   const label = groupLabel(band).replace(/^Aged /, "");
-  return `Each selected policy's own average change in household net income per person, in pounds a year, for people aged ${label} and for people of all ages. Largest effect on the chosen age group first.`;
+  return `Each policy's average change per person: ${label} vs all ages.`;
 };
 
 const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));
 
 const UNIT = "Average change per person (£ a year)";
-
-/** A measure's name over as many lines as it needs, right-aligned. */
-function MeasureTick({ x, y, payload, maxChars }) {
-  const lines = wrapWords(payload.value, maxChars);
-  const lineHeight = 14;
-  const top = y - ((lines.length - 1) * lineHeight) / 2;
-  return (
-    <text
-      x={x - 6}
-      y={top}
-      textAnchor="end"
-      dominantBaseline="middle"
-      fontSize={TICK_STYLE.fontSize}
-      fill={CHART_COLOURS.text}
-    >
-      {lines.map((line, index) => (
-        <tspan key={line} x={x - 6} dy={index === 0 ? 0 : lineHeight}>
-          {line}
-        </tspan>
-      ))}
-    </text>
-  );
-}
 
 /**
  * "Which measures matter most": each selected policy's mean change for a
@@ -105,10 +159,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     reservedLegendHeight: 0,
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
-  const notes = [
-    ...(noEffect.length ? [`No effect in ${yearLabel}: ${noEffect.join(", ")}`] : []),
-    ...(suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : []),
-  ];
+  const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
+  // No effect: in the card's More info row, each with its colour and reason
+  const noEffectItems = noEffect.map((policy) => ({
+    ...policy,
+    color: getPolicyColor(policy.id),
+    reason: noEffectReason(policy.id, selectedYear),
+  }));
   const csvText = () =>
     buildChartCsv({
       title: `Average change in household net income per person by policy, ${yearLabel}`,
@@ -129,14 +186,16 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     csv: csvText,
     published: published && shown.length > 0,
   };
-  const tickChars = narrow ? 16 : 24;
 
   return (
     <div className="young-people-measures">
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={title} />
+            <TitleIcon name="hbars" />
+            <span className="title-text">
+              <NoBreakYear text={title} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>
@@ -157,60 +216,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : shown.length ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart
-              data={shown}
-              layout="vertical"
-              margin={plotMargin(narrow)}
-              barCategoryGap="22%"
-              barGap={2}
-            >
-              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              <XAxis
-                type="number"
-                domain={domain}
-                ticks={ticks}
-                tickFormatter={signedPounds}
-                tick={TICK_STYLE}
-                axisLine={AXIS_LINE}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                label={{ value: UNIT, position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={<MeasureTick maxChars={tickChars} />}
-                width={narrow ? 118 : 172}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <ReferenceLine x={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
-              <Tooltip
-                {...TOOLTIP_PROPS}
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={
-                  <ChartTooltip
-                    format={(value) => `${pounds(value)} a year`}
-                    grouped={false}
-                    showPlus
-                    labelFormat={(label) => `${label}, ${yearLabel}`}
-                  />
-                }
-              />
-              {GROUPS.map((group) => (
-                <Bar
-                  key={group.key}
-                  dataKey={group.key}
-                  name={group.label}
-                  fill={group.color}
-                  maxBarSize={18}
-                  {...chartMotion()}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+          <MeasureDumbbell
+            rows={shown}
+            domain={domain}
+            ticks={ticks}
+            groupName={GROUPS[0].label.replace(/^Aged /, "")}
+            yearLabel={yearLabel}
+          />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>None of the selected policies changes household incomes in {yearLabel}.</p>
@@ -218,13 +230,25 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         )}
       </div>
       <div className="chart-legend">
-        {published && shown.length > 0 && <GroupedLegend items={GROUPS} />}
+        {published && shown.length > 0 && (
+          <span className="measure-dumbbell-legend">
+            <span>
+              <i className="dot" /> {GROUPS[0].label.replace(/^Aged /, "")}
+            </span>
+            <span>
+              <i className="ring" /> All ages
+            </span>
+          </span>
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
+      {published && noEffectItems.length > 0 && (
+        <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />
+      )}
     </div>
   );
 }

@@ -1,9 +1,21 @@
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import {
+  ALL_POLICY_NAMES,
+  POLICY_COLORS,
+  POLICY_ICONS,
+  REVENUE_RAISING_NAMES,
+} from "../utils/policyConfig";
+import TitleIcon from "./TitleIcon";
 
 const GROUPS = [
-  ["Raises revenue", true],
-  ["Costs revenue", false],
+  ["Raises revenue", true, "arrowUp"],
+  ["Costs revenue", false, "arrowDown"],
 ];
+
+/** A fact row's small muted icon (Starts, Type, Details): separable, as
+ *  the catalogue's metadata may not carry these rows */
+const FactIcon = ({ name }) => (
+  <TitleIcon name={name} bare size={13} className="policy-fact-icon" />
+);
 
 /**
  * "About selected policies": a card per selected policy, grouped by whether
@@ -13,7 +25,7 @@ const GROUPS = [
  * figures stay in the charts.
  */
 function PolicyCards({ policies, selectedPolicies }) {
-  return GROUPS.map(([heading, raises]) => {
+  return GROUPS.map(([heading, raises, arrow]) => {
     const items = ALL_POLICY_NAMES.map((name) =>
       policies.find((policy) => policy.name === name),
     ).filter(
@@ -25,11 +37,15 @@ function PolicyCards({ policies, selectedPolicies }) {
     if (!items.length) return null;
     return (
       <div key={heading} className="policy-group">
-        <h3 className="policy-group-heading">{heading}</h3>
+        <h3 className="policy-group-heading">
+          <TitleIcon name={arrow} bare size={14} className="policy-group-icon" />
+          {heading}
+        </h3>
         <ul className="policy-cards">
           {items.map((policy) => (
             <li key={policy.id} className="policy-card">
               <p className="policy-card-name">
+                <TitleIcon name={POLICY_ICONS[policy.id]} />
                 <span
                   className="policy-card-swatch"
                   style={{ background: POLICY_COLORS[policy.name] }}
@@ -40,11 +56,17 @@ function PolicyCards({ policies, selectedPolicies }) {
               <p className="policy-card-summary">{policy.summary}</p>
               <dl className="policy-card-facts">
                 <div className="policy-chip">
-                  <dt>Starts</dt>
+                  <dt>
+                    <FactIcon name="calendar" />
+                    Starts
+                  </dt>
                   <dd>{policy.starts}</dd>
                 </div>
                 <div className="policy-chip">
-                  <dt>Type</dt>
+                  <dt>
+                    <FactIcon name="tag" />
+                    Type
+                  </dt>
                   <dd>{policy.type}</dd>
                 </div>
               </dl>
@@ -52,7 +74,10 @@ function PolicyCards({ policies, selectedPolicies }) {
                 <div className="policy-card-foot">
                   {policy.details && (
                     <details className="policy-card-details">
-                      <summary>Details</summary>
+                      <summary>
+                        <FactIcon name="link" />
+                        Details
+                      </summary>
                       <p>{policy.details}</p>
                     </details>
                   )}

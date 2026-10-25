@@ -12,6 +12,8 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
+import SourceLink from "../SourceLink";
+import { ForecastSource } from "./sources";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
 import { GrowthCard, IncomesOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
@@ -28,13 +30,18 @@ const BASELINE_ROWS = [
   {
     id: "incomes",
     title: "Incomes",
-    subtitle: "Household income and inequality over time, and income growth across the distribution.",
+    subtitle: (
+      <>
+        Household income and inequality over time, and income growth across the distribution, under current
+        law (<SourceLink source="obr_efo_march_2026">OBR March 2026 forecast</SourceLink>).
+      </>
+    ),
     blocks: [[IncomesOverTimeCard, GrowthCard]],
   },
   {
     id: "poverty",
     title: "Poverty",
-    subtitle: "Poverty rates and how far below the line people are, and who is in poverty.",
+    subtitle: "Poverty rates, how far below the line people are, and who is in poverty, under current law.",
     blocks: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
 ];
@@ -64,8 +71,8 @@ function Row({ row, data }) {
 }
 
 const SUB_TABS = [
-  { value: "baseline", label: "Baseline outlook" },
-  { value: "forecast", label: "Forecast changes" },
+  { value: "baseline", label: "Baseline outlook", icon: "trend" },
+  { value: "forecast", label: "Forecast changes", icon: "refresh" },
 ];
 const SUB_TAB_VALUES = SUB_TABS.map((t) => t.value);
 
@@ -91,8 +98,8 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
             title="Forecast changes"
             subtitle={
               forecast.post_published
-                ? `The OBR economic forecast behind the baseline. This compares the ${forecastName(forecast.pre_label)} forecast with the ${forecastName(forecast.post_label)} forecast.`
-                : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
+                ? <>The OBR economic forecast behind the baseline: calendar-year growth in the annual average. This compares the {forecastName(forecast.pre_label)} forecast with the {forecastName(forecast.post_label)} forecast. <ForecastSource forecast={forecast} /></>
+                : <>The OBR forecast behind the baseline: calendar-year growth, from the <SourceLink source="obr_efo_current" />.</>
             }
           />
           <section id="living-forecast" className="report-section">
@@ -118,9 +125,12 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
   );
 }
 
-export default function LivingStandardsTab() {
+export default function LivingStandardsTab({ active = true }) {
   const [state, setState] = useState({ loading: true, data: null, error: null });
-  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES);
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
+  // Sub-tabs opened so far stay mounted, hidden while the other is shown
+  const [visited, setVisited] = useState([sub]);
+  if (!visited.includes(sub)) setVisited([...visited, sub]);
   // Charts or tables: kept here so it survives a sub-tab switch
   const [forecastView, setForecastView] = useState("chart");
 
@@ -158,20 +168,15 @@ export default function LivingStandardsTab() {
             ariaLabel="Living standards sections"
             idPrefix="living"
           />
-          <div className="tab-lede">
-            <p>
-              Projections of UK household incomes and poverty under current legislated policy: the baseline against
-              which Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget
-              measures are not modelled.
-            </p>
-          </div>
-          <SubTabPanel idPrefix="living" value={sub}>
-            {sub === "forecast" ? (
-              <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
-            ) : (
-              <BaselinePanel data={data} />
-            )}
-          </SubTabPanel>
+          {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
+            <SubTabPanel key={value} idPrefix="living" value={value} hidden={value !== sub}>
+              {value === "forecast" ? (
+                <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
+              ) : (
+                <BaselinePanel data={data} />
+              )}
+            </SubTabPanel>
+          ))}
         </div>
       )}
     </>
