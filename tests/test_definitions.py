@@ -7,19 +7,23 @@ receipt. These tests hold the properties that comparison relies on:
 - the definition is the receipt's own identity function at that commit
   (the oracle), for every registered measure and any commit;
 - content-bound sides don't depend on the commit, and code-bound sides do;
-- it is deterministic, and the same in another process;
+- it is deterministic, and the same in another process importing a copy
+  of the source outside any repository, as the API image does;
 - generation's configuration and the household calculation's give the
   same identities;
 - a changed parameter, an edited modifier module or another module source
-  is a difference, and nothing else is.
+  is a difference, and nothing else is;
+- a refusal to bind is reported, and never kept.
 """
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
 import uuid
+from pathlib import Path
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -121,13 +125,28 @@ def test_it_is_deterministic_and_a_copy():
     assert definitions.measure_definition(MEASURES[0], COMMIT) == second
 
 
-def test_it_is_the_same_in_another_process(tmp_path):
-    """No dependence on the working directory, hash seed or import order:
-    a fresh interpreter elsewhere gives the same definitions."""
+def test_it_is_the_same_from_a_copy_outside_any_repository(tmp_path):
+    """As in the API image: the package installed from a copy of the
+    source with no git history, at another path, in a fresh interpreter
+    with another hash seed. Nothing but the sources and the commit named
+    reaches a definition."""
+    source = Path(definitions.__file__).parent
+    copy = tmp_path / "app" / "src"
+    shutil.copytree(
+        source,
+        copy / source.name,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    assert subprocess.run(
+        ["git", "rev-parse", "--git-dir"], cwd=copy, capture_output=True
+    ).returncode, "the copy must be outside any repository"
     script = textwrap.dedent(
         f"""
-        import json
+        import json, sys
+        sys.path.insert(0, {str(copy)!r})
+        import uk_budget_data
         from uk_budget_data import definitions, household_impact
+        assert uk_budget_data.__file__.startswith({str(copy)!r})
         print(json.dumps({{
             m: definitions.measure_definition(m, {COMMIT!r})
             for m in household_impact.measure_ids()
@@ -136,7 +155,7 @@ def test_it_is_the_same_in_another_process(tmp_path):
     )
     output = subprocess.run(
         [sys.executable, "-c", script],
-        cwd=tmp_path,
+        cwd=copy.parent,
         env={**os.environ, "PYTHONHASHSEED": "12345"},
         capture_output=True,
         text=True,
@@ -297,6 +316,25 @@ def test_a_modifier_module_edited_after_import_cannot_be_bound(
     edited = _bind(monkeypatch, module)
     assert "error" in edited
     assert definitions.differences(bound, edited)
+
+
+def test_a_refusal_is_not_kept(tmp_path, monkeypatch):
+    """A module the receipt API refuses to bind (here, one a warning was
+    attributed to, leaving a ``__warningregistry__``) is tried again on
+    the next request, never remembered as unbindable."""
+    module, _ = _modifier_module(tmp_path, monkeypatch, MODIFIER)
+    reform = Reform(
+        id="mutant", name="Mutant", simulation_modifier=module.modifier
+    )
+    monkeypatch.setattr(definitions, "get_reform", lambda _id: reform)
+    module.__warningregistry__ = {}
+    refused = definitions.measure_definition("mutant", COMMIT)
+    assert "error" in refused and refused["git_sha"] == COMMIT
+    assert definitions._definition.cache_info().currsize == 0
+    del module.__warningregistry__
+    bound = definitions.measure_definition("mutant", COMMIT)
+    assert "error" not in bound
+    assert bound["reform"]["binding"] == "code_revision"
 
 
 def test_another_module_source_is_a_different_definition(

@@ -240,7 +240,10 @@ def expected_definitions(git_sha: Optional[str] = None) -> dict:
 
     An image older than the definitions declares none, and so does a run
     with no full commit (a local one, with no ``GIT_SHA``): they are then
-    not checked.
+    not checked. A measure the image cannot bind is declared with its
+    ``error``, and the smoke test refuses it (``read_expectations``): the
+    tests require every measure to bind, so an image that cannot is not
+    the code they passed on.
     """
     if importlib.util.find_spec("uk_budget_data.definitions") is None:
         return {"declared": False}
@@ -252,10 +255,12 @@ def expected_definitions(git_sha: Optional[str] = None) -> dict:
     return {
         "declared": True,
         "at": git_sha,
-        "expected": {
-            measure_id: definitions.measure_definition(measure_id, git_sha)
-            for measure_id in household_impact.measure_ids()
-        },
+        "expected": definitions.definitions_for(
+            {
+                measure_id: git_sha
+                for measure_id in household_impact.measure_ids()
+            }
+        ),
     }
 
 
@@ -511,6 +516,13 @@ def _definitions_entry_problems(entry: Any, expected_git_sha: str) -> list:
         )
     ):
         problems.append("names no definitions")
+    else:
+        for measure_id, definition in sorted(expected.items()):
+            if "error" in definition:
+                problems.append(
+                    f"the image cannot bind {measure_id}: "
+                    f"{definition['error']}"
+                )
     return problems
 
 

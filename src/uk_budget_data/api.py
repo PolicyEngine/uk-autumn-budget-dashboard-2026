@@ -515,8 +515,12 @@ def _household_impact(
     # The definitions are not part of it: the answer doesn't depend on
     # them.
     key = json.dumps(data.model_dump(mode="json"), sort_keys=True)
+    # Before the calculation: with one worker its runs share this process,
+    # and a warning from a bound module would leave it unbindable
+    # (uk_budget_data.definitions).
+    bound = definitions.definitions_for(requested or {})
     results = copy.deepcopy(_cached_household_impact(key))
-    results["definitions"] = definitions.definitions_for(requested or {})
+    results["definitions"] = bound
     return results
 
 

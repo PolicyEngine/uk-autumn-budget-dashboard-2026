@@ -19,9 +19,23 @@ needs no git history to do it. The household API reports them beside its
 answers (``?definition=<id>:<commit>``), and the page compares them with
 the approved receipt.
 
-Not covered, since a receipt binds them only through the commit: code a
-modifier calls in another module (the registered templates in
-``measure_templates``, say), and the household calculation itself.
+Not covered: everything ``receipt.is_non_calculation_path`` counts as
+calculation code except the bound modifiers' own modules and the parameter
+values. A receipt binds the rest only through the commit: code a modifier
+calls in another module (the registered templates in ``measure_templates``,
+and their module state), the household calculation (``household_impact``,
+``personal_impact``, ``publication.combine``), the request's defaults in
+``api``, and the locked dependencies beyond the versions the page compares.
+A change to any of them since a receipt reaches Personal impact with the
+definition unchanged; listing them needs git history, which the API image
+lacks, so the runbook's G5 has whoever deploys list them.
+
+A warning issued from a frame in a bound module leaves a
+``__warningregistry__`` in it, and the receipt API then refuses to bind
+that module. Household runs execute in worker processes when the API has
+more than one (``HOUSEHOLD_WORKERS``, 2 on Cloud Run), so they never touch
+the API process's modules; with one, they run in it, and a measure can
+become unbindable (reported as an ``error``, so shown unavailable).
 """
 
 import copy
@@ -85,6 +99,15 @@ def parse_requested(values: Iterable[str], known: Iterable[str]) -> dict:
     return requested
 
 
+class _Unbound(Exception):
+    """A definition the running code cannot bind, raised out of the cache
+    so a refusal is never kept: the next request tries again."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
 @functools.lru_cache(maxsize=256)
 def _definition(measure_id: str, git_sha: str) -> dict:
     reform = get_reform(measure_id)
@@ -98,7 +121,7 @@ def _definition(measure_id: str, git_sha: str) -> dict:
             reform, DataConfig(), CodeRevision(git_sha, tree_clean=True)
         )
     except ReceiptUnavailable as error:
-        return {"git_sha": git_sha, "error": error.reason}
+        raise _Unbound(error.reason) from error
     return {
         "git_sha": git_sha,
         "baseline": identity_core(baseline),
@@ -116,15 +139,30 @@ def measure_definition(measure_id: str, git_sha: str) -> dict:
     """
     if not FULL_COMMIT.fullmatch(git_sha):
         raise ValueError(f"{git_sha!r} is not a full commit sha")
-    return copy.deepcopy(_definition(measure_id, git_sha))
+    try:
+        return copy.deepcopy(_definition(measure_id, git_sha))
+    except _Unbound as error:
+        return {"git_sha": git_sha, "error": error.reason}
 
 
 def definitions_for(requested: dict) -> dict:
-    """``{id: measure_definition(id, commit)}`` for ``{id: commit}``."""
-    return {
-        measure_id: measure_definition(measure_id, git_sha)
-        for measure_id, git_sha in requested.items()
-    }
+    """``{id: measure_definition(id, commit)}`` for ``{id: commit}``.
+
+    A measure whose definition fails for any other reason is reported with
+    that reason, as ``measure_definition`` reports a refusal, so one
+    measure never fails the request: the page shows it unavailable and
+    still checks the others.
+    """
+    reported = {}
+    for measure_id, git_sha in requested.items():
+        try:
+            reported[measure_id] = measure_definition(measure_id, git_sha)
+        except Exception as error:
+            reported[measure_id] = {
+                "git_sha": git_sha,
+                "error": f"{type(error).__name__}: {error}",
+            }
+    return reported
 
 
 def receipt_definition(document: dict) -> dict:

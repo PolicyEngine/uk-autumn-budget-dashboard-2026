@@ -722,6 +722,14 @@ def test_the_standard_library_client_checks_definitions(tmp_path):
             {"declared": True, "at": SHA, "expected": {"x": "y"}},
             "names no definitions",
         ),
+        (
+            {
+                "declared": True,
+                "at": SHA,
+                "expected": {"x": {"git_sha": SHA, "error": "refused"}},
+            },
+            "the image cannot bind x: refused",
+        ),
     ],
 )
 def test_a_malformed_definitions_expectation_is_refused(

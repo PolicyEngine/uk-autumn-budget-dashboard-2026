@@ -7,12 +7,17 @@ definitions don't depend on the household and the household answer doesn't
 depend on them: the cached answer is shared whatever commits are named.
 """
 
+import sys
+import uuid
+import warnings
+
 import pytest
 from fastapi.testclient import TestClient
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from uk_budget_data import api, definitions, household_impact
+from uk_budget_data.models import Reform
 
 client = TestClient(api.app)
 ROUTE = "/api/household-impact"
@@ -158,3 +163,74 @@ def test_a_measure_the_running_code_cannot_bind_is_reported_not_refused(
         "git_sha": COMMIT,
         "error": "cannot be bound",
     }
+
+
+def test_one_measure_failing_does_not_fail_the_others(monkeypatch):
+    real = definitions.get_reform
+
+    def get_reform(measure_id):
+        if measure_id == MEASURES[0]:
+            raise RuntimeError("broken registration")
+        return real(measure_id)
+
+    monkeypatch.setattr(definitions, "get_reform", get_reform)
+    pairs = [(MEASURES[0], COMMIT), (MEASURES[1], COMMIT)]
+    response = client.post(f"{ROUTE}?{_query(pairs)}", json=REQUEST)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["definitions"][MEASURES[0]] == {
+        "git_sha": COMMIT,
+        "error": "RuntimeError: broken registration",
+    }
+    assert "error" not in body["definitions"][MEASURES[1]]
+    assert body["net_income"] == ANSWER["net_income"]
+
+
+WARNING_MODIFIER = """import warnings
+
+
+def modifier(sim):
+    warnings.warn("attributed to this module")
+    return sim
+"""
+
+
+def test_an_in_process_run_cannot_unbind_the_definitions_it_answers_with(
+    tmp_path, monkeypatch
+):
+    """With one worker, household runs share the API's process, and a
+    warning attributed to a bound module leaves it unbindable. The answer's
+    definitions are taken before the run, so the run cannot change them;
+    a definition first asked for after such a run is reported as an
+    error, which the page shows as the measure unavailable."""
+    name = f"definitions_api_mutant_{uuid.uuid4().hex}"
+    (tmp_path / f"{name}.py").write_text(WARNING_MODIFIER)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    module = __import__(name)
+    monkeypatch.setitem(sys.modules, name, module)
+    reform = Reform(
+        id=MEASURES[0], name="Mutant", simulation_modifier=module.modifier
+    )
+    monkeypatch.setattr(definitions, "get_reform", lambda _id: reform)
+    expected = definitions.measure_definition(MEASURES[0], COMMIT)
+    assert "error" not in expected
+    definitions._definition.cache_clear()
+
+    def calculate_in_process(answers, reform_ids, year, include=(), workers=1):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            module.modifier(None)
+        return dict(ANSWER)
+
+    monkeypatch.setattr(
+        household_impact, "calculate_household_impact", calculate_in_process
+    )
+    body = client.post(
+        f"{ROUTE}?{_query([(MEASURES[0], COMMIT)])}", json=REQUEST
+    ).json()
+    assert body["definitions"][MEASURES[0]] == expected
+    assert "__warningregistry__" in vars(module)
+    after = client.post(
+        f"{ROUTE}?{_query([(MEASURES[0], OTHER)])}", json=REQUEST
+    ).json()
+    assert "error" in after["definitions"][MEASURES[0]]

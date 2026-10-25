@@ -212,7 +212,7 @@ steps:
         from uk_budget_data.runtime_identity import runtime_identity
         bound = importlib.import_module("uk_budget_data.definitions") if importlib.util.find_spec("uk_budget_data.definitions") else None
         sha = runtime_identity()["git_sha"]
-        definitions = {"declared": True, "at": sha, "expected": {m: bound.measure_definition(m, sha) for m in importlib.import_module("uk_budget_data.household_impact").measure_ids()}} if bound is not None and isinstance(sha, str) and bound.FULL_COMMIT.fullmatch(sha) else {"declared": False}
+        definitions = {"declared": True, "at": sha, "expected": bound.definitions_for({m: sha for m in importlib.import_module("uk_budget_data.household_impact").measure_ids()})} if bound is not None and isinstance(sha, str) and bound.FULL_COMMIT.fullmatch(sha) else {"declared": False}
         print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS), "household_impact": {"declared": importlib.util.find_spec("uk_budget_data.household_impact") is not None}, "definitions": definitions}, sort_keys=True))' > /workspace/expectations.json
 
   # Main's checker, on plain Python: the revision's own code decides
