@@ -13,6 +13,7 @@ import {
   postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
+  stageMismatch,
 } from "../utils/householdImpactApi";
 
 // Results already fetched this session, by request: switching the year or
@@ -88,9 +89,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
 
   useEffect(() => {
     if (!enabled || policies.length === 0) return undefined;
+    const controller = new AbortController();
+    const { signal } = controller;
     const refuse = (error) => {
       cache.delete(key);
       setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+      // Nothing else this request asked for can be shown now
+      controller.abort();
     };
     // Nothing is answered unchecked: a selected measure with no approved
     // definition is refused before any request
@@ -112,8 +117,6 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       });
       return undefined;
     }
-    const controller = new AbortController();
-    const { signal } = controller;
     // Keep the last result on screen while the next one loads; it stays
     // marked stale (dataKey) until this request's answer arrives
     setState((prev) => ({
@@ -188,9 +191,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       }
       // The sweep and the split by policy, asked for at once: each part is
       // shown as soon as its own answer arrives. They wait for a check of the
-      // live publication, and a part answered by other package versions than
-      // the headline's, or that computes a measure from another definition
-      // than its approved one, refuses the whole result.
+      // live publication. A part the detail service answers from another
+      // build than the headline's, or with a measure computed from another
+      // definition than its approved one, is asked again of the main API; a
+      // part the main API answers so refuses the whole result.
       if (!(await current()) || signal.aborted) return;
       let merged = first;
       let failure = null;
@@ -198,18 +202,29 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const parts = DETAIL_PARTS.filter((include) =>
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
+      // The detail service's answer is used only if it matches the headline
+      // and computes every measure from its approved definition (a stale or
+      // pre-#125 deploy doesn't); otherwise the part is asked of the main API
+      const accept = (raw) => {
+        try {
+          const detail = normaliseHouseholdImpact(raw);
+          return stageMismatch(first, detail) === null && mismatch(detail) === null;
+        } catch {
+          return false;
+        }
+      };
       await Promise.all(
         parts.map(async (include) => {
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions, accept },
             );
             if (signal.aborted || refused) return;
             const detail = normaliseHouseholdImpact(raw);
-            // Checked as the headline was: a deployment between the two
-            // stages, or the detail URL's own, may compute a measure from
-            // another definition
+            // Checked as the headline was: the main API's answer comes back
+            // as it is, and a deployment between the two stages may compute a
+            // measure from another definition
             const mismatched = mismatch(detail);
             if (mismatched) throw mismatched;
             // Refused unless from the headline's own package versions
@@ -236,8 +251,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           }
         }),
       );
-      if (signal.aborted || refused || !failure) return;
-      setState((prev) => ({ ...prev, detailStatus: "error", detailError: failure }));
+      if (signal.aborted || refused) return;
+      // An answer without the part it was asked for leaves the result
+      // incomplete: say so rather than wait for good
+      const incomplete = merged.byPolicy === null || merged.sweep === null;
+      if (!failure && !incomplete) return;
+      setState((prev) => ({
+        ...prev,
+        detailStatus: "error",
+        detailError: failure ?? new Error("The household calculator's breakdown came back incomplete"),
+      }));
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);

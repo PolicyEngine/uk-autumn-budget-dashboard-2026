@@ -4,6 +4,8 @@ import {
   DefinitionMismatchError,
   EngineMismatchError,
   HouseholdApiError,
+  STAGE_ENGINE_PACKAGES,
+  StageMismatchError,
   UNREGISTERED,
   atStatePensionAge,
   buildHouseholdRequest,
@@ -14,6 +16,7 @@ import {
   normaliseHouseholdImpact,
   postHouseholdImpact,
   requestKey,
+  stageMismatch,
   statePensionFor,
   unregisteredMeasures,
 } from "./householdImpactApi";
@@ -243,13 +246,36 @@ describe("the household answer's package versions", () => {
     }));
   });
 
-  it("merges two stages exactly when their versions agree", () => {
-    fc.assert(fc.property(versions, versions, (first, second) => {
-      const headline = stage(first, 1, { by_policy: null, sweep: null });
-      const detail = stage(second, 1, {});
-      const agree = JSON.stringify(Object.entries(first).sort()) === JSON.stringify(Object.entries(second).sort());
-      if (agree) expect(mergeStages(headline, detail).engine).toEqual(first);
-      else expect(() => mergeStages(headline, detail)).toThrow(EngineMismatchError);
+  // Review of e9d7c76, finding 1: the Modal build reports no uk_budget_data
+  // version and Cloud Run reports one, so comparing it refused every
+  // calculation. The stages compare the model packages only, and each must
+  // be reported.
+  const project = fc.option(fc.constantFrom("0.1.0", "0.2.0"), { nil: null });
+  it("merges two stages exactly when they report the same model packages", () => {
+    fc.assert(fc.property(versions, versions, fc.boolean(), project, project, (first, random, same, ownA, ownB) => {
+      const second = same ? { ...first } : random;
+      const headline = stage({ ...first, uk_budget_data: ownA }, 1, { by_policy: null, sweep: null });
+      const detail = stage({ ...second, uk_budget_data: ownB }, 1, {});
+      const agree = STAGE_ENGINE_PACKAGES.every((name) => typeof first[name] === "string" && first[name] === second[name]);
+      if (agree) expect(mergeStages(headline, detail).engine).toEqual(headline.engine);
+      else expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
+    }));
+  });
+
+  // Review of e9d7c76, finding 3: an older build with the same package
+  // versions runs older measure definitions, and recomputes another net
+  // income for the same household
+  it("refuses a breakdown whose net income differs from the headline's by more than a penny", () => {
+    const full = { policyengine: "6.10.2", "policyengine-core": "3.33.3", "policyengine-uk": "2.132.6" };
+    fc.assert(fc.property(fc.double({ min: -5000, max: 5000, noNaN: true }), (shift) => {
+      const raw = { ...HOUSEHOLD_FIXTURE, engine: full };
+      const headline = normaliseHouseholdImpact({ ...raw, by_policy: null, sweep: null });
+      const detail = normaliseHouseholdImpact({ ...raw, net_income: { ...raw.net_income, change: raw.net_income.change + shift, reform: raw.net_income.reform + shift } });
+      if (Math.abs(shift) <= 0.01) expect(mergeStages(headline, detail).engine).toEqual(full);
+      else {
+        expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
+        expect(stageMismatch(headline, detail).packages).toEqual(["net_income"]);
+      }
     }));
   });
 });
@@ -680,6 +706,8 @@ describe("postHouseholdDetail", () => {
       expect(payload).toEqual(ok);
       expect(asked).toEqual([detail, main]);
 
+      // A refusal from the detail URL (an older build may not know a
+      // measure) is asked again of the main API, whose answer stands
       asked.length = 0;
       const fetchInvalid = async (url) => {
         asked.push(url);
@@ -688,7 +716,21 @@ describe("postHouseholdDetail", () => {
       await expect(
         postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchInvalid }),
       ).rejects.toMatchObject({ kind: "invalid" });
-      expect(asked).toEqual([detail]);
+      expect(asked).toEqual([detail, main]);
+
+      // An answer `accept` refuses (another build) is asked of the main API
+      asked.length = 0;
+      const other = { net_income: { baseline: 1, reform: 3, change: 2 } };
+      const fetchOther = async (url) => {
+        asked.push(url);
+        return respond(200, url === detail ? other : ok);
+      };
+      const accepted = await postHouseholdDetail(
+        { include: ["sweep"] },
+        { fetchImpl: fetchOther, accept: (raw) => raw.net_income.reform === 2 },
+      );
+      expect(accepted).toEqual(ok);
+      expect(asked).toEqual([detail, main]);
     } finally {
       process.env = saved;
     }
@@ -712,6 +754,41 @@ describe("postHouseholdDetail", () => {
       await postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchDetailDown, definitions });
       expect(asked.map(route)).toEqual([detail, main]);
       for (const url of asked) expect(requestedDefinitions(url)).toEqual([["alpha", "c".repeat(40)]]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
+  // Coordinator, 25 October (m13): a detail build that doesn't register a
+  // measure (one deployed before it, or rolled back) is asked again of the
+  // main API; only the main API's own refusal reaches the page
+  it("asks the main API when the detail URL's code doesn't register a measure, and passes on the main API's own refusal", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    const unknown = { detail: [{ type: "value_error", loc: ["body", "policies"], msg: "Value error, Unknown measures: beta" }] };
+    const body = { include: ["sweep"], policies: ["alpha", "beta"] };
+    try {
+      const asked = [];
+      const fetchDetailUnregistered = async (url) => {
+        asked.push(url);
+        return url === detail ? respond(422, unknown) : respond(200, ok);
+      };
+      expect(await postHouseholdDetail(body, { fetchImpl: fetchDetailUnregistered })).toEqual(ok);
+      expect(asked).toEqual([detail, main]);
+
+      asked.length = 0;
+      const fetchBothUnregistered = async (url) => {
+        asked.push(url);
+        return respond(422, unknown);
+      };
+      const refusal = await postHouseholdDetail(body, { fetchImpl: fetchBothUnregistered }).catch((error) => error);
+      expect(refusal).toBeInstanceOf(DefinitionMismatchError);
+      expect(refusal.refused.map((item) => item.id)).toEqual(["beta"]);
+      expect(asked).toEqual([detail, main]);
     } finally {
       process.env = saved;
     }

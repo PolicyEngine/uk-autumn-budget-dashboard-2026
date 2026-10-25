@@ -573,6 +573,30 @@ export class DefinitionMismatchError extends Error {
 }
 
 /**
+ * The model packages a calculation's stages must share. uk_budget_data is
+ * left out: every build reports the same project version for it, and a build
+ * that doesn't install the project (the Modal image copies it in as a
+ * folder) reports none, so it tells two deployments apart only wrongly.
+ */
+export const STAGE_ENGINE_PACKAGES = ["policyengine", "policyengine-core", "policyengine-uk"];
+
+/** A detail answer's net income may differ from the headline's by this much. */
+const NET_TOLERANCE = 0.01;
+
+/**
+ * The breakdown came from another deployment than its headline. Either its
+ * model packages differ, or it recomputed another net income for the same
+ * household, so it ran other measure definitions (an older build).
+ */
+export class StageMismatchError extends EngineMismatchError {
+  constructor(packages) {
+    super(packages);
+    this.name = "StageMismatchError";
+    this.message = `The household calculator's breakdown came from another build than its headline (${packages.join(", ")})`;
+  }
+}
+
+/**
  * The selected measures whose reported definition differs from the
  * approved one, in id order. A measure with no approved definition, or
  * none reported, is refused: nothing is answered unchecked.
@@ -596,23 +620,33 @@ export function definitionRefusals(expected, reported, ids = Object.keys(expecte
     .filter((item) => item.problems.length > 0);
 }
 
-const sameEngine = (a, b) => {
-  const names = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
-  return [...names].every((name) => (a ?? {})[name] === (b ?? {})[name]);
-};
+/**
+ * Why a detail answer can't sit under this headline, or null if it can.
+ *
+ * @returns {StageMismatchError|null}
+ */
+export function stageMismatch(first, detail) {
+  const a = first.engine ?? {};
+  const b = detail.engine ?? {};
+  const packages = STAGE_ENGINE_PACKAGES.filter((name) => typeof a[name] !== "string" || a[name] !== b[name]);
+  if (packages.length) return new StageMismatchError(packages);
+  const sameNet = ["before", "after"].every(
+    (side) => Number.isFinite(first.net?.[side]) && Number.isFinite(detail.net?.[side]) && Math.abs(first.net[side] - detail.net[side]) <= NET_TOLERANCE,
+  );
+  return sameNet ? null : new StageMismatchError(["net_income"]);
+}
 
 /**
  * A later stage's parts added to the first stage's result. Both stages must
- * come from the same package versions: a breakdown from another deployment
- * never sits under a headline from this one.
+ * come from the same build: a breakdown from another deployment never sits
+ * under a headline from this one.
  *
- * @throws {EngineMismatchError} when the stages' engines differ
+ * @throws {StageMismatchError} when the stages' model packages or net income
+ *   differ
  */
 export function mergeStages(first, detail) {
-  if (!sameEngine(first.engine, detail.engine)) {
-    const names = new Set([...Object.keys(first.engine ?? {}), ...Object.keys(detail.engine ?? {})]);
-    throw new EngineMismatchError([...names].filter((name) => (first.engine ?? {})[name] !== (detail.engine ?? {})[name]).sort());
-  }
+  const mismatch = stageMismatch(first, detail);
+  if (mismatch) throw mismatch;
   return {
     ...first,
     byPolicy: detail.byPolicy ?? first.byPolicy,
@@ -650,17 +684,25 @@ export function consistentRound(values, total) {
 /**
  * A detail part (sweep or split by policy): from the detail URL when the
  * build has one, falling back to the main API if that service cannot be
- * reached, errs or times out. Answers the page rejects ("invalid") are not
- * retried: the main API would refuse them too.
+ * reached, errs, times out, refuses the request (an older build may not know
+ * a measure, or register it: a DefinitionMismatchError) or answers with
+ * something `accept` refuses (another build than the headline's, or other
+ * measure definitions). The main API's answer, or its refusal, is returned
+ * as it is: the caller checks it again.
+ *
+ * @param {Object} body
+ * @param {Object} [options] - postHouseholdImpact's options, plus
+ *   `accept(raw) => boolean` for the detail URL's answer
  */
-export async function postHouseholdDetail(body, options = {}) {
+export async function postHouseholdDetail(body, { accept = null, ...options } = {}) {
   const detailUrl = householdDetailApiUrl();
   if (!detailUrl) return postHouseholdImpact(body, options);
   try {
-    return await postHouseholdImpact(body, { ...options, url: detailUrl });
+    const raw = await postHouseholdImpact(body, { ...options, url: detailUrl });
+    if (!accept || accept(raw)) return raw;
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    if (!(error instanceof HouseholdApiError) || error.kind === "invalid") throw error;
-    return postHouseholdImpact(body, options);
+    if (!(error instanceof HouseholdApiError || error instanceof DefinitionMismatchError)) throw error;
   }
+  return postHouseholdImpact(body, options);
 }
