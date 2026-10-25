@@ -17,14 +17,24 @@
   list-style: none;
 }
 
-/* Centred under the chart: columns as wide as their longest item, as many
-   as fit, the block centred; items inside a column left-aligned so their
-   swatches line up */
+/* Centred under the chart, items inside a column left-aligned so their
+   swatches line up. The column count is set inline (legendColumns), so the last row is as
+   full as it can be and the net line is just the next cell */
 .grouped-legend-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 240px));
   justify-content: center;
   gap: 5px 20px;
+}
+
+/* Every key in a 20px column, centred on the first line of its name, so
+   square swatches, line keys and the net line all line up */
+.grouped-legend-key {
+  display: flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  height: 1.3em;
 }
 
 .grouped-legend-item {
@@ -54,7 +64,6 @@
   flex: none;
   width: 10px;
   height: 10px;
-  margin-top: 0.2em;
   border-radius: 2px;
 }
 
@@ -95,7 +104,7 @@
 }
 
 @media (max-width: 600px) {
-  .grouped-legend-grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  .grouped-legend.is-flow .grouped-legend-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
