@@ -93,6 +93,7 @@ The web app's population figures are files in `public/data/`, written by the `uk
 |---|---|
 | `generate` | The national results for every measure and year (`--reforms`, `--years` narrow it; `--artifacts` writes one receipted artifact per measure for the publication manifest) |
 | `geography` | Disclosure-controlled results by region and constituency |
+| `constituencies` | `constituency.csv` from Microcosm's published local-area cut: `geography`'s seats pass with each measure in a fresh process, resumable, with a timing and memory table (`--dry-run` checks the cut and the gates only; see the runbook's "Results by constituency on the local-area cut") |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
 | `living-standards` | `living_standards_outlook.json`, the Living standards tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
 | `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Living standards Forecast changes series |
