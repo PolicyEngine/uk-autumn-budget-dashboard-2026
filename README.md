@@ -1,25 +1,33 @@
 # UK Autumn Budget 2026 dashboard
 
-PolicyEngine's dashboard for the UK Autumn Budget on 28 October 2026. It models how nine candidate Budget measures would change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. The measures are candidates modelled before the Budget, not announced policy, and the page says so on every tab that shows them. Budget figures appear only after verified publication. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
+PolicyEngine's dashboard for the UK Autumn Budget 2026 (Wednesday 28 October 2026). It shows how the Autumn Budget 2026 measures change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
 
-Live: <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026>
+| Link | |
+|---|---|
+| Live dashboard | <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026> |
+| Household API | <https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/household-impact> (`POST`; see [Architecture](#architecture)) |
+| Budget-day runbook | [`docs/budget-day-runbook.md`](docs/budget-day-runbook.md) |
+| Decision log | [Issue #119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119) |
+| Drill reruns (the four mock Budgets on today's engine) | <https://uk-ab2026-drill-reruns.vercel.app> |
 
 ## Tabs
 
-The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures and the Personal impact answers are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`), so a link reopens the same view.
+The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures and the household answers are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`), so a link reopens the same view.
 
 | Tab | What it shows |
 |---|---|
 | Population impact | Budgetary impact, distributional impact, winners and losers, and results by region and constituency, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** and **Young people**. |
-| Personal impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR's pre-Budget forecast against the Budget forecast). Sub-tabs: **Baseline outlook** and **Forecast changes**. The latter currently shows the pre-Budget forecast; the Budget-day comparison awaits verified provenance. |
-| Methodology | Data, model, measures, limitations, and the versions needed to replicate the figures. |
+| Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
+| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
 Every chart downloads as CSV, PNG, SVG or plain text.
 
 ## Measures
 
-Nine candidate measures, each compared against current law in policyengine-uk. They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates all nine together, with their interactions.
+The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates them all together, with their interactions.
+
+The list on `main` today:
 
 | Id | Measure |
 |---|---|
@@ -33,13 +41,11 @@ Nine candidate measures, each compared against current law in policyengine-uk. T
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
 
-A tenth candidate, the £2,000 salary sacrifice cap brought forward to April 2028, was dropped on 24 October: on policyengine-uk 2.132.6 its revenue included spurious income tax, because adjusted net income does not deduct the excess redirected into the pension.
-
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 
 ## Architecture
 
-- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Living standards read precomputed files from `public/data/`; Personal impact calls the household API.
+- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Living standards read precomputed files from `public/data/`; Household impact calls the household API.
 - **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
@@ -118,9 +124,31 @@ The web app's population figures are files in `public/data/`, written by the `uk
 
 The same pipeline is importable: `from uk_budget_data import generate_all_data, get_reform, DataConfig`. A `Reform` can carry `baseline_parameter_changes` to compare against something other than current law (`src/uk_budget_data/models.py`).
 
-### Budget day
+## Budget day
 
-The Budget-day sequence (receipts, coverage, provisional numbers, reconciliation against the Treasury's figures, the combined run, the OBR forecast load and rollback) is in [`docs/budget-day-runbook.md`](docs/budget-day-runbook.md). The design behind it, the production setup and the household route are in [`docs/budget-day-publication.md`](docs/budget-day-publication.md).
+The full sequence, roles and timings are in the [runbook](docs/budget-day-runbook.md); the design behind it is in [`docs/budget-day-publication.md`](docs/budget-day-publication.md). In order:
+
+| Step | What happens | Runbook |
+|---|---|---|
+| Start | Pull `main`, sync, run the certified-data tests and the household route check | [G0](docs/budget-day-runbook.md#g0-start-receipt-by-1130) |
+| OBR tables | Download the OBR workbooks **in a browser** (obr.uk refuses scripts) and import them | [Documents arrive](docs/budget-day-runbook.md#documents-arrive-1340), [OBR forecast](docs/budget-day-runbook.md#budget-day-obr-forecast-living-standards-tab-from-1340) |
+| Generate | `generate --artifacts`, one receipted artifact per measure, locally or on Modal | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315) |
+| Stage | `publish reconcile` and `publish stage`; each measure needs a signed expected-effects row (in #140, after #104) | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315), [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Attest | Hand-written modifiers (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
+| Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Results by area | `geography` over the approved ids, locally or on Modal | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
+| Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |
+
+**Who signs what.** The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) carry a reviewer's name. Each attestation needs two distinct people. Approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
+
+### Running it
+
+- **Locally.** `uv run uk-budget-data generate --artifacts …` runs one measure at a time. A receipted measure peaks at about 14–17 GB, so run in parallel (`--jobs`, in #112) only with more than about 40 GB free. Results by area need up to about 64 GB (#115, #138).
+- **On Modal** (in #139 for generation, #142 for results by area; both wait on the `uk-budget-2026-hf-token` secret in the `policyengine` workspace). One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
+- **Household API.** Deployed by the "Deploy the household API" workflow (below). Budget-week capacity (8 vCPU, 8 GiB, eight workers, one instance kept warm) is in #141; set it back after the Budget.
 
 ## Review and sign-off
 

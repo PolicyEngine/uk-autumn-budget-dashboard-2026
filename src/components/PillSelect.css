@@ -92,7 +92,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
+  height: 40px;
   padding: 0 12px 0 14px;
   font-family: inherit;
   font-size: var(--fs-caption);
@@ -166,7 +166,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
+  height: 40px;
   padding: 0 14px;
   font-family: inherit;
   font-size: var(--fs-caption);

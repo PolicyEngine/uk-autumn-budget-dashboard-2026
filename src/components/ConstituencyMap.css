@@ -23,20 +23,18 @@
   text-decoration: underline;
 }
 
-/* Top bar with search and the outcome toggle */
+/* One row: the view switch, the outcome toggle and the search box */
 .map-top-bar {
   display: flex;
-  gap: 24px;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
-/* Search section */
+/* Search: fills the rest of the row */
 .map-search-section {
   flex: 1;
-  min-width: 250px;
-  max-width: 400px;
+  min-width: 140px;
 }
 
 .map-search-label {
@@ -53,17 +51,38 @@
 
 .constituency-search {
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--pe-gray-300);
-  border-radius: 5px;
+  height: 40px;
+  box-sizing: border-box;
+  /* The control pills' shape and type, a magnifier at the left */
+  padding: 0 14px 0 38px;
+  font-family: inherit;
   font-size: var(--fs-caption);
-  transition: all 0.2s ease;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+    no-repeat 14px center;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.constituency-search:focus {
+.constituency-search:hover:not(:disabled) {
+  border-color: var(--pe-teal-500);
+}
+
+.constituency-search:focus,
+.constituency-search:focus-visible {
   outline: none;
   border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constituency-search {
+    transition: none;
+  }
 }
 
 .search-results {
@@ -324,12 +343,15 @@
 }
 
 /* Responsive design */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .map-top-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 8px;
   }
+}
+
+@media (max-width: 768px) {
 
   .map-search-section {
     max-width: 100%;
@@ -385,7 +407,7 @@
 }
 
 .map-template .constituency-search:disabled {
-  background: var(--pe-gray-50);
+  background-color: var(--pe-gray-50);
   cursor: not-allowed;
 }
 
@@ -429,7 +451,6 @@
 
 .constituency-body .map-search-section {
   max-width: 100%;
-  margin-bottom: 12px;
 }
 
 .map-content[hidden] {

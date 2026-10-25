@@ -575,6 +575,12 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
 
+**Wording on the day: config only.** The page says nothing that stops being true on Budget day; when the OBR's post forecast or its costings are loaded, the same components show them, labelled from config. The only text edits on the day are two keys in `src/utils/sources.js`, as soon as they are published, with labels to match (the page's text comes from the labels):
+- `obr_efo_current`: the October 2026 EFO page ("OBR, Economic and fiscal outlook – October 2026");
+- `budget_documents`: the Autumn Budget 2026 document and its policy costings on gov.uk.
+
+Check each URL loads, then deploy. A test fails if a view other than Methodology says "pre-Budget", "28 October" or "candidate".
+
 ## Budget day: OBR forecast (Living standards tab, from 13:40)
 
 The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026 forecast as "pre-Budget". Once the OBR publishes the Budget EFO, import its economy tables as a reviewable "post" series. Importing and committing them does not publish post-Budget figures: the page withholds those figures until a dedicated verified publication route exists. The import sets `post_published`, and from then on the Forecast changes sub-tab shows only an unavailable notice: the March 2026 forecast's lines and tiles go too (`ForecastPanel` in `src/components/livingStandards/LivingStandardsTab.jsx`). The Baseline outlook stays available. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
