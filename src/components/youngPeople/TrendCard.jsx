@@ -186,11 +186,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             <XAxis
               dataKey="year"
               tickFormatter={narrow ? shortFiscalYearTick : fiscalYearTick}
-              tick={TICK_STYLE}
               axisLine={AXIS_LINE}
               tickLine={false}
               interval={0}
-              padding={{ left: 28, right: 28 }}
+              padding={narrow ? { left: 10, right: 10 } : { left: 28, right: 28 }}
+              tick={narrow ? { ...TICK_STYLE, fontSize: 10 } : TICK_STYLE}
               height={X_AXIS_HEIGHT}
             />
             <YAxis

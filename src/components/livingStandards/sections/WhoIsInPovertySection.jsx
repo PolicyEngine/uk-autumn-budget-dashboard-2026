@@ -239,17 +239,6 @@ export default function WhoIsInPovertySection({ data }) {
           role="table"
           aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(from)} and ${fyDash(to)}`}
         >
-          <div className="dot-head" aria-hidden="true">
-            <span className="dot-label" />
-            <span className="dot-plot-area">
-              {allValue != null && (
-                <span className="dot-all-label" style={{ left: pos(allValue) }}>
-                  {b.reference} {formatPct(allValue)}
-                </span>
-              )}
-            </span>
-            <span className="dot-values" />
-          </div>
           {rows.map((r) => {
             const both = r.a != null && r.z != null;
             const lo = Math.min(r.a ?? r.z, r.z ?? r.a);
@@ -361,6 +350,13 @@ export default function WhoIsInPovertySection({ data }) {
           <span>
             <i className="to" /> {fyDash(to)}
           </span>
+          {/* The dashed reference line's value, with the plot's key rather
+              than between the controls and the chart */}
+          {allValue != null && (
+            <span>
+              <i className="all" /> {b.reference} {formatPct(allValue)}, {fyDash(to)}
+            </span>
+          )}
         </span>
       </div>
       <div className="chart-logo">

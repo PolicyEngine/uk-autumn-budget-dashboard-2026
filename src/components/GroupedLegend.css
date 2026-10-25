@@ -17,10 +17,14 @@
   list-style: none;
 }
 
+/* Centred under the chart: columns as wide as their longest item, as many
+   as fit, the block centred; items inside a column left-aligned so their
+   swatches line up */
 .grouped-legend-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 5px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 260px));
+  justify-content: center;
+  gap: 5px 20px;
 }
 
 .grouped-legend-item {
@@ -30,11 +34,9 @@
   min-width: 0;
 }
 
+/* A long name wraps rather than being cut off */
 .grouped-legend-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .grouped-legend-tag {
@@ -92,10 +94,6 @@
 
 @media (max-width: 600px) {
   .grouped-legend-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-
-  .grouped-legend-label {
-    white-space: normal;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }

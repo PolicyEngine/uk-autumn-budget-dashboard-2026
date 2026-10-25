@@ -360,8 +360,9 @@
 /* The two years' dots, in the legend row under the plot */
 .ls-card .dot-legend {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 20px;
+  gap: 4px 20px;
   font-size: var(--fs-caption);
   color: var(--pe-gray-700);
 }
@@ -382,6 +383,13 @@
   background: var(--c-surface, #fff);
   border: 2px solid var(--c-before);
   box-sizing: border-box;
+}
+
+.ls-card .dot-legend i.all {
+  width: 0;
+  height: 12px;
+  border-radius: 0;
+  border-left: 1px dashed var(--pe-gray-400);
 }
 
 .ls-card .dot-legend i.to,
