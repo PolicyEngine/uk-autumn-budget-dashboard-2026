@@ -177,13 +177,18 @@ export function singleAgeBars(rows, policies, selected, year) {
         break;
       }
       net += row.mean_change;
-      parts.push({ id: policy.id, name: policy.name, value: row.mean_change });
+      parts.push({
+        id: policy.id,
+        key: policy.seriesKey ?? `measure:${policy.id}`,
+        name: policy.label ?? policy.name,
+        value: row.mean_change,
+      });
     }
     // Each policy's own change, for the tooltip, largest first
     parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-    // Each policy's own change under its name too, for the stacked bars
-    const byName = complete ? Object.fromEntries(parts.map((part) => [part.name, part.value])) : {};
-    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...byName });
+    // Each policy's own change under its series key too, for the stacked bars
+    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
   }
   return bars;
 }
@@ -211,26 +216,15 @@ export function fitRange(min, max) {
 }
 
 /**
- * Why a measure has no effect in a year, where there is a short reason: an
- * employer cost moves no household's income, and the top-up is paid in
- * 2026-27 only. The measure comes from the catalogue, so the page keeps no
- * list of measures (#104): an employer cost is told by its name.
- */
-export function noEffectReason(measure, year) {
-  if (/^employer\b/i.test(measure.name ?? "")) return "Employer cost; wages held fixed";
-  if (measure.id === "warm_home_discount_top_up" && year !== 2026) return "Paid in 2026-27 only";
-  return null;
-}
-
-/**
  * Better off, unchanged and worse off for each single year of age,
  * SINGLE_AGE_FIRST to SINGLE_AGE_LAST, from the whole selection's run (as
- * for the age groups): `{ run, groups: [{ key, label, row, suppressed }] }`,
- * or null when the selection has no such run or the year no rows. An age
+ * for the age groups, `combinedId` the catalogue's package run):
+ * `{ run, groups: [{ key, label, row, suppressed }] }`, or null when the
+ * selection has no such run or the year no rows. An age
  * with fewer than MIN_SAMPLE_SIZE survey records is suppressed.
  */
-export function sharesBySingleAge(rows, policies, selected, year) {
-  const run = wholeSelectionRun(policies, selected);
+export function sharesBySingleAge(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
   if (!run) return null;
   const yearRows = (rows ?? []).filter((row) => row.year === Number(year) && row.reform_id === run);
   if (!yearRows.length) return null;

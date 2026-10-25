@@ -102,7 +102,9 @@ describe("the page's verified publication catalogue", () => {
     const view = search.includes("living") ? "living-view" : "methodology-view";
     expect(await screen.findByTestId(view)).toBeInTheDocument();
     expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(4);
-    expect(screen.queryByText("No Budget results are published yet")).toBeNull();
+    // The default view is mounted from the first render and kept, hidden,
+    // since #128; the open view says nothing about Budget results
+    expect(within(screen.getByRole("tabpanel")).queryByText("No Budget results are published yet")).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
     expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
@@ -283,6 +285,38 @@ describe("an open page follows the publication", () => {
       },
     ), { numRuns: 6 });
   }, 120000);
+
+  it("brings an artifact that recovers under the same manifest into the default selection", async () => {
+    // Review of 3d52cff, finding 1: the default was stored at mount, so a
+    // measure whose artifact verified later stayed out of it, unlike a
+    // fresh load of the same publication
+    const manifest = twoMeasures();
+    const unchanged = { "manifest.json": JSON.stringify(manifest) };
+    const failing = `${manifest.measures.beta.artifact}/receipt.json`;
+    const healthy = dashboardFixtureFetch({ overrides: unchanged });
+    const broken = dashboardFixtureFetch({ overrides: { ...unchanged, [failing]: 404 } });
+    let failingNow = true;
+    vi.stubGlobal("fetch", (url, init) => (failingNow ? broken : healthy)(url, init));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    expect(rowIds()).toEqual(new Set(["alpha"]));
+
+    failingNow = false;
+    await waitFor(async () => {
+      await act(async () => { window.dispatchEvent(new Event("focus")); });
+      expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+    }, { timeout: 10000 });
+    const selected = JSON.parse(screen.getByTestId("distributional-figures").dataset.selected);
+    expect(new Set(selected)).toEqual(new Set(["alpha", "beta"]));
+    expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
+    expect(screen.queryByText(/Newer results were published/)).toBeNull();
+
+    // The same publication loaded afresh selects the same measures
+    cleanup();
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+  }, 30000);
 
   it("recovers after the initial publication request fails", async () => {
     vi.stubGlobal("fetch", async () => { throw new TypeError("offline"); });

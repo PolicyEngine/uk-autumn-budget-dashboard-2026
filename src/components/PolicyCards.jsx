@@ -1,6 +1,8 @@
-import { policyIcon } from "../utils/policyConfig";
 import TitleIcon from "./TitleIcon";
 
+// Each group's heading and arrow, by the direction the catalogue gives a
+// measure's budgetary effect. Cards carry no icon per measure: a map by
+// measure id would be a measure list of the page's own.
 const GROUPS = [
   ["Raises revenue", "revenue", "arrowUp"],
   ["Costs revenue", "cost", "arrowDown"],
@@ -36,7 +38,6 @@ function PolicyCards({ policies, selectedPolicies }) {
           {items.map((policy) => (
             <li key={policy.id} className="policy-card">
               <p className="policy-card-name">
-                <TitleIcon name={policyIcon(policy)} />
                 <span
                   className="policy-card-swatch"
                   style={{ background: policy.color }}

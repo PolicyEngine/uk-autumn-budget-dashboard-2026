@@ -8,7 +8,7 @@ import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-it.each(["epsilon", "never_published"])("holds the requested personal measure %s without calling the household API", async (id) => {
+it.each(["epsilon", "never_published"])("holds the requested household measure %s without calling the household API", async (id) => {
   const calls = [];
   const published = dashboardFixtureFetch();
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
@@ -16,16 +16,16 @@ it.each(["epsilon", "never_published"])("holds the requested personal measure %s
     calls.push({ url: String(url), method: init.method ?? "GET" });
     return published(url, init);
   });
-  window.history.replaceState({}, "", `/?tab=personal&policies=${id}`);
+  window.history.replaceState({}, "", `/?tab=household&policies=${id}`);
   render(<App />);
-  expect(await screen.findByText("Personal impact is unavailable for the selected measures")).toBeInTheDocument();
+  expect(await screen.findByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
   expect(new URLSearchParams(window.location.search).get("policies")).toBe(id);
   expect(calls.some((call) => call.method === "POST" || call.url.includes("/api/household-impact"))).toBe(false);
   expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
   expect(document.body).not.toHaveTextContent("£0");
 });
 
-it("lets the reader remove an unavailable personal measure without calling the household API", async () => {
+it("lets the reader remove an unavailable household measure without calling the household API", async () => {
   const calls = [];
   const published = dashboardFixtureFetch();
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
@@ -33,9 +33,9 @@ it("lets the reader remove an unavailable personal measure without calling the h
     calls.push({ url: String(url), method: init.method ?? "GET" });
     return published(url, init);
   });
-  window.history.replaceState({}, "", "/?tab=personal&policies=epsilon");
+  window.history.replaceState({}, "", "/?tab=household&policies=epsilon");
   render(<App />);
-  const reason = "Personal impact is unavailable for the selected measures";
+  const reason = "Household impact is unavailable for the selected measures";
   const notice = (await screen.findByText(reason)).closest(".publication-unavailable");
   fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
   await waitFor(() => expect(screen.queryByText(reason)).toBeNull());
@@ -46,9 +46,9 @@ it("lets the reader remove an unavailable personal measure without calling the h
 // Review of 428d209, finding 3: a later snapshot remounts the views, and
 // must restore exactly the selection the reader had, an empty one included.
 describe("a later snapshot keeps the reader's selection", () => {
-  const REASON = "Personal impact is unavailable for the selected measures";
+  const REASON = "Household impact is unavailable for the selected measures";
   const policies = () => new URLSearchParams(window.location.search).get("policies");
-  // The fixture's measures cover 2032 and 2033 only, and Personal impact
+  // The fixture's measures cover 2032 and 2033 only, and Household impact
   // needs the title band's year. So alpha's and beta's receipts are also
   // published for it, re-bound through the production digest functions.
   const serve = async (statuses = {}, revision = 0) => {
@@ -92,7 +92,7 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("shows a withdrawn personal measure as unavailable instead of dropping it", async () => {
     const calls = [];
-    open("/?tab=personal&policies=alpha,beta", await serve(), calls);
+    open("/?tab=household&policies=alpha,beta", await serve(), calls);
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
@@ -104,7 +104,7 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("keeps a selection narrowed by removal when a later snapshot adds nothing", async () => {
     const calls = [];
-    open("/?tab=personal&policies=alpha,epsilon", await serve(), calls);
+    open("/?tab=household&policies=alpha,epsilon", await serve(), calls);
     const notice = (await screen.findByText(REASON)).closest(".publication-unavailable");
     fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
     await waitFor(() => expect(policies()).toBe("alpha"));
@@ -117,7 +117,7 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("keeps an empty personal selection empty", async () => {
     const calls = [];
-    open("/?tab=personal&policies=epsilon", await serve(), calls);
+    open("/?tab=household&policies=epsilon", await serve(), calls);
     const notice = (await screen.findByText(REASON)).closest(".publication-unavailable");
     fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
     await waitFor(() => expect(policies()).toBe(""));

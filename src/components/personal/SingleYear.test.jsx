@@ -10,7 +10,7 @@ import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
-// Personal impact shows nothing when the two differ.
+// Household impact shows nothing when the two differ.
 const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
 const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
 const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
@@ -116,12 +116,12 @@ describe("Household impact's results", () => {
 });
 
 describe("the household calculation, from the fixture", () => {
-  it("asks for the headline first, then the breakdown, with the wizard's answers", async () => {
+  it("asks for the headline first, then the sweep and the split by policy at once, with the wizard's answers", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    expect(household.map((body) => body.include)).toEqual([[], ["by_policy", "sweep"]]);
+    expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
     const [first] = household;
     expect(first.year).toBe(2029);
     expect(first.household).toMatchObject({
@@ -195,6 +195,10 @@ describe("the household calculation, from the fixture", () => {
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
+    // A supported selection has nothing left out: an unmodelled measure
+    // makes the whole selection unavailable instead (#104)
+    expect(assumptions).not.toHaveTextContent("not shown");
+    expect(assumptions).not.toHaveTextContent("not modelled");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child
@@ -348,8 +352,9 @@ describe("Calculate", () => {
 });
 
 describe("a change in the title bar after a result", () => {
+  // Published measures the household API answers for: an unmodelled one
+  // makes the selection unavailable (#104)
   const props = {
-    // The measures the household API models, so the selection has a result
     selectedPolicies: SUPPORTED_POLICY_IDS,
     policies: POLICIES_FOR_TEST,
   };
@@ -525,6 +530,35 @@ describe("the household calculation's errors", () => {
     expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
   });
 
+  it("shows the earnings charts as soon as the sweep arrives, while the split by policy is still running", async () => {
+    let finishByPolicy;
+    const byPolicyAsked = new Promise((resolve) => {
+      finishByPolicy = resolve;
+    });
+    serve((body) =>
+      body.include.includes("by_policy")
+        ? byPolicyAsked.then(() => json(householdAnswerFor(body)))
+        : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
+    finishByPolicy();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+  });
+
+  it("keeps the earnings charts when only the split by policy fails", async () => {
+    serve((body) =>
+      body.include.includes("by_policy") ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
+  });
+
   it("keeps the headline when only the breakdown fails", async () => {
     serve((body) =>
       body.include.length ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body)),
@@ -572,13 +606,13 @@ describe("an unavailable household calculation", () => {
     renderTab({ selectedPolicies: ids });
     toResults();
     const panel = await results();
-    expect(await within(panel).findByText("Personal impact is unavailable for this selection")).toBeInTheDocument();
+    expect(await within(panel).findByText("Household impact is unavailable for this selection")).toBeInTheDocument();
     expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
     expect(panel).not.toHaveTextContent("A different API label");
     expect(panel).not.toHaveTextContent("£0");
     expect(screen.queryByText(HEADLINE)).toBeNull();
     expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
-    expect(screen.getByRole("button", { name: /^More details/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^More details/ })).toBeInTheDocument();
     expect(household.length).toBeGreaterThan(0);
   });
 });

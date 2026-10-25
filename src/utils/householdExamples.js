@@ -1,20 +1,15 @@
 /**
  * The example households in the Household impact form's Examples menu, in
  * two groups: the young people (youngPersonPresets.js) and other
- * households, each chosen to show one measure clearly. An example fills
- * the form (on top of its defaults); every value stays editable, and
- * nothing is calculated until Calculate.
+ * households. An example fills the form (on top of its defaults); every
+ * value stays editable, and nothing is calculated until Calculate.
  *
- * Each "Other households" example was checked against the live household
- * API on 25 October 2026 with every measure selected; the measure it is for
- * changes its net income in the year named:
- *   pensioner: State Pension income tax protection +£93 in 2027-28
- *   family: Warm Home Discount top-up +£100 in 2026-27 (one winter only)
- *   graduate: Plan 2 threshold unfrozen +£79 in 2027-28
- *   driver: fuel duty rises deferred +£89, VAT cut on road fuel +£18, 2027-28
- *   higher earner: frozen income tax thresholds in 2031-32, −£221
- * No example shows Business Asset Disposal Relief: the form asks no capital
- * gains.
+ * Each "Other households" example was chosen, and checked against the live
+ * household API on 25 October 2026, so that a measure then published
+ * changes its net income in a year the page offers (ea665c3 lists which).
+ * The text describes the household, never a measure: which measures change
+ * its income is the calculation's answer, and the published measures can
+ * change, so a name here could name one the page no longer shows (#104).
  */
 import { YOUNG_PERSON_PRESETS } from "./youngPersonPresets";
 
@@ -37,7 +32,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "pensioner-70",
     label: "A pensioner on the State Pension",
-    description: "70, State Pension only; income tax protection",
+    description: "70, State Pension only",
     inputs: {
       ...RESET,
       current_age: 70,
@@ -53,7 +48,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "family-uc",
     label: "A family on Universal Credit",
-    description: "Two children, renting; Warm Home Discount in 2026-27",
+    description: "Two children, renting; high electricity use",
     inputs: {
       ...RESET,
       current_age: 34,
@@ -66,12 +61,12 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       monthly_rent: null,
       electricity_spending_per_year: 1300,
     },
-    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is paid for winter 2026-27 only: choose 2026-27 to see it.",
+    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household.",
   },
   {
     id: "graduate-35k",
     label: "A graduate on £35,000",
-    description: "27, Plan 2 student loan; threshold unfrozen",
+    description: "27, Plan 2 student loan",
     inputs: {
       ...RESET,
       current_age: 27,
@@ -85,7 +80,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "driver",
     label: "A driver with a long commute",
-    description: "£2,600 a year on petrol; fuel duty and VAT",
+    description: "£2,600 a year on petrol",
     inputs: {
       ...RESET,
       current_age: 40,
@@ -99,14 +94,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "higher-earner",
     label: "A higher earner on £110,000",
-    description: "Frozen tax thresholds bite from 2031-32",
+    description: "45, owns with a mortgage",
     inputs: {
       ...RESET,
       current_age: 45,
       current_salary: 110000,
       tenure: "OWNED_WITH_MORTGAGE",
     },
-    note: "Aged 45, earns £110,000 and owns with a mortgage. Keeping income tax thresholds frozen for another year changes their income tax from 2031-32: choose that year to see it.",
+    note: "Aged 45, earns £110,000 and owns with a mortgage.",
   },
 ];
 

@@ -123,7 +123,7 @@ const ICONS = {
       <path d="M3 21v-5h5" />
     </>
   ),
-  // Policy types (policyConfig's POLICY_ICONS)
+  // Policy types: no measure has its own icon until the catalogue carries one
   fuel: (
     <>
       <path d="M3 22h12M4 9h10M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" />

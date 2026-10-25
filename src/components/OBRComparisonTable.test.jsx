@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import OBRComparisonTable from "./OBRComparisonTable";
+import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonFoot } from "./OBRComparisonTable";
 
 // The chart/table choice: a "Show" dropdown pill
 const showPill = () => screen.getByRole("button", { name: /^Show as:/ });
@@ -233,5 +233,54 @@ describe("before the OBR costs the measures", () => {
     expect(await screen.findByText("The OBR has not costed the selected measures.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Show as:/ })).not.toBeInTheDocument();
+  });
+});
+
+// #128's foot under the budgetary chart: the comparison is offered only
+// when a verified OBR file costs a selected measure
+describe("the OBR comparison foot", () => {
+  const fixture = measureCatalogueFixture({ held: false });
+  const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: Object.fromEntries([ALPHA, BETA].map((id) => [id, { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === id) }])) });
+  const COSTED = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},Alpha,${YEAR},-1,-2`].join("\n");
+  // The table beside it settles from the same file, so once it shows its
+  // state the foot has had its answer too
+  const renderBoth = (selectedPolicies) => renderReact(
+    <MeasureCatalogueProvider catalogue={catalogue}>
+      <div data-testid="foot"><ObrComparisonFoot selectedPolicies={selectedPolicies} selectedYear={YEAR} /></div>
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={YEAR} />
+    </MeasureCatalogueProvider>,
+  );
+
+  it("offers the comparison when the OBR file costs a selected measure", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
+    renderBoth([ALPHA]);
+    const foot = screen.getByTestId("foot");
+    expect(await within(foot).findByText("Compare with OBR estimates")).toBeInTheDocument();
+  });
+
+  it("shows nothing while no OBR file can be bound to the approved results", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("not bound"); }));
+    renderBoth([ALPHA]);
+    expect(await screen.findByText(/The OBR comparison is unavailable/)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing when the OBR has costed none of the selected measures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
+    renderBoth([BETA]);
+    expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing for an empty selection, or for an OBR row with no figure", async () => {
+    const blank = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},Alpha,${YEAR},,`].join("\n");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(blank)));
+    renderBoth([ALPHA]);
+    expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    const { container } = renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}><ObrComparisonFoot selectedPolicies={[]} selectedYear={YEAR} /></MeasureCatalogueProvider>,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

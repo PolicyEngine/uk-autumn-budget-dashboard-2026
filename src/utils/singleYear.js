@@ -74,7 +74,6 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Salary sacrifice pay cut (current-law cap)",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -167,7 +166,7 @@ export function largestChangesSentence(groups) {
 
 // Notes about one part of a row, shown only when that part is: income
 // tax's is about the High Income Child Benefit Charge, employment income's
-// about the pension contribution adjustment's pay cut
+// about its pay cut row (labelled by the household API)
 const NOTE_PART = {
   income_tax: "child_benefit_charge",
   employment_income: "salary_sacrifice_haircut",
@@ -235,21 +234,16 @@ export function policyRows(byPolicy, total, policies) {
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
     // Every measure that leaves the household's net income where it was,
-    // with its colour and, for an employer cost or a top-up paid only in a
-    // year not offered, why
+    // with its colour and, for an employer cost, the API's note on why. No
+    // reason is kept here by measure id: that would be a measure list of
+    // the page's own
     noEffectItems: byPolicy.measures
       .filter((row) => row.status === "not_affected")
       .map((row) => ({
         id: row.id,
         name: nameOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
-        reason:
-          row.noteKind === "employer_cost"
-            ? row.note
-            : row.id === "warm_home_discount_top_up"
-              ? // The top-up is paid in 2026-27, which the year pill does not offer
-                "Paid in 2026-27 only"
-              : null,
+        reason: row.noteKind === "employer_cost" ? row.note : null,
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount

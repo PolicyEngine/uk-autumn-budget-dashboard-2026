@@ -2,9 +2,9 @@ import TitleIcon from "./TitleIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
-import UnavailableNotice from "./publication/UnavailableNotice";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import ExamplePicker from "./personal/ExamplePicker";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
@@ -692,7 +692,7 @@ function HouseholdCalculator({
 
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           {selectionUnavailable ? (
-            <UnavailableNotice reason="Personal impact is unavailable for this selection">
+            <UnavailableNotice reason="Household impact is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
               <p>Select measures that can all be calculated to see your household&apos;s results.</p>
             </UnavailableNotice>

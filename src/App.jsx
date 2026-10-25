@@ -119,25 +119,28 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
   const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
-  const [selectedPolicies, setSelectedPolicies] = useState(() =>
-    requested === null ? catalogue.displayable.map((measure) => measure.id) : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
+  const [chosenPolicies, setChosenPolicies] = useState(() =>
+    requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
   );
   const [selectionChosen, setSelectionChosen] = useState(requested !== null);
+  // The default is derived, never stored: an artifact that verifies later
+  // under the same manifest joins it, as on a fresh load (review of
+  // 3d52cff, finding 1). A newer manifest remounts the view instead.
+  const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
+  const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
   const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
-  const PRESETS = [{ id: "autumn-budget", name: "All measures", policies: catalogue.displayable.map((measure) => measure.id) }];
+  const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
   useScrollReveal(mainRef);
   // The views opened so far: each stays mounted once opened, hidden while
   // another is shown, so its state, open expanders and any calculation in
   // flight carry on
-  // Counted only once the address is read, so a link to another view never
-  // mounts the default one behind it
-  const [visited, setVisited] = useState([]);
-  if (locationReady && !visited.includes(activeTab)) setVisited([...visited, activeTab]);
+  const [visited, setVisited] = useState([DEFAULT_VIEW]);
+  if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
@@ -173,18 +176,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
-    setSelectedPolicies((previous) => previous.includes(policyId) ? previous.filter((id) => id !== policyId) : [...previous, policyId]);
+    setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
     setSelectionChosen(true);
   };
   // The one preset is the default, every displayable measure, so choosing
   // it hands the selection back to the publication
-  const handlePresetClick = (policies) => {
-    setSelectedPolicies(policies);
+  const handlePresetClick = () => {
     setSelectionChosen(false);
   };
   // Only on the reader's request: an unavailable measure leaves the selection
   const removeFromSelection = (ids) => {
-    setSelectedPolicies((previous) => previous.filter((id) => !ids.includes(id)));
+    setChosenPolicies(selectedPolicies.filter((id) => !ids.includes(id)));
     setSelectionChosen(true);
   };
 
@@ -270,13 +272,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   }, [activeTab]);
 
   // An explicit URL selection is never silently narrowed into another
-  // selection. Personal impact applies its own year-aware gate; Population
+  // selection. Household impact applies its own year-aware gate; Population
   // impact with an unavailable member has no complete set of Budget figures.
+  // Each opened view stays mounted, so the check is per view, not for the
+  // open one only.
   const unavailableIds = selectedPolicies.filter((id) => !catalogue.byId.get(id)?.displayable);
-  const viewUnavailable = unavailable ?? (activeTab === "dashboard" && unavailableIds.length ? {
+  const selectionUnavailable = unavailableIds.length ? {
     reason: "Some selected measures are unavailable",
     detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
-  } : null);
+  } : null;
+  const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   const yearShown = yearPillShown(activeTab);
@@ -306,7 +311,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <button
             key={preset.id}
             className="preset-button"
-            onClick={() => handlePresetClick(preset.policies)}
+            onClick={handlePresetClick}
           >
             {preset.name}
           </button>
@@ -368,7 +373,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           forecast: <SourceLink source="obr_efo_current" />. Choose a year and
           policies in the bar above.
         </p>
-
         {updated && (
           <p className="publication-updated" role="status">
             Newer results were published while this page was open; it now shows them.
@@ -402,9 +406,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={value !== activeTab}
         >
-        {viewUnavailable && BUDGET_VIEWS.has(value) ? (
-          <UnavailableNotice reason={viewUnavailable.reason}>
-            {viewUnavailable.detail && <p>{viewUnavailable.detail}</p>}
+        {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
+          <UnavailableNotice reason={viewUnavailable(value).reason}>
+            {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
               <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
             ) : (
@@ -592,7 +596,7 @@ function App() {
   const [updated, setUpdated] = useState(false);
   const current = useRef(null);
   const confirmer = useRef(null);
-  // Stable for the page's life: each Personal impact request waits on it
+  // Stable for the page's life: each Household impact request waits on it
   const confirmPublication = useCallback(
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],

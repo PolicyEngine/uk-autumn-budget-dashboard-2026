@@ -8,7 +8,7 @@ import Note from "../Note";
 import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
 import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
-import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } from "./youngPeopleData";
+import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
@@ -71,7 +71,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader">
-              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color ?? CHART_COLOURS.noChange }} aria-hidden="true" />
+              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
               {row.name}
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
@@ -162,11 +162,12 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's More info row, each with its colour and reason
+  // No effect: in the card's More info row, each with its colour. No reason
+  // per measure: a list of them by id would be a measure list of the page's
+  // own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: byId.get(policy.id)?.color ?? CHART_COLOURS.noChange,
-    reason: noEffectReason(policy, selectedYear),
+    color: byId.get(policy.id)?.color,
   }));
   const csvText = () =>
     buildChartCsv({

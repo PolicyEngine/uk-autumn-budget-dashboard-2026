@@ -171,13 +171,14 @@ describe("published measure catalogue in population views", () => {
     fixture.manifest.combined[COMBINED].status = "withdrawn";
     const catalogue = catalogueFor(fixture);
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: async () => fixture.ageCsv })));
-    render(withCatalogue(catalogue,
+    const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
     expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
-    // Two Recharts charts (change by age, change by year); the policy
-    // comparison is drawn without Recharts since #128
+    // The shares card draws nothing; the average change and trend cards
+    // still chart (the measures card is a dumbbell, not a chart, since #128)
+    expect(container.querySelector('.young-people-shares [data-testid="chart-rows"]')).toBeNull();
     expect(screen.getAllByTestId("chart-rows")).toHaveLength(2);
   });
 

@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -131,8 +131,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
-    // The Forecast changes view stays mounted, hidden, once opened (#128)
-    const notice = screen.queryByText("Budget-day forecast is unavailable until verified");
-    if (notice) expect(notice).not.toBeVisible();
+    // The forecast view stays mounted, hidden, since #128; the open one
+    // holds nothing back
+    expect(within(screen.getByRole("tabpanel")).queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
   });
 });

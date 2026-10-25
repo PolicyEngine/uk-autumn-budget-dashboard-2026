@@ -278,7 +278,7 @@ const singleSharesHeight = (rows) => rows * 17 + X_AXIS_HEIGHT + 24;
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
 /** An age's net change, then each policy's own part of it, largest first. */
 function SingleAgeTooltip({ active, payload, yearLabel }) {
-  const { byId } = useMeasureCatalogue();
+  const { policyColors } = useMeasureCatalogue();
   const point = payload?.[0]?.payload;
   if (!active || !point || point.netChange === null) return null;
   return (
@@ -295,7 +295,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
           .filter((part) => Math.round(part.value) !== 0)
           .map((part) => (
             <p key={part.id} className="chart-tooltip-row">
-              <span className="chart-tooltip-swatch" style={{ background: byId.get(part.id)?.color ?? CHART_COLOURS.noChange }} aria-hidden="true" />
+              <span className="chart-tooltip-swatch" style={{ background: policyColors[part.key] }} aria-hidden="true" />
               {part.name} {signedPounds(part.value)}
             </p>
           ))}
@@ -335,7 +335,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   const singleDrawn = singleData.map((point) => {
     const drawn = { ...point };
     for (const part of point.parts) {
-      if (part.value !== 0 && Math.abs(part.value) < sliver) drawn[part.name] = Math.sign(part.value) * sliver;
+      if (part.value !== 0 && Math.abs(part.value) < sliver) drawn[part.key] = Math.sign(part.value) * sliver;
     }
     return drawn;
   });
@@ -393,7 +393,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           units: `${units}; the sum of each selected policy's own effect`,
           columns: [
             { key: "label", label: "Age" },
-            ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
+            ...selectedNames,
             { key: "netChange", label: "Net change", decimals: 2 },
           ],
           // The real values, not the slivers drawn
@@ -490,7 +490,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter

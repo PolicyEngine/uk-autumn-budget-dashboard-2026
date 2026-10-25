@@ -27,7 +27,7 @@ export function useNarrowViewport() {
  * Chart colours by meaning, the same on every tab: the JS mirror of the
  * --c-* tokens in src/app/globals.css (SVG and PNG exports need literal
  * values, so charts take these rather than var(--c-*)). chartTheme.test.js
- * keeps the two equal. Policy colours are in policyConfig.js.
+ * keeps the two equal. Policy colours come from measureCatalogue.jsx.
  */
 export const CHART_COLOURS = {
   gain: "#319795",

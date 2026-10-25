@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
@@ -27,6 +30,20 @@ describe("the example households", () => {
       );
       expect(body.household.age, example.id).toBe(example.inputs.current_age);
       expect(body.household.employment_income, example.id).toBe(example.inputs.current_salary);
+    }
+  });
+
+  it("describe the household, never a measure", () => {
+    // Review of #128's merge into #104: the published measures can change,
+    // so an example naming one could name a measure the page doesn't show
+    const registry = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "uk_budget_data", "reforms.py"), "utf8");
+    const names = [...registry.matchAll(/^\s*name="([^"]+)"/gm)].map((match) => match[1].toLowerCase());
+    expect(names.length).toBeGreaterThan(5);
+    for (const example of HOUSEHOLD_EXAMPLES) {
+      const text = `${example.label} ${example.description} ${example.note}`;
+      for (const name of names) expect(text.toLowerCase(), example.id).not.toContain(name);
+      // Nor in part, as #128's first wording did
+      expect(text, example.id).not.toMatch(/freeze|unfrozen|top-up|Warm Home Discount|fuel duty|\bVAT\b|tax protection|see it/i);
     }
   });
 

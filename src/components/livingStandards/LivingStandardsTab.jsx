@@ -97,7 +97,7 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
   if (forecast?.post_published) {
     return (
       <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
-        <p>The pre-Budget baseline outlook remains available in Baseline outlook.</p>
+        <p>The baseline outlook, on the forecast it was built from, remains available in Baseline outlook.</p>
       </UnavailableNotice>
     );
   }

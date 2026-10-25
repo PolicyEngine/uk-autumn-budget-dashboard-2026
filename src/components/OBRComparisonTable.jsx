@@ -13,18 +13,19 @@ import SourceLink from "./SourceLink";
 /** What the comparison says while the OBR has not costed the selected measures. */
 export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
 
-function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+/**
+ * The OBR's and PolicyEngine's figures by measure and year, for displayable
+ * measures only: the OBR's from obr_comparison.csv once it verifies against
+ * the approved results, PolicyEngine's from the catalogue's verified
+ * budgetary tables. Null while loading. `{ unavailable: true }` when no OBR
+ * file can be bound: today it holds the November 2025 costings (see
+ * FLAT_VIEW_FILES in utils/publication/flat.js).
+ */
+export function useObrComparisonData(enabled = true) {
   const catalogue = useMeasureCatalogue();
-  const { byId } = catalogue;
-  const [comparisonData, setComparisonData] = useState(null);
-  const [loadFailure, setLoadFailure] = useState(null);
-  // Static by default: like for like with PolicyEngine's static estimates
-  const [showBehavioural, setShowBehavioural] = useState(false);
-  // The comparison shows as a chart or as a table, never both
-  const [view, setView] = useState("chart");
-  const showTable = view === "table";
-
+  const [loaded, setLoaded] = useState(null);
   useEffect(() => {
+    if (!enabled) return undefined;
     let live = true;
     loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
       .then((obrCsvText) => {
@@ -54,22 +55,45 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 
         // Convert to array
         const data = Object.values(obrData);
-        if (live) setComparisonData({ catalogue, rows: data });
+        if (live) setLoaded({
+          catalogue,
+          rows: data.filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year)),
+        });
       })
-      .catch(() => { if (live) setLoadFailure(catalogue); });
+      .catch(() => { if (live) setLoaded({ catalogue, unavailable: true }); });
     return () => { live = false; };
-  }, [catalogue]);
+  }, [enabled, catalogue]);
+  // Nothing loaded for an earlier catalogue is shown
+  return loaded?.catalogue === catalogue ? loaded : null;
+}
+
+/** Whether the OBR has a figure for any of the selected measures. */
+export function hasObrFigures(rows, selectedPolicies) {
+  return (rows ?? []).some(
+    (row) =>
+      selectedPolicies.includes(row.reform_id) &&
+      (Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural)),
+  );
+}
+
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data }) {
+  const catalogue = useMeasureCatalogue();
+  const { byId } = catalogue;
+  const fetched = useObrComparisonData(!data);
+  const comparisonData = data ?? fetched;
+  // Static by default: like for like with PolicyEngine's static estimates
+  const [showBehavioural, setShowBehavioural] = useState(false);
+  // The comparison shows as a chart or as a table, never both
+  const [view, setView] = useState("chart");
+  const showTable = view === "table";
 
   if (selectedPolicies.length === 0) return null;
-  // Today no OBR file can be bound (it holds the November 2025 costings; see
-  // FLAT_VIEW_FILES in utils/publication/flat.js), so this is what shows
-  if (loadFailure === catalogue) return <UnavailableNotice reason="The OBR comparison is unavailable: no OBR costings for this Budget are bound to the approved results." />;
-  if (comparisonData?.catalogue !== catalogue) return null;
+  // Today no OBR file can be bound, so this is what shows
+  if (comparisonData?.unavailable) return <UnavailableNotice reason="The OBR comparison is unavailable: no OBR costings for this Budget are bound to the approved results." />;
+  if (!comparisonData) return null;
 
   // Filter to selected policies
-  const filteredData = comparisonData.rows.filter((row) =>
-    selectedPolicies.includes(row.reform_id) && isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
-  );
+  const filteredData = comparisonData.rows.filter((row) => selectedPolicies.includes(row.reform_id));
 
   if (filteredData.length === 0) return null;
 
@@ -265,58 +289,14 @@ export default OBRComparisonTable;
  * line saying when it will be (an expander that opens to "not yet" reads
  * as broken).
  */
-/** Whether the OBR has a figure for any of the selected measures. */
-export function hasObrFigures(rows, selectedPolicies) {
-  return (rows ?? []).some(
-    (row) =>
-      selectedPolicies.includes(row.reform_id) &&
-      (Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural)),
-  );
-}
-
-/**
- * The OBR rows bound to the approved results, or null while none are: no
- * OBR file is bindable until a verified route for the Budget's costings
- * exists, so today this stays null.
- */
-function useVerifiedObrRows(catalogue) {
-  const [state, setState] = useState({ catalogue: null, rows: null });
-  useEffect(() => {
-    let live = true;
-    loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
-      .then((text) => {
-        const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
-        const rows = parseDashboardCsv(text).map((row) => ({
-          reform_id: row.reform_id,
-          obr_static: numeric(row.obr_static_value),
-          obr_behavioural: numeric(row.obr_post_behavioural_value),
-        }));
-        if (live) setState({ catalogue, rows });
-      })
-      .catch(() => {
-        if (live) setState({ catalogue, rows: null });
-      });
-    return () => {
-      live = false;
-    };
-  }, [catalogue]);
-  return state.catalogue === catalogue ? state.rows : null;
-}
-
-/**
- * The OBR comparison as an expander at the foot of the revenue card, shown
- * only once the OBR has costed a selected measure and its figures are bound
- * to the approved results. Until then nothing shows (an expander that opens
- * to "not yet" reads as broken).
- */
 export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
-  const catalogue = useMeasureCatalogue();
-  const rows = useVerifiedObrRows(catalogue);
-  if (!rows || selectedPolicies.length === 0) return null;
-  if (!hasObrFigures(rows, selectedPolicies)) return null;
+  const data = useObrComparisonData();
+  if (!data || selectedPolicies.length === 0) return null;
+  // No verified OBR figures for the selection: nothing at all
+  if (data.unavailable || !hasObrFigures(data.rows, selectedPolicies)) return null;
   return (
     <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
-      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} />
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />
     </Disclosure>
   );
 }

@@ -82,7 +82,6 @@ function EmploymentIncomeChart({
   });
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
-
   const chartTitle = `${CHART_TITLE}, ${formatYearRange(selectedYear)}`;
 
   // Net income levels need the approved package baseline at every point;
