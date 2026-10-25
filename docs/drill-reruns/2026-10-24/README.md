@@ -10,7 +10,7 @@ Every `mock*_` measure from the four mock-Budget drills was rerun on today's lat
 - `drill2-minimal-fix.diff`, `drill3-minimal-fix.diff`: the only code changes needed to run.
 - `probe_monthly_fuel_duty.py`: the check behind the fuel duty finding below.
 
-The sealed folders and answer keys were not opened. Drill-day figures come from `public/data/*.csv` on each drill branch. The official mock costings come from the filled national scoring sheets committed there.
+The sealed folders and answer keys were not opened. Drill-day figures come from `public/data/*.csv` on each drill branch. The drills' mock costings come from the filled national scoring sheets committed there. The dashboard's benchmarks are real published costings instead (see "External benchmarks" below).
 
 ## What was rerun
 
@@ -75,18 +75,58 @@ This is not confirmed by bisection. The lesson for Budget day: write dated fuel 
 
 The median and maximum are taken over "material" cells: those where the drill-day revenue is at least £0.01bn, excluding the invalid fuel rows. The size change is (|rerun| − |drill day|) / |drill day|.
 
-| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the like-for-like mock official costing (year cells) |
-|---|---|---|---|---|
-| 1 | 17 (4) | 9.98% | 20.3% | n/a: no filled national sheet with costings on the branch |
-| 2 | 23 (4) | 2.95% | 17.4% | 7 closer / 7 further |
-| 3 | 41 (5) | 1.95% | 14.6% | 23 closer / 10 further |
-| 4 | 51 (0) | 0.00% | 0.36% | 6 closer / 0 further (all moves are under 0.4%) |
+| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Closer / further vs the external costing (year cells) | Closer / further vs the drill mock costing |
+|---|---|---|---|---|---|
+| 1 | 17 (4) | 9.98% | 20.3% | 2 / 2 | n/a: no filled national sheet |
+| 2 | 23 (4) | 2.95% | 17.4% | 0 / 2 | 7 / 7 |
+| 3 | 41 (5) | 1.95% | 14.6% | 1 / 0 (1 unchanged) | 23 / 10 |
+| 4 | 51 (0) | 0.00% | 0.36% | none compared | 6 / 0 (all moves under 0.4%) |
 
-"Closer/further" compares each year cell's drill-day and rerun figures with the like-for-like mock official costing (see "Benchmark basis" below). Model year Y is fiscal year Y–Y+1, as the drill code states. Cells with a model limitation and the invalid fuel duty cells are left out (`vs_official_static` = `model_limitation` or `invalid` in `comparison.csv`).
+"Closer/further" compares each year cell's drill-day and rerun figures with a benchmark. The dashboard uses the external costing (`vs_external` in `comparison.csv`); the mock column is kept for reference (`vs_official_static`, like-for-like mock figure, see "Benchmark basis" below). Model year Y is fiscal year Y–Y+1, as the drill code states. Cells with a model limitation and the invalid fuel duty cells are left out (`vs_official_static` = `model_limitation` or `invalid` in `comparison.csv`).
+
+### External benchmarks
+
+The drills' costings were invented for the rehearsals, so the dashboard compares against **real published costings** of the same or an equivalent policy. `scripts/build_drill_rerun_dashboard.py` holds each source, the exact row or page, and the scaling (`EXTERNAL`). It writes `external_bn`, `external_match`, `external_source`, `external_url` and `vs_external` into `comparison.csv`. The mock figure stays on the dashboard as a second line, "drill mock".
+
+Match quality:
+
+- **Same change**: read straight off the source.
+- **Rescaled**: the same kind of change scaled to this size, for example a £430 threshold rise as 4.13 × HMRC's £2-a-week row.
+- **Derived**: official counts × the measure's amount.
+- **Different basis**: a real figure that is post-behavioural where our model is static (CGT). Shown, not compared.
+- **Related policy only**: a real costing of a related policy (for example the real £2m surcharge for a £1.5m band). Context, not compared.
+
+Only same-change, rescaled and derived figures that are not just an upper or lower bound count towards closer/further and the "differs most" list.
+
+| Drill | Measure | Match | External figure (£bn, + = revenue) | Source |
+|---|---|---|---|---|
+| 1 | Child Benefit £30/£20 | Rescaled | −1.19 (2027-28), −1.18 (2028-29) | [HMRC ready reckoner, June 2025](https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes): CB first and subsequent child £1/week |
+| 1 | NI threshold to £13,000 | Rescaled | −1.01, −1.12 | Ready reckoner: employee entry threshold £2/week; lower profits limit £104 |
+| 1 | VAT zero rate on household energy | Rescaled, upper bound | −2.40 (2027-28) | Ready reckoner: VAT reduced rate 1 point × 5 |
+| 1, 2, 3, 4 | Fuel duty measures | Related | Real measure −2.37 (2026-27), about −0.85 a year after | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=14), p. 14 |
+| 1, 2, 3 | Council tax surcharge variants | Related | Real £2m+ surcharge: static +0.61 (2028-29), post-behavioural +0.40 | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=51), p. 51 |
+| 2 | Electricity VAT zero rate | Rescaled, upper bound | −1.70 (2027-28) | [HM Treasury, 21 July 2026](https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living): about £850m for October 2026 to March 2027, doubled |
+| 2 | Employer NI threshold +£500 | Rescaled | −2.07, −2.26 | Ready reckoner: employer threshold £2/week |
+| 2 | CGT 18→20%, 24→28% | Different basis | −0.14, −0.66 (post-behavioural) | Ready reckoner: CGT rate rows, interpolated |
+| 2 | £150 energy payment | Derived, lower bound | −1.01 (2026-27) | [DWP Universal Credit statistics, Feb 2026](https://www.gov.uk/government/statistics/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026): 6.7m households × £150 |
+| 3 | CGT 28% and exempt amount £2,000 | Different basis | −0.09, −0.60 (post-behavioural) | Ready reckoner |
+| 3 | Class 4 main rate +1 point | Same change | +0.53, +0.45 | Ready reckoner: Class 4 main rate 1 point |
+| 3 | Warm Home Discount +£100 | Derived, upper bound | −0.67 a winter | [DESNZ consultation](https://www.gov.uk/government/consultations/expanding-the-warm-home-discount-scheme-2025-to-2026/expanding-the-warm-home-discount-scheme-2025-to-2026-consultation-document-accessible-webpage): £1bn for £150 in Great Britain |
+| 3, 4 | LHA to 30th percentile | Related | 2024 reset: −1.66 (2027-28), −1.70 | [Autumn Statement 2023 policy costings](https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf#page=16), p. 16 |
+| 3 | Salary sacrifice cap £1,000 | Related | Real £2,000 cap: +4.85 (2029-30), +2.59 | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=47), p. 47 |
+| 3, 4 | Threshold freeze to 2032 | Related | First year of the real freeze: +3.37 (2028-29) | [Budget 2025 Table 4.1](https://assets.publishing.service.gov.uk/media/69269df29fd433badebc31b3/Table_4.1_-_Budget_2025_Policy_Decisions.xlsx), line 46 |
+| 4 | Carer's Allowance limit +£26 | Rescaled (model limitation) | −0.06, −0.08, −0.10 | [Autumn Budget 2024 policy costings](https://assets.publishing.service.gov.uk/media/6721d2c54da1c0d41942a8d2/Policy_Costing_Document_-_Autumn_Budget_2024.pdf#page=64), p. 64: +£45 rise, scaled |
+| 4 | CGT higher rate 26% | Different basis | +0.00, −0.24 (post-behavioural) | Ready reckoner |
+| 4 | Savings starting band to £2,000 | Rescaled (model limitation) | +0.15 (2028-29) | Ready reckoner: starting rate limit £100 × 30 |
+| 4 | Warm Home Discount top-up | Derived, approximate | −0.83 (2026-27) | DESNZ consultation |
+
+**No external costing found:** State Pension personal allowance, State Pension double lock, Pensioner Allowance, State Pension Top-up Allowance, additional rate threshold at £100,000, employer NI relief for under-22s and under-23s, Child Benefit Early Years Addition, UC child element +£12.50, VAT cut on road fuel, and the drill 4 package. None is a real announced policy with a published costing, and none maps onto a ready-reckoner row.
+
+The ready reckoner covers 2026-27 to 2028-29 only, on the Spring Statement 2025 baseline, and includes behavioural effects for income tax, NICs and CGT.
 
 ### Benchmark basis
 
-The "official" costings here are **mock official costings**: the invented Treasury-style costings written for each rehearsal (each packet says "Every figure is invented for a PolicyEngine rehearsal"). They exist on no real website; the dashboard links each figure to the drill's mock costing note on GitHub. There is no real costing to compare with yet.
+This section is about the drills' **mock costings**: the invented Treasury-style costings written for each rehearsal (each packet says "Every figure is invented for a PolicyEngine rehearsal"). The dashboard shows them as a second line, "drill mock", linked to each drill's costing note.
 
 The rerun figure is a standalone tax-year liability, on a net `gov_balance` basis. The costings are on different bases:
 

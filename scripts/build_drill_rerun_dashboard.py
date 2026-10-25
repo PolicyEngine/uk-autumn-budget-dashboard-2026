@@ -231,6 +231,250 @@ def gap_rows(rows):
     return sorted(out, key=lambda x: -abs(x["gap"]))
 
 
+# Real published benchmarks. The drill costings are invented, so each measure
+# is matched to the closest real published costing of the same or an
+# equivalent policy, rescaled where the size of the change differs. Values are
+# £bn by model year (2027 = 2027-28); revenue is positive, cost negative.
+#
+# match:
+#   direct    the same change, read straight off the source
+#   rescaled  the same kind of change, scaled to this size (shown in "calc")
+#   derived   official counts × the measure's amount (shown in "calc")
+#   basis     a real figure on a different basis (post-behavioural); shown,
+#             not scored
+#   related   a real costing of a related policy; context only, not scored
+#   none      no external costing found
+# bound: the figure is only an upper or lower bound, or approximate.
+# Only direct, rescaled and derived figures without a bound are compared
+# (closer/further); the rest are shown for context.
+RR = {
+    "source": "HMRC, Direct effects of illustrative tax changes (June 2025)",
+    "url": "https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes",
+    "file": "https://assets.publishing.service.gov.uk/media/68552862b46781eacfd71d71/June_2025_TRR_ODS__1_.ods",
+    "basis": "Spring Statement 2025 baseline; National Accounts; behavioural effects included for income tax, NICs and CGT",
+}
+B25 = "https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf"
+B25T = "https://assets.publishing.service.gov.uk/media/69269df29fd433badebc31b3/Table_4.1_-_Budget_2025_Policy_Decisions.xlsx"
+AB24 = "https://assets.publishing.service.gov.uk/media/6721d2c54da1c0d41942a8d2/Policy_Costing_Document_-_Autumn_Budget_2024.pdf"
+AS23 = "https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf"
+ELEC = "https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living"
+WHD = ("https://www.gov.uk/government/consultations/expanding-the-warm-home-discount-scheme-2025-to-2026/"
+       "expanding-the-warm-home-discount-scheme-2025-to-2026-consultation-document-accessible-webpage")
+UCS = ("https://www.gov.uk/government/statistics/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026/"
+       "universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026")
+
+
+def _rr(where, calc, values, match="rescaled", bound=None):
+    e = {"match": match, "source": RR["source"], "short": "HMRC ready reckoner", "url": RR["url"], "file": RR["file"],
+         "where": where, "basis": RR["basis"], "calc": calc, "values": values}
+    if bound:
+        e["bound"] = bound
+    return e
+
+
+FUEL_REL = {
+    "match": "related", "source": "HM Treasury, Budget 2025 policy costings, p. 14",
+    "url": f"{B25}#page=14",
+    "where": "Fuel Duty: cancel uprating for 2026-27; extend the 5p cut to 31 August 2026, then staged rises",
+    "basis": "post-behavioural",
+    "calc": "Real Budget 2025 fuel duty measure: −£2.37bn (2026-27), then about −£0.85bn a year from 2027-28. "
+            "Rule of thumb from the HMRC ready reckoner: a 1% change in petrol and diesel duty is £235m in 2027-28 (about £0.4bn per 1p a litre).",
+    "values": {},
+}
+HVCTS_REL = {
+    "match": "related", "source": "HM Treasury, Budget 2025 policy costings, p. 51",
+    "url": f"{B25}#page=51",
+    "where": "High Value Council Tax Surcharge on homes over £2m in England from April 2028",
+    "basis": "static and post-behavioural",
+    "calc": "The real surcharge (£2m and above, 165,000 homes): static +£0.61bn in 2028-29, +£0.62bn, +£0.64bn; "
+            "post-behavioural +£0.40bn, +£0.43bn, +£0.44bn (Table 4.1). Different bands, so not comparable.",
+    "values": {},
+}
+LHA_REL = {
+    "match": "related", "source": "HM Treasury, Autumn Statement 2023 policy costings, p. 16",
+    "url": f"{AS23}#page=16",
+    "where": "Local Housing Allowance: set to the 30th percentile from April 2024",
+    "basis": "post-behavioural (landlords and claimants)",
+    "calc": "The 2024 reset after a four-year freeze: −£1.29bn (2024-25), −£1.49bn, −£1.59bn, −£1.66bn (2027-28), −£1.70bn (2028-29). "
+            "A 2027 reset starts from a different gap between rates and rents, so this is context, not a benchmark.",
+    "values": {},
+}
+FREEZE_REL = {
+    "match": "related", "source": "HM Treasury, Budget 2025 Table 4.1, line 46, and policy costings p. 40",
+    "url": f"{B25}#page=40",
+    "where": "Personal tax: maintain income tax and NICs thresholds for three further years to April 2031",
+    "basis": "post-behavioural (static in the costings document)",
+    "calc": "The first frozen year of the real extension raises +£3.37bn in 2028-29 (static +£3.33bn). "
+            "A one-year freeze in 2031-32 is the same kind of measure three years later, on a larger income base, so it should be somewhat larger.",
+    "values": {},
+}
+CGT_RULE = ("HMRC's CGT rows are post-behavioural and non-linear; points between the 1- and 5-point rows are "
+            "interpolated linearly. Our model is static, so this is not compared.")
+NONE = {"match": "none"}
+
+EXTERNAL = {
+    # Drill 1
+    "mock_child_benefit_increase": _rr(
+        "Child Benefit: increase first child rate by £1 a week (cost); increase subsequent child rate by £1 a week (cost)",
+        "Rise over the April 2027 baseline (£27.67 / £18.31, policyengine-uk): +£2.33 eldest, +£1.69 others. "
+        "2027-28: 2.33 × £335m + 1.69 × £240m = £1.19bn; 2028-29: 2.33 × £330m + 1.69 × £245m = £1.18bn. Includes the HICBC offset.",
+        {2027: -1.186, 2028: -1.183}),
+    "mock_nics_threshold_rise": _rr(
+        "Change employee entry threshold by £2 per week; change lower profits limit by £104 per year",
+        "£430 a year = 4.13 × £104. 2027-28: 4.13 × (£230m + £15m) = £1.01bn; 2028-29: 4.13 × (£250m + £20m) = £1.12bn.",
+        {2027: -1.013, 2028: -1.116}),
+    "mock_energy_vat_zero_rate": _rr(
+        "VAT: change reduced rate by 1 percentage point",
+        "5 points × £480m = £2.40bn in 2027-28. An upper bound: the 5% rate also covers a few other goods, and the row is UK-wide while the measure is Great Britain only.",
+        {2027: -2.40}, bound="upper"),
+    "mock_fuel_duty_freeze": FUEL_REL,
+    "mock_hvcts_extension": HVCTS_REL,
+    # Drill 2
+    "mock2_fuel_duty_hold": FUEL_REL,
+    "mock2_electricity_vat_zero": {
+        "match": "rescaled", "source": "HM Treasury news release, 21 July 2026", "short": "HM Treasury, July 2026",
+        "url": ELEC, "where": "Zero rate of VAT on domestic electricity in Great Britain, 1 October 2026 to 31 March 2027",
+        "basis": "Treasury estimate on estimated electricity prices",
+        "calc": "The real cut costs around £850m for six months (2026-27). Doubled for a full year in 2027-28: £1.70bn. "
+                "The upper end: October to March is the higher-use half of the year.",
+        "values": {2027: -1.70}, "bound": "upper"},
+    "mock2_employer_ni_threshold": _rr(
+        "Change employer threshold by £2 per week",
+        "£500 a year = 4.81 × £104. 2027-28: 4.81 × £430m = £2.07bn; 2028-29: 4.81 × £470m = £2.26bn.",
+        {2027: -2.067, 2028: -2.260}),
+    "mock2_cgt_rates": _rr(
+        "Increase lower / higher Capital Gains Tax rate by 1 and 5 percentage points",
+        "Lower rate +2 points: +£13m (2027-28), +£1m (2028-29); higher rate +4 points: −£156m, −£660m. Total −£0.14bn and −£0.66bn: "
+        "after behaviour, HMRC expects the rise to lose money. " + CGT_RULE,
+        {2027: -0.144, 2028: -0.659}, match="basis"),
+    "mock2_hvcts_band": HVCTS_REL,
+    "mock2_state_pension_uprating": NONE,
+    "mock2_state_pension_personal_allowance": NONE,
+    "mock2_energy_price_payment": {
+        "match": "derived", "source": "DWP, Universal Credit statistics to 12 February 2026", "short": "DWP Universal Credit statistics",
+        "url": UCS, "where": "6.7 million households on Universal Credit with a payment, Great Britain, February 2026",
+        "basis": "count × amount; no take-up or behaviour",
+        "calc": "6.7m × £150 = £1.01bn. A lower bound: Pension Credit households not on Universal Credit are left out.",
+        "values": {2026: -1.005}, "bound": "lower"},
+    # Drill 3
+    "mock3_fuel_duty_phasing": FUEL_REL,
+    "mock3_whd_top_up": {
+        "match": "derived", "source": "DESNZ, Expanding the Warm Home Discount scheme 2025 to 2026 (consultation)", "short": "DESNZ Warm Home Discount",
+        "url": WHD, "where": "Expanded scheme: around 6.1 million households in Great Britain, spend from around £600m to £1bn",
+        "basis": "scheme spend × amount",
+        "calc": "£1bn for £150 a household, so £100 is £0.67bn a winter. Great Britain; the measure is England and Wales only, so a little less.",
+        "values": {2026: -0.667, 2027: -0.667}, "bound": "upper"},
+    "mock3_lha_30th_percentile": LHA_REL,
+    "mock3_pensioner_allowance": NONE,
+    "mock3_employer_ni_under_22": NONE,
+    "mock3_additional_rate_threshold": NONE,
+    "mock3_cgt_higher_rate_aea": _rr(
+        "Increase higher Capital Gains Tax rate by 1 and 5 percentage points; increase Annual Exempt Amount by £500",
+        "Higher rate +4 points: −£156m (2027-28), −£660m (2028-29); exempt amount −£1,000: +£70m, +£60m. Total −£0.09bn and −£0.60bn. " + CGT_RULE,
+        {2027: -0.086, 2028: -0.600}, match="basis"),
+    "mock3_salary_sacrifice_cap": {
+        "match": "related", "source": "HM Treasury, Budget 2025 policy costings, p. 47",
+        "url": f"{B25}#page=47", "where": "Salary Sacrifice: limit NICs relief to £2,000 a year from 6 April 2029",
+        "basis": "post-behavioural (Table 4.1)",
+        "calc": "The real £2,000 cap: +£4.85bn (2029-30), +£2.59bn (2030-31); static +£4.87bn, +£5.07bn. The drill cuts the cap again to £1,000, which is not costed anywhere.",
+        "values": {}},
+    "mock3_hvcts_top_bands": HVCTS_REL,
+    "mock3_threshold_freeze_2032": FREEZE_REL,
+    "mock3_class4_main_rate": _rr(
+        "Change Class 4 main rate by 1 percentage point",
+        "Exactly this change: +£525m (2027-28), +£445m (2028-29). Self-assessment timing: part of the first year's yield is paid later.",
+        {2027: 0.525, 2028: 0.445}, match="direct"),
+    # Drill 4
+    "mock4_cb_early_years_addition": NONE,
+    "mock4_state_pension_topup_allowance": NONE,
+    "mock4_fuel_vat_cut": NONE,
+    "mock4_employer_ni_under23": NONE,
+    "mock4_fuel_duty": FUEL_REL,
+    "mock4_uc_child_element": NONE,
+    "mock4_lha_reset": LHA_REL,
+    "mock4_carers_allowance_limit": {
+        "match": "rescaled", "source": "HM Treasury, Autumn Budget 2024 policy costings, p. 64", "short": "Autumn Budget 2024 costing",
+        "url": f"{AB24}#page=64", "where": "Carer's Allowance: earnings limit from £151 to £196 a week from April 2025",
+        "basis": "costing of newly eligible claimants",
+        "calc": "The real +£45 rise costs £105m (2027-28), £135m, £165m. Scaled to +£26: £61m, £78m, £95m. Linear scaling is rough: who is near the limit differs.",
+        "values": {2027: -0.061, 2028: -0.078, 2029: -0.095}},
+    "mock4_cgt_higher_rate": _rr(
+        "Increase higher Capital Gains Tax rate by 1 and 5 percentage points",
+        "Higher rate +2 points: +£1m (2027-28), −£240m (2028-29). " + CGT_RULE,
+        {2027: 0.001, 2028: -0.240}, match="basis"),
+    "mock4_savings_starting_band": _rr(
+        "Change starting rate limit for savings income by £100",
+        "£3,000 cut = 30 × £5m = £150m in 2028-29.",
+        {2028: 0.150}),
+    "mock4_threshold_freeze_2032": FREEZE_REL,
+    "mock4_combined": {"match": "none", "calc": "A package of drill measures; no single external costing."},
+    "mock4_whd_topup": {
+        "match": "derived", "source": "DESNZ, Expanding the Warm Home Discount scheme 2025 to 2026 (consultation)", "short": "DESNZ Warm Home Discount",
+        "url": WHD, "where": "Expanded scheme: around 6.1 million households in Great Britain, spend from around £600m to £1bn",
+        "basis": "scheme spend × amount",
+        "calc": "£1bn for £150 a household, so £125 is £0.83bn for winter 2026-27. Great Britain, and the £75 Pension Credit part is not separated, so approximate.",
+        "values": {2026: -0.833}, "bound": "approximate"},
+}
+
+SCORED = ("direct", "rescaled", "derived")
+MATCH_LABEL = {
+    "direct": "Same change", "rescaled": "Rescaled", "derived": "Derived from official counts",
+    "basis": "Different basis", "related": "Related policy only", "none": "No external costing found",
+}
+
+
+def vs_ext(old, new, ext):
+    if ext is None:
+        return None
+    a, b = abs(old - ext), abs(new - ext)
+    if abs(a - b) < 0.005:
+        return "same"
+    return "closer" if b < a else "further"
+
+
+def ext_gaps(rows, k=5):
+    """Largest gaps between the rerun and a scored external figure: one cell
+    per measure (its largest gap), top k by size."""
+    best = {}
+    for r in rows:
+        if r["ext"] is None or r["invalid"] or r["limit"] or zero_cell(r):
+            continue
+        gap = r["new"] - r["ext"]
+        if r["id"] not in best or abs(gap) > abs(best[r["id"]]["gap"]):
+            best[r["id"]] = {
+                "label": r["name"], "drill": r["drill"], "id": r["id"], "fy": r["fy"], "icon": r["icon"],
+                "ours": r["new"], "drill_day": r["old"], "official": r["ext"],
+                "gap": gap, "gap_drill_day": r["old"] - r["ext"],
+                "ratio": abs(r["new"]) / abs(r["ext"]),
+                "match": EXTERNAL[r["id"]]["match"],
+                "source": EXTERNAL[r["id"]]["source"], "url": EXTERNAL[r["id"]]["url"],
+                "short": EXTERNAL[r["id"]].get("short", EXTERNAL[r["id"]]["source"]),
+                "calc": EXTERNAL[r["id"]]["calc"],
+            }
+    return sorted(best.values(), key=lambda x: -abs(x["gap"]))[:k]
+
+
+def write_csv_columns(path, comp, rows):
+    """Add the external benchmark columns to comparison.csv (idempotent)."""
+    by = {(r["drill"], r["id"], r["year"]): r for r in rows}
+    cols = ["external_bn", "external_match", "external_source", "external_url", "vs_external"]
+    fields = [c for c in comp[0].keys() if c not in cols] + cols
+    for c in comp:
+        r = by[(c["drill"], c["measure_id"], int(c["year"]))]
+        e = EXTERNAL.get(r["id"], NONE)
+        v = r["ext"] if r["ext"] is not None else r["ext_ref"]
+        c["external_bn"] = "" if v is None else f"{v:g}"
+        c["external_match"] = e["match"]
+        c["external_source"] = e.get("source", "")
+        c["external_url"] = e.get("url", "")
+        c["vs_external"] = ("invalid" if r["invalid"] else "model_limitation" if r["limit"] and r["ext"] is not None
+                            else {"same": "unchanged"}.get(r["vs"], r["vs"] or ""))
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")
+        w.writeheader()
+        w.writerows(comp)
+
+
 def zero_cell(x):
     return abs(x["old"] or 0) < 0.005 and abs(x["new"] or 0) < 0.005
 
@@ -356,6 +600,12 @@ def main() -> None:
         v = r["vs_official_static"] or None
         vs = {"unchanged": "same"}.get(v, v) if v in ("closer", "further", "unchanged") else None
         note, links = (None, []) if invalid else cause(d, mid, y)
+        ex = EXTERNAL.get(mid, NONE)
+        xv = ex.get("values", {}).get(y)
+        scored = ex["match"] in SCORED and "bound" not in ex
+        ext = xv if scored else None
+        ext_ref = None if scored else xv
+        xvs = None if (invalid or limit) else vs_ext(old, new, ext)
         name = NAMES.get(mid, r["measure_name"].removeprefix("MOCK: ").replace(" (MOCK)", ""))
         rows.append({
             "drill": d, "id": mid, "name": name[0].upper() + name[1:],
@@ -366,7 +616,8 @@ def main() -> None:
             "static": static, "post": post, "team": team,
             "sheet": None if not sh else {"url": sh["url"], "file": sh["file"], "line": sh["line"]},
             "note_sec": notes.get((d, mid)) if sh else None,
-            "lfl": lfl, "lfl_src": lfl_src, "limit": limit, "vs": vs, "invalid": invalid,
+            "lfl": lfl, "lfl_src": lfl_src, "limit": limit, "mock_vs": vs, "invalid": invalid,
+            "ext": ext, "ext_ref": ext_ref, "vs": xvs,
             "note": note, "links": links,
             "d": {k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
                   for k in ("d1_avg_change", "d5_avg_change", "d10_avg_change", "people_affected_pct")},
@@ -377,20 +628,27 @@ def main() -> None:
         g = [r for r in rows if r["drill"] == d]
         mat = [r for r in g if abs(r["old"]) >= 0.01 and not r["invalid"]]
         sizes = [abs(r["size_pct"]) for r in mat]
-        has_sheet = any(r["sheet"] for r in g)
+        has_ext = any(r["ext"] is not None for r in g)
         m = DRILL_META[d]
         groups.append({
             "drill": d, **m,
             "pr_url": f"{GH}/pull/{m['pr']}", "issue_url": f"{GH}/issues/{m['issue']}",
             "median": statistics.median(sizes), "max": max(sizes), "n": len(mat),
-            "closer": sum(r["vs"] == "closer" for r in g) if has_sheet else None,
-            "further": sum(r["vs"] == "further" for r in g) if has_sheet else None,
+            "closer": sum(r["vs"] == "closer" for r in g) if has_ext else None,
+            "further": sum(r["vs"] == "further" for r in g) if has_ext else None,
+            "mock_closer": sum(r["mock_vs"] == "closer" for r in g),
+            "mock_further": sum(r["mock_vs"] == "further" for r in g),
             "limited": sorted({r["name"] for r in g if r["limit"]}),
         })
 
     out = base / "dashboard"
     out.mkdir(exist_ok=True)
-    (out / "data.json").write_text(json.dumps({"drills": groups, "rows": rows, "gaps": gap_rows(rows)}, ensure_ascii=False))
+    ext_meta = {mid: {**{k: v for k, v in e.items() if k != "values"},
+                      "label": MATCH_LABEL[e["match"]] + (f" ({e['bound']}{' bound' if e['bound'] != 'approximate' else ''})" if "bound" in e else "")}
+                for mid, e in EXTERNAL.items()}
+    (out / "data.json").write_text(json.dumps(
+        {"drills": groups, "rows": rows, "gaps": ext_gaps(rows), "ext": ext_meta}, ensure_ascii=False))
+    write_csv_columns(base / "comparison.csv", comp, rows)
     print(f"wrote {out / 'data.json'}: {len(rows)} rows")
     for g in groups:
         print(g["drill"], round(g["median"], 3), round(g["max"], 3), g["n"], g["closer"], g["further"], g["limited"])
