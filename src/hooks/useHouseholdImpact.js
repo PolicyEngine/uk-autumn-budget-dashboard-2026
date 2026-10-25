@@ -43,7 +43,8 @@ const DEBOUNCE_MS = 400;
  *   selected measure's approved definition (`publishedDefinitions`). Both
  *   stages name their commits, and an answer whose reported definitions
  *   differ, or that reports none, is refused: a DefinitionMismatchError
- *   naming the measures
+ *   naming the measures. A selected measure with none here is refused
+ *   before any request, so leaving it out never shows an unchecked answer
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
@@ -73,6 +74,17 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
 
   useEffect(() => {
     if (!enabled || policies.length === 0) return undefined;
+    const refuse = (error) => {
+      cache.delete(key);
+      setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+    };
+    // Nothing is answered unchecked: a selected measure with no approved
+    // definition is refused before any request
+    const unapproved = policies.filter((id) => !Object.hasOwn(expectedDefinitions ?? {}, id));
+    if (unapproved.length) {
+      refuse(new DefinitionMismatchError(definitionRefusals(expectedDefinitions, null, unapproved)));
+      return undefined;
+    }
     const cached = cache.get(key);
     if (cached?.complete) {
       setState({
@@ -104,15 +116,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // and is dropped if the snapshot it was made under is no longer live:
     // the page then shows the new snapshot's views, or none.
     const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
-    // The selected measures the API's code does not compute from their
-    // approved definitions: none unless they are checked
-    const refusals = (answer) =>
-      expectedDefinitions ? definitionRefusals(expectedDefinitions, answer.definitions, policies) : [];
-    const definitions = expectedDefinitions ?? undefined;
-    const refuse = (error) => {
-      cache.delete(key);
-      setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+    // The refusal of the selected measures the API's code does not compute
+    // from their approved definitions, or null when it computes them all
+    const mismatch = (answer) => {
+      const refused = definitionRefusals(expectedDefinitions, answer.definitions, policies);
+      return refused.length ? new DefinitionMismatchError(refused, { unchecked: answer.definitions === null }) : null;
     };
+    const definitions = expectedDefinitions;
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
       if (!first) {
@@ -144,9 +154,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           return;
         }
         // Computed from other definitions than the approved ones
-        const refused = refusals(first);
-        if (refused.length) {
-          refuse(new DefinitionMismatchError(refused));
+        const refused = mismatch(first);
+        if (refused) {
+          refuse(refused);
           return;
         }
         const complete = first.byPolicy !== null && first.sweep !== null;
@@ -172,8 +182,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         const detail = normaliseHouseholdImpact(raw);
         // Checked as the headline was: a deployment between the two stages
         // may compute a measure from another definition
-        const refused = refusals(detail);
-        if (refused.length) throw new DefinitionMismatchError(refused);
+        const refused = mismatch(detail);
+        if (refused) throw refused;
         // Refused unless from the headline's own package versions
         const merged = mergeStages(first, detail);
         cache.set(key, { data: merged, complete: true });

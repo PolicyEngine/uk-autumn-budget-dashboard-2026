@@ -3,6 +3,8 @@ import fc from "fast-check";
 import {
   DefinitionMismatchError,
   EngineMismatchError,
+  HouseholdApiError,
+  UNREGISTERED,
   atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
@@ -13,7 +15,9 @@ import {
   postHouseholdImpact,
   requestKey,
   statePensionFor,
+  unregisteredMeasures,
 } from "./householdImpactApi";
+import contract from "./publication/contract.json";
 import { definitionDifferences } from "./publication/definitions";
 import { approvedDefinition, requestedDefinitions } from "../test/definitionsFixture";
 import {
@@ -577,5 +581,66 @@ describe("the household answer's definitions", () => {
     expect(error.kind).toBe("definition");
     expect(error.refused).toEqual([{ id: "alpha", problems: ["no definition reported"] }]);
     expect(error.message).toMatch(/does not compute alpha from the definitions/);
+    expect(error.unchecked).toBe(false);
+    expect(new DefinitionMismatchError([], { unchecked: true }).unchecked).toBe(true);
+  });
+
+  // Review of 0608183, finding 2: the API refuses a measure its code doesn't
+  // register with a 422, before it reports any definition
+  describe("a 422 naming measures the running code doesn't register", () => {
+    // The API's answer (HouseholdImpactRequest._known_measures, through
+    // FastAPI), as captured from api.py on 25 October
+    const unknown = (ids, requested) => ({
+      detail: [{
+        type: "value_error",
+        loc: ["body", "policies"],
+        msg: `Value error, Unknown measures: ${ids.join(", ")}`,
+        input: requested,
+        ctx: { error: {} },
+      }],
+    });
+    const post = async (payload, policies) => {
+      vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+      const fetchImpl = vi.fn(async () => Response.json(payload, { status: 422 }));
+      return postHouseholdImpact({ year: 2029, policies }, { fetchImpl }).then(() => null, (error) => error);
+    };
+
+    it("refuses them as definitions the running code can't bind, in the API's words", async () => {
+      const policies = ["badr_lifetime_limit_cut", "zz_new_measure", "aa_other"];
+      const error = await post(unknown(["aa_other", "zz_new_measure"], policies), policies);
+      expect(error).toBeInstanceOf(DefinitionMismatchError);
+      expect(error.unchecked).toBe(false);
+      const problem = `the running code cannot bind it: ${UNREGISTERED}`;
+      expect(error.refused).toEqual([{ id: "aa_other", problems: [problem] }, { id: "zz_new_measure", problems: [problem] }]);
+      // As the page words a reported UNREGISTERED (the contract's vectors)
+      expect(UNREGISTERED).toBe(contract.definition_unregistered);
+      expect(definitionDifferences(approvedDefinition(), { git_sha: "c".repeat(40), error: UNREGISTERED })).toEqual([problem]);
+      expect(contract.definition_vectors.differences.some((vector) => vector.problems.includes(problem))).toBe(true);
+    });
+
+    it("keeps any other 422 as it was", async () => {
+      const policies = ["badr_lifetime_limit_cut"];
+      // A measure it didn't ask for
+      expect(await post(unknown(["zz_new_measure"], ["zz_new_measure"]), policies)).toBeInstanceOf(HouseholdApiError);
+      // Another field refused beside it
+      const both = unknown(["badr_lifetime_limit_cut"], policies);
+      both.detail.push({ type: "less_than_equal", loc: ["body", "household", "children", 0, "age"], msg: "Input should be less than or equal to 19" });
+      const error = await post(both, policies);
+      expect(error).toBeInstanceOf(HouseholdApiError);
+      expect(error.fields.map((field) => field.field)).toEqual(["policies", "household.children.0.age"]);
+      // Another refusal of the measures
+      expect(await post({ detail: [{ loc: ["body", "policies"], msg: "List should have at most 12 items" }] }, policies)).toBeInstanceOf(HouseholdApiError);
+    });
+
+    it("names them exactly when every refusal is of measures the request asked for", () => {
+      const id = fc.stringMatching(/^[a-z][a-z0-9_]{0,10}$/);
+      fc.assert(fc.property(fc.uniqueArray(id, { minLength: 1, maxLength: 6 }), fc.uniqueArray(id, { minLength: 1, maxLength: 4 }), (requested, named) => {
+        const found = unregisteredMeasures(unknown(named, requested).detail, requested);
+        expect(found).toEqual(named.every((name) => requested.includes(name)) ? [...named].sort() : []);
+      }));
+      for (const detail of [undefined, null, "Unknown measures: a", [], [{ loc: ["body", "year"], msg: "Value error, Unknown measures: a" }]]) {
+        expect(unregisteredMeasures(detail, ["a"])).toEqual([]);
+      }
+    });
   });
 });

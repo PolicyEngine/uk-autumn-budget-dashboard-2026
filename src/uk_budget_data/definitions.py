@@ -45,6 +45,7 @@ import copy
 import functools
 import json
 import re
+import subprocess
 import urllib.parse
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -437,10 +438,25 @@ def manifest_report(
     return sorted(rows, key=lambda row: row["key"])
 
 
-def _changes_in_checkout(git_sha: str) -> list[str]:
+def _changes_in_checkout(
+    git_sha: str, repo_root: Path = Path(".")
+) -> list[str]:
     from uk_budget_data.publication.receipt import calculation_changes_since
 
-    return calculation_changes_since(git_sha, Path("."))
+    # One this checkout lacks would otherwise read as a side branch
+    if (
+        FULL_COMMIT.fullmatch(git_sha)
+        and subprocess.run(
+            ["git", "cat-file", "-e", f"{git_sha}^{{commit}}"],
+            cwd=repo_root,
+            capture_output=True,
+        ).returncode
+    ):
+        raise ValueError(
+            f"this checkout has no commit {git_sha[:12]}: fetch it "
+            "(git fetch origin), or unshallow a shallow clone"
+        )
+    return calculation_changes_since(git_sha, repo_root)
 
 
 def changes_lines(rows: list[dict], changes_since) -> list[str]:

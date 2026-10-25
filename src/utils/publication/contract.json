@@ -20,6 +20,7 @@
     "reform_sha256",
     "binding"
   ],
+  "definition_unregistered": "not a measure the running code registers",
   "definition_vectors": {
     "differences": [
       {

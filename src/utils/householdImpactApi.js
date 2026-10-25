@@ -20,6 +20,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import contract from "./publication/contract.json";
 import { definitionDifferences, definitionQuery } from "./publication/definitions";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
@@ -228,6 +229,32 @@ export function requestKey(body) {
   return JSON.stringify(rest);
 }
 
+/** How the API words a measure its code doesn't register (`uk_budget_data.definitions.UNREGISTERED`). */
+export const UNREGISTERED = contract.definition_unregistered;
+
+/**
+ * The requested measures a 422 says the running code doesn't register
+ * (`HouseholdImpactRequest._known_measures`: "Unknown measures: a, b" on
+ * `policies`), in id order. Empty unless every one it names was
+ * requested, so any other refusal keeps its own message.
+ *
+ * @param {*} detail - The 422's `detail`
+ * @param {string[]} requested - The request's `policies`
+ * @returns {string[]}
+ */
+export function unregisteredMeasures(detail, requested) {
+  if (!Array.isArray(detail) || !Array.isArray(requested)) return [];
+  const named = new Set();
+  for (const item of detail) {
+    const loc = Array.isArray(item?.loc) ? item.loc.filter((part) => part !== "body") : [];
+    const match = /Unknown measures: (.+)$/.exec(typeof item?.msg === "string" ? item.msg : "");
+    if (loc.length !== 1 || loc[0] !== "policies" || !match) return [];
+    for (const id of match[1].split(", ")) named.add(id);
+  }
+  const ids = [...named].sort();
+  return ids.length > 0 && ids.every((id) => requested.includes(id)) ? ids : [];
+}
+
 /** "household.age" from FastAPI's ["body", "household", "age"]. */
 function fieldErrors(detail) {
   if (!Array.isArray(detail)) return [];
@@ -249,7 +276,9 @@ function fieldErrors(detail) {
 
 /**
  * POST one stage. Resolves with the parsed JSON; rejects with a
- * HouseholdApiError (an abort by the caller rejects with the AbortError).
+ * HouseholdApiError, or a DefinitionMismatchError naming any selected
+ * measures the running code doesn't register (an abort by the caller
+ * rejects with the AbortError).
  *
  * @param {Object} body - From buildHouseholdRequest
  * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch,
@@ -318,6 +347,15 @@ export async function postHouseholdImpact(
     return payload;
   }
   const detail = payload?.detail;
+  // Measures the running code doesn't register (one published before the
+  // deploy that adds it, or after a rollback): unavailable, as a definition
+  // the running code can't bind is
+  const unregistered = response.status === 422 ? unregisteredMeasures(detail, body.policies) : [];
+  if (unregistered.length) {
+    throw new DefinitionMismatchError(
+      unregistered.map((id) => ({ id, problems: [`the running code cannot bind it: ${UNREGISTERED}`] })),
+    );
+  }
   if (response.status === 422 && Array.isArray(detail)) {
     const fields = fieldErrors(detail);
     throw new HouseholdApiError("invalid", "Some answers are outside what the calculation accepts.", {
@@ -499,10 +537,11 @@ export function engineDifferences(expected, reported) {
  * The household API's code does not compute some selected measures from
  * the definitions their published figures were approved on (or could not
  * say). Personal impact is then unavailable for them: `refused` names each,
- * with how its definition differs.
+ * with how its definition differs. `unchecked`: the answer reported no
+ * definitions at all (a build before #125), so nothing could be checked.
  */
 export class DefinitionMismatchError extends Error {
-  constructor(refused) {
+  constructor(refused, { unchecked = false } = {}) {
     super(
       `The household calculator does not compute ${refused.map((item) => item.id).join(", ")} ` +
         "from the definitions their published figures were approved on",
@@ -510,6 +549,7 @@ export class DefinitionMismatchError extends Error {
     this.name = "DefinitionMismatchError";
     this.kind = "definition";
     this.refused = refused;
+    this.unchecked = unchecked;
   }
 }
 

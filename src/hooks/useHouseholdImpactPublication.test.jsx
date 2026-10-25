@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import useHouseholdImpact, { clearHouseholdImpactCache } from "./useHouseholdImpact";
-import { DefinitionMismatchError, EngineMismatchError } from "../utils/householdImpactApi";
+import {
+  DETAIL_INCLUDE,
+  DefinitionMismatchError,
+  EngineMismatchError,
+  HEADLINE_INCLUDE,
+  UNREGISTERED,
+} from "../utils/householdImpactApi";
 import { APPROVED_COMMIT, approvedDefinition, reportedDefinitions, requestedDefinitions } from "../test/definitionsFixture";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 
 beforeEach(clearHouseholdImpactCache);
+
+// Every fixture measure's approved definition, which an API running the
+// approved code reports back (reportedDefinitions)
+const DEFINITIONS = Object.fromEntries(HOUSEHOLD_FIXTURE.included.map((id) => [id, approvedDefinition()]));
 afterEach(() => {
   cleanup();
   clearHouseholdImpactCache();
@@ -19,16 +29,16 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const requests = [];
   let change = HOUSEHOLD_FIXTURE.net_income.change;
   vi.stubGlobal("fetch", async (url, init) => {
-    expect(url).toBe("https://api.test/api/household-impact");
+    expect(url.split("?")[0]).toBe("https://api.test/api/household-impact");
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body);
     requests.push(body);
     const answer = structuredClone(householdAnswerFor(body));
     answer.net_income.change = change;
     answer.net_income.reform = answer.net_income.baseline + change;
-    return Response.json(answer);
+    return Response.json({ ...answer, definitions: reportedDefinitions(url) });
   });
-  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, expectedDefinitions: DEFINITIONS };
   const first = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-one" }));
   await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
   expect(first.result.current.data.net.change).toBe(change);
@@ -55,14 +65,14 @@ it("fetches a fresh answer for the same household after the publication snapshot
 // Review of 428d209, finding 2: requests were unbound to the approved
 // definitions; the client now checks what it can.
 describe("Personal impact's live answers", () => {
-  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one" };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedDefinitions: DEFINITIONS };
   const ENGINE = { policyengine: HOUSEHOLD_FIXTURE.engine.policyengine, "policyengine-uk": HOUSEHOLD_FIXTURE.engine["policyengine-uk"], "policyengine-core": HOUSEHOLD_FIXTURE.engine["policyengine-core"] };
   const serve = (requests, engineFor = () => HOUSEHOLD_FIXTURE.engine) => {
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
       requests.push(body);
-      return Response.json({ ...structuredClone(householdAnswerFor(body)), engine: engineFor(requests.length) });
+      return Response.json({ ...structuredClone(householdAnswerFor(body)), engine: engineFor(requests.length), definitions: reportedDefinitions(url) });
     });
   };
 
@@ -131,7 +141,7 @@ describe("Personal impact's live answers", () => {
 // the definition its receipt approved, checked on both stages.
 describe("Personal impact's definitions", () => {
   const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one" };
-  const expectedDefinitions = Object.fromEntries(HOUSEHOLD_FIXTURE.included.map((id) => [id, approvedDefinition()]));
+  const expectedDefinitions = DEFINITIONS;
   const [first, second] = [...HOUSEHOLD_FIXTURE.included].sort();
   const changed = (definitions, id) => ({
     ...definitions,
@@ -169,6 +179,7 @@ describe("Personal impact's definitions", () => {
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
     expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
     expect(hook.result.current.error.refused).toEqual([{ id: second, problems: ["its reform reform_sha256 differs"] }]);
+    expect(hook.result.current.error.unchecked).toBe(false);
     expect(hook.result.current.data).toBeNull();
     // Not asked for the breakdown
     expect(requests).toHaveLength(1);
@@ -181,16 +192,58 @@ describe("Personal impact's definitions", () => {
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
     expect(hook.result.current.error.refused.map((item) => item.id)).toEqual([...HOUSEHOLD_FIXTURE.included].sort());
     expect(hook.result.current.error.refused.every((item) => item.problems[0] === "no definition reported")).toBe(true);
+    // Nothing it reports tells the measures apart (HouseholdCalculator
+    // offers to ask again, not to remove them all)
+    expect(hook.result.current.error.unchecked).toBe(true);
     expect(requests).toHaveLength(1);
   });
 
-  it("refuses a selected measure with no approved definition, though the API reports one", async () => {
+  it("refuses a selected measure with no approved definition before asking", async () => {
     const requests = [];
     serve(requests);
     const { [first]: _dropped, ...partial } = expectedDefinitions;
     const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions: partial }));
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
     expect(hook.result.current.error.refused).toEqual([{ id: first, problems: ["no approved definition to check it against"] }]);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(requests).toEqual([]);
+  });
+
+  // Review of 0608183, finding 6: the default was to check nothing
+  it("refuses every selected measure before asking when given no approved definitions", async () => {
+    const requests = [];
+    serve(requests);
+    const { expectedDefinitions: _none, ...unchecked } = params;
+    const hook = renderHook(() => useHouseholdImpact(unchecked));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused).toEqual(
+      [...HOUSEHOLD_FIXTURE.included].sort().map((id) => ({ id, problems: ["no approved definition to check it against"] })),
+    );
+    expect(hook.result.current.data).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(requests).toEqual([]);
+  });
+
+  // Review of 0608183, finding 2: the API refuses a measure its code
+  // doesn't register with a 422 before it reports any definition
+  it("refuses a measure the running code doesn't register, from the API's 422", async () => {
+    const requests = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      return Response.json(
+        { detail: [{ type: "value_error", loc: ["body", "policies"], msg: `Value error, Unknown measures: ${second}`, input: body.policies, ctx: { error: {} } }] },
+        { status: 422 },
+      );
+    });
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused).toEqual([{ id: second, problems: [`the running code cannot bind it: ${UNREGISTERED}`] }]);
+    expect(hook.result.current.data).toBeNull();
+    expect(requests).toHaveLength(1);
   });
 
   it("takes the whole answer away when the breakdown is computed from another definition, and keeps nothing", async () => {
@@ -203,9 +256,40 @@ describe("Personal impact's definitions", () => {
     expect(hook.result.current.data).toBeNull();
     expect(requests).toHaveLength(2);
     hook.unmount();
-    // Nothing cached: the same request asks again
+    // Nothing cached, not even the headline: the same request starts again
+    // from the headline, with nothing on screen meanwhile
     const again = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    expect(again.result.current.data).toBeNull();
     await waitFor(() => expect(requests.length).toBeGreaterThan(2));
+    expect(requests[2].body.include).toEqual(HEADLINE_INCLUDE);
     again.unmount();
+  });
+
+  // Review of 0608183, finding 4: a headline kept from before goes straight
+  // to the breakdown, which must be checked as a fresh headline would be
+  it("refuses a breakdown from another definition under a headline kept from before", async () => {
+    const requests = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      // The first breakdown fails; the API is then redeployed
+      if (requests.length === 2) throw new TypeError("Failed to fetch");
+      const reported = reportedDefinitions(url);
+      return Response.json({
+        ...structuredClone(householdAnswerFor(body)),
+        definitions: requests.length === 3 ? changed(reported, first) : reported,
+      });
+    });
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.detailStatus).toBe("error"));
+    expect(hook.result.current.status).toBe("ready");
+    act(() => hook.result.current.retry());
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused.map((item) => item.id)).toEqual([first]);
+    expect(hook.result.current.data).toBeNull();
+    // The retry asked only for the breakdown: the headline was the kept one
+    expect(requests.map((request) => request.body.include)).toEqual([HEADLINE_INCLUDE, DETAIL_INCLUDE, DETAIL_INCLUDE]);
   });
 });

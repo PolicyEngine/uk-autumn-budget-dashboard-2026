@@ -114,6 +114,7 @@ def contract() -> dict:
         # Personal impact's definition check (``uk_budget_data.definitions``)
         "definition_identity_fields": list(definitions.IDENTITY_FIELDS),
         "definition_commit_pattern": definitions.FULL_COMMIT.pattern,
+        "definition_unregistered": definitions.UNREGISTERED,
         "definition_vectors": definitions.definition_vectors(),
         "scatter_bins": {
             **SCATTER_BINS,

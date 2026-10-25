@@ -620,7 +620,19 @@ function HouseholdCalculator({
         </div>
 
         <div className="household-results" role="region" aria-label="Results">
-          {refusedDefinitions.length > 0 ? (
+          {refusedDefinitions.length > 0 && householdResult.error.unchecked ? (
+            // Nothing to tell the measures apart by: removing them all would
+            // empty the national figures too, so offer to ask again instead
+            <UnavailableNotice reason="Personal impact can't be checked right now">
+              <p>
+                The household calculator isn&apos;t reporting the definitions it computes the measures from, so its
+                answers can&apos;t be checked against the published figures.
+              </p>
+              <button type="button" className="light-pill-button" onClick={householdResult.retry}>
+                Try again
+              </button>
+            </UnavailableNotice>
+          ) : refusedDefinitions.length > 0 ? (
             <UnavailableMeasures
               reason="Personal impact is unavailable for the selected measures"
               summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"

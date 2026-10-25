@@ -533,4 +533,47 @@ describe("a household calculation from other definitions", () => {
     expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
     expect(screen.queryByText("Personal impact is unavailable for the selected measures")).not.toBeInTheDocument();
   });
+  // Review of 0608183, finding 7: a build that reports no definitions
+  // (one before #125) gives nothing to tell the measures apart by
+  it("says the answers can't be checked when the API reports no definitions, and offers to ask again, not to remove every measure", async () => {
+    let reports = false;
+    household = [];
+    vi.stubGlobal("fetch", vi.fn(async (url, init = {}) => {
+      const body = JSON.parse(init.body);
+      household.push(body);
+      const answer = json(householdAnswerFor(body));
+      return reports ? withReportedDefinitions(answer, url) : answer;
+    }));
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    const region = await results();
+    expect(await within(region).findByText("Personal impact can't be checked right now")).toBeInTheDocument();
+    expect(within(region).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+    expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
+    expect(region.textContent).not.toMatch(/£\d/);
+    expect(screen.queryByRole("region", { name: "Your household's results" })).not.toBeInTheDocument();
+    // Asked again once the API reports them, it answers
+    reports = true;
+    fireEvent.click(within(region).getByRole("button", { name: "Try again" }));
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+    expect(household.map((body) => body.include)).toEqual([[], [], ["by_policy", "sweep"]]);
+  });
+
+  // Review of 0608183, finding 2: published before the deploy that
+  // registers it, or after a rollback past it
+  it("lists a measure the running code doesn't register as unavailable, with the remove action", async () => {
+    serve((body) => json({
+      detail: [{ type: "value_error", loc: ["body", "policies"], msg: `Value error, Unknown measures: ${changedId}`, input: body.policies, ctx: { error: {} } }],
+    }, 422));
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    const region = await results();
+    expect(await within(region).findByText("Personal impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      `${changedName}: the running code cannot bind it: not a measure the running code registers`,
+    ]);
+    fireEvent.click(within(region).getByRole("button", { name: /^Remove .* from the selection$/ }));
+    expect(remove).toHaveBeenCalledWith([changedId]);
+  });
 });

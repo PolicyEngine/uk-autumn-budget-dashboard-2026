@@ -429,6 +429,40 @@ def test_a_commit_the_checkout_does_not_descend_from_says_so(tmp_path, repo):
     )
 
 
+def test_a_commit_the_checkout_lacks_says_to_fetch_it(tmp_path, repo):
+    """Review of 0608183, finding 5: a receipt commit this checkout hasn't
+    fetched (or a shallow clone lacks) read as one HEAD doesn't descend
+    from. The command's own lister tells the two apart."""
+    _commit(repo, {"README.md": "x\n"}, "root")
+    _git(repo, "checkout", "-q", "-b", "side")
+    elsewhere = _commit(repo, {"src/uk_budget_data/x.py": "a = 1\n"}, "s")
+    _git(repo, "checkout", "-q", "main")
+    missing = "f" * 40
+    data_root = tmp_path / "data"
+    _publish(
+        data_root,
+        {
+            MEASURES[0]: _receipt(MEASURES[0], missing),
+            MEASURES[1]: _receipt(MEASURES[1], elsewhere),
+        },
+    )
+    code, lines = _run(
+        data_root,
+        lambda git_sha: definitions._changes_in_checkout(git_sha, repo),
+    )
+    assert code == 0, lines
+    listed = lines[lines.index(CHANGES_HEADING) + 1 : -1]
+    assert sorted(listed) == sorted(
+        [
+            f"  since {missing[:12]} ({MEASURES[0]}): cannot list them: "
+            f"this checkout has no commit {missing[:12]}: fetch it (git fetch "
+            "origin), or unshallow a shallow clone",
+            f"  since {elsewhere[:12]} ({MEASURES[1]}): cannot list them: the "
+            f"approved commit {elsewhere[:12]} is not an ancestor of HEAD",
+        ]
+    )
+
+
 def test_a_listed_path_does_not_fail_the_check_and_a_difference_still_does(
     tmp_path, repo
 ):

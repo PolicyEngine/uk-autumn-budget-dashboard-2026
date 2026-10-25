@@ -40,10 +40,23 @@ function canonical(value) {
   return JSON.stringify(value ?? null);
 }
 
-// The same JSON value. Stricter than Python's `==` only where JSON can't
-// tell them apart anyway (true and 1), so it never passes what Python
+// A value JSON gives both languages alike. A number past 2^53, or one too
+// large for a double (Infinity here), reads exactly in Python but not here,
+// so two such numbers could match here and differ there.
+const exact = (value) => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && (!Number.isInteger(value) || Number.isSafeInteger(value));
+  }
+  if (Array.isArray(value)) return value.every(exact);
+  if (isObject(value)) return Object.values(value).every(exact);
+  return true;
+};
+
+// The same JSON value. Stricter than Python's `==` where JSON can't tell
+// them apart anyway (true and 1), and for numbers not read exactly here
+// (`exact`), which are never the same: so it never passes what Python
 // refuses.
-const same = (a, b) => canonical(a) === canonical(b);
+const same = (a, b) => exact(a) && exact(b) && canonical(a) === canonical(b);
 
 /** An identity's digest fields; anything but an object has none. */
 export function identityCore(identity) {

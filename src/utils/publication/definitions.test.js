@@ -126,6 +126,23 @@ describe("definitionDifferences", () => {
     }));
   });
 
+  // Review of 0608183, finding 3: JSON.stringify(Infinity) is "null", and
+  // a double can't tell 2^53 from 2^53 + 1, where Python's json can
+  it("never matches a number this side can't read exactly, though Python could", () => {
+    const approved = { git_sha: "1".repeat(40), baseline: identityCore({}), reform: identityCore({ reform_sha256: null }) };
+    const withValue = (value) => ({ ...approved, reform: { ...approved.reform, reform_sha256: value } });
+    // 1e400 parses as Infinity here, and as a float infinity there
+    expect(definitionDifferences(approved, withValue(JSON.parse("1e400")))).toEqual(["its reform reform_sha256 differs"]);
+    const big = JSON.parse("9007199254740993");
+    expect(big).toBe(2 ** 53);
+    expect(definitionDifferences(withValue(2 ** 53), withValue(big))).toEqual(["its reform reform_sha256 differs"]);
+    expect(definitionDifferences(withValue(JSON.parse("[9007199254740993]")), withValue([2 ** 53]))).toEqual(["its reform reform_sha256 differs"]);
+    // Numbers JSON reads alike on both sides still match
+    fc.assert(fc.property(fc.oneof(fc.maxSafeInteger(), fc.double({ noDefaultInfinity: true, noNaN: true }).filter((x) => !Number.isInteger(x))), (value) => {
+      expect(definitionDifferences(withValue(value), withValue(JSON.parse(JSON.stringify(value))))).toEqual([]);
+    }));
+  });
+
   it("is empty exactly when every compared value is the same", () => {
     fc.assert(fc.property(definition, definition, (approved, reported) => {
       const same = approved.git_sha === reported.git_sha
