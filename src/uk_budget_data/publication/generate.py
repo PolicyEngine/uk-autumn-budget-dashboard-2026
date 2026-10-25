@@ -471,6 +471,16 @@ def generate_artifacts(
     basis = load_basis(repo_root / BASIS_PATH)
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
+    common = dict(
+        config=config,
+        revision=revision,
+        basis=basis,
+        argv=argv,
+        artifacts_root=artifacts_root,
+        dataset_path=dataset_path,
+        build=build,
+        process=process,
+    )
     checked_commits: dict = {}
 
     def member_revisions(key: str, ids: list[str]) -> dict[str, CodeRevision]:
@@ -499,17 +509,6 @@ def generate_artifacts(
                     "it before its combined runs",
                 ) from error
         return revisions
-
-    common = dict(
-        config=config,
-        revision=revision,
-        basis=basis,
-        argv=argv,
-        artifacts_root=artifacts_root,
-        dataset_path=dataset_path,
-        build=build,
-        process=process,
-    )
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
