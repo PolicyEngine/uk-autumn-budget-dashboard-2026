@@ -119,8 +119,8 @@ describe("MethodologyTab", () => {
     fireEvent.click(notes);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("living");
+    fireEvent.click(within(living).getByRole("link", { name: "Pre-measures forecast" }));
+    expect(onShowTab).toHaveBeenLastCalledWith("outlook");
     const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);

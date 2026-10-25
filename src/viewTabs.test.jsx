@@ -28,7 +28,7 @@ describe("the view tabs", () => {
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
       "Household impact",
-      "Living standards",
+      "Pre-measures forecast",
       "Policies",
       "Methodology",
     ]);
@@ -40,7 +40,7 @@ describe("the view tabs", () => {
     // The intro holds for every view, and sits above the tabs
     const intro = container.querySelector(".dashboard-intro");
     expect(intro).toHaveTextContent(
-      /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook\. Costings are our own; forecast: .+\. Choose a year and policies in the bar above\.$/,
+      /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast\. Costings are our own; forecast: .+\. Choose a year and policies in the bar above\.$/,
     );
     expect(intro.compareDocumentPosition(viewList())).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -63,7 +63,7 @@ describe("the view tabs", () => {
       dashboard: [true, true],
       // The year drives Household impact's household calculation
       household: [true, true],
-      living: [false, false],
+      outlook: [false, false],
       policies: [false, false],
       methodology: [false, false],
     };
@@ -89,7 +89,7 @@ describe("the view tabs", () => {
     const expected = {
       dashboard: [null, true],
       household: ["household", false],
-      living: ["living", false],
+      outlook: ["outlook", false],
       policies: ["policies", false],
       methodology: ["methodology", false],
     };
@@ -104,7 +104,9 @@ describe("the view tabs", () => {
       ["/?tab=household", "Household impact"],
       // An old link: the view it named, at its new address
       ["/?tab=personal", "Household impact"],
-      ["/?tab=living", "Living standards"],
+      ["/?tab=outlook", "Pre-measures forecast"],
+      // An old link: the pre-measures forecast was Living standards
+      ["/?tab=living", "Pre-measures forecast"],
       ["/?tab=policies", "Policies"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
@@ -150,12 +152,18 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Methodology" })).toBeInTheDocument();
   });
 
-  it("split Population impact into All households and Young people sub-tabs", async () => {
+  it("split Population impact into five sub-tabs, Public finances last", async () => {
     render(<App />);
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The pill sits directly under the view tabs, inside the view's panel
     expect(panel.firstElementChild).toBe(subList());
-    expect(subTabs().map((tab) => tab.textContent)).toEqual(["All households", "Young people"]);
+    expect(subTabs().map((tab) => tab.textContent)).toEqual([
+      "All households",
+      "Young people",
+      "Living standards",
+      "Poverty",
+      "Public finances",
+    ]);
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Change by age" })).toBeNull();
     // The default sub-tab has no ?sub=
@@ -247,7 +255,7 @@ describe("the view tabs", () => {
       "Figures by area",
       "Young people",
       "Household impact",
-      "Living standards",
+      "Pre-measures forecast",
       "Limitations",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
@@ -259,7 +267,7 @@ describe("the view tabs", () => {
     expect(panel).not.toHaveTextContent("our research on the");
     expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
     const living = panel.querySelector("#method-living");
-    expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
+    expect(within(living).getByRole("link", { name: "Pre-measures forecast" })).toBeInTheDocument();
     // Said once on the page
     for (const phrase of [
       /dominance and p% rules/g,
