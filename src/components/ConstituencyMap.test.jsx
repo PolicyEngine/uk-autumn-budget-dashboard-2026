@@ -519,7 +519,7 @@ describe("ConstituencyMap and the release's area routing", () => {
   const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
   // The redesign's only how-to-read sentence; the search box's placeholder
   // says what to do.
-  const HOW_TO_READ = /Each one is coloured by the size of its change/;
+  const HOW_TO_READ = /Uncoloured where the estimate is too uncertain/;
   // A fetch that fails, as on a network error, only when it is awaited.
   const NETWORK_FAILURE = {
     then: (_, reject) => reject(new TypeError("network down")),
@@ -585,7 +585,7 @@ describe("ConstituencyMap and the release's area routing", () => {
       );
       expect(
         screen.getByText(
-          "The average change in household net income in each constituency.",
+          "Average change in household net income by constituency.",
         ),
       ).toBeInTheDocument();
       expect(screen.queryByText(HOW_TO_READ)).not.toBeInTheDocument();

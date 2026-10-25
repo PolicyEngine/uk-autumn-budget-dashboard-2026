@@ -120,3 +120,32 @@
   border-radius: 50%;
   background: var(--c-net);
 }
+
+/* A short legend with no groups (before / after): one centred row, items
+   side by side, wrapping only on a narrow phone */
+.grouped-legend.is-row .grouped-legend-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grouped-legend.is-row .grouped-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .grouped-legend.is-row .grouped-legend-row {
+    flex-wrap: wrap;
+  }
+
+  .grouped-legend.is-row .grouped-legend-item {
+    white-space: normal;
+  }
+}

@@ -46,7 +46,7 @@ import TitleIcon from "./TitleIcon";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the percentage change in net income by decile, displaying the proportional impact relative to baseline income. Positive values indicate gains; negative values indicate losses.";
+  "Change in household net income by income decile, as a share of its net income.";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -180,8 +180,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       <div className="distributional-chart">
         <h3>Relative impact by income decile</h3>
         <p className="chart-description">
-          This chart shows the percentage change in net income by decile,
-          displaying the proportional impact relative to baseline income.
+            {CHART_DESCRIPTION}
         </p>
         <div
           style={{
@@ -249,9 +248,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
             </span>
           </h3>
           <p className="chart-description">
-            This chart shows the percentage change in net income by decile,
-            displaying the proportional impact relative to baseline income.
-            Positive values indicate gains; negative values indicate losses.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />

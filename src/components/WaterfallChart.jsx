@@ -46,7 +46,7 @@ import TitleIcon from "./TitleIcon";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the absolute change in net income by decile, measured in pounds per year. This represents the actual cash amount gained or lost by households in each decile.";
+  "Average change in household net income by income decile, £ a year.";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -165,8 +165,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       <div className="waterfall-chart">
         <h3>Absolute impact by income decile</h3>
         <p className="chart-description">
-          This chart shows the absolute change in net income by decile, measured
-          in pounds per year.
+            {CHART_DESCRIPTION}
         </p>
         <div
           style={{
@@ -241,9 +240,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             </span>
           </h3>
           <p className="chart-description">
-            This chart shows the absolute change in net income by decile,
-            measured in pounds per year. This represents the actual cash amount
-            gained or lost by households in each decile.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />

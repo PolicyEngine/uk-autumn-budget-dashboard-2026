@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import App, { CANDIDATE_BANNER, VIEWS, opensYoungPeople, viewFromLocation } from "./App";
+import App, { VIEWS, opensYoungPeople, viewFromLocation } from "./App";
 
 beforeEach(() => {
   // An empty CSV for every data file: these tests are about the views
@@ -47,22 +47,13 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Population impact" })).toBeInTheDocument();
   });
 
-  it("say once, under the intro, that the measures are candidates, except on Living standards and Methodology", () => {
+  it("shows no candidate banner on any view", () => {
     const { container } = render(<App />);
-    const withBanner = { dashboard: true, household: true, living: false, methodology: false };
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
-      const banners = screen.queryAllByText(CANDIDATE_BANNER);
-      expect(banners).toHaveLength(withBanner[view.value] ? 1 : 0);
-      if (banners.length) {
-        // Directly under the intro, above the tabs
-        const banner = container.querySelector(".candidate-banner");
-        expect(banner.previousElementSibling).toBe(container.querySelector(".dashboard-intro"));
-      }
+      expect(container.querySelector(".candidate-banner")).toBeNull();
+      expect(screen.queryByText(/not announced policy/)).toBeNull();
     });
-    expect(CANDIDATE_BANNER).toBe(
-      "Candidate measures, modelled before the Budget on 28 October; not announced policy.",
-    );
   });
 
   it("show the year and policy pills only where they apply", () => {

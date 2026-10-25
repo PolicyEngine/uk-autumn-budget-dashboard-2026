@@ -35,8 +35,6 @@ import {
   CHART_COLOURS,
 } from "../utils/chartTheme";
 import {
-  FIRST_DISPLAY_YEAR,
-  LAST_DISPLAY_YEAR,
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
@@ -173,7 +171,7 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear 
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
 
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
@@ -253,14 +251,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <TitleIcon name="landmark" />
             <span className="title-text">Revenue impact</span>
           </h3>
-          <p className="chart-description">
-            This chart shows the annual budgetary impact from{" "}
-            {fiscalYearTick(FIRST_DISPLAY_YEAR)} to{" "}
-            {fiscalYearTick(LAST_DISPLAY_YEAR)},
-            measured in billions of pounds. Positive values indicate revenue
-            gains for the Government, whilst negative values indicate costs to
-            the Treasury.
-          </p>
+          <p className="chart-description">{CHART_DESCRIPTION}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>

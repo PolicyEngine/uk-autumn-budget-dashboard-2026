@@ -761,12 +761,11 @@ export default function ConstituencyMap({
             </h3>
             <p className="chart-description">
               {notRouted ? (
-                "The average change in household net income in each constituency."
+                "Average change in household net income by constituency."
               ) : onMap ? (
                 <>
-                  The average change in household net income in each
-                  constituency. Each one is coloured by the size of its change
-                  when its 90% interval is narrow enough to tell.
+                  Average change in household net income by constituency.
+                  Uncoloured where the estimate is too uncertain.
                 </>
               ) : (
                 <>

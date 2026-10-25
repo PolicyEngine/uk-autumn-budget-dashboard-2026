@@ -505,11 +505,18 @@ body {
 }
 
 /* Standfirst: the full content width */
+/* 28px to the tab bar below (20px on a phone), with no banner between */
 .dashboard-intro {
   font-size: var(--fs-lead);
   color: var(--pe-gray-700);
   line-height: 1.6;
-  margin: 24px 0 16px;
+  margin: 24px 0 28px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-intro {
+    margin-bottom: 20px;
+  }
 }
 
 .dashboard-intro a {
@@ -1513,26 +1520,6 @@ body {
   }
 }
 
-/* The candidate measures banner under the intro: the Note's line, in a
-   calm tinted box */
-.candidate-banner {
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-100);
-  border-radius: var(--pe-radius-md);
-}
-
-.candidate-banner .note {
-  margin: 0;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-800);
-}
-
-.candidate-banner .note svg {
-  color: var(--pe-teal-700);
-}
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {

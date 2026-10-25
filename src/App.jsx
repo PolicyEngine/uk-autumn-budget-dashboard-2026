@@ -25,7 +25,6 @@ import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
-import Note from "./components/Note";
 import PolicyCards from "./components/PolicyCards";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
@@ -78,11 +77,6 @@ export function viewFromLocation({ search, hash }) {
   const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
-
-// The banner under the intro, and the views it is left off
-export const CANDIDATE_BANNER =
-  "Candidate measures, modelled before the Budget on 28 October; not announced policy.";
-const VIEWS_WITHOUT_CANDIDATE_BANNER = new Set(["living", "methodology"]);
 
 // Preset policy combinations
 const PRESETS = [
@@ -564,15 +558,6 @@ function App() {
           for your own household, alongside the living standards outlook.
           Choose a year and policies in the bar above.
         </p>
-
-        {/* Said once, under the intro, on the views that show the
-            measures: Living standards has its own demo line, and
-            Methodology describes them */}
-        {!VIEWS_WITHOUT_CANDIDATE_BANNER.has(activeTab) && (
-          <div className="candidate-banner" role="note">
-            <Note>{CANDIDATE_BANNER}</Note>
-          </div>
-        )}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
