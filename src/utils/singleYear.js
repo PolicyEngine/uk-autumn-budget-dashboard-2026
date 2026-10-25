@@ -236,14 +236,21 @@ export function policyRows(byPolicy, total, policies) {
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
     // Every measure that leaves the household's net income where it was,
-    // with its colour and, for an employer cost, why
+    // with its colour and, for an employer cost or a top-up paid only in a
+    // year not offered, why
     noEffectItems: byPolicy.measures
       .filter((row) => row.status === "not_affected")
       .map((row) => ({
         id: row.id,
         name: nameOf(row),
         color: getPolicyColor(row.id),
-        reason: row.noteKind === "employer_cost" ? row.note : null,
+        reason:
+          row.noteKind === "employer_cost"
+            ? row.note
+            : row.id === "warm_home_discount_top_up"
+              ? // The top-up is paid in 2026-27, which the year pill does not offer
+                "Paid in 2026-27 only"
+              : null,
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount

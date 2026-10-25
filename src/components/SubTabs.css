@@ -8,7 +8,6 @@
   gap: 4px;
   margin: 0 0 32px;
   padding: 0;
-  border-bottom: 1px solid var(--card-border);
   /* Choosing a sub-tab scrolls the control back to just under the sticky
      band and view tabs; SubTabs.jsx reads this */
   scroll-margin-top: calc(var(--sticky-offset) + 12px);
@@ -63,7 +62,7 @@
   position: absolute;
   left: 6px;
   right: 6px;
-  bottom: -1px;
+  bottom: 0;
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);

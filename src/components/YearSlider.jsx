@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import "./YearSlider.css";
 import PillChevron from "./PillChevron";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { SELECTABLE_YEARS } from "../utils/displayYears";
 
-// The years the dashboard shows (from 2026-27; see utils/displayYears.js)
-const YEARS = DISPLAY_YEARS;
+// The years a reader can choose (from 2027-28; see utils/displayYears.js)
+const YEARS = SELECTABLE_YEARS;
 
 // Play shows each year for 2.25s: long enough for the charts' 850ms
 // tween (utils/chartMotion.js) to settle and the year to be read
