@@ -81,6 +81,12 @@ function EmploymentIncomeChart({
   });
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // Each point's change, for the tooltip; and whether the change is so small
+  // (under 1% of net income everywhere) that the two lines coincide
+  const points = data.map((point) => ({ ...point, change: point.reform - point.baseline }));
+  const linesOverlap =
+    points.length > 0 &&
+    points.every((point) => Math.abs(point.change) < 0.01 * Math.max(Math.abs(point.baseline), 1));
 
   const chartTitle = `${CHART_TITLE}, ${formatYearRange(selectedYear)}`;
 
@@ -149,7 +155,7 @@ function EmploymentIncomeChart({
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 420 : 430}>
             <LineChart
-              data={data}
+              data={points}
               margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
             >
               <CartesianGrid {...GRID_PROPS} />
@@ -178,6 +184,8 @@ function EmploymentIncomeChart({
                 width={axisWidth(yTicks, formatPoundsShort)}
                 ticks={yTicks}
                 domain={[0, yTicks[yTicks.length - 1]]}
+                // The hidden change line must not stretch the axis below £0
+                allowDataOverflow
               />
 
               <Tooltip
@@ -193,7 +201,10 @@ function EmploymentIncomeChart({
                     labelFormat={(label) => `${household.x_label} ${formatPounds(label)}, ${formatYearRange(selectedYear)}`}
 
                     grouped={false}
+                    netKey="change"
+                    netLabel="Change"
 
+                    showZero
                   />
 
                 }
@@ -208,12 +219,15 @@ function EmploymentIncomeChart({
                 )}
                 verticalAlign="bottom"
                 align="center"
+                // The hidden change line carries the tooltip only
+                payload={LEGEND_ITEMS.map((item) => ({ value: item.label, type: "line", color: item.color, payload: { strokeDasharray: item.dash } }))}
               />
               <Line
                 type="monotone"
                 dataKey="baseline"
                 stroke={CHART_COLOURS.before}
-                strokeWidth={2.5}
+                // Drawn wider underneath, so it shows where the lines coincide
+                strokeWidth={4}
                 strokeDasharray={BEFORE_DASH}
                 dot={false}
                 name="Before the selected policies"
@@ -223,10 +237,20 @@ function EmploymentIncomeChart({
                 type="monotone"
                 dataKey="reform"
                 stroke={CHART_COLOURS.after}
-                strokeWidth={2.5}
+                strokeWidth={2}
                 dot={false}
                 name="After the selected policies"
                 {...chartMotion()}
+              />
+              {/* Carries the change to the tooltip; not drawn and not in the legend */}
+              <Line
+                dataKey="change"
+                name="Change"
+                stroke="transparent"
+                dot={false}
+                activeDot={false}
+                legendType="none"
+                isAnimationActive={false}
               />
               <Customized component={<ChartUnitLabel text="Household net income" />} />
             <Customized component={PolicyEngineLogo} />
@@ -239,6 +263,9 @@ function EmploymentIncomeChart({
           />
         )}
       </div>
+      {published && linesOverlap && (
+        <p className="chart-note chart-footer">The lines overlap: the change is under 1% of income.</p>
+      )}
     </div>
   );
 }
