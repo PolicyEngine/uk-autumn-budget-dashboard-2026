@@ -230,7 +230,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             {[...SERIES.filter((series) => series.key !== YOUNG_BAND), ...SERIES.filter((series) => series.key === YOUNG_BAND)].map((series) => (
               <Line
                 key={series.key}
-                type="linear"
+                type="monotone"
                 dataKey={series.key}
                 name={series.label}
                 stroke={series.color}
