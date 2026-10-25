@@ -2,9 +2,10 @@
 
 import json
 import math
+import urllib.parse
 
 import pytest
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
@@ -61,6 +62,9 @@ def coverage(monkeypatch):
     monkeypatch.setattr(
         deploy_smoke, "expected_coverage", lambda: (YEARS, POLICIES)
     )
+    # Definitions are declared only for a build with a commit; tests name
+    # theirs explicitly.
+    monkeypatch.delenv("GIT_SHA", raising=False)
 
 
 def fake_api(
@@ -497,3 +501,245 @@ def test_a_malformed_single_year_expectation_is_refused(tmp_path, entry):
     )
     with pytest.raises(ValueError, match="household_impact"):
         deploy_smoke.read_expectations(str(path), SHA)
+
+
+# --- the definitions -----------------------------------------------------------
+
+
+DEFINED = "d" * 40
+
+
+def _expected_definitions():
+    return deploy_smoke.expected_definitions(DEFINED)
+
+
+def _served(expected, change=None):
+    served = json.loads(json.dumps(expected["expected"]))
+    if change:
+        change(served)
+    return {**household_impact_answer(), "definitions": served}
+
+
+def _definitions_api(body, seen):
+    app = FastAPI()
+
+    @app.post("/api/household-impact")
+    def route(request: Request, payload: dict):
+        seen.append(request.query_params.getlist("definition"))
+        return body
+
+    @app.get("/api/health")
+    def health():
+        return {"status": "healthy"}
+
+    @app.get("/api/version")
+    def version_route():
+        return BUILD
+
+    @app.post("/api/personal-impact")
+    def impact_route(payload: dict):
+        return GOOD_ANSWER
+
+    return TestClient(app)
+
+
+def test_this_build_declares_definitions_for_every_measure_at_its_commit():
+    from uk_budget_data import definitions, household_impact
+
+    expected = _expected_definitions()
+    assert expected["declared"] is True
+    assert expected["at"] == DEFINED
+    assert expected["expected"] == {
+        m: definitions.measure_definition(m, DEFINED)
+        for m in household_impact.measure_ids()
+    }
+
+
+@pytest.mark.parametrize("git_sha", [None, "", "abc", "A" * 40])
+def test_a_build_with_no_full_commit_declares_none(monkeypatch, git_sha):
+    if git_sha is None:
+        monkeypatch.delenv("GIT_SHA", raising=False)
+    else:
+        monkeypatch.setenv("GIT_SHA", git_sha)
+    assert deploy_smoke.expected_definitions() == {"declared": False}
+
+
+def test_served_definitions_equal_to_the_images_pass_and_are_all_named():
+    expected = _expected_definitions()
+    seen = []
+    result = run_smoke(
+        _definitions_api(_served(expected), seen),
+        SHA,
+        BUILD,
+        household_impact={"declared": True},
+        definitions=expected,
+    )
+    assert result["pass"], result["problems"]
+    assert sorted(seen[0]) == sorted(
+        f"{m}:{DEFINED}" for m in expected["expected"]
+    )
+
+
+def _first(served):
+    return sorted(served)[0]
+
+
+@pytest.mark.parametrize(
+    "change, message",
+    [
+        (
+            lambda d: d[_first(d)]["reform"].update(reform_sha256="0" * 64),
+            "is not the one the image computes",
+        ),
+        (
+            lambda d: d.update(
+                {_first(d): {"git_sha": DEFINED, "error": "x"}}
+            ),
+            "is not the one the image computes",
+        ),
+        (lambda d: d.pop(_first(d)), "reports no definition of"),
+        (
+            lambda d: d.update(extra={"git_sha": DEFINED}),
+            "definitions that were not named: extra",
+        ),
+    ],
+)
+def test_served_definitions_that_differ_fail(change, message):
+    expected = _expected_definitions()
+    result = run_smoke(
+        _definitions_api(_served(expected, change), []),
+        SHA,
+        BUILD,
+        household_impact={"declared": True},
+        definitions=expected,
+    )
+    assert not result["pass"]
+    assert any(message in problem for problem in result["problems"]), result
+
+
+def test_an_answer_with_no_definitions_fails_when_the_image_declares_them():
+    expected = _expected_definitions()
+    result = run_smoke(
+        _definitions_api(household_impact_answer(), []),
+        SHA,
+        BUILD,
+        household_impact={"declared": True},
+        definitions=expected,
+    )
+    assert "/api/household-impact reports no definitions" in result["problems"]
+
+
+def test_an_image_without_definitions_is_not_refused_for_them():
+    seen = []
+    result = run_smoke(
+        _definitions_api(household_impact_answer(), seen),
+        SHA,
+        BUILD,
+        household_impact={"declared": True},
+        definitions={"declared": False},
+    )
+    assert result["pass"], result["problems"]
+    assert seen == [[]]
+
+
+def test_the_real_route_serves_the_definitions_the_image_computes(monkeypatch):
+    """The smoke request against the real app, its calculation stubbed:
+    the served definitions are exactly the ones expected_definitions
+    computes (the check the candidate must pass)."""
+    from uk_budget_data import api, definitions, household_impact
+
+    monkeypatch.setattr(
+        household_impact,
+        "calculate_household_impact",
+        lambda *args, **kwargs: household_impact_answer(),
+    )
+    api._cached_household_impact.cache_clear()
+    definitions._definition.cache_clear()
+    expected = _expected_definitions()
+    response = TestClient(real_app).post(
+        deploy_smoke.HOUSEHOLD_IMPACT_ROUTE
+        + "?"
+        + deploy_smoke.definitions_query(expected),
+        json=deploy_smoke.SMOKE_HOUSEHOLD_IMPACT,
+    )
+    api._cached_household_impact.cache_clear()
+    assert response.status_code == 200, response.text
+    assert deploy_smoke.definitions_problems(response.json(), expected) == []
+
+
+def test_the_standard_library_client_checks_definitions(tmp_path):
+    # An expectations file names definitions at the commit being deployed.
+    expected = deploy_smoke.expected_definitions(SHA)
+    path = _expectations(
+        tmp_path, household_impact={"declared": True}, definitions=expected
+    )
+    for body, code in (
+        (_served(expected), 0),
+        (
+            _served(
+                expected,
+                lambda d: d[_first(d)]["baseline"].update(binding="x"),
+            ),
+            1,
+        ),
+    ):
+        with serving(BUILD, GOOD_ANSWER, household_impact=body) as (
+            url,
+            server,
+        ):
+            result = deploy_smoke.main(
+                [
+                    "--base-url",
+                    url,
+                    "--expect-git-sha",
+                    SHA,
+                    "--expectations",
+                    path,
+                ]
+            )
+        assert result == code
+        named = [q for q in server.queries if q]
+        assert len(named) == 1
+        assert sorted(urllib.parse.parse_qs(named[0])["definition"]) == sorted(
+            f"{m}:{SHA}" for m in expected["expected"]
+        )
+
+
+@pytest.mark.parametrize(
+    "entry, message",
+    [
+        ({"declared": "yes"}, "not declared"),
+        ([True], "not declared"),
+        (
+            {"declared": True, "at": SHA, "expected": {}},
+            "names no definitions",
+        ),
+        (
+            {"declared": True, "at": "b" * 40, "expected": {"x": {}}},
+            "names definitions at",
+        ),
+        (
+            {"declared": True, "at": SHA, "expected": {"x": "y"}},
+            "names no definitions",
+        ),
+        (
+            {
+                "declared": True,
+                "at": SHA,
+                "expected": {"x": {"git_sha": SHA, "error": "refused"}},
+            },
+            "the image cannot bind x: refused",
+        ),
+    ],
+)
+def test_a_malformed_definitions_expectation_is_refused(
+    tmp_path, entry, message
+):
+    path = _expectations(tmp_path, definitions=entry)
+    with pytest.raises(ValueError, match=message):
+        deploy_smoke.read_expectations(path, SHA)
+
+
+def test_expectations_without_definitions_are_accepted(tmp_path):
+    data = deploy_smoke.read_expectations(_expectations(tmp_path), SHA)
+    assert "definitions" not in data
