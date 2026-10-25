@@ -161,6 +161,7 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
+  --c-vintage: #9fb8b3; /* an earlier OBR forecast: a thin grey-green dashed line */
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

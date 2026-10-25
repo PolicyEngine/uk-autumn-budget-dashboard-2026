@@ -260,7 +260,9 @@ def vintage_record(
 
 
 def _sheet_source(sheet: hofd.Sheet) -> str:
-    unit = f" ({sheet.unit})" if sheet.unit else ""
+    # Many sheet titles already end with their unit: "(£ billion)"
+    named = sheet.unit and f"({sheet.unit.lower()})" in sheet.title.lower()
+    unit = f" ({sheet.unit})" if sheet.unit and not named else ""
     return (
         "OBR, Historical official forecasts database, Spring 2026: sheet "
         f"{sheet.name}, {sheet.title}{unit}"

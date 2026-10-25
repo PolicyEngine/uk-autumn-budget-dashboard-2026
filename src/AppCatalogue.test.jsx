@@ -26,6 +26,7 @@ vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComp
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
 vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
+vi.mock("./components/forecastVintages/ForecastVintagesTab", () => ({ default: () => <div data-testid="forecasts-view" /> }));
 
 beforeEach(() => { window.history.replaceState({}, "", "/"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -94,14 +95,14 @@ describe("the page's verified publication catalogue", () => {
     expect(document.body).not.toHaveTextContent("£0");
   });
 
-  it.each(["?tab=living", "?tab=methodology"])("keeps the shell and %s without a manifest", async (search) => {
+  it.each(["?tab=living", "?tab=forecasts", "?tab=methodology"])("keeps the shell and %s without a manifest", async (search) => {
     // Round-2 review: the views that need no Budget figures stay
     window.history.replaceState({}, "", `/${search}`);
     vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
     render(<App />);
-    const view = search.includes("living") ? "living-view" : "methodology-view";
+    const view = `${new URLSearchParams(search).get("tab")}-view`;
     expect(await screen.findByTestId(view)).toBeInTheDocument();
-    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(4);
+    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(5);
     // The default view is mounted from the first render and kept, hidden,
     // since #128; the open view says nothing about Budget results
     expect(within(screen.getByRole("tabpanel")).queryByText("No Budget results are published yet")).toBeNull();

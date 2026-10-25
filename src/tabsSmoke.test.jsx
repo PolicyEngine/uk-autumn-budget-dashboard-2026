@@ -70,6 +70,8 @@ const LOADED = {
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Incomes heading shows once the outlook is read.
   living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  // The heading and the chart card show once the forecasts file is read.
+  forecasts: (panel) => within(panel).findAllByRole("heading", { name: "Real household disposable income per head" }),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -151,7 +153,7 @@ const CASES = [
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on a verified publication and real baseline data", () => {
+describe("each tab and the Young people sub-tab, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -273,7 +275,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     window.history.replaceState({}, "", "/");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+    for (const tab of ["Household impact", "Living standards", "OBR forecasts", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }

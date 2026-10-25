@@ -69,6 +69,7 @@ export const CHART_COLOURS = {
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
+  vintage: "#9FB8B3",
 };
 
 // Light horizontal gridlines only.

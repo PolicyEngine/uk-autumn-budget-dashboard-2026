@@ -442,6 +442,8 @@ export async function buildChartSvg(containerRef, options = {}) {
   if (clonedLegend) {
     clonedLegend.remove();
   }
+  // A range brush is a control for the page, not part of the figure
+  clonedSvg.querySelectorAll(".recharts-brush").forEach((brush) => brush.remove());
 
   // Remove existing image elements with relative URLs (won't work in standalone SVG)
   const existingImages = clonedSvg.querySelectorAll("image");

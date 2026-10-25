@@ -30,12 +30,13 @@ const band = (container) => container.querySelector(".title-row");
 const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
 
 describe("the view tabs", () => {
-  it("are four tabs under the intro, in order, with no view pill in the band", async () => {
+  it("are five tabs under the intro, in order, with no view pill in the band", async () => {
     const { container } = await renderApp();
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
       "Household impact",
       "Living standards",
+      "OBR forecasts",
       "Methodology",
     ]);
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
@@ -70,6 +71,7 @@ describe("the view tabs", () => {
       // The year drives Household impact's household calculation
       household: [true, true],
       living: [false, false],
+      forecasts: [false, false],
       methodology: [false, false],
     };
     VIEWS.forEach((view, index) => {
@@ -92,7 +94,13 @@ describe("the view tabs", () => {
     // Review of 15439f4, finding 2: the default follows the publication,
     // and a chosen selection survives a view without the policy pill
     const search = () => new URLSearchParams(window.location.search);
-    const tabParam = { dashboard: null, household: "household", living: "living", methodology: "methodology" };
+    const tabParam = {
+      dashboard: null,
+      household: "household",
+      living: "living",
+      forecasts: "forecasts",
+      methodology: "methodology",
+    };
     const { unmount } = await renderApp();
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
@@ -113,6 +121,7 @@ describe("the view tabs", () => {
       // An old link: the view it named, at its new address
       ["/?tab=personal", "Household impact"],
       ["/?tab=living", "Living standards"],
+      ["/?tab=forecasts", "OBR forecasts"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
       ["/?tab=nonsense", "Population impact"],
@@ -137,7 +146,7 @@ describe("the view tabs", () => {
     expect(tabs()[1]).toHaveFocus();
     fireEvent.keyDown(list, { key: "ArrowLeft" });
     fireEvent.keyDown(list, { key: "ArrowLeft" });
-    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[4]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "Home" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "End" });

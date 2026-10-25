@@ -2904,7 +2904,7 @@
         "kind": "level",
         "decimals": 2,
         "outturn_source": "ONS MGRZ (LMS): people in employment, aged 16 and over, calendar-year average",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Empl, Employment (millions) (Millions)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Empl, Employment (millions)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "million people",
@@ -6248,7 +6248,7 @@
         "kind": "level",
         "decimals": 0,
         "outturn_source": "ONS BKTL (UKEA): GDP at market prices, current prices, fiscal-year total",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet NGDP, Nominal GDP (\u00a3 billion) (\u00a3 billion)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet NGDP, Nominal GDP (\u00a3 billion)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -6897,7 +6897,7 @@
         "kind": "level",
         "decimals": 1,
         "outturn_source": "ONS J5II (PUSF): public sector net borrowing excluding public sector banks, fiscal-year total (sign reversed: the ONS records borrowing as negative)",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSNB, Public sector net borrowing (\u00a3 billion) (\u00a3 billion)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSNB, Public sector net borrowing (\u00a3 billion)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -7534,7 +7534,7 @@
         "kind": "level",
         "decimals": 1,
         "outturn_source": "ONS J5II (sign reversed) over ONS BKTL, fiscal years",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSNB, Public sector net borrowing (per cent of GDP) (per cent of GDP)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSNB, Public sector net borrowing (per cent of GDP)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -8177,7 +8177,7 @@
         "kind": "level",
         "decimals": 1,
         "outturn_source": "ONS HF6X (PUSF): public sector net debt excluding public sector banks, % of GDP, at the end of March",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSND, Public sector net debt (per cent of GDP) (per cent of GDP)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSND, Public sector net debt (per cent of GDP)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -8794,7 +8794,7 @@
         "kind": "level",
         "decimals": 0,
         "outturn_source": "ONS ANBT less IL65 (PUSF): public sector current receipts excluding public sector banks, fiscal-year total",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSCR, Public sector current receipts (\u00a3 billion) (\u00a3 billion)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSCR, Public sector current receipts (\u00a3 billion)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -9431,7 +9431,7 @@
         "kind": "level",
         "decimals": 1,
         "outturn_source": "ONS ANBT less IL65 over ONS BKTL, fiscal years",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSCR, Public sector current receipts (per cent of GDP) (per cent of GDP)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSCR, Public sector current receipts (per cent of GDP)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -10084,7 +10084,7 @@
         "kind": "level",
         "decimals": 0,
         "outturn_source": "ONS KX5Q (PUSF): total managed expenditure excluding public sector banks, fiscal-year total",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3TME, Total managed expenditure (\u00a3 billion) (\u00a3 billion)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3TME, Total managed expenditure (\u00a3 billion)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -10721,7 +10721,7 @@
         "kind": "level",
         "decimals": 1,
         "outturn_source": "ONS KX5Q over ONS BKTL, fiscal years",
-        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet TME, Total managed expenditure (per cent of GDP) (per cent of GDP)",
+        "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet TME, Total managed expenditure (per cent of GDP)",
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",

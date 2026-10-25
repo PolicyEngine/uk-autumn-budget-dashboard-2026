@@ -1,0 +1,87 @@
+/* The OBR forecasts view (ForecastVintagesTab): the chart card's toggles
+   and note, the chart's tooltip, and the lists under the card. */
+
+/* F, H and A: single letters in the compact switch's style, each pressed
+   on its own */
+.fv-toggles .obr-view-option {
+  min-width: 30px;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.fv-toggles .obr-view-option:disabled {
+  color: var(--pe-gray-300);
+  cursor: not-allowed;
+}
+
+.fv-note {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.fv-tooltip {
+  padding: 8px 10px;
+  color: var(--c-text);
+  max-width: 280px;
+}
+
+.fv-tooltip p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.fv-tooltip .fv-tooltip-period {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.fv-tooltip .fv-tooltip-earlier {
+  color: var(--c-tick);
+  font-size: var(--fs-micro);
+}
+
+/* The brush under the x axis: the dashboard's teal handles */
+.fv-plot .recharts-brush-texts {
+  font-size: var(--fs-micro);
+  fill: var(--c-tick);
+}
+
+.fv-more {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.fv-list,
+.fv-sources {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.fv-list li + li,
+.fv-sources li + li {
+  margin-top: 4px;
+}
+
+.fv-more h4 {
+  margin: 8px 0 6px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.fv-sha {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.fv-related {
+  margin: 4px 0 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}

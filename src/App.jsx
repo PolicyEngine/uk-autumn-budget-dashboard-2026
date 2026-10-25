@@ -23,6 +23,7 @@ import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import ForecastVintagesTab from "./components/forecastVintages/ForecastVintagesTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
@@ -38,12 +39,14 @@ import PolicyCards from "./components/PolicyCards";
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them. Young
-// people is a sub-tab of Population impact (PopulationImpactView).
+// outlook, OBR forecasts the OBR's own forecasts beside the outturn, and
+// Methodology is text: neither pill applies to them. Young people is a
+// sub-tab of Population impact (PopulationImpactView).
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
+  { value: "forecasts", label: "OBR forecasts", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
 
@@ -423,6 +426,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </UnavailableNotice>
         ) : value === "living" ? (
           <LivingStandardsTab active={activeTab === value} />
+        ) : value === "forecasts" ? (
+          <ForecastVintagesTab active={activeTab === value} onShowTab={handleTabChange} />
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (

@@ -94,6 +94,21 @@ def test_the_file_names_every_source_with_its_sha256(committed):
             assert source["archive_url"].endswith(source["url"])
 
 
+def test_a_sheet_title_ending_with_its_unit_names_it_once():
+    sheet = hofd.Sheet(
+        name="£PSNB",
+        title="Public sector net borrowing (£ billion)",
+        unit="£ billion",
+        notes=(),
+        periods=(),
+        vintages=(),
+        outturn={},
+    )
+    assert B._sheet_source(sheet).endswith("borrowing (£ billion)")
+    bare = dataclasses.replace(sheet, title="Public sector net borrowing")
+    assert B._sheet_source(bare).endswith("borrowing (£ billion)")
+
+
 def test_every_variable_has_its_units_measures_and_forecasts(committed):
     ids = [v["id"] for v in committed["variables"]]
     assert ids == [v.id for v in V.VARIABLES]

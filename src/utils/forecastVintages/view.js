@@ -48,7 +48,8 @@ export function measureLevels(variable, measure, { annual = false } = {}) {
         forecastEnd: lastIndex(values),
       });
       const levels = carryForward(measure.kind, values, outturn, anchor, { lag });
-      return levels && { id: vintage.id, label: vintage.label, anchor, levels, own: measure.kind === "level" };
+      // reanchored: drawn from a later period than its launch (the newest)
+      return levels && { id: vintage.id, label: vintage.label, anchor, reanchored: anchor !== launch, levels, own: measure.kind === "level" };
     })
     .filter(Boolean);
   if (!annual) return { frequency, outturn, vintages };
@@ -134,6 +135,35 @@ export function stepDecimals(step) {
   return 6;
 }
 
+/** An amount in a check's units: "0.3 percentage points", "£2.1 billion". */
+function checkAmount(value, units) {
+  const n = gb(value < 10 ? 2 : 1).format(value).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  if (units.startsWith("%")) return `${n} percentage point${n === "1" ? "" : "s"}`;
+  if (units === "£ billion") return `£${n} billion`;
+  if (units === "million people") return `${n} million people`;
+  return `${n} (${units})`;
+}
+
+/**
+ * What the build checked a measure's ONS outturn against, in a sentence:
+ * the periods, the tolerance every one is within, and the largest gap
+ * (largest relative to the value where the tolerance is a share of it).
+ */
+export function checkSentence(check, frequency) {
+  if (!check?.periods?.length) return null;
+  const label = (key) => periodLabel(periodIndex(key, frequency), frequency);
+  const share = Boolean(check.tolerance_is_share);
+  const tolerance = share ? `${gb(0).format(check.tolerance * 100)}% of the value` : checkAmount(check.tolerance, check.in);
+  const first = label(check.periods[0]);
+  const last = label(check.periods[check.periods.length - 1]);
+  const gap = checkAmount(Math.abs(check.largest_gap), check.in);
+  return (
+    `The ONS outturn was checked against ${check.against}, ${first} to ${last}: ` +
+    `every period is within ${tolerance}; the largest gap${share ? " relative to the value" : ""} is ` +
+    `${gap}, in ${label(check.largest_gap_period)}.`
+  );
+}
+
 export const OUTTURN_KEY = "outturn";
 export const vintageKey = (id) => `v_${id}`;
 
@@ -186,11 +216,22 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
     unavailable: null,
     frequency,
     measure,
+    unit,
     spec,
+    // An index names its base period: the start of the parliament
+    axisLabel: unit === "index" ? `Index (${periodLabel(start, frequency)} = 100)` : spec.axis,
     format: formatterFor(variable, unit, measure),
     rows,
     outturn: shown.outturn,
-    vintages: drawn.map((v) => ({ key: vintageKey(v.id), id: v.id, label: v.label, anchor: v.anchor, newest: v === newest, values: v.values })),
+    vintages: drawn.map((v) => ({
+      key: vintageKey(v.id),
+      id: v.id,
+      label: v.label,
+      anchor: v.anchor,
+      reanchored: v.reanchored,
+      newest: v === newest,
+      values: v.values,
+    })),
     newest: { key: vintageKey(newest.id), label: newest.label },
     points,
     start,
