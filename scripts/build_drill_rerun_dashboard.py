@@ -279,7 +279,7 @@ FUEL_REL = {
     "basis": "post-behavioural",
     "calc": "Real Budget 2025 fuel duty measure: −£2.37bn (2026-27), then about −£0.85bn a year from 2027-28. "
             "Rule of thumb from the HMRC ready reckoner: a 1% change in petrol and diesel duty is £235m in 2027-28 (about £0.4bn per 1p a litre).",
-    "values": {},
+    "values": {2026: -2.37, 2027: -0.855, 2028: -0.855, 2029: -0.85, 2030: -0.84},
 }
 HVCTS_REL = {
     "match": "related", "source": "HM Treasury, Budget 2025 policy costings, p. 51",
@@ -287,8 +287,8 @@ HVCTS_REL = {
     "where": "High Value Council Tax Surcharge on homes over £2m in England from April 2028",
     "basis": "static and post-behavioural",
     "calc": "The real surcharge (£2m and above, 165,000 homes): static +£0.61bn in 2028-29, +£0.62bn, +£0.64bn; "
-            "post-behavioural +£0.40bn, +£0.43bn, +£0.44bn (Table 4.1). Different bands, so not comparable.",
-    "values": {},
+            "post-behavioural +£0.40bn, +£0.43bn, +£0.44bn (Table 4.1). Shown: the static figures. Different bands, so not comparable.",
+    "values": {2028: 0.605, 2029: 0.62, 2030: 0.635},
 }
 LHA_REL = {
     "match": "related", "source": "HM Treasury, Autumn Statement 2023 policy costings, p. 16",
@@ -297,7 +297,7 @@ LHA_REL = {
     "basis": "post-behavioural (landlords and claimants)",
     "calc": "The 2024 reset after a four-year freeze: −£1.29bn (2024-25), −£1.49bn, −£1.59bn, −£1.66bn (2027-28), −£1.70bn (2028-29). "
             "A 2027 reset starts from a different gap between rates and rents, so this is context, not a benchmark.",
-    "values": {},
+    "values": {2027: -1.66, 2028: -1.70},
 }
 FREEZE_REL = {
     "match": "related", "source": "HM Treasury, Budget 2025 Table 4.1, line 46, and policy costings p. 40",
@@ -305,8 +305,8 @@ FREEZE_REL = {
     "where": "Personal tax: maintain income tax and NICs thresholds for three further years to April 2031",
     "basis": "post-behavioural (static in the costings document)",
     "calc": "The first frozen year of the real extension raises +£3.37bn in 2028-29 (static +£3.33bn). "
-            "A one-year freeze in 2031-32 is the same kind of measure three years later, on a larger income base, so it should be somewhat larger.",
-    "values": {},
+            "A one-year freeze in 2031-32 is the same kind of measure three years later, on a larger income base, so it should be somewhat larger. Shown against 2031-32 for reference.",
+    "values": {2031: 3.365},
 }
 CGT_RULE = ("HMRC's CGT rows are post-behavioural and non-linear; points between the 1- and 5-point rows are "
             "interpolated linearly. Our model is static, so this is not compared.")
@@ -377,7 +377,7 @@ EXTERNAL = {
         "url": f"{B25}#page=47", "where": "Salary Sacrifice: limit NICs relief to £2,000 a year from 6 April 2029",
         "basis": "post-behavioural (Table 4.1)",
         "calc": "The real £2,000 cap: +£4.85bn (2029-30), +£2.59bn (2030-31); static +£4.87bn, +£5.07bn. The drill cuts the cap again to £1,000, which is not costed anywhere.",
-        "values": {}},
+        "values": {2029: 4.845, 2030: 2.585}},
     "mock3_hvcts_top_bands": HVCTS_REL,
     "mock3_threshold_freeze_2032": FREEZE_REL,
     "mock3_class4_main_rate": _rr(
@@ -416,11 +416,104 @@ EXTERNAL = {
         "values": {2026: -0.833}, "bound": "approximate"},
 }
 
+# Other organisations' published estimates (think tanks, party costings).
+# Shown and labelled; never scored. Same rules: exact quote, URL checked,
+# scaling shown.
+TPA = "https://taxpolicy.org.uk/2026/07/07/mansion-tax-1-5m-burnham/"
+RF_TL = "https://resolutionfoundation.org/app/uploads/2024/05/Under-triple-lock-and-key.pdf"
+TL_PLUS = {
+    "match": "related", "kind": "think tank", "source": "Resolution Foundation, Under triple lock and key (May 2024)",
+    "short": "Resolution Foundation", "url": RF_TL,
+    "where": "The Conservatives' 'triple lock plus': a higher personal allowance for pensioners, rising with the triple lock",
+    "basis": "static, by 2029-30",
+    "calc": "\"around 8 million tax-paying pensioners would see an annual tax cut of around £250 a year by the end of the next Parliament, at a cost of just over £2 billion\". "
+            "A broader allowance for all pensioners, so context only. Shown against 2029-30.",
+    "values": {2029: -2.0}}
+EXTRA = {
+    "mock_energy_vat_zero_rate": [{
+        "match": "direct", "kind": "think tank", "source": "Nesta, Is removing VAT really the best way to cut energy bills? (22 September 2025)",
+        "short": "Nesta", "url": "https://www.nesta.org.uk/blog/is-removing-vat-really-the-best-way-to-cut-energy-bills/",
+        "where": "Removing VAT from household electricity and gas", "basis": "full year, no year or price basis stated",
+        "calc": "\"it will cost £2.5 billion per year to implement\". The commonly cited £1.75bn is on 2021 energy spending.",
+        "values": {2027: -2.5}}],
+    "mock_hvcts_extension": [{
+        "match": "rescaled", "kind": "think tank", "source": "Tax Policy Associates, What if Andy Burnham lowered the mansion tax threshold to £1.5m? (updated 19 September 2026)",
+        "short": "Tax Policy Associates", "url": TPA,
+        "where": "Revenue table, 2028-29: adding a £1.5m band at £1,500 (other bands unchanged)", "basis": "static, OBR-scaled",
+        "calc": "Static £850m with the £1,500 band against £605m for the £2m tax: +£245m. The drill charges £2,500 on £1.5m to £2m homes: £245m × 2,500 / 1,500 = £408m.",
+        "values": {2028: 0.408}}],
+    "mock2_hvcts_band": [{
+        "match": "direct", "kind": "think tank", "source": "Tax Policy Associates, What if Andy Burnham lowered the mansion tax threshold to £1.5m? (updated 19 September 2026)",
+        "short": "Tax Policy Associates", "url": TPA,
+        "where": "Revenue table, 2028-29: adding a £1.5m band at £1,500 (other bands unchanged)", "basis": "static, OBR-scaled",
+        "calc": "The same band: static £850m against £605m for the £2m tax, so +£245m (dynamic about £520m against £400m, +£120m).",
+        "values": {2028: 0.245}}],
+    "mock2_state_pension_personal_allowance": [TL_PLUS],
+    "mock3_pensioner_allowance": [TL_PLUS],
+    "mock4_state_pension_topup_allowance": [TL_PLUS],
+    "mock3_lha_30th_percentile": [{
+        "match": "direct", "kind": "think tank", "source": "Resolution Foundation, Saving private renters (19 September 2026)",
+        "short": "Resolution Foundation", "url": "https://www.resolutionfoundation.org/publications/saving-private-renters/",
+        "where": "Relinking LHA to the 30th percentile in April 2027 and keeping the link", "basis": "current prices, 2029-30",
+        "calc": "\"relinking LHA to the 30th percentile in April 2027 and maintaining the link thereafter would cost £2 billion a year\" (in current prices) by 2029-30.",
+        "values": {2029: -2.0}}],
+    "mock3_employer_ni_under_22": [{
+        "match": "related", "kind": "party", "source": "Conservative Party pledge, 6 October 2026 (reported by PA)",
+        "short": "Conservative Party costing", "url": "https://www.irishnews.com/news/uk/tories-pledge-to-halve-employer-national-insurance-for-young-people-D7AUPBRM2NOJ7LDU4HJVXSGA4E/",
+        "where": "Halve employer NI (15% to 7.5%) for workers aged 21 to 24", "basis": "static; party's own figure",
+        "calc": "Static cost £3.25bn, \"which officials estimate would fall to a 'dynamic' cost of £2.3 billion in 2029-30\". Different ages and rate, so context only. Shown against 2029-30.",
+        "values": {2029: -3.25}}],
+    "mock4_uc_child_element": [{
+        "match": "rescaled", "kind": "think tank", "source": "Child Poverty Action Group, Universal credit: a three-step plan (2024)",
+        "short": "CPAG", "url": "https://cpag.org.uk/sites/default/files/2024-05/Universal_credit_three_steps.pdf",
+        "where": "Increasing the child element by £20 a week", "basis": "2024 caseload",
+        "calc": "\"Increasing the child element by £20 a week would reduce child poverty by 400,000 at a cost of £3 billion.\" £12.50 a month = £2.88 a week: £3bn × 2.88 / 20 = £0.43bn. Before the two-child limit was removed, so likely low.",
+        "values": {2027: -0.433}}],
+}
+EXTRA["mock4_employer_ni_under23"] = EXTRA["mock3_employer_ni_under_22"]
+
 SCORED = ("direct", "rescaled", "derived")
 MATCH_LABEL = {
     "direct": "Same change", "rescaled": "Rescaled", "derived": "Derived from official counts",
     "basis": "Different basis", "related": "Related policy only", "none": "No external costing found",
 }
+
+
+def entries(mid):
+    """Official entry first, then other organisations; drop 'none' when
+    anything else exists."""
+    es = [EXTERNAL.get(mid, NONE)] + EXTRA.get(mid, [])
+    keep = [e for e in es if e["match"] != "none"]
+    return keep or es[:1]
+
+
+def is_scored(e):
+    return e.get("kind", "official") == "official" and e["match"] in SCORED and "bound" not in e
+
+
+def rank(e):
+    """Which figure the External column shows when several exist for a year."""
+    if is_scored(e):
+        return 0
+    if e.get("kind", "official") == "official" and e["match"] != "related":
+        return 1
+    if e.get("kind", "official") != "official" and e["match"] != "related":
+        return 2
+    return 3
+
+
+def word(e):
+    """Plain words for what a figure is."""
+    k = e.get("kind", "official")
+    if k == "think tank":
+        return "think tank" + (", related policy" if e["match"] == "related" else "")
+    if k == "party":
+        return "party costing, related policy"
+    if e["match"] == "related":
+        return "related policy"
+    if e["match"] == "basis":
+        return "after behaviour"
+    return {"upper": "up to", "lower": "at least", "approximate": "about"}.get(e.get("bound"), "")
 
 
 def vs_ext(old, new, ext):
@@ -461,10 +554,14 @@ def write_csv_columns(path, comp, rows):
     fields = [c for c in comp[0].keys() if c not in cols] + cols
     for c in comp:
         r = by[(c["drill"], c["measure_id"], int(c["year"]))]
-        e = EXTERNAL.get(r["id"], NONE)
-        v = r["ext"] if r["ext"] is not None else r["ext_ref"]
+        es = entries(r["id"])
+        if r["xs"]:
+            e, v = es[r["xs"][0][0]], r["xs"][0][1]
+        else:
+            e, v = es[0], None
         c["external_bn"] = "" if v is None else f"{v:g}"
-        c["external_match"] = e["match"]
+        c["external_match"] = (e["match"] + (f" ({e['bound']})" if "bound" in e else "")
+                               + ("" if e.get("kind", "official") == "official" else f"; {e['kind']}"))
         c["external_source"] = e.get("source", "")
         c["external_url"] = e.get("url", "")
         c["vs_external"] = ("invalid" if r["invalid"] else "model_limitation" if r["limit"] and r["ext"] is not None
@@ -600,11 +697,10 @@ def main() -> None:
         v = r["vs_official_static"] or None
         vs = {"unchanged": "same"}.get(v, v) if v in ("closer", "further", "unchanged") else None
         note, links = (None, []) if invalid else cause(d, mid, y)
-        ex = EXTERNAL.get(mid, NONE)
-        xv = ex.get("values", {}).get(y)
-        scored = ex["match"] in SCORED and "bound" not in ex
-        ext = xv if scored else None
-        ext_ref = None if scored else xv
+        es = entries(mid)
+        cands = sorted(((rank(e), i, e["values"][y]) for i, e in enumerate(es) if y in e.get("values", {})))
+        ext = next((v for rk, i, v in cands if rk == 0), None)
+        xs = [[i, v] for rk, i, v in cands]
         xvs = None if (invalid or limit) else vs_ext(old, new, ext)
         name = NAMES.get(mid, r["measure_name"].removeprefix("MOCK: ").replace(" (MOCK)", ""))
         rows.append({
@@ -617,7 +713,7 @@ def main() -> None:
             "sheet": None if not sh else {"url": sh["url"], "file": sh["file"], "line": sh["line"]},
             "note_sec": notes.get((d, mid)) if sh else None,
             "lfl": lfl, "lfl_src": lfl_src, "limit": limit, "mock_vs": vs, "invalid": invalid,
-            "ext": ext, "ext_ref": ext_ref, "vs": xvs,
+            "ext": ext, "xs": xs, "vs": xvs,
             "note": note, "links": links,
             "d": {k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
                   for k in ("d1_avg_change", "d5_avg_change", "d10_avg_change", "people_affected_pct")},
@@ -643,9 +739,18 @@ def main() -> None:
 
     out = base / "dashboard"
     out.mkdir(exist_ok=True)
-    ext_meta = {mid: {**{k: v for k, v in e.items() if k != "values"},
-                      "label": MATCH_LABEL[e["match"]] + (f" ({e['bound']}{' bound' if e['bound'] != 'approximate' else ''})" if "bound" in e else "")}
-                for mid, e in EXTERNAL.items()}
+    ext_meta = {mid: [{**{k: v for k, v in e.items() if k != "values"}, "kind": e.get("kind", "official"),
+                       "word": word(e), "scored": is_scored(e),
+                       "label": MATCH_LABEL[e["match"]] + (f" ({e['bound']}{' bound' if e['bound'] != 'approximate' else ''})" if "bound" in e else "")}
+                      for e in entries(mid)]
+                for mid in EXTERNAL}
+    # The drills' invented costings stay in comparison.csv only.
+    for r in rows:
+        for k in ("lfl", "lfl_src", "static", "post", "team", "sheet", "note_sec", "mock_vs"):
+            r.pop(k, None)
+    for g in groups:
+        g.pop("mock_closer", None)
+        g.pop("mock_further", None)
     (out / "data.json").write_text(json.dumps(
         {"drills": groups, "rows": rows, "gaps": ext_gaps(rows), "ext": ext_meta}, ensure_ascii=False))
     write_csv_columns(base / "comparison.csv", comp, rows)

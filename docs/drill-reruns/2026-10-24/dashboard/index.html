@@ -76,7 +76,7 @@ i.closer{background:var(--gbar)}i.further{background:var(--abar)}i.none{backgrou
 .mlist .lh+.mg{border-top:0}
 .mg.flash{background:#f0faf9}
 .mg .mdesc{margin-bottom:10px}
-.yr2{display:grid;grid-template-columns:96px 110px 110px 190px minmax(140px,1fr) 110px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f2f4;font-size:14.5px}
+.yr2{display:grid;grid-template-columns:96px 110px 110px 190px minmax(140px,1fr) 150px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f2f4;font-size:14.5px}
 .ylist .yr2:last-child{border-bottom:0}
 .yr2.lh{font-size:13px;color:var(--faint);border-bottom:1px solid var(--line);padding:12px 0 8px}
 .c-o{color:var(--faint);text-align:right}
@@ -222,7 +222,7 @@ details.src .dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px 2
 .empty{color:var(--muted)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #tt{position:fixed;z-index:50;max-width:320px;background:#1f2937;color:#f3f4f6;font-size:13px;line-height:1.5;padding:9px 12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:none}
-.mockl{font-size:.74rem;margin-top:2px}.mockl a{color:var(--faint);text-decoration:none;border-bottom:1px dotted var(--faint)}.offl.ref{color:var(--faint)}.c-f .offl,.mockl a{white-space:nowrap}
+.offl.ref{color:var(--muted,#6b7280)}.c-f .offl{white-space:nowrap}.nw{white-space:nowrap}.xk{display:block;font-size:.72rem;color:var(--faint);line-height:1.2}
 #tt b{display:block;font-weight:600;margin-bottom:2px;color:#fff}
 [data-tip]{cursor:help}a[data-tip],.brow[data-tip]{cursor:pointer}
 </style>
@@ -230,7 +230,7 @@ details.src .dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px 2
 <body>
 <header><div class="wrap"><h1>Drill reruns: drill day vs policyengine 6.10.2 <span class="mock">MOCK</span></h1></div></header>
 <main class="wrap">
-  <p class="lede">Each drill scored mock Budget measures on the day. We reran the same code on today's engine and data. Benchmarks are real published costings (HMRC, HM Treasury, DWP, DESNZ) of the same or an equivalent policy, rescaled where the change differs; many drill measures have no real equivalent. <span class="yi" data-tip="External benchmarks&#10;Same change: read straight off the source.&#10;Rescaled: the same kind of change, scaled to this size.&#10;Derived: official counts × the measure's amount.&#10;Different basis or related policy: shown for context, not compared.&#10;The drills' own costings were invented for the rehearsals; they are shown second, as 'drill mock'." tabindex="0">ⓘ</span></p>
+  <p class="lede">Each drill scored mock Budget measures on the day. We reran the same code on today's engine and data. Benchmarks are real published estimates of the same or an equivalent policy: official costings (HMRC, HM Treasury, DWP, DESNZ) first, then think tanks and party costings, rescaled where the change differs. <span class="yi" data-tip="External benchmarks&#10;A plain figure: official, same change or rescaled. These are the only figures compared with ours.&#10;up to / at least / about: an official figure that is only a bound or approximate.&#10;after behaviour: official, but after behavioural effects; our model is static.&#10;think tank / party costing: another organisation's published estimate.&#10;related policy: a real costing of a similar but different policy.&#10;Every figure links to its source." tabindex="0">ⓘ</span></p>
   <nav class="tabs" id="tabs" role="tablist" aria-label="Drills"></nav>
   <div id="root"></div>
   <div id="tt" role="tooltip" hidden></div>
@@ -263,13 +263,12 @@ function status(r){
   if(r.vs==='closer')return 'Closer to the external costing than on drill day.';
   if(r.vs==='further')return 'Further from the external costing than on drill day.';
   if(r.vs==='same')return 'Same distance from the external costing.';
-  if(r.ext_ref!=null)return xm(r).bound?'External figure is only a bound or approximate; not compared.':'External figure is not like-for-like; not compared.';
-  if(xm(r).match==='related')return 'Only a related policy has a real costing; not compared.';
-  return 'No external costing for this year.'}
-const xm=r=>(D.ext&&D.ext[r.id])||{match:'none',label:'No external costing found'};
+  if(r.xs.length)return 'Only a bound, a different basis, another organisation\'s estimate or a related policy; not compared.';
+  return 'No external figure for this year.'}
+const xm=r=>(D.ext&&D.ext[r.id])||[{match:'none',kind:'official',label:'No external costing found',word:''}];
+const xw=(e,v)=>(e.word?e.word+': ':'')+bnf(v);
 function rowTip(r){const L=[`${r.name} · ${r.fy}`,`Drill day ${n2(r.old)}bn → rerun ${n2(r.new)}bn`,`Change ${sbn(r.diff)}bn`+(r.pct!=null?` (${fp(r.pct)})`:'')];
-  if(r.ext!=null)L.push(`External (${xm(r).label.toLowerCase()}) ${n2(r.ext)}bn`);else if(r.ext_ref!=null)L.push(`External, not like-for-like ${n2(r.ext_ref)}bn`);
-  if(r.lfl!=null)L.push(`Drill mock costing ${n2(r.lfl)}bn (invented)`);
+  r.xs.forEach(([i,v])=>{const e=xm(r)[i];L.push(`External, ${e.short||e.source}: ${xw(e,v)}`)});
   L.push(status(r));return L.join('\n')}
 function measuresOf(d){const ids=[...new Set(D.rows.filter(r=>r.drill===d).map(r=>r.id))];return ids.map(id=>BY[id])}
 function valid(d){return measuresOf(d).filter(rs=>!rs[0].invalid&&!rs.every(zero))}
@@ -293,7 +292,7 @@ function mini(d,fuel){
   return `<div class="mini"><div class="mtitle">How much each measure changed (rerun vs drill day)${fuel?` <span class="yi"${T("Fuel duty is not compared: this drill set it month by month, and today's engine ignores month-by-month rates. See the drill tab.",true)}>ⓘ</span>`:''}</div><div class="mrows">${rows}${unNames.slice(0,Math.min(3,5-top.length)).map(n=>`<div class="mrow un"><div class="mn">${esc(n)}</div><div class="mtr"><span class="z"></span></div><div class="mv">0%</div></div>`).join('')}</div><div class="mextra">${extra||'&nbsp;'}</div></div>`}
 function dirw(ours,off){const d=Math.abs(Math.abs(ours)-Math.abs(off)).toFixed(1);const more=Math.abs(ours)>Math.abs(off);return off<0?`costs £${d}bn ${more?'more':'less'}`:`raises £${d}bn ${more?'more':'less'}`}
 function gapSub(){const grew=D.gaps.filter(g=>Math.abs(g.gap)>Math.abs(g.gap_drill_day)*1.2);
-  let t='Only measures with a comparable real costing (same change, rescaled or derived from official counts). Most gaps were there on drill day too.';
+  let t='Official costings only, for the same change or rescaled to it; bounds, think tanks and related policies are left out. Most gaps were there on drill day too.';
   if(grew.length)t+=' '+grew.map(g=>`The ${g.label} gap grew in the rerun (£${Math.abs(g.gap_drill_day).toFixed(2)}bn → £${Math.abs(g.gap).toFixed(2)}bn).`).join(' ');return t}
 function gapRow(g){const tip=`${g.label}: ours vs external, ${g.fy}\nOurs ${bnf(g.ours)} (drill day ${bnf(g.drill_day)}); external ${bnf(g.official)}\nSource: ${g.source}\n${g.calc}`;
   return `<div class="grow" data-tab="drill${g.drill}" data-goto="${g.id}"${T(tip,true)}>${icon(g.icon)}<div class="gm"><div class="gl">${esc(g.label)} <span class="gd">drill ${g.drill} · ${g.fy}</span></div><div class="gr">${esc(g.short)}</div></div>
@@ -327,8 +326,9 @@ function overview(){
    <details class="card src"><summary>Sources and method</summary><dl class="dl">
     <dt>Rerun</dt><dd>Each drill's own code, on <span class="dotted"${T('policyengine-uk 2.132.6, policyengine-core 3.33.3\nData: microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71\nSHA-256 810ba980…0951ece',true)}>policyengine 6.10.2</span> and the certified Microcosm data (24 Oct 2026).</dd>
     <dt>Benchmarks</dt><dd>${ext('HMRC ready reckoner (June 2025)','https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes','Direct effects of illustrative tax changes: per-unit costings of tax changes, post-behavioural, Spring Statement 2025 baseline.')}, ${ext('Budget 2025 costings','https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf','HM Treasury, Budget 2025 policy costings (November 2025).')}, ${ext('Autumn Budget 2024 costings','https://assets.publishing.service.gov.uk/media/6721d2c54da1c0d41942a8d2/Policy_Costing_Document_-_Autumn_Budget_2024.pdf','HM Treasury, Autumn Budget 2024 policy costings.')}, ${ext('Autumn Statement 2023 costings','https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf','HM Treasury, Autumn Statement 2023 policy costings.')}, the ${ext('electricity VAT release','https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living','HM Treasury news release, 21 July 2026.')}, DWP and DESNZ statistics. <span class="tiny">Each figure links to its source; hover for the scaling.</span></dd>
-    <dt>Drill mock</dt><dd>The drills' own costings were invented for the rehearsals. They are shown second and link to each drill's costing note.</dd>
-    <dt>Years</dt><dd>Model year 2027 = fiscal year 2027-28. Ready-reckoner figures cover 2026-27 to 2028-29 only. Model limitations and fuel duty are left out of closer/further.</dd>
+    <dt>Others</dt><dd>${ext('Resolution Foundation','https://www.resolutionfoundation.org/publications/saving-private-renters/','Saving private renters (2026); Under triple lock and key (2024).')}, ${ext('Tax Policy Associates','https://taxpolicy.org.uk/2026/07/07/mansion-tax-1-5m-burnham/','Mansion tax at £1.5m (2026).')}, ${ext('CPAG','https://cpag.org.uk/sites/default/files/2024-05/Universal_credit_three_steps.pdf','Universal credit: a three-step plan (2024).')}, ${ext('Nesta','https://www.nesta.org.uk/blog/is-removing-vat-really-the-best-way-to-cut-energy-bills/','VAT on energy bills (2025).')} and a Conservative Party costing. Labelled "think tank" or "party costing".</dd>
+    <dt>Compared</dt><dd>Only official figures for the same change, or rescaled or derived from official counts, and not just a bound, count for closer/further and the gap list. Think-tank and party figures, bounds, after-behaviour figures and related policies are shown for context only.</dd>
+    <dt>Years</dt><dd>Model year 2027 = fiscal year 2027-28. Ready-reckoner figures cover 2026-27 to 2028-29 only. Model limitations and fuel duty are left out of closer/further. The drills' own invented costings are not shown; they stay in comparison.csv.</dd>
    </dl><div class="pills"><a class="chip" href="${GH}/pull/114" target="_blank" rel="noopener">PR #114</a><a class="chip" href="${README}" target="_blank" rel="noopener">README</a><a class="chip" href="https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2" target="_blank" rel="noopener">policyengine 6.10.2</a><a class="chip" href="https://pypi.org/project/policyengine-uk/2.132.6/" target="_blank" rel="noopener">policyengine-uk 2.132.6</a></div></details>`}
 /* ---------- drill tab ---------- */
 function bars(g,list){
@@ -343,17 +343,12 @@ function bars(g,list){
 const bnf=v=>v==null?'—':(v<0?'−':'')+'£'+Math.abs(v).toFixed(2)+'bn';
 const sbnf=v=>(v>0.0049?'+':v<-0.0049?'−':'')+'£'+Math.abs(v).toFixed(2)+'bn';
 const pw=p=>p==null?'':(Math.abs(p)<0.005?'0%':(p>0?'+':'−')+(Math.abs(p)>=1?Math.round(Math.abs(p)):Math.abs(p).toFixed(Math.abs(p)<0.1?2:1))+'%');
-function mockCell(r){if(r.lfl==null)return '';
-  const sec=r.note_sec;const src=sec?`Drill mock costing (invented for the rehearsal): “${sec.title}”.`:`Drill ${r.drill} scoring sheet (invented figures), line ${r.sheet.line}.`;
-  const t=src+(r.lfl_src?`\nOn our basis: ${r.lfl_src.why} (note line ${r.lfl_src.line}).\nHeadline static ${bnf(r.static)}.`:`\nStatic costing${r.post!=null?`; post-behavioural ${bnf(r.post)}`:''}.`)+`\nClick to open the ${sec?'costing note':'scoring sheet'}.`;
-  return `<div class="mockl"><a href="${sec?sec.url:r.sheet.url}" target="_blank" rel="noopener"${T(t)}>drill mock ${bnf(r.lfl)}</a></div>`}
-function extTip(e){return [e.source||'',e.where?`Row: ${e.where}`:'',e.calc||'',e.basis?`Basis: ${e.basis}`:'',e.url?'Click to open the source.':''].filter(Boolean).join('\n')}
-function offCell(r){const e=xm(r);let main;
-  if(r.ext!=null)main=`<a class="offl" href="${e.url}" target="_blank" rel="noopener"${T(`${e.label}: ${bnf(r.ext)}\n`+extTip(e))}>${bnf(r.ext)}</a>`;
-  else if(r.ext_ref!=null)main=`<a class="offl ref" href="${e.url}" target="_blank" rel="noopener"${T(`${e.label}, not compared: ${bnf(r.ext_ref)}\n`+extTip(e))}>(${bnf(r.ext_ref)})</a>`;
-  else if(e.match==='related'&&r.year===BY[r.id].find(x=>!zero(x))?.year)main=`<a class="offl ref" href="${e.url}" target="_blank" rel="noopener"${T(`${e.label}\n`+extTip(e))}>related</a>`;
-  else main=`<span class="faint"${T(e.match==='none'?'No external costing found'+(e.calc?`\n${e.calc}`:''):e.match==='related'?`${e.label}: see the first year`:'No external figure for this year',true)}>—</span>`;
-  return main+mockCell(r)}
+function extTip(e){return [e.source||'',e.where?`On: ${e.where}`:'',e.calc||'',e.basis?`Basis: ${e.basis}`:'',e.url?'Click to open the source.':''].filter(Boolean).join('\n')}
+function offCell(r){const es=xm(r);
+  if(!r.xs.length){const n=es[0].match==='none';return `<span class="faint"${T(n?'No external costing found'+(es[0].calc?`\n${es[0].calc}`:''):'No external figure for this year',true)}>—</span>`}
+  const [i,v]=r.xs[0],e=es[i];const more=r.xs.slice(1).map(([j,w])=>`Also: ${es[j].short||es[j].source}, ${xw(es[j],w)}`);
+  const tip=[`${xw(e,v)}`+(r.ext!=null?' (compared with ours)':' (not compared)'),extTip(e),...more].join('\n');
+  return `<a class="offl${r.ext==null?' ref':''}" href="${e.url}" target="_blank" rel="noopener"${T(tip)}>${e.word?`<span class="xk">${esc(e.word)}</span>`:''}${bnf(v)}</a>`}
 function viz(r,lo,hi){const x=v=>((v-lo)/(hi-lo)*100).toFixed(1);let g='<span class="vt"></span>';
   if(lo<0&&hi>0)g+=`<span class="vz" style="left:${x(0)}%"></span>`;
   const xo=+x(r.old),xn=+x(r.new);if(Math.abs(xn-xo)>2)g+=`<span class="va" style="left:${Math.min(xo,xn)}%;width:${Math.abs(xn-xo)}%"></span>`;
@@ -361,15 +356,15 @@ function viz(r,lo,hi){const x=v=>((v-lo)/(hi-lo)*100).toFixed(1);let g='<span cl
   g+=`<span class="vo" style="left:${xo}%"></span><span class="vn" style="left:${xn}%"></span>`;
   return `<div class="viz"${T(rowTip(r),true)}>${g}</div>`}
 function yrow(r,lo,hi,hn){const c=cls(r);const extra=r.note&&r.note!==hn&&!r.invalid?` <span class="yi"${T(r.fy+': '+r.note,true)}>ⓘ</span>`:'';
-  return `<div class="yr2"><div class="c-y">${r.fy}${extra}</div><div class="c-o"><span class="sr">Drill day </span>${bnf(r.old)}</div><div class="c-n"><span class="sr">Rerun </span>${bnf(r.new)}</div>
+  return `<div class="yr2"><div class="c-y">${r.fy}${extra}</div><div class="c-o"><span class="sr">Drill day </span><span class="nw">${bnf(r.old)}</span></div><div class="c-n"><span class="sr">Rerun </span><span class="nw">${bnf(r.new)}</span></div>
    <div class="c-d"><span class="pill ${c}"${T(`rerun ${bnf(r.new)} − drill day ${bnf(r.old)} = ${sbnf(r.diff)}`+(r.pct!=null?` (${fp(r.pct)})`:'')+'\n'+status(r),true)}>${sbnf(r.diff)}${r.pct!=null&&Math.abs(r.diff)>=5e-4?` (${pw(r.pct)})`:''}</span></div>
-   <div class="c-v">${viz(r,lo,hi)}</div><div class="c-f${r.ext==null&&r.ext_ref==null?' nof':''}"><span class="lbl">External </span>${offCell(r)}</div></div>`}
+   <div class="c-v">${viz(r,lo,hi)}</div><div class="c-f${r.xs.length?'':' nof'}"><span class="lbl">External </span>${offCell(r)}</div></div>`}
 function points(rs,h){const P=[];
   if(h.note){let s=esc(h.note);if(h.links.length)s+=' ('+h.links.map(l=>ext(l[0],l[1],l[2]||l[0])).join(', ')+')';P.push(`${icon2('why')}<span><b>Why it moved:</b> ${s}</span>`)}
-  const e=xm(h);
-  const srcL=e.url?ext(e.source,e.url,extTip(e)):'';
-  if(e.match==='none')P.push(`${icon2('scale')}<span><b>External costing:</b> none found${e.calc?` (${esc(e.calc)})`:''}.</span>`);
-  else P.push(`${icon2('scale')}<span><b>External costing:</b> ${esc(e.label.toLowerCase())}, ${srcL}. <span class="faint">${esc(e.calc)}</span></span>`);
+  const es=xm(h);
+  if(es[0].match==='none')P.push(`${icon2('scale')}<span><b>External costing:</b> none found from official sources, think tanks or party costings${es[0].calc?` (${esc(es[0].calc)})`:''}.</span>`);
+  else es.forEach(e=>{
+    P.push(`${icon2('scale')}<span><b>External${e.kind==='official'?'':e.kind==='party'?' (party costing)':' (think tank)'}:</b> ${esc(e.label.toLowerCase())}, ${ext(e.source,e.url,extTip(e))}. <span class="faint">${esc(e.calc)}</span></span>`)});
   if(h.invalid)P.push(`${icon2('warn')}<span><b>Vs external:</b> not comparable; the rerun drops the duty change.</span>`);
   else if(h.limit)P.push(`${icon2('warn')}<span><b>Vs external:</b> not compared. Model limitation: ${esc(h.limit)}.</span>`);
   else if(rs.some(r=>r.ext!=null)){const c=rs.filter(r=>r.vs==='closer').length,f=rs.filter(r=>r.vs==='further').length,n=rs.filter(r=>r.vs).length;

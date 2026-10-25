@@ -86,47 +86,52 @@ The median and maximum are taken over "material" cells: those where the drill-da
 
 ### External benchmarks
 
-The drills' costings were invented for the rehearsals, so the dashboard compares against **real published costings** of the same or an equivalent policy. `scripts/build_drill_rerun_dashboard.py` holds each source, the exact row or page, and the scaling (`EXTERNAL`). It writes `external_bn`, `external_match`, `external_source`, `external_url` and `vs_external` into `comparison.csv`. The mock figure stays on the dashboard as a second line, "drill mock".
+The drills' costings were invented for the rehearsals, so the dashboard shows only **real published estimates** of the same or an equivalent policy. The invented costings are not on the page; they stay in `comparison.csv` (`official_*` columns). `scripts/build_drill_rerun_dashboard.py` holds every source, the exact row or page, the quote and the scaling (`EXTERNAL` for official sources, `EXTRA` for think tanks and party costings). It writes `external_bn`, `external_match`, `external_source`, `external_url` and `vs_external` into `comparison.csv`, using the figure the page shows for that year.
 
-Match quality:
+What the page shows in the External column, in this order of preference for each year:
 
-- **Same change**: read straight off the source.
-- **Rescaled**: the same kind of change scaled to this size, for example a £430 threshold rise as 4.13 × HMRC's £2-a-week row.
-- **Derived**: official counts × the measure's amount.
-- **Different basis**: a real figure that is post-behavioural where our model is static (CGT). Shown, not compared.
-- **Related policy only**: a real costing of a related policy (for example the real £2m surcharge for a £1.5m band). Context, not compared.
+1. **A plain figure**: official (HMRC, HM Treasury, DWP, DESNZ), for the same change, rescaled to it or derived from official counts. These are the only figures compared with ours (closer/further and the "differs most" list).
+2. **"up to", "at least", "about"**: an official figure that is only a bound or approximate.
+3. **"after behaviour"**: an official figure after behavioural effects (CGT); our model is static.
+4. **"think tank"** or **"party costing"**: another organisation's published estimate. Never compared.
+5. **"related policy"**: a real costing of a similar but different policy. Never compared.
 
-Only same-change, rescaled and derived figures that are not just an upper or lower bound count towards closer/further and the "differs most" list.
+Every figure links to its source outside this repository. Each source URL was checked to load, and each quoted figure was read from the source itself.
 
-| Drill | Measure | Match | External figure (£bn, + = revenue) | Source |
+| Drill | Measure | Shown | External figure (£bn, + = revenue) | Source |
 |---|---|---|---|---|
-| 1 | Child Benefit £30/£20 | Rescaled | −1.19 (2027-28), −1.18 (2028-29) | [HMRC ready reckoner, June 2025](https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes): CB first and subsequent child £1/week |
-| 1 | NI threshold to £13,000 | Rescaled | −1.01, −1.12 | Ready reckoner: employee entry threshold £2/week; lower profits limit £104 |
-| 1 | VAT zero rate on household energy | Rescaled, upper bound | −2.40 (2027-28) | Ready reckoner: VAT reduced rate 1 point × 5 |
-| 1, 2, 3, 4 | Fuel duty measures | Related | Real measure −2.37 (2026-27), about −0.85 a year after | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=14), p. 14 |
-| 1, 2, 3 | Council tax surcharge variants | Related | Real £2m+ surcharge: static +0.61 (2028-29), post-behavioural +0.40 | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=51), p. 51 |
-| 2 | Electricity VAT zero rate | Rescaled, upper bound | −1.70 (2027-28) | [HM Treasury, 21 July 2026](https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living): about £850m for October 2026 to March 2027, doubled |
-| 2 | Employer NI threshold +£500 | Rescaled | −2.07, −2.26 | Ready reckoner: employer threshold £2/week |
-| 2 | CGT 18→20%, 24→28% | Different basis | −0.14, −0.66 (post-behavioural) | Ready reckoner: CGT rate rows, interpolated |
-| 2 | £150 energy payment | Derived, lower bound | −1.01 (2026-27) | [DWP Universal Credit statistics, Feb 2026](https://www.gov.uk/government/statistics/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026): 6.7m households × £150 |
-| 3 | CGT 28% and exempt amount £2,000 | Different basis | −0.09, −0.60 (post-behavioural) | Ready reckoner |
-| 3 | Class 4 main rate +1 point | Same change | +0.53, +0.45 | Ready reckoner: Class 4 main rate 1 point |
-| 3 | Warm Home Discount +£100 | Derived, upper bound | −0.67 a winter | [DESNZ consultation](https://www.gov.uk/government/consultations/expanding-the-warm-home-discount-scheme-2025-to-2026/expanding-the-warm-home-discount-scheme-2025-to-2026-consultation-document-accessible-webpage): £1bn for £150 in Great Britain |
-| 3, 4 | LHA to 30th percentile | Related | 2024 reset: −1.66 (2027-28), −1.70 | [Autumn Statement 2023 policy costings](https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf#page=16), p. 16 |
-| 3 | Salary sacrifice cap £1,000 | Related | Real £2,000 cap: +4.85 (2029-30), +2.59 | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=47), p. 47 |
-| 3, 4 | Threshold freeze to 2032 | Related | First year of the real freeze: +3.37 (2028-29) | [Budget 2025 Table 4.1](https://assets.publishing.service.gov.uk/media/69269df29fd433badebc31b3/Table_4.1_-_Budget_2025_Policy_Decisions.xlsx), line 46 |
-| 4 | Carer's Allowance limit +£26 | Rescaled (model limitation) | −0.06, −0.08, −0.10 | [Autumn Budget 2024 policy costings](https://assets.publishing.service.gov.uk/media/6721d2c54da1c0d41942a8d2/Policy_Costing_Document_-_Autumn_Budget_2024.pdf#page=64), p. 64: +£45 rise, scaled |
-| 4 | CGT higher rate 26% | Different basis | +0.00, −0.24 (post-behavioural) | Ready reckoner |
-| 4 | Savings starting band to £2,000 | Rescaled (model limitation) | +0.15 (2028-29) | Ready reckoner: starting rate limit £100 × 30 |
-| 4 | Warm Home Discount top-up | Derived, approximate | −0.83 (2026-27) | DESNZ consultation |
+| 1 | Child Benefit £30/£20 | Official, rescaled | −1.19 (2027-28), −1.18 (2028-29) | [HMRC ready reckoner, June 2025](https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes): CB first and subsequent child £1/week |
+| 1 | NI threshold to £13,000 | Official, rescaled | −1.01, −1.12 | Ready reckoner: employee entry threshold £2/week; lower profits limit £104 |
+| 1 | VAT zero rate on household energy | up to (official); think tank | up to −2.40 (2027-28); Nesta −2.5 a year | Ready reckoner: VAT reduced rate × 5; [Nesta, Sept 2025](https://www.nesta.org.uk/blog/is-removing-vat-really-the-best-way-to-cut-energy-bills/): "it will cost £2.5 billion per year" |
+| 1 | Council tax surcharge from £1.5m | think tank, rescaled; related policy | +0.41 (2028-29) | [Tax Policy Associates, updated 19 Sept 2026](https://taxpolicy.org.uk/2026/07/07/mansion-tax-1-5m-burnham/): £1,500 band adds £850m − £605m = £245m static; × 2,500/1,500 |
+| 1–4 | Fuel duty measures | related policy | Real measure −2.37 (2026-27), about −0.85 a year after | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=14), p. 14 |
+| 2 | Electricity VAT zero rate | up to (official) | up to −1.70 (2027-28) | [HM Treasury, 21 July 2026](https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living): about £850m for October–March, doubled |
+| 2 | Employer NI threshold +£500 | Official, rescaled | −2.07, −2.26 | Ready reckoner: employer threshold £2/week |
+| 2 | CGT 18→20%, 24→28% | after behaviour (official) | −0.14, −0.66 | Ready reckoner: CGT rate rows, interpolated |
+| 2 | £150 energy payment | at least (official) | at least −1.01 (2026-27) | [DWP Universal Credit statistics, Feb 2026](https://www.gov.uk/government/statistics/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026): 6.7m households × £150 |
+| 2 | £1.5m–£2m surcharge band at £1,500 | think tank, same change | +0.245 static (2028-29); dynamic about +0.12 | Tax Policy Associates (as above) |
+| 2, 3, 4 | State Pension personal allowance; Pensioner Allowance; Top-up Allowance | think tank, related policy | −2.0 (2029-30) | [Resolution Foundation, May 2024](https://resolutionfoundation.org/app/uploads/2024/05/Under-triple-lock-and-key.pdf): "triple lock plus", "a cost of just over £2 billion" |
+| 3 | LHA relinked to 30th percentile from April 2027 | think tank, same change; related policy | −2.0 (2029-30, current prices); related −1.66, −1.70 | [Resolution Foundation, Saving private renters, 19 Sept 2026](https://www.resolutionfoundation.org/publications/saving-private-renters/); [Autumn Statement 2023 costings](https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf#page=16), p. 16 |
+| 3 | Class 4 main rate +1 point | Official, same change | +0.53, +0.45 | Ready reckoner |
+| 3 | CGT 28% and exempt amount £2,000 | after behaviour (official) | −0.09, −0.60 | Ready reckoner |
+| 3, 4 | Warm Home Discount top-ups | up to / about (official) | up to −0.67 a winter; about −0.83 | [DESNZ consultation](https://www.gov.uk/government/consultations/expanding-the-warm-home-discount-scheme-2025-to-2026/expanding-the-warm-home-discount-scheme-2025-to-2026-consultation-document-accessible-webpage): £1bn for £150 in Great Britain |
+| 3 | Salary sacrifice cap £1,000 | related policy | Real £2,000 cap +4.85 (2029-30), +2.59 | [Budget 2025 costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=47), p. 47 |
+| 3, 4 | Threshold freeze to 2032 | related policy | First year of the real freeze +3.37 (2028-29) | [Budget 2025 Table 4.1](https://assets.publishing.service.gov.uk/media/69269df29fd433badebc31b3/Table_4.1_-_Budget_2025_Policy_Decisions.xlsx), line 46 |
+| 3, 4 | Employer NI relief for under-22s / under-23s | party costing, related policy | −3.25 static (2029-30) | [Conservative pledge, 6 Oct 2026 (PA)](https://www.irishnews.com/news/uk/tories-pledge-to-halve-employer-national-insurance-for-young-people-D7AUPBRM2NOJ7LDU4HJVXSGA4E/): halve employer NI for 21–24s, static £3.25bn, dynamic £2.3bn |
+| 3 | Council tax surcharge top bands | related policy | Real £2m surcharge +0.61 static (2028-29) | [Budget 2025 costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=51), p. 51 |
+| 4 | LHA reset, then frozen | related policy | −1.66, −1.70 | Autumn Statement 2023 costings |
+| 4 | Carer's Allowance limit +£26 | Official, rescaled (model limitation) | −0.06, −0.08, −0.10 | [Autumn Budget 2024 costings](https://assets.publishing.service.gov.uk/media/6721d2c54da1c0d41942a8d2/Policy_Costing_Document_-_Autumn_Budget_2024.pdf#page=64), p. 64 |
+| 4 | CGT higher rate 26% | after behaviour (official) | +0.00, −0.24 | Ready reckoner |
+| 4 | Savings starting band to £2,000 | Official, rescaled (model limitation) | +0.15 (2028-29) | Ready reckoner |
+| 4 | UC child element +£12.50 a month | think tank, rescaled | −0.43 | [CPAG, 2024](https://cpag.org.uk/sites/default/files/2024-05/Universal_credit_three_steps.pdf): "+£20 a week … £3 billion"; × 2.88/20 |
 
-**No external costing found:** State Pension personal allowance, State Pension double lock, Pensioner Allowance, State Pension Top-up Allowance, additional rate threshold at £100,000, employer NI relief for under-22s and under-23s, Child Benefit Early Years Addition, UC child element +£12.50, VAT cut on road fuel, and the drill 4 package. None is a real announced policy with a published costing, and none maps onto a ready-reckoner row.
+**No external estimate found** (official, think tank or party): State Pension double lock from 2030, additional rate threshold at £100,000, Child Benefit Early Years Addition, VAT cut on road fuel, and the drill 4 package. Searches covered HMRC, HM Treasury, OBR, DWP, IFS, Resolution Foundation, CPAG, JRF, Nesta, Tax Policy Associates, the Pensions Policy Institute, the Commons Library and party costings. The double-lock announcement (29 September 2026) has no published costing; the only fuel-VAT figures found were from commercial blogs, which are not used. IFS and Commons Library pages that may hold LHA figures could not be fetched (HTTP 403), so they are not cited.
 
 The ready reckoner covers 2026-27 to 2028-29 only, on the Spring Statement 2025 baseline, and includes behavioural effects for income tax, NICs and CGT.
 
 ### Benchmark basis
 
-This section is about the drills' **mock costings**: the invented Treasury-style costings written for each rehearsal (each packet says "Every figure is invented for a PolicyEngine rehearsal"). The dashboard shows them as a second line, "drill mock", linked to each drill's costing note.
+This section is about the drills' **mock costings**: the invented Treasury-style costings written for each rehearsal (each packet says "Every figure is invented for a PolicyEngine rehearsal"). They are kept in `comparison.csv` for reference and are not shown on the dashboard.
 
 The rerun figure is a standalone tax-year liability, on a net `gov_balance` basis. The costings are on different bases:
 
