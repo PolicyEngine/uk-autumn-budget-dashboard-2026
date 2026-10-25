@@ -12,7 +12,7 @@
  *   family: Warm Home Discount top-up +£100 in 2026-27 (one winter only)
  *   graduate: Plan 2 threshold unfrozen +£79 in 2027-28
  *   driver: fuel duty rises deferred +£89, VAT cut on road fuel +£18, 2027-28
- *   higher earner: threshold freeze to 2031-32 −£221 in 2031-32
+ *   higher earner: frozen income tax thresholds in 2031-32, −£221
  * No example shows Business Asset Disposal Relief: the form asks no capital
  * gains.
  */
@@ -99,14 +99,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "higher-earner",
     label: "A higher earner on £110,000",
-    description: "Threshold freeze bites from 2031-32",
+    description: "Frozen tax thresholds bite from 2031-32",
     inputs: {
       ...RESET,
       current_age: 45,
       current_salary: 110000,
       tenure: "OWNED_WITH_MORTGAGE",
     },
-    note: "Aged 45, earns £110,000 and owns with a mortgage. The threshold freeze extension changes their income tax from 2031-32: choose that year to see it.",
+    note: "Aged 45, earns £110,000 and owns with a mortgage. Keeping income tax thresholds frozen for another year changes their income tax from 2031-32: choose that year to see it.",
   },
 ];
 

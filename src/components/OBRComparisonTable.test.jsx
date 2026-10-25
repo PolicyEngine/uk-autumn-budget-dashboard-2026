@@ -215,7 +215,8 @@ it("orders OBR rows from the catalogue rather than CSV insertion order", async (
   const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-1,-2`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
   vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
   const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
-  fireEvent.click(await screen.findByRole("button", { name: "Table" }));
+  await screen.findByRole("button", { name: /^Show as:/ });
+  show("Table");
   expect([...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent)).toEqual(catalogue.displayable.map((measure) => measure.label));
   expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA, ALPHA]);
 });

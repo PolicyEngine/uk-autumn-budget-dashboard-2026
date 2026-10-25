@@ -242,7 +242,7 @@ export function policyRows(byPolicy, total, policies) {
       .map((row) => ({
         id: row.id,
         name: nameOf(row),
-        color: getPolicyColor(row.id),
+        color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
         reason:
           row.noteKind === "employer_cost"
             ? row.note

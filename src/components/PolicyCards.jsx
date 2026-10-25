@@ -1,4 +1,4 @@
-import { POLICY_ICONS } from "../utils/policyConfig";
+import { policyIcon } from "../utils/policyConfig";
 import TitleIcon from "./TitleIcon";
 
 const GROUPS = [
@@ -36,7 +36,7 @@ function PolicyCards({ policies, selectedPolicies }) {
           {items.map((policy) => (
             <li key={policy.id} className="policy-card">
               <p className="policy-card-name">
-                <TitleIcon name={POLICY_ICONS[policy.id]} />
+                <TitleIcon name={policyIcon(policy)} />
                 <span
                   className="policy-card-swatch"
                   style={{ background: policy.color }}

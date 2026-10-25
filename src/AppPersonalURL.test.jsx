@@ -184,7 +184,7 @@ describe("a later snapshot keeps the reader's selection", () => {
   it("hands the selection back to the publication when the reader picks every measure", async () => {
     const calls = [];
     open("/?policies=", await serve({ beta: "staged" }), calls);
-    fireEvent.click(await screen.findByRole("button", { name: "All candidate measures" }));
+    fireEvent.click(await screen.findByRole("button", { name: "All measures" }));
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const before = selectedCount();
     expect(policies()).toBeNull();

@@ -134,8 +134,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // The views opened so far: each stays mounted once opened, hidden while
   // another is shown, so its state, open expanders and any calculation in
   // flight carry on
-  const [visited, setVisited] = useState([DEFAULT_VIEW]);
-  if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
+  // Counted only once the address is read, so a link to another view never
+  // mounts the default one behind it
+  const [visited, setVisited] = useState([]);
+  if (locationReady && !visited.includes(activeTab)) setVisited([...visited, activeTab]);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.

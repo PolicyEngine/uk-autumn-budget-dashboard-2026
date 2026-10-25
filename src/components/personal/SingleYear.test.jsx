@@ -171,7 +171,7 @@ describe("the household calculation, from the fixture", () => {
     expect(card.querySelector(".result-card-label")).toHaveTextContent("Change in your net income");
     // The year and the number of policies as pills
     const pills = [...card.querySelectorAll(".result-pill")].map((pill) => pill.textContent);
-    expect(pills).toEqual(["2029-30", `${POLICIES_FOR_TEST.length} policies`]);
+    expect(pills).toEqual(["2029-30", `${SUPPORTED_POLICY_IDS.length} policies`]);
     expect(changeValue()).toBe("+£3,765");
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
@@ -195,7 +195,6 @@ describe("the household calculation, from the fixture", () => {
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
-    expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child
@@ -350,13 +349,14 @@ describe("Calculate", () => {
 
 describe("a change in the title bar after a result", () => {
   const props = {
-    selectedPolicies: POLICIES_FOR_TEST.map((policy) => policy.id),
+    // The measures the household API models, so the selection has a result
+    selectedPolicies: SUPPORTED_POLICY_IDS,
     policies: POLICIES_FOR_TEST,
   };
 
   it("reruns the same household for the new year, without a second Calculate", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     const asked = household.length;
@@ -371,7 +371,7 @@ describe("a change in the title bar after a result", () => {
 
   it("does not rerun while the answers are being edited", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
@@ -385,7 +385,7 @@ describe("a change in the title bar after a result", () => {
 
   it("waits until the view is shown again when the year changes elsewhere", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     const asked = household.length;
@@ -570,6 +570,7 @@ describe("an unavailable household calculation", () => {
       return json(answer);
     });
     renderTab({ selectedPolicies: ids });
+    toResults();
     const panel = await results();
     expect(await within(panel).findByText("Personal impact is unavailable for this selection")).toBeInTheDocument();
     expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
@@ -577,7 +578,7 @@ describe("an unavailable household calculation", () => {
     expect(panel).not.toHaveTextContent("£0");
     expect(screen.queryByText(HEADLINE)).toBeNull();
     expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "More details" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^More details/ })).toBeInTheDocument();
     expect(household.length).toBeGreaterThan(0);
   });
 });

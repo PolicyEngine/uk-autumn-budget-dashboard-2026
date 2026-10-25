@@ -234,8 +234,12 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     );
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    // The page remounts its views once the publication is verified
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull(), {
+      timeout: 5000,
+    });
     const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
-    fireEvent.click(within(personal).getByRole("button", { name: /^Calculate/ }));
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }, { timeout: 5000 }));
     await waitFor(() => expect(held).toHaveLength(1));
 
     // Away to Methodology while the first stage is in flight
@@ -292,8 +296,12 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     );
     window.history.replaceState({}, "", "/?tab=household");
     render(<App />);
+    // The page remounts its views once the publication is verified
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull(), {
+      timeout: 5000,
+    });
     const household = await screen.findByRole("tabpanel", { name: "Household impact" });
-    fireEvent.click(within(household).getByRole("button", { name: /^Calculate/ }));
+    fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }, { timeout: 5000 }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(household).not.toBeVisible();
