@@ -128,7 +128,9 @@ describe("young people cards", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
     expect(screen.getByRole("heading", { level: 3, name: /Effect of each policy, 2028-29/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download chart: Effect of each policy/ })).toBeInTheDocument();
-    expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
+    // A row per policy: the group's value and its gap to all ages
+    expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/vs all ages|≈ all ages/).length).toBeGreaterThan(0);
     // No effect: in the card's More info row, closed at first
     const more = screen.getByRole("button", { name: "More info" });
     expect(more).toHaveAttribute("aria-expanded", "false");

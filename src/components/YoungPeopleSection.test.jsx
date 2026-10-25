@@ -131,7 +131,8 @@ describe("YoungPeopleSection", () => {
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(4);
+    // Three Recharts charts; Effect of each policy is a dot plot of rows
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
   });
 
   it("switches average change by age to single years of age", async () => {
@@ -152,8 +153,8 @@ describe("YoungPeopleSection", () => {
       />,
     );
     expect(await screen.findByText(/shown for a single policy or for all policies\./)).toBeInTheDocument();
-    // Every chart but the shares is drawn
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
+    // Every chart but the shares is drawn (Effect of each policy as rows)
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
   });
 
   it("shows a year with no rows as not yet published", async () => {
