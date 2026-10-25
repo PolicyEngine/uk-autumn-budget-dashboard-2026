@@ -1,6 +1,7 @@
 import { loadArtifact, loadManifest, loadPublication } from "./publication/load";
 import { parseCsv } from "./publication/csv";
 import { isDisplayable } from "./publication/manifest";
+import { DEFAULT_RELEASE, releaseFor } from "./publication/release";
 import { buildMeasureCatalogue, isCatalogueRowDisplayable } from "./measureCatalogue";
 
 export function parseDashboardCsv(text) {
@@ -9,16 +10,19 @@ export function parseDashboardCsv(text) {
   return rows.filter((row) => row.some((cell) => cell !== "")).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index]])));
 }
 
-/** Every national figure is read from a receipt-verified artifact snapshot. */
-export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal } = {}) {
-  const manifest = await loadManifest(basePath, { fetchImpl, signal });
+/**
+ * Every national figure is read from a receipt-verified artifact snapshot
+ * of one release: this Budget's by default, or a past event's.
+ */
+export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal, release = DEFAULT_RELEASE } = {}) {
+  const manifest = await loadManifest(basePath, { fetchImpl, signal, release });
   const data = { budgetary: [], distributional: [], winnersLosers: [], metrics: [] };
   if (!manifest) return { status: "no-manifest", catalogue: buildMeasureCatalogue(), ...data };
   // The package is every displayable measure: a held or not-computable
   // measure is shown as unavailable, so the combined run that describes the
   // page's figures is the one of the displayable measures.
   const packageIds = Object.keys(manifest.measures).filter((id) => isDisplayable(manifest.measures[id]));
-  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest });
+  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest, release });
   const names = { budgetary: "budgetary_impact", distributional: "distributional_impact", winnersLosers: "winners_losers", metrics: "metrics" };
   for (const [name, table] of Object.entries(names)) data[name] = Object.values(publication.tablesByKey).flatMap((tables) => tables[table] ?? []);
   const catalogue = buildMeasureCatalogue({ manifest, ...data, tablesByKey: publication.tablesByKey, failures: publication.failures });
@@ -37,14 +41,16 @@ export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal }
  *
  * @returns {Promise<{rows: Array<Object>, failures: Array<string>}>}
  */
-export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
+export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal, release } = {}) {
   const manifest = catalogue?.manifest;
   if (!manifest || !catalogue.tablesByKey) throw new Error("No Budget results are published yet");
+  // The artifacts sit in the root of the release the catalogue was loaded for
+  release = releaseFor(manifest, release);
   const failures = [];
   const loaded = await Promise.all(Object.keys(catalogue.tablesByKey).map(async (key) => {
     const entry = Object.hasOwn(manifest.measures, key) ? manifest.measures[key] : Object.hasOwn(manifest.combined, key) ? manifest.combined[key] : undefined;
     try {
-      return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table] }))[table] ?? [];
+      return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table], release }))[table] ?? [];
     } catch (error) {
       if (error?.name === "AbortError") throw error;
       failures.push(key);

@@ -51,7 +51,9 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+// `years`, when given, is a past event's own: the legend counts its rows
+// in place of the dashboard's years (isDisplayYear)
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, years }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -109,7 +111,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       (rawData ?? [])
         .filter(
           (row) =>
-            row.decile !== "all" && isDisplayYear(row.year) &&
+            row.decile !== "all" &&
+            (years ? years.includes(Number(row.year)) : isDisplayYear(row.year)) &&
             selectedPolicies.includes(row.reform_id) &&
             isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
             Math.abs(parseFloat(row.avg_change)) > 0.01,
@@ -119,7 +122,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     return ALL_POLICY_NAMES.filter((name) =>
       ids.has(POLICIES.find((policy) => policy.seriesKey === name)?.id),
     );
-  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue]);
+  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue, years]);
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)

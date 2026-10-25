@@ -9,9 +9,10 @@
 
 import { parseTable, tableForFile, TABLES } from "./csv";
 import { receiptProblems, sha256Hex, verifyFile, verifyReceiptFiles } from "./digest";
-import { assertCurrentRelease } from "./release";
+import { assertRelease, dataRoot, DEFAULT_RELEASE, releaseFor } from "./release";
 import {
   isDisplayable,
+  isSafeArtifactPath,
   MANIFEST_FILE,
   parseManifest,
   RECEIPT_FILE,
@@ -42,21 +43,22 @@ async function fetchOk(fetchImpl, url, init) {
 }
 
 /**
- * Fetch and validate the manifest.
+ * Fetch and validate a release's manifest (this Budget's by default) from
+ * that release's own data root.
  *
  * @returns {Promise<Object|null>} The manifest, or null when none is
  *   published yet (HTTP 404).
  */
 export async function loadManifest(
   basePath,
-  { fetchImpl = fetch, signal } = {},
+  { fetchImpl = fetch, signal, release = DEFAULT_RELEASE } = {},
 ) {
-  const url = `${basePath}/data/${MANIFEST_FILE}`;
+  const url = `${dataRoot(basePath, release)}/${MANIFEST_FILE}`;
   const response = await fetchImpl(url, { signal, cache: "no-cache" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   const bytes = await response.arrayBuffer();
-  const manifest = assertCurrentRelease(parseManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))));
+  const manifest = assertRelease(parseManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))), release);
   Object.defineProperty(manifest, "snapshotSha256", { value: await sha256Hex(bytes) });
   return manifest;
 }
@@ -76,8 +78,9 @@ export function receiptEngine(receipt) {
 }
 
 /**
- * Fetch one entry's artifact and return its verified, typed tables, with
- * the package versions its receipt records as `engine`.
+ * Fetch one entry's artifact from its release's data root (this Budget's
+ * by default) and return its verified, typed tables, with the package
+ * versions its receipt records as `engine`.
  *
  * @throws {Error} naming the first check that failed.
  */
@@ -85,12 +88,16 @@ export async function loadArtifact(
   basePath,
   key,
   entry,
-  { fetchImpl = fetch, signal, tables = DEFAULT_TABLES } = {},
+  { fetchImpl = fetch, signal, tables = DEFAULT_TABLES, release = DEFAULT_RELEASE } = {},
 ) {
   if (!isDisplayable(entry)) {
     throw new Error(`${key} is ${entry?.status}: its figures are not shown`);
   }
-  const base = `${basePath}/data/${entry.artifact}`;
+  // parseManifest refuses these too; a caller's own entry is checked again
+  if (!isSafeArtifactPath(entry.artifact)) {
+    throw new Error(`${key}: the artifact path leaves its release's data root`);
+  }
+  const base = `${dataRoot(basePath, release)}/${entry.artifact}`;
   const receipt = await (
     await fetchOk(fetchImpl, `${base}/${RECEIPT_FILE}`, { signal })
   ).json();
@@ -146,7 +153,11 @@ export function unverifiedMembers(memberIds, tablesByKey) {
  */
 export async function loadPublication(basePath, selectedIds, options = {}) {
   const selection = uniqueIds(selectedIds);
-  const manifest = options.manifest ?? await loadManifest(basePath, options);
+  const release = releaseFor(options.manifest, options.release);
+  options = { ...options, release };
+  const manifest = options.manifest
+    ? assertRelease(options.manifest, release)
+    : await loadManifest(basePath, options);
   if (manifest === null) {
     return {
       status: "no-manifest",

@@ -179,11 +179,17 @@ def make_household_rows(
 
 
 class World:
-    """Temporary data root, Treasury inputs and patched bundle."""
+    """Temporary data root, Treasury inputs and patched bundle.
 
-    def __init__(self):
+    ``release`` (a uk_budget_data.releases.Release) puts the data root at
+    that release's root under public/data; by default it is this Budget's.
+    """
+
+    def __init__(self, release=None):
         self.root = Path(tempfile.mkdtemp(prefix="publication-"))
         self.data_root = self.root / "public" / "data"
+        if release is not None and release.data_root:
+            self.data_root = self.data_root / release.data_root
         self.artifacts = self.data_root / "artifacts"
         self.inputs = self.root / "treasury"
         (self.inputs / "sources").mkdir(parents=True)

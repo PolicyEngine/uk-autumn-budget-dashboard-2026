@@ -17,14 +17,12 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import canonicalize from "canonicalize";
 import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt, assertAreaRows } from "../src/utils/publication/area.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
-const CURRENT_RELEASE = "uk-autumn-budget-2026";
-const CURRENT_BUDGET = { id: CURRENT_RELEASE, date: "2026-10-28" };
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const dropNulls = (value) => Array.isArray(value) ? value.map(dropNulls) :
   value !== null && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([, member]) => member !== null).map(([key, member]) => [key, dropNulls(member)])) : value;
@@ -41,17 +39,75 @@ const sameMap = (left, right) => isMap(left) && isMap(right) &&
 // flat files a view reads directly (results by area). Every other figure
 // comes from an artifact.
 export const FLAT_VIEW_FILES = ["constituency.csv", "regional.csv"];
+// As HISTORICAL_FLAT_VIEW_FILES there: a historical release's flat views.
+export const HISTORICAL_FLAT_VIEW_FILES = ["coverage.csv", "not_modelled.csv", "obr_comparison.csv"];
+// As METADATA_HEADERS and HISTORICAL_OBR_COMPARISON_HEADER there (and the
+// page's, src/utils/historical.js): each of those views' exact header.
+export const HISTORICAL_HEADERS = {
+  "coverage.csv": ["class", "gap_kind", "measures", "rows", "net_gbp", "absolute_gbp", "share_of_absolute", "share_of_measures"],
+  "not_modelled.csv": ["reform_id", "reform_name", "classification", "gap_kind", "reason", "rows", "obr_absolute_gbp"],
+  "obr_comparison.csv": ["reform_id", "reform_name", "year", "obr_gbp", "obr_modelled_heads_gbp", "replay_policyengine_gbp", "replay_pair"],
+};
 
-const isCurrentManifest = (manifest) =>
+// As uk_budget_data/releases.py: the releases the dashboard serves
+// (src/uk_budget_data/releases.json, which that module validates). The
+// current release keeps public/data; each historical release has its own
+// root, public/data/releases/<id>. The registry is code, so it is read from
+// this repository whichever tree is checked.
+const RELEASES_DIR = "releases";
+const REGISTRY = JSON.parse(readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "..", "src", "uk_budget_data", "releases.json"),
+  "utf8",
+));
+export const RELEASES = REGISTRY.releases;
+const CURRENT = RELEASES.find((release) => release.id === REGISTRY.default);
+if (REGISTRY.schema !== "uk-budget-dashboard/releases/v1" || CURRENT?.kind !== "current" ||
+    RELEASES.filter((release) => release.kind === "current").length !== 1 ||
+    RELEASES.some((release) => release.kind !== "current" &&
+      release.data_root !== `${RELEASES_DIR}/${release.id}`)) {
+  throw new Error("src/uk_budget_data/releases.json is not a valid release registry");
+}
+
+const budgetOf = (release) => ({ id: release.id, date: release.date });
+const isReleaseManifest = (manifest, release) =>
   manifest?.schema === "uk-budget-dashboard/publication-manifest/v1" &&
-  manifest.release === CURRENT_RELEASE && sameMap(manifest.budget, CURRENT_BUDGET);
+  manifest.release === release.id && sameMap(manifest.budget, budgetOf(release));
+const notForRelease = (release) => release === CURRENT
+  ? "manifest is not explicitly for the current 2026 Budget release"
+  : `manifest is not explicitly for the ${release.name} release`;
 
 /**
- * A manifest names this Budget, and the flat files a view reads are bound
- * to exactly that manifest's bytes and revision (release-index.json).
+ * Every registered release root that is published passes
+ * checkReleaseRoot, and public/data/releases/ holds nothing else. Problems
+ * for a historical release start with its id; the current release's do not.
  */
 export function checkReleaseIndex(root) {
-  const directory = join(root, "public", "data");
+  const data = join(root, "public", "data");
+  const problems = [];
+  for (const release of RELEASES) {
+    const directory = release === CURRENT ? data : join(data, release.data_root);
+    if (release !== CURRENT && !existsSync(directory)) continue;
+    const found = checkReleaseRoot(directory, release);
+    problems.push(...(release === CURRENT ? found : found.map((problem) => `${release.id}: ${problem}`)));
+  }
+  const releasesDirectory = join(data, RELEASES_DIR);
+  if (existsSync(releasesDirectory) && lstatSync(releasesDirectory).isDirectory()) {
+    for (const name of readdirSync(releasesDirectory).sort()) {
+      if (!RELEASES.some((release) => release !== CURRENT && release.id === name)) {
+        problems.push(`public/data/${RELEASES_DIR}/${name}: not a registered historical release`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * A manifest names the release its root serves, and the flat files that
+ * release's views read are bound to exactly that manifest's bytes and
+ * revision (release-index.json).
+ */
+function checkReleaseRoot(directory, release) {
+  const viewFiles = release === CURRENT ? FLAT_VIEW_FILES : HISTORICAL_FLAT_VIEW_FILES;
   const manifestPath = join(directory, "manifest.json");
   const indexPath = join(directory, "release-index.json");
   if (!existsSync(indexPath) && !existsSync(manifestPath)) return [];
@@ -60,14 +116,14 @@ export function checkReleaseIndex(root) {
     const bytes = readFileSync(manifestPath);
     const manifest = JSON.parse(bytes);
     if (!existsSync(indexPath) && !Object.keys(manifest.flat_files ?? {}).length) {
-      return isCurrentManifest(manifest) ? [] : ["manifest is not explicitly for the current 2026 Budget release"];
+      return isReleaseManifest(manifest, release) ? [] : [notForRelease(release)];
     }
     const index = JSON.parse(readFileSync(indexPath));
     if (lstatSync(manifestPath).isSymbolicLink() || lstatSync(indexPath).isSymbolicLink()) {
       problems.push("release index: symbolic link");
     }
-    if (!isCurrentManifest(manifest)) {
-      problems.push("release index: manifest is not explicitly for the current 2026 Budget release");
+    if (!isReleaseManifest(manifest, release)) {
+      problems.push(`release index: ${notForRelease(release)}`);
     }
     if (index.schema !== "uk-budget-release-index/v1") problems.push("release index: unknown schema");
     if (index.release !== manifest.release || !sameMap(index.budget, manifest.budget)) {
@@ -90,7 +146,12 @@ export function checkReleaseIndex(root) {
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
     let verifiedProvenance = null;
     const provenancePath = join(directory, AREA_PROVENANCE_FILE);
-    if (!/^[0-9a-f]{64}$/.test(index.flat_provenance_sha256 ?? "") ||
+    if (release !== CURRENT) {
+      // A past event has no results by area, so nothing binds area provenance
+      if (index.flat_provenance_sha256 !== undefined || manifest.flat_provenance_sha256 !== undefined) {
+        problems.push("release index: a past event binds no area provenance");
+      }
+    } else if (!/^[0-9a-f]{64}$/.test(index.flat_provenance_sha256 ?? "") ||
         index.flat_provenance_sha256 !== manifest.flat_provenance_sha256 ||
         lstatSync(provenancePath).isSymbolicLink()) {
       problems.push("release index: area provenance is not bound to the manifest");
@@ -115,9 +176,9 @@ export function checkReleaseIndex(root) {
         }
       }
     }
-    const unread = Object.keys(files).filter((name) => !FLAT_VIEW_FILES.includes(name)).sort();
+    const unread = Object.keys(files).filter((name) => !viewFiles.includes(name)).sort();
     if (unread.length) problems.push(`release index: binds files no view reads: ${unread.join(", ")}`);
-    const unbound = FLAT_VIEW_FILES.filter((name) => existsSync(join(directory, name)) && !Object.hasOwn(files, name));
+    const unbound = viewFiles.filter((name) => existsSync(join(directory, name)) && !Object.hasOwn(files, name));
     if (unbound.length) problems.push(`release index: flat view files published but not bound: ${unbound.join(", ")}`);
     for (const [name, expected] of Object.entries(files).sort()) {
       if (!/^[a-z][a-z0-9_]*\.csv$/.test(name) || typeof expected !== "string" || !/^[0-9a-f]{64}$/.test(expected)) {
@@ -134,6 +195,8 @@ export function checkReleaseIndex(root) {
         } else if (verifiedProvenance) {
           try { assertAreaRows(parseCsv(content.toString("utf8")), verifiedProvenance); }
           catch (error) { problems.push(`release index: ${name}: ${error.message}`); }
+        } else if (release !== CURRENT && Object.hasOwn(HISTORICAL_HEADERS, name)) {
+          problems.push(...historicalViewProblems(name, content.toString("utf8")));
         }
       }
     }
@@ -141,6 +204,17 @@ export function checkReleaseIndex(root) {
     problems.push("release index: manifest or index cannot be read");
   }
   return problems;
+}
+
+/** A historical view file bound to its manifest has its exact header, and every row its fields. */
+function historicalViewProblems(name, text) {
+  const expected = HISTORICAL_HEADERS[name];
+  const [header = [], ...rows] = parseCsv(text);
+  if (header.length !== expected.length || header.some((cell, index) => cell !== expected[index])) {
+    return [`release index: ${name}: header is not ${expected.join(", ")}`];
+  }
+  if (rows.some((row) => row.length !== expected.length)) return [`release index: ${name}: a row does not have every field`];
+  return [];
 }
 
 // As scripts/check_public_data.py: every text the area routing file may hold

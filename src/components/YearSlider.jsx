@@ -3,14 +3,14 @@ import "./YearSlider.css";
 import PillChevron from "./PillChevron";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 
-// The years a reader can choose (from 2027-28; see utils/displayYears.js)
-const YEARS = SELECTABLE_YEARS;
-
 // Play shows each year for 2.25s: long enough for the charts' 850ms
 // tween (utils/chartMotion.js) to settle and the year to be read
 export const PLAY_STEP_MS = 2250;
 
-function YearSlider({ selectedYear, onYearChange }) {
+// The years offered: by default the ones a reader can choose (from 2027-28;
+// see utils/displayYears.js), or a past event's own years
+function YearSlider({ selectedYear, onYearChange, years = SELECTABLE_YEARS }) {
+  const YEARS = years;
   const [isPlaying, setIsPlaying] = useState(false);
   const intervalRef = useRef(null);
 
@@ -39,7 +39,7 @@ function YearSlider({ selectedYear, onYearChange }) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying, onYearChange]);
+  }, [isPlaying, onYearChange, YEARS]);
 
   const currentIndex = YEARS.indexOf(selectedYear);
   const [open, setOpen] = useState(false);

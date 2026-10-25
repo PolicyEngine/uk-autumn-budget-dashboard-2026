@@ -136,6 +136,10 @@ TABLE_KINDS = {
     "income_curve.csv": SYNTHETIC_HOUSEHOLD,
     "age_impact.csv": NATIONAL_TABLE,
     "obr_comparison.csv": NATIONAL_TABLE,
+    # A historical release's coverage and not-modelled lists: counts and
+    # OBR totals by class and measure, no survey record
+    "coverage.csv": NATIONAL_TABLE,
+    "not_modelled.csv": NATIONAL_TABLE,
 }
 # A receipt holds provenance and digests, and the manifest entries, their
 # statuses and digests, and any household check receipt, which concerns

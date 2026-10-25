@@ -867,11 +867,13 @@ def check(
         manifest_identity_problems,
         release_index_problems,
     )
+    from uk_budget_data.releases import release_for_root
 
-    # The manifest and the file the page reads both name this Budget
-    failures = identity_problems(manifest) + manifest_identity_problems(
-        data_root
-    )
+    # The manifest and the file the page reads both name the release this
+    # root serves (this Budget, for the default root)
+    failures = identity_problems(
+        manifest, release_for_root(data_root)
+    ) + manifest_identity_problems(data_root)
     if check_flat_index:
         failures += release_index_problems(data_root, manifest)
     for key, entry in sorted(manifest.entries().items()):

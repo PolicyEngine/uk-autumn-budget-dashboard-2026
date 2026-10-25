@@ -62,7 +62,9 @@ const decileOrder = [
   "10th",
 ];
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+// `years`, when given, is a past event's own: the legend counts its rows
+// in place of the dashboard's years (isDisplayYear)
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, years }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -125,7 +127,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       (rawData ?? [])
         .filter(
           (row) =>
-            isDisplayYear(row.year) &&
+            (years ? years.includes(Number(row.year)) : isDisplayYear(row.year)) &&
             selectedPolicies.includes(row.reform_id) &&
             isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
             Math.abs(parseFloat(row.value)) > 0.01,
@@ -135,7 +137,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     return ALL_POLICY_NAMES.filter((name) =>
       ids.has(POLICIES.find((policy) => policy.seriesKey === name)?.id),
     );
-  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue]);
+  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue, years]);
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)

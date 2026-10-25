@@ -1,0 +1,1128 @@
+{
+ "coverage": [
+  [
+   "expressible",
+   "",
+   "0",
+   "0",
+   "0",
+   "0",
+   "0/1",
+   "0/1"
+  ],
+  [
+   "partial",
+   "",
+   "2",
+   "18",
+   "-2013792939.418244905",
+   "2013792939.418244905",
+   "1006896469709122452500000/63206261483610549377551397",
+   "2/89"
+  ],
+  [
+   "not_expressible",
+   "",
+   "39",
+   "324",
+   "-22201749958.141974857379284",
+   "40639730627.120064076713124",
+   "20319865313560032038356562/63206261483610549377551397",
+   "39/89"
+  ],
+  [
+   "out_of_household_scope",
+   "",
+   "48",
+   "678",
+   "-63833979218.38919178144453",
+   "83758999400.68278977338967",
+   "41879499700341394886694835/63206261483610549377551397",
+   "48/89"
+  ],
+  [
+   "not_expressible",
+   "construction_pending",
+   "23",
+   "180",
+   "-18604775996.353310754069284",
+   "22208203459.636736329123124",
+   "11104101729818368164561562/63206261483610549377551397",
+   "23/89"
+  ],
+  [
+   "not_expressible",
+   "model_or_data_gap",
+   "16",
+   "144",
+   "-3596973961.78866410331",
+   "18431527167.48332774759",
+   "9215763583741663873795000/63206261483610549377551397",
+   "16/89"
+  ],
+  [
+   "computed_by_replay",
+   "",
+   "2",
+   "12",
+   "",
+   "1882514598.958382595",
+   "941257299479191297500000/63206261483610549377551397",
+   "2/89"
+  ]
+ ],
+ "event": "spring_budget_2023",
+ "measures": [
+  {
+   "changes": {
+    "gov.hmrc.income_tax.allowances.annual_allowance.default": {
+     "2024": 40000,
+     "2025": 40000,
+     "2026": 40000,
+     "2027": 40000
+    },
+    "gov.hmrc.income_tax.allowances.annual_allowance.minimum": {
+     "2024": 4000,
+     "2025": 4000,
+     "2026": 4000,
+     "2027": 4000
+    },
+    "gov.hmrc.income_tax.allowances.annual_allowance.taper": {
+     "2024": 240000,
+     "2025": 240000,
+     "2026": 240000,
+     "2027": 240000
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_budget_2023__pension_annual_allowance_package",
+   "missing_legs": [
+    "Aggregation of Pension Input Amounts across open/closed public-service schemes needs scheme membership and defined-benefit input amounts; these are not separately observed.",
+    "Carry-forward and announcement-specific retirement/earnings responses are absent from this annual static relief leg."
+   ],
+   "name": "Annual Allowance (AA): increase to \u00a360,000 and allow Pension Input Amount aggregation between open and closed public service pension schemes from April 2023",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-269750622.4441216644",
+     "obr_modelled_heads_gbp": "-435739991.241131762"
+    },
+    "2027": {
+     "obr_gbp": "-289639086.4308529279",
+     "obr_modelled_heads_gbp": "-442171323.42959456"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "income_tax": -3004426501.3733215,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 40000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 4000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 240000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 60000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 10000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 260000
+      }
+     },
+     "measure_total_gbp": -3004426501.3733215
+    },
+    "2025": {
+     "head_effects": {
+      "income_tax": -3300744216.6347656,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 40000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 4000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 240000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 60000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 10000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 260000
+      }
+     },
+     "measure_total_gbp": -3300744216.6347656
+    },
+    "2026": {
+     "head_effects": {
+      "income_tax": -3540262930.7841797,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 40000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 4000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 240000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 60000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 10000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 260000
+      }
+     },
+     "measure_total_gbp": -3540262930.7841797
+    },
+    "2027": {
+     "head_effects": {
+      "income_tax": -3725202663.6395264,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 40000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 4000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 240000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.allowances.annual_allowance.default": 60000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.minimum": 10000,
+       "gov.hmrc.income_tax.allowances.annual_allowance.taper": 260000
+      }
+     },
+     "measure_total_gbp": -3725202663.6395264
+    }
+   }
+  },
+  {
+   "changes": {
+    "gov.dwp.universal_credit.elements.childcare.cap.1": {
+     "2024": 689.6,
+     "2025": 701.32,
+     "2026": 727.97,
+     "2027": 727.97
+    },
+    "gov.dwp.universal_credit.elements.childcare.cap.2": {
+     "2024": 1182.39,
+     "2025": 1202.49,
+     "2026": 1248.18,
+     "2027": 1248.18
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_budget_2023__uc_childcare_cap_increase",
+   "missing_legs": [
+    "Annual2023 applies the cap change throughout the year; the announced June2023 commencement is not apportioned.",
+    "Claiming, childcare spending and labour-supply responses, and separate upfront-payment and free-hours measures, are omitted."
+   ],
+   "name": "DWP: increase the maximum support available in Universal Credit for childcare costs",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-81646500",
+     "obr_modelled_heads_gbp": "-81646500"
+    },
+    "2027": {
+     "obr_gbp": "-86814000",
+     "obr_modelled_heads_gbp": "-86814000"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "universal_credit": -239031104.5414734
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 689.6,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1182.39
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 1014.63,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1739.37
+      }
+     },
+     "measure_total_gbp": -239031104.5414734
+    },
+    "2025": {
+     "head_effects": {
+      "universal_credit": -251689860.3839264
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 701.32,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1202.49
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 1031.88,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1768.94
+      }
+     },
+     "measure_total_gbp": -251689860.3839264
+    },
+    "2026": {
+     "head_effects": {
+      "universal_credit": -255168633.24157715
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 727.97,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1248.18
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 1071.09,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1836.16
+      }
+     },
+     "measure_total_gbp": -255168633.24157715
+    },
+    "2027": {
+     "head_effects": {
+      "universal_credit": -266037263.24046326
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 727.97,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1248.18
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.elements.childcare.cap.1": 1071.09,
+       "gov.dwp.universal_credit.elements.childcare.cap.2": 1836.16
+      }
+     },
+     "measure_total_gbp": -266037263.24046326
+    }
+   }
+  }
+ ],
+ "name": "Spring Budget 2023",
+ "not_modelled": [
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "275027423.84401091",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2023__30_hours_free_childcare_979dfc38",
+   "reform_name": "30 hours free childcare",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "225416074.689247905",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__aggregates_levy_freeze_rate_at_2_00_per_tonne_for_2023_24_ba20f25a",
+   "reform_name": "Aggregates levy: freeze rate at \u00a32.00 per tonne for 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "882521945.78867274",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__alcohol_duty_freeze_rates_until_august_2023_then_uprate_by_rpi_and_increase_draught_relief_to_9_2_for_beer_and_a72fc1eb",
+   "reform_name": "Alcohol Duty: freeze rates until August 2023 then uprate by RPI and increase Draught Relief to 9.2% for beer and cider and 23% for wine, other fermented beverages and spirits",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "34493856.092298779",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__amending_self_assessment_forms_for_cryptoassets_260a37f5",
+   "reform_name": "Amending Self Assessment forms for cryptoassets",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "10000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__artificial_intelligence_challenge_prize_reward_world_leading_ai_research_20c6e96c",
+   "reform_name": "Artificial Intelligence Challenge Prize: reward world-leading AI research",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1752885649.450337155084",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__assumed_underspend_b797e874",
+   "reform_name": "Assumed underspend",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "20000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__bbc_world_service_funding_4bdec1d0",
+   "reform_name": "BBC World Service funding",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "32272000000",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__capital_allowances_100_full_expensing_for_main_rate_assets_and_50_first_year_allowance_for_special_rate_assets_68df6fd8",
+   "reform_name": "Capital allowances: 100% full expensing for main rate assets and 50% First Year Allowance for special rate assets for three years",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "8189982.0121875596658",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__capital_gains_change_to_assessment_time_period_a879bba9",
+   "reform_name": "Capital Gains: change to assessment time period",
+   "rows": 36
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "37030398.4989801973",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__changes_to_tariff_rates_since_autumn_statement_2022_edcc1e23",
+   "reform_name": "Changes to tariff rates since Autumn Statement 2022",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "501900000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__changes_to_the_energy_price_guarantee_and_technical_changes_relating_to_other_energy_support_a83306d7",
+   "reform_name": "Changes to the Energy Price Guarantee and technical changes relating to other energy support",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "37988134.87734696204589",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__charitable_reliefs_withdraw_tax_reliefs_from_non_uk_charities_and_their_donors_and_suppliers_from_april_2023_7f972741",
+   "reform_name": "Charitable Reliefs: withdraw tax reliefs from non-UK charities and their donors and suppliers from April 2023",
+   "rows": 42
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "17300850208.9874128",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__childcare_for_working_parents_extend_30_free_hours_to_children_from_9_months_old_until_they_start_school_incre_f89a15a2",
+   "reform_name": "Childcare for working parents: extend 30 free hours to children from 9 months old until they start school, increase the government funding rate for all free hours and implement supply side reforms",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "8549611.68764509103",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__childcare_funding_incentives_for_childminders_624ee4dc",
+   "reform_name": "Childcare: funding incentives for childminders",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "629166593.2767305672",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__climate_change_agreement_scheme_extend_for_two_years_open_to_new_entrants_and_increase_buy_out_price_to_25_tco_48618b0e",
+   "reform_name": "Climate Change Agreement scheme: extend for two years, open to new entrants and increase buy-out price to \u00a325/tCO2e",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "36564693.0957882031479",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__community_investment_tax_relief_increase_the_amount_accredited_cdfi_bodies_can_raise_b133d32b",
+   "reform_name": "Community Investment Tax Relief: increase the amount accredited CDFI bodies can raise",
+   "rows": 24
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1826000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__council_tax_precepting_authorities_reserves_implications_of_referendum_principles_d3ce7bd3",
+   "reform_name": "Council tax precepting authorities: reserves implications of referendum principles",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "322000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__council_tax_referendum_limit_waiver_f3dd8eaa",
+   "reform_name": "Council tax referendum limit waiver",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "151040506.8274929599",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__creative_reliefs_reform_of_audiovisual_tax_reliefs_into_expenditure_credits_with_increase_in_rates_e6a28195",
+   "reform_name": "Creative reliefs: reform of audiovisual tax reliefs into expenditure credits with increase in rates",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "349011065.78166581",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__cultural_reliefs_extend_higher_rates_of_the_theatre_orchestra_and_museums_and_galleries_tax_reliefs_for_two_ye_7315da8a",
+   "reform_name": "Cultural reliefs: extend higher rates of the theatre, orchestra and museums and galleries tax reliefs for two years",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "11066037000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__defence_and_national_security_priorities_c1709a47",
+   "reform_name": "Defence and national security priorities",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "10000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dhsc_additional_funding_for_the_medicines_and_healthcare_products_regulatory_agency_ddd25e53",
+   "reform_name": "DHSC: additional funding for the Medicines and Healthcare products Regulatory Agency",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "318235546.151233981",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__digital_health_innovations_for_mental_health_musculoskeletal_and_cardiovascular_conditions_94747269",
+   "reform_name": "Digital health innovations for mental health, musculoskeletal, and cardiovascular conditions",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "21813550.000000001",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__disregarding_compensation_payments_related_to_the_post_office_horizon_scandal_from_benefit_means_tests_9fd2999b",
+   "reform_name": "Disregarding compensation payments related to the Post Office Horizon scandal from benefit means tests",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "280863730.31375385",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__dwp_additional_support_and_conditionality_for_carers_of_young_children_dfd0ddf3",
+   "reform_name": "DWP: additional support and conditionality for carers of young children",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "902473085.56028217",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_additional_work_coach_time_for_incapacity_benefits_claimants_71344f5a",
+   "reform_name": "DWP: Additional Work Coach Time for Incapacity Benefits claimants",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "44226146.863744945",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_disability_benefits_white_paper_reforms_bdf4b1e0",
+   "reform_name": "DWP: Disability Benefits White Paper reforms",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1219139205.3807505013",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__dwp_employment_programme_for_disabled_people_1fc5d06a",
+   "reform_name": "DWP: employment programme for disabled people",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "67482943.5391905",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_improve_and_expand_access_to_midlife_mot_4af54cd5",
+   "reform_name": "DWP: improve and expand access to Midlife MOT",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "11496349475.120202254",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__dwp_increase_the_administrative_earnings_threshold_from_15_to_18_hours_per_week_at_the_national_living_wage_0e5fbd28",
+   "reform_name": "DWP: increase the Administrative Earnings Threshold from 15 to 18 hours per week at the National Living Wage",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "15502500.0000000013",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__dwp_increase_the_severe_disability_premium_transitional_element_a03ca87a",
+   "reform_name": "DWP: increase the Severe Disability Premium Transitional Element",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "54775500",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2023__dwp_maintain_the_universal_credit_surplus_earnings_threshold_at_2_500_in_2023_24_bbc89e0c",
+   "reform_name": "DWP: maintain the Universal Credit surplus earnings threshold at \u00a32,500 in 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "25110993.460882692",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_occupational_health_sme_subsidy_pilot_scheme_expansion_aa5fa1ee",
+   "reform_name": "DWP: Occupational Health: SME subsidy pilot scheme expansion",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "402454267.21048822",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2023__dwp_pay_universal_credit_childcare_support_upfront_for_parents_moving_into_work_14add6c1",
+   "reform_name": "DWP: pay Universal Credit childcare support upfront for parents moving into work",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "120015647.080567221",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_pilot_workwell_partnerships_programme_ed4920e4",
+   "reform_name": "DWP: pilot WorkWell Partnerships Programme",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "145739117.234073106",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__dwp_remove_the_couples_administrative_earnings_threshold_d50dbdbf",
+   "reform_name": "DWP: remove the couples Administrative Earnings Threshold",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1450000000",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__electricity_generator_levy_index_benchmark_price_and_update_rules_on_costs_b18fedb2",
+   "reform_name": "Electricity Generator Levy: index benchmark price and update rules on costs",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "11500000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__employment_support_programme_for_ukrainians_37625616",
+   "reform_name": "Employment support programme for Ukrainians",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "547000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__energy_bills_discount_scheme_3f47aef3",
+   "reform_name": "Energy Bills Discount Scheme",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "382000000",
+   "reason": "No residence-history, foreign-income regime or repatriation/base-cost history needed by the announcement package.",
+   "reform_id": "spring_budget_2023__energy_bills_discount_scheme_support_for_domestic_heat_network_customers_on_non_domestic_contracts_d88041fd",
+   "reform_name": "Energy Bills Discount Scheme: support for Domestic Heat Network Customers on non-domestic contracts",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "2949000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__energy_price_guarantee_extend_the_support_rate_at_2_500_until_30_june_2023_9505fb17",
+   "reform_name": "Energy Price Guarantee: extend the support rate at \u00a32,500 until 30 June 2023",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "15172851527.924806814",
+   "reason": "Fuel-duty current-law path is collapsed by later freezes. A single-event reversal needs an announcement-consistent counterfactual uprating path, which is not guessed from the later certified path.",
+   "reform_id": "spring_budget_2023__fuel_duty_12_month_extension_to_the_5p_cut_in_rates_and_no_rpi_increase_in_2023_24_e690df7d",
+   "reform_name": "Fuel Duty: 12 month extension to the 5p cut in rates and no RPI increase in 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "37500000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__funding_for_further_labour_market_pilots_and_evaluations_6f1336a6",
+   "reform_name": "Funding for further labour market pilots and evaluations",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "31600000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__further_support_in_scotland_wales_and_northern_ireland_235b4fd8",
+   "reform_name": "Further support in Scotland, Wales and Northern Ireland",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "25000000",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__gaming_duty_maintain_gross_gaming_yield_bands_for_2023_24_19f626cd",
+   "reform_name": "Gaming duty: maintain Gross Gaming Yield bands for 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "60000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__help_to_save_extend_scheme_for_18_months_484b09dd",
+   "reform_name": "Help to Save: extend scheme for 18 months",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "314205478.953226026",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__hgv_levy_introduce_new_reformed_levy_from_august_2023_97de4d6e",
+   "reform_name": "HGV levy: introduce new reformed levy from August 2023",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "1387949032.0966267094",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_budget_2023__hmrc_investment_in_debt_management_capability_3fed931a",
+   "reform_name": "HMRC: investment in debt management capability",
+   "rows": 36
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "149558930.3664775891",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__increase_employment_advisers_in_health_settings_5792150f",
+   "reform_name": "Increase employment advisers in health settings",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "360262263.4529306988",
+   "reason": "No ISA subscriptions, product holdings or Help to Save savings/bonus history on the certified population.",
+   "reform_id": "spring_budget_2023__individual_savings_accounts_maintain_annual_subscription_limit_at_20_000_for_2023_24_27073f53",
+   "reform_name": "Individual Savings Accounts: maintain annual subscription limit at \u00a320,000 for 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "121664353.360516994",
+   "reason": "No carried-interest/partnership/liquidation identity and transaction history for this targeted tax-base change.",
+   "reform_id": "spring_budget_2023__introduce_an_elective_accruals_basis_for_the_carried_interest_rules_e9e7a31c",
+   "reform_name": "Introduce an elective accruals basis for the Carried Interest rules",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "251738566.358438804",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__levelling_up_and_pride_in_place_funding_2166f6f4",
+   "reform_name": "Levelling up and pride in place funding",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "3590239461.4620902401",
+   "reason": "The pinned annual pension-contributions relief model has no lifetime pension-pot allowance or lifetime-allowance charge variable/parameter; accumulated pension-pot and crystallisation events are needed.",
+   "reform_id": "spring_budget_2023__lifetime_allowance_lta_remove_charge_from_april_2023_and_abolish_from_april_2024_41834b9e",
+   "reform_name": "Lifetime Allowance (LTA): remove charge from April 2023 and abolish from April 2024",
+   "rows": 30
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "30003070.254922284523",
+   "reason": "No estates, bequests, death events or agricultural/business-property inheritance-tax relief model on the certified household population.",
+   "reform_id": "spring_budget_2023__low_income_trusts_and_estates_simplification_measures_to_reduce_reporting_and_administration_f32ef603",
+   "reform_name": "Low income trusts and estates: simplification measures to reduce reporting and administration",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "1775959815.5892032142",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_budget_2023__making_tax_digital_for_income_tax_self_assessment_and_digital_prompts_phased_introduction_from_2026_94fb4d69",
+   "reform_name": "Making Tax Digital for income tax Self Assessment and digital prompts: phased introduction from 2026",
+   "rows": 24
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "170025339.116211802",
+   "reason": "The tapered minimum annual allowance is not the Money Purchase Annual Allowance. The pinned relief model has no flexibly-accessed pension history or MPAA switch; substituting annual_allowance.minimum would apply the wrong rule.",
+   "reform_id": "spring_budget_2023__money_purchase_annual_allowance_mpaa_increase_to_10_000_from_april_2023_69af7f94",
+   "reform_name": "Money Purchase Annual Allowance (MPAA): increase to \u00a310,000 from April 2023",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "30000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__mortgage_guarantee_scheme_extend_for_one_year_341c78c1",
+   "reform_name": "Mortgage Guarantee Scheme: extend for one year",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "74124772.000000002795",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2023__national_insurance_contributions_impact_of_maintaining_the_lower_earnings_limit_and_small_profits_threshold_at_7b0d7c25",
+   "reform_name": "National Insurance contributions: impact of maintaining the Lower Earnings Limit and Small Profits Threshold at 2022-23 levels",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1395000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__nhs_pensions_new_retirement_flexibilities_including_partial_retirement_and_pensionable_reemployment_6324000b",
+   "reform_name": "NHS pensions: new retirement flexibilities including partial retirement and pensionable reemployment",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "32643646.618686032",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__other_del_spending_c859749a",
+   "reform_name": "Other DEL spending",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "203901237.985167837",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__penalty_reform_for_income_tax_self_assessment_phased_introduction_from_2026_108bbf60",
+   "reform_name": "Penalty reform for income tax Self Assessment: phased introduction from 2026",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "237489213.5456975",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__potholes_fund_increase_resources_to_maintain_and_improve_local_roads_58dbe19e",
+   "reform_name": "Potholes Fund: increase resources to maintain and improve local roads",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "49400000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__public_works_loan_board_new_discounted_housing_revenue_account_rate_80376700",
+   "reform_name": "Public Works Loan Board: new discounted Housing Revenue Account rate",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "48758597.14731506001",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__qualifying_care_relief_increase_from_april_2023_index_by_inflation_from_april_2024_b6f08ccb",
+   "reform_name": "Qualifying Care Relief: increase from April 2023, index by inflation from April 2024",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1819467488.4297553",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__r_d_tax_reliefs_additional_tax_relief_for_r_d_intensive_smes_5bfc10cf",
+   "reform_name": "R&D tax reliefs: additional tax relief for R&D intensive SMEs",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "206031374.400067497",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__r_d_tax_reliefs_delay_implementation_of_overseas_expenditure_restrictions_by_one_year_fd54cdef",
+   "reform_name": "R&D tax reliefs: delay implementation of overseas expenditure restrictions by one year",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "284142847.733795467",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2023__re_insurance_of_long_term_insurance_business_address_possible_tax_mismatch_and_clarify_scope_of_existing_legis_6252ec6f",
+   "reform_name": "Re-insurance of long term insurance business: address possible tax mismatch and clarify scope of existing legislation",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "29028808.9501827308",
+   "reason": "No estates, bequests, death events or agricultural/business-property inheritance-tax relief model on the certified household population.",
+   "reform_id": "spring_budget_2023__real_estate_investment_trusts_implement_edinburgh_reforms_to_increase_attractiveness_of_regime_9d03f344",
+   "reform_name": "Real Estate Investment Trusts: implement Edinburgh reforms to increase attractiveness of regime",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "14249352.8127418205",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__scaling_up_musculoskeletal_support_hubs_820ee874",
+   "reform_name": "Scaling up musculoskeletal support hubs",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "38242469.811077157351204",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__scottish_green_freeports_3cce3a08",
+   "reform_name": "Scottish Green Freeports",
+   "rows": 30
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "37757282.77994092",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__sector_based_work_academy_programme_swaps_expansion_to_80_000_starts_in_both_2023_24_and_2024_25_to_support_re_5f220449",
+   "reform_name": "Sector-Based Work Academy Programme (SWAPs): expansion to 80,000 starts in both 2023-24 and 2024-25 to support Returnerships",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "163378000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__skills_bootcamps_expansion_to_64_000_places_from_2024_25_to_support_returnerships_097db941",
+   "reform_name": "Skills Bootcamps: expansion to 64,000 places from 2024-25 to support Returnerships",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "16000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__stamp_duty_land_tax_amendment_to_the_registered_social_landlord_exemption_3f5ab651",
+   "reform_name": "Stamp Duty Land Tax: amendment to the Registered Social Landlord Exemption",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "116228387.155626234",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2023__starting_rate_limit_for_savings_income_maintain_at_5_000_for_2023_24_c7a92b01",
+   "reform_name": "Starting rate limit for savings income: maintain at \u00a35,000 for 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "11874460.677284844",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__suicide_prevention_fund_782ec27e",
+   "reform_name": "Suicide prevention fund",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "5916990602",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__supplementary_estimates_9c7f7028",
+   "reform_name": "Supplementary Estimates",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "48091565.7430036428",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__support_for_care_leavers_expansion_of_the_staying_close_programme_b549d43a",
+   "reform_name": "Support for care leavers: expansion of the Staying Close programme",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "120525775.87444121935",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__support_for_charities_and_community_organisations_funding_for_services_and_energy_efficiency_20743050",
+   "reform_name": "Support for charities and community organisations: funding for services and energy efficiency",
+   "rows": 24
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "33000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__support_for_veterans_d99b4b18",
+   "reform_name": "Support for veterans",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "71246764.063709138",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__swimming_pool_support_fund_help_public_pools_with_cost_pressures_and_energy_efficiency_2e8f2f81",
+   "reform_name": "Swimming Pool Support Fund: help public pools with cost pressures and energy efficiency",
+   "rows": 24
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "31000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2023__tax_exemptions_for_group_litigation_order_scheme_payments_related_to_the_post_office_horizon_scandal_7ead7cd1",
+   "reform_name": "Tax exemptions for Group Litigation Order scheme payments related to the Post Office Horizon scandal",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "134541741.085685738",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__tobacco_duty_increase_duty_on_hand_rolling_tobacco_by_an_additional_4_and_the_minimum_excise_tax_by_an_additio_fcea9073",
+   "reform_name": "Tobacco duty: increase duty on hand rolling tobacco by an additional 4% and the minimum excise tax by an additional 1%",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "34984821.1938390865",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__vat_extend_the_exemption_for_medical_care_services_supervised_by_healthcare_professionals_to_pharmacists_7b47b510",
+   "reform_name": "VAT: extend the exemption for medical care services supervised by healthcare professionals to pharmacists",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "24815383.4932209875",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__vat_extend_the_zero_rate_for_prescriptions_to_patient_group_directions_be9b860d",
+   "reform_name": "VAT: extend the zero rate for prescriptions to Patient Group Directions",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "225276283.10715288",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2023__vat_northern_ireland_second_hand_car_market_support_scheme_43443166",
+   "reform_name": "VAT: Northern Ireland second-hand car market support scheme",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "120158078.610057602",
+   "reason": "Targeted transport tax needs vehicle emissions/ownership, company-car benefit attributes or passenger journeys absent from the certified household inputs.",
+   "reform_id": "spring_budget_2023__vehicle_excise_duty_freeze_rate_for_hgvs_for_2023_24_5b76ad2c",
+   "reform_name": "Vehicle Excise Duty: freeze rate for HGVs for 2023-24",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "343171913.5735321374",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2023__wraparound_childcare_pathfinder_scheme_fd50195a",
+   "reform_name": "Wraparound childcare: pathfinder scheme",
+   "rows": 12
+  }
+ ],
+ "release": "uk-spring-budget-2023",
+ "replay_years": [
+  2024,
+  2025,
+  2026,
+  2027
+ ],
+ "schema": "uk-budget-dashboard/historical-event/v1",
+ "source": {
+  "export_schema": "policyengine-scorecard/uk-event-dashboard-export/v1",
+  "export_sha256": "97721689fc20688f4cd1b436eca97a48f5ae85c34f43914a0470cbf243428f63",
+  "registry_sha256": "0a78bfe32712bd30bdf9137bdf182e82a266c7da0e9885dd61cac6ef99a76357",
+  "variant": {
+   "comparison_sha256": "183e5f5ed636d8a2100e83642c1c7410f874b88e7457435edfada57190174999",
+   "dataset": {
+    "path": "enhanced_frs_2024_25.h5",
+    "repo_id": "policyengine/policyengine-uk-data-private",
+    "revision": "1.58.1",
+    "sha256": "056e80fd8e9151d78f432a25cde863340baee81304c6216a37fb575ce8563784"
+   },
+   "namespace_manifest_sha256": "738aa0e0b8100fbbcaa5dcedd07c7afd5ac7e597ce2a9a38b3fa40b1a3193f72",
+   "packages": {
+    "policyengine": "6.9.0",
+    "policyengine-core": "3.33.0",
+    "policyengine-uk": "2.130.1"
+   },
+   "receipt_sha256": "f37d068c69253a9353c7bf891c8a44897fb4166c9550b14376dbe0fd71e6501b"
+  }
+ },
+ "years": [
+  2026,
+  2027
+ ]
+}
