@@ -158,4 +158,11 @@ describe("MethodologyTab", () => {
     fireEvent.click(toggle);
     expect(data).not.toBeVisible();
   });
+
+  it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {
+    const { container } = renderTab();
+    expect(container.textContent).not.toMatch(
+      /pre-Budget|before the Budget|after the Budget|28 October|once the OBR|candidate|likely for the Budget/i,
+    );
+  });
 });

@@ -8,6 +8,13 @@ export const SOURCES = {
     label: "OBR, Fiscal risks and sustainability – July 2026",
     url: "https://obr.uk/frs/fiscal-risks-and-sustainability-july-2026/",
   },
+  // The OBR forecast the page's projections follow. On Budget day, point
+  // this at the new Economic and fiscal outlook; the Methodology text
+  // names whatever this label says.
+  obr_efo_current: {
+    label: "OBR, Economic and fiscal outlook – March 2026",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+  },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",
     url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",

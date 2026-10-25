@@ -120,7 +120,7 @@ const FLOW = [
   {
     title: "Two scenarios",
     icon: Scale,
-    text: "Each candidate measure is run against current law, for every fiscal year shown.",
+    text: "Each measure is run against current law, for every fiscal year shown.",
   },
   {
     title: "Static estimates",
@@ -272,7 +272,7 @@ function MethodologyTab({ onShowTab }) {
               model applied to a representative survey of UK households.
             </p>
             <ul className="method-points method-points-lead">
-              <li>Each candidate measure is compared with current law, household by household.</li>
+              <li>Each measure is compared with current law, household by household.</li>
               <li>The results are weighted up to the whole country.</li>
               <li>
                 <ViewLink tab="personal" onShowTab={onShowTab}>
@@ -357,11 +357,10 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     points: [
                       <>
-                        to 2030, the OBR&apos;s{" "}
-                        <SourceLink id="obr_efo_march_2026">March 2026 Economic and Fiscal Outlook</SourceLink>;
+                        over the forecast period, the <SourceLink id="obr_efo_current" />;
                       </>,
                       <>
-                        from 2031, long-run assumptions (the OBR&apos;s{" "}
+                        after it, long-run assumptions (the OBR&apos;s{" "}
                         <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink> report).
                       </>,
                     ],
@@ -389,7 +388,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.model}
           title="Model and measures"
-          subtitle="How the candidate measures are represented in the model."
+          subtitle="How the measures are represented in the model."
         >
           <div className="card method-card">
             <FactList
@@ -404,9 +403,9 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Baseline",
                   {
-                    lead: "Current law in policyengine-uk, before the Budget.",
+                    lead: "Current law in policyengine-uk.",
                     points: [
-                      "Each candidate measure changes it, so the difference between the two runs is the measure.",
+                      "Each measure changes it, so the difference between the two runs is the measure.",
                       "The Plan 2 measure's baseline also uses modelled student loan repayments.",
                     ],
                   },
@@ -482,10 +481,10 @@ function MethodologyTab({ onShowTab }) {
           </div>
 
           <div className="card method-card method-table-card method-muted-card">
-            <h3 className="method-card-title">Likely but not modelled</h3>
+            <h3 className="method-card-title">Not modelled</h3>
             <p className="method-more">
-              Reported as likely for the Budget, but outside what the household
-              model can cost, so not on the page.
+              Measures outside what the household model can cost, so not on
+              the page.
             </p>
             <table className="method-measures method-measures-muted">
               <thead>
@@ -818,9 +817,10 @@ function MethodologyTab({ onShowTab }) {
                 </li>
               </ul>
             </Callout>
-            <Callout icon={TriangleAlert} tone="warning" title="Pre-Budget basis">
-              The economic assumptions and the weights are pre-Budget: they
-              are not yet rebased on the Budget&apos;s OBR forecast.
+            <Callout icon={Info} title="Economic assumptions">
+              The economic assumptions and the weights follow the{" "}
+              <SourceLink id="obr_efo_current" />. Rebasing them on a new
+              forecast is a separate step.
             </Callout>
             <Callout icon={Info} title="Survey coverage">
               Surveys miss or under-record some incomes. The{" "}

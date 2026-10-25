@@ -1,5 +1,5 @@
 /**
- * How the national run represents each candidate measure, for the
+ * How the national run represents each measure, for the
  * Methodology view's table. Each row restates src/uk_budget_data/reforms.py
  * and budget_measures.py: what the measure changes against current law,
  * and the first model year it changes (year 2027 means 2027-28). The
@@ -90,8 +90,8 @@ export const MEASURE_MODELLING = [
 ];
 
 /**
- * Measures reported as likely that the household model cannot cost, for
- * the Methodology view's "Likely but not modelled" table.
+ * Measures the household model cannot cost, for the Methodology view's
+ * "Not modelled" table.
  */
 export const NOT_MODELLED = [
   {

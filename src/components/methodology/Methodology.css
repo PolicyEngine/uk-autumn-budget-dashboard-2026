@@ -642,7 +642,7 @@
   border-radius: var(--pe-radius-sm);
 }
 
-/* Likely but not modelled: a quieter table */
+/* Not modelled: a quieter table */
 .method-muted-card {
   background: var(--pe-gray-50);
 }
@@ -903,7 +903,7 @@
   font-size: var(--fs-small);
 }
 
-/* Likely but not modelled: an icon before each name */
+/* Not modelled: an icon before each name */
 .method-row-name {
   display: flex;
   align-items: flex-start;
