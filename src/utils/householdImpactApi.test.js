@@ -377,6 +377,33 @@ describe("the programme table's whole pounds", () => {
     expect(tax.children.reduce((sum, child) => sum + child.shown.change, 0)).toBe(tax.shown.change);
   });
 
+  it("shows Council Tax as the headline card's Based on does, not nudged to make the column add up", () => {
+    // The family on Universal Credit in 2027-28 (live API, 26 October
+    // 2026): Council Tax £2,628.58 was −£2,628 in the table and £2,629 under
+    // the headline
+    const family = [
+      { id: "employment_income", group: "income", before: 21504.02, after: 21504.02, children: [] },
+      { id: "income_tax", group: "tax", before: 1534.8, after: 1534.8, children: [] },
+      { id: "national_insurance", group: "tax", before: 714.73, after: 714.73, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.58, after: 2628.58, children: [] },
+      { id: "fuel_duty", group: "tax", before: 364.89, after: 338.52, children: [] },
+      { id: "vat_change", group: "tax", before: 0, after: -73.85, children: [] },
+      { id: "tv_licence", group: "tax", before: 180, after: 180, children: [] },
+      { id: "universal_credit", group: "benefit", before: 18443.07, after: 18443.07, children: [] },
+      { id: "child_benefit", group: "benefit", before: 2391.15, after: 2391.15, children: [] },
+      { id: "free_childcare", group: "benefit", before: 3633.88, after: 3633.88, children: [] },
+      { id: "other_taxes", group: "tax", before: 0.04, after: 0.05, children: [] },
+    ];
+    const totals = headlineTotals({ before: 40549.08, after: 40649.3 });
+    const rows = roundProgrammeGroups(programmeGroups(family), totals).flatMap((group) => group.rows);
+    const councilTax = rows.find((row) => row.id === "council_tax");
+    expect(councilTax.shown.before).toBe(-2629);
+    expect(councilTax.shown.after).toBe(-2629);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+  });
+
   it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
     const bars = [{ id: "a", change: 3.5, rounded: 3 }];
     expect(pinnedRound([3.5, 3.5], 7, bars)).toEqual([3, 4]);
