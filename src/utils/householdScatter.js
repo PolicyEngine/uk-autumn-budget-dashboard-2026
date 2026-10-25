@@ -551,3 +551,42 @@ export function panelDots(
   });
   return dots;
 }
+
+/**
+ * One circle per published cell (income band by change band), at the
+ * band's middle income and middle change, keyed by its cell so it tweens
+ * between years. Every cell is drawn, however few its households: the
+ * dots above (panelDots) give a cell a dot only when it holds about a
+ * dot's worth of households, so small groups (about a tenth of households
+ * in 2027-28) went unseen. The open outer bands sit at the axis edge
+ * (clampToAxis). The cells are as published: nothing is added or split.
+ *
+ * @param {Array<Object>} cells - A year's cells (scatterView's points)
+ * @returns {Array<Object>} Circles, largest first, so small ones draw on top
+ */
+export function cellCircles(cells) {
+  return cells
+    .map((cell) => {
+      const edge = edgeOf(cell.changeBand, cell.changeBandUpper);
+      return {
+        ...cell,
+        key: `${cell.incomeBand}:${cell.changeBand}`,
+        hidden: Boolean(edge),
+        edge: edge || undefined,
+      };
+    })
+    .sort((a, b) => b.households - a.households);
+}
+
+/** The smallest and largest circle radius, in px. */
+export const CIRCLE_RADIUS = { min: 2.5, max: 9 };
+
+/**
+ * A circle's radius: its area in proportion to its households, against the
+ * largest cell of the selection in any year (so sizes compare across
+ * years), and never under the minimum, so the smallest group still shows.
+ */
+export function circleRadius(households, largest, { min, max } = CIRCLE_RADIUS) {
+  if (!(largest > 0) || !(households > 0)) return min;
+  return Math.max(min, max * Math.sqrt(Math.min(1, households / largest)));
+}

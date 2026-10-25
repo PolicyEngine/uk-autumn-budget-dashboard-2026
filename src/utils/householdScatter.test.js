@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { toChangeAxis } from "./publication/scatter";
 import {
   allocateDots,
+  CIRCLE_RADIUS,
+  cellCircles,
+  circleRadius,
   clampToAxis,
   fitChangeAxis,
   changeBandLabel,
@@ -362,5 +365,31 @@ describe("fitChangeAxis and clampToAxis", () => {
   it("keeps groups with no published cells hidden", () => {
     const empty = { change: 0, hidden: true };
     expect(clampToAxis([empty], [-100, 100])[0]).toBe(empty);
+  });
+});
+
+describe("cellCircles and circleRadius", () => {
+  const cells = [
+    { incomeBand: 0, changeBand: 10, changeBandUpper: 25, households: 1000, income: 2500, change: 17.5 },
+    { incomeBand: 0, changeBand: 25, changeBandUpper: 50, households: 400000, income: 2500, change: 37.5 },
+    { incomeBand: 5000, changeBand: 5000, changeBandUpper: 5000, households: 2000, income: 7500, change: 5000 },
+  ];
+
+  it("draws every published cell, the smallest last so it sits on top", () => {
+    const circles = cellCircles(cells);
+    expect(circles).toHaveLength(3);
+    expect(circles.map((circle) => circle.households)).toEqual([400000, 2000, 1000]);
+    expect(new Set(circles.map((circle) => circle.key)).size).toBe(3);
+    // The open band waits for clampToAxis to put it at the edge
+    const open = circles.find((circle) => circle.changeBand === 5000);
+    expect(open).toMatchObject({ hidden: true, edge: "upper" });
+    expect(clampToAxis([open], [-100, 500])[0]).toMatchObject({ hidden: false, clamped: true, change: 500 });
+  });
+
+  it("sizes a circle's area by its households, never below the minimum", () => {
+    expect(circleRadius(400000, 400000)).toBe(CIRCLE_RADIUS.max);
+    expect(circleRadius(100000, 400000)).toBeCloseTo(CIRCLE_RADIUS.max / 2);
+    expect(circleRadius(1000, 400000)).toBe(CIRCLE_RADIUS.min);
+    expect(circleRadius(0, 400000)).toBe(CIRCLE_RADIUS.min);
   });
 });

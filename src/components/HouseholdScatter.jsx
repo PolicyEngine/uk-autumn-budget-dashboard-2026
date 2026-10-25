@@ -12,11 +12,12 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
+  CIRCLE_RADIUS,
+  cellCircles,
+  circleRadius,
   clampToAxis,
   fitChangeAxisAcrossYears,
-  householdsPerDot,
   INCOME_AXIS_DOMAIN,
-  panelDots,
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
@@ -31,9 +32,9 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
-// 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
-// dot size and colours. Its dots were sampled households; these are fixed
-// shares of groups of households, which keep their rows across years.
+// 2025), drawn from the binned cells: same axes, ticks, grid, zero line and
+// colours. Its dots were sampled households; here each circle is one
+// published group of households, its area in proportion to their number.
 const CHART_TITLE = "Household income impacts";
 const INCOME_TICKS = [0, 20000, 40000, 60000, 80000, 100000, 120000, 140000];
 const thousands = (value) => `${value / 1000}`;
@@ -43,13 +44,13 @@ const changeTick = (value) => {
   const text = abs >= 1000 ? `£${abs / 1000}k` : `£${abs}`;
   return value < 0 ? `\u2212${text}` : text;
 };
-// 2025: Recharts' default scatter symbol (area 64, so r ≈ 4.5) at an
-// opacity of 0.5 to 0.95 by household weight, which its Cell set as both
-// `opacity` and `fill-opacity` (so a dot showed at about its square).
-// Every dot here stands for the same number of households, so all take
-// the 2025 sample's typical value (its median, 0.51), set both ways.
-const DOT_RADIUS = Math.sqrt(64 / Math.PI);
-const DOT_OPACITY = 0.51;
+// A light fill, so overlapping circles show through one another, and a
+// firmer outline, so the smallest group still reads; the largest groups
+// are drawn first and the smallest on top (cellCircles).
+const FILL_OPACITY = 0.35;
+const STROKE_OPACITY = 0.9;
+// Smaller circles on a phone's narrower plot
+const NARROW_RADIUS = { min: 2, max: 7 };
 const GRID = { strokeDasharray: "3 3", stroke: CHART_COLOURS.grid };
 const TICK = { fontSize: 11, fill: CHART_COLOURS.tick };
 const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
@@ -69,10 +70,9 @@ const KEY = [
 const number = (value) =>
   new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
 const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
-const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
-const describe = (perDot, basisLabel) =>
-  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households.`;
+const describe = (basisLabel) =>
+  `Change in net income by ${basisLabel} income. Each circle is a group of households; its area shows how many.`;
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
 
 // Dots move between years and selections as the other charts' bars do:
@@ -116,6 +116,7 @@ function useTweenedDots(dots) {
           return {
             ...dot,
             change: was.change + (dot.change - was.change) * e,
+            r: was.r + (dot.r - was.r) * e,
             income: was.income + (dot.income - was.income) * e,
             opacity: was.opacity + (dot.opacity - was.opacity) * e,
           };
@@ -137,8 +138,8 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
-  const left = xAxis.x - DOT_RADIUS;
-  const right = xAxis.x + xAxis.width + DOT_RADIUS;
+  const left = xAxis.x - CIRCLE_RADIUS.max;
+  const right = xAxis.x + xAxis.width + CIRCLE_RADIUS.max;
   return (
     <g className="household-scatter-dots" onMouseLeave={() => onHover(null)}>
       {dots.map((dot) => {
@@ -152,11 +153,13 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             data-dot={dot.key}
             cx={cx}
             cy={cy}
-            r={DOT_RADIUS}
+            r={dot.r}
             fill={colourFor(dot)}
-            fillOpacity={DOT_OPACITY}
-            opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
-            strokeWidth={0}
+            fillOpacity={FILL_OPACITY}
+            stroke={colourFor(dot)}
+            strokeOpacity={STROKE_OPACITY}
+            strokeWidth={1}
+            opacity={Math.min(1, dot.opacity)}
             onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
           />
         );
@@ -204,21 +207,20 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
 }
 
 /**
- * Households by baseline net income and the change in it, drawn as the
- * 2025 dashboard drew its 500 sampled households: change on the x axis
- * (fitted to the dots shown: fitChangeAxis), baseline household net income
- * on the y axis (£0 to £150,000), uniform dots coloured by gain, loss or no
- * change, and changes beyond the axis drawn at its edge.
+ * Households by baseline net income and the change in it, on the 2025
+ * dashboard's axes: change on the x axis (fitChangeAxis), baseline
+ * household net income on the y axis (£0 to £150,000), coloured by gain,
+ * loss or no change, and changes beyond the axis drawn at its edge.
  *
- * The dots come from the binned cells in household_scatter_binned.csv
- * (£5,000 income bands by change bands). Every year's households are
- * banded by their baseline income in the basis year (2027-28), so a band
- * is the same households in every year. Each band gets its dots once, by
- * its households in the basis year, and its k-th dot stands at the band's
- * k-th weighted quantile of change in the year shown (panelDots): when the
- * year changes, a dot keeps its row and its rank, and slides sideways. No
- * survey household is shown on its own (#30): a dot's tooltip gives its
- * group.
+ * Each circle is one published cell of household_scatter_binned.csv (a
+ * £5,000 income band by a change band), at the cell's middle, its area in
+ * proportion to its households (cellCircles, circleRadius). Every cell is
+ * drawn, so a small group is never hidden by a large one: small circles
+ * sit on top, and fills are light enough to see through. Every year's
+ * households are banded by their baseline income in the basis year
+ * (2027-28), so a band is the same households in every year, and a cell's
+ * circle moves and resizes between years. No survey household is shown
+ * on its own (#30): a circle's tooltip gives its group.
  *
  * Cells are published per reform: one measure shows its own, every measure
  * the package's, and any other selection a notice.
@@ -252,14 +254,24 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reform, data],
   );
+  // One circle per published group, sized against the selection's largest
+  // group in any year, so a size means the same in every year
+  const largest = useMemo(
+    () => Math.max(0, ...(yearPoints ?? []).flat().map((cell) => cell.households)),
+    [yearPoints],
+  );
   const dots = useMemo(() => {
-    const placed = ready ? panelDots(view.basisPoints, view.points) : [];
-    return clampToAxis(placed, changeAxis.domain);
-  }, [ready, view, changeAxis]);
+    const radius = narrow ? NARROW_RADIUS : CIRCLE_RADIUS;
+    const circles = ready
+      ? cellCircles(view.points).map((cell) => ({
+          ...cell,
+          r: circleRadius(cell.households, largest, radius),
+        }))
+      : [];
+    return clampToAxis(circles, changeAxis.domain);
+  }, [ready, view, changeAxis, largest, narrow]);
   const shown = useTweenedDots(dots);
-  const description = ready
-    ? describe(householdsPerDot(view.basisPoints), basisLabel)
-    : DESCRIPTION_LOADING;
+  const description = ready ? describe(basisLabel) : DESCRIPTION_LOADING;
 
   // A hovered dot's group belongs to the year and selection it was
   // hovered in

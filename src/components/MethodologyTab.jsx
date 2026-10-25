@@ -440,8 +440,7 @@ function MethodologyTab({ onShowTab }) {
                           </span>
                         </>,
                         `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
-                        "About 500 dots, shared out by each income group's households in 2027-28.",
-                        "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
+                        "One circle per published group, at its middle income and change; its area is in proportion to its households, with a minimum size so the smallest group still shows.",
                       ],
                     },
                   ],
