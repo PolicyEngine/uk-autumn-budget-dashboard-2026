@@ -14,8 +14,9 @@ import {
   MIN_SAMPLE_SIZE,
   YOUNG_BAND,
   singleAgeKey,
+  wholeSelectionRun,
 } from "../../utils/ageImpact";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { CHART_COLOURS, REFERENCE_DASH } from "../../utils/chartTheme";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -29,7 +30,7 @@ export const GROUP_STYLES = {
   "35-49": { color: CHART_COLOURS.ageAdults },
   "50-64": { color: CHART_COLOURS.ageOlder },
   "65+": { color: CHART_COLOURS.agePension },
-  all: { color: CHART_COLOURS.reference, dash: "5 3" },
+  all: { color: CHART_COLOURS.reference, dash: REFERENCE_DASH },
 };
 
 /** Below this (in £ a year) a mean change counts as no change. */
@@ -69,7 +70,7 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
     if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
-      noEffect.push(policy.name);
+      noEffect.push({ id: policy.id, name: policy.name });
     } else {
       shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
     }
@@ -168,6 +169,7 @@ export function singleAgeBars(rows, policies, selected, year) {
   for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
     let net = 0;
     let complete = chosen.length > 0 && chosen.length === selected.length;
+    const parts = [];
     for (const policy of chosen) {
       const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
       if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
@@ -175,8 +177,18 @@ export function singleAgeBars(rows, policies, selected, year) {
         break;
       }
       net += row.mean_change;
+      parts.push({
+        id: policy.id,
+        key: policy.seriesKey ?? `measure:${policy.id}`,
+        name: policy.label ?? policy.name,
+        value: row.mean_change,
+      });
     }
-    bars.push({ age, label: String(age), netChange: complete ? net : null });
+    // Each policy's own change, for the tooltip, largest first
+    parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    // Each policy's own change under its series key too, for the stacked bars
+    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
   }
   return bars;
 }
@@ -201,4 +213,26 @@ export function fitRange(min, max) {
   for (let tick = bottom; tick <= top + 1e-9; tick += step) ticks.push(tick);
   if (ticks.length < 2) ticks.push(bottom + step);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * Better off, unchanged and worse off for each single year of age,
+ * SINGLE_AGE_FIRST to SINGLE_AGE_LAST, from the whole selection's run (as
+ * for the age groups, `combinedId` the catalogue's package run):
+ * `{ run, groups: [{ key, label, row, suppressed }] }`, or null when the
+ * selection has no such run or the year no rows. An age
+ * with fewer than MIN_SAMPLE_SIZE survey records is suppressed.
+ */
+export function sharesBySingleAge(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
+  if (!run) return null;
+  const yearRows = (rows ?? []).filter((row) => row.year === Number(year) && row.reform_id === run);
+  if (!yearRows.length) return null;
+  const groups = [];
+  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+    const row = yearRows.find((candidate) => candidate.age_band === singleAgeKey(age)) ?? null;
+    const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
+    groups.push({ key: String(age), label: String(age), age, row: usable, suppressed: !usable });
+  }
+  return { run, groups };
 }

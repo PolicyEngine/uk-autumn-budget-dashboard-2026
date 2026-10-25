@@ -62,9 +62,9 @@ const FAILURE_TEXT = [
 const LOADED = {
   // App.jsx renders the Public finances section only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The form's list: its first row (Age) and the optional details; the
-  // results are checked below.
-  personal: (panel) => within(panel).findAllByRole("heading", { name: "More details" }),
+  // The form's card: its More details section; the results are checked
+  // below.
+  household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
@@ -83,7 +83,7 @@ let consoleErrors;
 const publicationFetch = dashboardFixtureFetch();
 
 // The household API must run the model versions the approved receipts
-// record, or Personal impact shows nothing: answer with alpha's.
+// record, or Household impact shows nothing: answer with alpha's.
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
@@ -175,13 +175,16 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
         (r) => r.status !== 200 && !NOT_YET_PUBLISHED.has(r.url),
       );
       expect(missing).toEqual([]);
-      if (value === "personal") {
-        // The form's first row is the head's age, with its default
-        expect(within(panel).getByRole("button", { name: /^Age/, expanded: false })).toHaveTextContent("Age30");
-        // The results beside the form (every answer has a default): the tab
-        // asks the household API in two stages and shows the answer
+      if (value === "household") {
+        // The form's first box is the head's age, with its default
+        expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
+        // Nothing is asked before Calculate
+        expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
+        // Every answer has a default: one press asks the household API in
+        // two stages and shows the answer
+        fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
         expect(
-          await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
+          await within(panel).findByText(/^Change in your net income$/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
         await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
         const stages = requests
@@ -200,15 +203,109 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     15000,
   );
 
-  it("fails the Personal impact tab when the API URL is not set", async () => {
+  it("fails the Household impact tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the
     // results would be: the check above would catch it.
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
     );
     expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
+  });
+
+  it("keeps a household calculation running across a tab switch, and shows its answer on return", async () => {
+    // Hold the household API's answers until released
+    const held = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input, init = {}) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url === HOUSEHOLD_API) {
+          return new Promise((resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+            held.push(() => resolve(serve(input, init)));
+          });
+        }
+        return serve(input, init);
+      }),
+    );
+    window.history.replaceState({}, "", "/?tab=personal");
+    render(<App />);
+    // The views are rebuilt once the publication verifies
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
+    const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
+    await waitFor(() => expect(held).toHaveLength(1));
+
+    // Away to Methodology while the first stage is in flight
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    expect(personal).not.toBeVisible();
+    held.shift()();
+    // The second stage follows while the view is hidden
+    await waitFor(() => expect(held).toHaveLength(1));
+    held.shift()();
+    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2));
+
+    // Back: the same view, with the finished answer, and nothing asked again
+    fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
+    expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
+    expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
+    await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
+    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
+    expect(held).toHaveLength(0);
+  });
+
+  it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
+    expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
+    expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Compare with OBR estimates" })).toBeNull();
+  });
+
+  it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
+    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    // Every view opened so far stays mounted; Methodology is never opened
+    const text = document.body.textContent;
+    expect(text).not.toMatch(/pre-Budget/i);
+    expect(text).not.toMatch(/28 October/);
+    expect(text).not.toMatch(/candidate/i);
+  });
+
+  it("keeps a hidden view's progress inside it: nothing of it shows on another view", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input, init = {}) => {
+        const url = typeof input === "string" ? input : input.url;
+        // The household API never answers here
+        if (url === HOUSEHOLD_API) return new Promise(() => {});
+        return serve(input, init);
+      }),
+    );
+    window.history.replaceState({}, "", "/?tab=household");
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
+    const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
+    await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    expect(household).not.toBeVisible();
+    for (const node of document.querySelectorAll(".processing-panel, .processing-bar, .skeleton-chip")) {
+      expect(node.closest('[role="tabpanel"]')).toBe(household);
+      expect(node).not.toBeVisible();
+    }
+    const methodology = screen.getByRole("tabpanel", { name: "Methodology" });
+    expect(methodology).toBeVisible();
+    expect(methodology.textContent).not.toMatch(/Calculating your household/);
   });
 });
