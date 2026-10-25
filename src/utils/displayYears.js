@@ -37,8 +37,10 @@ export const DISPLAY_YEARS = Object.freeze([...CONFIG_YEARS]);
 /**
  * The years a reader can choose (the year pill, Play, Household impact):
  * from 2027-28. 2026-27 stays in the charts that draw every year (the
- * revenue bars) but is not offered: its only measure, the Warm Home
- * Discount top-up, shows as "Paid in 2026-27 only".
+ * revenue bars) but is not offered. Four measures change household incomes
+ * in 2026-27 (fuel duty, road fuel VAT, electricity VAT and the Warm Home
+ * Discount top-up, which shows as "Paid in 2026-27 only"), so their
+ * 2026-27 household results are not shown: offering the year is open.
  */
 export const FIRST_SELECTABLE_YEAR = 2027;
 

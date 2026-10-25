@@ -439,7 +439,8 @@ function MethodologyTab({ onShowTab }) {
                             ))}
                           </span>
                         </>,
-                        `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
+                        `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end.`,
+                        `The change axis is fitted to the selection's dots over every year, from the 1st to the 99th percentile and never wider than −${pounds(SCATTER_CHANGE_MAX)} to ${pounds(SCATTER_CHANGE_MAX)}; a dot beyond it is drawn at its edge.`,
                         "About 500 dots, shared out by each income group's households in 2027-28.",
                         "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
                       ],
@@ -462,8 +463,8 @@ function MethodologyTab({ onShowTab }) {
                   [
                     "Sign-off",
                     {
-                      value: "A named reviewer signs off every public data file before it is published.",
-                      more: ["A file awaiting sign-off is marked pending, and a pending file expires after 14 days at most."],
+                      value: "Every public data file is listed with a named reviewer before it is published.",
+                      more: ["A file still under review is listed as pending, and may be published as pending for 14 days at most."],
                     },
                   ],
                 ]}
@@ -575,7 +576,7 @@ function MethodologyTab({ onShowTab }) {
                 <p>
                   The same model and measures, applied to one household&apos;s answers. How it works
                   is under &ldquo;About these figures&rdquo;, below the results on the{" "}
-                  <ViewLink tab="personal" onShowTab={onShowTab}>
+                  <ViewLink tab="household" onShowTab={onShowTab}>
                     Household impact tab
                   </ViewLink>
                   .

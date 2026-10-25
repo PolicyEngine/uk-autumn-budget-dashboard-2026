@@ -137,6 +137,8 @@ export default function LivingStandardsTab({ active = true }) {
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
+      // The reason goes to the console; the page says only that it failed
+      if (r.error) console.error("Could not load outlook data:", r.error);
       if (live) setState({ loading: false, ...r });
     });
     return () => {
@@ -155,7 +157,7 @@ export default function LivingStandardsTab({ active = true }) {
       )}
       {error && (
         <p className="view-status" role="alert">
-          Could not load outlook data: {error}
+          The living standards data could not be loaded. Please reload the page.
         </p>
       )}
 
