@@ -14,8 +14,10 @@ default arguments of every function in it. So each modifier has a module of
 its own, named after it, and a fix to one changes only its own measure's
 definition (until 25 October all seven shared one module, and any edit
 there changed every one). A constant two modifiers use, the road fuel VAT
-rate, is written in each of their modules. ``tests/test_budget_measures.py``
-checks both.
+rate, is written in each of their modules; a helper modifiers share goes
+outside the package, as the templates in ``measure_templates.py`` do.
+``tests/test_budget_measures.py`` checks both, and
+``tests/test_budget_measures_split.py`` the split.
 
 Import a modifier from its module, as ``from
 uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut``.

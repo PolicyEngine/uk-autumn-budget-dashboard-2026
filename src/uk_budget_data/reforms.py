@@ -181,7 +181,7 @@ def _create_state_pension_income_tax_protection() -> Reform:
             "allowance. Someone whose only income is the full new State "
             "Pension pays no income tax."
         ),
-        simulation_modifier=(state_pension_income_tax_allowance),
+        simulation_modifier=state_pension_income_tax_allowance,
     )
 
 
@@ -351,7 +351,7 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
             PLAN_2_THRESHOLD, plan_2_unfrozen_thresholds()
         ),
         simulation_modifier=connect_student_loan_repayments,
-        baseline_simulation_modifier=(connect_student_loan_repayments),
+        baseline_simulation_modifier=connect_student_loan_repayments,
     )
 
 
