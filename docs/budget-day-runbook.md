@@ -850,6 +850,12 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 
 ## Faster generation on Budget day
 
+**What the page reads.** The Budget views read approved artifacts only, plus `regional.csv` and `constituency.csv` once `publish index` binds them (G4). The other flat tables in `public/data` (`budgetary_impact.csv` and the rest) are still written by a plain `generate`, but no view reads them. So on Budget day `--jobs` speeds up these runs:
+- G2's `generate --artifacts --reforms <ids> --jobs 2`;
+- G4's `geography --jobs 2`.
+
+`--artifacts` runs locally only (a receipt binds the execution it ran in). The artifact and area timings below are estimates, not timed runs.
+
 Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microcosm national dataset). The draft PR "Faster generation" holds the details.
 
 - **Where the time goes.** One measure is two microsimulations, built once and read for every year:
@@ -896,6 +902,8 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 
 ## Fast full run
 
+**Not a step of the day.** This run writes the flat tables, which no Budget view reads (see "What the page reads" above). It's kept here as a measure of the machine's speed and memory. To time the day's own runs, time G2's `generate --artifacts` and G4's area run at the rehearsal.
+
 "Society" results: the nine candidate measures plus `autumn_budget_2026_combined`, every year (2026 to 2031), every flat table in `public/data` (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned`, `income_curve`, and `obr_comparison`). One `generate` writes all of them.
 
 **Measured end to end on 25 October** on an 18-core, 64 GB Mac (policyengine 6.10.2, `microcosm_uk_2024_25`). Other sessions were holding about 37 GB, with 10 to 20 GB of swap in use. Every parallel run's files were byte-identical to the serial run's. The serial run's seven dashboard tables were also byte-identical to the committed `public/data`.
@@ -908,7 +916,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 | **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
 | `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
 
-- **Use on Budget day: `--jobs 2`, about 8 minutes.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
+- **`--jobs 2` is the setting to use, about 8 minutes here.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
 - **The per-unit estimate is now 6.5 GB** (it was 22.5 GB, a peak footprint that counts compressed pages). With 22.5 GB, `auto` and the admission check fell back to one unit at a time on this Mac. Two units at once peaked at 12.8 GB RSS (6.4 GB each), three at 16.4 GB, swap rose no more than in the serial run, and free memory never fell below 8.4 GB. With 6.5 GB and 21 GB free, `auto` picks 2 and the admission check lets a second unit start while the first ramps up, but not a third. The table's `--unit-memory-gb 4` rows are how this was measured before the change; 4 and 6.5 both admit two units on this machine.
 - **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
 
