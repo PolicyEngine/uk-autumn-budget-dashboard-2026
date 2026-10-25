@@ -889,12 +889,12 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   | Step | Before (serial) | Now, `--jobs 1` | Now, 2 jobs | Modal, about 10 containers |
   |---|---|---|---|---|
   | Flat CSVs, with age_impact and the binned scatter | 33 min, plus 12–23 min (age) and 10–24 min (scatter) | about 17 min | about 9 min | about 5 min |
-  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | local only |
+  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | about 5–7 min (estimate; see "Budget day on Modal") |
   | `geography` (simulation part; the estimate and checks add about 3 min) | about 24 min | about 24 min | about 12 min | local only |
 
   - **How many jobs fit.** On a quiet 64 GB laptop `auto` should pick 2 workers for six years. On 24 October, with other agents' sessions holding memory and 16 GB of swap, it picked 1.
   - **Modal** sends each measure to its own container. Each container downloads the dataset (about 1.5 GB) on its first run. 10 measures need 10 containers, so 20 containers buy nothing over 10.
-- **`--backend modal`** (flat CSVs and `--only` only, opt-in):
+- **`--backend modal`** (flat CSVs, `--only` and, since the Modal PR, `--artifacts`; opt-in):
 
   ```bash
   uv run --with modal==1.6.2 uk-budget-data generate --backend modal
@@ -905,7 +905,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
     2. give the runner a Modal token (`modal token new`), as the person running the command.
   - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
   - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
-  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **`--artifacts` runs on Modal too; `geography` stays local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally, so a release's artifacts are made either all on Modal or all locally ("Budget day on Modal" below).
   - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
 
 ## Fast full run
@@ -939,10 +939,73 @@ git status --short public/data                                  # review the dif
 - **Fallbacks, in order:**
   1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
   2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
-  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+  3. Modal (`--backend modal`) is about 5 min, but it is not runnable on the real data yet. The workspace has no `uk-budget-2026-hf-token` secret ("Budget day on Modal").
 - **Not covered here:**
   - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
   - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
+
+## Budget day on Modal
+
+Receipted generation (G2, `generate --artifacts`) with one Modal container per measure, so the nine measures run at once instead of one after another on a shared laptop. The publish-measure workflow sends a pushed measure there automatically once `PUBLISH_MEASURE_BACKEND=modal` is set.
+
+```
+push to main (reforms.py)  or  dispatch "Publish measures (Budget day)"
+        │
+        ▼
+detect: changed-measures (registry on HEAD vs HEAD^)       ← GitHub runner
+        │  one matrix job per measure
+        ▼
+compute: generate --artifacts --reforms <id> --backend modal
+        │  checks the Modal secret, then one container (32 GB, 2 CPUs)
+        │  builds both simulations on the bundle's dataset, writes the
+        │  artifact in the container and sends its files back
+        ▼
+data-pr: stage-artifacts (reconcile, stage, pending review rows,
+         publish check) and ONE draft data pull request
+        │
+        ▼
+the Reconciler signs (sign-measures) and merges: nothing here approves
+```
+
+- **Commands by hand** (from a clean checkout of the release commit; the containers run the working tree, so a dirty tree is refused):
+
+  ```bash
+  uv run --with modal==1.6.2 uk-budget-data generate --artifacts --backend modal \
+    --reforms <the nine ids>
+  uv run --with modal==1.6.2 uk-budget-data generate --combined <the nine ids> --backend modal
+  ```
+
+  The files land under `public/data/artifacts/` exactly where a local run puts them, write-once: an artifact already there with the same bytes is "unchanged", one with different bytes is an error.
+- **Every artifact of a release from the same place.** A Modal artifact carries the container's execution identity. Mixing it with local ones makes staging ask for `--adopt-execution`, which marks every other entry stale. So once Modal is used, the measures and the combined run all go there; the area run (`geography`) is local only, which needs a decision before Budget day (see below).
+- **No dataset file is sent.** A container downloads the bundle's dataset itself with the workspace secret. `--dataset <file>` is refused on Modal.
+- **Before it can run on the real data:**
+
+  | Needed | Owner | State on 25 October |
+  |---|---|---|
+  | Modal workspace secret `uk-budget-2026-hf-token` (key `HUGGING_FACE_TOKEN`, an organisation read-only token) | Anthony | missing; the job stops with "Modal secret missing" |
+  | Repository secrets `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` (for the workflow) | Anthony | not checked from here; the job stops with an error if they are absent |
+  | Running the Microcosm data on Modal is within its terms | Max | to confirm |
+  | Repository variable `PUBLISH_MEASURE_BACKEND=modal` (Budget day only) | whoever runs Budget day | unset (the workflow defaults to the larger runner) |
+
+- **Smoke test without the licensed data** (no secret, no dataset sent):
+
+  ```bash
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py \
+    --root /tmp/modal-smoke <measure ids>
+  ```
+
+  Each container builds an invented dataset (`synthetic_dataset`, 300 households, fixed seed) and runs the measure's receipted path up to the receipt, which the gate refuses because the invented dataset is not a bundle dataset; that refusal is the expected outcome. A second call sends an artifact-shaped directory back and writes it locally twice (written, then unchanged).
+- **Measured on 25 October** (smoke test, synthetic data, years 2026 and 2027):
+
+  | What | Time |
+  |---|---|
+  | First run, including building the image from `uv.lock` (3 measures) | 171 s |
+  | Nine measures, warm image, one container each, at once | 127 s end to end; 67–92 s per container |
+  | Return path (pack, send back, write locally, write again) | 13 s |
+
+  On the real data a container also downloads the dataset (about 1.5 GB) and each measure runs over every policy year; a local receipted measure takes about 3.3 min, so nine at once should take about 5–7 min end to end. That is an estimate until the secret exists.
+- **Fallback:** locally with `--jobs 1` (about 30 min for the nine, or about 14 min with #112's shared simulations), as in "Fast full run".
+- **Not on Modal yet:** the area run (`geography`, 2 to 3.5 h locally). It is the slowest step on the day; moving it needs the area run split by region and the same execution-identity rule.
 
 ## Adopting a release (each re-cut)
 

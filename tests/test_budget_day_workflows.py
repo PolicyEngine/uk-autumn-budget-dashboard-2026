@@ -225,6 +225,12 @@ def test_modal_backend_is_opt_in_and_guarded():
     assert "--backend modal" in modal["run"]
     assert "generate --artifacts" in modal["run"]
     assert "uv run --with modal==1.6.2" in modal["run"]
+    # A missing workspace secret stops the job before any measure runs
+    assert "uk-budget-2026-hf-token" in modal["run"]
+    assert "Modal secret missing" in modal["run"]
+    assert modal["run"].index("Modal secret missing") < modal["run"].index(
+        "generate --artifacts"
+    )
     # The Modal token reaches only the step that calls Modal
     assert modal["env"] == {
         "MODAL_TOKEN_ID": "${{ secrets.MODAL_TOKEN_ID }}",
