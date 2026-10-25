@@ -862,4 +862,6 @@ def test_a_later_calculation_starts_before_an_earlier_one_finishes():
     first.join(30)
     # The second's one run finished well before the first's four did
     assert started["second done"] < started["first done"]
-    assert started["second done"] - second_started < 1.5
+    # A loose bound: CI's shared runners spawn worker processes slowly (3.5 s
+    # seen), and the ordering above is what shows the fairness
+    assert started["second done"] - second_started < 5

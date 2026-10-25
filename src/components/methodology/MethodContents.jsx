@@ -11,9 +11,13 @@ const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Scroll a section into view, keep its anchor in the address, and move focus to its title. */
+export const OPEN_SECTION_EVENT = "method:open-section";
+
 export function goToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
+  // A section collapsed on a phone opens before it is scrolled to
+  window.dispatchEvent(new CustomEvent(OPEN_SECTION_EVENT, { detail: id }));
   target.scrollIntoView?.({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
   window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
   const title = target.querySelector("h2");
@@ -46,7 +50,7 @@ function currentSection(sections) {
  * phone. One nav landmark holds both; CSS shows one of them.
  *
  * @param {Object} props
- * @param {Array<{id: string, title: string}>} props.sections
+ * @param {Array<{id: string, title: string, icon?: import("react").ComponentType}>} props.sections
  */
 function MethodContents({ sections }) {
   const [current, setCurrent] = useState(sections[0]?.id);
@@ -73,7 +77,7 @@ function MethodContents({ sections }) {
         On this page
       </p>
       <ol className="method-contents-list">
-        {sections.map(({ id, title }) => (
+        {sections.map(({ id, title, icon: Icon }) => (
           <li key={id}>
             <a
               href={`#${id}`}
@@ -84,7 +88,8 @@ function MethodContents({ sections }) {
                 goToSection(id);
               }}
             >
-              {title}
+              {Icon && <Icon className="method-contents-icon" aria-hidden="true" strokeWidth={1.75} />}
+              <span>{title}</span>
             </a>
           </li>
         ))}

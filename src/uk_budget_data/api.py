@@ -180,7 +180,10 @@ def household_request_limit() -> int:
     memory stay bounded by the slots. Without workers every run is in this
     process, so one request at a time.
     """
-    if household_workers() <= 1:
+    # On Modal (HOUSEHOLD_RUNNER=modal) the runs happen in their own
+    # containers, not in this process, so requests can overlap.
+    modal_runner = os.environ.get("HOUSEHOLD_RUNNER") == "modal"
+    if household_workers() <= 1 and not modal_runner:
         return 1
     try:
         return max(1, int(os.environ.get("HOUSEHOLD_CONCURRENT_REQUESTS", 4)))

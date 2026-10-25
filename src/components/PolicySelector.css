@@ -167,3 +167,50 @@
 .policy-selector-label-short {
   display: none;
 }
+
+/* Select all, clear and Done, kept in view at the list's foot */
+.policy-selector-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--pe-surface);
+  border-top: 1px solid var(--pe-gray-200);
+}
+
+.policy-selector-action,
+.policy-selector-done {
+  min-height: 40px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.policy-selector-action {
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+}
+
+.policy-selector-action:disabled {
+  color: var(--pe-gray-400);
+  cursor: default;
+}
+
+.policy-selector-done {
+  margin-left: auto;
+  color: #ffffff;
+  background: var(--band-teal);
+  border: 1px solid var(--band-teal);
+}
+
+.policy-selector-action:focus-visible,
+.policy-selector-done:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 2px;
+}
