@@ -3,6 +3,8 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
@@ -28,7 +30,7 @@ const GROUP_SUFFIX = {
 };
 
 /** The Rate view: card parts for the Poverty over time card. */
-export default function usePovertyRateView(data) {
+export default function usePovertyRateView(data, range = null, setRange = null) {
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
@@ -58,7 +60,7 @@ export default function usePovertyRateView(data) {
   const groupName = poverty.groups[group].toLowerCase();
 
   let summary = null;
-  const span = headlineSpan(projection, data);
+  const span = headlineSpan(projection, data, range);
   if (span && span[0].rate != null && span[1].rate != null) {
     const [first, last] = span;
     const a = round1(first.rate * 100);
@@ -124,6 +126,9 @@ export default function usePovertyRateView(data) {
         },
     controls: (
       <>
+        {range && setRange && rangeYears(data).length > 2 && (
+          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
+        )}
         <PillSelect
           variant="light"
           prefix="Measure"
@@ -161,6 +166,7 @@ export default function usePovertyRateView(data) {
       </div>
     ) : (
       <LsLineChart
+          highlight={range}
         data={chartData}
         series={series}
         yFormat={formatPctAxis}

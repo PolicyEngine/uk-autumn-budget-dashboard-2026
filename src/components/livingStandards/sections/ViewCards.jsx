@@ -12,13 +12,15 @@ import useInequalityView from "./InequalitySection";
 import useDecileView from "./DecileGrowthSection";
 import usePovertyRateView from "./PovertySection";
 import useDepthView from "./DeepPovertySection";
-import { useYearRange } from "../../../utils/livingStandards/yearRange";
+import { rangeYears, useYearRange } from "../../../utils/livingStandards/yearRange";
 import { headlineStartYear, headlineYear } from "../../../utils/livingStandards/outlook";
 
 export function IncomesOverTimeCard({ data }) {
   const [show, setShow] = useState("income");
-  const income = useHouseholdIncomeView(data);
-  const inequality = useInequalityView(data);
+  // The shared two-year range (?ls_from, ?ls_to) drives each view's sentence
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const income = useHouseholdIncomeView(data, range, setRange);
+  const inequality = useInequalityView(data, range, setRange);
   return (
     <ViewCard
       title="Incomes over time"
@@ -60,7 +62,8 @@ GrowthCard.requires = "income_by_decile";
 
 export function PovertyOverTimeCard({ data }) {
   const [show, setShow] = useState("rate");
-  const rate = usePovertyRateView(data);
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const rate = usePovertyRateView(data, range, setRange);
   const depth = useDepthView(data);
   return (
     <ViewCard

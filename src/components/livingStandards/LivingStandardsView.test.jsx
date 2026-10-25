@@ -110,6 +110,21 @@ describe("the Living standards view", () => {
     expect(window.location.search).toBe("?tab=living");
   });
 
+  it("compares the years chosen in the range pill on Incomes and Poverty over time", async () => {
+    window.history.replaceState({}, "", "/?tab=living&ls_from=2028&ls_to=2030");
+    render(<App />);
+    const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
+    const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
+    const poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
+    for (const card of [incomes, poverty]) {
+      // The shared pill shows the chosen years, and the sentence compares them
+      expect(within(card).getByRole("group", { name: "Years compared" })).toHaveTextContent(/2028-29.*2030-31/);
+      expect(card).toHaveTextContent(/2028-29/);
+      expect(card).toHaveTextContent(/2030-31/);
+      expect(card.querySelector(".ls-summary, p")).not.toHaveTextContent(/from 2027-28 to 2031-32/);
+    }
+  });
+
   it("switches each card's view with its switch, and never shows a signed zero", async () => {
     window.history.replaceState({}, "", "/?tab=living");
     render(<App />);

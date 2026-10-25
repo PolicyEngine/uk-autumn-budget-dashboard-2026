@@ -4,6 +4,8 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   changeVerb,
@@ -55,7 +57,7 @@ function describeMetric(id, label) {
 }
 
 /** The Median income view: card parts for the Incomes over time card. */
-export default function useHouseholdIncomeView(data) {
+export default function useHouseholdIncomeView(data, range = null, setRange = null) {
   const living = data.living_standards;
   const meta = data.meta;
   const metricIds = Object.keys(living.metrics);
@@ -98,7 +100,7 @@ export default function useHouseholdIncomeView(data) {
   // One sentence: what the measure is (a few words) and how it moves to the
   // headline year. Units live in the unit label.
   let summary = null;
-  const span = headlineSpan(projection, data);
+  const span = headlineSpan(projection, data, range);
   if (span) {
     const [first, last] = span;
     const a = first[adjustment];
@@ -157,6 +159,9 @@ export default function useHouseholdIncomeView(data) {
       : null,
     controls: (
       <>
+        {range && setRange && rangeYears(data).length > 2 && (
+          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
+        )}
         <PillSelect
           variant="light"
           prefix="Measure"
@@ -202,6 +207,7 @@ export default function useHouseholdIncomeView(data) {
         </div>
       ) : (
         <LsLineChart
+          highlight={range}
           data={chartData}
           series={series}
           yFormat={yFormat}

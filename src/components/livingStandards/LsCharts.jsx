@@ -6,6 +6,7 @@ import {
   Customized,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -117,10 +118,16 @@ export function LsLineChart({
   yDomain,
   yTicks,
   baseYear = BASE_YEAR,
+  // [from, to]: the years a card's sentence compares, shaded on the chart
+  highlight = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
+  // Rows key years by their start (2028) or as "2028-29"; match either
+  const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
+  const band = highlight ? highlight.map(asKey) : null;
+  const shaded = band && data.some((d) => d[xKey] === band[0]) && data.some((d) => d[xKey] === band[1]);
   const yWidth = tickWidth(yTicks, yFormat);
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
@@ -154,6 +161,16 @@ export function LsLineChart({
             {...TOOLTIP_PROPS}
             content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
           />
+          {shaded && (
+            <ReferenceArea
+              x1={band[0]}
+              x2={band[1]}
+              fill={CHART_COLOURS.highlightBand}
+              fillOpacity={0.7}
+              stroke="none"
+              ifOverflow="extendDomain"
+            />
+          )}
           {visible.map((s) => (
             <Line
               key={s.key}

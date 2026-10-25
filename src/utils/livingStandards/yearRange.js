@@ -52,3 +52,17 @@ export function useYearRange(years, fallback) {
   );
   return [range, choose];
 }
+
+/**
+ * The projection years a reader can compare (meta.headline_start_year to
+ * meta.headline_end_year, "2027-28" … "2031-32"), for cards whose own rows
+ * also hold outturn years.
+ */
+export function rangeYears(data) {
+  const first = startOf(data?.meta?.headline_start_year);
+  const last = startOf(data?.meta?.headline_end_year);
+  if (!first || !last || last <= first) return [];
+  const out = [];
+  for (let y = first; y <= last; y += 1) out.push(`${y}-${String((y + 1) % 100).padStart(2, "0")}`);
+  return out;
+}
