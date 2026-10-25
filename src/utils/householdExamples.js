@@ -6,8 +6,15 @@
  * nothing is calculated until Calculate.
  *
  * Each "Other households" example was checked against the live household
- * API on 25 October 2026 with every measure selected: the measure it is
- * for changes its net income in the year its description names.
+ * API on 25 October 2026 with every measure selected; the measure it is for
+ * changes its net income in the year named:
+ *   pensioner: State Pension income tax protection +£93 in 2027-28
+ *   family: Warm Home Discount top-up +£100 in 2026-27 (one winter only)
+ *   graduate: Plan 2 threshold unfrozen +£79 in 2027-28
+ *   driver: fuel duty rises deferred +£89, VAT cut on road fuel +£18, 2027-28
+ *   higher earner: threshold freeze to 2031-32 −£221 in 2031-32
+ * No example shows Business Asset Disposal Relief: the form asks no capital
+ * gains.
  */
 import { YOUNG_PERSON_PRESETS } from "./youngPersonPresets";
 
@@ -30,7 +37,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "pensioner-70",
     label: "A pensioner on the State Pension",
-    description: "70, the full new State Pension only, owns their home",
+    description: "70, State Pension only; income tax protection",
     inputs: {
       ...RESET,
       current_age: 70,
@@ -46,7 +53,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "family-uc",
     label: "A family on Universal Credit",
-    description: "Couple renting with two children, one earner on £21,000",
+    description: "Two children, renting; Warm Home Discount in 2026-27",
     inputs: {
       ...RESET,
       current_age: 34,
@@ -59,12 +66,12 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       monthly_rent: null,
       electricity_spending_per_year: 1300,
     },
-    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household.",
+    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is paid for winter 2026-27 only: choose 2026-27 to see it.",
   },
   {
     id: "graduate-35k",
     label: "A graduate on £35,000",
-    description: "27, Plan 2 student loan, renting",
+    description: "27, Plan 2 student loan; threshold unfrozen",
     inputs: {
       ...RESET,
       current_age: 27,
@@ -78,7 +85,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "driver",
     label: "A driver with a long commute",
-    description: "£38,000, £2,600 a year on petrol",
+    description: "£2,600 a year on petrol; fuel duty and VAT",
     inputs: {
       ...RESET,
       current_age: 40,
