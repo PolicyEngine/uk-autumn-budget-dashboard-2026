@@ -56,6 +56,8 @@ function ChartTooltip({
       key: String(entry.dataKey),
       name: entry.name,
       value: Number(entry.value),
+      // A value already written out (FloatingTooltip's TooltipRows)
+      text: entry.text,
       color: POLICY_COLORS[entry.name] ?? entry.color ?? entry.fill ?? entry.stroke,
     }));
   const net = netKey ? payload.find((entry) => entry.dataKey === netKey) : null;
@@ -80,7 +82,7 @@ function ChartTooltip({
             <div key={row.key} className="chart-tooltip-row">
               <span className="chart-tooltip-swatch" style={{ background: row.color }} />
               <span className="chart-tooltip-name">{row.name}</span>
-              <span className="chart-tooltip-value">{valueText(row.value)}</span>
+              <span className="chart-tooltip-value">{row.text ?? valueText(row.value)}</span>
             </div>
           ))}
         </div>

@@ -62,9 +62,9 @@
   max-width: 280px;
   padding: 10px;
   font-size: 12px;
-  color: #374151;
+  color: var(--c-text);
   background-color: white;
-  border: 1px solid #ccc;
+  border: 1px solid var(--c-axis);
   border-radius: 4px;
   pointer-events: none;
 }

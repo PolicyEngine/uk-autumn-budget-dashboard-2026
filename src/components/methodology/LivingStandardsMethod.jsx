@@ -2,12 +2,12 @@
 // and data its baseline runs on and their status, the prices and sources,
 // the notes on the data, and what the baseline leaves out. Each is said
 // here and nowhere else. Read from public/data/living_standards_outlook.json
-// (meta), the file the Living standards view draws; the notes are the
-// outlook pipeline's own (PolicyEngine/uk-living-standards-outlook).
+// (meta), the file the Living standards view draws; the notes are written by
+// this repo's pipeline (uk-budget-data living-standards).
 
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
-import { describeDataset, fyDash, loadOutlook, splitSource } from "../../utils/livingStandards/outlook";
+import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, OBR_EFO_TITLE, OBR_EFO_URL, plainWords } from "../livingStandards/sources";
 
 // Notes said elsewhere: the demo status (Status, below) and the Budget
@@ -22,6 +22,29 @@ function deflatorWords(text = "") {
     return "incomes before housing costs deflated by OBR CPI, after housing costs by CPI after housing costs";
   }
   return /OBR CPI/i.test(text) ? "OBR CPI" : null;
+}
+
+/**
+ * meta.uc_health_element_extension, when applied: the years and the upstream
+ * fix this repo's pipeline reproduces on an engine without it.
+ */
+function UcHealthElementFix({ fix, engine }) {
+  const years = (fix.years || []).map(fyLabel);
+  const span = years.length > 1 ? `${years[0]} and ${years[years.length - 1]}` : years[0];
+  // The last year the engine's own scenario sets: the year before the fix's first.
+  const last = fix.years?.length ? fyLabel(fix.years[0] - 1) : null;
+  return (
+    <>
+      policyengine-uk {engine} ends the protection of pre-2026 claimants&apos; UC health element after {last}, so
+      every claimant falls to the new-claimant rate (fixed in {fix.fixed_in},{" "}
+      <a href={fix.upstream_fix_url} {...ext}>
+        {fix.upstream_fix}
+      </a>
+      ). For {span} this baseline applies that fix itself: protected claimants keep the protected amount and new
+      claimants the new-claimant amount, both uprated with benefits, and {Math.round(fix.new_claimant_share * 100)}% of
+      claimants count as new, as in {last}.
+    </>
+  );
 }
 
 /** The engine, data and status of the Living standards baseline, then its notes and gaps. */
@@ -58,9 +81,15 @@ export default function LivingStandardsMethod() {
             ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
             ["Data", dataset],
             ["Status", "Demo output, unvalidated. Same engine version as the Budget views."],
+            meta.headline_start_year &&
+              meta.headline_end_year && ["Period", periodLabel(meta.headline_start_year, meta.headline_end_year)],
             meta.real_price_base && [
               "Prices",
               [`${fyDash(meta.real_price_base)} prices`, deflatorWords(meta.deflator)].filter(Boolean).join("; "),
+            ],
+            meta.uc_health_element_extension?.applied && [
+              "UC health element",
+              <UcHealthElementFix key="uc" fix={meta.uc_health_element_extension} engine={meta.policyengine_uk} />,
             ],
             [
               "Sources",

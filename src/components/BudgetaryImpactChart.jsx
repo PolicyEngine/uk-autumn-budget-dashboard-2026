@@ -32,6 +32,7 @@ import {
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import {
   FIRST_DISPLAY_YEAR,
@@ -66,7 +67,7 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
       y={yAxis.y}
       width={width}
       height={yAxis.height}
-      fill="#319795"
+      fill={CHART_COLOURS.gain}
       fillOpacity={0.08}
       style={{
         transform: `translateX(${start}px)`,
@@ -132,14 +133,14 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
               height={height}
               rx={4}
               ry={4}
-              fill={unpublished ? "#F9FAFB" : "#ffffff"}
-              stroke="#D1D5DB"
+              fill={unpublished ? CHART_COLOURS.mutedFill : CHART_COLOURS.surface}
+              stroke={CHART_COLOURS.axis}
               strokeWidth={1}
             />
             <text
               x={x}
               y={top + height / 2 - ((lines.length - 1) * (size + 2)) / 2}
-              fill={unpublished ? "#6B7280" : "#111827"}
+              fill={unpublished ? CHART_COLOURS.tick : CHART_COLOURS.text}
               fontSize={size}
               fontWeight={unpublished ? 500 : 600}
               textAnchor="middle"
@@ -214,7 +215,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
-      ? [{ color: "#000000", label: "Net impact", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net impact", type: "line" }]
       : []),
   ];
 
@@ -336,14 +337,14 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <Line
               type="linear"
               dataKey="netImpact"
-              stroke="#000000"
+              stroke={CHART_COLOURS.net}
               strokeWidth={2}
-              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 4 }}
+              dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: 4 }}
               name="netImpact"
               {...chartMotion()}
               hide={activePolicies.length <= 1}
             />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Customized
               component={
                 <NetImpactLabels

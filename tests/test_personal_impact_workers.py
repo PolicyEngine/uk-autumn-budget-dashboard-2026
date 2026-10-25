@@ -35,7 +35,6 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         "POLICY_IDS",
         [
             "fuel_duty_rise_deferral",
-            "salary_sacrifice_cap_2028",
             "badr_lifetime_limit_cut",
             # A measure whose modifier changes households: it must reach
             # the workers (pickled by reference) and act there.
@@ -79,14 +78,9 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         ]
         for year in [2025, 2026, 2028, 2030]
     )
-    assert any(
-        serial["policies"][policy_id]["years"][year]["net_income_change"]
-        for policy_id in [
-            "fuel_duty_rise_deferral",
-            "salary_sacrifice_cap_2028",
-        ]
-        for year in [2025, 2026, 2028, 2030]
-    )
+    # No parameter-change measure left moves this household in these years
+    # (the salary sacrifice cap's haircut did, before that measure was
+    # dropped); the warm home discount above shows a measure acting there.
 
 
 @pytest.mark.parametrize(
@@ -392,8 +386,9 @@ def test_run_jobs_maps_calls_and_passes_the_calculation_deadline(
 ):
     seen = {}
 
-    def run(workers, calls, timeout):
+    def run(workers, calls, timeout, slots=None):
         seen.update(workers=workers, calls=calls, timeout=timeout)
+        seen["slots"] = slots
         return ["result"]
 
     monkeypatch.setattr(personal_impact, "run_in_workers", run)
@@ -402,6 +397,9 @@ def test_run_jobs_maps_calls_and_passes_the_calculation_deadline(
     assert personal_impact.run_jobs(
         2, [(years, situation, "unused", scenario)]
     ) == ["result"]
+    # Its processes take the instance's shared slots, as the household
+    # route's do
+    assert seen.pop("slots") is personal_impact.household_slots()
     assert seen == {
         "workers": 2,
         "calls": [
@@ -789,3 +787,79 @@ def test_nothing_outlives_a_server_killed_outright(tmp_path, monkeypatch):
             any(running(pid) for pid in pids) and time.monotonic() < deadline
         ):
             time.sleep(0.05)
+
+
+# --- shared slots: concurrent calculations share the workers fairly --------
+
+
+def test_fair_slots_serve_a_waiting_calculation_before_one_that_holds_some():
+    slots = personal_impact.FairSlots(1)
+    assert slots.acquire(1)
+    order = []
+
+    def waiter():
+        assert slots.acquire(5)
+        order.append("waiter")
+        slots.release()
+
+    thread = threading.Thread(target=waiter)
+    thread.start()
+    deadline = time.monotonic() + 5
+    while not slots._queue and time.monotonic() < deadline:
+        time.sleep(0.01)
+    slots.release()
+    # Someone is queued: a calculation that already runs may not jump it
+    assert not slots.try_acquire() or order == ["waiter"]
+    thread.join(5)
+    assert order == ["waiter"]
+    assert slots.free == 1
+
+
+def test_concurrent_calculations_never_run_more_processes_than_slots():
+    """Three calculations of three calls each, two slots: at most two
+    processes at once, and every calculation gets its answers."""
+    slots = personal_impact.FairSlots(2)
+    results = {}
+
+    def calculation(name):
+        results[name] = personal_impact.run_in_workers(
+            2, [(time.sleep, (0.2,))] * 3, 60, slots=slots
+        )
+
+    peak = 0
+    threads = [
+        threading.Thread(target=calculation, args=(n,)) for n in range(3)
+    ]
+    for thread in threads:
+        thread.start()
+    while any(thread.is_alive() for thread in threads):
+        peak = max(peak, len(personal_impact.live_workers()))
+        time.sleep(0.01)
+    assert results == {n: [None] * 3 for n in range(3)}
+    assert peak <= 2
+    assert slots.free == 2
+
+
+def test_a_later_calculation_starts_before_an_earlier_one_finishes():
+    """Not one whole calculation after another: the second starts its first
+    run while the first still has runs to go."""
+    slots = personal_impact.FairSlots(1)
+    started = {}
+
+    def calculation(name, count):
+        personal_impact.run_in_workers(
+            1, [(time.sleep, (0.3,))] * count, 60, slots=slots
+        )
+        started.setdefault(f"{name} done", time.monotonic())
+
+    first = threading.Thread(target=calculation, args=("first", 4))
+    first.start()
+    time.sleep(0.1)
+    second_started = time.monotonic()
+    second = threading.Thread(target=calculation, args=("second", 1))
+    second.start()
+    second.join(30)
+    first.join(30)
+    # The second's one run finished well before the first's four did
+    assert started["second done"] < started["first done"]
+    assert started["second done"] - second_started < 1.5

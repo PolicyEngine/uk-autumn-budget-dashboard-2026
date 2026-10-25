@@ -1,3 +1,4 @@
+import { CHART_COLOURS } from "./chartTheme";
 /**
  * How the Recharts series move when the data change (a year change, or the
  * year pill's Play): they tween from the old values to the new ones over
@@ -32,5 +33,5 @@ export function netDot({ cx, cy }) {
   if (cx === undefined || cy === undefined || Number.isNaN(cx) || Number.isNaN(cy)) {
     return null;
   }
-  return <circle cx={cx} cy={cy} r={3.5} fill="#000000" stroke="#ffffff" strokeWidth={1.5} />;
+  return <circle cx={cx} cy={cy} r={3.5} fill={CHART_COLOURS.net} stroke={CHART_COLOURS.surface} strokeWidth={1.5} />;
 }

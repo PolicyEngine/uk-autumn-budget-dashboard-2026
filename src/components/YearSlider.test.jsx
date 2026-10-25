@@ -6,19 +6,20 @@ const open = () =>
   fireEvent.click(screen.getByRole("button", { name: "Year, 2029-30" }));
 
 describe("YearSlider", () => {
-  it("opens a list of the shown years, from 2027-28, the chosen one selected", () => {
+  it("opens a list of the shown years, from 2026-27, the chosen one selected", () => {
     render(<YearSlider selectedYear={2029} onYearChange={() => {}} />);
     open();
     const list = screen.getByRole("listbox", { name: "Year" });
     const options = Array.from(list.querySelectorAll('[role="option"]'));
     expect(options.map((option) => option.textContent.replace("✓", ""))).toEqual([
+      "2026-27",
       "2027-28",
       "2028-29",
       "2029-30",
       "2030-31",
       "2031-32",
     ]);
-    expect(options[2]).toHaveAttribute("aria-selected", "true");
+    expect(options[3]).toHaveAttribute("aria-selected", "true");
   });
 
   it("chooses by click or by arrow keys and Enter, then closes", () => {

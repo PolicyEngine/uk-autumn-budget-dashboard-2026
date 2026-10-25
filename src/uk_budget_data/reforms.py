@@ -32,9 +32,6 @@ FUEL_DUTY = "gov.hmrc.fuel_duty.petrol_and_diesel"
 PERSONAL_ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 BASIC_RATE_BAND = "gov.hmrc.income_tax.rates.uk[1].threshold"
 BADR_LIFETIME_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
-SALARY_SACRIFICE_CAP = (
-    "gov.hmrc.national_insurance.salary_sacrifice_pension_cap"
-)
 PLAN_2_THRESHOLD = "gov.hmrc.student_loans.thresholds.plan_2"
 
 FUEL_DUTY_DEFERRAL_ID = "fuel_duty_rise_deferral"
@@ -44,7 +41,6 @@ ELECTRICITY_VAT_ID = "domestic_electricity_zero_vat"
 EMPLOYER_NI_ID = "employer_ni_relief_under_25s"
 THRESHOLD_FREEZE_ID = "threshold_freeze_2031_32"
 BADR_ID = "badr_lifetime_limit_cut"
-SALARY_SACRIFICE_ID = "salary_sacrifice_cap_2028"
 FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
 
@@ -185,7 +181,9 @@ def _create_warm_home_discount_top_up() -> Reform:
             "Candidate measure. The Warm Home Discount rises from £150 to "
             "£250 for winter 2026-27 only: £100 more to each household in "
             "Great Britain receiving Universal Credit or Pension Credit. "
-            "Eligibility is approximate, with no high-cost-to-heat test."
+            "Receipt follows DESNZ's rates: 85% of Pension Credit households "
+            "and 70% of other eligible households. Eligibility is "
+            "approximate, with no high-cost-to-heat test."
         ),
         simulation_modifier=budget_measures.warm_home_discount_top_up,
     )
@@ -279,44 +277,7 @@ def _create_badr_lifetime_limit_cut() -> Reform:
 
 
 # =============================================================================
-# 8. SALARY SACRIFICE CAP BROUGHT FORWARD TO APRIL 2028
-# =============================================================================
-
-
-def _create_salary_sacrifice_cap_2028() -> Reform:
-    """The £2,000 cap on National Insurance-free salary sacrifice pension
-    contributions, from April 2028 instead of April 2029.
-
-    Current law in policyengine-uk 2.132.6 sets the cap from 2029; this
-    sets it for 2028 too. The engine's behavioural parameters apply as they
-    do to the cap in current law: the broad-base haircut (employers spread
-    the extra NI over all workers' pay) and no reduction in employees'
-    contributions.
-    """
-    from policyengine_uk.system import system
-
-    haircut = (
-        system.parameters.gov.contrib.behavioral_responses
-    ).salary_sacrifice_broad_base_haircut_rate("2028-04-06")
-    return Reform(
-        id=SALARY_SACRIFICE_ID,
-        name="Salary sacrifice cap from 2028",
-        description=(
-            "Candidate measure. The £2,000 cap on National Insurance-free "
-            "salary sacrifice pension contributions starts in April 2028, a "
-            "year earlier than planned. The excess above the cap is "
-            "treated as earnings for National Insurance. Includes the "
-            f"broad-base haircut ({haircut:.2%}) where employers spread "
-            "increased NI costs across all workers."
-        ),
-        parameter_changes=threshold_change(
-            SALARY_SACRIFICE_CAP, {"2028": 2000}
-        ),
-    )
-
-
-# =============================================================================
-# 9. TEMPORARY VAT CUT ON ROAD FUEL
+# 8. TEMPORARY VAT CUT ON ROAD FUEL
 # =============================================================================
 
 
@@ -335,7 +296,7 @@ def _create_road_fuel_vat_cut() -> Reform:
 
 
 # =============================================================================
-# 10. PLAN 2 STUDENT LOAN REPAYMENT THRESHOLD UNFROZEN
+# 9. PLAN 2 STUDENT LOAN REPAYMENT THRESHOLD UNFROZEN
 # =============================================================================
 
 # The Plan 2 threshold in 2026-27, before the Budget 2025 freeze.
@@ -395,7 +356,6 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     EMPLOYER_NI_ID,
     THRESHOLD_FREEZE_ID,
     BADR_ID,
-    SALARY_SACRIFICE_ID,
     FUEL_VAT_ID,
     PLAN_2_ID,
 )
@@ -408,7 +368,6 @@ _MEASURE_FACTORIES = (
     _create_employer_ni_relief_under_25s,
     _create_threshold_freeze_2031_32,
     _create_badr_lifetime_limit_cut,
-    _create_salary_sacrifice_cap_2028,
     _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
 )
@@ -431,7 +390,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All ten candidate measures simulated together: "
+            "All nine candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -471,7 +430,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the ten candidate measures."""
+    """The combined package, then the nine candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 

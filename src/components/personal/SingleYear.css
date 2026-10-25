@@ -9,7 +9,42 @@
 }
 
 .single-year-updating {
-  color: var(--pe-gray-500);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pe-gray-100);
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  color: var(--pe-gray-700);
+}
+
+.single-year-updating::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pe-teal-500);
+  animation: single-year-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes single-year-pulse {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .single-year-updating::before { animation: none; }
+}
+
+/* The last figures, while newer inputs load: greyed under their own year */
+.single-year-stale.is-stale,
+.single-year-details.is-stale .report-section {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transition: opacity 0.15s ease;
 }
 
 .single-year-quiet {
@@ -33,14 +68,45 @@
 }
 
 .single-year-change.is-loss .stat-value {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
-.single-year-notes p {
-  margin: 0 0 4px;
+/* What the figures assume: one muted line of short items under the
+   headline, separated by dots */
+.single-year-assumptions {
+  display: block;
+  margin: 12px 0 0;
   font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-600);
+}
+
+.single-year-assumption {
+  display: inline;
+}
+
+.single-year-assumption + .single-year-assumption::before {
+  content: " · ";
+  white-space: pre;
+  color: var(--pe-gray-400);
+}
+
+.single-year-assumption dt,
+.single-year-assumption dd {
+  display: inline;
+  margin: 0;
+}
+
+.single-year-assumption dt {
+  white-space: pre;
+}
+
+.single-year-assumption dd {
+  color: var(--pe-gray-800);
+}
+
+.single-year-assumption-detail {
+  color: var(--pe-gray-500);
 }
 
 .single-year-error ul {
@@ -187,7 +253,7 @@
 }
 
 .programme-table .change.is-loss {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 .programme-table .change.is-zero {
@@ -202,13 +268,12 @@
   color: var(--pe-gray-600);
 }
 
-/* The marginal rate inside the earnings card's expander */
-.single-year-mtr {
-  padding-top: 8px;
-}
-
-.single-year-mtr .chart-header h3 {
-  font-size: var(--fs-body) !important;
+/* Net income and the marginal tax rate across earnings: a pair of cards in
+   the dashboard's charts-grid (globals.css), whose shared rows line up the
+   titles, descriptions, plots, x-axes and legends; stacked on a phone. The
+   earnings plot's own top margin is the pair's description gap. */
+.single-year-chart-pair .earnings-plot {
+  margin-top: 0;
 }
 
 /* Wizard: choices and the optional details */
@@ -222,7 +287,7 @@
   font-size: var(--fs-small);
   color: var(--pe-gray-800);
   background: var(--pe-surface);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pe-gray-200);
   border-radius: 6px;
 }
 
@@ -293,12 +358,8 @@
 }
 
 .single-year-banner.is-loss {
-  background: #fffbeb;
-  border-color: #fde68a;
-}
-
-.single-year-banner.is-stale {
-  opacity: 0.6;
+  background: var(--c-loss-soft);
+  border-color: var(--c-loss-border);
 }
 
 .single-year-banner p {
@@ -319,7 +380,7 @@
 }
 
 .single-year-banner.is-loss .single-year-amount {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 .single-year-pct {

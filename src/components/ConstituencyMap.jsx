@@ -62,6 +62,46 @@ import {
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { CHART_COLOURS } from "../utils/chartTheme";
+import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
+
+/**
+ * A hovered seat's tooltip rows from describeSeat's lines: the figure under
+ * its outcome's name and the 90% interval, or for a seat with no figure,
+ * its notes.
+ */
+export function seatTooltipRows(described) {
+  const value = described.lines.find((line) => line.kind === "value");
+  const name = described.lines.find((line) => line.kind === "label");
+  const interval = described.lines.find((line) => line.kind === "interval");
+  if (!value) {
+    return described.lines.map((line, index) => ({
+      key: `note-${index}`,
+      name: line.text,
+      text: "",
+      color: CHART_COLOURS.noChange,
+    }));
+  }
+  const color =
+    value.direction === "gain"
+      ? CHART_COLOURS.gain
+      : value.direction === "loss"
+        ? CHART_COLOURS.loss
+        : CHART_COLOURS.noChange;
+  return [
+    { key: "value", name: name?.text ?? "Figure", text: value.text, color },
+    ...(interval
+      ? [
+          {
+            key: "interval",
+            name: "90% interval",
+            text: interval.text.replace(/^90% interval: /, ""),
+            color: CHART_COLOURS.reference,
+          },
+        ]
+      : []),
+  ];
+}
 
 const CHART_TITLE = "Constituency-level impacts";
 
@@ -156,8 +196,8 @@ function placeInCorners(svg, area) {
     .attr("x", area.right - CHART_LOGO.width - CHART_LOGO.padding)
     .attr("y", area.bottom - CHART_LOGO.height - CHART_LOGO.padding);
 }
-const SELECTED_STROKE = { stroke: "#1D4044", strokeWidth: 0.6 };
-const HOVER_STROKE = { stroke: "#666666", strokeWidth: 0.3 };
+const SELECTED_STROKE = { stroke: CHART_COLOURS.highlight, strokeWidth: 0.6 };
+const HOVER_STROKE = { stroke: CHART_COLOURS.tick, strokeWidth: 0.3 };
 
 // A colour d3 can blend: a hex value, or rgb() left by an interrupted
 // transition. Never a pattern's url().
@@ -267,7 +307,7 @@ function MapTemplate({ features, children }) {
             className="map-template-svg"
           >
             {paths.map(({ code, d }) => (
-              <path key={code} d={d} fill="#D1D5DB" stroke="#FFFFFF" strokeWidth={0.4} />
+              <path key={code} d={d} fill={CHART_COLOURS.axis} stroke={CHART_COLOURS.surface} strokeWidth={0.4} />
             ))}
           </svg>
         )}
@@ -319,6 +359,9 @@ export default function ConstituencyMap({
   const mapRef = useRef(null);
   const selectedRef = useRef(null);
   const statesRef = useRef(null);
+  // The seat under the pointer and where, in the map canvas
+  const canvasRef = useRef(null);
+  const [hoverSeat, setHoverSeat] = useState(null);
 
   // The map and the rankings read one state (useConstituencyView), so they
   // have figures together, from the same rows, under the same gate.
@@ -338,6 +381,13 @@ export default function ConstituencyMap({
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
   const yearLabel = fiscalYearLabel(selectedYear);
+  // A hover from another year, measure or outcome is not shown, so the
+  // tooltip never shows the figures it had while the year pill plays
+  const hoverStamp = `${selectedYear}|${reform}|${outcome}`;
+  const hoverStampRef = useRef(hoverStamp);
+  useEffect(() => {
+    hoverStampRef.current = hoverStamp;
+  }, [hoverStamp]);
 
   const states = useMemo(
     () =>
@@ -529,13 +579,23 @@ export default function ConstituencyMap({
         event.stopPropagation();
         selectSeat(seatCode(feature));
       })
-      .on("mouseover", function (event, feature) {
+      .on("mouseover mousemove", function (event, feature) {
+        const box = canvasRef.current?.getBoundingClientRect();
+        if (box) {
+          setHoverSeat({
+            stamp: hoverStampRef.current,
+            code: seatCode(feature),
+            x: event.clientX - box.left,
+            y: event.clientY - box.top,
+          });
+        }
         if (seatCode(feature) === selectedRef.current) return;
         d3.select(this)
           .attr("stroke", HOVER_STROKE.stroke)
           .attr("stroke-width", HOVER_STROKE.strokeWidth);
       })
       .on("mouseout", function (event, feature) {
+        setHoverSeat(null);
         const { stroke, strokeWidth } = strokeFor(
           seatCode(feature),
           statesRef.current,
@@ -573,6 +633,37 @@ export default function ConstituencyMap({
           outcome,
         })
       : null;
+
+  // The hovered seat's tooltip, from the current rows (never another
+  // year's), unless it is the selected seat, whose card is open
+  const hoverFeature =
+    hoverSeat && hoverSeat.stamp === hoverStamp && hoverSeat.code !== selectedCode
+      ? featuresByCode.get(hoverSeat.code)
+      : null;
+  const hoverDescribed =
+    states && hoverFeature
+      ? describeSeat({
+          feature: hoverFeature,
+          state: states.get(hoverSeat.code),
+          regional: regionalTable,
+          reform,
+          year: selectedYear,
+          outcome,
+        })
+      : null;
+  const hoverTip = hoverDescribed
+    ? {
+        key: hoverSeat.code,
+        x: hoverSeat.x,
+        y: hoverSeat.y,
+        content: (
+          <TooltipRows
+            label={`${hoverDescribed.title}, ${yearLabel}`}
+            rows={seatTooltipRows(hoverDescribed)}
+          />
+        ),
+      }
+    : null;
 
   const handleZoom = (factor) => {
     const map = mapRef.current;
@@ -801,7 +892,7 @@ export default function ConstituencyMap({
         {/* Kept mounted in the Rankings view, so the map keeps its zoom */}
         {view.kind === "rows" && (
           <div className="map-content" hidden={!onMap}>
-            <div className="map-canvas">
+            <div className="map-canvas" ref={canvasRef}>
               <svg
                 ref={setSvgNode}
                 width={WIDTH}
@@ -885,6 +976,7 @@ export default function ConstituencyMap({
                   <TooltipLines lines={tooltip.lines} />
                 </div>
               )}
+              <FloatingTooltip tip={hoverTip} />
             </div>
           </div>
         )}

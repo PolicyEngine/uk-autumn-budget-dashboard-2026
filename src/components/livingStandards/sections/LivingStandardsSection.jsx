@@ -1,17 +1,19 @@
-// Household income card. Ported from PolicyEngine/uk-living-standards-outlook
-// (LivingStandardsSection). The summary runs from 2026-27 (headlineSpan).
+// Household income: the "Median income" view of the Incomes over time card.
+// Ported from PolicyEngine/uk-living-standards-outlook (LivingStandardsSection).
+// The summary runs from 2027-28 (headlineSpan).
 
 import { useMemo, useState } from "react";
-import LsCard from "../LsCard";
 import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   changeVerb,
   fyDash,
+  fyLabel,
   headlineSpan,
   formatPounds,
   formatPoundsKAxis,
   formatPoundsWholeAxis,
+  rowsPeriod,
 } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
@@ -24,9 +26,9 @@ import {
   projectionStartYear,
   trimProjection,
   visibleRows,
+  shortLabel,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import Note from "../../Note";
 import { CSV_SOURCES, HbaiSource } from "../sources";
 
 /** meta.units[metric] may be a string or an object with a label/unit field. */
@@ -52,7 +54,8 @@ function describeMetric(id, label) {
   return "";
 }
 
-export default function LivingStandardsSection({ data }) {
+/** The Median income view: card parts for the Incomes over time card. */
+export default function useHouseholdIncomeView(data) {
   const living = data.living_standards;
   const meta = data.meta;
   const metricIds = Object.keys(living.metrics);
@@ -125,81 +128,74 @@ export default function LivingStandardsSection({ data }) {
     adjustment === "real" ? ` Real values are in ${priceBase} prices.` : ""
   }`;
 
-  return (
-    <LsCard
-      title="Household income"
-      about={description}
-      summary={summary}
-      source={<HbaiSource />}
-      download={
-        chartData.length
-          ? {
-              filename: `living-standards-${metric}-${adjustment}`,
-              legendItems: lineLegendItems(series),
-              csv: () =>
-                seriesCsv({
-                  title: `Household income: ${label}`,
-                  units: yLabel,
-                  source: CSV_SOURCES.hbai,
-                  rows: chartData,
-                  series,
-                }),
-            }
-          : null
-      }
-      controls={
-        <>
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Income metric"
-            value={metric}
-            onChange={setMetric}
-            options={metricIds.map((id) => ({
-              value: id,
-              label: living.metrics[id],
-              // The pill shows "Median (BHC)"; the list keeps the full name
-              badge: living.metrics[id].replace(/ equivalised income/i, ""),
-            }))}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Prices"
-            name="Price basis"
-            value={adjustment}
-            onChange={setAdjustment}
-            options={[
-              { value: "real", label: "Real" },
-              { value: "nominal", label: "Cash terms" },
-            ]}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Period"
-            name="Series shown"
-            value={effectiveView}
-            onChange={setViewMode}
-            options={VIEW_OPTIONS.map((o) =>
-              o.value === "outturn" && noOutturn
-                ? { ...o, disabled: true, title: realOnlyOutturn ? "Official series in real terms only" : NO_OFFICIAL_SERIES }
-                : o,
-            )}
-          />
-        </>
-      }
-      footer={
-        noOutturn && (
-          <Note>
-            {realOnlyOutturn
-              ? "Official incomes after housing costs are shown in real terms only."
-              : `${NO_OFFICIAL_SERIES}.`}
-          </Note>
-        )
-      }
-      boxes={[meta.headline_end_year_note, /_ahc$/.test(metric) && meta.cpi_ahc_note]}
-      notes={[units && `Incomes are in ${units}.`]}
-    >
-      {chartData.length === 0 ? (
+  const csv = () =>
+    seriesCsv({
+      title: `Household income: ${label}`,
+      units: yLabel,
+      source: CSV_SOURCES.hbai,
+      rows: chartData,
+      series,
+    });
+
+  return {
+    period: rowsPeriod(chartData, "year", fyLabel),
+    summary,
+    about: description,
+    notes: [
+      noOutturn &&
+        (realOnlyOutturn
+          ? "Official incomes after housing costs are shown in real terms only."
+          : `${NO_OFFICIAL_SERIES}.`),
+      units && `Incomes are in ${units}.`,
+      meta.headline_end_year_note,
+      /_ahc$/.test(metric) && meta.cpi_ahc_note,
+    ],
+    source: <HbaiSource />,
+    sourceText: CSV_SOURCES.hbai,
+    download: chartData.length
+      ? { filename: `living-standards-${metric}-${adjustment}`, legendItems: lineLegendItems(series), csv }
+      : null,
+    controls: (
+      <>
+        <PillSelect
+          variant="light"
+          name="Income metric"
+          value={metric}
+          onChange={setMetric}
+          options={metricIds.map((id) => ({
+            value: id,
+            label: living.metrics[id],
+            // The pill shows "Median (BHC)"; the list keeps the full name
+            badge: shortLabel(living.metrics[id]),
+          }))}
+        />
+        <PillSelect
+          variant="light"
+          prefix="Prices"
+          name="Price basis"
+          value={adjustment}
+          onChange={setAdjustment}
+          options={[
+            { value: "real", label: "Real" },
+            { value: "nominal", label: "Cash terms", badge: shortLabel("Cash terms") },
+          ]}
+        />
+        <PillSelect
+          variant="light"
+          prefix="Period"
+          name="Series shown"
+          value={effectiveView}
+          onChange={setViewMode}
+          options={VIEW_OPTIONS.map((o) =>
+            o.value === "outturn" && noOutturn
+              ? { ...o, disabled: true, title: realOnlyOutturn ? "Official series in real terms only" : NO_OFFICIAL_SERIES }
+              : o,
+          )}
+        />
+      </>
+    ),
+    chart:
+      chartData.length === 0 ? (
         <div className="chart-plot">
           <div className="plot-empty">No data for this metric.</div>
         </div>
@@ -213,7 +209,6 @@ export default function LivingStandardsSection({ data }) {
           yDomain={axis.domain}
           yTicks={axis.ticks}
         />
-      )}
-    </LsCard>
-  );
+      ),
+  };
 }

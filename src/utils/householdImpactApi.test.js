@@ -24,6 +24,36 @@ import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
 
 describe("buildHouseholdRequest", () => {
+  it("asks 16- to 19-year-olds' education, yes until answered, and keeps a child of 20 for the API to refuse", () => {
+    const body = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, children_ages: "15, 16, 18, 19, 20", children_in_education: [true, true, false] },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(body.household.children).toEqual([
+      { age: 15 },
+      { age: 16, in_education: true },
+      { age: 18, in_education: false },
+      { age: 19, in_education: true },
+      { age: 20 },
+    ]);
+  });
+
+  it("sends private pensions, the partner's only with a partner", () => {
+    const single = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, private_pension_per_year: 10000, partner_private_pension_per_year: 5000 },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(single.household.private_pension_income).toBe(10000);
+    expect(single.household.partner_private_pension_income).toBe(0);
+    const couple = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, has_partner: true, partner_private_pension_per_year: 5000 },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(couple.household.private_pension_income).toBe(0);
+    expect(couple.household.partner_private_pension_income).toBe(5000);
+  });
+
+
   it("sends rent only for renters and childcare only with children", () => {
     const owner = buildHouseholdRequest(
       { ...WIZARD_DEFAULTS, tenure: "OWNED_OUTRIGHT", monthly_rent: 900, monthly_childcare: 400 },
@@ -68,8 +98,11 @@ describe("buildHouseholdRequest", () => {
         "tenure",
         "monthly_rent",
         "dividend_income",
+        "electricity_spending",
         "savings_interest_income",
         "property_income",
+        "private_pension_income",
+        "partner_private_pension_income",
         "petrol_spending",
         "diesel_spending",
         "salary_sacrifice_pension_contributions",
@@ -184,6 +217,50 @@ describe("policyRows", () => {
     const small = policyRows({ ...byPolicy, residual: 0.6 }, 300.4, POLICIES);
     expect(small.rows.some((row) => row.id === "interaction")).toBe(false);
     expect(small.rows.reduce((sum, row) => sum + row.rounded, 0)).toBe(300);
+  });
+
+  it("notes an employer cost apart from no effect, and the Warm Home Discount if received", () => {
+    const byPolicy = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      by_policy: {
+        measures: [
+          {
+            id: "employer_ni_relief_under_25s",
+            name: "Employer NI relief for under-25s",
+            change: 0,
+            status: "not_affected",
+            note: "No household effect (employer cost): wages are held fixed.",
+            note_kind: "employer_cost",
+          },
+          {
+            id: "warm_home_discount_top_up",
+            name: "Warm Home Discount top-up",
+            change: 100,
+            status: "affected",
+            note: "If received: £100.",
+            note_kind: "if_received",
+          },
+        ],
+        combined: 100,
+        sum_of_singles: 100,
+        residual: 0,
+      },
+    }).byPolicy;
+    const { rows, noEffect, notes } = policyRows(byPolicy, 100, POLICIES);
+    expect(rows.map((row) => [row.id, row.rounded])).toEqual([["warm_home_discount_top_up", 100]]);
+    expect(noEffect).toEqual([]);
+    expect(notes.map((note) => [note.id, note.kind])).toEqual([
+      ["employer_ni_relief_under_25s", "employer_cost"],
+      ["warm_home_discount_top_up", "if_received"],
+    ]);
+    expect(notes[0].text).toMatch(/^No household effect \(employer cost\)/);
+    // Not received: no "if received" note
+    const none = policyRows(
+      { ...byPolicy, measures: byPolicy.measures.map((row) => ({ ...row, change: 0, status: "not_affected" })) },
+      0,
+      POLICIES,
+    );
+    expect(none.notes.map((note) => note.id)).toEqual(["employer_ni_relief_under_25s"]);
   });
 
   it("lists a measure worth under £1 apart from those with no effect", () => {

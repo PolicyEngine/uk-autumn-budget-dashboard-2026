@@ -6,6 +6,7 @@
  */
 import { consistentRound } from "./householdImpactApi";
 import { getPolicyColor } from "./policyConfig";
+import { CHART_COLOURS } from "./chartTheme";
 
 const MINUS = "−";
 
@@ -43,6 +44,7 @@ export const PROGRAMME_LABELS = {
   student_loan_repayments: "Student loan repayment",
   council_tax: "Council tax",
   fuel_duty: "Fuel duty",
+  vat_change: "VAT",
   tv_licence: "TV licence",
   pension_contributions: "Pension contributions from pay",
   other_taxes: "Other taxes",
@@ -51,12 +53,15 @@ export const PROGRAMME_LABELS = {
   uc_child_element: "Child element",
   uc_housing_costs_element: "Housing element",
   uc_childcare_element: "Childcare element",
+  benefit_cap: "Benefit cap",
+  council_tax_reduction: "Council Tax Reduction",
   child_benefit: "Child Benefit",
   tax_free_childcare: "Tax-Free Childcare",
   housing_benefit: "Housing Benefit",
   pension_credit: "Pension Credit",
   state_pension: "State Pension",
   winter_fuel_payment: "Winter Fuel Payment",
+  warm_home_discount_top_up: "Warm Home Discount top-up",
   scottish_child_payment: "Scottish Child Payment",
   free_childcare: "Free childcare hours",
   universal_childcare_entitlement: "Universal hours (3- and 4-year-olds)",
@@ -68,6 +73,7 @@ export const PROGRAMME_LABELS = {
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
+  private_pension_income: "Private pension",
   other_income: "Other income",
 };
 
@@ -77,6 +83,8 @@ const IN_SENTENCE = {
   student_loan_repayments: "student loan repayments",
   council_tax: "council tax",
   fuel_duty: "fuel duty",
+  vat_change: "VAT",
+  warm_home_discount_top_up: "the Warm Home Discount top-up",
   tv_licence: "the TV licence",
   pension_contributions: "pension contributions",
   free_childcare: "free childcare hours",
@@ -84,15 +92,17 @@ const IN_SENTENCE = {
   dividend_income: "dividends",
   savings_interest_income: "savings interest",
   property_income: "property income",
+  private_pension_income: "private pension",
+  benefit_cap: "the benefit cap",
 };
 
 // The breakdown's top rows, in Spring Statement's order: market income,
 // taxes, benefits, pension contributions. Each opens to its programmes.
 export const GROUPS = [
-  { id: "income", label: "Market income", color: "#4A7BA7" },
-  { id: "tax", label: "Taxes", color: "#9CA3AF" },
-  { id: "benefit", label: "Benefits", color: "#319795" },
-  { id: "pension", label: "Pension contributions", color: "#B8875A" },
+  { id: "income", label: "Market income", color: CHART_COLOURS.marketIncome },
+  { id: "tax", label: "Taxes", color: CHART_COLOURS.noChange },
+  { id: "benefit", label: "Benefits", color: CHART_COLOURS.gain },
+  { id: "pension", label: "Pension contributions", color: CHART_COLOURS.pensionContributions },
 ];
 
 // Rows the API files under taxes that the breakdown shows as their own
@@ -198,7 +208,7 @@ export function policyRows(byPolicy, total, policies) {
     rows.push({
       id: "interaction",
       name: "Interaction between policies",
-      color: "#9CA3AF",
+      color: CHART_COLOURS.noChange,
       change: byPolicy.residual,
     });
   }
@@ -215,7 +225,18 @@ export function policyRows(byPolicy, total, policies) {
     rows: rows
       .filter((row) => row.rounded !== 0)
       .sort((a, b) => Math.abs(b.rounded) - Math.abs(a.rounded)),
-    noEffect: byPolicy.measures.filter((row) => row.status === "not_affected").map(nameOf),
+    // An employer cost has its own note, not "no effect"
+    noEffect: byPolicy.measures
+      .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
+      .map(nameOf),
+    // Notes on a measure's figure: an employer cost always, "if received"
+    // where the household gets the amount
+    notes: byPolicy.measures
+      .filter(
+        (row) =>
+          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+      )
+      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
@@ -421,7 +442,15 @@ export const SINGLE_YEAR_METHOD = [
     "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
   ],
   [
-    "Not modelled for one household",
-    "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only. Council Tax is not taken off: policyengine-uk does not compute it, and no selected policy changes it.",
+    "Every policy applied",
+    "Each side is a policyengine-uk simulation of your household with the policies' parameter changes and their changes to the model's formulas, as in the national figures: the fuel duty deferral includes the VAT on the lower pump price, and the VAT changes apply to the petrol, diesel and electricity spending you enter. The employer NI relief for under-25s changes what employers pay, with wages held fixed, so it is £0 for every household (an employer cost). The Warm Home Discount top-up is shown for a household that would get it, if received: not every eligible household receives it, and the national figures pay it to 85% of Pension Credit households and 70% of other eligible households (DESNZ receipt rates).",
+  ],
+  [
+    "Who counts as a child",
+    "Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19, as you answer for each. Child Benefit counts such a young person until 20; Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
+  ],
+  [
+    "Council Tax",
+    "Estimated from your band and your region's average Band D for 2026-27 (MHCLG for England, tax-base weighted by region; the Welsh and Scottish governments), grown to the chosen year with policyengine-uk's OBR Council Tax forecast, and taken off net income. Northern Ireland has domestic rates, which are not modelled. No selected policy changes it.",
   ],
 ];

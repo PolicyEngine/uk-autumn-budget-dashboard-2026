@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -10,19 +10,19 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 
-export const BEFORE_COLOUR = "#9CA3AF";
-export const AFTER_COLOUR = "#319795";
-const LOSS_COLOUR = "#D97706";
-const ZERO_LINE = "#374151";
-const YOU_COLOUR = "#374151";
-const DROP_FILL = "#F3F4F6";
+export const BEFORE_COLOUR = CHART_COLOURS.noChange;
+export const AFTER_COLOUR = CHART_COLOURS.gain;
+const LOSS_COLOUR = CHART_COLOURS.loss;
+const ZERO_LINE = CHART_COLOURS.text;
+const YOU_COLOUR = CHART_COLOURS.text;
+const DROP_FILL = CHART_COLOURS.mutedFill;
 const BEFORE_DASH = "6 4";
 
 export const LEGEND_ITEMS = [
   { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
   { label: "After the selected policies", color: AFTER_COLOUR, type: "line" },
 ];
-const DROP_ITEM = { label: "Net income falls as salary rises", color: "#E5E7EB" };
+const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
 
 /** Ticks for a change: symmetric about zero in a 1/2/5 step. */
 function changeTicks(maxAbs) {
@@ -74,9 +74,8 @@ function valueAt(points, income, key) {
  * @param {Object} props.sweep - normaliseHouseholdImpact's sweep
  * @param {number|null} props.salary - The salary used, in the year
  * @param {string} props.yearLabel - "2029-30"
- * @param {React.ReactNode} [props.footer] - The card's foot (an expander)
  */
-export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
+export default function EarningsChart({ sweep, salary, yearLabel }) {
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
@@ -97,13 +96,9 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
     axisWidth(cTicks, formatPoundsShort),
   );
   const right = 20;
-  const topH = narrow ? 210 : 250;
-  const gap = 28;
-  const bottomH = narrow ? 120 : 140;
-  const axisH = 44;
-  const top1 = 12;
+  const { topH, gap, bottomH, axisH, top1 } = earningsLayout(narrow);
   const top2 = top1 + topH + gap;
-  const height = top2 + bottomH + axisH;
+  const height = earningsChartHeight(narrow);
   const plotW = Math.max(width - left - right, 40);
 
   const x = (v) => left + (v / xMax) * plotW;
@@ -176,7 +171,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={wrapperRef} className="earnings-plot">
+      <div ref={wrapperRef} className="earnings-plot chart-plot">
         <div ref={chartRef} className="earnings-plot-inner">
           <svg
             className="earnings-svg"
@@ -234,7 +229,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
             <path d={linePath(points, x, y1, "after")} fill="none" stroke={AFTER_COLOUR} strokeWidth={2.5} />
 
             {/* X axis */}
-            <line x1={left} x2={left + plotW} y1={top2 + bottomH} y2={top2 + bottomH} stroke="#D1D5DB" />
+            <line x1={left} x2={left + plotW} y1={top2 + bottomH} y2={top2 + bottomH} stroke={CHART_COLOURS.axis} />
             {xTicks.map((tick) => (
               <text key={`x-${tick}`} x={x(tick)} y={top2 + bottomH + 18} textAnchor="middle" {...TICK_STYLE}>
                 {formatPoundsShort(tick)}
@@ -255,7 +250,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
             {youX !== null && (
               <g className="earnings-you">
                 <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray="4 3" />
-                {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke="#fff" strokeWidth={2} />}
+                {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />}
                 <text
                   x={youX + (youX > left + plotW - 40 ? -6 : 6)}
                   y={top1 + 12}
@@ -263,7 +258,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
                   fontSize={13}
                   fontWeight={600}
                   fill={YOU_COLOUR}
-                  stroke="#fff"
+                  stroke={CHART_COLOURS.surface}
                   strokeWidth={4}
                   paintOrder="stroke"
                 >
@@ -275,7 +270,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
             {/* Hover guide */}
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
-                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top2 + bottomH} stroke="#9CA3AF" strokeWidth={1} />
+                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top2 + bottomH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
                 <circle cx={x(hovered.income)} cy={y1(hovered.before)} r={3.5} fill={BEFORE_COLOUR} />
                 <circle cx={x(hovered.income)} cy={y1(hovered.after)} r={3.5} fill={AFTER_COLOUR} />
               </g>
@@ -304,7 +299,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => `Salary ${formatPounds(v)}`}
+                labelFormat={(v) => `Salary ${formatPounds(v)}, ${yearLabel}`}
                 grouped={false}
                 netKey="change"
                 netLabel="Change"
@@ -313,17 +308,30 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
             </div>
           )}
         </div>
-        <div className="single-year-legend">
-          <GroupedLegend items={legendItems} />
-        </div>
-        <div className="card-logo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={CHART_LOGO.href} alt="PolicyEngine" />
-        </div>
       </div>
-      {footer}
+      <div className="single-year-legend chart-legend">
+        <GroupedLegend items={legendItems} />
+      </div>
+      <div className="card-logo chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
     </div>
   );
 }
 
 export { valueAt, changeTicks };
+
+/** The earnings chart's panels, in px: net income on top, the change below. */
+export function earningsLayout(narrow) {
+  return { topH: narrow ? 210 : 250, gap: 28, bottomH: narrow ? 120 : 140, axisH: 44, top1: 12 };
+}
+
+/**
+ * The earnings chart's height, which the marginal tax rate chart beside it
+ * takes too, so their x-axes line up.
+ */
+export function earningsChartHeight(narrow) {
+  const { topH, gap, bottomH, axisH, top1 } = earningsLayout(narrow);
+  return top1 + topH + gap + bottomH + axisH;
+}

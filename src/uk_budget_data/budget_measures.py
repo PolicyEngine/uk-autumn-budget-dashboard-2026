@@ -228,7 +228,22 @@ def state_pension_income_tax_allowance(
 # high-cost-to-heat test, and the template cannot select the legacy benefits
 # (Housing Benefit, income-related ESA and JSA, tax credits), so eligibility
 # is approximate.
-def warm_home_discount_top_up(sim, amount=100, geography="GB", year=2026):
+#
+# Receipt follows DESNZ's rates (Continuing the Warm Home Discount
+# 2026-2031, final stage impact assessment, para. 40): 85% of Pension Credit
+# households and 70% of other eligible households receive the rebate (about
+# 6m recipients of 7.8m eligible), drawn by household as policyengine-uk's
+# would_receive_warm_home_discount draws it. This mirrors pe-uk #2616 until
+# the bundle includes it; then the top-up can follow the model's own
+# receipt.
+def warm_home_discount_top_up(
+    sim,
+    amount=100,
+    geography="GB",
+    year=2026,
+    pension_credit_receipt_rate=0.85,
+    other_receipt_rate=0.7,
+):
     return apply_benefit_receipt_payment(
         sim,
         amount=amount,
@@ -240,6 +255,8 @@ def warm_home_discount_top_up(sim, amount=100, geography="GB", year=2026):
         geography=geography,
         channel="cost_of_living_support_payment",
         year=year,
+        pension_credit_receipt_rate=pension_credit_receipt_rate,
+        other_receipt_rate=other_receipt_rate,
     )
 
 

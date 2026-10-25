@@ -53,14 +53,13 @@ function renderTab(props = {}) {
   );
 }
 
-// Straight from step 1: every answer has a default
-function toResults() {
-  fireEvent.click(screen.getByRole("button", { name: "See results" }));
-}
+// The results are beside the form from the start: every answer has a
+// default, and they update as the answers change
+function toResults() {}
 
 const HEADLINE = /The selected policies would/;
 
-// The form's last step, headed "Results"
+// The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
 
 describe("Personal impact's results", () => {
@@ -107,27 +106,31 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  it("says the change in one sentence, as Spring Statement does, with the salary used and what is not included", async () => {
+  it("says the change in one sentence, then one line of what it assumes", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
-    toResults();
     const panel = await results();
     const banner = (await within(panel).findByText(HEADLINE)).closest(".single-year-banner");
     expect(banner).toHaveTextContent(
       "The selected policies would raise your household's annual net income by £3,765 (+5.8%) in 2029-30",
     );
     expect(banner).toHaveClass("is-gain");
-    // The change is said once: not as a tile, not in the breakdown
+    // The change is said once: not as a tile, not in the breakdown, and no
+    // sentence repeating what the headline says
     expect(panel.querySelector(".single-year-tiles")).toBeNull();
-    expect(panel).toHaveTextContent(
-      "Your salary in 2029-30: £34,192, and your partner's £12,822, grown from 2026",
+    expect(panel).not.toHaveTextContent("before and after the selected policies.");
+    // One line of assumptions, short items; the rail explanation is in
+    // "About these figures"
+    const assumptions = panel.querySelector("dl.single-year-assumptions");
+    expect(assumptions).toHaveTextContent(
+      "Salary in 2029-30: £34,192, partner £12,822 (grown from 2026 with OBR earnings)",
     );
-    expect(panel).toHaveTextContent("Not included in this view: Rail fares freeze.");
-    // Renting (the wizard's default): the rent area the API used, once
-    expect(panel).toHaveTextContent("Rent area: Central Greater Manchester, the region's default.");
+    expect(assumptions).toHaveTextContent("Rent area: Central Greater Manchester (region default)");
+    expect(assumptions).toHaveTextContent("Rail fares freeze: not shown (national figures only)");
+    expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
-    // No child of 16 or over: no note on who counts as a child
-    expect(panel).not.toHaveTextContent("Who counts as a child");
+    // No child of 16 or over: no item on who counts as a child
+    expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
 
   it("draws one bar per policy that changes the household, adding up to the change", async () => {
@@ -205,15 +208,16 @@ describe("the household calculation, from the fixture", () => {
     expect(within(panel).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
   });
 
-  it("marks you on the earnings chart, with the marginal rate in a closed expander", async () => {
+  it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
-    toResults();
     await screen.findByRole("heading", { name: /Net income across earnings/ });
     expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
-    const expander = screen.getByRole("button", { name: "Marginal tax rate across earnings" });
-    expect(expander).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(expander);
+    // Always shown, not in an expander
+    expect(screen.queryByRole("button", { name: "Marginal tax rate across earnings" })).not.toBeInTheDocument();
+    const pair = container.querySelector(".single-year-chart-pair");
+    expect(within(pair).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    expect(pair.children).toHaveLength(2);
     expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
@@ -232,6 +236,77 @@ describe("the household calculation, from the fixture", () => {
   });
 });
 
+describe("while a new answer loads", () => {
+  /** Serve the first answers at once, then hold every later request until released. */
+  function serveSlowly() {
+    const held = [];
+    let slow = false;
+    serve((body) => {
+      if (!slow) return json(householdAnswerFor(body));
+      return new Promise((resolve) => held.push(() => resolve(json(householdAnswerFor(body)))));
+    });
+    return {
+      slowDown: () => {
+        slow = true;
+      },
+      releaseAll: () => held.splice(0).forEach((release) => release()),
+      held,
+    };
+  }
+
+  const banner = () => screen.getByText(HEADLINE).closest(".single-year-banner");
+  const stalePart = () => screen.getByText(HEADLINE).closest(".single-year-stale");
+  const details = (container) => container.querySelector(".single-year-details");
+
+  it("keeps the old figures under their own year, greyed, until the new year's answer arrives", async () => {
+    const server = serveSlowly();
+    const { rerender, container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    expect(banner()).toHaveTextContent("in 2029-30");
+    expect(stalePart()).toBeNull();
+    server.slowDown();
+    const ids = POLICIES_FOR_TEST.map((p) => p.id);
+    rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
+    // At once, and still after the debounce and while the request is held
+    for (const wait of [0, 600]) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      expect(banner()).toHaveTextContent("in 2029-30");
+      expect(banner()).not.toHaveTextContent("2030-31");
+      expect(stalePart()).toHaveClass("is-stale");
+      expect(details(container)).toHaveClass("is-stale");
+      expect(screen.getByRole("heading", { name: /Change in net income by policy, 2029-30/ })).toBeInTheDocument();
+      expect(screen.getByText(/Updating for 2030-31/)).toBeInTheDocument();
+    }
+    await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
+    server.releaseAll();
+    await waitFor(() => expect(banner()).toHaveTextContent("in 2030-31"));
+    expect(stalePart()).toBeNull();
+    expect(screen.queryByText(/Updating for/)).not.toBeInTheDocument();
+    // The breakdown stage: the old bars stay greyed under their year until it lands
+    await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
+    expect(details(container)).not.toHaveClass("is-stale");
+    server.releaseAll();
+    await screen.findByRole("heading", { name: /Change in net income by policy, 2030-31/ });
+  });
+
+  it("greys a deselected policy's bar rather than showing it as current", async () => {
+    const server = serveSlowly();
+    const { rerender, container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    server.slowDown();
+    const ids = POLICIES_FOR_TEST.map((p) => p.id).slice(1);
+    rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2029} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(stalePart()).toHaveClass("is-stale");
+    expect(details(container)).toHaveClass("is-stale");
+    expect(details(container)).toHaveAttribute("aria-busy", "true");
+    server.releaseAll();
+    await waitFor(() => expect(stalePart()).toBeNull());
+  });
+});
+
 describe("the household calculation's errors", () => {
   it("names a refused child's age as the children's, not yours", async () => {
     serve(() =>
@@ -241,6 +316,28 @@ describe("the household calculation's errors", () => {
     toResults();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Children's ages: Input should be less than or equal to 19");
+  });
+
+  it("says what to do about a child of 20 or over", async () => {
+    serve(() =>
+      json(
+        {
+          detail: [
+            {
+              type: "less_than_equal",
+              loc: ["body", "household", "children", 0, "age"],
+              msg: "Input should be less than or equal to 19",
+            },
+          ],
+        },
+        422,
+      ),
+    );
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Children's ages: Children are 0 to 19.");
+    expect(alert).toHaveTextContent("leave them out");
   });
 
   it("names the answers the API refused", async () => {
@@ -292,7 +389,7 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
-    expect(screen.getByText("The earnings chart is not available.")).toBeInTheDocument();
+    expect(screen.getByText("The earnings charts are not available.")).toBeInTheDocument();
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
   });

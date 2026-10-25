@@ -21,11 +21,6 @@ export const MEASURE_MODELLING = [
     from: 2027,
   },
   {
-    name: "Salary sacrifice cap from 2028",
-    how: "Sets the £2,000 cap for 2028-29 as well as later years. The behavioural assumption is described in its policy note.",
-    from: 2028,
-  },
-  {
     name: "Fuel duty rises deferred",
     how: "Sets the duty rate in each year to the deferred path, weighted by days from 6 April as the model blends it, and lowers VAT by 20% of the duty change on each litre bought. Fuel spending is held fixed.",
     from: 2026,
@@ -42,7 +37,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Warm Home Discount top-up",
-    how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. There is no high-cost-to-heat test, and legacy benefits are not counted.",
+    how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616). There is no high-cost-to-heat test, and legacy benefits are not counted.",
     from: 2026,
   },
   {
@@ -52,7 +47,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Employer NI relief for under-25s",
-    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (HMRC puts that relief at about £0.57bn in 2025-26). The figure is static and gross: no pay response and no corporation tax effect.",
+    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (HMRC puts that relief at about £0.57bn in 2025-26). The figure is static and gross: no pay response and no corporation tax effect. The cost is higher than the Resolution Foundation's £5.1bn for scrapping employer NI for under-25s (Take a chance on me, June 2026) mainly because that figure is for 2025-26 and this one starts in 2027-28: on 2025-26 earnings the model gives £5.7bn for the same group. Tax Policy Associates put the same relief at £6.2bn to £7.4bn on 2025-26 pay.",
     from: 2027,
   },
   {

@@ -103,7 +103,7 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: var(--pe-surface, #ffffff);
+  background: var(--pe-surface);
 }
 
 .region-cell-value {
@@ -116,7 +116,7 @@
 }
 
 .region-tier-approximate {
-  color: #92400e;
+  color: var(--c-notice-text);
 }
 
 .region-tier-withheld {
@@ -125,7 +125,7 @@
 
 .region-note {
   margin: 0;
-  color: #666;
+  color: var(--pe-gray-500);
   font-size: var(--fs-caption);
   line-height: 1.5;
 }

@@ -1,14 +1,14 @@
 reform_id,reform_name,year,decile,value
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,1st,0.3182798135591884
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,2nd,0.20527448107352989
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,3rd,0.17985496006770504
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,4th,0.16080372957101768
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,5th,0.13727361343412245
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,6th,0.11622108971456202
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,7th,0.10384558940808906
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,8th,0.0946567646620447
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,9th,0.0820827790281526
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,10th,0.04176293291925804
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,1st,0.2659062863318797
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,2nd,0.17952559223782993
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,3rd,0.1572400664570907
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,4th,0.1402230309006714
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,5th,0.12512412422183206
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,6th,0.10819769821929341
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,7th,0.0945746915177451
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,8th,0.09200934834127007
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,9th,0.07936544999638065
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,10th,0.04136531631033303
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,1st,0.2954102476692408
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,2nd,0.20689666356247224
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,3rd,0.19744699440712837
@@ -19,16 +19,16 @@ autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,7th,0.
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,8th,0.1636972504789927
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,9th,0.1318589529983125
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,10th,0.027712749641016027
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,1st,0.01784619984031601
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,2nd,0.014699817395131095
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,3rd,0.003836831226295157
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,4th,-0.011207445575362966
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,5th,-0.07556345233810323
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,6th,-0.04284441163537934
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,7th,-0.04494516416102032
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,8th,-0.07586147151158557
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,9th,-0.12514378100854306
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,10th,-0.25786488575641847
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,1st,0.052426671063061814
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,2nd,0.052413812163914934
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,3rd,0.04682073378607067
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,4th,0.04765406234476642
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,5th,0.05085978968126285
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,6th,0.051231505022064465
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,7th,0.061489859281111246
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,8th,0.055230092357268876
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,9th,0.028233577959386212
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,10th,-0.027554760220195068
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,1st,0.062188879539205356
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,2nd,0.06681622206577703
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,3rd,0.058853345493819445
@@ -179,16 +179,16 @@ state_pension_income_tax_protection,State Pension income tax protection,2031,7th
 state_pension_income_tax_protection,State Pension income tax protection,2031,8th,0.003325187138121502
 state_pension_income_tax_protection,State Pension income tax protection,2031,9th,0.0023879759780426404
 state_pension_income_tax_protection,State Pension income tax protection,2031,10th,0.004414462921098359
-warm_home_discount_top_up,Warm Home Discount top-up,2026,1st,0.1663095932645555
-warm_home_discount_top_up,Warm Home Discount top-up,2026,2nd,0.09951861301814684
-warm_home_discount_top_up,Warm Home Discount top-up,2026,3rd,0.08080586967007175
-warm_home_discount_top_up,Warm Home Discount top-up,2026,4th,0.06498904805551971
-warm_home_discount_top_up,Warm Home Discount top-up,2026,5th,0.046022907160167624
-warm_home_discount_top_up,Warm Home Discount top-up,2026,6th,0.031863930611745916
-warm_home_discount_top_up,Warm Home Discount top-up,2026,7th,0.0244879384549117
-warm_home_discount_top_up,Warm Home Discount top-up,2026,8th,0.011720771730613568
-warm_home_discount_top_up,Warm Home Discount top-up,2026,9th,0.006676591429009644
-warm_home_discount_top_up,Warm Home Discount top-up,2026,10th,0.001683212030316746
+warm_home_discount_top_up,Warm Home Discount top-up,2026,1st,0.11347701791330354
+warm_home_discount_top_up,Warm Home Discount top-up,2026,2nd,0.07383386580119741
+warm_home_discount_top_up,Warm Home Discount top-up,2026,3rd,0.05831366008362778
+warm_home_discount_top_up,Warm Home Discount top-up,2026,4th,0.046211660034817095
+warm_home_discount_top_up,Warm Home Discount top-up,2026,5th,0.03214875698867127
+warm_home_discount_top_up,Warm Home Discount top-up,2026,6th,0.023825951241128608
+warm_home_discount_top_up,Warm Home Discount top-up,2026,7th,0.015140623008726189
+warm_home_discount_top_up,Warm Home Discount top-up,2026,8th,0.00917357314068354
+warm_home_discount_top_up,Warm Home Discount top-up,2026,9th,0.00396292560356201
+warm_home_discount_top_up,Warm Home Discount top-up,2026,10th,0.0012875139430779154
 warm_home_discount_top_up,Warm Home Discount top-up,2027,1st,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2027,2nd,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2027,3rd,0.0
@@ -479,66 +479,6 @@ badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,7th,-0.00
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,8th,-0.005759186102007354
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,9th,-0.02343551565326672
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,10th,-0.05625059177919458
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,1st,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,2nd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,3rd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,4th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,5th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,6th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,7th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,8th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,9th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,10th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,1st,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,2nd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,3rd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,4th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,5th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,6th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,7th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,8th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,9th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,10th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,1st,-0.034277621977835286
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,2nd,-0.038225997880750824
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,3rd,-0.04300152154117561
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,4th,-0.058117198960566024
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,5th,-0.12334810935995243
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,6th,-0.09255495633858223
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,7th,-0.10464128440591904
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,8th,-0.12352049662168127
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,9th,-0.14572202980601254
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,10th,-0.21986931277563548
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,1st,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,2nd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,3rd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,4th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,5th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,6th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,7th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,8th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,9th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,10th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,1st,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,2nd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,3rd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,4th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,5th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,6th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,7th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,8th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,9th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,10th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,1st,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,2nd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,3rd,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,4th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,5th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,6th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,7th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,8th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,9th,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,10th,0.0
 road_fuel_vat_cut,VAT cut on road fuel,2026,1st,0.04410955555618116
 road_fuel_vat_cut,VAT cut on road fuel,2026,2nd,0.03171408611612161
 road_fuel_vat_cut,VAT cut on road fuel,2026,3rd,0.030767363953012484

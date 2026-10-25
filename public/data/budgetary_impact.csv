@@ -1,7 +1,7 @@
 reform_id,reform_name,year,value
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,-2.1744532605097637
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,-1.976210457465318
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,-8.88884660567911
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,-4.704788438617425
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,-6.920891151278313
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,-7.3453212342252225
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2030,-7.647465291765178
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2031,-3.8369681574513974
@@ -17,7 +17,7 @@ state_pension_income_tax_protection,State Pension income tax protection,2028,-0.
 state_pension_income_tax_protection,State Pension income tax protection,2029,-0.19271200229313176
 state_pension_income_tax_protection,State Pension income tax protection,2030,-0.28184630760512164
 state_pension_income_tax_protection,State Pension income tax protection,2031,-0.3129366676151599
-warm_home_discount_top_up,Warm Home Discount top-up,2026,-0.6781286347294538
+warm_home_discount_top_up,Warm Home Discount top-up,2026,-0.47988583128926865
 warm_home_discount_top_up,Warm Home Discount top-up,2027,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2028,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2029,0.0
@@ -47,12 +47,6 @@ badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2028,0.3749233
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2029,0.3866473171370677
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2030,0.39888543751170974
 badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,0.411263385649347
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2026,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2027,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2028,2.1142153555854573
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2029,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2030,0.0
-salary_sacrifice_cap_2028,Salary sacrifice cap from 2028,2031,0.0
 road_fuel_vat_cut,VAT cut on road fuel,2026,-0.5067516077936846
 road_fuel_vat_cut,VAT cut on road fuel,2027,-0.24861428345172984
 road_fuel_vat_cut,VAT cut on road fuel,2028,0.0

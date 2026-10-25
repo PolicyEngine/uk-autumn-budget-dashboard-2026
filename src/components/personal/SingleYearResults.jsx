@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
-import Disclosure from "../Disclosure";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { areaName, headlineVerb, money, policyRows, signedPercent } from "../../utils/singleYear";
 import PolicyBars from "./PolicyBars";
@@ -82,18 +81,69 @@ export function showDependantsNote(data) {
   );
 }
 
+/**
+ * What the figures assume, as short items (label, value, how it was
+ * chosen) for one line under the headline. The full explanations are in
+ * "About these figures".
+ */
+export function assumptionItems(data, yearLabel, { renting = false, policies = [] } = {}) {
+  const items = [];
+  const own = data.salaryUsed ?? 0;
+  const partner = data.partnerSalaryUsed ?? 0;
+  if (own > 0 || partner > 0) {
+    items.push({
+      id: "salary",
+      label: `Salary in ${yearLabel}`,
+      value: data.partnerSalaryUsed !== null ? `${money(own)}, partner ${money(partner)}` : money(own),
+      detail: `grown from ${data.salaryYear} with OBR earnings`,
+    });
+  }
+  if (renting && data.area?.brmaDefault && data.area.brma) {
+    items.push({ id: "rent-area", label: "Rent area", value: areaName(data.area.brma), detail: "region default" });
+  }
+  if (data.councilTax && data.councilTax.amount > 0) {
+    items.push({
+      id: "council-tax",
+      label: "Council Tax",
+      value: money(data.councilTax.amount),
+      detail:
+        data.councilTax.source === "estimated"
+          ? `band ${data.councilTax.band}, region average`
+          : "as entered",
+    });
+  }
+  if (showDependantsNote(data)) {
+    items.push({
+      id: "children",
+      label: "Children 16 to 19",
+      value: "counted only in school or college",
+      detail: null,
+    });
+  }
+  for (const item of data.notModelled) {
+    const name = policies.find((policy) => policy.id === item.id)?.name ?? item.name ?? item.id;
+    items.push({
+      id: `not-${item.id}`,
+      label: name,
+      value: "not shown",
+      detail: item.id === "rail_fares_freeze" ? "national figures only" : "not modelled for one household",
+    });
+  }
+  return items;
+}
+
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
 /**
- * The household's results inside the wizard's card: the lede, the headline
- * sentence (the only place the change appears), the salary used and what
- * is not included.
+ * The household's headline: one sentence with the change (the only place
+ * it appears), then one line of what the figures assume.
  */
 export function SingleYearHeadline({ result, year, policies = [], noPolicies, renting = false }) {
-  const yearLabel = fiscalYearTick(year);
   const { status, data, error, stale, retry } = result;
+  // The figures' own year: while a new year loads, the old figures keep
+  // their year, never the one just chosen
+  const yearLabel = fiscalYearTick(data?.year ?? year);
   const showLoading = useDelayed(status === "loading" && !data);
-  const showUpdating = useDelayed(status === "loading" && Boolean(data));
 
   if (noPolicies) {
     return (
@@ -107,10 +157,12 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
   const totals = data ? headlineTotals(data.net) : null;
   return (
     <div className="single-year-headline" aria-busy={status === "loading"}>
-      <p className="single-year-lede">
-        Your household&apos;s net income in {yearLabel}, before and after the selected policies.
-        {showUpdating && <span className="single-year-updating"> Updating…</span>}
-      </p>
+      {stale && status !== "error" && (
+        <p className="single-year-updating" role="status">
+          Updating for {fiscalYearTick(year)} and the policies now selected; the figures below are the last ones
+          calculated.
+        </p>
+      )}
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
       {status === "loading" && !data && (
         <p className="single-year-quiet" role="status">
@@ -118,7 +170,7 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
         </p>
       )}
       {data && status !== "error" && (
-        <>
+        <div className={stale ? "single-year-stale is-stale" : undefined} aria-busy={stale || undefined}>
           {/* The headline, as Spring Statement 2026 words it: one sentence,
               the change in it; the before and after are in the breakdown */}
           <div className={`single-year-banner ${changeClass(totals.change)} ${stale ? "is-stale" : ""}`}>
@@ -135,20 +187,18 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
               in {yearLabel}
             </p>
           </div>
-          <div className="single-year-notes">
-            {salaryNote(data, yearLabel) && <p>{salaryNote(data, yearLabel)}</p>}
-            {renting && data.area?.brmaDefault && data.area.brma && (
-              <p>Rent area: {areaName(data.area.brma)}, the region&apos;s default.</p>
-            )}
-            {showDependantsNote(data) && <p>{data.dependantsNote}</p>}
-            {data.notModelled.map((item) => (
-              <p key={item.id}>
-                Not included in this view:{" "}
-                {policies.find((policy) => policy.id === item.id)?.name ?? item.name ?? item.id}. {item.reason}
-              </p>
+          <dl className="single-year-assumptions" aria-label="Assumptions">
+            {assumptionItems(data, yearLabel, { renting, policies }).map((item) => (
+              <div key={item.id} className="single-year-assumption">
+                <dt>{item.label}: </dt>
+                <dd>
+                  {item.value}
+                  {item.detail && <span className="single-year-assumption-detail"> ({item.detail})</span>}
+                </dd>
+              </div>
             ))}
-          </div>
-        </>
+          </dl>
+        </div>
       )}
     </div>
   );
@@ -172,15 +222,18 @@ function Pending({ text }) {
  * the marginal tax rate in a closed expander).
  */
 export function SingleYearDetails({ result, year, policies }) {
-  const yearLabel = fiscalYearTick(year);
-  const { data, detailStatus, detailError, retry } = result;
+  const { data, detailStatus, detailError, retry, stale } = result;
   if (!data || result.status === "error") return null;
+  // The figures' own year (see SingleYearHeadline)
+  const yearLabel = fiscalYearTick(data.year ?? year);
   const totals = headlineTotals(data.net);
   const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null;
   const detailFailed = detailStatus === "error";
 
+  // While newer inputs load, every section shows the last figures greyed,
+  // under their own year, until the new answer arrives
   return (
-    <div className="single-year-details">
+    <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
       <SectionHeading
         title="Breakdown of household net income"
         subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
@@ -207,7 +260,13 @@ export function SingleYearDetails({ result, year, policies }) {
       />
       <section className="report-section">
         {bars ? (
-          <PolicyBars rows={bars.rows} noEffect={bars.noEffect} underAPound={bars.underAPound} yearLabel={yearLabel} />
+          <PolicyBars
+            rows={bars.rows}
+            noEffect={bars.noEffect}
+            underAPound={bars.underAPound}
+            notes={bars.notes}
+            yearLabel={yearLabel}
+          />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
@@ -219,23 +278,17 @@ export function SingleYearDetails({ result, year, policies }) {
 
       <SectionHeading
         title="Across earnings"
-        subtitle="How your household's net income changes as your salary varies."
+        subtitle="How your household's net income and marginal tax rate change as your salary varies."
       />
       <section className="report-section">
         {data.sweep ? (
-          <EarningsChart
-            sweep={data.sweep}
-            salary={data.salaryUsed}
-            yearLabel={yearLabel}
-            footer={
-              <Disclosure inCard title="Marginal tax rate across earnings">
-                <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-              </Disclosure>
-            }
-          />
+          <div className="charts-grid single-year-chart-pair">
+            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+          </div>
         ) : detailFailed ? (
           <div className="card single-year-card">
-            <SingleYearError error={detailError} onRetry={retry} title="The earnings chart is not available." />
+            <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
           </div>
         ) : (
           <Pending text="Calculating across earnings…" />

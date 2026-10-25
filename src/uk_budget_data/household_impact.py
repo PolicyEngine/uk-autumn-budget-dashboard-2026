@@ -15,32 +15,46 @@ shows, for one policy year and the selected measures:
 - an earnings sweep: net income and the marginal effective tax rate across
   the head's employment income, with the household's own point marked.
 
-Every figure comes from policyengine.py's household calculation
-(``pe.uk.calculate_household``), on the policyengine-uk version the release
-bundle pins, with no dataset. The sweep is one call per side, using the
-calculation's ``axes``.
+Every figure comes from a policyengine-uk household simulation on the
+version the release bundle (policyengine.py) pins, with no dataset: the
+household is built as policyengine.py's household calculation
+(``pe.uk.calculate_household``) builds it, with its input checks, and each
+side runs as a ``policyengine_uk.Simulation`` with a ``Scenario`` holding the
+side's parameter changes and its measures' simulation modifiers, the path
+the national run and ``personal_impact`` take. policyengine.py's household
+calculation takes parameter changes only, so six of the nine measures (those
+whose modifiers change a formula) could not be applied through it; on this
+path every measure is. The sweep is one simulation per side, with the
+situation's ``axes``: the modifiers change formulas, which act on every
+point of the sweep at once.
 
-policyengine.py takes a measure as parameter changes keyed by dates. Each
-measure's changes are read as the national run reads them
-(policyengine-uk's ``read_parameter_changes``: a bare year is the fiscal
-year from 6 April, or the calendar year on a calendar-year series) and
-written as inclusive ``start.stop`` intervals, so the household sees the
-national run's changes on the national run's dates. The measures and their
-merge are the population pipeline's own (``reforms`` and
-``publication.combine.merged_changes``).
+Each side's parameter changes and modifiers are the population pipeline's
+own: the measures' changes merged as the combined run merges them
+(``publication.combine.merged_changes``), in member order, with each
+member's modifier run in that order after them.
 
-A measure that needs a simulation modifier can't be written as parameter
-changes. It is reported as not modelled, never left out silently, unless
-its modifier only touches dataset values (``HOUSEHOLD_INERT_MODIFIERS``),
-which a household calculation has none of.
+A measure whose household effect is £0 by construction (employer National
+Insurance: wages are fixed), or that depends on receipt (the Warm Home
+Discount), carries a note with its change (``HOUSEHOLD_NOTES``).
 """
 
+import copy
+import importlib
+import json
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Optional
 
 import numpy as np
-import policyengine as pe
+from policyengine.tax_benefit_models.common import (
+    normalize_axes,
+    validate_annual_household_inputs,
+)
+from policyengine.tax_benefit_models.uk.household import _build_situation
+from policyengine.tax_benefit_models.uk.model import uk_latest
+from policyengine.utils.household_validation import validate_household_input
 from policyengine_uk.model_api import WEEKS_IN_YEAR
 from policyengine_uk.parameters.gov.simulation.labour_supply_responses.aliases import (  # noqa: E501
     canonicalize_parameter_changes,
@@ -57,7 +71,6 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
-from uk_budget_data.budget_measures import connect_student_loan_repayments
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
@@ -67,6 +80,8 @@ from uk_budget_data.publication.combine import (
 )
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
+    EMPLOYER_NI_ID,
+    WARM_HOME_DISCOUNT_ID,
     get_autumn_budget_2026_reforms,
     get_reform,
 )
@@ -141,18 +156,28 @@ OLDEST_CHILD_AGE = 19
 # started it: the rules count a 19-year-old only if they started before 19.
 EDUCATION_START_AGE = 16
 
-# Modifiers that only replace values a dataset supplies. A household
-# calculation has no dataset, so they change nothing there, and the
-# measure's parameter changes are the whole measure.
-HOUSEHOLD_INERT_MODIFIERS = frozenset({connect_student_loan_repayments})
-
-NOT_MODELLED_REASON = (
-    "This measure changes the simulation in code, which policyengine.py's "
-    "household calculation can't apply."
-)
-# Reasons for particular measures, where the general one doesn't say enough.
-# None of the candidate measures needs one.
-NOT_MODELLED_REASONS: dict[str, str] = {}
+# Notes on a measure's household change, where the number alone would
+# mislead: £0 by construction, or an amount that depends on receipt.
+HOUSEHOLD_NOTES: dict[str, dict] = {
+    EMPLOYER_NI_ID: {
+        "kind": "employer_cost",
+        "text": (
+            "No household effect (employer cost): employers pay less "
+            "National Insurance, and wages are held fixed, so no household's "
+            "net income changes."
+        ),
+    },
+    WARM_HOME_DISCOUNT_ID: {
+        "kind": "if_received",
+        "text": (
+            "If received: the £100 is shown for a household in Great Britain "
+            "on Universal Credit or Pension Credit in 2026-27. Not every "
+            "eligible household receives the Warm Home Discount: the "
+            "national figures pay it to 85% of Pension Credit households "
+            "and 70% of other eligible households (DESNZ receipt rates)."
+        ),
+    },
+}
 
 INTERACTION_METHOD = (
     "Each measure's change is that measure switched to its Budget setting, "
@@ -178,6 +203,10 @@ class Programme:
     entity: str
     children: tuple = ()
     note: Optional[str] = None
+    # A row that is one variable less another (both summed over
+    # ``entity``s members), in place of ``variable``: what one step of a
+    # calculation took off, such as the benefit cap.
+    difference: Optional[tuple] = None
 
 
 def _row(id_, label, variable, entity):
@@ -249,8 +278,8 @@ PROGRAMMES = (
         "council_tax",
         "household",
         note=(
-            "As entered, not modelled: policyengine-uk takes Council Tax as "
-            "an input (the band does not set it), so no measure changes it."
+            "Estimated from the band and the region's average Band D "
+            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
         ),
     ),
     Programme(
@@ -260,6 +289,18 @@ PROGRAMMES = (
         "fuel_duty",
         "household",
         note="From the petrol and diesel spending entered.",
+    ),
+    Programme(
+        "vat_change",
+        "VAT",
+        "tax",
+        "vat_change",
+        "household",
+        note=(
+            "The change in VAT the measures make on the spending entered "
+            "(electricity, petrol and diesel). The form asks about no other "
+            "spending, so VAT itself is not shown: £0 before the Budget."
+        ),
     ),
     Programme("tv_licence", "TV licence", "tax", "tv_licence", "household"),
     Programme(
@@ -278,7 +319,7 @@ PROGRAMMES = (
         "universal_credit",
         "Universal Credit",
         "benefit",
-        "universal_credit",
+        "universal_credit_pre_benefit_cap",
         "benunit",
         children=(
             _row(
@@ -306,7 +347,10 @@ PROGRAMMES = (
                 "benunit",
             ),
         ),
-        note="Elements are before the earnings taper and any benefit cap.",
+        note=(
+            "Before the benefit cap, which is its own row. Elements are "
+            "before the earnings taper."
+        ),
     ),
     Programme(
         "child_benefit", "Child Benefit", "benefit", "child_benefit", "benunit"
@@ -322,8 +366,36 @@ PROGRAMMES = (
         "housing_benefit",
         "Housing Benefit",
         "benefit",
-        "housing_benefit",
+        "housing_benefit_pre_benefit_cap",
         "benunit",
+        note="Before the benefit cap, which is its own row.",
+    ),
+    Programme(
+        "benefit_cap",
+        "Benefit cap",
+        "benefit",
+        None,
+        "benunit",
+        note=(
+            "What the benefit cap takes off Universal Credit and Housing "
+            "Benefit, shown as a negative amount, so the rows above it are "
+            "before the cap and the group adds up to what is paid."
+        ),
+        difference=(
+            ("universal_credit", "universal_credit_pre_benefit_cap"),
+            ("housing_benefit", "housing_benefit_pre_benefit_cap"),
+        ),
+    ),
+    Programme(
+        "council_tax_reduction",
+        "Council Tax Reduction",
+        "benefit",
+        "council_tax_benefit",
+        "benunit",
+        note=(
+            "Only where policyengine-uk simulates the local scheme; "
+            "elsewhere none is counted."
+        ),
     ),
     Programme(
         "pension_credit",
@@ -341,6 +413,19 @@ PROGRAMMES = (
         "benefit",
         "winter_fuel_allowance",
         "household",
+    ),
+    Programme(
+        "warm_home_discount_top_up",
+        "Warm Home Discount top-up",
+        "benefit",
+        "cost_of_living_support_payment",
+        "household",
+        note=(
+            "The candidate £100 more Warm Home Discount in 2026-27, paid "
+            "through policyengine-uk's cost-of-living payment, for a "
+            "household in Great Britain on Universal Credit or Pension "
+            "Credit, if received."
+        ),
     ),
     Programme(
         "scottish_child_payment",
@@ -418,6 +503,13 @@ PROGRAMMES = (
         "property_income",
         "person",
     ),
+    Programme(
+        "private_pension_income",
+        "Private pension",
+        "income",
+        "private_pension_income",
+        "person",
+    ),
 )
 
 # Each group's total as policyengine-uk's net income counts it
@@ -465,6 +557,12 @@ DEPENDANTS_NOTE = (
 )
 EXTRA_VARIABLES = sorted(
     {row.variable for row in _all_rows() if row.variable}
+    | {
+        name
+        for row in _all_rows()
+        for pair in (row.difference or ())
+        for name in pair
+    }
     | {name for names in GROUP_TOTALS.values() for name in names}
     | set(DEPENDANT_VARIABLES)
     | {"brma", "local_authority"}
@@ -489,6 +587,15 @@ def measure_ids() -> list[str]:
         for reform in get_autumn_budget_2026_reforms()
         if reform.id != AUTUMN_BUDGET_2026_COMBINED_ID
     ]
+
+
+# The average UK household's domestic electricity spending, £ a year
+# including VAT: ONS, Family spending in the UK, April 2024 to March 2025,
+# Workbook 1, Table A1, line 4.4.1 (Electricity): £20.00 a week.
+# https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
+# policyengine-uk reads it (``electricity_consumption``) only for the zero
+# VAT on domestic electricity, so it changes no pre-Budget figure.
+ELECTRICITY_SPENDING = round(20.00 * 52)
 
 
 @dataclass(frozen=True)
@@ -522,15 +629,21 @@ class HouseholdAnswers:
     monthly_rent: float = 0
     brma: Optional[str] = None
     local_authority: Optional[str] = None
-    council_tax: float = 0
+    # None: estimated from the band and the region (estimated_council_tax)
+    council_tax: Optional[float] = None
     council_tax_band: str = "D"
     monthly_childcare: float = 0
     salary_year: int = SALARY_YEAR
     dividend_income: float = 0
     savings_interest_income: float = 0
     property_income: float = 0
+    # Private and workplace pensions in payment, £ a year
+    private_pension_income: float = 0
+    partner_private_pension_income: float = 0
     petrol_spending: float = 0
     diesel_spending: float = 0
+    # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
+    electricity_spending: float = ELECTRICITY_SPENDING
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -656,6 +769,99 @@ def state_pensions(
     )
 
 
+# Average Band D Council Tax in 2026-27, £ a year, for a dwelling of two
+# adults, including adult social care, parish/community and police/fire
+# precepts:
+# - England, by region: MHCLG, "Council Tax levels set by local authorities
+#   in England 2026 to 2027", Table 10 (Data_Billing): each billing
+#   authority's line 17 (area Band D including all precepts) weighted by its
+#   line 7 tax base, by region. Weighted over all of England this gives
+#   £2,391.52 and over London £2,068.47, the release's own averages
+#   (Tables 3 and 7).
+#   https://www.gov.uk/government/statistics/council-tax-levels-set-by-local-authorities-in-england-2026-to-2027
+# - Wales: Welsh Government, "Council Tax levels: April 2026 to March 2027",
+#   average Band D £2,283 (county, police and community councils).
+#   https://www.gov.wales/council-tax-levels-april-2026-march-2027-html
+# - Scotland: Scottish Government, Council Tax datasets, "Band D Council Tax
+#   1996-97 to 2026-27": £1,653.44 (excluding water and sewerage).
+#   https://www.gov.scot/publications/council-tax-datasets/
+# Northern Ireland has domestic rates, not Council Tax: none is estimated.
+COUNCIL_TAX_BAND_D = {
+    "NORTH_EAST": 2_534.67,
+    "NORTH_WEST": 2_478.62,
+    "YORKSHIRE": 2_389.55,
+    "EAST_MIDLANDS": 2_460.34,
+    "WEST_MIDLANDS": 2_392.62,
+    "EAST_OF_ENGLAND": 2_393.99,
+    "LONDON": 2_068.47,
+    "SOUTH_EAST": 2_472.41,
+    "SOUTH_WEST": 2_550.04,
+    "WALES": 2_283.00,
+    "SCOTLAND": 1_653.44,
+}
+COUNCIL_TAX_BASE_YEAR = 2026
+
+# Each band's Council Tax as a share of Band D. England and Wales: the
+# Local Government Finance Act 1992 s.5(1) ninths (Wales adds band I,
+# 21/9). Scotland since April 2017: A to D the same, E to H 473, 585, 705
+# and 882 three-hundred-and-sixtieths (Council Tax (Substitution of
+# Proportion) (Scotland) Order 2016).
+_NINTHS = {"A": 6, "B": 7, "C": 8, "D": 9, "E": 11, "F": 13, "G": 15}
+COUNCIL_TAX_BAND_RATIO = {
+    **{band: n / 9 for band, n in _NINTHS.items()},
+    "H": 18 / 9,
+    "I": 21 / 9,
+}
+SCOTTISH_BAND_RATIO = {
+    **COUNCIL_TAX_BAND_RATIO,
+    "E": 473 / 360,
+    "F": 585 / 360,
+    "G": 705 / 360,
+    "H": 882 / 360,
+}
+
+
+def council_tax_growth(region: str, year: int) -> float:
+    """Council Tax growth from 2026-27 to ``year``, compounded from
+    policyengine-uk's own Council Tax growth series for the nation
+    (``gov.economic_assumptions.yoy_growth.obr.council_tax``, the OBR's
+    forecast), read for each year as policyengine-uk uprates a dataset's
+    Council Tax (``uprate_council_tax``)."""
+    from policyengine_uk.data.economic_assumptions import (
+        _COUNCIL_TAX_GROWTH_SERIES,
+    )
+    from policyengine_uk.system import system
+
+    series = _COUNCIL_TAX_GROWTH_SERIES.get(region)
+    if series is None:
+        return 1.0
+    growth = system.parameters.gov.economic_assumptions.yoy_growth.obr
+    rates = growth.council_tax.get_child(series)
+    factor = 1.0
+    for y in range(COUNCIL_TAX_BASE_YEAR + 1, year + 1):
+        factor *= 1 + float(rates(f"{y}-01-01"))
+    return factor
+
+
+def estimated_council_tax(region: str, band: str, year: int) -> float:
+    """A household's Council Tax, £ a year, in ``year``: its region's
+    average Band D for 2026-27 (``COUNCIL_TAX_BAND_D``) times its band's
+    ratio, grown to ``year`` (``council_tax_growth``). Before discounts or
+    Council Tax Reduction (which policyengine-uk works out). None in
+    Northern Ireland (domestic rates): 0."""
+    band_d = COUNCIL_TAX_BAND_D.get(region)
+    if band_d is None:
+        return 0.0
+    ratios = (
+        SCOTTISH_BAND_RATIO
+        if region == "SCOTLAND"
+        else (COUNCIL_TAX_BAND_RATIO)
+    )
+    # Band I is Welsh only; elsewhere the top band is H
+    ratio = ratios.get(band if band != "I" or region == "WALES" else "H")
+    return round(band_d * ratio * council_tax_growth(region, year), 2)
+
+
 def household_entities(
     answers: HouseholdAnswers, year: Optional[int] = None
 ) -> tuple[list, dict, dict]:
@@ -685,6 +891,7 @@ def household_entities(
             "dividend_income": answers.dividend_income,
             "savings_interest_income": answers.savings_interest_income,
             "property_income": answers.property_income,
+            "private_pension_income": answers.private_pension_income,
             "pension_contributions_via_salary_sacrifice": (
                 answers.salary_sacrifice_pension_contributions
             ),
@@ -699,6 +906,9 @@ def household_entities(
             {
                 "age": answers.partner_age,
                 "employment_income": partner_salary,
+                "private_pension_income": (
+                    answers.partner_private_pension_income
+                ),
                 "student_loan_plan": answers.partner_student_loan_plan,
                 "is_claimant_or_partner": True,
             }
@@ -727,10 +937,19 @@ def household_entities(
         "region": answers.region,
         "tenure_type": answers.tenure,
         "rent": answers.monthly_rent * 12 if answers.tenure in RENTING else 0,
-        "council_tax": answers.council_tax,
+        "council_tax": (
+            answers.council_tax
+            if answers.council_tax is not None
+            else estimated_council_tax(
+                answers.region,
+                answers.council_tax_band,
+                answers.salary_year if year is None else year,
+            )
+        ),
         "council_tax_band": answers.council_tax_band,
         "petrol_spending": answers.petrol_spending,
         "diesel_spending": answers.diesel_spending,
+        "electricity_consumption": answers.electricity_spending,
     }
     if answers.brma is not None:
         household["brma"] = answers.brma
@@ -762,24 +981,47 @@ def py_reform_dict(changes: Optional[dict]) -> dict:
     return reform
 
 
-def household_modelled(measure: Reform) -> bool:
-    """Whether a household calculation can apply the whole measure: it has
-    no modifier, or only ones that touch dataset values alone."""
-    return all(
-        modifier is None or modifier in HOUSEHOLD_INERT_MODIFIERS
-        for modifier in (
-            measure.baseline_simulation_modifier,
-            measure.simulation_modifier,
+def modifier_name(modifier) -> str:
+    """A module-level modifier as ``module:name``, which a worker process
+    resolves (``resolve_modifier``) and a run's key can hold.
+
+    Raises:
+        ValueError: for a modifier that isn't a module-level function, which
+            no other process could find.
+    """
+    name = f"{modifier.__module__}:{modifier.__qualname__}"
+    if "<" in modifier.__qualname__ or resolve_modifier(name) is not modifier:
+        raise ValueError(
+            f"{name} is not a module-level function, so a household run "
+            "can't apply it"
         )
-    )
+    return name
+
+
+def resolve_modifier(name: str):
+    """The modifier ``modifier_name`` named."""
+    module, _, qualname = name.partition(":")
+    target = importlib.import_module(module)
+    for part in qualname.split("."):
+        target = getattr(target, part)
+    return target
+
+
+def _side(parameter_changes: Optional[dict], modifiers: list) -> dict:
+    """One side as a run takes it: the parameter changes as the national
+    run's ``Scenario`` reads them, and the modifiers, by name, in the order
+    they run."""
+    return {
+        "parameter_changes": copy.deepcopy(parameter_changes or {}),
+        "modifiers": [modifier_name(m) for m in modifiers if m is not None],
+    }
 
 
 @dataclass(frozen=True)
 class MeasureSides:
-    """The selected measures as policyengine.py reform dicts: the
-    pre-Budget ("before") and Budget ("after") sides of them all, and for
-    each measure the before side with that one measure switched to its
-    Budget setting."""
+    """The selected measures as runs take them (``_side``): the pre-Budget
+    ("before") and Budget ("after") sides of them all, and for each measure
+    the before side with that one measure switched to its Budget setting."""
 
     before: dict
     after: dict
@@ -816,6 +1058,25 @@ def _single_changes(
     return changes
 
 
+def _single_modifiers(
+    measure: Reform, members: list[Reform], config: DataConfig
+) -> list:
+    """The modifiers of one measure switched on, in member order: this
+    measure's Budget modifier, and every other member's pre-Budget one, as
+    ``merged_changes`` takes them."""
+    modifiers = []
+    for member in members:
+        if member is measure:
+            modifiers += merged_changes([member], config)["reform"][
+                "modifiers"
+            ]
+        else:
+            modifiers += merged_changes([member], config)["baseline"][
+                "modifiers"
+            ]
+    return modifiers
+
+
 def measure_sides(
     reform_ids: list[str], config: Optional[DataConfig] = None
 ) -> MeasureSides:
@@ -839,40 +1100,100 @@ def measure_sides(
     measures = member_order(
         [get_reform(id_) for id_ in dict.fromkeys(reform_ids)]
     )
-    included, not_modelled = [], []
-    for measure in measures:
-        if household_modelled(measure):
-            included.append(measure)
-        else:
-            not_modelled.append(
-                {
-                    "id": measure.id,
-                    "name": measure.name,
-                    "reason": NOT_MODELLED_REASONS.get(
-                        measure.id, NOT_MODELLED_REASON
-                    ),
-                }
-            )
-    if not included:
-        return MeasureSides({}, {}, [], not_modelled)
-    sides = merged_changes(included, config)
-    before = py_reform_dict(sides["baseline"]["parameter_changes"])
-    after = py_reform_dict(sides["reform"]["parameter_changes"])
+    sides = merged_changes(measures, config)
+    before = _side(
+        sides["baseline"]["parameter_changes"], sides["baseline"]["modifiers"]
+    )
+    after = _side(
+        sides["reform"]["parameter_changes"], sides["reform"]["modifiers"]
+    )
     singles = {}
-    for measure in included:
-        others = [other for other in included if other is not measure]
+    for measure in measures:
+        others = [other for other in measures if other is not measure]
         singles[measure.id] = (
             after
             if not others
-            else py_reform_dict(_single_changes(measure, others, config))
+            else _side(
+                _single_changes(measure, others, config),
+                _single_modifiers(measure, measures, config),
+            )
         )
     return MeasureSides(
         before=before,
         after=after,
-        included=[measure.id for measure in included],
-        not_modelled=not_modelled,
+        included=[measure.id for measure in measures],
+        not_modelled=[],
         singles=singles,
     )
+
+
+def household_situation(
+    people: list,
+    benunit: dict,
+    household: dict,
+    year: int,
+    axes: Optional[list] = None,
+) -> dict:
+    """The household as a policyengine-uk situation, checked and built as
+    policyengine.py's household calculation builds it (with its axes)."""
+    people = [dict(person) for person in people]
+    benunit, household = dict(benunit), dict(household)
+    year = validate_annual_household_inputs(
+        year=year,
+        entities={
+            "people": people,
+            "benunit": [benunit],
+            "household": [household],
+        },
+    )
+    validate_household_input(
+        model_version=uk_latest,
+        entities={
+            "person": people,
+            "benunit": [benunit],
+            "household": [household],
+        },
+    )
+    return _build_situation(
+        people=people,
+        benunit=benunit,
+        household=household,
+        year=year,
+        axes=normalize_axes(axes=axes, year=year, model_version=uk_latest),
+    )
+
+
+def side_scenario(side: dict):
+    """A side as a policyengine-uk ``Scenario``, as ``personal_impact``
+    builds one (``create_simulation``, ``effective``): the parameter
+    changes, and one modifier running the side's modifiers in order; None
+    when the side changes nothing."""
+    from policyengine_uk.utils.scenario import Scenario
+
+    from uk_budget_data.personal_impact import effective
+
+    modifiers = [resolve_modifier(name) for name in side["modifiers"]]
+    fields: dict = {}
+    if side["parameter_changes"]:
+        fields["parameter_changes"] = side["parameter_changes"]
+    if len(modifiers) == 1:
+        fields["simulation_modifier"] = modifiers[0]
+    elif modifiers:
+
+        def apply_members(sim):
+            for modifier in modifiers:
+                modifier(sim)
+            return sim
+
+        fields["simulation_modifier"] = apply_members
+    return effective(Scenario(**fields)) if fields else None
+
+
+def _plain(value):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return str(value) if value is not None else None
 
 
 def _summed(values, axes_active: bool):
@@ -890,43 +1211,46 @@ def run_scenario(
     benunit: dict,
     household: dict,
     year: int,
-    reform: dict,
+    side: dict,
     axes: Optional[list] = None,
     net_income_only: bool = False,
 ) -> dict:
-    """One policyengine.py household calculation, reduced to what the
-    answer reads: net income, and unless ``net_income_only``, each
+    """One household simulation of one side (``_side``), reduced to what
+    the answer reads: net income, and unless ``net_income_only``, each
     programme row summed over the household, each person's dependant
     status and the household's area. With ``axes``, net income is a list
     over the sweep. Module level and plain data in and out, so it can run
     in a worker process."""
-    result = pe.uk.calculate_household(
-        people=people,
-        benunit=benunit,
-        household=household,
-        year=year,
-        reform=reform or None,
-        extra_variables=None if net_income_only else EXTRA_VARIABLES,
-        axes=axes,
+    from policyengine_uk import Simulation
+
+    simulation = Simulation(
+        situation=household_situation(people, benunit, household, year, axes),
+        scenario=side_scenario(side),
     )
-    net = result.household.household_net_income
+    net = simulation.calculate("household_net_income", year)
     if axes is not None:
         return {"household_net_income": [float(v) for v in net]}
-    out = {"household_net_income": float(net)}
+    out = {"household_net_income": float(net[0])}
     if net_income_only:
         return out
-    entities = {
-        "person": result.person,
-        "benunit": [result.benunit],
-        "household": [result.household],
+    variables = simulation.tax_benefit_system.variables
+    entities: dict = {
+        "person": [{} for _ in people],
+        "benunit": [{}],
+        "household": [{}],
     }
+    for name in EXTRA_VARIABLES:
+        entity = variables[name].entity.key
+        values = simulation.calculate(name, year, map_to=entity)
+        for member, value in zip(entities[entity], values):
+            member[name] = _plain(value)
     out["rows"] = _programme_rows(entities)
     out["dependants"] = [
         {name: bool(person[name]) for name in DEPENDANT_VARIABLES}
-        for person in result.person
+        for person in entities["person"]
     ]
-    out["brma"] = result.household.brma
-    out["local_authority"] = result.household.local_authority
+    out["brma"] = entities["household"][0]["brma"]
+    out["local_authority"] = entities["household"][0]["local_authority"]
     return out
 
 
@@ -952,7 +1276,19 @@ def _programme_rows(entities: dict) -> dict:
                 [member[child.variable] for member in entities[child.entity]],
                 False,
             )
-        if programme.variable is None:
+        if programme.difference:
+            rows[programme.id] = sum(
+                _summed(
+                    [member[plus] for member in entities[programme.entity]],
+                    False,
+                )
+                - _summed(
+                    [member[minus] for member in entities[programme.entity]],
+                    False,
+                )
+                for plus, minus in programme.difference
+            )
+        elif programme.variable is None:
             rows[programme.id] = sum(
                 rows[child.id] for child in programme.children
             )
@@ -1009,21 +1345,62 @@ def _own_rate(grid: list[float], rates: list[float], income: float):
     return rates[-1]
 
 
+# Runs already done, by their inputs: the breakdown stage asks again for the
+# headline stage's two runs (before and after), which are then reused. Plain
+# data in and out, so a run's inputs are its key.
+_RUNS: "OrderedDict[str, dict]" = OrderedDict()
+_RUNS_LOCK = threading.Lock()
+RUNS_KEPT = 256
+
+
+def clear_runs() -> None:
+    """Forget the runs kept (for tests that stand in for the engine)."""
+    with _RUNS_LOCK:
+        _RUNS.clear()
+
+
+def _run_key(job: tuple) -> str:
+    return json.dumps(job, sort_keys=True, default=str)
+
+
 def _run_all(jobs: list, workers: int) -> list:
     """Every calculation, in worker processes when there are several
-    workers (``personal_impact.run_in_workers``), else here, in turn."""
-    if workers > 1 and len(jobs) > 1:
+    workers (``personal_impact.run_in_workers``, taking the instance's
+    shared slots, so concurrent requests share the processes fairly), else
+    here, in turn. A run already done for the same inputs is reused."""
+    keys = [_run_key(job) for job in jobs]
+    results: list = [None] * len(jobs)
+    with _RUNS_LOCK:
+        for i, key in enumerate(keys):
+            if key in _RUNS:
+                _RUNS.move_to_end(key)
+                results[i] = copy.deepcopy(_RUNS[key])
+    todo = [i for i, result in enumerate(results) if result is None]
+    # With workers, even one run goes to a worker: requests run at once, and
+    # two runs in this process at the same time would share its engine.
+    if workers > 1 and todo:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
+            household_slots,
             run_in_workers,
         )
 
-        return run_in_workers(
+        done = run_in_workers(
             workers,
-            [(run_scenario, job) for job in jobs],
+            [(run_scenario, jobs[i]) for i in todo],
             CALCULATION_TIMEOUT_SECONDS,
+            slots=household_slots(),
         )
-    return [run_scenario(*job) for job in jobs]
+    else:
+        done = [run_scenario(*jobs[i]) for i in todo]
+    with _RUNS_LOCK:
+        for i, result in zip(todo, done):
+            results[i] = result
+            _RUNS[keys[i]] = copy.deepcopy(result)
+            _RUNS.move_to_end(keys[i])
+        while len(_RUNS) > RUNS_KEPT:
+            _RUNS.popitem(last=False)
+    return results
 
 
 def _money(value: float) -> float:
@@ -1135,6 +1512,28 @@ def calculate_household_impact(
                 f"{fiscal_year(year)} with the OBR average earnings index."
             ),
         },
+        "council_tax_used": {
+            "band": answers.council_tax_band,
+            "council_tax": _money(household["council_tax"]),
+            "source": (
+                "entered" if answers.council_tax is not None else "estimated"
+            ),
+            "note": (
+                "As entered."
+                if answers.council_tax is not None
+                else (
+                    "No Council Tax in Northern Ireland (domestic rates are "
+                    "not modelled)."
+                    if answers.region not in COUNCIL_TAX_BAND_D
+                    else (
+                        f"Band {answers.council_tax_band} at the region's "
+                        "average Band D for 2026-27, grown to "
+                        f"{fiscal_year(year)} with the OBR's Council Tax "
+                        "forecast."
+                    )
+                )
+            ),
+        },
         "state_pension_used": {
             "state_pension_age": state_pension_age(year),
             "full_new_state_pension": _money(full_new_state_pension(year)),
@@ -1233,6 +1632,9 @@ def _by_policy(
                 "status": "not_affected" if change == 0 else "affected",
             }
         )
+        if id_ in HOUSEHOLD_NOTES:
+            measures[-1]["note"] = HOUSEHOLD_NOTES[id_]["text"]
+            measures[-1]["note_kind"] = HOUSEHOLD_NOTES[id_]["kind"]
     return {
         "measures": measures,
         "combined": _money(combined),

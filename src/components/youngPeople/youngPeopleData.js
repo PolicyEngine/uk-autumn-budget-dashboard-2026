@@ -15,6 +15,7 @@ import {
   YOUNG_BAND,
   singleAgeKey,
 } from "../../utils/ageImpact";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -22,13 +23,13 @@ import {
  * darker with age, and all ages in grey (dashed where drawn as a line).
  */
 export const GROUP_STYLES = {
-  "0-15": { color: "#8DB8E3" },
-  "16-24": { color: "#319795" },
-  "25-34": { color: "#5A8FCB" },
-  "35-49": { color: "#3165A8" },
-  "50-64": { color: "#7C5CB8" },
-  "65+": { color: "#2E1F5E" },
-  all: { color: "#6B7280", dash: "5 3" },
+  "0-15": { color: CHART_COLOURS.ageChildren },
+  "16-24": { color: CHART_COLOURS.gain },
+  "25-34": { color: CHART_COLOURS.ageYoungAdults },
+  "35-49": { color: CHART_COLOURS.ageAdults },
+  "50-64": { color: CHART_COLOURS.ageOlder },
+  "65+": { color: CHART_COLOURS.agePension },
+  all: { color: CHART_COLOURS.reference, dash: "5 3" },
 };
 
 /** Below this (in £ a year) a mean change counts as no change. */

@@ -3,7 +3,7 @@ import "./YearSlider.css";
 import PillChevron from "./PillChevron";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
-// The years the dashboard shows (from 2027-28; see utils/displayYears.js)
+// The years the dashboard shows (from 2026-27; see utils/displayYears.js)
 const YEARS = DISPLAY_YEARS;
 
 // Play shows each year for 2.25s: long enough for the charts' 850ms

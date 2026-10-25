@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DETAIL_INCLUDE,
+  DETAIL_TIMEOUT_MS,
   HEADLINE_INCLUDE,
   buildHouseholdRequest,
   mergeStages,
@@ -41,8 +42,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
   );
   const key = requestKey(body);
   const [attempt, setAttempt] = useState(0);
+  // `key` is the request asked for last; `dataKey` the request `data`
+  // answers. They differ while a new answer loads: the old numbers are then
+  // stale, however many renders that takes.
   const [state, setState] = useState({
     key: null,
+    dataKey: null,
     status: "idle",
     data: null,
     error: null,
@@ -56,6 +61,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
     if (cached?.complete) {
       setState({
         key,
+        dataKey: key,
         status: "ready",
         data: cached.data,
         error: null,
@@ -66,10 +72,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
     }
     const controller = new AbortController();
     const { signal } = controller;
-    // Keep the last result on screen while the next one loads
+    // Keep the last result on screen while the next one loads; it stays
+    // marked stale (dataKey) until this request's answer arrives
     setState((prev) => ({
       ...prev,
       key,
+      dataKey: cached ? key : prev.dataKey,
       status: cached ? "ready" : "loading",
       data: cached ? cached.data : prev.data,
       error: null,
@@ -89,6 +97,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
           if (signal.aborted) return;
           setState({
             key,
+            dataKey: null,
             status: "error",
             data: null,
             error,
@@ -102,6 +111,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
         cache.set(key, { data: first, complete });
         setState({
           key,
+          dataKey: key,
           status: "ready",
           data: first,
           error: null,
@@ -111,12 +121,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
         if (complete) return;
       }
       try {
-        const raw = await postHouseholdImpact({ ...body, include: DETAIL_INCLUDE }, { signal });
+        const raw = await postHouseholdImpact(
+          { ...body, include: DETAIL_INCLUDE },
+          { signal, timeoutMs: DETAIL_TIMEOUT_MS },
+        );
         if (signal.aborted) return;
         const merged = mergeStages(first, normaliseHouseholdImpact(raw));
         cache.set(key, { data: merged, complete: true });
         setState({
           key,
+          dataKey: key,
           status: "ready",
           data: merged,
           error: null,
@@ -138,14 +152,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  // A result for other answers is shown only while the new one loads
-  const stale = state.key !== key;
+  // `stale`: the data on screen answers other inputs (an earlier year or
+  // set of policies) than the ones now chosen, from the moment they change
+  // until the new answer arrives. The page greys it and labels it with its
+  // own year, never the new one.
+  const asked = state.key === key;
+  const stale = state.data !== null && state.dataKey !== key;
   return {
-    status: stale && state.status === "error" ? "loading" : state.status,
+    status: asked ? state.status : "loading",
     data: state.data,
-    error: stale ? null : state.error,
-    detailStatus: state.detailStatus,
-    detailError: stale ? null : state.detailError,
+    error: asked ? state.error : null,
+    detailStatus: asked ? state.detailStatus : "loading",
+    detailError: asked ? state.detailError : null,
     stale,
     retry,
   };

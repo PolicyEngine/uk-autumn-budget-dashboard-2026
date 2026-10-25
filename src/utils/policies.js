@@ -50,7 +50,7 @@ export const POLICIES = [
     starts: "Winter 2026-27",
     type: "Benefit",
     details:
-      "Paid to households in Great Britain on Universal Credit or Pension Credit. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate. Its only year, 2026-27, comes before the charts' first year.",
+      "Paid to households in Great Britain on Universal Credit or Pension Credit. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate.",
     source: {
       label: "Warm Home Discount",
       href: "https://www.gov.uk/the-warm-home-discount-scheme",
@@ -80,7 +80,7 @@ export const POLICIES = [
     starts: "April 2027",
     type: "National Insurance",
     details:
-      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts. The cost is higher than the Resolution Foundation's £5.1bn for scrapping employer NI for under-25s (Take a chance on me, June 2026) mainly because that figure is for 2025-26 and this one starts in 2027-28: on 2025-26 earnings the model gives £5.7bn for the same group. Tax Policy Associates put the same relief at £6.2bn to £7.4bn on 2025-26 pay.",
+      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
   },
   {
     id: "threshold_freeze_2031_32",
@@ -107,17 +107,6 @@ export const POLICIES = [
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
     },
-  },
-  {
-    id: "salary_sacrifice_cap_2028",
-    name: "Salary sacrifice cap from 2028",
-    description: "Start the £2,000 salary sacrifice cap a year early",
-    summary:
-      "Starts the £2,000 cap on National Insurance-free salary sacrifice pension contributions in April 2028, a year early.",
-    starts: "April 2028",
-    type: "National Insurance",
-    details:
-      "Contributions above the cap pay employee and employer National Insurance. Assumes employers spread the cost over all workers' pay and employees keep their contributions.",
   },
   {
     id: "road_fuel_vat_cut",

@@ -7,21 +7,28 @@ import "./ViewSwitch.css";
  * each and Enter or Space chooses it.
  *
  * @param {Object} props
- * @param {Array<{value: string, label: string, icon: JSX.Element}>} props.options
+ * @param {Array<{value: string, label: string, icon?: JSX.Element, title?: string}>} props.options
+ *   - `title`, the full name where `label` is short
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {string} props.label - The group's accessible name
+ * @param {boolean} [props.compact] - The in-card size, as tall as the
+ *   in-card pills beside it
  */
-function ViewSwitch({ options, value, onChange, label }) {
+function ViewSwitch({ options, value, onChange, label, compact = false }) {
   return (
-    <div className="obr-view-switch" role="group" aria-label={label}>
+    <div
+      className={`obr-view-switch${compact ? " is-compact" : ""}`}
+      role="group"
+      aria-label={label}
+    >
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className="obr-view-option"
           aria-pressed={value === option.value}
-          title={option.label}
+          title={option.title ?? option.label}
           onClick={() => onChange(option.value)}
         >
           {option.icon}

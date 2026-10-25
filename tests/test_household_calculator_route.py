@@ -35,7 +35,6 @@ MEASURE_YEARS = {
     "employer_ni_relief_under_25s": 2027,
     "threshold_freeze_2031_32": 2031,
     "badr_lifetime_limit_cut": 2027,
-    "salary_sacrifice_cap_2028": 2028,
     "road_fuel_vat_cut": 2026,
     "plan_2_threshold_unfreeze": 2027,
 }

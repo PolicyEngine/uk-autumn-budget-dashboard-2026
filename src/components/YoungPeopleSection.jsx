@@ -44,6 +44,7 @@ import {
   AXIS_TITLE_STYLE,
   axisWidth,
   fiscalYearTick,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -65,12 +66,12 @@ const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
 // on white)
 const YOUNG_FILL = "rgba(49, 151, 149, 0.10)";
-const YOUNG_SWATCH = "#EAF5F4";
+const YOUNG_SWATCH = CHART_COLOURS.highlightBand;
 // Better off, unchanged, worse off: the page's teal and amber, grey between
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: "#0D9488" },
-  { key: "pct_unchanged", label: "Unchanged", color: "#D1D5DB" },
-  { key: "pct_worse_off", label: "Worse off", color: "#D97706" },
+  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
 ];
 
 const MEAN_DESCRIPTION =
@@ -92,7 +93,7 @@ const SINGLE_AGE_TICKS_NARROW = ["10", "16", "24", "30", "40"];
 const YOUNG_ENDS = new Set(["16", "24"]);
 // Gains teal, losses amber, under £1 either way grey (as the household
 // scatter)
-const SIGN_COLOURS = { gain: "#319795", loss: "#D97706", zero: "#9CA3AF" };
+const SIGN_COLOURS = { gain: CHART_COLOURS.gain, loss: CHART_COLOURS.loss, zero: CHART_COLOURS.noChange };
 const signColour = (value) =>
   Math.abs(value) < 1 ? SIGN_COLOURS.zero : value > 0 ? SIGN_COLOURS.gain : SIGN_COLOURS.loss;
 const UNIT = "Average change per person (£ a year)";
@@ -172,7 +173,7 @@ function AgeTick({ x, y, payload, narrow }) {
       y={y + 12}
       textAnchor="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young ? 600 : 400}
     >
       {narrow ? band?.short : payload.value}
@@ -210,7 +211,7 @@ function SingleAgeTick({ x, y, payload }) {
       y={y + 12}
       textAnchor="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young ? 600 : 400}
     >
       {payload.value}
@@ -219,7 +220,7 @@ function SingleAgeTick({ x, y, payload }) {
 }
 
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
-function SingleAgeTooltip(props) {
+function SingleAgeTooltip({ yearLabel, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!point || point.netChange === null) return null;
   return (
@@ -228,7 +229,7 @@ function SingleAgeTooltip(props) {
       format={(value) => `${pounds(value)} a year`}
       showPlus
       showZero
-      labelFormat={(label) => `Age ${label}`}
+      labelFormat={(label) => `Age ${label}, ${yearLabel}`}
       single={{ key: "netChange", label: "Net change", color: signColour(point.netChange) }}
     />
   );
@@ -289,7 +290,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
             group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
           })),
           ...(activeNames.length > 1
-            ? [{ color: "#000000", label: "Net change", type: "line" }]
+            ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
         ],
   };
@@ -385,11 +386,11 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={<SingleAgeTooltip />}
+                content={<SingleAgeTooltip yearLabel={yearLabel} />}
               />
               <Bar dataKey="netChange" name="Net change" {...chartMotion()}>
                 {singleData.map((point) => (
@@ -422,14 +423,14 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
                 content={
                   <ChartTooltip
                     format={pounds}
-                    labelFormat={(label) => `Aged ${label.toLowerCase()}`}
+                    labelFormat={(label) => `Aged ${label.toLowerCase()}, ${yearLabel}`}
                     netKey="netChange"
                     netLabel="Net change"
                   />
@@ -451,7 +452,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 type="linear"
                 dataKey="netChange"
                 name="netChange"
-                stroke="#000000"
+                stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
                 {...chartMotion()}
@@ -505,7 +506,7 @@ function GroupTick({ x, y, payload, narrow }) {
       textAnchor="end"
       dominantBaseline="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young || !band ? 600 : 400}
     >
       {label}
@@ -632,7 +633,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   <ChartTooltip
                     format={percent}
                     grouped={false}
-                    labelFormat={(label) => (label === "All ages" ? label : `Aged ${label.toLowerCase()}`)}
+                    labelFormat={(label) =>
+                      `${label === "All ages" ? label : `Aged ${label.toLowerCase()}`}, ${yearLabel}`
+                    }
                   />
                 }
               />
@@ -650,7 +653,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                     dataKey={outcome.key}
                     position="center"
                     formatter={(value) => (value >= (narrow ? 14 : 8) ? `${Math.round(value)}%` : "")}
-                    fill={outcome.key === "pct_unchanged" ? "#374151" : "#FFFFFF"}
+                    fill={outcome.key === "pct_unchanged" ? CHART_COLOURS.text : CHART_COLOURS.surface}
                     fontSize={12}
                     fontWeight={600}
                   />

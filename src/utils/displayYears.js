@@ -9,8 +9,8 @@
  */
 import budgetYears from "../uk_budget_data/budget_years.json";
 
-/** The first fiscal year shown: 2027 is 2027-28. */
-export const FIRST_DISPLAY_YEAR = 2027;
+/** The first fiscal year shown: 2026 is 2026-27 (the Warm Home Discount top-up's winter). */
+export const FIRST_DISPLAY_YEAR = 2026;
 
 const CONFIG_YEARS = budgetYears.policy_years.filter(
   (year) => year >= FIRST_DISPLAY_YEAR,
