@@ -164,7 +164,7 @@ describe("the personal impact form", () => {
   it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
     render(<HouseholdCalculator />);
     openMore();
-    expect(box("Your private or workplace pension")).toHaveValue(0);
+    expect(box("Private or workplace pension")).toHaveValue(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
     expect(field("council_tax_band")).not.toBeNull();
     choose("Region", "Northern Ireland");

@@ -757,11 +757,12 @@
   color: var(--pe-gray-500);
 }
 
-/* Four boxes a row; two below 900px; one below 480px */
+/* Three boxes a row, as every group holds three; two below 900px; one
+   below 480px. Each label takes one line, so the boxes in a row line up. */
 .household-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
   align-items: start;
 }
 
@@ -808,6 +809,10 @@
 
 /* Labels: small, spaced capitals above the box */
 .household-field .field-label {
+  min-height: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0 0 6px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -825,7 +830,12 @@
 
 .household-field .label-with-info .field-label {
   flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
+}
+
+.household-field .label-with-info .info-icon-wrapper {
+  flex: none;
 }
 
 .household-field .field-hint {

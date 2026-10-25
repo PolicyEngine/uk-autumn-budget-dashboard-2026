@@ -177,6 +177,7 @@ const CHOICE_CONFIGS = {
       { value: false, label: "No" },
     ],
     hint: "Yes counts the Universal Credit your answers entitle you to.",
+    hintAs: "tooltip",
   },
 };
 
@@ -191,13 +192,13 @@ const NUMBER_CONFIGS = {
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   private_pension_per_year: {
-    label: "Your private or workplace pension",
+    label: "Private or workplace pension",
     min: 0,
     max: 200000,
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Pensions you are paid, before tax, not counting the State Pension.",
+    hint: "Your private or workplace pension: pensions you are paid, before tax, not counting the State Pension.",
   },
   partner_private_pension_per_year: {
     label: "Partner's private or workplace pension",
@@ -217,13 +218,13 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
   },
   salary_sacrifice_per_year: {
-    label: "Pension paid by salary sacrifice",
+    label: "Salary sacrifice pension",
     min: 0,
     max: 60000,
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "From April 2029 the National Insurance relief is capped at £2,000 a year.",
+    hint: "Pension paid by salary sacrifice. From April 2029 the National Insurance relief is capped at £2,000 a year.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -286,7 +287,9 @@ const PREFILLED = {
 };
 
 // A short hint goes under its box; a long one behind an "i" by the label
-const hintPlace = (hint) => (hint && hint.length > 60 ? "tooltip" : "below");
+// Long notes behind the "i"; short ones under the box. A field can ask for
+// the "i" so its note never makes its row taller than the others.
+const hintPlace = (hint, place) => place ?? (hint && hint.length > 60 ? "tooltip" : "below");
 
 const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? region;
 
@@ -437,7 +440,7 @@ function HouseholdCalculator({
           options={config.options}
           value={inputs[id]}
           hint={chosen?.hint ?? config.hint}
-          hintAs={hintPlace(chosen?.hint ?? config.hint)}
+          hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
           onChange={(value) => handleInputChange(id, value)}
         />
       );
