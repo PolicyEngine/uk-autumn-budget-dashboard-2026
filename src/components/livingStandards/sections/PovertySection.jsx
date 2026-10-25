@@ -126,6 +126,7 @@ export default function usePovertyRateView(data) {
       <>
         <PillSelect
           variant="light"
+          prefix="Measure"
           name="Poverty measure"
           value={measure}
           onChange={setMeasure}

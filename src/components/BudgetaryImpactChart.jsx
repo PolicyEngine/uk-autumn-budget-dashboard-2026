@@ -80,10 +80,13 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
   );
 }
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
+  // On a narrow plot six tags collide: label only the year shown (the
+  // tooltip gives every year's net)
+  const crowded = xAxis.width < 460;
   const fontSize = narrow ? 11 : 12;
   const gap = 6;
   const tagHeight = fontSize + 8;
@@ -104,6 +107,7 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
         // Net tags show with two or more measures; a not-yet-published tag
         // always shows, so the empty year is never read as zero.
         if (!show && !unpublished) return null;
+        if (crowded && !unpublished && point.year !== selectedYear) return null;
         const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
         // On a phone the not-yet-published tag takes two lines, in smaller
         // type, so it fits its year's band beside the last bar
@@ -363,6 +367,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
+                  selectedYear={selectedYear}
                   show
                 />
               }

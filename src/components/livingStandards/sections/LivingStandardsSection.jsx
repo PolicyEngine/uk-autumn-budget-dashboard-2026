@@ -159,6 +159,7 @@ export default function useHouseholdIncomeView(data) {
       <>
         <PillSelect
           variant="light"
+          prefix="Measure"
           name="Income metric"
           value={metric}
           onChange={setMetric}

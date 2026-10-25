@@ -113,7 +113,7 @@
 }
 
 .measure-dumbbell-gap {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--pe-gray-500);
 }
 
@@ -133,7 +133,7 @@
   position: absolute;
   top: 4px;
   transform: translateX(-50%);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--pe-gray-500);
   white-space: nowrap;
 }
@@ -193,18 +193,38 @@
   border: 2px solid var(--c-before);
 }
 
-/* Phones: the name above, the plot and values below it */
+/* Phones: the name with its value and gap on one line, then the plot
+   across the full width */
 @media (max-width: 600px) {
   .measure-dumbbell-row {
-    grid-template-columns: minmax(0, 1fr) 108px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name values"
+      "plot plot";
     row-gap: 2px;
   }
 
   .measure-dumbbell-name {
-    grid-column: 1 / -1;
+    grid-area: name;
   }
 
-  .measure-dumbbell-axis .measure-dumbbell-name {
+  .measure-dumbbell-values {
+    grid-area: values;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .measure-dumbbell-plot {
+    grid-area: plot;
+  }
+
+  .measure-dumbbell-axis {
+    grid-template-areas: "plot plot";
+  }
+
+  .measure-dumbbell-axis .measure-dumbbell-name,
+  .measure-dumbbell-axis .measure-dumbbell-values {
     display: none;
   }
 

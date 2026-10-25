@@ -65,14 +65,9 @@ export default function LsCard({
         <div>
           <h3>
             {icon && <TitleIcon name={icon} />}
-            <span className="title-text">
-              {title}
-              {period && (
-                <>
-                  , <span className="nowrap">{period}</span>
-                </>
-              )}
-            </span>
+            {/* The years are on the axes, the From/to pill and the headline
+                sentence; the downloads keep them in their titles */}
+            <span className="title-text">{title}</span>
           </h3>
           {summary && <p className="chart-description">{summary}</p>}
         </div>

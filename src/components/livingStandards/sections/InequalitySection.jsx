@@ -90,6 +90,7 @@ export default function useInequalityView(data) {
       <>
         <PillSelect
           variant="light"
+          prefix="Measure"
           name="Inequality measure"
           value={measure}
           onChange={setMeasure}

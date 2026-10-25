@@ -24,30 +24,49 @@
 /* 24px under the row, so the plot's top tick is never glued to it */
 .ls-controls {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin: 4px 0 24px;
 }
 
-/* The row is its own container, so a half-width card's pills can drop their
-   prefix words ("Breakdown", "Measure") and keep their choices readable on
-   one line */
-.ls-controls {
-  container: ls-controls / inline-size;
-}
+/* One line on desktop: no wrap above 900px, so the pills tighten instead */
+@media (min-width: 901px) {
+  .ls-controls {
+    gap: 6px;
+  }
 
-@container ls-controls (max-width: 640px) {
-  .ls-controls .pill-select-prefix {
-    display: none;
+  /* Full choices, never cut off: the value in bold teal with no chip, so
+     four labelled pills fit a half-width card */
+  .ls-controls > .pill-select,
+  .ls-controls > .ls-range {
+    flex-shrink: 0;
+  }
+
+  .ls-controls .pill-select-light .pill-select-toggle {
+    gap: 3px;
+    padding: 0 6px 0 9px;
+  }
+
+  .ls-controls .pill-select-light .pill-select-badge {
+    padding: 0;
+    background: none;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .ls-controls .pill-select-prefix::after {
+    content: ":";
   }
 }
 
-/* One line on desktop; wrapping only once the card is too narrow */
 @media (max-width: 900px) {
   .ls-controls {
-    flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .ls-controls .pill-select-prefix::after {
+    content: ":";
   }
 }
 
@@ -786,11 +805,17 @@
   background: var(--c-after);
 }
 
+/* Above the dashed reference line, on the card's colour, so the line never
+   runs through the figure */
 .ls-bar-value {
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: 100%;
-  margin-left: 6px;
+  margin-left: 4px;
+  padding: 0 3px;
+  background: var(--c-surface, #fff);
+  border-radius: 3px;
   transform: translateY(-50%);
   color: var(--pe-gray-800);
   font-variant-numeric: tabular-nums;
@@ -801,6 +826,8 @@
   left: auto;
   right: 6px;
   margin-left: 0;
+  padding: 0;
+  background: none;
   color: var(--c-surface, #fff);
   font-weight: 600;
 }

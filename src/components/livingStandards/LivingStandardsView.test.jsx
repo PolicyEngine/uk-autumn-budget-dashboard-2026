@@ -71,10 +71,10 @@ describe("the Living standards view", () => {
     // beside Growth across the distribution, Poverty over time beside Who is
     // in poverty. The period is in each title.
     const card = (name) => within(panel()).getByRole("heading", { level: 3, name }).closest(".ls-card");
-    const incomes = card(/^Incomes over time, 2021-22 to 2031-32$/);
-    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution, 2027-28 to 2031-32$/).closest(".charts-grid"));
-    const poverty = card(/^Poverty over time, 2021-22 to 2031-32$/);
-    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty, 2027-28 to 2031-32$/).closest(".charts-grid"));
+    const incomes = card(/^Incomes over time$/);
+    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution$/).closest(".charts-grid"));
+    const poverty = card(/^Poverty over time$/);
+    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty$/).closest(".charts-grid"));
     expect(panel().querySelectorAll(".ls-card")).toHaveLength(4);
     for (const name of ["Child poverty", "What the baseline leaves out", "Data"]) {
       expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
@@ -129,7 +129,7 @@ describe("the Living standards view", () => {
     expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
     expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
     choose(poverty, "Poverty view", "Depth");
-    poverty = (await heading(/^Poverty over time, 2027-28 to 2031-32$/)).closest(".ls-card");
+    poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
     expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
@@ -173,8 +173,10 @@ describe("the Living standards view", () => {
     // followed by every card comparing two years
     choose(who, "Compare from", "2029-30");
     expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
-    expect(await heading(/^Who is in poverty, 2029-30 to 2031-32$/)).toBeInTheDocument();
-    expect(await heading(/^Growth across the distribution, 2029-30 to 2031-32$/)).toBeInTheDocument();
+    // Titles carry no years (the pill, axes and sentence do): the sentences follow
+    expect(await heading(/^Who is in poverty$/)).toBeInTheDocument();
+    expect(within(who).getByText(/since 2029-30/)).toBeInTheDocument();
+    expect(within(growth).getByText(/From 2029-30 to 2031-32/)).toBeInTheDocument();
 
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
     expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);

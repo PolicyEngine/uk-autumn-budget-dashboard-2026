@@ -59,7 +59,7 @@ describe("Forecast changes before the Budget forecast", () => {
   it("draws the pre-Budget line only and says the Budget forecast is to come", async () => {
     await renderForecast(REAL);
     expect(screen.getByText(/will add the Autumn Budget 2026 forecast once the OBR publishes it/)).toBeInTheDocument();
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
+    const cpi = card(/^CPI inflation$/);
     const legend = cpi.querySelector(".chart-legend");
     expect(legend).toHaveTextContent("OBR March 2026 (pre-Budget)");
     expect(legend).not.toHaveTextContent("Budget forecast");
@@ -87,7 +87,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
       expect(text).toMatch(/pre-Budget/);
       expect(text).toMatch(/October 2026/);
     }
-    const legendText = card(/^CPI inflation, 2027 to 2030$/).querySelector(".chart-legend").textContent;
+    const legendText = card(/^CPI inflation$/).querySelector(".chart-legend").textContent;
     expect(legendText).toContain("OBR March 2026 (pre-Budget)");
     expect(legendText).toContain(POST_LABEL);
 
@@ -105,7 +105,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     await renderForecast(publishedOutlook());
     fireEvent.click(screen.getByRole("button", { name: /Chart or table/ }));
     fireEvent.click(screen.getByRole("option", { name: "Tables" }));
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
+    const cpi = card(/^CPI inflation$/);
     const headers = within(cpi).getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual(["Year", "OBR March 2026 (pre-Budget)", POST_LABEL, "Difference"]);
     const first = within(cpi).getAllByRole("row")[1];
