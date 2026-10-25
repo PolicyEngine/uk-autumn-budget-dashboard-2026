@@ -25,7 +25,7 @@ Every chart downloads as CSV, PNG, SVG or plain text.
 
 ## Measures
 
-The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures.py`](src/uk_budget_data/budget_measures.py). `autumn_budget_2026_combined` simulates them all together, with their interactions.
+The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates them all together, with their interactions.
 
 The list on `main` today:
 

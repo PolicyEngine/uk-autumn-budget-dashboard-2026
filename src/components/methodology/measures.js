@@ -1,10 +1,10 @@
 /**
  * How the national run represents each candidate measure, for the
  * Methodology view's table. Each row restates src/uk_budget_data/reforms.py
- * and budget_measures.py: what the measure changes against current law,
- * and the first model year it changes (year 2027 means 2027-28). The
- * policy descriptions themselves stay with the Policies section of
- * Population impact; these are modelling facts only.
+ * and the modifiers in budget_measures/: what the measure changes against
+ * current law, and the first model year it changes (year 2027 means
+ * 2027-28). The policy descriptions themselves stay with the Policies
+ * section of Population impact; these are modelling facts only.
  *
  * `name` matches the measure's name on the page (POLICY_COLORS keys), so
  * the table's swatches are the charts' colours.
