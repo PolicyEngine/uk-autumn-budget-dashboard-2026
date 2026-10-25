@@ -813,6 +813,54 @@ export default function ConstituencyMap({
                 prefix="Rank by"
               />
             ))}
+          {/* The map view's search, on the same line as the view switch */}
+          {onMap && view.kind !== "loading" && (
+            <div className="map-search-section">
+              <div className="search-container">
+                {view.kind === "rows" ? (
+                  <input
+                    key="search"
+                    id="constituency-search"
+                    type="search"
+                    aria-label="Search constituency"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search or select a constituency"
+                    className="constituency-search"
+                    autoComplete="off"
+                  />
+                ) : (
+                  <input
+                    key="search-disabled"
+                    id="constituency-search"
+                    type="search"
+                    aria-label="Search constituency"
+                    placeholder="Search or select a constituency"
+                    className="constituency-search"
+                    disabled
+                  />
+                )}
+                {view.kind === "rows" && searchResults.length > 0 && (
+                  <div className="search-results">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.code}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          selectSeat(result.code);
+                        }}
+                        className="search-result-item"
+                      >
+                        <div className="result-name">{result.name}</div>
+                        <div className="result-value">{result.summary}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -821,55 +869,6 @@ export default function ConstituencyMap({
           <p className="constituency-loading">Loading map…</p>
         )}
 
-        {/* The map view: the search box, then the map */}
-        {onMap && view.kind !== "loading" && (
-          <div className="map-search-section">
-            <label className="map-search-label" htmlFor="constituency-search">
-              Search constituency
-            </label>
-            <div className="search-container">
-              {view.kind === "rows" ? (
-                <input
-                  key="search"
-                  id="constituency-search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search or select a constituency"
-                  className="constituency-search"
-                  autoComplete="off"
-                />
-              ) : (
-                <input
-                  key="search-disabled"
-                  id="constituency-search"
-                  type="text"
-                  placeholder="Search or select a constituency"
-                  className="constituency-search"
-                  disabled
-                />
-              )}
-              {view.kind === "rows" && searchResults.length > 0 && (
-                <div className="search-results">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.code}
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery("");
-                        selectSeat(result.code);
-                      }}
-                      className="search-result-item"
-                    >
-                      <div className="result-name">{result.name}</div>
-                      <div className="result-value">{result.summary}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         {/* The one notice, over whichever view is shown */}
         {view.kind === "notice" && onMap && (
           <MapTemplate features={boundariesReady ? features : null}>{notice}</MapTemplate>

@@ -23,20 +23,18 @@
   text-decoration: underline;
 }
 
-/* Top bar with search and the outcome toggle */
+/* One row: the view switch, the outcome toggle and the search box */
 .map-top-bar {
   display: flex;
-  gap: 24px;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
-/* Search section */
+/* Search: fills the rest of the row */
 .map-search-section {
   flex: 1;
-  min-width: 250px;
-  max-width: 400px;
+  min-width: 140px;
 }
 
 .map-search-label {
@@ -53,7 +51,9 @@
 
 .constituency-search {
   width: 100%;
-  padding: 6px 10px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 12px;
   border: 1px solid var(--pe-gray-300);
   border-radius: 5px;
   font-size: var(--fs-caption);
@@ -324,12 +324,15 @@
 }
 
 /* Responsive design */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .map-top-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 8px;
   }
+}
+
+@media (max-width: 768px) {
 
   .map-search-section {
     max-width: 100%;
@@ -429,7 +432,6 @@
 
 .constituency-body .map-search-section {
   max-width: 100%;
-  margin-bottom: 12px;
 }
 
 .map-content[hidden] {
