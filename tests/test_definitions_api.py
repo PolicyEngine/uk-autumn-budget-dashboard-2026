@@ -161,7 +161,9 @@ def test_measures_unregistered_in_the_body_are_the_422_the_page_reads(
     assert response.status_code == 422
     [item] = response.json()["detail"]
     assert item["loc"] == ["body", "policies"]
-    match = re.search(r"Unknown measures: (.+)$", item["msg"])
+    # \Z, not $: Python's $ also matches before a final newline, and the
+    # page's JavaScript $ does not.
+    match = re.search(r"Unknown measures: (.+)\Z", item["msg"])
     assert match is not None
     assert match.group(1).split(", ") == ["aa_other", "zz_new_measure"]
     assert _fake_calculation == []
