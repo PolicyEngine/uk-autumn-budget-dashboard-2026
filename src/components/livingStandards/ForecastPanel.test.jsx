@@ -1,7 +1,8 @@
 /**
  * The Forecast changes sub-tab before and after the Budget forecast is
- * published (forecast.post_published), from the real outlook file with a
- * made-up post-Budget forecast.
+ * published (forecast.post_published), from the real outlook file set to
+ * each state, so both hold whichever state the committed file is in: the
+ * Budget-day obr-forecast import publishes it.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,10 +15,34 @@ const REAL = JSON.parse(
 
 const POST_LABEL = "OBR October 2026 (Autumn Budget)";
 const POST_RELEASE = "OBR Economic and fiscal outlook, October 2026: detailed forecast tables, economy";
+// build_outlook's post_label (src/uk_budget_data/living_standards/build.py)
+const UNPUBLISHED_LABEL = "Budget forecast";
+
+/**
+ * The real file, unpublished, as uk-budget-data living-standards writes it
+ * with no Budget forecast loaded: build_outlook's post_label, then
+ * apply_post(outlook, None) (src/uk_budget_data/living_standards/forecast.py):
+ * post_published false, post_source null, and every series' post a copy of
+ * its pre, with no post_source.
+ */
+function unpublishedOutlook(base = REAL) {
+  const data = structuredClone(base);
+  const f = data.forecast;
+  f.post_published = false;
+  f.post_label = UNPUBLISHED_LABEL;
+  f.post_source = null;
+  for (const section of f.sections) {
+    for (const series of section.series) {
+      series.post = series.pre.map((p) => ({ ...p }));
+      delete series.post_source;
+    }
+  }
+  return data;
+}
 
 /** The real file, published: CPI 2027 up 0.3 points, RPI 2027 unchanged, earnings 2027 down 0.04 points. */
-function publishedOutlook() {
-  const data = structuredClone(REAL);
+function publishedOutlook(base = REAL) {
+  const data = structuredClone(base);
   const f = data.forecast;
   f.post_published = true;
   f.post_label = POST_LABEL;
@@ -55,9 +80,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("the fixtures", () => {
+  it("do not depend on the committed file's forecast state", () => {
+    expect(unpublishedOutlook(publishedOutlook())).toStrictEqual(unpublishedOutlook());
+    expect(publishedOutlook(unpublishedOutlook())).toStrictEqual(publishedOutlook());
+  });
+
+  // Until the Budget-day import publishes the committed file, the unpublished
+  // fixture is that file, as the pipeline wrote it.
+  it.skipIf(REAL.forecast.post_published)("unpublished is the committed file while it is unpublished", () => {
+    expect(unpublishedOutlook()).toStrictEqual(REAL);
+  });
+});
+
 describe("Forecast changes with one forecast", () => {
   it("draws the one forecast, named from the sources config, and nothing about a later one", async () => {
-    await renderForecast(REAL);
+    await renderForecast(unpublishedOutlook());
     expect(screen.getByText(/The OBR forecast behind the baseline: calendar-year growth, from the/)).toBeInTheDocument();
     expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
     const cpi = card(/^CPI inflation$/);
