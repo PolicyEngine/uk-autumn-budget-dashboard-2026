@@ -273,7 +273,7 @@ def test_later_page_docs_and_publication_commits_do_not_block(
     "path",
     [
         "src/uk_budget_data/reforms.py",
-        "src/uk_budget_data/budget_measures.py",
+        "src/uk_budget_data/budget_measures/road_fuel_vat_cut.py",
         "uv.lock",
         "pyproject.toml",
         "data_inputs/regions.csv",
@@ -506,7 +506,7 @@ def test_a_package_whose_code_bound_member_has_no_entry_is_refused(
 
 
 @pytest.mark.parametrize(
-    "path", ["src/uk_budget_data/budget_measures.py", "uv.lock"]
+    "path", ["src/uk_budget_data/budget_measures/road_fuel_vat_cut.py", "uv.lock"]
 )
 def test_a_package_is_refused_when_its_member_s_code_changed(
     documented_state, path

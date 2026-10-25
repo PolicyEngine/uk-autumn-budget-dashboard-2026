@@ -342,8 +342,7 @@ def test_another_module_source_is_a_different_definition(
 ):
     """A constant changed elsewhere in the modifier's module, the function
     itself untouched, changes the identity: the receipt binds the whole
-    module (so a fix anywhere in budget_measures.py changes every measure
-    with a modifier there)."""
+    module (so each modifier has a module of its own in budget_measures)."""
     first, _ = _modifier_module(tmp_path, monkeypatch, MODIFIER)
     second, _ = _modifier_module(
         tmp_path, monkeypatch, MODIFIER.replace("0.2", "0.25")

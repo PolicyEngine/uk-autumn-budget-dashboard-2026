@@ -68,7 +68,7 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Pension contribution adjustment: broad-base pay cut",
+  salary_sacrifice_haircut: "Salary sacrifice pay cut (current-law cap)",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -438,7 +438,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
+    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
   ],
   [
     "Every policy applied",
