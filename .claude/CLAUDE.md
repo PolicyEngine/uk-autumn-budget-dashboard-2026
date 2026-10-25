@@ -78,7 +78,7 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 The stack is in the README's "Architecture" section. For components: React 19 hooks for state, Recharts 2 for charts, Tailwind CSS 4 and `@policyengine/ui-kit` (theme and page shell) plus component CSS.
 
 ### Key components
-- `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Personal impact answers in the address.
+- `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Household impact answers in the address.
 - `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people).
 - `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
 - `src/components/livingStandards/`: the Living standards tab.

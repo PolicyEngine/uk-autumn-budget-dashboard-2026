@@ -1,6 +1,7 @@
 // Helpers shared by the baseline sections (living standards, poverty).
 
 import { fyStart } from "./outlook";
+import { zeroBasedAxis } from "../chartTheme";
 import { CHART_COLOURS } from "../chartTheme";
 
 export const EMPTY = [];
@@ -139,26 +140,13 @@ export function niceAxis(dataMax) {
 }
 
 /**
- * Axis over [min, max] (optionally forced to include 0) with about five round
- * steps. For series that do not start at zero (Gini, 90:10) or that go
- * negative (growth). Returns { domain, ticks }.
+ * Axis over the values with about five round steps, always including 0
+ * (the dashboard's rule, chartTheme.zeroBasedAxis): for series that go
+ * negative (growth) or sit well above 0 (Gini, 90:10). `includeZero` is
+ * kept for callers; 0 is always in. Returns { domain, ticks }.
  */
-export function rangeAxis(values, { includeZero = false, pad = 0.05 } = {}) {
-  const vals = values.filter((v) => v != null && Number.isFinite(v));
-  if (!vals.length) return { domain: [0, 1], ticks: [0, 1] };
-  let lo = Math.min(...vals, ...(includeZero ? [0] : []));
-  let hi = Math.max(...vals, ...(includeZero ? [0] : []));
-  const span = hi - lo || Math.abs(hi) || 1;
-  if (!(includeZero && lo === 0)) lo -= span * pad;
-  if (!(includeZero && hi === 0)) hi += span * pad;
-  const raw = (hi - lo) / 5;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  const start = Math.floor(lo / step) * step;
-  const end = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
-  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+export function rangeAxis(values, { pad = 0.05 } = {}) {
+  return zeroBasedAxis(values, { pad });
 }
 
 /** Rows of { year, value } -> chart rows keyed by fiscal-year start. */

@@ -37,7 +37,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   : '/uk/autumn-budget-2026';
 
 
-// The Personal impact tab's API URL is baked in at build time: fail a
+// The Household impact tab's API URL is baked in at build time: fail a
 // production build that lacks it, and every build that has it in the wrong
 // form (scripts/household-api-env.mjs).
 checkHouseholdApiEnv(process.env);

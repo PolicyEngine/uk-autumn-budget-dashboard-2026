@@ -99,3 +99,45 @@ export const SOURCES = {
 
 /** Attributes for a link to an external source. */
 export const EXTERNAL = { target: "_blank", rel: "noopener noreferrer" };
+
+/**
+ * Sources only the other tabs name (merged with the shared list above, so
+ * Methodology's file and this one differ only by these added keys).
+ * A source whose page does not exist yet has `url: null` and is written as
+ * plain text until it does.
+ */
+Object.assign(SOURCES, {
+  // The model, named in the intro
+  policyengine_uk_model: {
+    label: "PolicyEngine UK",
+    url: "https://policyengine.org/uk/model",
+  },
+  // Where the measures and their costings are read from, linked in the intro.
+  // Update on Budget day (runbook step): the Autumn Budget 2026 document and
+  // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
+  budget_documents: {
+    label: "HM Treasury",
+    url: "https://www.gov.uk/government/organisations/hm-treasury",
+  },
+  // Published with the Budget on 28 October 2026; linked once it exists
+  obr_budget_2026_costings: {
+    label: "the OBR's Autumn Budget 2026 costings",
+    url: null,
+  },
+  ons_ashe: {
+    label: "ONS, Annual Survey of Hours and Earnings",
+    url: "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/agegroupashetable6",
+  },
+  ons_private_rents: {
+    label: "ONS, Price Index of Private Rents",
+    url: "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics",
+  },
+  hmrc_rates_allowances: {
+    label: "HMRC, Rates and allowances",
+    url: "https://www.gov.uk/government/collections/rates-and-allowances-hm-revenue-and-customs",
+  },
+  warm_home_discount: {
+    label: "Warm Home Discount",
+    url: "https://www.gov.uk/the-warm-home-discount-scheme",
+  },
+});

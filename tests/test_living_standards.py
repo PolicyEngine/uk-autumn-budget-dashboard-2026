@@ -441,7 +441,16 @@ def check_contract(doc: dict) -> None:
     assert dec["base_year"] == "2027-28" and dec["end_year"] == end
     for basis in ("bhc", "ahc"):
         assert len(dec[basis]["cumulative_growth_to_end"]) == 10
-    assert doc["poverty_by_group"]["years"] == ["2027-28", end]
+    # Every year from the base year to the end, so any two can be compared
+    group_years = doc["poverty_by_group"]["years"]
+    assert group_years[0] == "2027-28" and group_years[-1] == end
+    assert group_years == sorted(group_years) and len(group_years) >= 2
+    for basis in ("bhc", "ahc"):
+        quintiles = dec[basis]["quintile_by_year"]
+        assert [q["year"] for q in quintiles] == [
+            d["year"] for d in dec[basis]["by_year"]
+        ]
+        assert all(len(q["real_median"]) == 5 for q in quintiles)
     for key in ("child_poverty_by_family", "deep_poverty"):
         block = doc[key]["projection"]
         first = next(iter(block.values()))

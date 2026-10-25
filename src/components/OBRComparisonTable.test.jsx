@@ -7,6 +7,13 @@ import {
   within,
 } from "@testing-library/react";
 import OBRComparisonTable from "./OBRComparisonTable";
+
+// The chart/table choice: a "Show" dropdown pill
+const showPill = () => screen.getByRole("button", { name: /^Show as:/ });
+const show = (label) => {
+  fireEvent.click(showPill());
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${label}`) }));
+};
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { geographyFetch } from "../test/geographyFixture";
 
@@ -41,7 +48,8 @@ describe("the OBR comparison table", () => {
       }),
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Table" }));
+    await screen.findByRole("button", { name: /^Show as:/ });
+    show("Table");
 
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
@@ -65,7 +73,7 @@ describe("the OBR comparison table", () => {
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
     const basis = await screen.findByRole("button", { name: "OBR basis: Static" });
-    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    show("Table");
     fireEvent.click(basis);
     fireEvent.click(screen.getByRole("option", { name: /Post-behavioural/ }));
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
@@ -74,7 +82,7 @@ describe("the OBR comparison table", () => {
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
   });
 
-  it("keeps the intro to one short sentence with the EFO link", async () => {
+  it("keeps the intro to one short sentence naming this year's OBR costings, from the sources config", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -85,14 +93,11 @@ describe("the OBR comparison table", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    const link = await screen.findByRole("link", { name: "EFO" });
-    expect(link).toHaveAttribute(
-      "href",
-      "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/",
-    );
+    await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
     expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates against the OBR's November 2025 costings (EFO), £bn a year; positive values raise revenue.",
+      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings, £bn a year; positive values raise revenue.",
     );
+    expect(container).not.toHaveTextContent("November 2025");
   });
 });
 
@@ -108,14 +113,14 @@ describe("the OBR comparison's chart and table switch", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    const chart = await screen.findByRole("button", { name: "Chart" });
-    const table = screen.getByRole("button", { name: "Table" });
-    expect(chart).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("button", { name: /^Show as:/ })).toHaveAccessibleName(
+      "Show as: Chart",
+    );
     expect(container.querySelector(".obr-dumbbell")).not.toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
 
-    fireEvent.click(table);
-    expect(table).toHaveAttribute("aria-pressed", "true");
+    show("Table");
+    expect(showPill()).toHaveAccessibleName("Show as: Table");
     expect(container.querySelector(".obr-dumbbell")).toBeNull();
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
@@ -178,7 +183,7 @@ describe("the OBR comparison at 2031-32", () => {
       "£0",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    show("Table");
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
     const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
@@ -205,10 +210,10 @@ describe("before the OBR costs the measures", () => {
     );
     expect(
       await screen.findByText(
-        "Shown once the OBR publishes its costings for these measures.",
+        "The OBR has not costed the selected measures.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Table" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Show as:/ })).not.toBeInTheDocument();
   });
 });

@@ -68,6 +68,33 @@ function PolicySelector({ policies, selectedPolicies, onPolicyToggle, disabledRe
               </label>
             ))}
           </div>
+          {/* Select all, clear and close: on a phone the list fills the
+              screen, so it needs its own way out */}
+          <div className="policy-selector-actions">
+            <button
+              type="button"
+              className="policy-selector-action"
+              disabled={selectedCount === policies.length}
+              onClick={() =>
+                policies.filter((p) => !selectedPolicies.includes(p.id)).forEach((p) => onPolicyToggle(p.id))
+              }
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="policy-selector-action"
+              disabled={selectedCount === 0}
+              onClick={() =>
+                policies.filter((p) => selectedPolicies.includes(p.id)).forEach((p) => onPolicyToggle(p.id))
+              }
+            >
+              Clear
+            </button>
+            <button type="button" className="policy-selector-done" onClick={() => setIsExpanded(false)}>
+              Done
+            </button>
+          </div>
         </div>
       )}
     </div>
