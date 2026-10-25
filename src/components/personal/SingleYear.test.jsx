@@ -120,6 +120,59 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
+  it("with a detail URL, asks for all three parts at once and races the headline across both services", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        const body = JSON.parse(init.body);
+        asked.push([url, body.include]);
+        // Nothing answers until all the requests are out: none waits for
+        // another's answer
+        await gate;
+        return json(householdAnswerFor(body));
+      }),
+    );
+    renderTab();
+    toResults();
+    await waitFor(() => expect(asked).toHaveLength(4));
+    expect(asked).toEqual(
+      expect.arrayContaining([
+        [HOUSEHOLD_API, []],
+        [DETAIL_API, []],
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
+    release();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+  });
+
+  it("with a detail URL, shows the headline from the detail answers when the headline itself fails", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        const body = JSON.parse(init.body);
+        return body.include.length === 0 ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body));
+      }),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("shows the result card and breakdown once only the headline has resolved", async () => {
     // The slower parts never answer: the headline must not wait for them
     serve((body) =>
