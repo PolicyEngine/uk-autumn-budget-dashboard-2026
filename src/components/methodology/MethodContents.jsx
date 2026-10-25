@@ -11,9 +11,13 @@ const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Scroll a section into view, keep its anchor in the address, and move focus to its title. */
+export const OPEN_SECTION_EVENT = "method:open-section";
+
 export function goToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
+  // A section collapsed on a phone opens before it is scrolled to
+  window.dispatchEvent(new CustomEvent(OPEN_SECTION_EVENT, { detail: id }));
   target.scrollIntoView?.({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
   window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
   const title = target.querySelector("h2");

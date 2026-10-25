@@ -7,6 +7,8 @@ import { POLICY_COLORS } from "../utils/policyConfig";
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
+  vi.unstubAllGlobals();
+  delete window.matchMedia;
 });
 
 const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onShowTab} />);
@@ -123,5 +125,37 @@ describe("MethodologyTab", () => {
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+  });
+
+  it("renders every section with its icon, so a missing icon import fails", () => {
+    const { container } = renderTab();
+    for (const { id } of METHOD_CONTENTS) {
+      const section = container.querySelector(`section#${id}`);
+      expect(section).not.toBeNull();
+      expect(section.querySelector(".method-section-heading .method-icon svg")).not.toBeNull();
+    }
+    // Every defined term has its icon
+    for (const term of container.querySelectorAll(".method-fact dt")) {
+      expect(term.querySelector("svg")).not.toBeNull();
+    }
+  });
+
+  it("starts each section after the first collapsed on a phone, and opens it from the jump menu", () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    renderTab();
+    const data = document.getElementById(`${METHOD_SECTIONS.data}-body`);
+    expect(data).not.toBeVisible();
+    expect(document.getElementById(`${METHOD_SECTIONS.overview}`)).toHaveTextContent("Survey data");
+    const nav = screen.getByRole("navigation", { name: "Methodology contents" });
+    fireEvent.change(within(nav).getByRole("combobox"), {
+      target: { value: METHOD_SECTIONS.data },
+    });
+    expect(data).toBeVisible();
+    const toggle = within(document.getElementById(METHOD_SECTIONS.data)).getByRole("button", {
+      name: "Hide details",
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(toggle);
+    expect(data).not.toBeVisible();
   });
 });

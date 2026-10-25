@@ -1,7 +1,8 @@
 import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
-import MethodContents, { goToSection } from "./methodology/MethodContents";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import MethodContents, { OPEN_SECTION_EVENT, goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
@@ -15,6 +16,7 @@ import ExpandableText from "./methodology/ExpandableText";
 import {
   Briefcase,
   Calculator,
+  ChevronDown,
   CircleSlash,
   ChartColumn,
   Compass,
@@ -67,6 +69,16 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
   { id: METHOD_SECTIONS.versions, title: "Versions and replication", icon: GitBranch },
 ];
+
+// Where the view is laid out for a phone (as in Methodology.css)
+const PHONE = "(max-width: 899px)";
+const phoneQuery = () => (typeof window !== "undefined" ? window.matchMedia?.(PHONE) : null);
+const isPhone = () => Boolean(phoneQuery()?.matches);
+const subscribePhone = (onChange) => {
+  const query = phoneQuery();
+  query?.addEventListener?.("change", onChange);
+  return () => query?.removeEventListener?.("change", onChange);
+};
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, icon }) => [id, icon]));
 
@@ -135,6 +147,22 @@ const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAS
  */
 function MethodSection({ id, title, subtitle, children }) {
   const scope = SECTION_SCOPE[id] ?? [];
+  const collapsible = id !== METHOD_SECTIONS.overview;
+  // On a phone each section after the first starts collapsed, to keep the
+  // page short; its toggle, a link or the jump menu to it opens it
+  const phone = useSyncExternalStore(subscribePhone, isPhone, () => false);
+  const [opened, setOpened] = useState(false);
+  const collapsed = collapsible && phone && !opened;
+  const bodyId = `${id}-body`;
+
+  useEffect(() => {
+    const open = (event) => {
+      if (event.detail === id) setOpened(true);
+    };
+    window.addEventListener(OPEN_SECTION_EVENT, open);
+    return () => window.removeEventListener(OPEN_SECTION_EVENT, open);
+  }, [id]);
+
   return (
     <section id={id} className="method-section" aria-labelledby={`${id}-title`}>
       <div className="section-heading method-section-heading">
@@ -154,8 +182,22 @@ function MethodSection({ id, title, subtitle, children }) {
           )}
         </div>
       </div>
-      {children}
-      {id !== METHOD_SECTIONS.overview && <BackToTop targetId={METHOD_SECTIONS.overview} />}
+      {collapsible && (
+        <button
+          type="button"
+          className="method-section-toggle"
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+          onClick={() => setOpened(collapsed)}
+        >
+          {collapsed ? "Show details" : "Hide details"}
+          <ChevronDown aria-hidden="true" strokeWidth={1.75} />
+        </button>
+      )}
+      <div id={bodyId} className="method-section-body" hidden={collapsed}>
+        {children}
+        {collapsible && <BackToTop targetId={METHOD_SECTIONS.overview} />}
+      </div>
     </section>
   );
 }

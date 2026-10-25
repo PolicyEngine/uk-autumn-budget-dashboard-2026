@@ -289,17 +289,17 @@
 
 .method-flow-number {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
+  right: -5px;
+  bottom: -5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--band-teal);
   color: var(--c-surface);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -963,4 +963,83 @@
 
 .method-card .method-list-caveats svg {
   color: var(--c-loss-text);
+}
+
+/* The section toggle shows only on a phone */
+.method-section-toggle {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  /* Only the jump menu sticks here: the title band and tabs scroll away */
+  .app:has(.methodology-tab) .title-row,
+  .app:has(.methodology-tab) .view-tabs-bar {
+    position: static;
+  }
+
+  .method-contents {
+    top: 0;
+  }
+
+  .methodology-tab .method-section {
+    scroll-margin-top: 72px;
+  }
+
+  .methodology-tab .method-section + .method-section {
+    margin-top: 32px;
+  }
+
+  .method-section-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    margin: -4px 0 4px;
+    padding: 0 12px;
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    background: var(--pe-surface);
+    font: inherit;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--pe-teal-700);
+    cursor: pointer;
+  }
+
+  .method-section-toggle svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--pe-transition-fast);
+  }
+
+  .method-section-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .method-section-toggle:focus-visible {
+    outline: 2px solid var(--pe-teal-500);
+    outline-offset: 2px;
+  }
+
+  /* 40px tap areas */
+  .method-clamp-toggle,
+  .method-back a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+
+  .method-clamp-toggle {
+    margin-top: 0;
+  }
+
+  .method-back {
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .method-section-toggle svg {
+    transition: none;
+  }
 }
