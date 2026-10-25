@@ -222,20 +222,21 @@ def state_pension_income_tax_allowance(
 
 # £100 more Warm Home Discount (£150 to £250), winter 2026-27.
 #
-# Paid once per household in Great Britain receiving Universal Credit or
-# Pension Credit (guarantee or savings credit), through the cost-of-living
-# payment channel, as a benefit. The model has no Warm Home Discount and no
-# high-cost-to-heat test, and the template cannot select the legacy benefits
-# (Housing Benefit, income-related ESA and JSA, tax credits), so eligibility
-# is approximate.
+# Paid once per household in Great Britain receiving a benefit in the
+# Warm Home Discount's 2026-27 core group for England and Wales (Universal
+# Credit, Pension Credit, Housing Benefit or income-related ESA; eligibility
+# statement 2026-27, as policyengine-uk #2504 lists them), through the
+# cost-of-living payment channel, as a benefit. Scotland's scheme has its
+# own core group, so households there are approximate. Our bundle
+# (policyengine-uk 2.132.6) has no Warm Home Discount; #2504 is in 2.154.0,
+# which no policyengine.py release pins yet.
 #
 # Receipt follows DESNZ's rates (Continuing the Warm Home Discount
 # 2026-2031, final stage impact assessment, para. 40): 85% of Pension Credit
-# households and 70% of other eligible households receive the rebate (about
-# 6m recipients of 7.8m eligible), drawn by household as policyengine-uk's
-# would_receive_warm_home_discount draws it. This mirrors pe-uk #2616 until
-# the bundle includes it; then the top-up can follow the model's own
-# receipt.
+# households and 70% of other eligible households receive the rebate,
+# drawn by household as policyengine-uk's would_receive_warm_home_discount
+# draws it (#2616, open). Once a bundle includes both, the top-up can follow
+# the model's own receipt.
 def warm_home_discount_top_up(
     sim,
     amount=100,
@@ -251,6 +252,8 @@ def warm_home_discount_top_up(
             "universal_credit",
             "guarantee_credit",
             "savings_credit",
+            "housing_benefit",
+            "esa_income",
         ],
         geography=geography,
         channel="cost_of_living_support_payment",

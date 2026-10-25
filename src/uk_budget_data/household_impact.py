@@ -171,7 +171,8 @@ HOUSEHOLD_NOTES: dict[str, dict] = {
         "kind": "if_received",
         "text": (
             "If received: the £100 is shown for a household in Great Britain "
-            "on Universal Credit or Pension Credit in 2026-27. Not every "
+            "on Universal Credit, Pension Credit, Housing Benefit or "
+            "income-related ESA in 2026-27. Not every "
             "eligible household receives the Warm Home Discount: the "
             "national figures pay it to 85% of Pension Credit households "
             "and 70% of other eligible households (DESNZ receipt rates)."
