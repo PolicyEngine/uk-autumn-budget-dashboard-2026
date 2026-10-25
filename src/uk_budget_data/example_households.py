@@ -18,6 +18,11 @@ Sources for the fixed amounts:
   Workbook 1, Table A1, line 7.2.2 (petrol, diesel and other motor oils):
   £18.40 a week per household, £957 a year.
   https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
+- Electricity: ONS, Family spending in the UK, April 2024 to March 2025,
+  Workbook 1, Table A1, line 4.4.1 (Electricity): £20.00 a week per
+  household, £1,040 a year, the household calculator's default too. Every
+  household has it, so the zero VAT on domestic electricity reaches each
+  one; policyengine-uk reads it only for that measure.
 - State Pension: the full new State Pension, read from the model's own
   parameter (gov.dwp.state_pension.new_state_pension.amount) for each year,
   £241.30 a week in 2026-27 (DWP, Benefit and pension rates 2026 to 2027).
@@ -57,6 +62,8 @@ MANCHESTER_RENT_TWO_BED = 1_239
 MANCHESTER_RENT_THREE_BED = 1_441
 # ONS Family Spending FYE 2025, Table A1, 7.2.2: £18.40 a week.
 PETROL_SPENDING = round(18.40 * 52)
+# ONS Family Spending FYE 2025, Table A1, 4.4.1: £20.00 a week.
+ELECTRICITY_SPENDING = round(20.00 * 52)
 
 MANCHESTER = {
     "region": "NORTH_WEST",
@@ -86,6 +93,8 @@ class ExampleHousehold:
         x_max: The top of the income grid.
         people: Its members; the first is the earner.
         household_inputs: Inputs on the household (tenure, rent, area).
+        measure_id: The candidate measure this household is chosen to show.
+        measure_year: The first year that measure changes its net income.
     """
 
     id: str
@@ -96,6 +105,8 @@ class ExampleHousehold:
     x_max: int
     people: tuple
     household_inputs: dict
+    measure_id: str = ""
+    measure_year: int = 2027
 
     @property
     def earner(self) -> str:
@@ -109,10 +120,12 @@ class ExampleHousehold:
 EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
     ExampleHousehold(
         id="single_renter",
-        label="Single adult renting",
+        label="Graduate renting",
         definition=(
             "One adult aged 30 with a Plan 2 student loan, renting a "
-            "one-bedroom home privately in Manchester for £1,007 a month."
+            "one-bedroom home privately in Manchester for £1,007 a month and "
+            "spending £1,040 a year on electricity; the unfrozen Plan 2 "
+            "threshold lowers their repayments from 2027-28."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -121,16 +134,21 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         household_inputs={
             **MANCHESTER,
             "tenure_type": "RENT_PRIVATELY",
+            "electricity_consumption": ELECTRICITY_SPENDING,
             "rent": MANCHESTER_RENT_ONE_BED * 12,
         },
+        measure_id="plan_2_threshold_unfreeze",
+        measure_year=2027,
     ),
     ExampleHousehold(
         id="couple_three_children",
-        label="Couple with three children",
+        label="Couple with three children and a car",
         definition=(
             "A couple aged 35 and 33 with children aged 3, 6 and 8 and one "
             "earner, renting a three-bedroom home privately in Manchester "
-            "for £1,441 a month and spending £957 a year on petrol."
+            "for £1,441 a month and spending £957 a year on petrol and "
+            "£1,040 on electricity; the fuel duty and road fuel VAT measures "
+            "lower what they pay at the pump."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Earner's employment income",
@@ -145,16 +163,22 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         household_inputs={
             **MANCHESTER,
             "tenure_type": "RENT_PRIVATELY",
+            "electricity_consumption": ELECTRICITY_SPENDING,
             "rent": MANCHESTER_RENT_THREE_BED * 12,
             "petrol_spending": PETROL_SPENDING,
         },
+        measure_id="fuel_duty_rise_deferral",
+        measure_year=2027,
     ),
     ExampleHousehold(
         id="lone_parent",
         label="Lone parent with two children",
         definition=(
             "A lone parent aged 32 with children aged 6 and 9, renting a "
-            "two-bedroom home privately in Manchester for £1,239 a month."
+            "two-bedroom home privately in Manchester for £1,239 a month and "
+            "spending £1,040 a year on electricity; while they receive "
+            "Universal Credit, the Warm Home Discount top-up adds £100 in "
+            "2026-27."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -167,8 +191,11 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         household_inputs={
             **MANCHESTER,
             "tenure_type": "RENT_PRIVATELY",
+            "electricity_consumption": ELECTRICITY_SPENDING,
             "rent": MANCHESTER_RENT_TWO_BED * 12,
         },
+        measure_id="warm_home_discount_top_up",
+        measure_year=2026,
     ),
     ExampleHousehold(
         id="pensioner_couple",
@@ -176,7 +203,9 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         definition=(
             "A couple aged 70 and 68 who own their home outright, each on "
             "the full new State Pension (£241.30 a week in 2026-27); the "
-            "older partner has the private pension."
+            "older partner has the private pension; they spend £1,040 a year "
+            "on electricity, and the State Pension income tax protection "
+            "lowers their income tax from 2027-28."
         ),
         x_variable=PRIVATE_PENSION_INCOME,
         x_label="Older partner's private pension income",
@@ -185,7 +214,13 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             Person("pensioner1", 70, full_new_state_pension=True),
             Person("pensioner2", 68, full_new_state_pension=True),
         ),
-        household_inputs={**MANCHESTER, "tenure_type": "OWNED_OUTRIGHT"},
+        household_inputs={
+            **MANCHESTER,
+            "tenure_type": "OWNED_OUTRIGHT",
+            "electricity_consumption": ELECTRICITY_SPENDING,
+        },
+        measure_id="state_pension_income_tax_protection",
+        measure_year=2027,
     ),
     ExampleHousehold(
         id="higher_income_saver",
@@ -193,7 +228,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         definition=(
             "One adult aged 45 who owns their home with a mortgage, with "
             "£3,000 a year of savings interest and £5,000 of dividends on "
-            "top of their pay."
+            "top of their pay, spending £1,040 a year on electricity; the "
+            "threshold freeze raises their income tax from 2031-32."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -208,7 +244,13 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
                 },
             ),
         ),
-        household_inputs={**MANCHESTER, "tenure_type": "OWNED_WITH_MORTGAGE"},
+        household_inputs={
+            **MANCHESTER,
+            "tenure_type": "OWNED_WITH_MORTGAGE",
+            "electricity_consumption": ELECTRICITY_SPENDING,
+        },
+        measure_id="threshold_freeze_2031_32",
+        measure_year=2031,
     ),
 )
 
