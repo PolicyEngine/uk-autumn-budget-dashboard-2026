@@ -11,11 +11,14 @@
  *   POST NEXT_PUBLIC_HOUSEHOLD_API_URL   (…/api/household-impact)
  *   { year, policies, household: {…}, include: [...] }
  *
- * The page asks in two stages: first `include: []` (the headline and the
- * programmes), then `include: ["by_policy", "sweep"]` (each policy's own
- * effect and the earnings sweep), which are slower. A part a stage did not
- * compute comes back as null; `normaliseHouseholdImpact` turns the answer
- * into the page's own shape.
+ * The page asks first for `include: []` (the headline and the programmes),
+ * then, at once, for `include: ["sweep"]` (the earnings sweep, two runs) and
+ * `include: ["by_policy"]` (one run per measure). The two later requests
+ * share the instance's worker slots fairly, so the sweep's two runs are not
+ * queued behind every measure's run: the earnings charts arrive without
+ * waiting for the split by policy. A part a request did not compute comes
+ * back as null; `normaliseHouseholdImpact` turns the answer into the page's
+ * own shape.
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
@@ -37,9 +40,12 @@ export const DETAIL_TIMEOUT_MS = 200_000;
 /** The year the wizard's salary is entered for; the server grows it. */
 export const SALARY_YEAR = 2026;
 
-/** The two stages of a calculation. */
+/** The requests of a calculation: the headline, then the detail parts. */
 export const HEADLINE_INCLUDE = [];
-export const DETAIL_INCLUDE = ["by_policy", "sweep"];
+export const SWEEP_INCLUDE = ["sweep"];
+export const BY_POLICY_INCLUDE = ["by_policy"];
+/** The detail parts, each asked for on its own and at once, sweep first. */
+export const DETAIL_PARTS = [SWEEP_INCLUDE, BY_POLICY_INCLUDE];
 
 /** The API's field names, as the wizard labels them (for error messages). */
 export const FIELD_LABELS = {
