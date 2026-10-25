@@ -39,7 +39,9 @@ REGIONS = [
 TENURES = ["RENT_PRIVATELY", "OWNED_OUTRIGHT", "OWNED_WITH_MORTGAGE"]
 
 
-def spec(households: int = DEFAULT_HOUSEHOLDS, seed: int = DEFAULT_SEED) -> str:
+def spec(
+    households: int = DEFAULT_HOUSEHOLDS, seed: int = DEFAULT_SEED
+) -> str:
     """The dataset path that names this dataset without its bytes."""
     return f"{PREFIX}{households}:{seed}"
 
@@ -69,9 +71,11 @@ def build(households: int = DEFAULT_HOUSEHOLDS, seed: int = DEFAULT_SEED):
             age = (
                 int(rng.integers(67, 85))
                 if adult and pensioner
-                else int(rng.integers(19, 66))
-                if adult
-                else int(rng.integers(0, 16))
+                else (
+                    int(rng.integers(19, 66))
+                    if adult
+                    else int(rng.integers(0, 16))
+                )
             )
             earnings = (
                 float(round(rng.lognormal(10.2, 0.7), -2))

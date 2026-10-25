@@ -119,9 +119,7 @@ def run_artifact_here(job, allow_bundle: bool):
     if dataset is not None and dataset.startswith(synthetic_dataset.PREFIX):
         households, seed = synthetic_dataset.parse(dataset)
         dataset = str(
-            synthetic_dataset.write(
-                scratch / "synthetic.h5", households, seed
-            )
+            synthetic_dataset.write(scratch / "synthetic.h5", households, seed)
         )
     elif dataset is not None:
         raise ValueError(
@@ -207,12 +205,20 @@ class SmokeGenerator:
 
         body = f"reform_id,year,value\n{key},2027,0.0\n".encode()
         digest = hashlib.sha256(body).hexdigest()
-        target = Path(tempfile.mkdtemp(prefix="transport-")) / key / digest[:16]
+        target = (
+            Path(tempfile.mkdtemp(prefix="transport-")) / key / digest[:16]
+        )
         target.mkdir(parents=True)
         (target / "budgetary_impact.csv").write_bytes(body)
         (target / "receipt.json").write_text(
-            json.dumps({"schema": "transport-check", "files": {
-                "budgetary_impact.csv": digest}}, indent=2, sort_keys=True)
+            json.dumps(
+                {
+                    "schema": "transport-check",
+                    "files": {"budgetary_impact.csv": digest},
+                },
+                indent=2,
+                sort_keys=True,
+            )
             + "\n"
         )
         return f"{key}/{digest[:16]}", _pack(target)

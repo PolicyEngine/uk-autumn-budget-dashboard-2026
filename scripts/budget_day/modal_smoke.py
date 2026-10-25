@@ -71,8 +71,8 @@ def transport(root: Path, key: str) -> float:
 
     started = time.perf_counter()
     with modal.enable_output(), modal_generate.smoke_app.run():
-        relative, files = modal_generate.SmokeGenerator().transport_check.remote(
-            key
+        relative, files = (
+            modal_generate.SmokeGenerator().transport_check.remote(key)
         )
     container = Path("/container") / relative
     outcome = ArtifactOutcome(
