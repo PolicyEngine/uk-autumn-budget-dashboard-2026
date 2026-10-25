@@ -253,7 +253,7 @@ describe("the view tabs", () => {
     for (const phrase of [
       /Methods and sources/g,
       /dominance and p% rules/g,
-      /interactions between measures are not included/g,
+      /leave out interactions between measures/g,
       /line at the foot of the page/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);

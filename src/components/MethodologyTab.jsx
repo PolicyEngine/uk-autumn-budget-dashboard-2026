@@ -5,11 +5,11 @@ import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
-import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
+import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
+import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
-import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
@@ -69,7 +69,7 @@ const FLOW = [
   },
   {
     title: "Published figures",
-    text: "Figures pass disclosure checks and a person reviews every public file.",
+    text: "Figures pass disclosure checks, and a named reviewer signs off each public data file; a file awaiting sign-off is marked pending.",
   },
 ];
 
@@ -136,8 +136,9 @@ function SectionLink({ id, children }) {
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay with Population
- * impact. Living standards states the engine, data, notes and gaps of
- * that view's own baseline.
+ * impact, and the household calculation with Personal impact's "About
+ * these figures". Living standards states the engine, data, notes and gaps
+ * of that view's projections.
  *
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
@@ -163,10 +164,12 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-lead">
               The national figures come from a microsimulation: a tax-benefit
               model applied to a representative survey of UK households. Each
-              Budget measure is compared with what would have happened
-              without it, household by household, and the results are
-              weighted up to the whole country. Personal impact uses its own
-              model, and Living standards its own baseline.
+              candidate measure is compared with current law, household by
+              household, and the results are weighted up to the whole
+              country. Personal impact applies the same model and measures to
+              one household&apos;s answers. Living standards uses the same
+              model and data to project incomes and poverty with no Budget
+              measures applied.
             </p>
             <ol className="method-flow" aria-label="How the numbers are made">
               {FLOW.map((step, index) => (
@@ -210,7 +213,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Projection",
-                  "Incomes and prices are projected from the survey year to each year shown, with the economic assumptions in policyengine-uk: the OBR forecast to 2030-31, then its long-run assumptions (CPI at the 2% target from 2031).",
+                  "Incomes and prices are projected from the survey year to each year shown with policyengine-uk's economic assumptions: the OBR's March 2026 Economic and Fiscal Outlook to 2030, then long-run assumptions from 2031.",
                 ],
                 [
                   "Small groups",
@@ -333,7 +336,12 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The Plan 2 student loan measure counts the change in loan repayments. The employer National Insurance relief changes revenue only: with wages fixed, household incomes do not move.",
+                  <>
+                    The Plan 2 student loan measure counts the change in loan
+                    repayments. The employer National Insurance relief changes
+                    revenue only (see{" "}
+                    <SectionLink id={METHOD_SECTIONS.model}>Static</SectionLink>).
+                  </>,
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
@@ -346,7 +354,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "OBR comparison",
-                  "Shown once the OBR publishes its costings for these measures. Our figures are static; the OBR's post-behavioural costings include its estimate of behavioural responses.",
+                  "Our figures are static. Where the OBR has costed a measure, the comparison opens on its static costing; choose Post-behavioural to include its estimate of behavioural responses.",
                 ],
               ]}
             />
@@ -384,7 +392,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Household scatter bands",
-                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots, as the 2025 dashboard's sample of households did: each group gets a share in proportion to its households, placed at random within the group. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
+                  `Households are grouped by their 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots, as the 2025 dashboard's sample of households did: each income group gets a share in proportion to its households in 2027-28. In the year shown, a group's dots are spread across its households' changes (its k-th dot at the group's k-th quantile), so a dot keeps its row and moves only sideways between years. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
                 ],
                 [
                   "Gain, loss, no change",
@@ -456,7 +464,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Single year of age",
-                  `Ages 0 to ${SINGLE_AGE_TOP - 1} one year at a time, then ${SINGLE_AGE_TOP} and over together, as in the ONS mid-year population estimates.`,
+                  `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`,
                 ],
                 [
                   "Who counts",
@@ -465,10 +473,6 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Better or worse off",
                   "Better off when their household's net income rises by more than 0.01% of its baseline net income (taking a baseline below £1 as £1); worse off when it falls by more than that; otherwise unchanged.",
-                ],
-                [
-                  "Directly affected",
-                  "Their own income tax, National Insurance, student loan repayment or employment income changes by £1 a year or more. Benefits are paid to benefit units, not to people, so a change only in benefits, or in prices, does not count.",
                 ],
               ]}
             />
@@ -488,10 +492,11 @@ function MethodologyTab({ onShowTab }) {
         >
           <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
             <h3 className="method-card-title">Household calculation</h3>
-            <FactList items={SINGLE_YEAR_METHOD} />
-            <p className="method-more">
+            <p>
+              How one household&apos;s figures are worked out is under
+              &ldquo;About these figures&rdquo;, below the results on the{" "}
               <ViewLink tab="personal" onShowTab={onShowTab}>
-                See the Personal impact tab
+                Personal impact tab
               </ViewLink>
               .
             </p>
@@ -501,7 +506,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.living}
           title="Living standards"
-          subtitle="The separate baseline behind the Living standards tab."
+          subtitle="The projections behind the Living standards tab."
         >
           <div className="card method-card">
             <p>
@@ -509,8 +514,8 @@ function MethodologyTab({ onShowTab }) {
               <ViewLink tab="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
-              view runs on a separate baseline from the Budget views, set out
-              below.
+              view projects incomes and poverty under current law, with no
+              Budget measures applied.
             </p>
           </div>
           <LivingStandardsMethod />
@@ -526,7 +531,7 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Measures added up",
-                  "Each measure is simulated on its own. Where several are selected, the charts add up their separate effects, so interactions between measures are not included.",
+                  "Each measure is also simulated on its own. Where several are selected, the revenue, decile and age charts add up their separate effects, so they leave out interactions between measures. The household scatter and the shares better and worse off come from a run of the whole selection, so they include them, and show nothing for a selection with no such run.",
                 ],
                 [
                   "Pre-Budget basis",

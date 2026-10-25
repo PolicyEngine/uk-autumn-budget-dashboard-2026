@@ -208,7 +208,7 @@ describe("the Living standards view", () => {
     const section = await screen.findByRole("region", { name: "Living standards" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
-    expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
+    expect(within(section).getByText("Unvalidated.")).toBeInTheDocument();
     expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
     expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
     // The UC health element fix, with its upstream pull request

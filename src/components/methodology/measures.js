@@ -17,17 +17,17 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Business Asset Disposal Relief restricted",
-    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). The model applies it to each year's qualifying gains, as if none of the limit had been used before; capital gains are imputed.",
+    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). Capital gains are imputed.",
     from: 2027,
   },
   {
     name: "Fuel duty rises deferred",
-    how: "Sets the duty rate in each year to the deferred path, weighted by days from 6 April as the model blends it, and lowers VAT by 20% of the duty change on each litre bought. Fuel spending is held fixed.",
+    how: "Sets the duty rate in each year to the deferred path, weighted by days from 6 April as the model blends it, and lowers VAT by 20% of the duty change on each litre bought.",
     from: 2026,
   },
   {
     name: "VAT cut on road fuel",
-    how: "Lowers VAT on petrol and diesel spending by 5 points for the days the cut is in force in each fiscal year (121 days of 2026-27, 61 of 2027-28), with spending held fixed.",
+    how: "Lowers VAT on petrol and diesel spending by 5 points for the days the cut is in force in each fiscal year (121 days of 2026-27, 61 of 2027-28).",
     from: 2026,
   },
   {

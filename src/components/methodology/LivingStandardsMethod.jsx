@@ -80,7 +80,7 @@ export default function LivingStandardsMethod() {
           items={[
             ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
             ["Data", dataset],
-            ["Status", "Demo output, unvalidated. Same engine version as the Budget views."],
+            ["Status", "Unvalidated."],
             meta.headline_start_year &&
               meta.headline_end_year && ["Period", periodLabel(meta.headline_start_year, meta.headline_end_year)],
             meta.real_price_base && [

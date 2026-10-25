@@ -98,19 +98,17 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("describes the household calculation in its slot", () => {
+  it("points to the household calculation from its slot", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Household calculation",
     );
-    expect(slot).not.toHaveTextContent("To follow");
-    expect(slot).toHaveTextContent("same measures as the national figures");
-    expect(slot).toHaveTextContent("OBR's average earnings forecast");
-    expect(slot).not.toHaveTextContent("in the national figures only");
-    expect(slot).toHaveTextContent("Every policy applied");
-    expect(slot).toHaveTextContent("employer NI relief for under-25s");
-    expect(slot).toHaveTextContent("if received");
+    // The calculation is said once, in Personal impact's "About these
+    // figures"; this slot points there.
+    expect(slot).toHaveTextContent("About these figures");
+    expect(within(slot).getByRole("link", { name: "Personal impact tab" })).toBeInTheDocument();
+    expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
   });
 
   it("switches views from its links, in place", () => {
