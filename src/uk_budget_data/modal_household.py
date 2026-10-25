@@ -16,6 +16,14 @@ decision with a price (see the runbook), not a default.
 
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop uk-budget-household   # when done
+
+Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
+``warm_schedule`` runs every 10 minutes and sets how many ``Household``
+containers stay warm from ``WARM_WINDOWS`` (UK time): 2 by default, 12 for
+the Monday 26 October rehearsal (09:00-18:00) and on Budget day (Wednesday
+28 October 12:00-22:00), with the web endpoint kept at 1 only in those
+peaks, and 0 from 4 November 00:00 (the hard stop). To switch it all off
+at once: ``modal app stop uk-budget-household``.
 """
 
 import os
@@ -39,6 +47,24 @@ MAX_CONTAINERS = 12
 # set window (the webinar), knowing the price.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
+
+# Warm containers by UK time: (start, end, Household, web), first match wins.
+WARM_WINDOWS = (
+    ("2026-10-26T09:00", "2026-10-26T18:00", 12, 1),
+    ("2026-10-28T12:00", "2026-10-28T22:00", 12, 1),
+)
+WARM_BASELINE = (2, 0)
+WARM_UNTIL = "2026-11-04T00:00"
+
+
+def warm_target(now_uk: str) -> tuple:
+    """(Household, web) warm containers at a UK time ``YYYY-MM-DDTHH:MM``."""
+    if now_uk >= WARM_UNTIL:
+        return (0, 0)
+    for start, end, household, web_warm in WARM_WINDOWS:
+        if start <= now_uk < end:
+            return (household, web_warm)
+    return WARM_BASELINE
 
 
 def build_image() -> modal.Image:
@@ -151,3 +177,26 @@ def web():
     from uk_budget_data.api import app as api
 
     return api
+
+
+@app.function(
+    cpu=0.25,
+    memory=256,
+    timeout=60,
+    retries=0,
+    schedule=modal.Cron("*/10 * * * *"),
+)
+def warm_schedule():
+    """Apply ``warm_target`` for the current UK time (see the docstring)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    now_uk = datetime.now(ZoneInfo("Europe/London")).strftime("%Y-%m-%dT%H:%M")
+    household, web_warm = warm_target(now_uk)
+    modal.Cls.from_name(APP_NAME, "Household")().update_autoscaler(
+        min_containers=household
+    )
+    modal.Function.from_name(APP_NAME, "web").update_autoscaler(
+        min_containers=web_warm
+    )
+    print(f"{now_uk} UK: Household min_containers={household}, web={web_warm}")
