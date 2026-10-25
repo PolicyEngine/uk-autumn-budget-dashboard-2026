@@ -133,6 +133,29 @@ function GroupedLegend({ names, items, netLabel }) {
   }, [signature]);
 
   const mode = layout?.mode ?? "stacked";
+  // A short legend with no groups (before / after, higher / lower): its
+  // items on one centred row, wrapping only when they do not fit
+  const flat = groups.length === 1 && !groups[0][0] && all.length <= 4;
+  if (flat) {
+    return (
+      <div ref={ref} className="grouped-legend is-flat">
+        <ul className="grouped-legend-items">
+          {all.map((item) => (
+            <li key={item.label}>
+              <Swatch item={item} />
+              <span className="grouped-legend-label">{item.label}</span>
+            </li>
+          ))}
+          {netLabel && (
+            <li>
+              <span className="grouped-legend-line" aria-hidden="true" />
+              <span className="grouped-legend-label">{netLabel}</span>
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
   return (
     <div ref={ref} className={`grouped-legend is-${mode}`}>
       <div className="grouped-legend-groups">

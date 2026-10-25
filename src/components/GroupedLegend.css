@@ -120,3 +120,17 @@
   border-radius: 50%;
   background: var(--c-net);
 }
+
+/* A short ungrouped legend: one centred row, 16px between items, 6px
+   between swatch and text; it wraps only when it must (a phone) */
+.grouped-legend.is-flat .grouped-legend-items {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+}
+
+.grouped-legend.is-flat .grouped-legend-items li {
+  align-items: center;
+  gap: 6px;
+}

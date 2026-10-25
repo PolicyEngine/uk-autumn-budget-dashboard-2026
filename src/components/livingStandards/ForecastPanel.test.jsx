@@ -82,7 +82,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     expect(cards.length).toBe(10);
     for (const c of cards) {
       const text = c.querySelector(".chart-legend").textContent;
-      expect(c.querySelectorAll(".grouped-legend-groups .grouped-legend-swatch-line")).toHaveLength(2);
+      expect(c.querySelectorAll(".grouped-legend .grouped-legend-swatch-line")).toHaveLength(2);
       expect(text).toMatch(/pre-Budget/);
       expect(text).toMatch(/October 2026/);
     }
