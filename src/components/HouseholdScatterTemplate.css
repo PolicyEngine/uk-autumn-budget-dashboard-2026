@@ -72,3 +72,34 @@
 .household-scatter-tooltip p {
   margin: 2px 0;
 }
+
+/* Key under the scatter: one centred row, dots as the chart draws them,
+   and a hollow dot for how many households each stands for */
+.scatter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--pe-gray-700);
+}
+
+.scatter-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scatter-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.scatter-legend-dot.is-hollow {
+  background: transparent;
+  border: 1.5px solid var(--pe-gray-500);
+}
