@@ -69,7 +69,7 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Salary sacrifice cap: broad-base pay cut",
+  salary_sacrifice_haircut: "Pay cut for the salary sacrifice cap (current law)",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
