@@ -2,8 +2,9 @@ import SourceLink from "../SourceLink";
 import TitleIcon from "../TitleIcon";
 import "./singleYearMethodNotes.css";
 
-// The longer notes of "About these figures" (SINGLE_YEAR_METHOD): a short
-// lead, then one point per idea, each fact once
+// The longer notes of "About these figures" (SINGLE_YEAR_METHOD): a
+// one-line summary, the rest behind a Details toggle, one short line per
+// idea, each fact once
 function Note({ icon, lead, points }) {
   return (
     <div className="method-note">
@@ -11,11 +12,14 @@ function Note({ icon, lead, points }) {
         <TitleIcon name={icon} bare size={14} className="method-note-icon" />
         {lead}
       </p>
-      <ul>
-        {points.map((point, index) => (
-          <li key={index}>{point}</li>
-        ))}
-      </ul>
+      <details className="method-note-details">
+        <summary>Details</summary>
+        <ul>
+          {points.map((point, index) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }
@@ -35,16 +39,12 @@ export const CHANGE_BY_POLICY_NOTE = (
 export const EVERY_POLICY_NOTE = (
   <Note
     icon="receipt"
-    lead="Each side is a policyengine-uk simulation of your household, with the policies' parameter and formula changes, as in the national figures."
+    lead="Your household is simulated in policyengine-uk with the selected policies applied, as in the national figures."
     points={[
-      "The fuel duty deferral includes the VAT on the lower pump price.",
-      "The VAT changes apply to the petrol, diesel and electricity spending you enter.",
-      "The employer NI relief for under-25s changes what employers pay, with wages held fixed, so it is £0 for every household (an employer cost).",
-      <>
-        The Warm Home Discount top-up is shown for a household that would get it, if received. Not every eligible
-        household receives it: the national figures pay it to 85% of Pension Credit households and 70% of other
-        eligible households (<SourceLink source="desnz_whd_ia">DESNZ receipt rates</SourceLink>).
-      </>,
+      "Fuel duty deferral: includes the VAT on the lower pump price.",
+      "VAT changes: apply to the petrol, diesel and electricity spending you enter.",
+      "Employer NI relief: an employer cost, £0 for households (wages held fixed).",
+      "Warm Home Discount top-up: paid in 2026-27 only, so not in the selectable years.",
     ]}
   />
 );
@@ -52,8 +52,9 @@ export const EVERY_POLICY_NOTE = (
 export const WHO_IS_A_CHILD_NOTE = (
   <Note
     icon="users"
-    lead="Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19, as you answer for each."
+    lead="Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education."
     points={[
+      "The education must have begun before 19 (school or college), as you answer for each.",
       "Child Benefit counts such a young person until 20.",
       "Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
     ]}
@@ -63,14 +64,14 @@ export const WHO_IS_A_CHILD_NOTE = (
 export const COUNCIL_TAX_NOTE = (
   <Note
     icon="building"
-    lead="Estimated from your band and your region's average Band D for 2026-27, and taken off net income."
+    lead="Estimated from your band and region, and taken off net income."
     points={[
       <>
         Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink> for England, tax-base weighted by
         region; the <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
         <SourceLink source="scotland_council_tax">Scottish</SourceLink> governments.
       </>,
-      "Grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
+      "Starts from 2026-27 averages, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
       "Northern Ireland has domestic rates, which are not modelled.",
       "No selected policy changes it.",
     ]}
