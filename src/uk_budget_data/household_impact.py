@@ -41,6 +41,7 @@ Discount), carries a note with its change (``HOUSEHOLD_NOTES``).
 import copy
 import importlib
 import json
+import os
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -474,13 +475,15 @@ PROGRAMMES = (
         children=(
             _row(
                 "salary_sacrifice_haircut",
-                "Salary sacrifice cap: broad-base pay cut",
+                "Pay cut for the salary sacrifice cap (current law)",
                 "salary_sacrifice_broad_base_haircut",
                 "person",
             ),
         ),
         note=(
-            "policyengine-uk assumes employers recover the salary sacrifice "
+            "The £2,000 salary sacrifice cap from April 2029 is existing law "
+            "(Budget 2025), so it is the same before and after the measures. "
+            "policyengine-uk assumes employers recover the "
             "cap's extra employer National Insurance by cutting every "
             "employee's pay by a set share, whether or not they use salary "
             "sacrifice: the pay cut row, a negative amount."
@@ -578,10 +581,18 @@ EARNINGS_INDEX = "gov.economic_assumptions.indices.obr.average_earnings"
 SWEEP_POINTS = 50
 SWEEP_MIN_MAX = 150_000
 
-# The variables the sweep reads, summed over the household at each point, to
-# split the marginal rate into its parts. income_tax includes the Child
-# Benefit charge (CB_HITC), which is taken out of it as a part of its own.
-SWEEP_COMPONENT_VARIABLES = (
+# The marginal rate at the head's own income: the change in net income when
+# the head earns this much more. The sweep's points are several thousand
+# pounds apart, so a rate over the sweep interval holding the income can
+# average across a kink (the end of the Personal Allowance taper) that the
+# head has not reached.
+OWN_RATE_STEP = 100
+
+# The variables read to split the marginal rate into its parts, summed over
+# the household. income_tax includes the Child Benefit charge (CB_HITC, one of
+# policyengine-uk's income_tax_additions), which is taken out of it as a part
+# of its own.
+RATE_PART_VARIABLES = (
     "income_tax",
     "CB_HITC",
     "personal_allowance",
@@ -592,14 +603,15 @@ SWEEP_COMPONENT_VARIABLES = (
 )
 
 # The parts of the marginal rate, in stacking order: each the share of an
-# extra pound of the head's employment income it takes, and "other" the rest
-# of the rate, so the parts add up to it exactly.
+# extra pound of the head's employment income that a tax takes or a benefit's
+# withdrawal removes, and "other" the rest of the rate (pension
+# contributions, other taxes and the rounding), so the parts add up to it.
 MARGINAL_RATE_PARTS = (
     "income_tax",
+    "child_benefit_charge",
     "personal_allowance_taper",
     "national_insurance",
     "student_loan",
-    "child_benefit_charge",
     "universal_credit",
     "other_benefits",
     "other",
@@ -1241,34 +1253,43 @@ def run_scenario(
     side: dict,
     axes: Optional[list] = None,
     net_income_only: bool = False,
+    parts: bool = False,
 ) -> dict:
     """One household simulation of one side (``_side``), reduced to what
     the answer reads: net income, and unless ``net_income_only``, each
     programme row summed over the household, each person's dependant
     status and the household's area. With ``axes``, net income is a list
-    over the sweep. Module level and plain data in and out, so it can run
-    in a worker process."""
+    over the sweep. The sweep, a full run, and a run asked for ``parts``
+    also read ``RATE_PART_VARIABLES`` summed over the household (lists over
+    the sweep), to split the marginal rate. Module level and plain data in
+    and out, so it can run in a worker process."""
     from policyengine_uk import Simulation
 
     simulation = Simulation(
         situation=household_situation(people, benunit, household, year, axes),
         scenario=side_scenario(side),
     )
+
+    def rate_part_values():
+        return {
+            name: [
+                float(v)
+                for v in simulation.calculate(name, year, map_to="household")
+            ]
+            for name in RATE_PART_VARIABLES
+        }
+
     net = simulation.calculate("household_net_income", year)
     if axes is not None:
         return {
             "household_net_income": [float(v) for v in net],
-            "components": {
-                name: [
-                    float(v)
-                    for v in simulation.calculate(
-                        name, year, map_to="household"
-                    )
-                ]
-                for name in SWEEP_COMPONENT_VARIABLES
-            },
+            "components": rate_part_values(),
         }
     out = {"household_net_income": float(net[0])}
+    if parts or not net_income_only:
+        out["components"] = {
+            name: values[0] for name, values in rate_part_values().items()
+        }
     if net_income_only:
         return out
     variables = simulation.tax_benefit_system.variables
@@ -1375,44 +1396,54 @@ def marginal_rates(grid: list[float], net: list[float]) -> list:
     ]
 
 
-def marginal_rate_parts(
+def rate_parts(step: float, total: float, low: dict, high: dict) -> dict:
+    """A marginal rate ``total`` over ``step`` pounds of the head's
+    employment income, split into ``MARGINAL_RATE_PARTS`` from the
+    ``RATE_PART_VARIABLES`` at the step's two ends (``low`` and ``high``).
+
+    Each part is the change in its variable over the step, per pound: taxes
+    as they rise, benefits as they fall. Income tax less the Child Benefit
+    charge is split into its rate and the personal allowance taper: with the
+    allowance falling by ``t`` per pound, the extra pound and the lost
+    allowance are both taxed at the band's rate ``r``, so the tax rises by
+    r(1 + t), of which r is the rate and r·t the taper. "other" is the rest
+    of ``total``, so the parts add up to it exactly."""
+
+    def rise(name):
+        return (high[name] - low[name]) / step
+
+    charge = rise("CB_HITC")
+    tax = rise("income_tax") - charge
+    taper = max(0.0, -rise("personal_allowance"))
+    rate = tax / (1 + taper)
+    universal_credit = -rise("universal_credit")
+    part = {
+        "income_tax": rate,
+        "child_benefit_charge": charge,
+        "personal_allowance_taper": tax - rate,
+        "national_insurance": rise("national_insurance"),
+        "student_loan": rise("student_loan_repayments"),
+        "universal_credit": universal_credit,
+        "other_benefits": -rise("household_benefits") - universal_credit,
+    }
+    part["other"] = total - sum(part.values())
+    return part
+
+
+def sweep_rate_parts(
     grid: list[float], net: list[float], components: dict
 ) -> list[dict]:
-    """The marginal rate between neighbouring sweep points, split into
-    ``MARGINAL_RATE_PARTS``: each the share of an extra pound of the head's
-    employment income that a tax takes or a benefit's withdrawal removes.
-
-    Income tax less the Child Benefit charge is split into its rates and the
-    personal allowance taper: with the allowance falling by ``t`` per pound,
-    the extra pound and the lost allowance are both taxed at the top rate
-    ``r``, so the tax rises by r(1 + t), of which r is the rate and r·t the
-    taper. "other" is the rest of the rate (pension contributions, other
-    taxes), so the parts add up to ``marginal_rates`` exactly."""
-    totals = marginal_rates(grid, net)
-    parts = []
-    for i, total in enumerate(totals):
-        step = grid[i + 1] - grid[i]
-
-        def rise(name):
-            values = components[name]
-            return (values[i + 1] - values[i]) / step
-
-        tax = rise("income_tax") - rise("CB_HITC")
-        taper = max(0.0, -rise("personal_allowance"))
-        rate = tax / (1 + taper) if taper > 0 else tax
-        uc = -rise("universal_credit")
-        part = {
-            "income_tax": rate,
-            "personal_allowance_taper": tax - rate,
-            "national_insurance": rise("national_insurance"),
-            "student_loan": rise("student_loan_repayments"),
-            "child_benefit_charge": rise("CB_HITC"),
-            "universal_credit": uc,
-            "other_benefits": -rise("household_benefits") - uc,
-        }
-        part["other"] = total - sum(part.values())
-        parts.append(part)
-    return parts
+    """``rate_parts`` on each step of the sweep, adding up to
+    ``marginal_rates``."""
+    return [
+        rate_parts(
+            grid[i + 1] - grid[i],
+            total,
+            {name: values[i] for name, values in components.items()},
+            {name: values[i + 1] for name, values in components.items()},
+        )
+        for i, total in enumerate(marginal_rates(grid, net))
+    ]
 
 
 def _rounded_parts(parts: dict, total: float) -> dict:
@@ -1423,12 +1454,17 @@ def _rounded_parts(parts: dict, total: float) -> dict:
     return out
 
 
-def _own_rate(grid: list[float], rates: list[float], income: float):
-    """The rate over the sweep interval holding the head's own income."""
-    for i in range(len(grid) - 1):
-        if grid[i] <= income < grid[i + 1]:
-            return rates[i]
-    return rates[-1]
+def with_pay_rise(people: list, step: float) -> list:
+    """The household's people with the head earning ``step`` more."""
+    people = [dict(person) for person in people]
+    people[0]["employment_income"] = people[0]["employment_income"] + step
+    return people
+
+
+def own_rate(net: float, net_higher: float, step: float) -> float:
+    """The marginal effective tax rate at the head's own income: the share
+    of the next ``step`` pounds that does not reach household net income."""
+    return 1 - (net_higher - net) / step
 
 
 # Runs already done, by their inputs: the breakdown stage asks again for the
@@ -1464,7 +1500,13 @@ def _run_all(jobs: list, workers: int) -> list:
     todo = [i for i, result in enumerate(results) if result is None]
     # With workers, even one run goes to a worker: requests run at once, and
     # two runs in this process at the same time would share its engine.
-    if workers > 1 and todo:
+    if todo and os.environ.get("HOUSEHOLD_RUNNER") == "modal":
+        # On Modal (modal_household.py): every run in its own container at
+        # once, each with the engine already loaded.
+        from uk_budget_data.modal_household import fan_out
+
+        done = fan_out([jobs[i] for i in todo])
+    elif workers > 1 and todo:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
             household_slots,
@@ -1521,12 +1563,62 @@ def _programme_entry(row: Programme, before: dict, after: dict) -> dict:
     return entry
 
 
+# Measures that cannot move this household's net income in this year,
+# from the household's answers alone, so the split by policy need not run
+# them: each shows as "not affected", exactly as its run would. Every rule is
+# checked against the full run in tests/test_household_skips.py, over many
+# households and every policy year.
+SKIP_REASONS = {
+    "employer_ni_relief_under_25s": "an employer cost; wages are held fixed",
+    "warm_home_discount_top_up": "paid in 2026-27 only",
+    "threshold_freeze_2031_32": "changes nothing before 2031-32",
+    "plan_2_threshold_unfreeze": "no Plan 2 student loan",
+    "state_pension_income_tax_protection": "no one at State Pension age",
+    "badr_lifetime_limit_cut": "no capital gains",
+    "fuel_duty_rise_deferral": "no petrol or diesel spending",
+    "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
+    "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
+}
+
+
+def provably_unaffected(
+    measure_id: str, answers: HouseholdAnswers, year: int
+) -> bool:
+    """Whether ``measure_id`` cannot change this household's net income in
+    ``year``. False whenever it might (and for any measure without a rule)."""
+    adults = [(answers.age, answers.student_loan_plan)]
+    if answers.has_partner:
+        adults.append((answers.partner_age, answers.partner_student_loan_plan))
+    no_fuel = not answers.petrol_spending and not answers.diesel_spending
+    if measure_id == "employer_ni_relief_under_25s":
+        return True
+    if measure_id == "warm_home_discount_top_up":
+        return year != 2026
+    if measure_id == "threshold_freeze_2031_32":
+        return year < 2031
+    if measure_id == "plan_2_threshold_unfreeze":
+        return all(plan != "PLAN_2" for _, plan in adults)
+    if measure_id == "state_pension_income_tax_protection":
+        return all(age < state_pension_age(year) for age, _ in adults)
+    if measure_id == "badr_lifetime_limit_cut":
+        # The household's answers carry no capital gains.
+        return True
+    if measure_id == "fuel_duty_rise_deferral":
+        return no_fuel
+    if measure_id == "road_fuel_vat_cut":
+        return no_fuel or year >= 2028
+    if measure_id == "domestic_electricity_zero_vat":
+        return not answers.electricity_spending or year >= 2028
+    return False
+
+
 def calculate_household_impact(
     answers: HouseholdAnswers,
     reform_ids: list[str],
     year: int,
     include: tuple = PARTS,
     workers: int = 1,
+    skip_unaffected: bool = True,
 ) -> dict:
     """The household's net income in ``year`` before and after the
     selected measures, and the programmes; with "by_policy" in
@@ -1551,31 +1643,44 @@ def calculate_household_impact(
     salary, partner_salary = salaries_in(answers, year)
     pension, partner_pension = state_pensions(answers, year)
 
-    def job(reform, axes=None, net_income_only=False):
+    def job(
+        reform, axes=None, net_income_only=False, members=None, parts=False
+    ):
         return (
-            people,
+            members or people,
             benunit,
             household,
             year,
             reform,
             axes,
             net_income_only,
-        )
+        ) + ((True,) if parts else ())
 
     jobs = [job(sides.before), job(sides.after)]
     by_policy = "by_policy" in include
     many = len(sides.included) > 1
+    # The measures whose own run is needed (provably_unaffected: the rest
+    # are exactly £0 for this household and year, so they are not run).
+    to_run = [
+        id_
+        for id_ in sides.included
+        if not (skip_unaffected and provably_unaffected(id_, answers, year))
+    ]
     if by_policy and many:
         jobs += [
-            job(sides.singles[id_], net_income_only=True)
-            for id_ in sides.included
+            job(sides.singles[id_], net_income_only=True) for id_ in to_run
         ]
     sweep = "sweep" in include
     if sweep:
         axes, grid = sweep_axes(salary)
+        raised = with_pay_rise(people, OWN_RATE_STEP)
         jobs += [
             job(sides.before, axes, True),
             job(sides.after, axes, True),
+            job(
+                sides.before, net_income_only=True, members=raised, parts=True
+            ),
+            job(sides.after, net_income_only=True, members=raised, parts=True),
         ]
     outputs = _run_all(jobs, workers)
     before, after = outputs[0], outputs[1]
@@ -1664,24 +1769,43 @@ def calculate_household_impact(
         "engine": runtime_identity()["packages"],
     }
     if by_policy:
-        singles = (
-            outputs[2 : 2 + len(sides.included)]
-            if many
-            else ([after] if sides.included else [])
-        )
+        if many:
+            ran = dict(zip(to_run, outputs[2 : 2 + len(to_run)]))
+            unaffected = {"household_net_income": base_net}
+            singles = [ran.get(id_, unaffected) for id_ in sides.included]
+        else:
+            singles = [after] if sides.included else []
         result["by_policy"] = _by_policy(
             sides.included, singles, base_net, combined
         )
     if sweep:
         result["sweep"] = _sweep(
             grid,
-            outputs[-2]["household_net_income"],
-            outputs[-1]["household_net_income"],
+            outputs[-4]["household_net_income"],
+            outputs[-3]["household_net_income"],
             salary,
             base_net,
             reform_net,
-            outputs[-2].get("components"),
-            outputs[-1].get("components"),
+            (
+                own_rate(
+                    base_net,
+                    outputs[-2]["household_net_income"],
+                    OWN_RATE_STEP,
+                ),
+                own_rate(
+                    reform_net,
+                    outputs[-1]["household_net_income"],
+                    OWN_RATE_STEP,
+                ),
+            ),
+            components=(
+                outputs[-4].get("components"),
+                outputs[-3].get("components"),
+                before.get("components"),
+                after.get("components"),
+                outputs[-2].get("components"),
+                outputs[-1].get("components"),
+            ),
         )
     return result
 
@@ -1739,8 +1863,8 @@ def _sweep(
     salary,
     base_net,
     reform_net,
-    base_components=None,
-    reform_components=None,
+    own_rates,
+    components=(None,) * 6,
 ):
     base_rates = marginal_rates(grid, base_line)
     reform_rates = marginal_rates(grid, reform_line)
@@ -1769,36 +1893,51 @@ def _sweep(
             "employment_income": _money(salary),
             "baseline": _money(base_net),
             "reform": _money(reform_net),
-            "baseline_marginal_rate": round(
-                _own_rate(grid, base_rates, salary), 4
-            ),
-            "reform_marginal_rate": round(
-                _own_rate(grid, reform_rates, salary), 4
-            ),
+            "baseline_marginal_rate": round(own_rates[0], 4),
+            "reform_marginal_rate": round(own_rates[1], 4),
         },
         "note": (
             "Only the head's employment income varies; everything else is "
             "held as entered. A marginal rate is over the interval between "
             "two neighbouring points: one minus the change in household net "
-            "income over the change in the head's employment income."
+            "income over the change in the head's employment income. The "
+            f"rate at the head's own income is over the next £{OWN_RATE_STEP} "
+            "they earn."
         ),
     }
-    # The rate's parts, when both runs read them (a run from before they
+    # The rates' parts, when every run read them (a run kept from before they
     # were added, or a stand-in engine, has none: the page then draws the
-    # total alone)
-    if base_components and reform_components:
-        base_parts = marginal_rate_parts(grid, base_line, base_components)
-        reform_parts = marginal_rate_parts(
-            grid, reform_line, reform_components
+    # totals alone)
+    if all(components):
+        base_sweep, reform_sweep, base_own, reform_own, base_up, reform_up = (
+            components
         )
         sweep["marginal_rate_parts"] = {
             "parts": list(MARGINAL_RATE_PARTS),
             "baseline": [
-                _rounded_parts(p, r) for p, r in zip(base_parts, base_rates)
+                _rounded_parts(p, r)
+                for p, r in zip(
+                    sweep_rate_parts(grid, base_line, base_sweep), base_rates
+                )
             ],
             "reform": [
                 _rounded_parts(p, r)
-                for p, r in zip(reform_parts, reform_rates)
+                for p, r in zip(
+                    sweep_rate_parts(grid, reform_line, reform_sweep),
+                    reform_rates,
+                )
             ],
+            "own_point": {
+                "baseline": _rounded_parts(
+                    rate_parts(OWN_RATE_STEP, own_rates[0], base_own, base_up),
+                    own_rates[0],
+                ),
+                "reform": _rounded_parts(
+                    rate_parts(
+                        OWN_RATE_STEP, own_rates[1], reform_own, reform_up
+                    ),
+                    own_rates[1],
+                ),
+            },
         }
     return sweep

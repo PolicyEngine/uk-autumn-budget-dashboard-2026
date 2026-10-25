@@ -13,6 +13,9 @@ import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
 import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
+import SourceLink from "./components/SourceLink";
+import useScrollReveal from "./hooks/useScrollReveal";
+import HouseholdPicker from "./components/HouseholdPicker";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
@@ -25,7 +28,6 @@ import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
-import Note from "./components/Note";
 import PolicyCards from "./components/PolicyCards";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
@@ -79,16 +81,11 @@ export function viewFromLocation({ search, hash }) {
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
 
-// The banner under the intro, and the views it is left off
-export const CANDIDATE_BANNER =
-  "Candidate measures, modelled before the Budget on 28 October; not announced policy.";
-const VIEWS_WITHOUT_CANDIDATE_BANNER = new Set(["living", "methodology"]);
-
 // Preset policy combinations
 const PRESETS = [
   {
     id: "autumn-budget",
-    name: "All candidate measures",
+    name: "All measures",
     policies: POLICIES.map((p) => p.id),
   },
 ];
@@ -163,6 +160,9 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Cards fade and rise in as they scroll into view
+  const mainRef = useRef(null);
+  useScrollReveal(mainRef);
   // The views opened so far: each stays mounted once opened, hidden while
   // another is shown, so its state, open expanders and any calculation in
   // flight carry on
@@ -518,7 +518,7 @@ function App() {
   return (
     // A view without the year pill has a one-row band on a phone
     <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"}>
-      <main className="main-content">
+      <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
             selector still in reach. The sentinel tells it when it is stuck. */}
@@ -559,20 +559,14 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          This dashboard shows how Autumn Budget 2026 measures would affect
-          the public finances and households: by income, area and age, and
+          This dashboard uses <SourceLink source="policyengine_uk_model" /> to
+          show how Autumn Budget 2026 measures would affect the public
+          finances and households: by income, area and age, and
           for your own household, alongside the living standards outlook.
-          Choose a year and policies in the bar above.
+          Measures and costings: <SourceLink source="budget_documents" />;
+          forecast: <SourceLink source="obr_efo_current" />. Choose a year and
+          policies in the bar above.
         </p>
-
-        {/* Said once, under the intro, on the views that show the
-            measures: Living standards has its own demo line, and
-            Methodology describes them */}
-        {!VIEWS_WITHOUT_CANDIDATE_BANNER.has(activeTab) && (
-          <div className="candidate-banner" role="note">
-            <Note>{CANDIDATE_BANNER}</Note>
-          </div>
-        )}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
@@ -601,6 +595,7 @@ function App() {
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             year={distributionalYear}
+            active={activeTab === value}
           />
         ) : (
           // Population impact: All households and Young people sub-tabs
@@ -692,12 +687,18 @@ function App() {
                       />
                     </section>
 
-                    {/* Row 3: example households. Each card has its own
-                        household chooser, starting on different ones. */}
+                    {/* Row 3: example households, one chooser above both
+                        charts */}
                     <SectionHeading
                       title="Example households"
-                      subtitle="Net income of five example households across their incomes. Choose a household in either chart."
+                      subtitle="Net income of five example households across their incomes."
                     />
+                    <div className="example-household-picker">
+                      <HouseholdPicker
+                        value={exampleHouseholdId}
+                        onChange={setExampleHouseholdId}
+                      />
+                    </div>
                     <section
                       id="household"
                       className="report-section charts-grid charts-row-3"
@@ -707,12 +708,14 @@ function App() {
                         selectedYear={distributionalYear}
                         household={exampleHouseholdId}
                         onHouseholdChange={setExampleHouseholdId}
+                        showPicker={false}
                       />
                       <EmploymentIncomeDiffChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                         household={exampleHouseholdId}
                         onHouseholdChange={setExampleHouseholdId}
+                        showPicker={false}
                       />
                     </section>
 

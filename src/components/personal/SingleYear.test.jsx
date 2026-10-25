@@ -93,12 +93,12 @@ describe("Household impact's results", () => {
 });
 
 describe("the household calculation, from the fixture", () => {
-  it("asks for the headline first, then the breakdown, with the wizard's answers", async () => {
+  it("asks for the headline first, then the sweep and the split by policy at once, with the wizard's answers", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    expect(household.map((body) => body.include)).toEqual([[], ["by_policy", "sweep"]]);
+    expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
     const [first] = household;
     expect(first.year).toBe(2029);
     expect(first.household).toMatchObject({
@@ -118,6 +118,23 @@ describe("the household calculation, from the fixture", () => {
       children: [],
     });
     expect(first.household).not.toHaveProperty("children_ages");
+  });
+
+  it("shows the result card and breakdown once only the headline has resolved", async () => {
+    // The slower parts never answer: the headline must not wait for them
+    serve((body) =>
+      body.include.length === 0 ? json(householdAnswerFor(body)) : new Promise(() => {}),
+    );
+    renderTab();
+    toResults();
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(document.querySelector("#household-breakdown")).not.toBeNull();
+    // The split by policy and the sweep wait in their own cards
+    await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(2));
+    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(2);
+    // Changed answers can be sent without waiting for the slower parts
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    expect(calculateButton()).not.toBeDisabled();
   });
 
   it("shows the change in one result card: the figure, its share, before and after, and what it is based on", async () => {
@@ -246,7 +263,7 @@ describe("the household calculation, from the fixture", () => {
     expect(terms).toContain("Universal Credit");
     expect(terms).toContain("Change by policy");
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
-    expect(within(panel).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
   });
 
   it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
@@ -264,25 +281,18 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate, then asks again for another year only on Calculate", async () => {
+  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
     // Before Calculate: the empty cards and a prompt, and no request
     expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
     expect(headlineCard()).toBeNull();
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household).toEqual([]);
-    toResults();
-    await screen.findByText(HEADLINE);
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
-    // Another year: the result goes, the prompt comes back; nothing asked yet
-    expect(await screen.findByText("Choose your answers and press Calculate.")).toBeInTheDocument();
-    expect(headlineCard()).toBeNull();
-    expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household.some((body) => body.year === 2030)).toBe(false);
+    expect(household).toEqual([]);
+    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -312,6 +322,57 @@ describe("Calculate", () => {
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("a change in the title bar after a result", () => {
+  const props = {
+    selectedPolicies: POLICIES_FOR_TEST.map((policy) => policy.id),
+    policies: POLICIES_FOR_TEST,
+  };
+
+  it("reruns the same household for the new year, without a second Calculate", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} />);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));
+    const later = household.slice(asked);
+    expect(later[0].year).toBe(2030);
+    expect(later[0].include).toEqual([]);
+    // The same answers as the first calculation
+    expect(later[0].household).toEqual(household[0].household);
+  });
+
+  it("does not rerun while the answers are being edited", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household.length).toBe(asked);
+    // The reader is asked to press Calculate
+    expect(headlineCard()).toBeNull();
+  });
+
+  it("waits until the view is shown again when the year changes elsewhere", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    toResults();
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
+    const asked = household.length;
+    rerender(<PersonalImpactTab {...props} year={2030} active={false} />);
+    rerender(<PersonalImpactTab {...props} year={2031} active={false} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(household.length).toBe(asked);
+    rerender(<PersonalImpactTab {...props} year={2031} active />);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("2031-32"));
+    expect(household.slice(asked).map((body) => body.year)).not.toContain(2030);
   });
 });
 
@@ -439,6 +500,35 @@ describe("the household calculation's errors", () => {
     fail = false;
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
     expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
+  });
+
+  it("shows the earnings charts as soon as the sweep arrives, while the split by policy is still running", async () => {
+    let finishByPolicy;
+    const byPolicyAsked = new Promise((resolve) => {
+      finishByPolicy = resolve;
+    });
+    serve((body) =>
+      body.include.includes("by_policy")
+        ? byPolicyAsked.then(() => json(householdAnswerFor(body)))
+        : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
+    finishByPolicy();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+  });
+
+  it("keeps the earnings charts when only the split by policy fails", async () => {
+    serve((body) =>
+      body.include.includes("by_policy") ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
   });
 
   it("keeps the headline when only the breakdown fails", async () => {

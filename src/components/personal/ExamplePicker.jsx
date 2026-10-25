@@ -80,7 +80,7 @@ export default function ExamplePicker({ groups, value, onChoose }) {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M4 11l8-6 8 6M6 9.5V19h12V9.5" />
+          <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z M19 3v4M17 5h4M5 17v4M3 19h4" />
         </svg>
         Examples
         <svg

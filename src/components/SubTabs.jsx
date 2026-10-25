@@ -1,3 +1,4 @@
+import TitleIcon from "./TitleIcon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./SubTabs.css";
 
@@ -129,6 +130,7 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
             className="sub-tab"
             onClick={() => choose(tab.value)}
           >
+            {tab.icon && <TitleIcon name={tab.icon} bare size={16} className="sub-tab-icon" />}
             {tab.label}
           </button>
         );

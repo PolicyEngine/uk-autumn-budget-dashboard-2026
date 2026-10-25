@@ -42,6 +42,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
+  hover: "#EEF6F6",
   obr: "#9CA3AF",
   obrText: "#6B7280",
   net: "#000000",
@@ -69,16 +70,25 @@ export const CHART_COLOURS = {
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
   mtrIncomeTax: "#5FB3A8",
+  mtrChildBenefit: "#4FD1C5",
   mtrAllowanceTaper: "#285E61",
   mtrNationalInsurance: "#A7E3DA",
   mtrStudentLoan: "#E8B66A",
-  mtrChildBenefit: "#7C9CBF",
-  mtrUniversalCredit: "#3B6E8F",
-  mtrOtherBenefits: "#9DB7D5",
+  mtrUniversalCredit: "#2C7A7B",
+  mtrOtherBenefits: "#9AE6B4",
   mtrOther: "#D1D5DB",
 };
 
 // Light horizontal gridlines only.
+/** "Before" is a grey dashed line on every chart, "after" a teal solid one */
+export const BEFORE_DASH = "6 4";
+
+/** A reference line or series (all people, all ages, "You"): one dashed style */
+export const REFERENCE_DASH = "4 3";
+
+/** The hover cursor behind a bar or row, on every chart */
+export const HOVER_CURSOR = { fill: "#EEF6F6" };
+
 export const GRID_PROPS = {
   vertical: false,
   stroke: CHART_COLOURS.grid,
@@ -203,4 +213,35 @@ export function sweepAxis(max) {
   const ticks = [];
   for (let value = 0; value <= top + 1e-9; value += step) ticks.push(value);
   return { domain: [0, top], ticks };
+}
+
+// Width a full fiscal-year tick ("2027-28") needs at 12px, with a gap
+const FISCAL_TICK_WIDTH = 64;
+
+/**
+ * Fiscal-year ticks that fit the plot: the full "2027-28" label, every
+ * year if there is room, otherwise every second or third year counted from
+ * `base` (the base year, 2027-28, is always a tick when given), and always
+ * the first and last year. A tick too close to the first or last is
+ * dropped, so labels never touch. The tooltip still names every year.
+ * Returns the years to label (for Recharts' `ticks`).
+ */
+export function fiscalYearTicks(years, plotWidth, { base } = {}) {
+  const list = [...years];
+  if (list.length <= 2 || !plotWidth) return list;
+  const per = plotWidth / list.length;
+  const step = Math.max(1, Math.ceil(FISCAL_TICK_WIDTH / per));
+  if (step === 1) return list;
+  const anchor = list.includes(base) ? list.indexOf(base) : 0;
+  const first = 0;
+  const last = list.length - 1;
+  const picked = new Set([first, last]);
+  for (let i = 0; i < list.length; i += 1) {
+    if ((i - anchor) % step !== 0) continue;
+    // Keep clear of the first and last, which are always shown
+    if (i !== first && i - first < step) continue;
+    if (i !== last && last - i < step) continue;
+    picked.add(i);
+  }
+  return [...picked].sort((a, b) => a - b).map((i) => list[i]);
 }

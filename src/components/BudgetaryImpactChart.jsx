@@ -33,13 +33,13 @@ import {
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
+  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
-  FIRST_DISPLAY_YEAR,
-  LAST_DISPLAY_YEAR,
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 // Net impact labels, one per year, as on the 2025 dashboard: the signed
 // total in a small white tag. A tag sits just above the year's stack of
@@ -79,10 +79,13 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
   );
 }
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, selectedYear }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
+  // On a narrow plot six tags collide: label only the year shown (the
+  // tooltip gives every year's net)
+  const crowded = xAxis.width < 460;
   const fontSize = narrow ? 11 : 12;
   const gap = 6;
   const tagHeight = fontSize + 8;
@@ -103,6 +106,7 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
         // Net tags show with two or more measures; a not-yet-published tag
         // always shows, so the empty year is never read as zero.
         if (!show && !unpublished) return null;
+        if (crowded && !unpublished && point.year !== selectedYear) return null;
         const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
         // On a phone the not-yet-published tag takes two lines, in smaller
         // type, so it fits its year's band beside the last bar
@@ -168,7 +172,7 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
 
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
@@ -244,15 +248,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     <div className="budgetary-impact-chart">
       <div className="chart-header">
         <div>
-          <h3>Revenue impact</h3>
-          <p className="chart-description">
-            This chart shows the annual budgetary impact from{" "}
-            {fiscalYearTick(FIRST_DISPLAY_YEAR)} to{" "}
-            {fiscalYearTick(LAST_DISPLAY_YEAR)},
-            measured in billions of pounds. Positive values indicate revenue
-            gains for the Government, whilst negative values indicate costs to
-            the Treasury.
-          </p>
+          <h3>
+            <TitleIcon name="landmark" />
+            <span className="title-text">Revenue impact</span>
+          </h3>
+          <p className="chart-description">{CHART_DESCRIPTION}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
@@ -302,7 +302,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
 
               {...TOOLTIP_PROPS}
 
-              cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+              cursor={HOVER_CURSOR}
 
               content={
 
@@ -359,6 +359,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
+                  selectedYear={selectedYear}
                   show
                 />
               }

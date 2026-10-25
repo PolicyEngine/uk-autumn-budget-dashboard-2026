@@ -1,31 +1,23 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { legendLayout, subColumns } from "../utils/legendLayout";
 import "./GroupedLegend.css";
 
 
-// The groups' names: by the Government's revenue (Revenue impact), or by
-// households' incomes (every chart of household income), where a measure
-// that raises revenue lowers incomes
-const GROUP_NAMES = {
-  revenue: ["Raises revenue", "Costs revenue"],
-  household: ["Lowers household incomes", "Raises household incomes"],
-};
-
 /**
- * Split legend items into the two groups, revenue-raising measures first,
- * keeping their order; empty groups are left out. Items that are not
- * policies (no `raises`) form one group with no name.
+ * Split legend items into the two groups, "Raise revenue" then "Cost
+ * revenue", keeping their order; empty groups are left out. Items that are
+ * not policies (no `raises`) form one group with no heading.
  *
  * @param {Array<{label: string, color: string, raises?: boolean}>} items
- * @param {"revenue"|"household"} [framing]
  */
-export function legendGroups(items, framing = "revenue") {
+export function legendGroups(items) {
   if (items.length > 0 && items.every((item) => item.raises === undefined)) {
     return [[null, items]];
   }
-  const [raising, costing] = GROUP_NAMES[framing];
   return [
-    [raising, items.filter((item) => item.raises)],
-    [costing, items.filter((item) => !item.raises)],
+    ["Raise revenue", items.filter((item) => item.raises)],
+    ["Cost revenue", items.filter((item) => !item.raises)],
   ].filter(([, groupItems]) => groupItems.length > 0);
 }
 
@@ -69,54 +61,171 @@ function Swatch({ item }) {
   );
 }
 
+/** An item's label, with its note behind an "i" when it has one. */
+function ItemLabel({ item }) {
+  return (
+    <>
+      <span className="grouped-legend-label">{item.label}</span>
+      {item.info && (
+        <span className="info-icon-wrapper grouped-legend-info">
+          <button type="button" className="info-icon" aria-label={`About ${item.label}`}>
+            i
+          </button>
+          <span className="info-tooltip" role="tooltip">
+            {item.info}
+          </span>
+        </span>
+      )}
+    </>
+  );
+}
+
+// The room an "i" takes after a label: its button and gap
+const INFO_WIDTH = 22;
+
+// The legend's font, as in GroupedLegend.css
+const LABEL_FONT = { fontSize: 12.5, fontWeight: "400" };
+const HEADING_FONT = { fontSize: 11, fontWeight: "600" };
+// The swatch and its gap
+const ICON_WIDTH = 16;
+
+/** Text widths from a canvas in the legend's font, or an estimate where
+ * there is no canvas (tests). */
+function textMeasurer(node) {
+  const family = node ? getComputedStyle(node).fontFamily : "";
+  let context = null;
+  try {
+    context = document.createElement("canvas").getContext("2d");
+  } catch {
+    context = null;
+  }
+  const make = ({ fontSize, fontWeight }) => (text) => {
+    if (!context) return String(text).length * fontSize * 0.55;
+    context.font = `${fontWeight} ${fontSize}px ${family || "system-ui, sans-serif"}`;
+    // A pixel of slack, so the browser never wraps a label the layout
+    // measured as fitting
+    return context.measureText(String(text)).width + 1;
+  };
+  return { label: make(LABEL_FONT), heading: make(HEADING_FONT) };
+}
+
 /**
- * A chart legend in a flowing grid across the card's width (as many
- * columns as fit, two or one on a phone): each group's name as a small tag
- * at the start of its run of items, the net line as the last item. A
- * short legend with no groups (before / after) is one centred row.
+ * A chart legend: each group ("Raise revenue", "Cost revenue") under its
+ * own heading, the groups side by side, a group of more than three items
+ * in two sub-columns, labels wrapped where needed; the net line centred
+ * under them, the whole block centred under the plot. The layout
+ * (legendLayout, shared with the export) is chosen from the measured
+ * width, on every resize: one column on a phone.
  *
- * Pass `names` (dashboard policy names) or `items`. `framing` names the
- * groups by revenue (Revenue impact) or by household incomes.
+ * Pass `names` (dashboard policy names) or `items`.
  */
-function GroupedLegend({ names, items, netLabel, framing = "revenue" }) {
+function GroupedLegend({ names, items, netLabel }) {
   const all = items ?? policyItems(names ?? []);
-  const groups = legendGroups(all, framing);
-  const flat = groups.length === 1 && !groups[0][0] && all.length <= 4;
-  const entry = (item) => (
-    <li key={item.label} className="grouped-legend-item" title={item.title ?? item.label}>
-      <Swatch item={item} />
-      <span className="grouped-legend-label">{item.short ?? item.label}</span>
-    </li>
-  );
-  const net = netLabel && (
-    <li className="grouped-legend-item">
-      <span className="grouped-legend-line" aria-hidden="true" />
-      <span className="grouped-legend-label">{netLabel}</span>
-    </li>
-  );
-  if (flat) {
+  const groups = legendGroups(all);
+  const ref = useRef(null);
+  const [layout, setLayout] = useState(null);
+  const signature = groups
+    .map(([heading, groupItems]) => `${heading}:${groupItems.map((item) => item.label).join("|")}`)
+    .join("/");
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+    const measure = textMeasurer(node);
+    // A label with an "i" is measured with the room the "i" takes
+    const infoFor = new Map(all.map((item) => [item.label, Boolean(item.info)]));
+    const measureLabel = (text) => measure.label(text) + (infoFor.get(text) ? INFO_WIDTH : 0);
+    const decide = () => {
+      const next = legendLayout({
+        groups: groups.map(([heading, groupItems]) => ({
+          heading,
+          labels: groupItems.map((item) => item.label),
+        })),
+        available: node.clientWidth,
+        measure: measureLabel,
+        measureHeading: measure.heading,
+        iconWidth: ICON_WIDTH,
+      });
+      const key = JSON.stringify(next);
+      setLayout((current) => (current && current.key === key ? current : { ...next, key }));
+    };
+    decide();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(decide);
+    observer.observe(node);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+
+  // A short legend with no groups (before / after): one row, side by side
+  if (groups.length === 1 && !groups[0][0] && all.length <= 3) {
     return (
-      <div className="grouped-legend is-flat">
-        <ul className="grouped-legend-items">
-          {all.map(entry)}
-          {net}
+      <div ref={ref} className="grouped-legend is-row">
+        <ul className="grouped-legend-row">
+          {all.map((item) => (
+            <li key={item.label} className="grouped-legend-item">
+              <Swatch item={item} />
+              <ItemLabel item={item} />
+            </li>
+          ))}
         </ul>
+        {netLabel && (
+          <p className="grouped-legend-net">
+            <span className="grouped-legend-line" aria-hidden="true" />
+            {netLabel}
+          </p>
+        )}
       </div>
     );
   }
+
+  const mode = layout?.mode ?? "stacked";
   return (
-    <div className="grouped-legend is-flow">
-      <ul className="grouped-legend-grid">
-        {groups.map(([heading, groupItems]) => [
-          heading && (
-            <li key={`heading-${heading}`} className="grouped-legend-tag" aria-hidden="true">
-              {heading}
-            </li>
-          ),
-          ...groupItems.map((item) => (heading ? { ...item, title: `${item.label} (${heading.toLowerCase()})` } : item)).map(entry),
-        ])}
-        {net}
-      </ul>
+    <div ref={ref} className={`grouped-legend is-${mode}`}>
+      <div className="grouped-legend-groups">
+        {groups.map(([heading, groupItems], index) => {
+          const laid = layout?.groups[index];
+          const columns = laid ? subColumns(groupItems, laid.columns) : [groupItems];
+          const width = laid && mode !== "stacked" ? `${laid.width}px` : undefined;
+          return (
+            <div key={heading ?? "items"} className="grouped-legend-group">
+              {heading && <p className="grouped-legend-heading">{heading}</p>}
+              <div className="grouped-legend-columns">
+                {columns.map((column, columnIndex) => (
+                  <ul
+                    key={columnIndex}
+                    className="grouped-legend-items"
+                    style={width ? { width } : undefined}
+                  >
+                    {column.map((item) => (
+                      <li key={item.label}>
+                        <Swatch item={item} />
+                        <ItemLabel item={item} />
+                      </li>
+                    ))}
+                    {/* In a narrow card the items flow and the net line
+                        joins the last row (CSS); elsewhere it sits below */}
+                    {netLabel &&
+                      index === groups.length - 1 &&
+                      columnIndex === columns.length - 1 && (
+                        <li className="grouped-legend-net-inline" aria-hidden="true">
+                          <span className="grouped-legend-line" />
+                          <span className="grouped-legend-label">{netLabel}</span>
+                        </li>
+                      )}
+                  </ul>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {netLabel && (
+        <p className="grouped-legend-net">
+          <span className="grouped-legend-line" aria-hidden="true" />
+          {netLabel}
+        </p>
+      )}
     </div>
   );
 }

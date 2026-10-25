@@ -4,6 +4,17 @@
  * checked to load the page it names on 25 October 2026.
  */
 export const SOURCES = {
+  obr_fiscal_risks: {
+    label: "OBR, Fiscal risks and sustainability – July 2026",
+    url: "https://obr.uk/frs/fiscal-risks-and-sustainability-july-2026/",
+  },
+  // The OBR forecast the page's projections follow. On Budget day, point
+  // this at the new Economic and fiscal outlook; the Methodology text
+  // names whatever this label says.
+  obr_efo_current: {
+    label: "OBR, Economic and fiscal outlook – March 2026",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+  },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",
     url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
@@ -48,6 +59,26 @@ export const SOURCES = {
     label: "HMRC, Rates and thresholds for employers 2026 to 2027",
     url: "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027",
   },
+  hmrc_income_tax_rates: {
+    label: "HMRC, Income Tax rates and allowances",
+    url: "https://www.gov.uk/government/publications/rates-and-allowances-income-tax/income-tax-rates-and-allowances-current-and-past",
+  },
+  hmrc_ni_rates: {
+    label: "HMRC, Rates and allowances: National Insurance contributions",
+    url: "https://www.gov.uk/government/publications/rates-and-allowances-national-insurance-contributions/rates-and-allowances-national-insurance-contributions",
+  },
+  student_loan_thresholds: {
+    label: "GOV.UK, Repaying your student loan: how much you repay",
+    url: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
+  },
+  policyengine_uk: {
+    label: "policyengine-uk",
+    url: "https://github.com/PolicyEngine/policyengine-uk",
+  },
+  constituency_method_note: {
+    label: "Method note for constituency figures",
+    url: "https://github.com/PolicyEngine/microcosm/issues/1131",
+  },
   pe_uk_2616: {
     label: "policyengine-uk #2616",
     url: "https://github.com/PolicyEngine/policyengine-uk/pull/2616",
@@ -76,9 +107,21 @@ export const EXTERNAL = { target: "_blank", rel: "noopener noreferrer" };
  * plain text until it does.
  */
 Object.assign(SOURCES, {
+  // The model, named in the intro
+  policyengine_uk_model: {
+    label: "PolicyEngine UK",
+    url: "https://policyengine.org/uk/model",
+  },
+  // Where the measures and their costings are read from, linked in the intro.
+  // Update on Budget day (runbook step): the Autumn Budget 2026 document and
+  // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
+  budget_documents: {
+    label: "HM Treasury",
+    url: "https://www.gov.uk/government/organisations/hm-treasury",
+  },
   // Published with the Budget on 28 October 2026; linked once it exists
   obr_budget_2026_costings: {
-    label: "the OBR's Autumn Budget 2026 costings (28 October 2026)",
+    label: "the OBR's Autumn Budget 2026 costings",
     url: null,
   },
   ons_ashe: {

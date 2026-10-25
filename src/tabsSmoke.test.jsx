@@ -164,7 +164,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["by_policy", "sweep"]]);
+        expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
           true,
         );
@@ -216,31 +216,44 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(personal).not.toBeVisible();
     held.shift()();
-    // The second stage follows while the view is hidden
-    await waitFor(() => expect(held).toHaveLength(1));
+    // The second stage (the sweep and the split by policy, asked for at
+    // once) follows while the view is hidden
+    await waitFor(() => expect(held).toHaveLength(2));
     held.shift()();
-    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2));
+    held.shift()();
+    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
     expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
     await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
-    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
+    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
 
-  it("shows the OBR comparison once: a pending line until the OBR's costings are in, never an empty expander", async () => {
+  it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
     window.history.replaceState({}, "", "/");
     render(<App />);
-    const pending = await screen.findByText(/^OBR comparison: available after the OBR publishes/, {}, { timeout: 5000 });
-    expect(pending).toBeInTheDocument();
+    await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
+    expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Compare with OBR estimates" })).toBeNull();
-    // Still once after the other sub-tab and back (both stay mounted)
-    fireEvent.click(screen.getByRole("tab", { name: "Young people" }));
-    fireEvent.click(screen.getByRole("tab", { name: "All households" }));
-    expect(screen.getAllByText(/^OBR comparison: available after/)).toHaveLength(1);
+  });
+
+  it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
+    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    // Every view opened so far stays mounted; Methodology is never opened
+    const text = document.body.textContent;
+    expect(text).not.toMatch(/pre-Budget/i);
+    expect(text).not.toMatch(/28 October/);
+    expect(text).not.toMatch(/candidate/i);
   });
 
   it("keeps a hidden view's progress inside it: nothing of it shows on another view", async () => {

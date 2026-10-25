@@ -51,4 +51,7 @@ export function percentAxis(values) {
 /** "OBR March 2026 (pre-Budget)" -> "OBR March 2026". */
 export const forecastName = (label) => String(label || "").replace(/\s*\((pre-Budget|Autumn Budget|Budget)\)\s*$/i, "");
 
+/** A forecast's name as a series label: "OBR March 2026 (pre-Budget)" -> "OBR, March 2026". */
+export const forecastSeriesLabel = (label) => forecastName(label).replace(/^OBR\s+/, "OBR, ");
+
 export const lowerFirst = (s) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);

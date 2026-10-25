@@ -128,6 +128,7 @@ code {
   --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
   --c-highlight: #285e61; /* the highlighted group, such as the age band */
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
+  --c-hover: #eef6f6; /* behind the hovered bar or row */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
   --c-obr-text: #6b7280;
   --c-net: #000000; /* the net line and its dots */
@@ -159,15 +160,15 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
-  /* The marginal tax rate's parts, stacked: taxes in teals, the allowance
-     taper darkest, benefit withdrawals in blues, the rest grey */
+  /* The marginal tax rate's parts, stacked: taxes and benefit withdrawals
+     in teals and greens, the student loan in orange, the rest grey */
   --c-mtr-income-tax: #5fb3a8;
+  --c-mtr-child-benefit: #4fd1c5;
   --c-mtr-allowance-taper: #285e61;
   --c-mtr-national-insurance: #a7e3da;
   --c-mtr-student-loan: #e8b66a;
-  --c-mtr-child-benefit: #7c9cbf;
-  --c-mtr-universal-credit: #3b6e8f;
-  --c-mtr-other-benefits: #9db7d5;
+  --c-mtr-universal-credit: #2c7a7b;
+  --c-mtr-other-benefits: #9ae6b4;
   --c-mtr-other: #d1d5db;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
@@ -319,14 +320,17 @@ body {
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
-  background: var(--page-bg);
+  /* A strip of its own: the page's main navigation */
+  background: var(--pe-surface);
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
 }
 
 .view-tabs {
   display: flex;
-  gap: 28px;
+  gap: 4px;
   height: var(--view-tabs-height);
-  border-bottom: 1px solid var(--card-border);
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
   overflow-y: hidden;
@@ -361,37 +365,98 @@ body {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   height: 100%;
-  padding: 0 2px;
+  padding: 0 16px;
   font-family: inherit;
-  font-size: var(--fs-body);
-  font-weight: 500;
+  font-size: 1rem;
+  /* One weight for every tab, so choosing one never moves the others */
+  font-weight: 600;
   white-space: nowrap;
   color: var(--pe-gray-600);
   background: transparent;
   border: none;
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.view-tab-icon {
+  display: inline-flex;
+  color: var(--pe-gray-500);
 }
 
 .view-tab:hover {
   color: var(--band-teal);
+  background: var(--pe-teal-50);
 }
 
-/* One weight for every tab, so choosing one never moves the others */
+.view-tab:hover .view-tab-icon,
+.view-tab[aria-selected="true"] .view-tab-icon {
+  color: var(--band-teal);
+}
+
 .view-tab[aria-selected="true"] {
   color: var(--band-teal);
+  background: var(--pe-teal-50);
 }
 
 /* The underline sits on the bar's rule */
 .view-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 8px;
+  right: 8px;
   bottom: 0;
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
+}
+
+/* On a phone all four views show at once, two by two, and the bar
+   scrolls with the page: only the band sticks */
+@media (max-width: 600px) {
+  :root {
+    --view-tabs-height: 0px;
+  }
+
+  .view-tabs-bar {
+    position: static;
+    padding-block: 8px;
+  }
+
+  .view-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    height: auto;
+    overflow: visible;
+    mask-image: none !important;
+  }
+
+  .view-tab {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+  }
+
+  .view-tab[aria-selected="true"] {
+    border-color: var(--band-teal);
+  }
+
+  .view-tab[aria-selected="true"]::after {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .view-tab {
+    gap: 6px;
+    padding: 0 6px;
+    font-size: 0.875rem;
+  }
 }
 
 /* One keyboard focus ring for every button and link on the page; the
@@ -435,14 +500,16 @@ body {
   padding: 0;
 }
 
-.method-card a {
+.method-card a,
+.method-callout a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
   text-underline-offset: 3px;
 }
 
-.method-card a:hover {
+.method-card a:hover,
+.method-callout a:hover {
   text-decoration-color: currentColor;
 }
 
@@ -515,11 +582,18 @@ body {
 }
 
 /* Standfirst: the full content width */
+/* 28px to the tab bar below (20px on a phone), with no banner between */
 .dashboard-intro {
   font-size: var(--fs-lead);
   color: var(--pe-gray-700);
   line-height: 1.6;
-  margin: 24px 0 16px;
+  margin: 24px 0 28px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-intro {
+    margin-bottom: 20px;
+  }
 }
 
 .dashboard-intro a {
@@ -614,6 +688,13 @@ body {
   font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--pe-gray-500);
+}
+
+/* A source named in a section's intro reads as a link */
+.section-heading p a {
+  color: var(--c-gain-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* Sections */
@@ -1209,7 +1290,7 @@ body {
   .title-row .policy-selector-toggle {
     width: auto;
     min-width: 0;
-    height: 34px;
+    height: 40px;
     gap: 6px;
     padding: 0 12px 0 5px;
   }
@@ -1249,9 +1330,6 @@ body {
     font-size: var(--fs-body-lg);
   }
 
-  .view-tabs {
-    gap: 22px;
-  }
 
   .preset-buttons {
     flex-direction: column;
@@ -1270,6 +1348,36 @@ body {
     width: 100%;
   }
 }
+
+/* A phone: the title has the first row to itself, never cut off, and the
+   two pills share the second; a smaller title on the narrowest screens */
+@media (max-width: 480px) {
+  :root {
+    --title-row-height: 92px;
+  }
+
+  .title-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "title title"
+      "year policy";
+    row-gap: 6px;
+  }
+
+  .band-policy {
+    justify-self: start;
+  }
+
+  .title-row h1 {
+    font-size: var(--fs-body-lg);
+  }
+
+  .app[data-band="compact"] .title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title policy";
+  }
+}
+
 
 /* The page fills the window without overshooting it: the shell's main
    grows to the window, the app grows inside it, and the replication line
@@ -1400,6 +1508,9 @@ body {
 }
 
 .policy-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 10px;
   font-size: var(--fs-micro);
   font-weight: 600;
@@ -1469,7 +1580,22 @@ body {
 }
 
 .policy-chip dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--pe-gray-500);
+}
+
+.policy-fact-icon,
+.policy-group-icon {
+  display: inline-flex;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-details summary .policy-fact-icon {
+  margin-right: 4px;
+  vertical-align: -2px;
+  color: currentColor;
 }
 
 .policy-chip dd {
@@ -1516,26 +1642,6 @@ body {
   }
 }
 
-/* The candidate measures banner under the intro: the Note's line, in a
-   calm tinted box */
-.candidate-banner {
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-100);
-  border-radius: var(--pe-radius-md);
-}
-
-.candidate-banner .note {
-  margin: 0;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-800);
-}
-
-.candidate-banner .note svg {
-  color: var(--pe-teal-700);
-}
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {
@@ -1591,4 +1697,43 @@ body {
 #recharts_measurement_span {
   visibility: hidden !important;
   user-select: none;
+}
+
+/* Scroll reveal (useScrollReveal): cards below the fold fade and rise in
+   once, opacity and transform only, so layout and chart sizes never move */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 420ms cubic-bezier(0.33, 1, 0.68, 1) var(--reveal-delay, 0ms),
+    transform 420ms cubic-bezier(0.33, 1, 0.68, 1) var(--reveal-delay, 0ms);
+}
+
+.reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Example households: one chooser above the pair of charts */
+.example-household-picker {
+  margin: 0 0 16px;
+}
+
+.example-household-picker .household-picker {
+  margin: 0;
 }

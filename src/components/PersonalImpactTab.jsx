@@ -5,13 +5,14 @@ import "./PersonalImpactTab.css";
  * Household impact: one household's answers, then its net income in the
  * year chosen in the title band before and after the selected policies.
  */
-function PersonalImpactTab({ selectedPolicies, policies, year }) {
+function PersonalImpactTab({ selectedPolicies, policies, year, active = true }) {
   return (
     <div className="personal-impact-tab">
       <HouseholdCalculator
         selectedPolicies={selectedPolicies}
         policies={policies}
         year={year}
+        active={active}
       />
     </div>
   );

@@ -15,12 +15,12 @@ from typing import Literal, Optional
 
 import anyio
 import numpy as np
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from uk_budget_data import household_impact
+from uk_budget_data import definitions, household_impact
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.personal_impact import (
     HouseholdInput,
@@ -180,7 +180,10 @@ def household_request_limit() -> int:
     memory stay bounded by the slots. Without workers every run is in this
     process, so one request at a time.
     """
-    if household_workers() <= 1:
+    # On Modal (HOUSEHOLD_RUNNER=modal) the runs happen in their own
+    # containers, not in this process, so requests can overlap.
+    modal_runner = os.environ.get("HOUSEHOLD_RUNNER") == "modal"
+    if household_workers() <= 1 and not modal_runner:
         return 1
     try:
         return max(1, int(os.environ.get("HOUSEHOLD_CONCURRENT_REQUESTS", 4)))
@@ -508,19 +511,45 @@ def _cached_household_impact(request_json: str) -> dict:
     )
 
 
-def _household_impact(data: HouseholdImpactRequest) -> dict:
+def _household_impact(
+    data: HouseholdImpactRequest, requested: Optional[dict] = None
+) -> dict:
     # Canonical JSON: the same request in another key order is one entry.
+    # The definitions are not part of it: the answer doesn't depend on
+    # them.
     key = json.dumps(data.model_dump(mode="json"), sort_keys=True)
-    return copy.deepcopy(_cached_household_impact(key))
+    # Before the calculation: with one worker its runs share this process,
+    # and a warning from a bound module would leave it unbindable
+    # (uk_budget_data.definitions).
+    bound = definitions.definitions_for(
+        requested or {}, household_impact.measure_ids()
+    )
+    results = copy.deepcopy(_cached_household_impact(key))
+    results["definitions"] = bound
+    return results
 
 
 @app.post("/api/household-impact")
 async def calculate_household_impact(
-    data: HouseholdImpactRequest, response: Response
+    data: HouseholdImpactRequest,
+    response: Response,
+    definition: list[str] = Query(
+        default=[],
+        description=(
+            "<measure id>:<commit>, once per measure: the commit its "
+            "approved receipt was made at. The answer's definitions give "
+            "each one's baseline and reform identities recomputed at that "
+            "commit from this build's code, to compare with the receipt "
+            "(uk_budget_data.definitions). A query parameter, so the body "
+            "a build without them refuses is unchanged."
+        ),
+    ),
 ):
     """One household's net income in one year before and after the
     selected measures: the headline, each measure's own effect and the
-    interaction residual, the programmes, and the earnings sweep.
+    interaction residual, the programmes, and the earnings sweep, with the
+    definitions named in ``definition`` (always present; empty when none
+    are named).
 
     Runs in a worker thread, so ``/api/health`` keeps answering, through
     its own limiter (``HOUSEHOLD_REQUESTS``): several requests at once
@@ -531,9 +560,16 @@ async def calculate_household_impact(
     are refused with a 422 naming the field.
     """
     try:
+        requested = definitions.parse_requested(definition)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
         received = time.perf_counter()
         results, calculating = await anyio.to_thread.run_sync(
-            timed, _household_impact, data, limiter=HOUSEHOLD_REQUESTS
+            timed,
+            functools.partial(_household_impact, requested=requested),
+            data,
+            limiter=HOUSEHOLD_REQUESTS,
         )
         response.headers["Server-Timing"] = server_timing(
             calculating,

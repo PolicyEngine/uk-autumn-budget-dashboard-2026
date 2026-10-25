@@ -20,8 +20,8 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
-from uk_budget_data.budget_measures import (
-    road_fuel_vat_cut,
+from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.models import DataConfig

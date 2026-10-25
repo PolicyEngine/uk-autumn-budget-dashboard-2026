@@ -1,11 +1,11 @@
-// Growth incidence: real change in each income decile's median from 2027-28
-// (headlineStartYear) to the headline end year, from the real medians in
-// income_by_decile.<basis>.by_year.
-// The By decile view of the Growth across the distribution card. Ported
-// from PolicyEngine/uk-living-standards-outlook.
+// Growth incidence: real change in each income quintile's own median
+// between the two chosen years, from the real medians in
+// income_by_decile.<basis>.quintile_by_year (the file keeps the decile
+// series too). The view of the Growth across the distribution card.
 
 import { useState } from "react";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
 import { LsBarChart } from "../LsCharts";
 import { PALETTE, rangeAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -22,23 +22,20 @@ import { CSV_SOURCES, PeSource } from "../sources";
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 
-// Deciles or quintiles: each group's own median, from the outlook file
-const GROUPINGS = {
-  decile: { key: "by_year", groups: "deciles", noun: "decile", tenth: "tenth", label: "Income decile (1 = lowest)" },
-  quintile: { key: "quintile_by_year", groups: "quintiles", noun: "quintile", tenth: "fifth", label: "Income quintile (1 = lowest)" },
-};
+// Quintiles: each group's own median, from the outlook file
+const g = { key: "quintile_by_year", groups: "quintiles", noun: "quintile", fifth: "fifth", label: "Income quintile (1 = lowest)" };
 
 /**
- * The By decile or By quintile view: card parts for the Growth across the
- * distribution card. A file without quintiles gives no quintile view.
+ * The quintile view: card parts for the Growth across the distribution
+ * card. A file without quintiles gives no view.
  */
-export default function useDecileView(data, grouping = "decile") {
+export default function useQuintileGrowthView(data, range = null, setRange = null) {
   const dec = data.income_by_decile;
-  const g = GROUPINGS[grouping];
   const [basis, setBasis] = useState("bhc");
   const byYear = dec[basis]?.[g.key] || [];
-  const first = byYear.find((r) => r.year === headlineStartYear(data)) || byYear[0];
-  const end = byYear.find((r) => r.year === headlineYear(data)) || byYear[byYear.length - 1];
+  const [fromYear, toYear] = range ?? [headlineStartYear(data), headlineYear(data)];
+  const first = byYear.find((r) => r.year === fromYear) || byYear[0];
+  const end = byYear.find((r) => r.year === toYear) || byYear[byYear.length - 1];
 
   if (!first || !end || !dec[g.groups]) return null;
   const rows = dec[g.groups].map((d, i) => ({ decile: d, growth: (end.real_median[i] / first.real_median[i] - 1) * 100 }));
@@ -54,6 +51,10 @@ export default function useDecileView(data, grouping = "decile") {
   ];
 
   const controls = (
+    <>
+    {setRange && (
+      <YearRangeSelect years={byYear.map((r) => r.year)} from={first.year} to={end.year} onChange={setRange} />
+    )}
     <PillSelect
       variant="light"
       prefix="Housing costs"
@@ -62,6 +63,7 @@ export default function useDecileView(data, grouping = "decile") {
       onChange={setBasis}
       options={Object.keys(dec.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
     />
+    </>
   );
 
   return {
@@ -69,11 +71,11 @@ export default function useDecileView(data, grouping = "decile") {
     summary: (
       <>
         From {fyDash(first.year)} to {fyDash(end.year)}, real median income ({basisShort}) in the lowest-income
-        {" "}{g.tenth} <strong>{say(bottom)}</strong>; in the highest-income {g.tenth} it <strong>{say(top)}</strong>.
+        {" "}{g.fifth} <strong>{say(bottom)}</strong>; in the highest-income {g.fifth} it <strong>{say(top)}</strong>.
       </>
     ),
-    about: `${grouping === "decile" ? dec.statistic : dec.statistic.replace("decile", "quintile")}. Groups are re-ranked each year, so this compares positions in the distribution, not the same people.`,
-    notes: [...(grouping === "decile" ? (dec.notes || []).filter((n) => /lowest tenth/i.test(n)) : []), basis === "ahc" && data.meta.cpi_ahc_note],
+    about: `${dec.statistic.replace("decile", "quintile")}. Groups are re-ranked each year, so this compares positions in the distribution, not the same people.`,
+    notes: [basis === "ahc" && data.meta.cpi_ahc_note],
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
     download: {

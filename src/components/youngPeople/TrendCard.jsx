@@ -30,6 +30,7 @@ import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 import { AGE_GROUPS, YOUNG_BAND } from "../../utils/ageImpact";
 import { GROUP_STYLES, changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
+import TitleIcon from "../TitleIcon";
 
 /** One line per age group, 16 to 24 drawn thicker, all ages dashed. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -39,13 +40,13 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION =
-  "Average change per person in each year, by age group (£ a year). 16 to 24 is thicker; the shaded year is the one selected.";
+  "Average change per person each year, by age group; 16 to 24 is thicker, the selected year shaded.";
 
 const UNIT = "Change per person (£ a year)";
 // Room beside the ticks for the rotated axis title
 const TITLE_ROOM = 20;
 // The selected year's shading, as the 16 to 24 band in "Average change by age"
-const SELECTED_FILL = "rgba(49, 151, 149, 0.10)";
+const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 /**
  * The selected year's shading, and each unpublished year's grey band with
@@ -166,7 +167,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     <div className="young-people-trend">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="trend" />
+            <span className="title-text">{title}</span>
+          </h3>
           <p className="chart-description">{TREND_DESCRIPTION}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
@@ -226,7 +230,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             {[...SERIES.filter((series) => series.key !== YOUNG_BAND), ...SERIES.filter((series) => series.key === YOUNG_BAND)].map((series) => (
               <Line
                 key={series.key}
-                type="linear"
+                type="monotone"
                 dataKey={series.key}
                 name={series.label}
                 stroke={series.color}

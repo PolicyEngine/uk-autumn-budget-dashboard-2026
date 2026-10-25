@@ -12,6 +12,7 @@ import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } fr
 import { NoEffectList } from "../personal/PolicyBars";
 import { getPolicyColor } from "../../utils/policyConfig";
 import "./MeasureDumbbell.css";
+import TitleIcon from "../TitleIcon";
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -121,7 +122,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
 
 export const measuresDescription = (band) => {
   const label = groupLabel(band).replace(/^Aged /, "");
-  return `Each selected policy's own average change in household net income per person, in pounds a year, for people aged ${label} and for people of all ages. Largest effect on the chosen age group first.`;
+  return `Each policy's average change per person: ${label} vs all ages.`;
 };
 
 const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));
@@ -191,7 +192,10 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={title} />
+            <TitleIcon name="hbars" />
+            <span className="title-text">
+              <NoBreakYear text={title} />
+            </span>
           </h3>
           <p className="chart-description">{description}</p>
         </div>

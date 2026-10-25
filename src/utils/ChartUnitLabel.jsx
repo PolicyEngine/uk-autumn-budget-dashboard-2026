@@ -26,9 +26,27 @@ export function yTitleFontSize(text, length) {
  * chart's SVG, so the SVG and PNG downloads carry it.
  * Use with Recharts' <Customized component={<ChartUnitLabel text="…" />} />.
  */
-function ChartUnitLabel({ text, yAxisMap }) {
+function ChartUnitLabel({ text, yAxisMap, horizontal = false }) {
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!yAxis || !text) return null;
+  // A long unit ("£ a year, 2027-28 prices") reads better as a short note
+  // above the axis than squeezed along it; the chart keeps room for it in
+  // its top margin.
+  if (horizontal) {
+    return (
+      <text
+        className="chart-unit-label"
+        x={yAxis.x}
+        y={yAxis.y - 12}
+        fontSize={FONT_SIZE}
+        fontWeight={500}
+        fill={CHART_COLOURS.axisTitle}
+        textAnchor="start"
+      >
+        {text}
+      </text>
+    );
+  }
   const fontSize = yTitleFontSize(text, yAxis.height);
   // Rotated −90°, the glyphs rise to the left of the baseline: a baseline
   // at this x keeps the text inside the gutter.

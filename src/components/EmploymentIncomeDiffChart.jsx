@@ -41,6 +41,7 @@ import {
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -62,6 +63,8 @@ function EmploymentIncomeDiffChart({
   defaultHousehold = EXAMPLE_HOUSEHOLDS[1].id,
   household: controlledHousehold,
   onHouseholdChange,
+  // Off where one picker above the pair drives both charts
+  showPicker = true,
 }) {
   const [ownHousehold, setOwnHousehold] = useState(defaultHousehold);
   // A parent can control the choice so the two household cards stay in step
@@ -103,7 +106,9 @@ function EmploymentIncomeDiffChart({
   };
 
   const { domain: xDomain, ticks: xTicks } = sweepAxis(household.x_max);
-  const picker = <HouseholdPicker value={household.id} onChange={setHouseholdId} />;
+  const picker = showPicker ? (
+    <HouseholdPicker value={household.id} onChange={setHouseholdId} />
+  ) : null;
 
   if (loading) {
     return (
@@ -111,7 +116,10 @@ function EmploymentIncomeDiffChart({
         <div className="chart-header">
           <div>
             <h3>
-              <NoBreakYear text={chartTitle} />
+              <TitleIcon name="trend" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
             </h3>
           </div>
         </div>
@@ -139,7 +147,10 @@ function EmploymentIncomeDiffChart({
       <div className="chart-header">
         <div>
           <h3>
-            <NoBreakYear text={chartTitle} />
+            <TitleIcon name="trend" />
+            <span className="title-text">
+              <NoBreakYear text={chartTitle} />
+            </span>
           </h3>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />

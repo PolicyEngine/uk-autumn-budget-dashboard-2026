@@ -1,7 +1,8 @@
-/* "Young people (16 to 24)": the chart cards in the page's charts grid,
-   two pairs; the first pair has a choice box above each plot. */
+/* Young people: the chart cards in the page's charts grid, two pairs;
+   the first pair has a choice box above each plot. Links to
+   #young-people land on the first section's heading. */
 
-.young-people-heading {
+#young-people {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
@@ -20,3 +21,11 @@
   margin: 12px 0 24px;
 }
 
+
+/* A muted line under a chart, about how to read it */
+.chart-footnote {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}

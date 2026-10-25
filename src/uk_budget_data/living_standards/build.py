@@ -30,6 +30,7 @@ from uk_budget_data.living_standards.engine import (
     headline_end_year,
     headline_end_year_note,
 )
+from uk_budget_data.living_standards.projections import GROUP_POVERTY_MEASURES
 from uk_budget_data.living_standards.uc_health_element import (
     EXTENSION_YEARS,
     needs_uc_health_element_extension,
@@ -468,22 +469,23 @@ def build_outlook(
             },
         ),
     }
-    group_years = [y for y in years if "poverty_by_group" in P(y)]
+    poverty_years = [y for y in years if "poverty_by_group" in P(y)]
     suppressed = []
     breakdowns = {}
     for name, (label, glabels) in labels.items():
         cells = {}
         for g in glabels:
             cells[g] = {}
-            for y in group_years:
+            for y in poverty_years:
                 c = P(y)["poverty_by_group"][name][g]
                 small = c["unweighted_households"] < MIN_HOUSEHOLDS
                 if small:
                     suppressed.append(f"{name}/{g}/{fy(y)}")
                 cells[g][fy(y)] = {
-                    "relative_ahc": (
-                        None if small else round(c["relative_ahc"], 5)
-                    ),
+                    **{
+                        m: None if small else round(c[m], 5)
+                        for m in GROUP_POVERTY_MEASURES
+                    },
                     "median_equivalised_income_bhc": (
                         None
                         if small
@@ -508,9 +510,12 @@ def build_outlook(
                 }
         breakdowns[name] = {"label": label, "groups": glabels, "cells": cells}
     poverty_by_group = {
-        "years": [fy(y) for y in group_years],
+        "years": [fy(y) for y in poverty_years],
         "measures": {
             "relative_ahc": "Relative poverty (AHC)",
+            "absolute_ahc": "Absolute poverty (AHC)",
+            "relative_bhc": "Relative poverty (BHC)",
+            "absolute_bhc": "Absolute poverty (BHC)",
             "median_equivalised_income_bhc": f"Median equivalised income (BHC), {EQ_UNIT}",
         },
         "min_unweighted_households": MIN_HOUSEHOLDS,
@@ -758,7 +763,7 @@ CAVEATS = [
 def notes(validation: dict) -> list[str]:
     """meta.notes: one plain sentence each, at most 160 characters."""
     out = [
-        "Model figures are unvalidated demo output from the Microcosm dataset.",
+        "Model projections; not yet validated against outturn.",
         "Income outturn is HBAI, published in real terms; BHC cash values are recovered with OBR CPI, and AHC outturn is shown in real terms only.",
         "Poverty and inequality outturn is the HBAI admin-linked series, which starts in 2021-22.",
         (
@@ -769,7 +774,7 @@ def notes(validation: dict) -> list[str]:
     ]
     if not POST_PUBLISHED:
         out.append(
-            "The Autumn Budget 2026 OBR forecast is due on 28 October 2026; until then the post-Budget series repeat the pre-Budget ones."
+            "Until a later OBR forecast is loaded, the post series repeat the March 2026 forecast."
         )
     return out
 

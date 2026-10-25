@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import TitleIcon from "./TitleIcon";
+import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
@@ -20,6 +21,7 @@ import useCollapse from "../hooks/useCollapse";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
 // The form's answers, each at a typical value until changed. Sources:
@@ -66,18 +68,21 @@ export const WIZARD_DEFAULTS = {
 // closed at first, in groups of their own. `children` stands for each
 // child's answers (their age and, from 16, their education).
 export const FORM_SECTIONS = [
-  { title: "You", fields: ["current_age", "current_salary", "region"] },
+  { title: "You", icon: "user", fields: ["current_age", "current_salary", "region"] },
   {
     title: "Family and home",
+    icon: "house",
     fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
   },
   {
     title: "More details",
+    icon: "sliders",
     collapsible: true,
     groups: [
-      { title: "Other income", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
+      { title: "Other income", icon: "coins", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
       {
         title: "Pension and student loan",
+        icon: "piggy",
         fields: [
           "private_pension_per_year",
           "partner_private_pension_per_year",
@@ -89,9 +94,10 @@ export const FORM_SECTIONS = [
       },
       {
         title: "Spending",
+        icon: "cart",
         fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
       },
-      { title: "Council tax and benefits", fields: ["council_tax_band", "claims_universal_credit"] },
+      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
     ],
   },
 ];
@@ -326,6 +332,7 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
@@ -376,19 +383,53 @@ function HouseholdCalculator({
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
   });
-  const running =
-    submitted !== null && (householdResult.status === "loading" || householdResult.detailStatus === "loading");
   // The answers, year or policies differ from those of the result shown
   const changed =
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+  // Busy while the headline is calculated, and while the slower parts are
+  // for these same answers; changed answers can be sent once the headline
+  // is back, without waiting for the split by policy and the sweep
+  const running =
+    submitted !== null &&
+    (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
 
+  // Once a household has been calculated, the title bar's year or policies
+  // rerun it, with the same answers, without a second Calculate. Not while
+  // the answers are being edited (the reader presses Calculate then), and
+  // only while this view is shown: a change made on another view (Play
+  // through years runs five) is caught up once, on coming back, rather than
+  // calculated for every year passed through.
+  const answersEdited =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year: 0, policies: [] })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: 0, policies: [] }));
+  useEffect(() => {
+    if (!active || submitted === null || answersEdited || householdPolicies.length === 0) return;
+    const samePolicies = submitted.policies.join(",") === selectionKey;
+    if (submitted.year === year && samePolicies) return;
+    setSubmitted({ inputs: submitted.inputs, year, policies: householdPolicies, at: Date.now() });
+    // Only the bar's year and policies (and coming back to the view) rerun it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, selectionKey, active]);
+
+  const resultsRef = useRef(null);
   const calculate = (event) => {
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
     setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now() });
+    // On a phone the results start screens below the button: bring the
+    // waiting message into view, so pressing Calculate visibly does something
+    requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      const { top } = target.getBoundingClientRect();
+      if (top > window.innerHeight * 0.6) {
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      }
+    });
   };
 
   // Whether a field applies to the answers so far (rent only when renting)
@@ -517,6 +558,7 @@ function HouseholdCalculator({
       return (
         <section key={section.title} className="household-group" aria-labelledby={labelId}>
           <h3 className="household-group-label" id={labelId}>
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
             {section.title}
           </h3>
           {renderGrid(section.fields)}
@@ -537,6 +579,7 @@ function HouseholdCalculator({
             aria-controls={panelId}
             onClick={() => setMoreOpen((value) => !value)}
           >
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
             {section.title}{" "}
             <span className="household-more-count">{shown} questions</span>
             <svg
@@ -570,6 +613,7 @@ function HouseholdCalculator({
               return (
                 <div key={group.title} className="household-subgroup" role="group" aria-labelledby={groupId}>
                   <h4 className="household-subgroup-label" id={groupId}>
+                    <TitleIcon name={group.icon} bare size={13} className="household-label-icon" />
                     {group.title}
                   </h4>
                   {renderGrid(group.fields)}
@@ -592,7 +636,10 @@ function HouseholdCalculator({
         <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
             <div className="household-form-title">
-              <h2>Your household</h2>
+              <h2>
+                <TitleIcon name="house" />
+                Your household
+              </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
             <div className="household-header-actions">
@@ -631,7 +678,7 @@ function HouseholdCalculator({
           {FORM_SECTIONS.map(renderSection)}
         </form>
 
-        <div className="household-results" role="region" aria-label="Results">
+        <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           <SingleYearHeadline
             result={householdResult}
             year={submitted?.year ?? year}

@@ -2,85 +2,74 @@ import { CHART_COLOURS } from "../../utils/chartTheme";
 
 /**
  * The marginal tax rate's parts, in the API's stacking order: what each
- * takes of an extra pound of salary, its colour and a one-line note for
- * the legend's "i".
+ * takes of an extra pound of salary, its colour, and for the less familiar
+ * ones a one-line note behind an "i" in the legend.
  */
 export const RATE_PARTS = [
+  { name: "income_tax", label: "Income tax", color: CHART_COLOURS.mtrIncomeTax },
   {
-    name: "income_tax",
-    label: "Income tax",
-    color: CHART_COLOURS.mtrIncomeTax,
-    about: "Income tax on each extra pound, at the rate of the band it falls in.",
+    name: "child_benefit_charge",
+    label: "Child Benefit clawback",
+    color: CHART_COLOURS.mtrChildBenefit,
+    info: "The High Income Child Benefit Charge takes back 1% of Child Benefit for every £200 of income above £60,000, all of it by £80,000.",
   },
   {
     name: "personal_allowance_taper",
-    label: "Personal allowance taper",
+    label: "PA taper",
     color: CHART_COLOURS.mtrAllowanceTaper,
-    about:
-      "Above the taper threshold the personal allowance falls £1 for every £2 of income, so each extra pound also makes 50p more taxable.",
+    info: "The personal allowance falls by £1 for every £2 of income above £100,000, until it is gone at £125,140: each extra pound also makes 50p more taxable.",
   },
-  {
-    name: "national_insurance",
-    label: "National Insurance",
-    color: CHART_COLOURS.mtrNationalInsurance,
-    about: "Employee National Insurance on each extra pound of salary.",
-  },
-  {
-    name: "student_loan",
-    label: "Student loan",
-    color: CHART_COLOURS.mtrStudentLoan,
-    about: "Student loan repayments on earnings above your plan's threshold.",
-  },
-  {
-    name: "child_benefit_charge",
-    label: "Child Benefit charge",
-    color: CHART_COLOURS.mtrChildBenefit,
-    about: "The High Income Child Benefit Charge, which takes back Child Benefit as income rises.",
-  },
-  {
-    name: "universal_credit",
-    label: "Universal Credit taper",
-    color: CHART_COLOURS.mtrUniversalCredit,
-    about: "Universal Credit withdrawn as earnings rise, after tax and National Insurance.",
-  },
-  {
-    name: "other_benefits",
-    label: "Other benefits",
-    color: CHART_COLOURS.mtrOtherBenefits,
-    about: "Other benefits withdrawn as earnings rise, such as Housing Benefit or Pension Credit.",
-  },
-  {
-    name: "other",
-    label: "Other",
-    color: CHART_COLOURS.mtrOther,
-    about: "The rest of the rate, such as pension contributions.",
-  },
+  { name: "national_insurance", label: "National Insurance", color: CHART_COLOURS.mtrNationalInsurance },
+  { name: "student_loan", label: "Student loan", color: CHART_COLOURS.mtrStudentLoan },
+  { name: "universal_credit", label: "UC taper", color: CHART_COLOURS.mtrUniversalCredit },
+  { name: "other_benefits", label: "Other benefits", color: CHART_COLOURS.mtrOtherBenefits },
+  { name: "other", label: "Other", color: CHART_COLOURS.mtrOther },
 ];
 
 // A part smaller than this on every step is left off the chart and legend
-const NEGLIGIBLE = 0.0005;
+const NEGLIGIBLE = 0.005;
 
 /** The parts the steps actually use, in stacking order. */
 export function partsInUse(steps) {
-  return RATE_PARTS.filter((part) =>
-    steps.some((step) => Math.abs(step[part.name] ?? 0) >= NEGLIGIBLE),
-  );
+  return RATE_PARTS.filter((part) => steps.some((step) => Math.abs(step[part.name] ?? 0) >= NEGLIGIBLE));
 }
+
+/** The stacked key for a part: its drawn (never negative) value. */
+export const drawnKey = (name) => `${name}Drawn`;
 
 /**
  * The breakdown chart's rows: one per sweep step, at its lower salary, with
- * each part after the policies and both totals; the last step repeated at
- * the sweep's end so it is drawn to there.
+ * each part after the policies, both totals, and each part as drawn. A
+ * part can be negative (a benefit that rises with pay); it is drawn at
+ * zero and "other" takes up the difference, so the stack still reaches
+ * the total. The last step is repeated at the sweep's end so it is drawn
+ * to there.
  */
 export function breakdownRows(rates, parts) {
   if (!parts) return [];
-  const rows = rates.map((rate, i) => ({
-    income: rate.income,
-    to: rate.to,
-    ...parts.after[i],
-    before: rate.before,
-    after: rate.after,
-  }));
+  const named = RATE_PARTS.filter((part) => part.name !== "other").map((part) => part.name);
+  const rows = rates.map((rate, i) => {
+    const step = parts.after[i] ?? {};
+    const drawn = Object.fromEntries(named.map((name) => [drawnKey(name), Math.max(0, step[name] ?? 0)]));
+    const stacked = Object.values(drawn).reduce((sum, value) => sum + value, 0);
+    drawn[drawnKey("other")] = Math.max(0, rate.after - stacked);
+    return { income: rate.income, to: rate.to, ...step, ...drawn, before: rate.before, after: rate.after };
+  });
   if (rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });
   return rows;
+}
+
+/**
+ * Your rate's parts as words, largest first, leaving out any under half a
+ * point: "income tax 20%, National Insurance 8%".
+ */
+export function describeParts(own) {
+  if (!own) return "";
+  return RATE_PARTS.filter((part) => (own[part.name] ?? 0) >= NEGLIGIBLE)
+    .sort((a, b) => own[b.name] - own[a.name])
+    .map((part) => {
+      const label = part.name === "income_tax" ? "income tax" : part.label;
+      return `${label} ${Math.round(own[part.name] * 100)}%`;
+    })
+    .join(", ");
 }

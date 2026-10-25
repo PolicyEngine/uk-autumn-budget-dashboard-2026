@@ -498,6 +498,8 @@
 }
 
 .household-form-title h2 {
+  display: flex;
+  align-items: center;
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
@@ -609,7 +611,7 @@
 .example-menu-title {
   margin: 0;
   padding: 8px 10px 4px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -746,7 +748,7 @@
 .household-group-label,
 .household-subgroup-label {
   margin: 0 0 14px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -814,7 +816,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0 0 6px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1024,6 +1026,23 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+/* A 40px tap target around the small circle on a touch screen */
+@media (pointer: coarse) {
+  .info-icon {
+    position: relative;
+  }
+
+  .info-icon::before {
+    content: "";
+    position: absolute;
+    inset: -13px;
+  }
+
+  .household-field .stepper-button {
+    width: 40px;
+  }
+}
+
 .info-icon:hover,
 .info-icon:focus-visible {
   color: var(--pe-surface);
@@ -1194,4 +1213,24 @@
   .calculate-spinner {
     animation-duration: 2.4s;
   }
+}
+
+/* Scrolled to on Calculate: clear of the sticky title band and tabs */
+.household-results {
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+}
+
+/* Section and group labels: a small muted icon before the text */
+.household-group-label,
+.household-subgroup-label,
+.household-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.household-label-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--pe-gray-500);
 }

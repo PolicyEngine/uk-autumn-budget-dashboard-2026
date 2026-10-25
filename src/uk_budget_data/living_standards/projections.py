@@ -198,6 +198,15 @@ def tenure_groups(tenure):
     return np.array([TENURE[t] for t in tenure], dtype=object)
 
 
+# The poverty measures given for each group, as "Poverty over time" offers
+GROUP_POVERTY_MEASURES = (
+    "relative_ahc",
+    "absolute_ahc",
+    "relative_bhc",
+    "absolute_bhc",
+)
+
+
 def poverty_by_group(a):
     w = a["weight"]
     breakdowns = {
@@ -214,7 +223,7 @@ def poverty_by_group(a):
         for g in sorted(set(labels)):
             mask = labels == g
             cells[g] = {
-                "relative_ahc": rate(a["relative_ahc"], w, mask),
+                **{m: rate(a[m], w, mask) for m in GROUP_POVERTY_MEASURES},
                 "median_equivalised_income_bhc": wmedian(
                     a["eq_bhc"][mask], w[mask]
                 ),
@@ -297,9 +306,10 @@ def baseline_year(sim, year, snapshot_years=()):
     return res
 
 
-def group_years(policyengine_uk: str) -> tuple[int, int]:
-    """poverty_by_group snapshot years: the base year and the end year."""
-    return (BASE_YEAR, headline_end_year(policyengine_uk))
+def group_years(policyengine_uk: str) -> tuple[int, ...]:
+    """poverty_by_group snapshot years: every year from the base year to the
+    end year, so the page can compare any two of them."""
+    return tuple(range(BASE_YEAR, headline_end_year(policyengine_uk) + 1))
 
 
 def run_projections(log=print) -> dict:

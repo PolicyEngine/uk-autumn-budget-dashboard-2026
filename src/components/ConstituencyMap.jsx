@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
-import ViewSwitch, { ListIcon, MapIcon } from "./ViewSwitch";
+import PillSelect from "./PillSelect";
 import ConstituencyRankings, { TABLE_SIZE } from "./ConstituencyRankings";
 import {
   APPROXIMATE_MARK,
@@ -64,6 +64,7 @@ import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
+import TitleIcon from "./TitleIcon";
 
 /**
  * A hovered seat's tooltip rows from describeSeat's lines: the figure under
@@ -109,8 +110,8 @@ const CHART_TITLE = "Constituency-level impacts";
 const PANELS = ["map", "rankings"];
 const PANEL_PARAM = "map";
 const PANEL_OPTIONS = [
-  { value: "map", label: "Map", icon: <MapIcon /> },
-  { value: "rankings", label: "Rankings", icon: <ListIcon /> },
+  { value: "map", label: "Map" },
+  { value: "rankings", label: "Rankings" },
 ];
 
 // Excel reads a CSV as UTF-8 only with a byte-order mark ("Ynys Môn").
@@ -753,16 +754,18 @@ export default function ConstituencyMap({
         <div className="chart-header">
           <div>
             <h3>
-              {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
+              <TitleIcon name="map" />
+              <span className="title-text">
+                {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
+              </span>
             </h3>
             <p className="chart-description">
               {notRouted ? (
-                "The average change in household net income in each constituency."
+                "Average change in household net income by constituency."
               ) : onMap ? (
                 <>
-                  The average change in household net income in each
-                  constituency. Each one is coloured by the size of its change
-                  when its 90% interval is narrow enough to tell.
+                  Average change in household net income by constituency.
+                  Uncoloured where the estimate is too uncertain.
                 </>
               ) : (
                 <>
@@ -793,11 +796,13 @@ export default function ConstituencyMap({
           then the logo. */}
       <div className="chart-controls">
         <div className="map-top-bar">
-          <ViewSwitch
-            label="Show constituencies as"
-            options={PANEL_OPTIONS}
+          <PillSelect
+            variant="light"
+            name="Show constituencies as"
+            prefix="Show"
             value={panel}
             onChange={setPanel}
+            options={PANEL_OPTIONS}
           />
           {view.kind === "rows" &&
             (onMap ? (
@@ -810,6 +815,54 @@ export default function ConstituencyMap({
                 prefix="Rank by"
               />
             ))}
+          {/* The map view's search, on the same line as the view switch */}
+          {onMap && view.kind !== "loading" && (
+            <div className="map-search-section">
+              <div className="search-container">
+                {view.kind === "rows" ? (
+                  <input
+                    key="search"
+                    id="constituency-search"
+                    type="search"
+                    aria-label="Search constituency"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search or select a constituency"
+                    className="constituency-search"
+                    autoComplete="off"
+                  />
+                ) : (
+                  <input
+                    key="search-disabled"
+                    id="constituency-search"
+                    type="search"
+                    aria-label="Search constituency"
+                    placeholder="Search or select a constituency"
+                    className="constituency-search"
+                    disabled
+                  />
+                )}
+                {view.kind === "rows" && searchResults.length > 0 && (
+                  <div className="search-results">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.code}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          selectSeat(result.code);
+                        }}
+                        className="search-result-item"
+                      >
+                        <div className="result-name">{result.name}</div>
+                        <div className="result-value">{result.summary}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -818,55 +871,6 @@ export default function ConstituencyMap({
           <p className="constituency-loading">Loading map…</p>
         )}
 
-        {/* The map view: the search box, then the map */}
-        {onMap && view.kind !== "loading" && (
-          <div className="map-search-section">
-            <label className="map-search-label" htmlFor="constituency-search">
-              Search constituency
-            </label>
-            <div className="search-container">
-              {view.kind === "rows" ? (
-                <input
-                  key="search"
-                  id="constituency-search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search or select a constituency"
-                  className="constituency-search"
-                  autoComplete="off"
-                />
-              ) : (
-                <input
-                  key="search-disabled"
-                  id="constituency-search"
-                  type="text"
-                  placeholder="Search or select a constituency"
-                  className="constituency-search"
-                  disabled
-                />
-              )}
-              {view.kind === "rows" && searchResults.length > 0 && (
-                <div className="search-results">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.code}
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery("");
-                        selectSeat(result.code);
-                      }}
-                      className="search-result-item"
-                    >
-                      <div className="result-name">{result.name}</div>
-                      <div className="result-value">{result.summary}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         {/* The one notice, over whichever view is shown */}
         {view.kind === "notice" && onMap && (
           <MapTemplate features={boundariesReady ? features : null}>{notice}</MapTemplate>
