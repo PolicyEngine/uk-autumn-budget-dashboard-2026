@@ -90,7 +90,7 @@ export function showDependantsNote(data) {
  * chosen) for one line under the headline. The full explanations are in
  * "About these figures".
  */
-export function assumptionItems(data, yearLabel, { renting = false, policies = [] } = {}) {
+export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null } = {}) {
   const items = [];
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
@@ -111,6 +111,21 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       label: "Council Tax",
       value: `${money(data.councilTax.amount)} · band ${data.councilTax.band}`,
       detail: data.councilTax.source === "estimated" ? "region average" : "as entered",
+    });
+  }
+  // The spending the fuel and electricity measures act on: prefilled with
+  // the average household's, so a default answer's gain comes from it
+  const fuel = (spending?.petrol ?? 0) + (spending?.diesel ?? 0);
+  const electricity = spending?.electricity ?? 0;
+  if (fuel > 0 || electricity > 0) {
+    const parts = [];
+    if (fuel > 0) parts.push(`fuel ${money(fuel)}`);
+    if (electricity > 0) parts.push(`electricity ${money(electricity)}`);
+    items.push({
+      id: "spending",
+      label: "Spending a year",
+      value: parts.join(", "),
+      detail: "petrol and diesel, and electricity, as in More details",
     });
   }
   if (showDependantsNote(data)) {
@@ -367,6 +382,7 @@ export function SingleYearHeadline({
   policies = [],
   noPolicies,
   renting = false,
+  spending = null,
   submitted = true,
   changed = false,
   policyCount = 0,
@@ -421,7 +437,7 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             policyCount={policyCount}
-            items={assumptionItems(data, yearLabel, { renting, policies })}
+            items={assumptionItems(data, yearLabel, { renting, policies, spending })}
           />
         </div>
       )}

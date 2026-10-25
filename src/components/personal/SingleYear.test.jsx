@@ -175,6 +175,9 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
+    // The spending the fuel and electricity measures act on (the form's
+    // prefilled averages: petrol £620 and diesel £340, electricity £1,040)
+    expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
