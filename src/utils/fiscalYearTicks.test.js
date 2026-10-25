@@ -1,23 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legendColumns } from "./GroupedLegend";
-import { fiscalYearTicks } from "../utils/chartTheme";
-
-describe("legendColumns", () => {
-  it("prefers a fuller last row to one more column", () => {
-    // Room for 4 columns: 9 entries take 3 (no orphan), 8 take 4
-    expect(legendColumns(9, 960)).toBe(3);
-    expect(legendColumns(8, 960)).toBe(4);
-    expect(legendColumns(10, 960)).toBe(4);
-  });
-
-  it("never uses more columns than entries, or than fit", () => {
-    expect(legendColumns(3, 1200)).toBe(3);
-    // A half-width card: 3 narrower columns rather than an orphan
-    expect(legendColumns(9, 490)).toBe(3);
-    expect(legendColumns(9, 380)).toBe(1);
-    expect(legendColumns(9, 0)).toBe(1);
-  });
-});
+import { fiscalYearTicks } from "./chartTheme";
 
 describe("fiscalYearTicks", () => {
   const years = [2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031];
