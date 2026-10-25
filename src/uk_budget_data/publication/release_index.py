@@ -542,12 +542,15 @@ def unbind_area_results(
     working.flat_files = {}
     working.flat_aliases = {}
     working.flat_provenance_sha256 = None
-    # The index first, so no later state pairs it with these files. Each
-    # step leaves the area views unavailable, and rerunning finishes it.
+    # The index first, so no later state pairs it with these files, and
+    # the manifest last, so no area file outlives its binding: until the
+    # save, the saved manifest binds files with no index, which publish
+    # check refuses. Each step leaves the area views unavailable, and
+    # rerunning finishes it.
     (data_root / INDEX_FILE).unlink(missing_ok=True)
-    m.save_manifest(working, data_root)
     for name in (*AREA_FILES, AREA_PROVENANCE_FILE):
         (data_root / name).unlink(missing_ok=True)
+    m.save_manifest(working, data_root)
     for field in type(manifest).model_fields:
         setattr(manifest, field, getattr(working, field))
     return manifest
