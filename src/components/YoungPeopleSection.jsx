@@ -252,6 +252,33 @@ function SingleAgeTick({ x, y, payload }) {
   );
 }
 
+/**
+ * An age down the side of the horizontal single-age chart: every age on a
+ * wide screen, every second one on a narrow one, 16 and 24 always, in bold
+ * teal across the young band.
+ */
+function SingleAgeRowTick({ x, y, payload, narrow }) {
+  const age = Number(payload.value);
+  const young = age >= 16 && age <= 24;
+  if (narrow && age % 2 === 1 && !YOUNG_ENDS.has(payload.value)) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={4}
+      textAnchor="end"
+      fontSize={TICK_STYLE.fontSize}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
+      fontWeight={young ? 600 : 400}
+    >
+      {payload.value}
+    </text>
+  );
+}
+
+// 13px bars 4px apart, plus the axis
+const singleSharesHeight = (rows) => rows * 17 + X_AXIS_HEIGHT + 24;
+
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
 /** An age's net change, then each policy's own part of it, largest first. */
 function SingleAgeTooltip({ active, payload, yearLabel }) {
@@ -663,36 +690,38 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length && single ? (
-          // One 100% column per age, 16 to 24 shaded, as in the single-age
-          // average chart
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} margin={plotMargin(narrow)} barCategoryGap="10%">
-              <CartesianGrid {...GRID_PROPS} />
-              <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
+          // One 100% bar per age, ages down the side as in the age-group
+          // view, 16 to 24 shaded; the split is in the tooltip at this
+          // density
+          <ResponsiveContainer width="100%" height={singleSharesHeight(data.length)}>
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={plotMargin(narrow)}
+              barCategoryGap={4}
+              barSize={13}
+            >
+              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
+              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} ifOverflow="visible" />
               <XAxis
-                dataKey="group"
-                ticks={narrow ? SINGLE_AGE_TICKS_NARROW : SINGLE_AGE_TICKS}
-                interval={0}
-                tick={<SingleAgeTick />}
-                axisLine={AXIS_LINE}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                label={{ value: "Age", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
-              />
-              <YAxis
+                type="number"
                 domain={[0, 100]}
                 ticks={[0, 25, 50, 75, 100]}
                 tickFormatter={(value) => `${value}%`}
                 tick={TICK_STYLE}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                height={X_AXIS_HEIGHT}
+                label={{ value: "Share of people", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
+              />
+              <YAxis
+                type="category"
+                dataKey="group"
+                tick={<SingleAgeRowTick narrow={narrow} />}
+                width={36}
                 axisLine={false}
                 tickLine={false}
-                width={44}
-                label={{
-                  value: "Share of people",
-                  angle: -90,
-                  position: "insideLeft",
-                  style: { ...AXIS_TITLE_STYLE, textAnchor: "middle" },
-                }}
+                interval={0}
               />
               <Tooltip
                 {...TOOLTIP_PROPS}
