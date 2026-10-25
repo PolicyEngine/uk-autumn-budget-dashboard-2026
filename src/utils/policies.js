@@ -50,7 +50,7 @@ export const POLICIES = [
     starts: "Winter 2026-27",
     type: "Benefit",
     details:
-      "Paid to households in Great Britain on Universal Credit or Pension Credit. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate.",
+      "Paid to households in Great Britain on Universal Credit, Pension Credit, Housing Benefit or income-related ESA, the 2026-27 core group in England and Wales. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. Scotland's scheme has its own core group, so eligibility there is approximate.",
     source: {
       label: "Warm Home Discount",
       href: "https://www.gov.uk/the-warm-home-discount-scheme",
