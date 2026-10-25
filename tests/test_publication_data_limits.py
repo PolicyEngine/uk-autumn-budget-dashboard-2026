@@ -18,6 +18,7 @@ from tests.fixed_shape_measures import (
     sdlt_from_purchases_read_at_build,
 )
 from tests.publication_support import World, make_household_rows, make_tables
+from tests.test_data_limits import RAISED_SURCHARGE
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module
@@ -547,7 +548,12 @@ def test_generation_records_a_parameter_change_on_a_limited_rate(world):
     reform = Reform(
         id="surcharge",
         name="Surcharge",
-        parameter_changes={SURCHARGE_RATE: {"2027": 0.07, "2028": 0.07}},
+        parameter_changes={
+            SURCHARGE_RATE: {
+                "2027": RAISED_SURCHARGE,
+                "2028": RAISED_SURCHARGE,
+            }
+        },
     )
     # From the scenarios alone (stand-ins with no parameter tree) ...
     assert generated_limits(
@@ -651,7 +657,12 @@ def test_generation_writes_only_the_receipt_of_a_data_limited_measure(world):
     reform = Reform(
         id="surcharge",
         name="Higher rates surcharge",
-        parameter_changes={SURCHARGE_RATE: {"2027": 0.07, "2028": 0.07}},
+        parameter_changes={
+            SURCHARGE_RATE: {
+                "2027": RAISED_SURCHARGE,
+                "2028": RAISED_SURCHARGE,
+            }
+        },
     )
     report = generate_artifacts(
         [reform],
@@ -683,7 +694,7 @@ def test_a_combined_run_with_a_data_limited_member_is_written_receipt_only(
         Reform(
             id="alpha",
             name="Alpha",
-            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
+            parameter_changes={SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}},
         ),
         Reform(
             id="beta",

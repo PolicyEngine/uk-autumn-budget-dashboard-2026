@@ -344,12 +344,16 @@ def test_input_paths_belong_only_to_their_own_limit(limit):
             == []
         )
     other = next(item for item in data_limits.DATA_LIMITS if item != limit)
+    # A real variable no limit reads. (Not employment income: from the
+    # a133 cut it adds salary sacrifice returned to income, so it is one of
+    # that limit's own.)
     for name in (
         other.missing_input,
-        "employment_income",
+        "age",
         "",
         "not_a_variable",
     ):
+        assert name not in data_limits.limit_variables(limit)
         assert data_limits.record_problems(
             [data_limits.record(limit, [f"input:{name}"])]
         )
