@@ -584,6 +584,7 @@ def test_area_provenance_records_the_approved_artifact_and_scenarios(
     publication,
 ):
     from unittest.mock import patch
+
     from tests.publication_support import RATE_PATH
     from uk_budget_data.publication.release_index import identity_core
 
@@ -633,6 +634,7 @@ def test_changed_area_definition_is_refused_before_simulation(
 ):
     """Changing current parameters cannot borrow an earlier approval."""
     from unittest.mock import Mock, patch
+
     from tests.publication_support import RATE_PATH
 
     world, manifest = publication
@@ -670,6 +672,7 @@ def test_area_command_refuses_a_changed_definition_before_building(
 ):
     import os
     from unittest.mock import Mock, patch
+
     from tests.publication_support import RATE_PATH
 
     world, manifest = publication

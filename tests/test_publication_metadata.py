@@ -18,14 +18,13 @@ from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.release_index import (
-    identity_core,
-    area_provenance_document_problems,
-    PROVENANCE_KIND,
     AREA_FILES,
     AREA_PROVENANCE_FILE,
     FLAT_VIEW_FILES,
     INDEX_FILE,
+    PROVENANCE_KIND,
     area_problems,
+    identity_core,
     manifest_identity_problems,
     release_index_problems,
     write_area_provenance,
@@ -33,7 +32,7 @@ from uk_budget_data.publication.release_index import (
 )
 from uk_budget_data.publication.review_rows import REVIEW_COLUMNS, review_rows
 from uk_budget_data.publication.tables import sha256_bytes
-from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES, get_reform
+from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES
 
 DESCRIPTION = 'A public explanation, including punctuation and "quotes".'
 

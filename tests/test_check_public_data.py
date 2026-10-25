@@ -395,6 +395,7 @@ def test_this_repository_passes_through_budget_week(day):
 
 def test_area_provenance_has_a_declared_review_kind(repo):
     import json
+
     from uk_budget_data.publication.release_index import PROVENANCE_KIND
 
     name = "public/data/area_provenance.json"

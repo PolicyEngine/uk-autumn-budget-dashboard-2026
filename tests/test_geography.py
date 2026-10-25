@@ -23,6 +23,10 @@ from policyengine.disclosure import (
 from policyengine.disclosure.schema import PUBLIC_COLUMNS, WITHHELD
 
 from tests import geography_fixture
+from tests.fixed_shape_measures import (
+    council_tax_on_purchases_from_2028,
+    sdlt_priced_on_purchases,
+)
 from uk_budget_data import geography as g
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.private_outputs import AUDIT_DIR_ENV, PrivateOutputError
@@ -1461,20 +1465,21 @@ def publication_manifest(
     These approvals exercise the command's entry gate; the area run still
     has to pass its independent data-limit and disclosure checks.
     """
+    import shutil
+    from contextlib import ExitStack
+    from unittest.mock import patch
+
     from tests.publication_support import World
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import attestations as a
     from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication import receipt as r
     from uk_budget_data.publication.artifacts import read_receipt
     from uk_budget_data.publication.combine import combined_key
     from uk_budget_data.publication.publish import approve, stage
-    from uk_budget_data.publication import receipt as r
-    from uk_budget_data.models import DataConfig
-    from uk_budget_data.publication import attestations as a
     from uk_budget_data.publication.template_proof import (
         measure_templates_proof,
     )
-    from contextlib import ExitStack
-    from unittest.mock import patch
-    import shutil
 
     world = World()
     stack = ExitStack()
@@ -2494,12 +2499,6 @@ def refused(printed):
         part.split(":")[0].strip()
         for part in printed.split(REFUSED + ": ")[1:]
     ]
-
-
-from tests.fixed_shape_measures import (
-    sdlt_priced_on_purchases,
-    council_tax_on_purchases_from_2028,
-)
 
 
 def test_a_limit_only_in_a_formula_is_refused_on_real_simulations(

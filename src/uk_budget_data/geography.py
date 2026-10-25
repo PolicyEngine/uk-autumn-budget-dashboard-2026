@@ -2118,15 +2118,15 @@ def area_provenance(
         dashboard = document.get("dashboard") or {}
         if dashboard.get("key") != key:
             problems.append("approved receipt key differs")
-        for field in (
+        for digest in (
             "receipt_sha256",
             "outputs_sha256",
             "execution_identity_sha256",
         ):
-            if (dashboard.get("digests") or {}).get(field) != getattr(
-                entry, field
+            if (dashboard.get("digests") or {}).get(digest) != getattr(
+                entry, digest
             ):
-                problems.append(f"approved {field} differs")
+                problems.append(f"approved {digest} differs")
         if set(years) - (set(entry.years) - set(entry.unsupported_years)):
             problems.append("requested years are not approved and supported")
         if problems:
