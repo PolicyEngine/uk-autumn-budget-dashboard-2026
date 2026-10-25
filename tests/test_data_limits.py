@@ -2945,7 +2945,8 @@ def test_the_certified_data_still_lack_every_limits_input():
         holder = sim.get_holder(limit.missing_input)
         assert holder.get_known_periods() == [], (
             f"the certified data now set {limit.missing_input}: lift "
-            f"{limit.key}"
+            f"{limit.key}, and if a cut in NEWLY_MISSING_INPUTS lists it, "
+            "say so in NO_LONGER_MISSING"
         )
 
 

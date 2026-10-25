@@ -62,6 +62,19 @@ class DataLimit:
     reason: str
 
 
+# The means tests' lists of the capital they count. They name share-like
+# capital, which counts corporate wealth whole unless itemised holdings are
+# given, so the split acts through no parameter but these: a measure that
+# names holdings in them, to count some and not others.
+SHARE_CAPITAL_SOURCES = (
+    "gov.dwp.universal_credit.means_test.capital.sources",
+    "gov.dwp.housing_benefit.means_test.capital.sources",
+    "gov.dwp.pension_credit.income.capital.sources",
+    "gov.dwp.income_support.means_test.capital.sources",
+    "gov.dwp.JSA.income.capital.sources",
+    "gov.dwp.ESA.income.capital.sources",
+)
+
 DATA_LIMITS = (
     DataLimit(
         key="additional_dwelling_purchases",
@@ -100,6 +113,202 @@ DATA_LIMITS = (
             "(policyengine-uk-data #573) would lift this."
         ),
     ),
+    # The 13 inputs the a133 cut (policyengine-uk 2.147.2) newly leaves at
+    # their defaults (NEWLY_MISSING_INPUTS), each keyed on the parameters
+    # whose effect runs through it, read from the formulas at 2.147.2 that
+    # read it (tests/test_data_limits_cuts.py pins those readers).
+    DataLimit(
+        key="pip_daily_living_points",
+        parameters=("gov.dwp.pip.daily_living.points_thresholds",),
+        missing_input="pip_dl_points",
+        reason=(
+            "The certified data record each claimant's PIP daily living "
+            "award, not the assessment points behind it, so the model leaves "
+            "everyone's points at its default of -1 (not assessed) and keeps "
+            "the recorded award. A change to the points needed for the "
+            "standard or enhanced rate therefore moves no one. Changes to "
+            "the rates themselves are not affected."
+        ),
+    ),
+    DataLimit(
+        key="pip_mobility_points",
+        parameters=("gov.dwp.pip.mobility.points_thresholds",),
+        missing_input="pip_m_points",
+        reason=(
+            "The certified data record each claimant's PIP mobility award, "
+            "not the assessment points behind it, so the model leaves "
+            "everyone's points at its default of -1 (not assessed) and keeps "
+            "the recorded award. A change to the points needed for the "
+            "standard or enhanced rate therefore moves no one. Changes to "
+            "the rates themselves are not affected."
+        ),
+    ),
+    DataLimit(
+        key="bus_uncapped_single_fares",
+        parameters=(
+            "gov.dft.bus.fares",
+            "gov.dft.bus.reference_fares",
+            # The table that stands in for the missing fares.
+            "gov.dft.bus.uncapped_single_fares",
+        ),
+        missing_input="local_bus_uncapped_single_fare",
+        reason=(
+            "The certified data do not record what each passenger's single "
+            "bus tickets would cost without the fare cap, so the model's "
+            "default prices a change to the single-fare cap, for single "
+            "tickets in England outside London, from its own table of "
+            "uncapped single fares in three bands, not from each "
+            "passenger's fares."
+        ),
+    ),
+    DataLimit(
+        key="salary_sacrifice_returned_to_income",
+        # No parameter acts through it: it is only added to employment
+        # income and employee pension contributions. The limit watches a
+        # measure that sets it, or changes a formula that reads it.
+        parameters=(),
+        missing_input="salary_sacrifice_returned_to_income",
+        reason=(
+            "The certified data record no salary sacrifice returned to "
+            "ordinary pay, and the model's default is none. A measure that "
+            "returns sacrificed pay to income, or changes how the model "
+            "counts it, cannot be costed. The pension salary sacrifice cap "
+            "does not act through it in this model."
+        ),
+    ),
+    DataLimit(
+        key="pre_2015_salary_sacrifice",
+        parameters=("gov.hmrc.income_tax.allowances.annual_allowance",),
+        missing_input="pension_contributions_via_salary_sacrifice_pre_2015",
+        reason=(
+            "The certified data do not record when salary sacrifice "
+            "arrangements were made, so the model's default treats all of "
+            "it as made on or after 9 July 2015 and adds it all back to "
+            "threshold income for the tapered annual allowance. A change to "
+            "the annual allowance or its taper cannot be costed for people "
+            "with earlier arrangements."
+        ),
+    ),
+    DataLimit(
+        key="annual_allowance_death_benefits",
+        parameters=("gov.hmrc.income_tax.allowances.annual_allowance",),
+        missing_input=(
+            "pension_annual_allowance_taxable_lump_sum_death_benefits"
+        ),
+        reason=(
+            "The certified data do not identify taxable lump-sum pension "
+            "death benefits, so with the model's default of none nothing is "
+            "deducted for them from threshold and adjusted income for the "
+            "tapered annual allowance, which exclude them. A change to the "
+            "annual allowance or its taper cannot be costed for people who "
+            "received them."
+        ),
+    ),
+    DataLimit(
+        key="defined_benefit_pension_share",
+        parameters=(
+            "gov.hmrc.income_tax.allowances.annual_allowance",
+            # Acts only through the defined-benefit share, so with the
+            # default share of nil a change to it moves nothing.
+            "gov.simulation.pensions.defined_benefit_input_per_contribution",
+        ),
+        missing_input="defined_benefit_pension_share",
+        reason=(
+            "The certified data do not record which workplace pension "
+            "contributions go to defined-benefit schemes, so the model's "
+            "default treats every contribution as money purchase and counts "
+            "contributions, not the growth in defined-benefit rights, "
+            "towards the annual allowance. A change to the annual allowance "
+            "or its taper cannot be costed for defined-benefit members."
+        ),
+    ),
+    DataLimit(
+        key="non_residential_property_secured_debt",
+        parameters=("gov.dwp.universal_credit.means_test.capital",),
+        missing_input="non_residential_property_secured_debt",
+        reason=(
+            "The certified data do not record debt secured on "
+            "non-residential property, so the model's default of none "
+            "counts that property at its market value less sale costs in "
+            "the Universal Credit capital test. A change to Universal "
+            "Credit's capital rules cannot be costed for owners with such "
+            "debt."
+        ),
+    ),
+    DataLimit(
+        key="other_residential_property_secured_debt",
+        parameters=("gov.dwp.universal_credit.means_test.capital",),
+        missing_input="other_residential_property_secured_debt",
+        reason=(
+            "The certified data do not record debt secured on residential "
+            "property other than the home, so the model's default of none "
+            "counts that property at its market value less sale costs in "
+            "the Universal Credit capital test. A change to Universal "
+            "Credit's capital rules cannot be costed for owners with such "
+            "debt."
+        ),
+    ),
+    DataLimit(
+        key="directly_held_shares",
+        parameters=SHARE_CAPITAL_SOURCES,
+        missing_input="directly_held_shares",
+        reason=(
+            "The certified data do not split share-like wealth into directly "
+            "held shares, unit and investment trusts and stocks and shares "
+            "ISAs, so the model's default of none for directly held shares "
+            "leaves the means tests counting only the total, corporate "
+            "wealth. A change to which of those holdings the means tests "
+            "count cannot be costed."
+        ),
+    ),
+    DataLimit(
+        key="unit_and_investment_trusts",
+        parameters=SHARE_CAPITAL_SOURCES,
+        missing_input="unit_and_investment_trusts",
+        reason=(
+            "The certified data do not split share-like wealth into directly "
+            "held shares, unit and investment trusts and stocks and shares "
+            "ISAs, so the model's default of none for unit and investment "
+            "trusts leaves the means tests counting only the total, "
+            "corporate wealth. A change to which of those holdings the "
+            "means tests count cannot be costed."
+        ),
+    ),
+    DataLimit(
+        key="early_years_school_start_deferred",
+        parameters=(
+            "gov.dfe.universal_childcare_entitlement",
+            "gov.dfe.extended_childcare_entitlement",
+            "gov.dfe.childcare_funding_rate",
+            "gov.dfe.weeks_per_year",
+            "gov.dfe.compulsory_school_age",
+            "gov.scottish_government.funded_early_learning_childcare",
+        ),
+        missing_input="early_years_school_start_deferred",
+        reason=(
+            "The certified data do not record which children defer starting "
+            "school, so the model's default assumes none does: each child "
+            "keeps funded early years hours only for the terms before the "
+            "usual school start for its date of birth. A change to funded "
+            "early years entitlement in England or Scotland cannot be "
+            "costed for children who defer."
+        ),
+    ),
+    DataLimit(
+        key="full_year_category_a_director",
+        parameters=(
+            "gov.hmrc.national_insurance.class_1.directors."
+            "full_year_category_a_2022_23",
+        ),
+        missing_input="is_full_year_category_a_director",
+        reason=(
+            "The certified data do not identify company directors who held "
+            "office all year, and the model's default treats no one as one. "
+            "That matters only for the annual calculation of directors' "
+            "employee National Insurance in 2022-23, outside the Budget's "
+            "years, so only a change to that rule is affected."
+        ),
+    ),
 )
 
 
@@ -120,6 +329,76 @@ REGISTRY_SHA256 = hashlib.sha256(
         separators=(",", ":"),
     ).encode()
 ).hexdigest()
+
+
+# The model inputs each certified data cut newly leaves at their defaults:
+# those its predecessor's data also lacked are not listed again.
+# policyengine.py's budget-inputs gate (``provenance.uk_candidate.
+# budget_inputs``) records them as ``newly_missing_inputs`` in the cut's
+# certification evidence (budget-inputs.json), which the bundle doesn't
+# ship, so the adoption PR copies them here, keyed by the cut's build id
+# (the bundle's ``data_releases.uk.build_id``). Every input listed for any
+# cut needs a limit above until it is no longer missing
+# (``NO_LONGER_MISSING``): a cut skipped by the dashboard lists inputs its
+# successor won't. ``coverage_problems`` checks it, and
+# tests/test_data_limits_cuts.py fails an installed cut with no record.
+# Not part of REGISTRY_SHA256: the record changes no receipt.
+NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
+    # policyengine-uk 2.147.2 with Microcosm UK 2024-25 national, 23 Oct
+    # 2026: policyengine.py#715's budget-inputs evidence, accepted on
+    # condition that the dashboard holds each as a data limit
+    # (policyengine.py#715#issuecomment-6381135108, dashboard #124).
+    "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a": (
+        "defined_benefit_pension_share",
+        "directly_held_shares",
+        "early_years_school_start_deferred",
+        "is_full_year_category_a_director",
+        "local_bus_uncapped_single_fare",
+        "non_residential_property_secured_debt",
+        "other_residential_property_secured_debt",
+        "pension_annual_allowance_taxable_lump_sum_death_benefits",
+        "pension_contributions_via_salary_sacrifice_pre_2015",
+        "pip_dl_points",
+        "pip_m_points",
+        "salary_sacrifice_returned_to_income",
+        "unit_and_investment_trusts",
+    ),
+}
+
+# Inputs a cut listed above that are no longer missing, with why: the
+# certified data carry them again (the lift tripwire in
+# tests/test_data_limits.py fails, and the limit is removed in the same
+# adoption PR), or the installed model no longer has them as inputs. The
+# certified test checks the first; tests/test_data_limits_cuts.py the
+# second.
+NO_LONGER_MISSING: dict[str, str] = {}
+
+
+def coverage_problems(build_id: str) -> list[str]:
+    """Why the limits don't cover the inputs certified cuts newly leave at
+    their defaults, with ``build_id`` the installed cut: empty when they
+    do.
+
+    A problem is the installed cut having no record, or an input any
+    recorded cut lists having neither a limit nor a ``NO_LONGER_MISSING``
+    entry.
+    """
+    problems = []
+    if build_id not in NEWLY_MISSING_INPUTS:
+        problems.append(
+            f"the installed data cut {build_id} has no record in "
+            "NEWLY_MISSING_INPUTS: copy newly_missing_inputs from its "
+            "certification's budget-inputs.json (an empty tuple if none)"
+        )
+    limited = {limit.missing_input for limit in DATA_LIMITS}
+    for cut, names in NEWLY_MISSING_INPUTS.items():
+        for name in sorted(set(names) - limited - set(NO_LONGER_MISSING)):
+            problems.append(
+                f"{name}, which {cut} newly leaves at its default, has no "
+                "data limit: register one keyed on the parameters it acts "
+                "through, with the default in its reason"
+            )
+    return problems
 
 
 def _under(path: str, prefix: str) -> bool:
@@ -352,7 +631,14 @@ def _same_effect(before, after, *, from_year=None) -> bool:
         start = f"{from_year}-01-01"
         # Include the boundary: an earlier breakpoint can still be in force.
         instants = sorted({start, *(i for i in instants if i >= start)})
+    # Core can't read a parameter at year 0, where policyengine-uk starts
+    # some (``0000-01-01``); what is in force from then is in force at year
+    # 1, since no breakpoint can fall between.
+    instants = sorted({max(i, _FIRST_INSTANT) for i in instants})
     return all(_equal(before(i), after(i)) for i in instants)
+
+
+_FIRST_INSTANT = "0001-01-01"
 
 
 # An enum class's own record of its members, which are listed by name and
@@ -561,14 +847,23 @@ def _loaded_globals(code) -> frozenset:
 @functools.lru_cache(maxsize=None)
 def _code_names(code) -> set:
     """The names and string constants a code object, and any code nested in
-    it, uses: how a formula names the variables it reads."""
+    it, uses: how a formula names the variables it reads. A list or tuple
+    of names (``add(household, period, ["a", "b"])``) compiles to one tuple
+    constant, so strings inside constant tuples and frozensets count too."""
     found = set(code.co_names)
     for const in code.co_consts:
-        if isinstance(const, str):
-            found.add(const)
-        elif hasattr(const, "co_consts"):
-            found |= _code_names(const)
+        found |= _constant_names(const)
     return found
+
+
+def _constant_names(const) -> set:
+    if isinstance(const, str):
+        return {const}
+    if isinstance(const, (tuple, frozenset)):
+        return set().union(*map(_constant_names, const))
+    if hasattr(const, "co_consts"):
+        return _code_names(const)
+    return set()
 
 
 class _Behaviour:
@@ -1327,7 +1622,12 @@ def _measure_code(function) -> bool:
     code = getattr(function, "__code__", None)
     if code is None:
         return False
-    path = code.co_filename
+    return _measure_path(code.co_filename)
+
+
+def _measure_path(path: str) -> bool:
+    """Whether code from ``path`` is a measure's: neither a library's nor
+    the model's."""
     return not _library_path(path) and "/policyengine_uk/" not in path
 
 
@@ -2526,8 +2826,18 @@ def _calculated_before(sim, name) -> bool:
 # for the watch to see (review of #51 round 17). So the build is watched
 # too: every read of an input a limit names, while a simulation is built
 # for publication, is recorded on the simulation and counts as touching the
-# limit (``build:<input>``). Reads the model makes itself count as well;
-# none is made today, which tests/test_data_limits.py checks.
+# limit (``build:<input>``). Reads the model makes itself count as well,
+# except while policyengine-uk constructs the simulation, by its own code:
+# from policyengine-uk 2.147.2 its construction runs formulas reading inputs
+# some limits name, on both sides of every measure (the Universal Credit
+# rebalancing, ``add_universal_credit_reform``, which calculates the health
+# element and with it the capital tests; for a situation, its conversion
+# to a dataset, ``UKSingleYearDataset.from_simulation``). A read counts
+# when a measure's code lies between it and the construction: a modifier
+# the constructor calls, or a formula one replaced. A read made outside the
+# construction (the build function asking for a value, say) counts too.
+# tests/test_data_limits.py checks that building the certified data reads
+# nothing else.
 
 _BUILD_ATTRIBUTE = "_data_limit_build_reads"
 
@@ -2560,10 +2870,38 @@ class BuildRecord:
 def _built_get_array(self, *args, **kwargs):
     if _BUILD.records:
         name = getattr(getattr(self, "variable", None), "name", None)
-        if name in _MISSING_INPUTS:
+        if name in _MISSING_INPUTS and not _model_own_read(sys._getframe(1)):
             for record in _BUILD.records:
                 record.reads.add(name)
     return _ENGINE["get_array"](self, *args, **kwargs)
+
+
+def _model_constructors() -> frozenset:
+    """The code of policyengine-uk's simulation constructors: the engine's
+    simulation's subclasses defined in the model, however deep."""
+    found, kinds = set(), [_engine_parts()["simulation"]]
+    while kinds:
+        kind = kinds.pop()
+        kinds.extend(kind.__subclasses__())
+        code = getattr(kind.__dict__.get("__init__"), "__code__", None)
+        if code is not None and "/policyengine_uk/" in code.co_filename:
+            found.add(code)
+    return frozenset(found)
+
+
+def _model_own_read(frame) -> bool:
+    """Whether a read made while a simulation is built is the model's own:
+    a policyengine-uk constructor lies between it and the nearest measure's
+    code outwards (see "the build" above)."""
+    constructors = _model_constructors()
+    constructing = False
+    while frame is not None:
+        code = frame.f_code
+        if _measure_path(code.co_filename):
+            return constructing
+        constructing = constructing or code in constructors
+        frame = frame.f_back
+    return False
 
 
 @contextmanager
