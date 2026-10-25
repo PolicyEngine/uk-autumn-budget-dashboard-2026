@@ -28,10 +28,14 @@ const chosen = (name) => {
   return box.options[box.selectedIndex].textContent;
 };
 const box = (name) => screen.getByRole("spinbutton", { name });
-const example = () => screen.getByRole("combobox", { name: "Start from an example" });
-const applyExample = (label) => {
-  fireEvent.change(example(), { target: { value: within(example()).getByRole("option", { name: label }).value } });
+const examplesButton = () => screen.getByRole("button", { name: "Examples" });
+const openExamples = () => {
+  if (examplesButton().getAttribute("aria-expanded") !== "true") fireEvent.click(examplesButton());
+  return screen.getByRole("menu", { name: "Start from an example" });
 };
+const exampleItem = (label) =>
+  within(openExamples()).getByRole("menuitemradio", { name: new RegExp(`^${label}`) });
+const applyExample = (label) => fireEvent.click(exampleItem(label));
 
 describe("the personal impact form", () => {
   it("is one card of boxes in sections, the essentials first and the rest in More details, with the results below it", () => {
@@ -192,22 +196,32 @@ describe("the personal impact form", () => {
 
   it("fills the form from an example, still editable", () => {
     render(<HouseholdCalculator />);
-    const options = within(example()).getAllByRole("option").map((option) => option.textContent);
-    expect(options).toEqual([
-      "Start from an example",
+    const menu = openExamples();
+    // Two groups, each item a name and one line on what it shows
+    expect(within(menu).getAllByRole("group").map((group) => group.getAttribute("aria-label"))).toEqual([
+      "Young people",
+      "Other households",
+    ]);
+    const young = within(within(menu).getByRole("group", { name: "Young people" })).getAllByRole("menuitemradio");
+    expect(young.map((item) => item.querySelector(".example-menu-name").textContent)).toEqual([
       "A 22-year-old renting",
       "A 19-year-old apprentice",
       "A 23-year-old graduate",
     ]);
+    expect(young.every((item) => item.querySelector(".example-menu-description").textContent.length > 0)).toBe(true);
     applyExample("A 22-year-old renting");
-    expect(chosen("Start from an example")).toBe("A 22-year-old renting");
+    // Chosen: the menu closes, and the example is marked when it opens again
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-checked", "true");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
     expect(screen.getByText(/Rents privately at £900 a month, an illustrative figure\./)).toBeInTheDocument();
     expect(box("Age")).toHaveValue(22);
     expect(box("Salary in 2026")).toHaveValue(25000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     // Edited: no longer the example as given
     expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
-    expect(chosen("Start from an example")).toBe("Start from an example");
+    expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-checked", "false");
   });
 
   it("fills the household answers from each example", () => {

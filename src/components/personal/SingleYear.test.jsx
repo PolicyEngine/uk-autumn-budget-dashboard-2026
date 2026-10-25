@@ -67,11 +67,11 @@ function toResults() {
 }
 
 // The headline card's label, once a result is shown
-const HEADLINE = /^Change in your net income, /;
+const HEADLINE = /^Change in your net income$/;
 /** The headline card (there is none before a result). */
-const headlineCard = () => document.querySelector(".headline-hero");
+const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
-const changeValue = () => headlineCard().querySelector(".headline-hero-value").textContent;
+const changeValue = () => headlineCard().querySelector(".result-value").textContent;
 
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
@@ -120,30 +120,35 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  it("shows the change, its share and net income after as headline cards, then what they assume as boxes", async () => {
+  it("shows the change in one result card: the figure, its share, before and after, and what it is based on", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     const panel = await results();
     await within(panel).findByText("+£3,765");
-    const hero = headlineCard();
-    expect(hero).toHaveClass("is-gain");
-    expect(hero.querySelector(".headline-hero-label")).toHaveTextContent("Change in your net income, 2029-30");
+    const card = headlineCard();
+    expect(card).toHaveClass("is-gain");
+    expect(card.querySelector(".result-card-label")).toHaveTextContent("Change in your net income");
+    // The year and the number of policies as pills
+    const pills = [...card.querySelectorAll(".result-pill")].map((pill) => pill.textContent);
+    expect(pills).toEqual(["2029-30", `${POLICIES_FOR_TEST.length} policies`]);
     expect(changeValue()).toBe("+£3,765");
     // The figure once, for copying and screen readers alike
-    expect(hero.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(hero.querySelector(".headline-hero-figure")).toHaveTextContent(/^\+£3,765 a year$/);
-    // Its share and the before and after on one line, in the same card
-    expect(hero.querySelector(".headline-hero-detail")).toHaveTextContent("+5.8% of net income · Net income before and after: £65,371 → £69,136");
-    expect(panel.querySelectorAll(".headline-hero")).toHaveLength(1);
+    expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
+    expect(card.querySelector(".result-figure")).toHaveTextContent(/^\+£3,765 a year$/);
+    // Its share as a chip, and net income before and after as bars
+    expect(card.querySelector(".result-chip")).toHaveTextContent("Up 5.8% of net income");
+    const bars = [...card.querySelectorAll(".result-bar-row")].map((row) => row.textContent);
+    expect(bars).toEqual(["Before£65,371", "After£69,136"]);
+    expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
     expect(panel).not.toHaveTextContent("before and after the selected policies.");
     // What it is based on: a strip, each a label over its value, the note
     // behind an "i"; the rail explanation is in "About these figures"
-    const assumptions = panel.querySelector("dl.based-on");
+    const assumptions = panel.querySelector("dl.result-foot-items");
     const box = (label) =>
-      [...assumptions.querySelectorAll(".based-on-item")].find((item) =>
+      [...assumptions.querySelectorAll(".result-foot-item")].find((item) =>
         item.querySelector("dt").textContent.startsWith(label),
       );
     expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
@@ -288,8 +293,8 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example fills the form only
-    const examples = screen.getByRole("combobox", { name: "Start from an example" });
-    fireEvent.change(examples, { target: { value: within(examples).getAllByRole("option")[1].value } });
+    fireEvent.click(screen.getByRole("button", { name: "Examples" }));
+    fireEvent.click(screen.getAllByRole("menuitemradio")[0]);
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);

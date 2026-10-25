@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
+import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
+import ExamplePicker from "./personal/ExamplePicker";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
@@ -356,7 +357,7 @@ function HouseholdCalculator({
     setInputs({ ...WIZARD_DEFAULTS, ...preset.inputs });
     setPresetId(preset.id);
   };
-  const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
+  const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
 
   const householdPolicies = useMemo(
     () => (selectionKey ? selectionKey.split(",") : []),
@@ -592,42 +593,11 @@ function HouseholdCalculator({
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
             <div className="household-header-actions">
-            <div className="household-examples">
-              <label className="visually-hidden" htmlFor="household-example">
-                Start from an example
-              </label>
-              <div className="select-box">
-                <select
-                  id="household-example"
-                  value={presetId ?? ""}
-                  onChange={(event) => {
-                    const preset = YOUNG_PERSON_PRESETS.find((item) => item.id === event.target.value);
-                    if (preset) applyPreset(preset);
-                  }}
-                >
-                  <option value="">Start from an example</option>
-                  {YOUNG_PERSON_PRESETS.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="select-chevron"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </div>
+            <ExamplePicker
+              groups={EXAMPLE_GROUPS}
+              value={presetId}
+              onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
+            />
             <button
               type="submit"
               className={`calculate-button ${running ? "is-busy" : ""}`}
@@ -667,6 +637,7 @@ function HouseholdCalculator({
             renting={isRenting((submitted?.inputs ?? inputs).tenure)}
             submitted={submitted !== null}
             changed={changed}
+            policyCount={submitted?.policies.length ?? householdPolicies.length}
           />
         </div>
       </div>

@@ -524,93 +524,443 @@
   gap: 12px;
 }
 
-.headline-hero {
-  padding: 24px 28px;
+/* The result card: head (label, year and policies), body (the figure
+   beside before and after), foot (what it is based on) */
+.result-card {
+  position: relative;
+  padding: 0;
+  overflow: visible;
+  border-left: 3px solid var(--pe-gray-300);
 }
 
-.headline-hero p {
+.result-card.is-gain {
+  border-left-color: var(--c-gain);
+}
+
+.result-card.is-loss {
+  border-left-color: var(--c-loss);
+}
+
+.result-card p {
   margin: 0;
 }
 
-.headline-hero-label {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-600);
+.result-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 20px 28px 0;
 }
 
-.headline-hero-figure {
-  margin-top: 4px !important;
+.result-card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.result-card-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.result-pill.is-link {
+  color: var(--pe-teal-700);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.result-pill.is-link:hover {
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
+}
+
+.result-pill.is-link:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.result-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 24px 40px;
+  align-items: center;
+  padding: 16px 28px 24px;
+}
+
+/* A very light tint behind the figure only */
+.result-card-hero {
+  padding: 16px 20px;
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+}
+
+.result-card.is-gain .result-card-hero {
+  background: var(--pe-teal-50);
+}
+
+.result-card.is-loss .result-card-hero {
+  background: var(--c-loss-soft);
+}
+
+.result-figure {
   line-height: 1.1;
 }
 
-.headline-hero-value {
+.result-value {
   font-size: 2.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-800);
+  color: var(--pe-gray-700);
 }
 
-.headline-hero.is-gain .headline-hero-value {
+.result-card.is-gain .result-value {
   color: var(--c-gain-text);
 }
 
-.headline-hero.is-loss .headline-hero-value {
+.result-card.is-loss .result-value {
   color: var(--c-loss-text);
 }
 
-.headline-hero-unit {
+.result-unit {
   font-size: var(--fs-body-lg);
   font-weight: 500;
   color: var(--pe-gray-500);
 }
 
-.headline-hero-detail {
-  margin-top: 8px !important;
-  font-size: var(--fs-small);
+.result-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px !important;
+  padding: 2px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--pe-gray-600);
-}
-
-.headline-hero-sep {
-  color: var(--pe-gray-400);
-}
-
-/* Based on: a quiet strip, label over value, thin rules between */
-.based-on {
-  display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  margin: 0;
-  background: var(--pe-gray-50);
+  background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
+  border-radius: 999px;
 }
 
-.based-on-item {
-  min-width: 0;
-  padding: 12px 20px;
+.result-chip.is-gain {
+  color: var(--c-gain-text);
+  border-color: var(--pe-teal-200);
 }
 
-.based-on-item + .based-on-item {
-  border-left: 1px solid var(--card-border);
+.result-chip.is-loss {
+  color: var(--c-loss-text);
+  border-color: var(--c-loss-border);
 }
 
-.based-on-label {
+/* Before and after, on one scale */
+.result-bars {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-bar-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 2px;
+  gap: 12px;
+}
+
+.result-bar-label {
   font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--pe-gray-500);
 }
 
-.based-on-value {
+.result-bar-value {
+  min-width: 7ch;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--pe-gray-800);
+}
+
+.result-bar-track {
+  position: relative;
+  height: 10px;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.result-bar-fill,
+.result-bar-diff {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.result-bar-fill {
+  background: var(--pe-gray-300);
+  border-radius: 999px;
+}
+
+.result-bar-row.is-after .result-bar-fill {
+  background: var(--pe-teal-500);
+}
+
+/* The difference: at least a few pixels, so a small change still shows */
+.result-bar-diff {
+  min-width: 4px;
+  background: var(--c-gain-text);
+  transition-delay: 0.2s;
+}
+
+.result-card.is-loss .result-bar-diff {
+  background: var(--c-loss);
+}
+
+.result-bars.is-grown .result-bar-fill,
+.result-bars.is-grown .result-bar-diff {
+  transform: scaleX(1);
+}
+
+/* Foot: what the figure is based on */
+.result-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 28px;
+  background: var(--pe-gray-50);
+  border-top: 1px solid var(--card-border);
+  border-radius: 0 0 var(--card-radius) 0;
+}
+
+.result-foot-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--pe-gray-400);
+}
+
+.result-foot-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
   margin: 0;
+}
+
+.result-foot-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-caption);
+}
+
+.result-foot-item dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--pe-gray-500);
+}
+
+.result-foot-icon {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+.result-foot-item dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.result-card-more {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-teal-700);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.result-card-more:hover {
+  text-decoration: underline;
+}
+
+.result-card-more:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+/* Skeletons of the detail cards, at their final heights */
+.skeleton-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeleton-card.is-bars {
+  min-height: 300px;
+}
+
+.skeleton-card.is-chart {
+  min-height: 420px;
+}
+
+.skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pe-gray-100) 0%, var(--pe-gray-200) 50%, var(--pe-gray-100) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line.is-title {
+  width: 55%;
+  height: 14px;
+  margin-bottom: 6px;
+}
+
+.skeleton-line.is-label {
+  width: 30%;
+  height: 8px;
+}
+
+.skeleton-line.is-bar {
+  height: 14px;
+}
+
+.skeleton-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.skeleton-chart svg {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+.skeleton-axis {
+  fill: none;
+  stroke: var(--pe-gray-200);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.skeleton-curve {
+  fill: none;
+  stroke: var(--pe-gray-200);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  from {
+    opacity: 0.5;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The status chip over a skeleton */
+.skeleton-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(300px, calc(100% - 32px));
+  padding: 12px 14px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-md);
+  transform: translate(-50%, -50%);
+  animation: single-year-fade-in 0.3s ease-out both;
+}
+
+.skeleton-chip > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.skeleton-chip p {
+  margin: 0;
+}
+
+.skeleton-chip-title {
   font-size: var(--fs-small);
   font-weight: 600;
   color: var(--pe-gray-800);
+}
+
+.skeleton-chip-time {
+  margin-top: 2px !important;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-500);
+}
+
+.skeleton-chip .processing-bar {
+  width: 100%;
+  margin: 8px 0 0;
+}
+
+.processing-spinner.is-small {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-width: 2px;
 }
 
 /* Before Calculate */
@@ -753,8 +1103,7 @@
 }
 
 /* New cards and charts fade in rather than pop */
-.headline-hero,
-.based-on,
+.result-card,
 .single-year-details .report-section > .card,
 .single-year-details .charts-grid > div {
   animation: single-year-fade-in 0.3s ease-out both;
@@ -871,30 +1220,41 @@
   color: var(--pe-gray-500);
 }
 
+@media (max-width: 768px) {
+  .result-card-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
 @media (max-width: 600px) {
-  .headline-hero {
-    padding: 20px;
+  .result-card-head,
+  .result-card-body,
+  .result-card-foot {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
-  .headline-hero-value {
+  .result-value {
     font-size: 2rem;
   }
 
-  .based-on {
-    grid-auto-flow: row;
-    grid-template-columns: minmax(0, 1fr);
+  .result-foot-items {
+    flex-direction: column;
+    gap: 6px;
   }
 
-  .based-on-item + .based-on-item {
-    border-left: none;
-    border-top: 1px solid var(--card-border);
+  .result-card-more {
+    margin-left: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .processing-panel,
-  .headline-hero,
-  .based-on,
+  .result-card,
+  .skeleton-chip,
+  .skeleton-line,
+  .skeleton-curve,
   .single-year-details .report-section > .card,
   .single-year-details .charts-grid > div {
     animation: none;
@@ -905,6 +1265,8 @@
   }
 
   .collapse,
+  .result-bar-fill,
+  .result-bar-diff,
   .processing-bar span,
   .no-effect-chevron,
   .single-year-result,

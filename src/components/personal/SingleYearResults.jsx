@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import useCountUp from "../../hooks/useCountUp";
+import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
-import { SLOW_CALCULATION_SECONDS, TYPICAL_CALCULATION_SECONDS } from "../../utils/householdTiming";
+import {
+  DETAIL_CALCULATION_SECONDS,
+  SLOW_CALCULATION_SECONDS,
+  TYPICAL_CALCULATION_SECONDS,
+} from "../../utils/householdTiming";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -107,11 +112,8 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
     items.push({
       id: "council-tax",
       label: "Council Tax",
-      value: money(data.councilTax.amount),
-      detail:
-        data.councilTax.source === "estimated"
-          ? `band ${data.councilTax.band}, region average`
-          : "as entered",
+      value: `${money(data.councilTax.amount)} · band ${data.councilTax.band}`,
+      detail: data.councilTax.source === "estimated" ? "region average" : "as entered",
     });
   }
   if (showDependantsNote(data)) {
@@ -189,67 +191,161 @@ function ProcessingPanel({ seconds, compact = false }) {
   );
 }
 
-/**
- * The headline: one card with the change (said nowhere else), large and
- * counted up, with its share and the before and after on one quiet line
- * under it. The figure is one element, so it reads (and copies) once.
- */
-function HeadlineHero({ totals, yearLabel }) {
-  const shown = Math.round(useCountUp(totals.change));
-  const counting = shown !== totals.change;
-  const share = totals.change === 0 ? null : signedPercent(totals.change, totals.before);
+// Small line icons for the "Based on" items
+const ICON_PATHS = {
+  salary: "M4 8h16v11H4zM9 8V5h6v3M4 13h16",
+  "rent-area": "M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+  "council-tax": "M4 11l8-6 8 6M6 9.5V19h12V9.5M10 19v-5h4v5",
+};
+
+function ItemIcon({ id }) {
+  const d = ICON_PATHS[id];
+  if (!d) return null;
   return (
-    <div className={`card headline-hero ${changeClass(totals.change)}`}>
-      <p className="headline-hero-label">Change in your net income, {yearLabel}</p>
-      <p className="headline-hero-figure">
-        <span className="headline-hero-value" aria-busy={counting || undefined}>
-          {signedPounds(counting ? shown : totals.change)}
-        </span>
-        {totals.change !== 0 && <span className="headline-hero-unit"> a year</span>}
-      </p>
-      <p className="headline-hero-detail">
-        {share && (
-          <>
-            {share} of net income
-            <span className="headline-hero-sep" aria-hidden="true">
-              {" · "}
-            </span>
-          </>
-        )}
-        <span className="visually-hidden">Net income before and after: </span>
-        {money(totals.before)} → {money(totals.after)}
-      </p>
+    <svg
+      className="result-foot-icon"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Scroll to a section of the results, under the sticky band. */
+function scrollToSection(event, id) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  event.preventDefault();
+  target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+}
+
+/**
+ * Net income before and after on one scale: two thin bars, the after bar's
+ * difference from before marked at its end. They grow in on arrival.
+ */
+function BeforeAfterBars({ totals }) {
+  const top = Math.max(totals.before, totals.after, 1);
+  const lower = Math.min(totals.before, totals.after);
+  const share = (value) => `${Math.max(0, (value / top) * 100)}%`;
+  const [grown, setGrown] = useState(prefersReducedMotion());
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const rows = [
+    { key: "before", label: "Before", value: totals.before },
+    { key: "after", label: "After", value: totals.after },
+  ];
+  return (
+    <div className={`result-bars ${grown ? "is-grown" : ""}`.trim()}>
+      {rows.map((row) => (
+        <div key={row.key} className={`result-bar-row is-${row.key}`}>
+          <span className="result-bar-label">{row.label}</span>
+          <span className="result-bar-track" aria-hidden="true">
+            <span className="result-bar-fill" style={{ width: share(row.key === "after" ? lower : row.value) }} />
+            {row.key === "after" && totals.change !== 0 && (
+              <span
+                className="result-bar-diff"
+                style={{ left: share(lower), width: share(Math.abs(totals.change)) }}
+              />
+            )}
+          </span>
+          <span className="result-bar-value">{money(row.value)}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
 /**
- * What the figures are based on: one quiet strip, each item a label over
- * its value, with how it was chosen behind an "i".
+ * The result: one card. Its head names the figure and its year and
+ * policies; the body has the change (said nowhere else), large and counted
+ * up, with its share as a chip, beside net income before and after as
+ * bars; the foot says what it is based on, each note behind an "i". The
+ * figure is one element, so it reads (and copies) once.
  */
-function BasedOn({ items }) {
-  if (items.length === 0) return null;
+function ResultCard({ totals, yearLabel, policyCount, items }) {
+  const shown = Math.round(useCountUp(totals.change));
+  const counting = shown !== totals.change;
+  const tone = changeClass(totals.change);
+  const share = totals.change === 0 ? null : signedPercent(Math.abs(totals.change), totals.before);
   return (
-    <dl className="based-on" aria-label="Based on">
-      {items.map((item) => (
-        <div key={item.id} className="based-on-item single-year-assumption">
-          <dt className="based-on-label">
-            {item.label}
-            {item.detail && (
-              <span className="info-icon-wrapper">
-                <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
-                  i
-                </button>
-                <span className="info-tooltip" role="tooltip">
-                  {item.detail}
-                </span>
-              </span>
-            )}
-          </dt>
-          <dd className="based-on-value">{item.value}</dd>
+    <section className={`card result-card ${tone}`} aria-label="Your result">
+      <div className="result-card-head">
+        <p className="result-card-label">Change in your net income</p>
+        <div className="result-card-pills">
+          <span className="result-pill">{yearLabel}</span>
+          <a
+            className="result-pill is-link"
+            href="#change-by-policy"
+            onClick={(event) => scrollToSection(event, "change-by-policy")}
+          >
+            {policyCount} {policyCount === 1 ? "policy" : "policies"}
+          </a>
         </div>
-      ))}
-    </dl>
+      </div>
+      <div className="result-card-body">
+        <div className="result-card-hero">
+          <p className="result-figure">
+            <span className="result-value" aria-busy={counting || undefined}>
+              {signedPounds(counting ? shown : totals.change)}
+            </span>
+            {totals.change !== 0 && <span className="result-unit"> a year</span>}
+          </p>
+          {share && (
+            <p className={`result-chip ${tone}`}>
+              <span aria-hidden="true">{totals.change > 0 ? "▲" : "▼"} </span>
+              <span className="visually-hidden">{totals.change > 0 ? "Up " : "Down "}</span>
+              {share.replace(/^[+−]/, "")} of net income
+            </p>
+          )}
+        </div>
+        <BeforeAfterBars totals={totals} />
+      </div>
+      {items.length > 0 && (
+        <div className="result-card-foot">
+          <span className="result-foot-title">Based on</span>
+          <dl className="result-foot-items" aria-label="Based on">
+            {items.map((item) => (
+              <div key={item.id} className="result-foot-item">
+                <dt>
+                  <ItemIcon id={item.id} />
+                  {item.label}
+                </dt>
+                <dd>
+                  {item.value}
+                  {item.detail && (
+                    <span className="info-icon-wrapper">
+                      <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
+                        i
+                      </button>
+                      <span className="info-tooltip" role="tooltip">
+                        {item.detail}
+                      </span>
+                    </span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <a
+            className="result-card-more"
+            href="#household-breakdown"
+            onClick={(event) => scrollToSection(event, "household-breakdown")}
+          >
+            See the breakdown <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -268,6 +364,7 @@ export function SingleYearHeadline({
   renting = false,
   submitted = true,
   changed = false,
+  policyCount = 0,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -318,21 +415,82 @@ export function SingleYearHeadline({
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
       {data && status !== "error" && (
         <div className={`single-year-result ${dimmed ? "is-stale" : ""}`} aria-busy={dimmed || undefined}>
-          <HeadlineHero totals={totals} yearLabel={yearLabel} />
-          <BasedOn items={assumptionItems(data, yearLabel, { renting, policies })} />
+          <ResultCard
+            totals={totals}
+            yearLabel={yearLabel}
+            policyCount={policyCount}
+            items={assumptionItems(data, yearLabel, { renting, policies })}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function Pending({ text }) {
+// The detail stage's skeletons: what each card will look like, with the
+// calculation's progress over it
+const SKELETON_TEXT = {
+  policies: "Working out each policy's share",
+  earnings: "Calculating net income across salaries",
+};
+
+/**
+ * A card still being calculated: a skeleton of its final shape (bars for
+ * the split by policy, two charts for across earnings) at its final
+ * height, under a small chip with a spinner, the usual time, the seconds
+ * so far and a slim bar. Shown after 300ms, so a quick answer never
+ * flashes it.
+ */
+function PendingSkeleton({ kind }) {
   const shown = useDelayed(true);
+  const seconds = useElapsedSeconds(true);
+  const typical = DETAIL_CALCULATION_SECONDS;
+  const late = seconds > Math.max(SLOW_CALCULATION_SECONDS, typical * 1.5);
+  const chip = shown && (
+    <div className="skeleton-chip" role="status">
+      <span className="processing-spinner is-small" aria-hidden="true" />
+      <div>
+        <p className="skeleton-chip-title">{SKELETON_TEXT[kind]}</p>
+        <p className="skeleton-chip-time">
+          {late ? "Taking longer than usual; still working" : `About ${typical} s · ${seconds} s so far`}
+        </p>
+        <div className="processing-bar" aria-hidden="true">
+          <span style={{ transform: `scaleX(${progressShare(seconds, typical)})` }} />
+        </div>
+      </div>
+    </div>
+  );
+  if (kind === "earnings") {
+    return (
+      <div className="charts-grid single-year-chart-pair skeleton-pair" aria-busy="true">
+        {[0, 1].map((index) => (
+          <div key={index} className="card single-year-card skeleton-card is-chart">
+            <span className="skeleton-line is-title" />
+            <div className="skeleton-chart" aria-hidden="true">
+              <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+                <path className="skeleton-axis" d="M20 10V140H295" />
+                <path
+                  className="skeleton-curve"
+                  d={index === 0 ? "M20 130 C90 110 140 70 295 30" : "M20 120 L80 120 L80 80 L170 80 L170 60 L295 60"}
+                />
+              </svg>
+            </div>
+            {index === 0 && chip}
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className="card single-year-card single-year-pending" aria-busy="true">
-      <p className="single-year-quiet" role="status">
-        {shown ? text : " "}
-      </p>
+    <div className="card single-year-card skeleton-card is-bars" aria-busy="true">
+      <span className="skeleton-line is-title" />
+      {[78, 52, 34, 18].map((width) => (
+        <div key={width} className="skeleton-bar-row" aria-hidden="true">
+          <span className="skeleton-line is-label" />
+          <span className="skeleton-line is-bar" style={{ width: `${width}%` }} />
+        </div>
+      ))}
+      {chip}
     </div>
   );
 }
@@ -366,7 +524,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
             title="Breakdown of household net income"
             subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
           />
-          <section className="report-section">
+          <section className="report-section" id="household-breakdown">
             {data.programmes ? (
               <ProgrammeTable
                 programmes={data.programmes}
@@ -388,7 +546,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
             title="Change by policy"
             subtitle="How much each selected policy adds to or takes from your household's net income."
           />
-          <section className="report-section">
+          <section className="report-section" id="change-by-policy">
             {bars ? (
               <PolicyBars
                 rows={bars.rows}
@@ -403,7 +561,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
                 <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
               </div>
             ) : (
-              <Pending text="Working out each policy's share…" />
+              <PendingSkeleton kind="policies" />
             )}
           </section>
         </div>
@@ -424,7 +582,7 @@ export function SingleYearDetails({ result, year, policies, changed = false }) {
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
           </div>
         ) : (
-          <Pending text="Calculating across earnings…" />
+          <PendingSkeleton kind="earnings" />
         )}
       </section>
     </div>

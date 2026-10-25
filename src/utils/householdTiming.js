@@ -7,3 +7,7 @@ export const TYPICAL_CALCULATION_SECONDS = 20;
 
 // Past this, the panel says the calculation is taking longer than usual
 export const SLOW_CALCULATION_SECONDS = 30;
+
+// The second stage (the split by policy and the earnings sweep, asked
+// together): its median time, measured the same way
+export const DETAIL_CALCULATION_SECONDS = 20;

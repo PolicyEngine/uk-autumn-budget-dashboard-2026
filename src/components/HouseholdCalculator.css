@@ -512,17 +512,147 @@
   color: var(--pe-gray-500);
 }
 
-/* The header's right side: the examples picker and Calculate */
+/* The header's right side: Examples (quiet) and Calculate (primary) on one
+   row, the same height and radius */
 .household-header-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
 }
 
-.household-examples {
-  flex: 0 1 240px;
-  min-width: 200px;
+.example-picker {
+  position: relative;
+}
+
+.example-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.example-picker-button:hover {
+  border-color: var(--pe-gray-300);
+  background: var(--pe-gray-50);
+}
+
+.example-picker-button:active {
+  transform: translateY(1px);
+}
+
+.example-picker-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pe-teal-200);
+}
+
+.example-picker-button svg {
+  flex: none;
+  color: var(--pe-gray-500);
+}
+
+.example-picker-chevron {
+  transition: transform 0.2s ease;
+}
+
+.example-picker-button[aria-expanded="true"] .example-picker-chevron {
+  transform: rotate(180deg);
+}
+
+/* The menu: a popover list under the button, right-aligned */
+.example-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: min(480px, 70vh);
+  padding: 6px;
+  overflow-y: auto;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--pe-shadow-lg);
+  animation: example-menu-in 0.15s ease-out both;
+}
+
+@keyframes example-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.example-menu-group + .example-menu-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.example-menu-title {
+  margin: 0;
+  padding: 8px 10px 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--pe-gray-400);
+}
+
+.example-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+}
+
+.example-menu-item:hover,
+.example-menu-item:focus-visible {
+  background: var(--pe-gray-50);
+  outline: none;
+}
+
+.example-menu-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--pe-teal-200);
+}
+
+.example-menu-item[aria-checked="true"] {
+  background: var(--pe-teal-50);
+}
+
+.example-menu-name {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.example-menu-description {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
 }
 
 /* Calculate, as the student loan calculator's .calculate-button */
@@ -1012,10 +1142,24 @@
     padding: 14px 16px 0;
   }
 
-  .household-examples,
-  .household-header-actions,
-  .calculate-button {
+  .household-header-actions {
     flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .example-picker,
+  .calculate-button {
+    flex: 1 1 0;
+  }
+
+  .example-picker-button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .example-menu {
+    left: 0;
+    right: auto;
   }
 
   .household-more {
@@ -1027,8 +1171,14 @@
   .household-more-chevron,
   .info-tooltip,
   .calculate-button,
-  .calculate-arrow {
+  .calculate-arrow,
+  .example-picker-button,
+  .example-picker-chevron {
     transition: none;
+  }
+
+  .example-menu {
+    animation: none;
   }
 
   .calculate-spinner {

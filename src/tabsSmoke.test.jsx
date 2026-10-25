@@ -158,7 +158,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
         // two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
         expect(
-          await within(panel).findByText(/^Change in your net income, /, {}, { timeout: 5000 }),
+          await within(panel).findByText(/^Change in your net income$/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
         await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
         const stages = requests
@@ -224,7 +224,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Personal impact" }));
     expect(screen.getByRole("tabpanel", { name: "Personal impact" })).toBe(personal);
-    expect(await within(personal).findByText(/^Change in your net income, /)).toBeInTheDocument();
+    expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
     await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);
     expect(held).toHaveLength(0);
