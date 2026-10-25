@@ -157,10 +157,10 @@ export function checkSentence(check, frequency) {
   const first = label(check.periods[0]);
   const last = label(check.periods[check.periods.length - 1]);
   const gap = checkAmount(Math.abs(check.largest_gap), check.in);
+  const what = check.in.startsWith("% change") ? `ONS outturn's ${check.in}` : "ONS outturn";
   return (
-    `The ONS outturn was checked against ${check.against}, ${first} to ${last}: ` +
-    `every period is within ${tolerance}; the largest gap${share ? " relative to the value" : ""} is ` +
-    `${gap}, in ${label(check.largest_gap_period)}.`
+    `From ${first} to ${last}, the ${what} is within ${tolerance} of ${check.against}; ` +
+    `the largest gap${share ? " relative to the value" : ""} is ${gap}, in ${label(check.largest_gap_period)}.`
   );
 }
 

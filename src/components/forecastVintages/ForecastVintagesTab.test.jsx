@@ -214,7 +214,7 @@ describe("the page's text", () => {
     expect(await screen.findByText(/^Outturn: ONS CRXX/)).toBeInTheDocument();
     expect(screen.getByText(/^Forecasts: OBR, Economic and fiscal outlook/)).toBeInTheDocument();
     expect(screen.getByText(/starts from the latest outturn it reaches, Q2 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/every period is within 1\.5 percentage points/)).toBeInTheDocument();
+    expect(screen.getByText(/^From Q4 2023 to Q3 2025, the ONS outturn's % change on a year earlier is within 1\.5 percentage points/)).toBeInTheDocument();
   });
 
   it("lists every source file with its checksum", async () => {
@@ -252,7 +252,7 @@ describe("the page's text", () => {
 describe("the chart's sentences", () => {
   it("name each forecast's start from the file's launch rules", () => {
     expect(startsSentence(DATA.meta.launch_rules, "calendar", false)).toBe(
-      "Each dashed line is one OBR forecast. It starts at the calendar year before the forecast was published.",
+      "Each dashed line is one OBR forecast, from its launch period: the calendar year before the forecast was published.",
     );
     expect(startsSentence({}, "calendar", false)).toBeNull();
     expect(startsSentence(DATA.meta.launch_rules, "quarterly", true)).toMatch(/last whole calendar year/);

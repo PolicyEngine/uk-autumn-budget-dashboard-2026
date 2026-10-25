@@ -59,7 +59,7 @@ export function startsSentence(rules, frequency, annual) {
   const rule = annual
     ? "The last whole calendar year up to the quarter it starts from in the quarterly view."
     : rules?.[frequency];
-  return rule ? `Each dashed line is one OBR forecast. It starts at ${lowerFirst(rule)}` : null;
+  return rule ? `Each dashed line is one OBR forecast, from its launch period: ${lowerFirst(rule)}` : null;
 }
 
 const POINT_NAMES = {

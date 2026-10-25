@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { NEWEST_SHOWN, forecastVintagesProblem } from "./load";
 import { periodIndex, toSeries } from "./transforms";
-import { OUTTURN_KEY, UNIT_ORDER, buildView, formatterFor, niceAxis, stepDecimals } from "./view";
+import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, formatterFor, niceAxis, stepDecimals } from "./view";
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
 const variable = (id) => DATA.variables.find((v) => v.id === id);
@@ -174,5 +174,30 @@ describe("axes and formats", () => {
   it("keep the outturn under its own key", () => {
     const view = buildView(DATA, variable("cpi"), { unit: "pct" });
     expect(view.rows.some((r) => OUTTURN_KEY in r)).toBe(true);
+  });
+});
+
+describe("the outturn check, in words", () => {
+  it("states the periods, the tolerance and the largest gap of each kind of check", () => {
+    const gdp = variable("real_gdp").level.check;
+    expect(checkSentence(gdp, "calendar")).toBe(
+      `From ${gdp.periods[0]} to ${gdp.periods[gdp.periods.length - 1]}, the ONS outturn's % change on a year earlier is within 1 percentage point of the outturn row of the OBR's database; the largest gap is 0.29 percentage points, in 2017.`,
+    );
+    const psnb = variable("psnb").level.check;
+    expect(checkSentence(psnb, "fiscal")).toMatch(
+      /^From 2017-18 to 2024-25, the ONS outturn is within 5% of the value of the outturn row of the OBR's database; the largest gap relative to the value is £2\.13 billion, in 2017-18\.$/,
+    );
+    const employment = variable("employment").level.check;
+    expect(checkSentence(employment, "calendar")).toMatch(/is within 2% of the value .* million people, in \d{4}\.$/);
+    const rhdi = variable("rhdi_per_person").level.check;
+    expect(checkSentence(rhdi, "quarterly")).toMatch(/^From Q4 2023 to Q3 2025, .* within 1\.5 percentage points of Table 1\.5 of the March 2026 forecast/);
+  });
+
+  it("says every measure's check, and nothing where there is none", () => {
+    for (const v of DATA.variables) {
+      for (const m of [v.level, v.share].filter(Boolean)) expect(checkSentence(m.check, v.frequency)).toMatch(/^From .+, in .+\.$/);
+    }
+    expect(checkSentence(null, "calendar")).toBeNull();
+    expect(checkSentence({ periods: [] }, "calendar")).toBeNull();
   });
 });
