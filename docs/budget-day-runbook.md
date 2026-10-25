@@ -681,7 +681,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - **The cuts:**
   - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
-  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
+  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, a breakdown answered under 200 s, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
@@ -790,7 +790,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - **Approve on the upgrade branch, before merging, for re-cuts and the final cut** (coordinator, 22 October; see "Rolling re-cuts" above).
   - **Why it's possible:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`).
   - **What it avoids:** a gap. If approval came after the merge, figures that were approved would show at most as provisional from the merge until approval (re-staging them with `--provisional` keeps them visible).
-  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check immediately after the merge and the deploy, and revert if it fails.
+  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check and time one breakdown immediately after the merge and the deploy, and revert if either fails.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -894,7 +894,7 @@ Exports are built only from approved entries of one manifest revision. A measure
     --to-revisions <revision>=100
   ```
 
-  Then re-run the household check against the live route, and time one breakdown (see "Adopting a release").
+  **After either path,** the workflow's `rollback` or this fallback, re-run the household check against the live route, and time one breakdown (see "Adopting a release").
 - **A model release.** To go back to the previous bundle after an upgrade:
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
