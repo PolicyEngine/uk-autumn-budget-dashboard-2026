@@ -176,7 +176,9 @@ describe("published measure catalogue in population views", () => {
     ));
     expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
-    expect(screen.getAllByTestId("chart-rows")).toHaveLength(3);
+    // Two Recharts charts (change by age, change by year); the policy
+    // comparison is drawn without Recharts since #128
+    expect(screen.getAllByTestId("chart-rows")).toHaveLength(2);
   });
 
   it("keeps an unsupported year's age figures null and refuses the combined run", async () => {

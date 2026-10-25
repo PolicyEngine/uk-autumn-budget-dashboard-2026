@@ -131,6 +131,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
-    expect(screen.queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
+    // The Forecast changes view stays mounted, hidden, once opened (#128)
+    const notice = screen.queryByText("Budget-day forecast is unavailable until verified");
+    if (notice) expect(notice).not.toBeVisible();
   });
 });

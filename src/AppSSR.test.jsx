@@ -7,7 +7,7 @@ it("prerenders the shell without a browser or any Budget figures", () => {
   expect(typeof window).toBe("undefined");
   const html = renderToString(<App />);
   expect(html).toContain("UK Autumn Budget 2026");
-  for (const label of ["Population impact", "Personal impact", "Living standards", "Methodology"]) {
+  for (const label of ["Population impact", "Household impact", "Living standards", "Methodology"]) {
     expect(html).toContain(label);
   }
   expect(html).toContain("Loading published measures");
