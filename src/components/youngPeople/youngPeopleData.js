@@ -69,7 +69,7 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
     if (group.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
-      noEffect.push(policy.name);
+      noEffect.push({ id: policy.id, name: policy.name });
     } else {
       shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
     }
@@ -198,4 +198,16 @@ export function fitRange(min, max) {
   for (let tick = bottom; tick <= top + 1e-9; tick += step) ticks.push(tick);
   if (ticks.length < 2) ticks.push(bottom + step);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * Why a measure has no effect in a year, where there is a short reason: an
+ * employer cost moves no household's income, and two measures apply in one
+ * year or from one year only.
+ */
+export function noEffectReason(id, year) {
+  if (id === "employer_ni_relief_under_25s") return "Employer cost; wages held fixed";
+  if (id === "threshold_freeze_2031_32" && year < 2031) return "Starts in 2031-32";
+  if (id === "warm_home_discount_top_up" && year !== 2026) return "Paid in 2026-27 only";
+  return null;
 }

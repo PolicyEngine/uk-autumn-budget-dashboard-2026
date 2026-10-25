@@ -92,7 +92,7 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
             <rect x={area.x} y={yAxis.y} width={area.width} height={yAxis.height} fill={CHART_COLOURS.mutedFill} />
             <text x={area.centre} y={yAxis.y + 16} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
               <tspan x={area.centre}>Not yet</tspan>
-              <tspan x={area.centre} dy={13}>published</tspan>
+              <tspan x={area.centre} dy={13}>{" published"}</tspan>
             </text>
           </g>
         );

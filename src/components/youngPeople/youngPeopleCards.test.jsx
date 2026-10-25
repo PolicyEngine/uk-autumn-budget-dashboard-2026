@@ -89,7 +89,7 @@ describe("young people data", () => {
     const thin = [...ROWS.filter((r) => !(r.reform_id === "two_child_limit" && r.age_band === "16-24" && r.year === 2028)), row("two_child_limit", 2028, "16-24", 190, MIN_SAMPLE_SIZE - 1)];
     const { shown, noEffect, suppressed } = measureComparison(thin, POLICIES, ALL, 2028);
     expect(shown.map((point) => point.name)).toEqual(["Threshold freeze extension"]);
-    expect(noEffect).toEqual(["Salary sacrifice cap"]);
+    expect(noEffect.map((policy) => policy.name)).toEqual(["Salary sacrifice cap"]);
     expect(suppressed).toEqual(["2 child limit repeal"]);
   });
 
@@ -129,7 +129,12 @@ describe("young people cards", () => {
     expect(screen.getByRole("heading", { level: 3, name: /Effect of each policy, 2028-29/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download chart: Effect of each policy/ })).toBeInTheDocument();
     expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
-    expect(screen.getByText(/No effect in 2028-29: Salary sacrifice cap/)).toBeInTheDocument();
+    // No effect: in the card's More info row, closed at first
+    const more = screen.getByRole("button", { name: "More info" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    expect(screen.getByText("No effect in 2028-29 (1)")).toBeInTheDocument();
+    expect(screen.getByText("Salary sacrifice cap")).toBeInTheDocument();
   });
 
   it("lets the reader choose the age group compared", () => {

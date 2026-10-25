@@ -154,7 +154,7 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
             >
               {lines.map((line, index) => (
                 <tspan key={line} x={x} dy={index === 0 ? 0 : size + 2}>
-                  {line}
+                  {index === 0 ? line : ` ${line}`}
                 </tspan>
               ))}
             </text>

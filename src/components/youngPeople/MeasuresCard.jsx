@@ -27,7 +27,9 @@ import {
 } from "../../utils/chartTheme";
 import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
-import { measureComparison, niceRange, pounds, signedPounds, wrapWords } from "./youngPeopleData";
+import { measureComparison, niceRange, noEffectReason, pounds, signedPounds, wrapWords } from "./youngPeopleData";
+import { NoEffectList } from "../personal/PolicyBars";
+import { getPolicyColor } from "../../utils/policyConfig";
 import { chartMotion } from "../../utils/chartMotion";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 
@@ -67,8 +69,10 @@ function MeasureTick({ x, y, payload, maxChars }) {
       fill={CHART_COLOURS.text}
     >
       {lines.map((line, index) => (
+        // A space before each wrapped line, so the name reads (and copies)
+        // as words; with the end anchor it moves nothing
         <tspan key={line} x={x - 6} dy={index === 0 ? 0 : lineHeight}>
-          {line}
+          {index === 0 ? line : ` ${line}`}
         </tspan>
       ))}
     </text>
@@ -105,10 +109,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     reservedLegendHeight: 0,
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
-  const notes = [
-    ...(noEffect.length ? [`No effect in ${yearLabel}: ${noEffect.join(", ")}`] : []),
-    ...(suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : []),
-  ];
+  const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
+  // No effect: in the card's More info row, each with its colour and reason
+  const noEffectItems = noEffect.map((policy) => ({
+    ...policy,
+    color: getPolicyColor(policy.id),
+    reason: noEffectReason(policy.id, selectedYear),
+  }));
   const csvText = () =>
     buildChartCsv({
       title: `Average change in household net income per person by policy, ${yearLabel}`,
@@ -225,6 +232,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
+      {published && noEffectItems.length > 0 && (
+        <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />
+      )}
     </div>
   );
 }
