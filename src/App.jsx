@@ -488,30 +488,36 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // All households: places, and how changes vary between households
     return (
       <div className="results-container">
-        {/* The constituency map, then the decile pair under one measure
-            key, then the household scatter: each full width but the pair,
-            side by side. The scatter shows binned groups of households
-            only: the per-household scatter stays withdrawn, as it showed
-            survey households one by one. Results by region are hidden for
-            now (RegionView is kept, not rendered). */}
-        <SectionHeading
-          icon="compass"
-          title="Where and who"
-          subtitle="Average change by constituency and by income decile, and how changes vary between households."
-        />
-        <section id="constituencies" className="report-section charts-stack">
-          <ConstituencyMap
-            selectedPolicies={selectedPolicies}
-            selectedYear={distributionalYear}
-            policies={POLICIES}
-            showRegionLink={false}
-          />
-        </section>
-        {/* Both decile cards colour by measure: one key above the pair
-            (MeasureKey), and hovering a measure there shows it in both */}
+        {/* Three sections: by area (the constituency map), by income (the
+            decile pair) and across households (the scatter of binned groups;
+            the per-household scatter stays withdrawn, as it showed survey
+            households one by one). One measure key above them all
+            (MeasureKey): the decile cards colour by measure and register
+            with it. Results by region are hidden for now (RegionView is
+            kept, not rendered). */}
         <MeasureKeyProvider>
+          <SectionMeasureKey />
+          <SectionHeading
+            id="by-area"
+            icon="compass"
+            title="By area"
+            subtitle="Average change in household income in each parliamentary constituency."
+          />
+          <section id="constituencies" className="report-section charts-stack">
+            <ConstituencyMap
+              selectedPolicies={selectedPolicies}
+              selectedYear={distributionalYear}
+              policies={POLICIES}
+              showRegionLink={false}
+            />
+          </section>
+          <SectionHeading
+            id="by-income"
+            icon="wallet"
+            title="By income"
+            subtitle="How the change differs between lower- and higher-income households."
+          />
           <section id={DECILES_ANCHOR} className="report-section distributional-section">
-            <SectionMeasureKey />
             <div className="charts-grid">
               <WaterfallChart
                 rawData={results.rawWinnersLosers}
@@ -525,14 +531,33 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               />
             </div>
           </section>
-        </MeasureKeyProvider>
-        <section id="scatter" className="report-section charts-stack">
-          <HouseholdScatter
-            selectedPolicies={selectedPolicies}
-            policies={POLICIES}
-            selectedYear={distributionalYear}
+          <SectionHeading
+            id="across-households"
+            icon="users"
+            title="Across households"
+            subtitle="Who gains and who loses at every income level, in groups of households with similar incomes and changes."
           />
-        </section>
+          <section id="scatter" className="report-section charts-stack">
+            <HouseholdScatter
+              selectedPolicies={selectedPolicies}
+              policies={POLICIES}
+              selectedYear={distributionalYear}
+            />
+          </section>
+          <p className="section-link">
+            Where would your household be?{" "}
+            <a
+              className="twin-link"
+              href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+              onClick={(event) => {
+                event.preventDefault();
+                handleTabChange("household");
+              }}
+            >
+              Work it out on Household impact →
+            </a>
+          </p>
+        </MeasureKeyProvider>
       </div>
     );
   };
