@@ -58,7 +58,9 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+// `pastEvent`: the chart is a past fiscal event's (#107), so its "More info"
+// gives no £0 measure a reason written for this Budget's (zeroReason)
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, pastEvent = false }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -364,7 +366,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} />
+          <ChartMoreInfo members={members} year={selectedYear} pastEvent={pastEvent} />
         </div>
       )}
     </div>

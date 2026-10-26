@@ -352,8 +352,8 @@ function HistoricalDashboard({ release, published, views }) {
             <SectionHeading title="Households by income" subtitle="How net income changes across the income distribution in the selected year." />
             <section id="deciles" className="report-section distributional-section">
               <div className="charts-grid">
-                <WaterfallChart rawData={rawWinnersLosers} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
-                <DistributionalChart rawData={rawDistributional} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
+                <WaterfallChart rawData={rawWinnersLosers} selectedPolicies={selectedPolicies} selectedYear={selectedYear} pastEvent />
+                <DistributionalChart rawData={rawDistributional} selectedPolicies={selectedPolicies} selectedYear={selectedYear} pastEvent />
               </div>
             </section>
           </div>

@@ -69,7 +69,9 @@ const decileOrder = [
   "10th",
 ];
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+// `pastEvent`: the chart is a past fiscal event's (#107), so its "More info"
+// gives no £0 measure a reason written for this Budget's (zeroReason)
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, pastEvent = false }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -375,7 +377,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} />
+          <ChartMoreInfo members={members} year={selectedYear} pastEvent={pastEvent} />
         </div>
       )}
     </div>

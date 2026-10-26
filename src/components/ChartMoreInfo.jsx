@@ -38,7 +38,7 @@ function EmployerReason({ id, year, text }) {
  * The selected measures that are £0 for households in the year shown, for a
  * card's "More info": a lead line, then one measure per line with why.
  */
-export function ZeroMeasuresDetail({ zero, year, period }) {
+export function ZeroMeasuresDetail({ zero, year, period, pastEvent = false }) {
   const count = zero.length === 1 ? "1 measure is" : `${zero.length} measures are`;
   return (
     <div className="zero-measures">
@@ -47,7 +47,7 @@ export function ZeroMeasuresDetail({ zero, year, period }) {
       </p>
       <ul className="zero-measures-list">
         {zero.map((member) => {
-          const reason = zeroReason(member, year);
+          const reason = zeroReason(member, year, { pastEvent });
           return (
             <li key={member.id} data-zero-measure={member.id}>
               <strong>{member.name}</strong>:{" "}
@@ -75,16 +75,19 @@ export function ZeroMeasuresDetail({ zero, year, period }) {
  * `period` replaces "in 2027-28" for a chart over several years (its £0
  * measures are £0 in all of them).
  *
- * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, period?: string, children?: React.ReactNode}} props
+ * `pastEvent`: the members are a past fiscal event's, so no £0 measure is
+ * given a reason written for this Budget's (zeroReason).
+ *
+ * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, period?: string, pastEvent?: boolean, children?: React.ReactNode}} props
  */
-function ChartMoreInfo({ members = [], year, period, children }) {
+function ChartMoreInfo({ members = [], year, period, pastEvent = false, children }) {
   const zero = members.filter((member) => member.muted);
   const extra = Array.isArray(children) ? children.filter(Boolean) : children;
   const hasExtra = Array.isArray(extra) ? extra.length > 0 : Boolean(extra);
   if (!zero.length && !hasExtra) return null;
   return (
     <Disclosure inCard title="More info" className="chart-more-info" contentClassName="chart-more-info-content">
-      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} period={period} />}
+      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} period={period} pastEvent={pastEvent} />}
       {extra}
     </Disclosure>
   );

@@ -88,6 +88,15 @@ describe("legendMembership", () => {
     expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
   });
 
+  it("gives a past event's £0 measure no reason written for this Budget's measures", () => {
+    // #107: a past event's employer measure (Autumn Budget 2024 raised
+    // employer NI) must not read as this Budget's relief, and this Budget's
+    // dates never say when a past measure is in force
+    for (const id of [EMPLOYER_NI, "warm_home_discount_top_up"]) {
+      expect(zeroReason(catalogue.byId.get(id), 2027, { pastEvent: true })).toEqual({ kind: "none", text: "no change for the households shown" });
+    }
+  });
+
   it("never calls a measure out of force from details written for another description of it", () => {
     // Changed since its entry was written (on Budget day, say): its window
     // may no longer hold, so it is not used
@@ -135,6 +144,18 @@ describe.each([
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(screen.getAllByText("Fuel duty rises deferred")[0].closest("li").className).not.toContain("is-muted");
     within(container).getByText("They are greyed out in the key and left out of the tooltip.");
+  });
+
+  it("on a past event's page, says only that a £0 measure changes no household shown", () => {
+    const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} pastEvent />);
+    const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+    fireEvent.click(within(moreInfo).getByRole("button", { name: "More info" }));
+    const zero = [...container.querySelectorAll("[data-zero-measure]")];
+    // The same £0 measures as on this Budget's page, each with no reason of its own
+    expect(zero.map((node) => node.dataset.zeroMeasure)).toEqual(expect.arrayContaining([EMPLOYER_NI, "warm_home_discount_top_up"]));
+    for (const node of zero) expect(node.textContent).toMatch(/: No change for the households shown\.$/);
+    expect(moreInfo.textContent).not.toMatch(/Employers pay less|held fixed|only\./);
+    expect(within(moreInfo).queryByRole("link", { name: "Public finances" })).toBeNull();
   });
 });
 
