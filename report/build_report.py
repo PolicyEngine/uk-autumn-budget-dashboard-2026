@@ -1155,7 +1155,9 @@ class Report:
 def keep_lead(section: str) -> str:
     """Keep a section's heading and introduction on the page of its first figure,
     table or notice (Chrome does not honour break-after: avoid on headings)."""
-    match = re.search(r'<p class="kicker">.*?(</figure>|</table>|</div></div>)', section, flags=re.S)
+    if 'id="summary"' in section:
+        return section
+    match = re.search(r'<p class="kicker">.*?(</figure>|</table>|</p></div>)', section, flags=re.S)
     if not match or "</section>" in match.group(0):
         return section
     return section[: match.start()] + '<div class="keep">' + match.group(0) + "</div>" + section[match.end():]

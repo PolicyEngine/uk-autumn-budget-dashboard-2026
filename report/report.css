@@ -19,7 +19,7 @@ p { orphans: 3; widows: 3; }
 
 /* Provisional: a watermark on every page, and the dashboard's label */
 .watermark { position: fixed; top: 45%; left: 0; right: 0; text-align: center; transform: rotate(-30deg);
-  font-size: 66pt; font-weight: 700; color: #B45309; opacity: 0.08; letter-spacing: 0.04em; pointer-events: none; z-index: 0; text-transform: uppercase; }
+  font-size: 66pt; font-weight: 700; color: #B45309; opacity: 0.08; letter-spacing: 0.04em; pointer-events: none; z-index: 10; text-transform: uppercase; }
 .status-banner, .status-inline { background: #FFF7E6; color: #7A5A1F; border: 1px solid #FDE68A; border-radius: 1.5mm; padding: 2.5mm 3.5mm; font-weight: 600; font-size: 9pt; }
 .status-banner { display: inline-block; margin: 8mm 0 0; }
 
