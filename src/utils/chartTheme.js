@@ -82,8 +82,9 @@ export const CHART_COLOURS = {
 export const POLICY_RAMPS = {
   // Amber 900, 700, 500
   raise: ["#78350F", "#B45309", "#F59E0B"],
-  // Teal 800 to 200
-  cost: ["#115E59", "#0F766E", "#0D9488", "#14B8A6", "#2DD4BF", "#5EEAD4", "#99F6E4"],
+  // Teals, dark blue-teal to green-teal: even steps in lightness, with the
+  // hue turning so the dark end stays apart; the lightest is 3:1 on white
+  cost: ["#092438", "#003E4C", "#055457", "#026962", "#047E67", "#0A9367", "#40A85E"],
 };
 
 /**

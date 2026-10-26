@@ -26,7 +26,7 @@ import {
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
-import { marginalRates, rateAt } from "../../utils/singleYear";
+import { keepSentence, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
@@ -104,6 +104,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
       : salary !== null
         ? rateAt(rates, salary)
         : null;
+  // The rate as money, from the API's own rates only: they are over the
+  // next £100, which the sentence scales (a sweep step is too coarse)
+  const keep = own ? keepSentence(own.beforeRate, own.afterRate) : null;
 
   const download = {
     chartRef,
@@ -144,6 +147,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               {pct(yours.after)} after.
             </p>
           )}
+          {yours && keep && <p className="chart-description single-year-keep">{keep}</p>}
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>

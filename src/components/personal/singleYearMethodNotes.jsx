@@ -77,3 +77,15 @@ export const COUNCIL_TAX_NOTE = (
     ]}
   />
 );
+
+export const MARGINAL_RATE_NOTE = (
+  <Note
+    icon="percent"
+    lead="The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered."
+    points={[
+      "The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+      "“Of your next £1,000” is that rate applied to £1,000. Where earning the next £100 lowers net income by more than £100 (a cliff, such as losing childcare support above £100,000), the sentence is about that £100 instead.",
+      "Known limits: Council Tax Reduction is counted only where the model has the local scheme, so rates are understated for people who get it elsewhere. Each person has one student loan plan, so an undergraduate and postgraduate loan together is not modelled. On the engine version pinned here, Scottish top-rate taxpayers are charged £377 too much a year; policyengine-uk 2.134.3 fixes this, and the pin moves after the Budget.",
+    ]}
+  />
+);
