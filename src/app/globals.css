@@ -650,7 +650,6 @@ body {
   font-weight: 600;
   color: var(--band-ink);
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
 /* The count is part of the value's text, not a badge */
