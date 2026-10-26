@@ -1984,7 +1984,8 @@ body {
 
 @media (max-width: 480px) {
   .policy-filter .obr-view-option {
-    padding-inline: 10px;
+    gap: 4px;
+    padding-inline: 8px;
     font-size: var(--fs-caption);
   }
 
