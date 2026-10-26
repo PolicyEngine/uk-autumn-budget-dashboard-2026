@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
 import { HOUSEHOLD_ABOUT_ID } from "./methodology/anchors";
@@ -83,9 +86,11 @@ describe("MethodologyTab", () => {
     const { container } = renderTab(onShowTab);
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
-    const pointer = model.querySelector(".method-pointer");
-    expect(pointer).toHaveTextContent("What each measure does and how it is modelled is on Policies");
-    const link = within(pointer).getByRole("link", { name: "Policies" });
+    const summary = model.querySelector(".method-summary");
+    expect(summary.querySelectorAll("p")).toHaveLength(1);
+    expect(summary).toHaveTextContent("What each measure does and how it is modelled is on Policies");
+    const link = summary.querySelector("a.method-pointer");
+    expect(link).toHaveAccessibleName("Policies");
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
@@ -193,6 +198,34 @@ describe("MethodologyTab", () => {
     for (const link of container.querySelectorAll('a[href^="#method-"]')) {
       expect(container.querySelector(link.getAttribute("href")), link.getAttribute("href")).not.toBeNull();
     }
+  });
+
+  it("keeps the space after every link: no JSX text after a tag that loses it in the build", () => {
+    // Next's compiler (SWC) drops the leading space of JSX text that runs on
+    // to another line after a closing tag ("net income</Term> under ...",
+    // shown as "net incomeunder"); jsdom's transform keeps it, so a render
+    // test cannot see it. Such text needs an explicit {" "}.
+    const root = join(fileURLToPath(import.meta.url), "..");
+    const files = [
+      "MethodologyTab.jsx",
+      "GeographyMethodology.jsx",
+      ...readdirSync(join(root, "methodology")).filter((f) => f.endsWith(".jsx")).map((f) => `methodology/${f}`),
+      "personal/singleYearMethodNotes.jsx",
+    ];
+    const tag = /(<\/[A-Za-z][\w.]*>|\/>) +(?=[^\s{<])/g;
+    const glued = [];
+    for (const file of files) {
+      const lines = readFileSync(join(root, file), "utf8").split("\n");
+      lines.forEach((line, index) => {
+        for (const match of line.matchAll(tag)) {
+          const rest = line.slice(match.index + match[0].length);
+          const next = (lines[index + 1] ?? "").trim();
+          if (/[<{]/.test(rest) || /^\s*(\/\/|\*)/.test(line) || !next || /^[<{)}/]/.test(next)) continue;
+          glued.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+    expect(glued).toEqual([]);
   });
 
   it("renders every section with its icon, so a missing icon import fails", () => {
