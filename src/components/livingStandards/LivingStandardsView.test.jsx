@@ -299,12 +299,14 @@ describe("the Pre-measures forecast view", () => {
     expect(within(growth).getByText(/second-lowest-income twentieth/)).toBeInTheDocument();
     expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).has("ls_groups")).toBe(false);
-    expect(within(growth).getByRole("button", { name: /^Growth view:/ })).toHaveTextContent("Year by year");
+    // One Options pill, the view first: no separate View pill
+    expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
+    expect(optionsSummary(growth)).toBe("Options: Year by year · Vigintiles · Before housing costs · All people");
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth|fifth/)).not.toBeInTheDocument();
     // Year by year, deciles, after housing costs, non-pensioners: each
     // choice in the address, the sentence following
-    choose(growth, "Growth view", "Year by year");
+    choose(growth, "View", "Year by year");
     choose(growth, "Income groups", "Deciles");
     choose(growth, "Housing costs", "After housing costs");
     choose(growth, "Population", "Non-pensioners");
@@ -335,9 +337,9 @@ describe("the Pre-measures forecast view", () => {
     // Back to vigintiles, the default, leaves ?ls_groups out
     choose(growth, "Income groups", "Vigintiles");
     // Whole period goes in the address; back to the defaults leaves nothing
-    choose(growth, "Growth view", "Whole period");
+    choose(growth, "View", "Whole period");
     expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");
-    choose(growth, "Growth view", "Year by year");
+    choose(growth, "View", "Year by year");
     choose(growth, "Housing costs", "Before housing costs");
     choose(growth, "Population", "All people");
     for (const param of ["ls_growth", "ls_groups", "ls_housing", "ls_pop"]) {

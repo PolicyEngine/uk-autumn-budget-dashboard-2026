@@ -5,7 +5,6 @@
 // file without it falls back to income_by_decile's quintiles and deciles
 // (all people). The view of the Growth across the distribution card.
 
-import PillSelect from "../../PillSelect";
 import { housingOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
 import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
@@ -181,18 +180,15 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // The years compared are the section's (CurrentLawSection); the view is
   // the card's pill and the rest sits under Options (ControlBar)
   const controls = {
-    primary: (
-      <PillSelect
-        variant="light"
-        prefix="View"
-        name="Growth view"
-        value={view}
-        onChange={setView}
-        options={Object.entries(VIEWS).map(([value, label]) => ({ value, label }))}
-        stableWidth
-      />
-    ),
+    // One Options pill: the view first, then the groups, housing costs and
+    // population ("Year by year · Vigintiles · Before housing costs · All people")
     options: [
+      {
+        label: "View",
+        value: view,
+        onChange: setView,
+        options: Object.entries(VIEWS).map(([value, label]) => ({ value, label })),
+      },
       offer.groupings.length > 1 && {
         label: "Income groups",
         value: grouping,
