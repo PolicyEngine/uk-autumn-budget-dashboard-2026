@@ -2,6 +2,9 @@ import TitleIcon from "../TitleIcon";
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
+import { InfoTip } from "../Tip";
+import { CircleSlash, ListChecks } from "lucide-react";
+import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
@@ -257,19 +260,23 @@ function scrollToSection(event, id) {
  * on a policy's figure (an employer cost's says why it is £0). The
  * policies with no effect are one line in the waterfall itself.
  */
-/** An employer cost's note, shortened for one bullet (the API's leads with a label). */
-const shortReason = (text) => (text ?? "").replace(/^No household effect \(employer cost\):\s*/i, "");
+/** An employer cost's note, without the API's leading label, as a sentence. */
+const shortReason = (text) => {
+  const rest = (text ?? "").replace(/^No household effect \(employer cost\):\s*/i, "");
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+};
 
 /**
- * The result card's "About this result": what the figure rests on and
- * what does not move it, each said once. The caution on assumed spending,
- * what the figure is based on (each detail behind an "i"), the measures
- * with no effect (an employer cost with its one-line reason), and any
- * measure's own note or one worth less than £1 a year.
+ * The result card's "About this result", in the charts' "About this chart"
+ * style (InfoSections): one bullet on assumed spending, when most of the
+ * change comes from it, then two columns with matching headings: "Based
+ * on" (each fact with its tip) and "No effect on you" (a chip each; an
+ * employer cost's reason in its tip). Any measure's own note, or one under
+ * £1 a year, below. Each fact once.
  */
 function AboutResult({ items, caution, bars }) {
   const noEffect = bars?.noEffectItems ?? [];
-  // Employer costs are said with their measure under "No effect on you"
+  // Employer costs are said with their chip under "No effect on you"
   const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   const parts = [
@@ -278,64 +285,108 @@ function AboutResult({ items, caution, bars }) {
     (notes.length > 0 || under.length > 0) && "Notes",
   ].filter(Boolean);
   if (!caution && parts.length === 0) return null;
+  const extra = [
+    ...(under.length > 0 ? [`Less than £1 a year: ${under.join(", ")}.`] : []),
+    ...notes.map((note) => (
+      <span key={note.id} data-note={note.kind}>
+        <strong>{note.name}</strong>: {note.text}
+      </span>
+    )),
+  ];
   return (
     <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
-      {caution && <p className="result-caution">Most of this comes from assumed fuel and electricity spending.</p>}
-      {items.length > 0 && (
-        <div className="result-card-basis">
-          <span className="result-foot-title">Based on</span>
-          <dl className="result-foot-items" aria-label="Based on">
-            {items.map((item) => (
-              <div key={item.id} className="result-foot-item">
-                <dt>{item.label}</dt>
-                <dd>
-                  {item.value}
-                  {item.detail && (
-                    <span className="info-icon-wrapper">
-                      <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
-                        i
-                      </button>
-                      <span className="info-tooltip" role="tooltip">
-                        {item.detail}
-                      </span>
-                    </span>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
+      <div className="info-sections result-about">
+        {caution && (
+          <ul className="info-list result-about-caution">
+            <li>Most of the change comes from assumed fuel and electricity spending.</li>
+          </ul>
+        )}
+        <div className="result-about-columns">
+          {items.length > 0 && (
+            <section className="info-section result-card-basis">
+              <h4 className="info-heading">
+                <ListChecks aria-hidden="true" strokeWidth={1.75} />
+                Based on
+              </h4>
+              <dl className="result-foot-items" aria-label="Based on">
+                {items.map((item) => (
+                  <div key={item.id} className="result-foot-item">
+                    <dt>{item.label}</dt>
+                    <dd>
+                      {item.value}
+                      {item.detail && <InfoTip content={item.detail} label={`About ${item.label}: ${item.detail}`} />}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+          {noEffect.length > 0 && (
+            <section className="info-section result-card-no-effect">
+              <h4 className="info-heading">
+                <CircleSlash aria-hidden="true" strokeWidth={1.75} />
+                No effect on you
+              </h4>
+              <ul className="result-no-effect-chips">
+                {noEffect.map((item) => (
+                  <li key={item.id} className="result-no-effect-chip" title={item.name}>
+                    {item.label ?? item.name}
+                    {item.reason && <InfoTip content={shortReason(item.reason)} label={`Why ${item.name} has no effect`} />}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
-      )}
-      {noEffect.length > 0 && (
-        <div className="result-card-no-effect">
-          <span className="result-foot-title">No effect on you</span>
-          <ul>
-            {noEffect.map((item) => (
-              <li key={item.id} title={item.name}>
-                {item.reason ? (
-                  <>
-                    {item.name}: {shortReason(item.reason)}
-                  </>
-                ) : (
-                  item.label ?? item.name
-                )}
+        {extra.length > 0 && (
+          <ul className="info-list result-card-notes">
+            {extra.map((item, index) => (
+              <li key={index} className="single-year-quiet">
+                {item}
               </li>
             ))}
           </ul>
-        </div>
-      )}
-      {(notes.length > 0 || under.length > 0) && (
-        <div className="result-card-notes">
-          {under.length > 0 && <p className="single-year-quiet">Less than £1 a year: {under.join(", ")}.</p>}
-          {notes.map((note) => (
-            <p key={note.id} className="single-year-quiet" data-note={note.kind}>
-              <strong>{note.name}</strong>: {note.text}
-            </p>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </Disclosure>
   );
+}
+
+const TENURE_WORDS = {
+  RENT_PRIVATELY: "renting",
+  RENT_FROM_COUNCIL: "renting from the council",
+  RENT_FROM_HA: "renting from a housing association",
+  OWNED_WITH_MORTGAGE: "owns with a mortgage",
+  OWNED_OUTRIGHT: "owns outright",
+};
+
+/**
+ * One short line on whose result it is, from the answers and the API's
+ * answer: "£24,166 salary · renting in Central Greater Manchester · band D",
+ * with the family when it is not one adult ("couple, 2 children"). The
+ * details stay in "About this result".
+ *
+ * @param {Object} data - normaliseHouseholdImpact's answer
+ * @param {{tenure?: string, regionLabel?: string, partner?: boolean, children?: number}} household
+ */
+export function householdSummary(data, { tenure = null, regionLabel = null, partner = false, children = 0 } = {}) {
+  const parts = [];
+  const own = data.salaryUsed ?? 0;
+  const theirs = data.partnerSalaryUsed ?? 0;
+  if (own > 0 && theirs > 0) parts.push(`${money(own)} and ${money(theirs)} salaries`);
+  else if (own + theirs > 0) parts.push(`${money(own + theirs)} salary`);
+  const family = [partner ? "couple" : null, children > 0 ? `${children} ${children === 1 ? "child" : "children"}` : null]
+    .filter(Boolean)
+    .join(", ");
+  if (family) parts.push(family);
+  const words = TENURE_WORDS[tenure] ?? null;
+  // A renter's place is their rent area ("renting in …"); anyone else's,
+  // their region on its own
+  const rentArea = tenure && tenure.startsWith("RENT") && data.area?.brma ? areaName(data.area.brma) : null;
+  if (words) parts.push(rentArea ? `${words} in ${rentArea}` : words);
+  if (!rentArea && regionLabel) parts.push(regionLabel);
+  if (data.councilTax?.band) parts.push(`band ${data.councilTax.band}`);
+  return parts.join(" · ");
 }
 
 /**
@@ -347,7 +398,7 @@ function AboutResult({ items, caution, bars }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, summary = "" }) {
   const shown = Math.round(useCountUp(totals.change));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
@@ -386,6 +437,8 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
                 {share.replace(/^[+−]/, "")} of net income
               </p>
             )}
+            {/* Whose result it is, in one muted line */}
+            {summary && <p className="result-summary">{summary}</p>}
           </div>
         </div>
         <NetIncomeWaterfall
@@ -420,6 +473,7 @@ export function SingleYearHeadline({
   startedAt = null,
   salarySource = null,
   spendingSource = null,
+  household = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -465,6 +519,7 @@ export function SingleYearHeadline({
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
+            summary={household ? householdSummary(data, household) : ""}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
