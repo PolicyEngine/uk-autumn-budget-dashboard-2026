@@ -128,6 +128,39 @@ def test_drill5_combined_run_shares_the_static_pin(monkeypatch):
     monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
 
 
+def test_drill5_package_by_area_is_the_combined_runs_members(monkeypatch):
+    """Results by area check the combined reform as a package of the same
+    members the combined run simulates: the drill's 14, not main's 9."""
+    monkeypatch.setenv("UK_BUDGET_MEASURE_SET", "drill5")
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    seen = {}
+    real = reforms._create_combined_autumn_budget_reform
+
+    def capture(members):
+        seen["ids"] = [m.id for m in members]
+        return real(members)
+
+    monkeypatch.setattr(
+        reforms, "_create_combined_autumn_budget_reform", capture
+    )
+    reforms.list_reform_ids()
+    components = reforms.combined_components()
+    assert len(components) == 14
+    assert sorted(components) == sorted(seen["ids"])
+    assert all(reforms.get_reform(c) is not None for c in components)
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+
+
+def test_main_package_by_area_is_the_nine_candidates(monkeypatch):
+    monkeypatch.delenv("UK_BUDGET_MEASURE_SET", raising=False)
+    assert (
+        reforms.combined_components()
+        == reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+    )
+
+
 def test_cgt_main_rates_are_static_on_the_installed_engine(drill5):
     """The engine's default main elasticity is 1 (from policyengine-uk
     2.134.0); the measure's pin sets it to 0 in its own simulation, so

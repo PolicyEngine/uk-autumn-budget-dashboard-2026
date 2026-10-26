@@ -80,9 +80,9 @@ from uk_budget_data.publication import combine
 from uk_budget_data.publication import manifest as publication_manifest
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.reforms import (
-    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
     DEFAULT_YEARS,
+    combined_components,
     get_reform,
 )
 
@@ -104,10 +104,9 @@ FAMILY_OUTCOME = {
     "share_losing": "share_losing",
 }
 INTERACTION_SUFFIX = "__interaction"
-# Packages published by area: the combined reform and the measures in it.
-PACKAGES = {
-    AUTUMN_BUDGET_2026_COMBINED_ID: AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
-}
+# Packages published by area: the combined reform and the measures in it,
+# in the active measure set (the drill's under UK_BUDGET_MEASURE_SET=drill5).
+PACKAGES = {AUTUMN_BUDGET_2026_COMBINED_ID: combined_components()}
 
 EFRS = "efrs"
 MICROCOSM = "microcosm"

@@ -721,6 +721,20 @@ def _measure_factories():
     return _MEASURE_FACTORIES
 
 
+def combined_components() -> tuple[str, ...]:
+    """The members of the combined reform, by id, in the active measure set:
+    the nine candidates, or under ``UK_BUDGET_MEASURE_SET=drill5`` the
+    drill's measures less its alternatives. Results by area check the
+    combined reform as a package of these."""
+    if _measure_factories() is _MEASURE_FACTORIES:
+        return AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+    return tuple(
+        measure.id
+        for measure in get_drill5_measures()
+        if measure.id not in DRILL5_ALTERNATIVES
+    )
+
+
 def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
     """One simulation of every candidate measure.
 
