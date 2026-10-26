@@ -23,6 +23,8 @@ import {
   overallAverage,
   parseDistribution,
   positionSummary,
+  lowerCount,
+  PLACE_MEANING,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
@@ -346,6 +348,8 @@ function CompareView({ rows, unit, grow }) {
       {rows.map((row) => {
         const v = unit === "pct" ? row.pct : row.gbp;
         const missing = v === null || v === undefined;
+        // No % published for it (the UK average): its £ instead, unbarred
+        const poundsOnly = missing && unit === "pct" && row.gbp !== null && row.gbp !== undefined;
         const share = missing ? 0 : (Math.abs(v) / max) * 100 * grow;
         return (
           <div key={row.key} className={`position-compare-row ${row.you ? "is-you" : ""}`} role="listitem">
@@ -359,7 +363,8 @@ function CompareView({ rows, unit, grow }) {
               )}
             </span>
             <span className="position-compare-value">
-              <strong>{missing ? "Not published" : unit === "pct" ? signedPct(v, 2) : signedPounds(v)}</strong>
+              <strong>{poundsOnly ? signedPounds(row.gbp) : missing ? "Not published" : unit === "pct" ? signedPct(v, 2) : signedPounds(v)}</strong>
+              {poundsOnly && <span className="position-compare-other">no % published</span>}
               {!missing && (
                 <span className="position-compare-other">
                   {unit === "pct" ? (row.gbp !== null ? signedPounds(row.gbp) : "") : row.pct !== null ? signedPct(row.pct, 2) : ""}
@@ -448,7 +453,7 @@ function RankView({ width, narrow, curves, position, side }) {
       <line x1={left} x2={youX} y1={y(youP)} y2={y(youP)} stroke={TEXT} strokeWidth={1} strokeDasharray={REFERENCE_DASH} />
       <circle cx={youX} cy={y(youP)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
       <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={13}>
-        {`You: ${Math.round(youP)}% have less`}
+        {`You: ${Math.round(youP)} in 100 live in households with less`}
       </Label>
     </svg>
   );
@@ -566,7 +571,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const netBefore = Number(net?.before);
   const ownChange = Number(net?.after) - netBefore;
   const ownPct = netBefore > 0 ? (ownChange / netBefore) * 100 : 0;
-  const text = positionSummary(position, ownChange, netBefore);
+  const text = positionSummary(position, ownChange, netBefore, side);
   const textLine = `${text.headline} ${text.chips.map((c) => `${c.label}: ${c.value}.`).join(" ")}`;
   // Your tenth on the side shown
   const decile = decileOf(side === "after" ? position.after : position.before) ?? decileOf(position.before);
@@ -588,7 +593,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         ? "You stay in the same percentile."
         : `You move ${position.pointChange > 0 ? "up" : "down"} ${Math.abs(position.pointChange)} ${Math.abs(position.pointChange) === 1 ? "percentile" : "percentiles"}.`;
   const placeTip = [
-    `Your rank: ${describePosition(position.before)} before the selected policies, ${describePosition(position.after)} after.`,
+    `Your place is how many in every 100 people in the UK ${PLACE_MEANING}: ${lowerCount(position.before)} before the selected policies and ${lowerCount(position.after)} after.`,
     moveWords,
     everyone && everyone.up !== null && everyone.down !== null
       ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
@@ -657,7 +662,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           rows: compareRows,
         });
 
-  const whereTitle = `Where you sit, ${yearLabel}`;
+  const whereTitle = `Your place in the distribution, ${yearLabel}`;
   const compareTitle = `How your change compares, ${yearLabel}`;
   const youPlace = side === "after" ? position.after : position.before;
   const whereAlt =
@@ -718,8 +723,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {showAs === "rank"
-                  ? `${Math.round(youPlace.percentile ?? (youPlace.below ? LOWEST_PERCENTILE : HIGHEST_PERCENTILE))} in every 100 people have less income than you, ${side} the selected policies.`
-                  : "How many people are at each income, with you on it."}
+                  ? "Read up from you: how many in every 100 people live in households with a lower income than yours."
+                  : "How many people live at each household income, with yours on it."}
               </p>
             </div>
             <ChartDownloadMenu
@@ -752,8 +757,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               year={year}
               info={{
                 how: [
-                  `Your income is household net income after all taxes, divided by ${position.factor.toFixed(2)} for your household's size.`,
-                  "Spread shows how many people are at each income; Rank shows how many have less than each income. Both are the same distribution, on the same axis.",
+                  `Your place is how many in every 100 people in the UK ${PLACE_MEANING}, in ${yearLabel}, before or after the selected policies as chosen above.`,
+                  `Household income is net income after all taxes; yours is divided by ${position.factor.toFixed(2)} for your household's size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
+                  "Spread shows how many people live at each household income; Rank shows how many live in households with a lower income than each. Both are the same distribution, on the same axis.",
                   "Your place before ranks among everyone's income before the policies; after, among everyone's after.",
                 ],
                 caveats: [

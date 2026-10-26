@@ -1121,12 +1121,62 @@
   padding: 0;
 }
 
-/* Whose result it is, under the figure: one muted line */
-.result-summary {
-  margin: 10px 0 0;
-  font-size: var(--fs-caption);
-  line-height: 1.45;
+/* Whose result it is, under the figure: small muted chips that wrap
+   whole, then Edit */
+.result-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 7px;
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.result-fact svg {
+  flex: none;
   color: var(--pe-gray-500);
+}
+
+.result-fact:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.result-facts-edit {
+  padding: 2px 4px;
+  font: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--c-gain-text);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.result-facts-edit:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.result-facts-edit:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* "About this result", at the card's foot, in the charts' "About this
