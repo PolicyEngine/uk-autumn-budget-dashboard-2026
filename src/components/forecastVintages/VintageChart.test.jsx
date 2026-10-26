@@ -1,7 +1,8 @@
 /**
  * The chart's layout helpers: where the labelled points' text goes, the x
  * ticks, the y axis and the legend. Properties over arbitrary points and
- * rows; the chart itself is rendered in ForecastVintagesTab.test.jsx.
+ * rows, and every committed view laid out; the chart itself is rendered in
+ * ForecastVintagesView.test.jsx.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
