@@ -165,8 +165,9 @@ describe("the Pre-measures forecast view", () => {
     ["living", "Living standards", "How the measures change incomes", ["Incomes under current law", "Inequality"], [/^Incomes over time$/, /^Growth across the distribution$/, /^Inequality over time/]],
     ["poverty", "Poverty", "How the measures change poverty", ["Poverty under current law"], [/^Poverty over time$/, /^Who is in poverty$/]],
   ])("?sub=%s shows the current-law cards with no policy selected", async (sub, label, measures, headings, cards) => {
-    // A link whose policies are all unknown selects none
-    window.history.replaceState({}, "", `/?sub=${sub}&policies=not_a_measure`);
+    // A link with an empty selection selects none (an unknown id would be
+    // an unavailable selection, #104)
+    window.history.replaceState({}, "", `/?sub=${sub}&policies=`);
     render(<App />);
     const panel = await screen.findByRole("tabpanel", { name: label });
     // The measures' sections give way to the empty state, alone

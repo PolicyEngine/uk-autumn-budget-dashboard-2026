@@ -632,7 +632,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ) : value === "outlook" ? (
           // With no verified publication, Population impact is unavailable:
           // the current-law cards (the independent outlook) show here too
-          <LivingStandardsTab withCurrentLaw={Boolean(unavailable)} />
+          <LivingStandardsTab withCurrentLaw={Boolean(unavailable) && !unavailable.loading} />
         ) : value === "policies" ? (
           // Every published measure's card, whatever the band's selection
           <div className="results-container">
@@ -749,7 +749,7 @@ function App() {
     };
   }, []);
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…" }
+    ? { reason: "Loading published measures…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
