@@ -16,6 +16,7 @@ import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
 import { yearsOption } from "../controlOptions";
 import { defaultRange, useYearRange } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
@@ -131,9 +132,9 @@ export default function WhoIsInPovertySection({ data }) {
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
-  // The same measure Poverty over time opens on (absolute, before housing
-  // costs); a breakdown without it (the child ones) falls back to its first
-  const [measureChoice, setMeasure] = useState("absolute_bhc");
+  // One measure for the sub-tab's tiles and both cards (usePovertyMeasure);
+  // a breakdown without it (the child ones) falls back to its first
+  const [measureChoice, setMeasure] = usePovertyMeasure();
   const plotRef = useRef(null);
   // Cleared when the breakdown or measure changes, so it never shows a row
   // that has gone
