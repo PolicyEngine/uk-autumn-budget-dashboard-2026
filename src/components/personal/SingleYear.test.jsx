@@ -439,8 +439,8 @@ describe("the household calculation, from the fixture", () => {
     // Each card's switch sits in the controls row, so the pair's rows line up
     expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
     expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
-    // Net income first: before and after, marking you
-    const net = within(earnings).getByRole("button", { name: "Net income" });
+    // After first, as the marginal rate card, marking you
+    const net = within(earnings).getByRole("button", { name: "After" });
     expect(net).toHaveAttribute("aria-pressed", "true");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
     expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
