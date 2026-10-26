@@ -130,14 +130,17 @@ code {
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
-  /* The landing page (LandingPage.css): how much the Public finances view
-     behind it is faded (the share of the page background over it; more
-     over its first 240px, under the paragraph) and blurred, and the least
-     height it shows of it */
-  --landing-fade: 80%;
-  --landing-fade-top: 92%;
-  --landing-blur: 4px;
-  --landing-min-height: 640px;
+  /* The landing page (LandingPage.css): how much of the page background
+     lies over the Public finances view behind it (more at the top, behind
+     the heading and paragraph; less around and below the boxes), its blur,
+     the glass panels' blur, the least height of the view it shows, and the
+     boxes' hover motion */
+  --landing-fade: 58%;
+  --landing-fade-top: 80%;
+  --landing-blur: 2px;
+  --landing-glass-blur: 10px;
+  --landing-min-height: 620px;
+  --landing-motion: 0.2s;
   /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
@@ -2820,6 +2823,46 @@ body {
   }
 }
 
+
+/* ---------- Popovers and menus (usePresence.js) ---------- */
+/* In: a fade and a scale from 0.98, from the edge it opens from. Out: a
+   fade, while the hook keeps it mounted for --motion-fast. */
+.popover-motion {
+  transform-origin: top center;
+  animation: popover-in var(--motion-fast) var(--ease-out);
+}
+
+.popover-motion.is-leaving {
+  pointer-events: none;
+  animation: popover-out var(--motion-fast) ease-in forwards;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-motion,
+  .popover-motion.is-leaving {
+    animation: none;
+  }
+}
 
 /* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
 /* The new content of a card whose view changed: a fade and a 6px rise */

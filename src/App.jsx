@@ -33,7 +33,7 @@ import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
-import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
 import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
@@ -386,8 +386,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const yearShown = landing || yearPillShown(activeTab);
   const policiesShown = landing || view.policies;
 
-  // A caveat on the results while any shown measure is provisional: under
-  // the landing page's paragraph, else a badge above the views
+  // A caveat on the results while any shown measure is provisional: one
+  // small badge on the landing page, nowhere above the views
   const provisional =
     catalogue.manifest &&
     catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional");
@@ -668,9 +668,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             Newer results were published while this page was open; it now shows them.
           </p>
         )}
-        {provisional && !landing && (
-          <p className="publication-provisional provisional-badge" role="status">{PROVISIONAL_LABEL}</p>
-        )}
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
             <p>{measure.description}</p>
@@ -697,7 +694,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             financesFigure={unavailable || selectedPolicies.length === 0 ? null : netRevenueFigure(results.budgetData, distributionalYear, yearLabel)}
             measuresFigure={unavailable ? null : measureCountFigure(catalogue.displayable.length)}
             provisional={provisional && (
-              <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
+              <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
             )}
           />
         )}

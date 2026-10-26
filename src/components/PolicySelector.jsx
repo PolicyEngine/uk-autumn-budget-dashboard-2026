@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
@@ -10,6 +11,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
     (policy) => policy.displayable !== false,
   );
   const [isExpanded, setIsExpanded] = useState(false);
+  const presence = usePresence(isExpanded);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -56,8 +58,8 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         <PillChevron />
       </button>
 
-      {isExpanded && (
-        <div className="policy-selector-dropdown">
+      {presence.mounted && (
+        <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
           <div className="policy-list">
             {policies.map((policy) => (
               <label key={policy.id} className="policy-item">

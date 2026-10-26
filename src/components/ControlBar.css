@@ -228,7 +228,15 @@
     max-width: none;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
-    animation: control-bar-sheet 0.18s ease-out;
+  }
+
+  /* On a phone the dialog is a sheet: it rises from the foot, not scales */
+  .control-bar-dialog.popover-motion {
+    animation: control-bar-sheet var(--motion-base) var(--ease-out);
+  }
+
+  .control-bar-dialog.popover-motion.is-leaving {
+    animation: popover-out var(--motion-fast) ease-in forwards;
   }
 
   .control-bar-segment {
@@ -248,7 +256,9 @@
     transition: none;
   }
 
-  .control-bar-dialog {
+  .control-bar-dialog,
+  .control-bar-dialog.popover-motion,
+  .control-bar-dialog.popover-motion.is-leaving {
     animation: none;
   }
 }
