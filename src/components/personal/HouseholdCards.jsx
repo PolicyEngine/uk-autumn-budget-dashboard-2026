@@ -3,7 +3,6 @@ import {
   Armchair,
   ArrowRight,
   Baby,
-  Banknote,
   BriefcaseBusiness,
   Car,
   Check,
@@ -23,7 +22,7 @@ import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
-import { SELECTABLE_YEARS } from "../../utils/displayYears";
+import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
 import Tip from "../Tip";
 
@@ -57,7 +56,7 @@ const SOURCE_NAMES = {
   plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
   threshold_freeze_2031_32: "the threshold freeze",
   warm_home_discount_top_up: "the Warm Home Discount top-up",
-  employer_ni_relief_under_25s: "employer NI relief",
+  employer_ni_relief_under_25s: "employer National Insurance relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
 };
 // A short name where there is one, else the catalogue's published name
@@ -102,7 +101,7 @@ export function cardFigures(example, byYear, year, catalogue = null) {
       ? { ids: [mainId], name: chipName(mainId, catalogue), part: mainPart, own: false }
       : { ids: own, name: example.tag, part: ownPart, own: true };
   // Every year a reader can choose: one not yet in is null (its bar a stub)
-  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].sort((a, b) => a - b);
+  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].filter(isDisplayYear).sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
   return { change: current.change, ownPart, top, series };
 }
@@ -133,7 +132,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`Where they sit in the UK income distribution, ${yearLabel}: the ${ordinal(percentile)} percentile of household income adjusted for household size, after the measures`}>
+    <Tip content={`${percentile} in 100 people in the UK have a lower household income than this household, adjusted for household size (${yearLabel}, after the selected policies)`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -320,20 +319,23 @@ export default function HouseholdCards({
           households" beside it once a household is chosen */}
       <div className="household-cards-head">
         <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
-        {chosen && (
+        {/* Open again: back to the strip; folded, the button is at the
+            strip's start, where the eye begins */}
+        {chosen && !folded && (
           <button
             type="button"
             className="household-cards-toggle"
-            aria-expanded={!folded}
+            aria-expanded
             aria-controls="household-cards-grid"
-            onClick={() => setShowAll((open) => !open)}
+            onClick={() => setShowAll(false)}
           >
             <LayoutGrid size={14} strokeWidth={2} aria-hidden="true" />
-            {folded ? "Show all households" : "Show fewer"}
+            Show fewer
           </button>
         )}
       </div>
       <HouseholdStrip
+        onShowAll={() => setShowAll(true)}
         examples={examples}
         value={value}
         presets={presets}
@@ -459,13 +461,6 @@ export default function HouseholdCards({
   );
 }
 
-/** What the form asks first, as the Your household card hints at it. */
-const YOURS_HINTS = [
-  { label: "Salary", Icon: Banknote },
-  { label: "Family", Icon: UsersRound },
-  { label: "Home", Icon: House },
-];
-
 /**
  * "Your household", above the examples, the width of the grid: an
  * invitation to enter your own, with what the form asks first, and once
@@ -490,18 +485,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         {/* The card's name, for the button's: the title says it on screen */}
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        {/* The subtitle, with what the form asks first beside it */}
-        <span className="household-yours-line">
-          <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
-          <span className="household-yours-hints" aria-hidden="true">
-            {YOURS_HINTS.map(({ label, Icon }) => (
-              <span key={label} className="household-yours-hint">
-                <Icon size={12} strokeWidth={2} />
-                {label}
-              </span>
-            ))}
-          </span>
-        </span>
+        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
       </span>
       <span className="household-yours-side">
         {calculated && (
@@ -540,7 +524,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
  */
-function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
+function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose, onShowAll = null }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
   const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
@@ -587,6 +571,18 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
   return (
     <div className={`household-strip-fold ${shown ? "is-open" : ""}`.trim()} aria-hidden={!shown || undefined} inert={!shown || undefined}>
       <div className="household-strip-fold-inner">
+        {onShowAll && (
+          <button
+            type="button"
+            className="household-cards-back"
+            aria-expanded={false}
+            aria-controls="household-cards-grid"
+            onClick={onShowAll}
+          >
+            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
+            Show all households
+          </button>
+        )}
         <ul className="household-strip" role="listbox" aria-label="Households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
           {items.map((item, index) => {
             const isSelected = index === selected;

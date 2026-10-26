@@ -5,6 +5,8 @@ import {
   CartesianGrid,
   Cell,
   Customized,
+  LabelList,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -18,6 +20,7 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import TitleIcon from "./TitleIcon";
 import ControlBar from "./ControlBar";
+import SelectedYearShade from "./SelectedYearShade";
 import "./SummaryMetricChart.css";
 // The in-card pill styles (.ls-controls), shared with the current-law cards
 import "./livingStandards/LivingStandards.css";
@@ -34,7 +37,6 @@ import {
   fiscalYearTick,
   shortFiscalYearTick,
   useNarrowViewport,
-  divergingAxis,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
@@ -62,7 +64,10 @@ export const SUMMARY_METRICS = {
     title: "Change in the poverty rate",
     description:
       "Change in the share of people in absolute poverty before housing costs, each year, in percentage points.",
-    unit: "Change (pp)",
+    unit: "Change in poverty rate (percentage points)",
+    // The headline measure's people and line, for the sentence in people
+    group: "all",
+    line: "absolute poverty (before housing costs)",
     icon: "users",
     // One formatter for every poverty card (formatPp): 3 decimals under 0.1pp
     decimals: 3,
@@ -170,7 +175,7 @@ export function povertyMetric({ basis, housing, group }) {
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
-    // "Change in absolute poverty (BHC), pp": the card's short subtitle
+    // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
     // What the long description adds, for More info
     detail:
@@ -178,8 +183,32 @@ export function povertyMetric({ basis, housing, group }) {
       (children ? "Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
     // "the share of children in relative poverty after housing costs"
     phrase: `the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ${HOUSING[housing]}`,
+    // "absolute poverty (before housing costs)", for the card's sentence
+    line: `${basis} poverty (${HOUSING[housing]})`,
+    unit: `Change in ${children ? "child " : ""}poverty rate (percentage points)`,
     group,
   };
+}
+
+/**
+ * A value axis fitted tight to the bars: the largest bar plus 8%, rounded
+ * up to a step of 1, 2, 2.5 or 5 × 10^k (two steps a side), from zero when
+ * every value has one sign and symmetric about zero when they go both ways.
+ */
+export function tightAxis(values) {
+  const finite = values.filter(Number.isFinite);
+  const size = Math.max(...finite.map(Math.abs), 1e-9) * 1.08;
+  const raw = size / 2;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * power).find((candidate) => candidate >= raw - 1e-12);
+  const top = Math.ceil(size / step - 1e-9) * step;
+  const up = finite.some((v) => v > 0);
+  const down = finite.some((v) => v < 0);
+  const lo = down ? -top : 0;
+  const hi = up || !down ? top : 0;
+  const ticks = [];
+  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Number(t.toFixed(10)));
+  return { domain: [lo, hi], ticks };
 }
 
 /** The inequality chart's measures (?inequality=top-10). */
@@ -290,27 +319,25 @@ export function hasColumn(rows, key) {
   return (rows ?? []).some((row) => row[key] !== undefined && row[key] !== "");
 }
 
-// The columns that tell a run carries the poverty and inequality measures
-// (useMeasureChoice's)
-const CHOICE_COLUMNS = ["child_poverty_rel_ahc_change_pp", "p90_p10_change"];
-
 /**
  * The rows that decide whether a chart offers its choices: the shown run's,
  * so a verified artifact written before the poverty and inequality measures
- * shows its headline only, even when another run carries them. With no run
- * for the selection but its `measures` shown each on its own, theirs, and
- * none unless every one carries the measures, since each is read under the
- * choice and a run without them would read as no effect. Every run's while
- * nothing is shown or the run has no rows.
+ * shows its headline only, even when another run carries them; every run's
+ * while no run is shown or the run has no rows; with no whole-selection run,
+ * a selected measure's that lacks them.
  */
-export function choiceRows(rows, run, measures = null) {
-  if (!run && measures?.length) {
-    const own = (rows ?? []).filter((row) => measures.includes(row.reform_id));
-    const carries = (id) => CHOICE_COLUMNS.every((key) => hasColumn(own.filter((row) => row.reform_id === id), key));
-    return measures.every(carries) ? own : [];
-  }
+export function choiceRows(rows, run, selected = []) {
   const own = run ? (rows ?? []).filter((row) => row.reform_id === run) : [];
-  return own.length ? own : rows;
+  if (own.length) return own;
+  // No whole-selection run: each selected measure's own run is drawn, so a
+  // choice is offered only when every one of them carries the measures (the
+  // rows of a measure without them come first, so its absence decides)
+  if (!run && selected.length > 1) {
+    const ofMeasure = (id) => (rows ?? []).filter((row) => row.reform_id === id);
+    const lacking = selected.map(ofMeasure).find((own) => own.length && !own.some((row) => row.top_10_share_change_pp !== undefined && row.top_10_share_change_pp !== ""));
+    if (lacking) return lacking;
+  }
+  return rows;
 }
 
 /**
@@ -393,11 +420,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const catalogue = useMeasureCatalogue();
   const { combinedId } = catalogue;
   const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
-  // No run for the whole selection: each selected measure's own, side by side
-  const ownRuns = !run && selectedPolicies.length > 1
-    ? policies.filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
-    : null;
-  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run, ownRuns?.map((policy) => policy.id)));
+  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run, selectedPolicies));
   // Each measure on its own: the selected year (default) or year by year
   const [effectView, setEffectView] = useState("year");
   // People behind a poverty change (pp × the population), where the
@@ -405,14 +428,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const peopleText = (year, value) =>
     metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
-  const byMeasure = ownRuns
-    ? ownRuns.map((policy) => ({
-        id: policy.id,
-        name: shortNameOf(policy),
-        fullName: policy.label ?? policy.name,
-        colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
-        points: metricByYear(rows, policy.id, metric),
-      }))
+  // No run for the whole selection: each selected measure's own, side by side
+  const byMeasure = !run && selectedPolicies.length > 1
+    ? policies
+        .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+        .map((policy) => ({
+          id: policy.id,
+          name: shortNameOf(policy),
+          fullName: policy.label ?? policy.name,
+          colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
+          points: metricByYear(rows, policy.id, metric),
+        }))
     : null;
   const measureData = byMeasure
     ? DISPLAY_YEARS.map((year, i) => ({
@@ -420,16 +446,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  // 2026-27 is shown only where the selection changes something then (a
-  // measure in force from autumn 2026); otherwise the axis starts in 2027-28
-  const emptyFirst = (points) => {
-    const first = points.find((point) => point.year === DISPLAY_YEARS[0]);
-    return !first || first.value === null || Number(Math.abs(first.value).toFixed(metric.decimals)) === 0;
-  };
-  const firstYearShown = byMeasure
-    ? !byMeasure.every((m) => emptyFirst(m.points))
-    : !emptyFirst(metricByYear(rows, run, metric));
-  const years = firstYearShown ? DISPLAY_YEARS : DISPLAY_YEARS.slice(1);
+  // Every year shown, from 2027-28 (FIRST_DISPLAY_YEAR)
+  const years = DISPLAY_YEARS;
   const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
@@ -438,8 +456,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
-  // Symmetric about zero when the change goes both ways (divergingAxis)
-  const { domain, ticks } = divergingAxis(shown.map((point) => point.value));
+  // Fitted to the data: from zero when every bar has one sign, symmetric
+  // when they go both ways, with round ticks (tightAxis)
+  const { domain, ticks } = tightAxis(shown.map((point) => point.value));
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;
@@ -449,6 +468,16 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     selected?.value != null && metric.group && population
       ? peopleShort(selected.value, population(selectedYear, metric.group), metric.group)
       : null;
+  // "about 5,000 people", "under 1,000 children": the selected year's people
+  const selectedCount = (() => {
+    const millions = selected?.value != null && metric.group && population ? population(selectedYear, metric.group) : null;
+    if (!millions) return null;
+    const people = Math.abs((selected.value / 100) * millions * 1e6);
+    const who = metric.group === "children" ? "children" : "people";
+    return people < 1000 ? `under 1,000 ${who}` : `about ${(Math.round(people / 1000) * 1000).toLocaleString("en-GB")} ${who}`;
+  })();
+  // Each bar's value, signed, at its end
+  const barLabel = (value) => (value == null || value === 0 ? "" : `${value > 0 ? "+" : "−"}${metric.format(value)}`);
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -495,6 +524,13 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 In {fiscalYearTick(selectedYear)}, the selected measures{" "}
                 {Math.round(selected.value * 1e6) === 0 ? (
                   <>do not change {subjectOf(metric)}</>
+                ) : metric.line && selectedCount ? (
+                  // "lift about 5,000 people out of absolute poverty (before
+                  // housing costs), less than 0.1 percentage points"
+                  <>
+                    {selected.value < 0 ? "lift" : "push"} <strong>{selectedCount}</strong>{" "}
+                    {selected.value < 0 ? "out of" : "into"} {metric.line}, {plainAmount(metric, selected.value)}
+                  </>
                 ) : (
                   <>
                     {selected.value < 0 ? "reduce" : "increase"} {subjectOf(metric)} by{" "}
@@ -567,6 +603,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               margin={{ ...chartMargin(narrow, { top: 16 }), bottom: CHART_LOGO.height + CHART_LOGO.padding + 8 }}
             >
               <CartesianGrid {...GRID_PROPS} />
+              {/* The header-selected year, shaded as on every year chart */}
+              <Customized component={<SelectedYearShade value={selectedYear} />} />
               <XAxis
                 dataKey="year"
                 tick={TICK_STYLE}
@@ -598,6 +636,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                   />
                 }
               />
+              {/* The year chosen in the band above, shaded */}
+              <ReferenceArea x1={selectedYear} x2={selectedYear} fill={CHART_COLOURS.grid} fillOpacity={0.45} ifOverflow="hidden" />
               <Bar
                 dataKey="value"
                 name={metric.title}
@@ -605,6 +645,24 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
+                <LabelList
+                  dataKey="value"
+                  // On a phone only the chosen year's bar is labelled, so
+                  // neighbouring labels never meet
+                  content={({ x, y, width, height: h, value, index }) =>
+                    value == null || (narrow && data[index]?.year !== selectedYear) ? null : (
+                      <text
+                        x={x + width / 2}
+                        y={value < 0 ? Math.max(y, y + h) + 14 : Math.min(y, y + h) - 6}
+                        textAnchor="middle"
+                        fontSize={11}
+                        fill={CHART_COLOURS.text}
+                      >
+                        {barLabel(value)}
+                      </text>
+                    )
+                  }
+                />
                 {data.map((point) => {
                   const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
                   return (

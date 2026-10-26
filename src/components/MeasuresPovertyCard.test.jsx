@@ -8,7 +8,7 @@ import { povertyMetric } from "./SummaryMetricChart";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
 import { outlookPopulation } from "../utils/povertyPeople";
-import { POLICY_DETAILS } from "../utils/policyDetails";
+import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 
@@ -69,7 +69,7 @@ describe("measurePovertyRows and povertyWaterfall", () => {
 
   it("reads each measure's own change by its short name, the package from the combined run", () => {
     const { members, measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
-    expect(measures.map((m) => m.name)).toContain("Plan 2 threshold unfrozen");
+    expect(measures.map((m) => m.name)).toContain("Student loan threshold unfrozen");
     expect(total).toBe(-0.008);
     // Employer NI changes no household's income: in More info, not a step
     expect(members.find((member) => member.id === "employer_ni_relief_under_25s").muted).toBe(true);
@@ -129,18 +129,18 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures reduce the poverty rate by less than 0\.1 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lift about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
-    expect(rows[0]).toBe("Plan 2 threshold unfrozen");
+    expect(rows[0]).toBe("Student loan threshold unfrozen");
     expect(rows.at(-1)).toBe("All measures together");
-    expect(rows).not.toContain("Employer NI relief, under-25s");
+    expect(rows).not.toContain("Employer National Insurance relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Of the measures, Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
+    expect(headline).toHaveTextContent(/^Unfreezing the student loan threshold does most, lifting about [\d,]+ people out of poverty; all the measures together lift about [\d,]+\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -157,7 +157,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
-    expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);
+    expect(none).toHaveTextContent(/^No effect on poverty: .*Business sale relief limit halved/);
     expect(none).toHaveTextContent(/change prices/);
     // The card says each fact once: the people rule is in Methodology
     expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
@@ -189,6 +189,8 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   // metrics rows have only the contract's columns, while every other run's
   // carry the measures too (loadArtifact's withPovertyInequality)
   const OLDER = "plan_2_threshold_unfreeze";
+  // Its name as the card and the chart give it
+  const OLDER_NAME = shortNameOf(catalogue.byId.get(OLDER));
   const EXTRAS = new Set(FLAT_EXTRA_COLUMNS.metrics.map(([column]) => column));
   const without = (row) => Object.fromEntries(Object.entries(row).filter(([column]) => !EXTRAS.has(column)));
   const mixed = metrics.map((row) => (row.reform_id === OLDER ? without(row) : row));
@@ -252,7 +254,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     const card = await renderCard(mixed, [OLDER]);
     expect(card.querySelector(".wf-none")).toBeNull();
     expect(card.querySelector(".mp-fell-back")).toHaveTextContent(NOTE);
-    expect(within(card).getAllByRole("rowheader").map(nameOf)).toEqual(["Plan 2 threshold unfrozen"]);
+    expect(within(card).getAllByRole("rowheader").map(nameOf)).toEqual([OLDER_NAME]);
     // In people, as the headline counts them: the population of everyone,
     // not of the children chosen
     const population = outlookPopulation(JSON.parse(readFileSync(join(PUBLIC, "data", "living_standards_outlook.json"), "utf8")));
@@ -276,7 +278,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Change in the poverty rate$/ }, { timeout: 5000 });
     const chart = heading.closest(".charts-stack > div");
     expect(chart).not.toHaveTextContent(/with no effect hidden|changes this on its own/);
-    expect(chart).toHaveTextContent(/Plan 2 threshold unfrozen/);
+    expect(chart).toHaveTextContent(OLDER_NAME);
   });
 
   it("lists as a step or no effect only what a run carries, and keeps the chosen measure exactly when every run read, and some run, carries it", () => {

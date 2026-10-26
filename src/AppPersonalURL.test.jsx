@@ -86,7 +86,7 @@ describe("a later snapshot keeps the reader's selection", () => {
       return fetcher(requested, init);
     });
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
   };
   const householdCalls = (calls) => calls.filter((call) => call.method === "POST" || call.url.includes("/api/household-impact"));
 

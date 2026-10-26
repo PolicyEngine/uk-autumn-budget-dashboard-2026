@@ -662,9 +662,13 @@ function HouseholdScatter({
             yearLabel={yearLabel}
           />
         )}
-        {!ready && (
+        {/* While loading, the chart's grey template is the placeholder */}
+        {view.kind === "loading" && (
+          <span className="visually-hidden" role="status">Loading household results…</span>
+        )}
+        {!ready && view.kind !== "loading" && (
           <div className="household-scatter-template-note" role="status">
-            <p>{view.kind === "loading" ? "Loading household results…" : view.reason}</p>
+            <p>{view.reason}</p>
             {view.detail && <p className="household-scatter-template-detail">{view.detail}</p>}
           </div>
         )}

@@ -5,7 +5,7 @@
  * Poverty and Inequality charts offer their pills from receipted data.
  */
 import { describe, expect, it } from "vitest";
-import { fireEvent, within, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import contract from "./contract.json";
 import { FLAT_EXTRA_COLUMNS, TableError, parseTable, withPovertyInequality } from "./csv";
 import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
@@ -176,6 +176,12 @@ describe("the Poverty and Inequality pills from verified artifacts", () => {
     const rows = await verifiedRows();
     expect(choiceRows(rows, "beta").every((row) => row.reform_id === "beta")).toBe(true);
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={rows} policies={policies} selectedPolicies={["beta"]} selectedYear={2027} />);
-    expect(screen.queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Options:/ })).toBeNull();
+  });
+
+  it("offers no choice for measures drawn side by side when one of them lacks the measures", async () => {
+    const rows = await verifiedRows();
+    // No whole-selection run: each measure's own bars, and beta's artifact predates the measures
+    expect(choiceRows(rows, null, ["alpha", "beta"]).every((row) => row.reform_id === "beta")).toBe(true);
   });
 });

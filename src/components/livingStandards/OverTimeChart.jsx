@@ -9,14 +9,14 @@
 
 import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartRows, lineLegendItems } from "./LsCharts";
-import ChartUnitLabel from "../../utils/ChartUnitLabel";
+import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import useElementWidth from "../../hooks/useElementWidth";
 import { AXIS_LINE, CHART_COLOURS, GRID_PROPS, TICK_STYLE, axisWidth, useNarrowViewport } from "../../utils/chartTheme";
 import { zoomAxis } from "../../utils/livingStandards/baseline";
 import { fyLabel, fyStart } from "../../utils/livingStandards/outlook";
 
-const MARGIN = { top: 28, right: 24, left: 0, bottom: 0 };
+const MARGIN = { top: UNIT_LABEL_TOP_MARGIN, right: 24, left: 0, bottom: 0 };
 const X_AXIS_HEIGHT = 26;
 // Width a "2027-28" tick needs before every other year is labelled
 const TICK_WIDTH = 58;

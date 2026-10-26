@@ -141,7 +141,7 @@ describe("an open page follows the publication", () => {
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
-    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated with the latest published results/)).toBeInTheDocument();
   });
 
   it("lets the reader remove a withdrawn measure and keep the rest", async () => {
@@ -174,7 +174,7 @@ describe("an open page follows the publication", () => {
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
     await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
     expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
     expect(screen.getAllByText("This measure is excluded from the displayed figures. Totals cover the selected available measures.").length).toBeGreaterThan(0);
@@ -210,7 +210,7 @@ describe("an open page follows the publication", () => {
       expect(rows.filter((row) => row.reform_id === "alpha").map((row) => row.value)).toEqual(Array(10).fill(42.25));
     });
     expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
-    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated with the latest published results/)).toBeInTheDocument();
   });
 
   it("takes the figures away when the manifest is withdrawn or invalid", async () => {
@@ -287,7 +287,7 @@ describe("an open page follows the publication", () => {
         }, { timeout: 10000 });
         expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
         expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
-        expect(screen.queryByText(/Newer results were published/)).toBeNull();
+        expect(screen.queryByText(/Updated with the latest published results/)).toBeNull();
         cleanup();
       },
     ), { numRuns: 6 });
@@ -316,7 +316,7 @@ describe("an open page follows the publication", () => {
     const selected = JSON.parse(screen.getByTestId("distributional-figures").dataset.selected);
     expect(new Set(selected)).toEqual(new Set(["alpha", "beta"]));
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
-    expect(screen.queryByText(/Newer results were published/)).toBeNull();
+    expect(screen.queryByText(/Updated with the latest published results/)).toBeNull();
 
     // The same publication loaded afresh selects the same measures
     cleanup();

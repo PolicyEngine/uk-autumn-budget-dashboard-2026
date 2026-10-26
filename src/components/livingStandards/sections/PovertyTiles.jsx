@@ -26,12 +26,23 @@ const TILES = [
 
 const pct = (v) => formatPct(round1(v));
 
-/** Where the rate ends up, without repeating the tile's figure. */
-export function povertyTileMeaning(a, b, to) {
-  const d = round1(b) - round1(a);
-  if (Math.abs(d) < 0.05) return `No change by ${fyDash(to)} under current law.`;
-  return `${d > 0 ? "Rises" : "Falls"} to ${pct(b)} by ${fyDash(to)} under current law.`;
+/**
+ * The tile's lead: the change in the rate over the years compared, in
+ * points of the one-decimal values ("No change", "Rises 0.1 points"). The
+ * change leads because the model's levels sit below the official ones.
+ */
+export function povertyTileChange(a, b) {
+  const d = Math.round((round1(b) - round1(a)) * 10) / 10;
+  if (d === 0) return "No change";
+  const size = Math.abs(d).toFixed(1);
+  return `${d > 0 ? "Rises" : "Falls"} ${size} ${size === "1.0" ? "point" : "points"}`;
 }
+
+/** The levels behind it, said small and as the model's own. */
+export const povertyTileLevels = (a, b, from, to) =>
+  round1(a) === round1(b)
+    ? `Model estimate: ${pct(a)} in ${fyDash(from)} and ${fyDash(to)}.`
+    : `Model estimate: ${pct(a)} in ${fyDash(from)}, ${pct(b)} in ${fyDash(to)}.`;
 
 /** A group's projection from `startYear` to `end`, oldest first. */
 function trendRows(projection, startYear, end) {
@@ -43,7 +54,7 @@ function trendRows(projection, startYear, end) {
 
 /** The info tip: the measure, and why the levels sit below official figures. */
 const tileInfo = (measure) =>
-  `${povertyDefinition(measure)} PolicyEngine projection: its levels sit below the official figures because the data are reweighted to 2025 totals, so read it as change over time. Official figures are on the Poverty over time card.`;
+  `${povertyDefinition(measure)} The tile leads with the change: PolicyEngine's levels sit well below DWP's official rates because its data are reweighted to 2025 totals, so the levels are model estimates. Official rates are on the Poverty over time card.`;
 
 export default function PovertyTiles({ data }) {
   const years = rangeYears(data);
@@ -73,10 +84,12 @@ export default function PovertyTiles({ data }) {
           icon={t.icon}
           name={t.name}
           info={tileInfo(measure)}
-          value={pct(t.a)}
-          caption={`in ${kind} poverty in ${fyDash(from)}`}
-          trend={{ rows: t.rows, format: pct, seriesLabel: "PolicyEngine projection", highlight: fyDash(from), dashed: true, minSpan: 2 }}
-          meaning={povertyTileMeaning(t.a, t.b, to)}
+          value={povertyTileChange(t.a, t.b)}
+          valueKind="text"
+          caption={`in ${kind} poverty, ${fyDash(from)} to ${fyDash(to)}`}
+          trend={{ rows: t.rows, format: pct, seriesLabel: "PolicyEngine projection (model estimate)", highlight: fyDash(from), dashed: true, minSpan: 2 }}
+          meaning={povertyTileLevels(t.a, t.b, from, to)}
+          meaningKind="small"
         />
       ))}
     </div>

@@ -9,6 +9,7 @@ import SummaryMetricChart, {
   metricValue,
   parsePovertyChoice,
   povertyMetric,
+  tightAxis,
 } from "./SummaryMetricChart";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
@@ -186,8 +187,10 @@ describe("povertyMetric and parsePovertyChoice", () => {
 });
 
 describe("choiceRows, each measure on its own", () => {
-  it("offers the choice only while every measure shown carries the measures", () => {
-    const WIDE = { child_poverty_rel_ahc_change_pp: "-0.001", p90_p10_change: "0.01" };
+  it("offers no choice while a measure shown has rows without the measures", () => {
+    // A run written after the poverty and inequality measures carries them
+    // all (all or none per artifact); one written before, the headline only
+    const WIDE = { child_poverty_rel_ahc_change_pp: "-0.001", p90_p10_change: "0.01", top_10_share_change_pp: "0.001" };
     const IDS = ["a", "b", "c"];
     fc.assert(
       fc.property(fc.tuple(...IDS.map(() => fc.constantFrom("wide", "headline", "none"))), fc.subarray(IDS, { minLength: 2 }), (kinds, shown) => {
@@ -196,9 +199,10 @@ describe("choiceRows, each measure on its own", () => {
         );
         const decided = choiceRows(rows, null, shown);
         const offered = hasColumn(decided, "child_poverty_rel_ahc_change_pp") && hasColumn(decided, "p90_p10_change");
-        expect(offered).toBe(shown.every((id) => kinds[IDS.indexOf(id)] === "wide"));
-        // Only the measures shown decide
-        expect(decided.every((row) => shown.includes(row.reform_id))).toBe(true);
+        // Never offered while a measure shown would read as no effect under
+        // it; offered otherwise wherever a run carries them
+        const lacking = shown.some((id) => kinds[IDS.indexOf(id)] === "headline");
+        expect(offered).toBe(!lacking && kinds.includes("wide"));
       }),
       { numRuns: 200 },
     );
@@ -206,5 +210,12 @@ describe("choiceRows, each measure on its own", () => {
     const rows = [{ reform_id: "a", year: "2027", p90_p10_change: "0.01" }, { reform_id: "b", year: "2027" }];
     expect(choiceRows(rows, "b")).toEqual([rows[1]]);
     expect(choiceRows(rows, null)).toBe(rows);
+  });
+});
+
+describe("tightAxis", () => {
+  it("fits the bars: symmetric with round ticks when they go both ways, from zero when one way", () => {
+    expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.05, 0.05], ticks: [-0.05, -0.025, 0, 0.025, 0.05] });
+    expect(tightAxis([-0.007, -0.004]).domain).toEqual([-0.01, 0]);
   });
 });
