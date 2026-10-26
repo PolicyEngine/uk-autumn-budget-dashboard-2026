@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -17,6 +17,8 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import TitleIcon from "./TitleIcon";
+import ViewSwitch from "./ViewSwitch";
+import "./SummaryMetricChart.css";
 import {
   AXIS_LINE,
   CHART_COLOURS,
@@ -54,6 +56,7 @@ export const SUMMARY_METRICS = {
     csvUnits: "percentage points; people in households below the absolute poverty line, before housing costs",
     file: "poverty-rate-change",
     noChange: "The selected policies do not change the poverty rate in any year shown.",
+    choices: "poverty",
   },
   inequality: {
     key: "gini_change",
@@ -69,8 +72,201 @@ export const SUMMARY_METRICS = {
     csvUnits: "% change in the Gini coefficient (equivalised household net income)",
     file: "gini-change",
     noChange: "The selected policies do not change income inequality in any year shown.",
+    choices: "inequality",
   },
 };
+
+/**
+ * The poverty measures metrics.csv carries beside the headline (absolute,
+ * before housing costs, for everyone): the choices are the pill groups
+ * above the chart, and the address keeps them (?poverty=relative-ahc-children).
+ */
+export const POVERTY_CHOICES = [
+  {
+    name: "basis",
+    label: "Poverty line",
+    options: [
+      { value: "absolute", label: "Absolute" },
+      { value: "relative", label: "Relative" },
+    ],
+  },
+  {
+    name: "housing",
+    label: "Housing costs",
+    options: [
+      { value: "bhc", label: "Before housing costs" },
+      { value: "ahc", label: "After housing costs" },
+    ],
+  },
+  {
+    name: "group",
+    label: "People",
+    options: [
+      { value: "all", label: "All people" },
+      { value: "children", label: "Children" },
+    ],
+  },
+];
+
+const POVERTY_DEFAULT = { basis: "absolute", housing: "bhc", group: "all" };
+
+const POVERTY_LINES = {
+  absolute: "the absolute poverty line (60% of 2024-25 median income, held constant in real terms)",
+  // policyengine-uk's in_relative_poverty_*: 60% of the median in the same
+  // simulation, so under the policies the line is their own median's
+  relative:
+    "relative poverty (below 60% of median income in the same year; the line moves with the policies' effect on the median)",
+};
+
+const HOUSING = { bhc: "before housing costs", ahc: "after housing costs" };
+
+/** The poverty chart's metric for one choice of line, housing costs and people. */
+export function povertyMetric({ basis, housing, group }) {
+  const children = group === "children";
+  const measure = `${basis === "absolute" ? "abs" : "rel"}_${housing}`;
+  const headline = basis === "absolute" && housing === "bhc" && !children;
+  const people = children ? "children" : "people";
+  return {
+    ...SUMMARY_METRICS.poverty,
+    // The headline column is the same figure, and older files have only it
+    key: headline ? SUMMARY_METRICS.poverty.key : `${children ? "child_" : ""}poverty_${measure}_change_pp`,
+    title: children ? "Change in the child poverty rate" : SUMMARY_METRICS.poverty.title,
+    description:
+      `Change in the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ` +
+      `${HOUSING[housing]}, each year, in percentage points.` +
+      (basis === "relative" ? " The line is 60% of median income in the same year, so it moves with the policies' effect on the median." : "") +
+      (children ? " Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
+    csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
+    file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
+    noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
+  };
+}
+
+/** The inequality chart's measures (?inequality=top-10). */
+export const INEQUALITY_METRICS = {
+  gini: { ...SUMMARY_METRICS.inequality, label: "Gini" },
+  "top-10": {
+    ...SUMMARY_METRICS.inequality,
+    label: "Top 10% share",
+    key: "top_10_share_change_pp",
+    description:
+      "Change in the share of equivalised household net income received by the 10% of people with the highest incomes, each year, in percentage points.",
+    unit: "Change (pp)",
+    scale: 1,
+    decimals: 3,
+    format: (value) => `${Math.abs(value).toFixed(3)}pp`,
+    csvUnits: "percentage points; share of equivalised household net income received by the top 10% of people",
+    file: "top-10-share-change",
+  },
+  "top-1": {
+    ...SUMMARY_METRICS.inequality,
+    label: "Top 1% share",
+    key: "top_1_share_change_pp",
+    description:
+      "Change in the share of equivalised household net income received by the 1% of people with the highest incomes, each year, in percentage points.",
+    unit: "Change (pp)",
+    scale: 1,
+    decimals: 3,
+    format: (value) => `${Math.abs(value).toFixed(3)}pp`,
+    csvUnits: "percentage points; share of equivalised household net income received by the top 1% of people",
+    file: "top-1-share-change",
+  },
+  "90-10": {
+    ...SUMMARY_METRICS.inequality,
+    label: "90/10 ratio",
+    key: "p90_p10_change",
+    description:
+      "Relative change in the 90/10 ratio, the equivalised household net income of the person at the 90th percentile over that at the 10th, each year.",
+    unit: "Change in 90/10 ratio (%)",
+    csvUnits: "% change in the 90/10 ratio (equivalised household net income)",
+    file: "90-10-ratio-change",
+  },
+};
+
+const PARAM = { poverty: "poverty", inequality: "inequality" };
+
+function readParam(name) {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+/** Put a choice in the address, or take it out when it is the default. */
+function writeParam(name, value) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  if (value) params.set(name, value);
+  else params.delete(name);
+  const search = params.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`,
+  );
+}
+
+/** A poverty choice from ?poverty=, the default where a part is unknown. */
+export function parsePovertyChoice(text) {
+  const parts = (text ?? "").split("-");
+  const choice = { ...POVERTY_DEFAULT };
+  POVERTY_CHOICES.forEach((group, index) => {
+    if (group.options.some((option) => option.value === parts[index])) choice[group.name] = parts[index];
+  });
+  return choice;
+}
+
+/** Whether metrics.csv has a column (older files have only the headline ones). */
+export function hasColumn(rows, key) {
+  return (rows ?? []).some((row) => row[key] !== undefined && row[key] !== "");
+}
+
+/**
+ * The chosen measure for a chart with choices (poverty, inequality), and the
+ * pill groups that choose it; none when the file predates the measures.
+ */
+function useMeasureChoice(metric, rows) {
+  const family = metric.choices;
+  const [poverty, setPoverty] = useState(() => parsePovertyChoice(readParam(PARAM.poverty)));
+  const [inequality, setInequality] = useState(() => {
+    const value = readParam(PARAM.inequality);
+    return INEQUALITY_METRICS[value] ? value : "gini";
+  });
+
+  if (family === "poverty" && hasColumn(rows, "child_poverty_rel_ahc_change_pp")) {
+    const choose = (name) => (value) => {
+      const next = { ...poverty, [name]: value };
+      setPoverty(next);
+      const text = POVERTY_CHOICES.map((group) => next[group.name]).join("-");
+      writeParam(PARAM.poverty, text === "absolute-bhc-all" ? null : text);
+    };
+    return {
+      metric: povertyMetric(poverty),
+      controls: POVERTY_CHOICES.map((group) => ({
+        label: group.label,
+        value: poverty[group.name],
+        onChange: choose(group.name),
+        options: group.options,
+      })),
+    };
+  }
+  if (family === "inequality" && hasColumn(rows, "p90_p10_change")) {
+    return {
+      metric: INEQUALITY_METRICS[inequality],
+      controls: [
+        {
+          label: "Inequality measure",
+          value: inequality,
+          onChange: (value) => {
+            setInequality(value);
+            writeParam(PARAM.inequality, value === "gini" ? null : value);
+          },
+          options: Object.entries(INEQUALITY_METRICS).map(([value, measure]) => ({ value, label: measure.label })),
+        },
+      ],
+    };
+  }
+  // A file without the measures: the headline column, no choice
+  return { metric, controls: [] };
+}
 
 /**
  * One point per shown year: the metric for the whole selection's run, or
@@ -97,8 +293,9 @@ export function metricByYear(rows, run, metric) {
  * no single run (two or more policies, not all), it says to choose one
  * policy or all, as Young people's shares do.
  */
-function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selectedYear }) {
+function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear }) {
   const chartRef = useRef(null);
+  const { metric, controls } = useMeasureChoice(family, rows);
   const narrow = useNarrowViewport();
   const run = wholeSelectionRun(policies, selectedPolicies);
   const data = metricByYear(rows, run, metric);
@@ -143,6 +340,20 @@ function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selected
         </div>
         <ChartDownloadMenu download={download} chartTitle={metric.title} />
       </div>
+      {controls.length > 0 && (
+        <div className="summary-metric-choices">
+          {controls.map((control) => (
+            <ViewSwitch
+              key={control.label}
+              compact
+              label={control.label}
+              options={control.options}
+              value={control.value}
+              onChange={control.onChange}
+            />
+          ))}
+        </div>
+      )}
       <div ref={chartRef}>
         {!run ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
