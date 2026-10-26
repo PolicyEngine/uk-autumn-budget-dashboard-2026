@@ -361,6 +361,10 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * net income, the y axis's concept, in `incomeYear` (the basis year when
  * not given). The title is then `title`, and the line under it says what a
  * dot is and how households with incomes like the reader's changed.
+ *
+ * `embedded` draws it as one view of another card (the Household impact
+ * position card): no title, download menu or logo of its own; the card's
+ * menu takes this chart's download, handed up through `onDownload`.
  */
 function HouseholdScatter({
   selectedPolicies,
@@ -368,6 +372,8 @@ function HouseholdScatter({
   selectedYear = DEFAULT_DISPLAY_YEAR,
   you = null,
   title = CHART_TITLE,
+  embedded = false,
+  onDownload = null,
 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
@@ -455,13 +461,29 @@ function HouseholdScatter({
           scatterCsv(view.points, { title: chartTitle, basisYear: view.basisYear }),
       }
     : null;
+  // Embedded, the host card's menu downloads this chart
+  useEffect(() => {
+    if (onDownload) onDownload(download);
+    // The download changes with what it describes, not with every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onDownload, ready, view, description, chartTitle, exportName]);
   const incomeTitle = basisLabel
     ? `Household net income, ${basisLabel} (£k)`
     : "Household net income (£k)";
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
-  if (you && view.kind === "notice") {
+  if ((you || embedded) && view.kind === "notice") {
+    const reason = [view.reason, view.detail].filter(Boolean).join(" ");
+    if (embedded) {
+      return (
+        <div className="household-scatter-template is-embedded household-scatter-you-notice">
+          <p className="chart-description" role="status">
+            {reason}
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="household-scatter-template household-scatter-you-notice">
         <div className="chart-header">
@@ -473,7 +495,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description" role="status">
-              {[view.reason, view.detail].filter(Boolean).join(" ")}
+              {reason}
             </p>
           </div>
         </div>
@@ -482,23 +504,27 @@ function HouseholdScatter({
   }
 
   return (
-    <div className="household-scatter-template">
-      <div className="chart-header">
-        <div>
-          <h3>
-            <TitleIcon name="dots" />
-            <span className="title-text">
-              <NoBreakYear text={chartTitle} />
-            </span>
-          </h3>
-          <p className="chart-description">{description}</p>
+    <div className={`household-scatter-template${embedded ? " is-embedded" : ""}`}>
+      {embedded ? (
+        <p className="chart-description">{description}</p>
+      ) : (
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">{description}</p>
+          </div>
+          <ChartDownloadMenu
+            download={download}
+            chartTitle={chartTitle}
+            disabledReason={ready ? undefined : "Available when results are published"}
+          />
         </div>
-        <ChartDownloadMenu
-          download={download}
-          chartTitle={chartTitle}
-          disabledReason={ready ? undefined : "Available when results are published"}
-        />
-      </div>
+      )}
 
       {/* The plot takes the rows the map beside it uses for its controls,
           map and colour scale, so the two cards line up and fill alike */}
@@ -578,10 +604,12 @@ function HouseholdScatter({
         </ul>
       )}
 
-      <div className="chart-logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={CHART_LOGO.href} alt="PolicyEngine" />
-      </div>
+      {!embedded && (
+        <div className="chart-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={CHART_LOGO.href} alt="PolicyEngine" />
+        </div>
+      )}
     </div>
   );
 }

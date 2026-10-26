@@ -8,7 +8,6 @@ import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResu
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
 import useBasisIncome from "../hooks/useBasisIncome";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
-import HouseholdScatter from "./HouseholdScatter";
 import { PRESET_POLICIES, loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
@@ -740,8 +739,9 @@ function HouseholdCalculator({
     );
   };
 
-  // The result among all UK households: the Population impact scatter
-  // with this household on it, for the year and policies the result was
+  // The result among all UK households (the position card's "Among all
+  // households" view): the Population impact scatter with this household
+  // on it, for the year and policies the result was
   // asked with, once it is back and while the answers stand. The scatter's
   // y axis is baseline household net income in its basis year (2027-28),
   // so the household is placed by its own baseline income in that year.
@@ -875,19 +875,6 @@ function HouseholdCalculator({
         )}
       </div>
 
-      {/* Where the result sits among all UK households, under the result */}
-      {you && (
-        <section className="report-section charts-stack household-among" aria-label="Your household among all UK households">
-          <HouseholdScatter
-            selectedPolicies={submitted.policies}
-            policies={policies}
-            selectedYear={submitted.year}
-            you={you}
-            title="Your household among all UK households"
-          />
-        </section>
-      )}
-
       {/* The results' sections, below the form and headline, once asked */}
       {submitted !== null && !noneSelected && (
         <div role="region" aria-label="Your household's results">
@@ -897,6 +884,7 @@ function HouseholdCalculator({
             policies={policies}
             household={buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household}
             selected={submitted.policies}
+            you={you}
             changed={changed}
             startedAt={submitted.at}
           />

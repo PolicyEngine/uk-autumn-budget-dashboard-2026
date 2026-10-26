@@ -476,7 +476,7 @@ function PendingSkeleton({ kind, startedAt }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, household = null, selected = null, changed = false, startedAt = null }) {
+export function SingleYearDetails({ result, year, policies, household = null, selected = null, you = null, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Never an earlier result: nothing while the headline is calculated
   // again, or once the answers differ from the result's
@@ -506,6 +506,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
               year={data.year ?? year}
               policies={selected ?? []}
               yearLabel={yearLabel}
+              you={you}
             />
           </section>
         </>
