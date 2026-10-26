@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import SwapTransition from "./SwapTransition";
 import {
   Bar,
   BarChart,
@@ -824,7 +825,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
           <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
-      <div ref={chartRef} className="chart-plot young-people-plot">
+      <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length && single ? (
@@ -887,7 +888,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
             <p>No shares are published for this selection in {yearLabel}.</p>
           </div>
         )}
-      </div>
+      </SwapTransition>
       <div className="chart-legend">
         {data.length > 0 && (
           <div className="grouped-legend is-row">

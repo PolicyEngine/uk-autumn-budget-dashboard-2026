@@ -10,6 +10,9 @@ import { CHART_COLOURS } from "./chartTheme";
  */
 export const CHART_MOTION_MS = 300;
 
+/** --motion-base, for a content swap or disclosure timed from JS */
+export const MOTION_BASE_MS = 220;
+
 /** --ease-out, for a CSS transition set from JS */
 export const MOTION_EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
 

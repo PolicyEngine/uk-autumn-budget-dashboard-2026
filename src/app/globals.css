@@ -2822,6 +2822,55 @@ body {
 }
 
 
+/* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
+/* The new content of a card whose view changed: a fade and a 6px rise */
+.swap-transition-inner.swap-in {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A table that replaces a chart (Chart or table, on the OBR forecast's
+   cards) rises in as a swapped view does */
+.ls-table-wrapper {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+/* A view or sub-tab's content fades in when it is shown (they stay
+   mounted and are hidden, so the animation replays on each showing).
+   Opacity only: a transform would move the sticky parts inside. */
+.tab-panel:not([hidden]),
+.sub-panel:not([hidden]) {
+  animation: panel-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap-transition-inner.swap-in,
+  .ls-table-wrapper,
+  .tab-panel:not([hidden]),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
+
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {
   display: grid;
