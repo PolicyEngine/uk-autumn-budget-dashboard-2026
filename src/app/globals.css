@@ -2932,6 +2932,12 @@ body {
   background: transparent;
 }
 
+/* A figure counting to its new value (CountUpText.jsx): fixed-width
+   digits, so the text around it does not shuffle */
+.count-up {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
 /* The new content of a card whose view changed: a fade and a 6px rise */
 .swap-transition-inner.swap-in {
