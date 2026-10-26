@@ -543,7 +543,9 @@ function HouseholdCalculator({
           min={0}
           max={OLDEST_CHILD_AGE}
           step={1}
-          hint="Age in 2026, from 0 to 19."
+          // Ages are taken in the chosen year (the calculation does not age
+          // anyone from 2026, unlike the salary, which it grows)
+          hint={`Age in ${fiscalYearTick(year)}, from 0 to 19.`}
           outOfRangeMessage={CHILD_AGE_MESSAGE}
           onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
         />
