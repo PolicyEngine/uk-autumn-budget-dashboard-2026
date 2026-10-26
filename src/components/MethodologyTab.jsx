@@ -2,6 +2,8 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import ForecastFeedMethod from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
+import MethodGlossary from "./methodology/MethodGlossary";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
@@ -167,7 +169,9 @@ function MethodologyTab({ onShowTab }) {
               each measure, and weight the difference up to the whole country.
             </p>
           }
-        />
+        >
+          <MethodGlossary />
+        </MethodSection>
 
         <MethodSection
           id={METHOD_SECTIONS.data}
@@ -294,7 +298,7 @@ function MethodologyTab({ onShowTab }) {
           }
           details={
             <>
-              <h3 className="method-details-title">Public finances</h3>
+              <h3 id={METHOD_ANCHORS.publicFinances} className="method-details-title method-anchor">Public finances</h3>
               <FactList
                 items={[
                   [
@@ -328,7 +332,7 @@ function MethodologyTab({ onShowTab }) {
                   ],
                 ]}
               />
-              <h3 className="method-details-title">Households by income</h3>
+              <h3 id={METHOD_ANCHORS.byIncome} className="method-details-title method-anchor">Households by income</h3>
               <FactList
                 items={[
                   [
@@ -349,7 +353,7 @@ function MethodologyTab({ onShowTab }) {
                   ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
                 ]}
               />
-              <h3 className="method-details-title">Poverty and inequality</h3>
+              <h3 id={METHOD_ANCHORS.poverty} className="method-details-title method-anchor">Poverty and inequality</h3>
               <FactList
                 items={[
                   [
@@ -366,7 +370,7 @@ function MethodologyTab({ onShowTab }) {
                   ],
                 ]}
               />
-              <h3 className="method-details-title">Household scatter</h3>
+              <h3 id={METHOD_ANCHORS.scatter} className="method-details-title method-anchor">Household scatter</h3>
               <FactList
                 items={[
                   [

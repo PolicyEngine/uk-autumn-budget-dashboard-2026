@@ -40,6 +40,8 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { PE_MODEL_SOURCE } from "./InfoSections";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
@@ -68,6 +70,14 @@ const decileOrder = [
   "9th",
   "10th",
 ];
+
+// The card's "About this chart"
+const RELATIVE_INFO = {
+  shows: "Each decile's total change in household net income, as a percentage of its total net income.",
+  how: ["Totals over all its households, so larger incomes weigh more than in an average of percentages."],
+  sources: [PE_MODEL_SOURCE],
+  method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
+};
 
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
@@ -384,9 +394,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear}>
-            <p>{CHART_DESCRIPTION}</p>
-          </ChartMoreInfo>
+          <ChartMoreInfo members={members} year={selectedYear} info={RELATIVE_INFO} />
         </div>
       )}
     </div>

@@ -37,6 +37,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
 import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
+import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
@@ -342,6 +343,31 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
   };
+  // A card's link to Methodology (utils/methodLink): switch to it in place,
+  // then bring the term or section into view, opening any folded details
+  // it sits in
+  const openViewRef = useRef(handleTabChange);
+  useEffect(() => {
+    openViewRef.current = handleTabChange;
+  });
+  useEffect(() => {
+    const onOpenView = (event) => {
+      const { tab, anchor } = event.detail || {};
+      if (!tab) return;
+      openViewRef.current(tab);
+      if (!anchor) return;
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${anchor}`);
+      setTimeout(() => {
+        const target = document.getElementById(anchor);
+        if (!target) return;
+        const folded = target.closest("details");
+        if (folded) folded.open = true;
+        target.scrollIntoView?.({ block: "start" });
+      }, 300);
+    };
+    window.addEventListener(OPEN_VIEW_EVENT, onOpenView);
+    return () => window.removeEventListener(OPEN_VIEW_EVENT, onOpenView);
+  }, []);
   // A Policies card's "See its effect": Population impact with only that
   // measure selected (the address then carries ?policies=<id>)
   const handleShowEffect = (policyId) => {

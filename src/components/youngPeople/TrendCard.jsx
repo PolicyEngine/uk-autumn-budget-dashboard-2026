@@ -68,6 +68,10 @@ const FOCUS_COLOUR = CHART_COLOURS.gain;
 const CONTEXT_COLOUR = CHART_COLOURS.axis;
 const CONTEXT_HOVER = CHART_COLOURS.tick;
 const SELECTED_FILL = CHART_COLOURS.highlightBand;
+// The focus view's one chip for every other age group
+const OTHERS = "others";
+/** The key's swatch for the selected year's shading. */
+export const SELECTED_YEAR_KEY = { key: "selected-year", label: "Selected year", fill: SELECTED_FILL };
 
 const COMPARE_OPTIONS = [
   { value: "focus", label: `${FOCUS_LABEL} vs all ages`, summary: `${FOCUS_LABEL} vs all` },
@@ -332,6 +336,17 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   // All age groups: which lines are drawn (SeriesToggle), every one at first
   const [shownGroups, setShownGroups] = useState(() => SERIES.map((series) => series.key));
   const groupsView = compare === "groups" && view === "lines";
+  // The focus view: 16 to 24, all ages and the other groups (one chip for
+  // all of them), every one at first
+  const [shownFocus, setShownFocus] = useState([FOCUS, ALL_BAND, OTHERS]);
+  const focusView = compare === "focus" && view === "lines";
+  /** Whether a line is drawn in the view shown. */
+  const isShown = (key) =>
+    groupsView
+      ? shownGroups.includes(key)
+      : focusView
+        ? shownFocus.includes(key === FOCUS || key === ALL_BAND ? key : OTHERS)
+        : true;
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
@@ -387,7 +402,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       })
     : lineData
         // All age groups: fitted to the lines shown
-        .flatMap((point) => groupKeys.filter((each) => !groupsView || shownGroups.includes(each)).map((each) => point[each]))
+        .flatMap((point) => groupKeys.filter(isShown).map((each) => point[each]))
         .filter((v) => v !== null && v !== undefined);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
@@ -447,10 +462,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         key: series.key,
         label: series.label,
         short: series.short,
-        colour: hovered === series.key ? CONTEXT_HOVER : CONTEXT_COLOUR,
+        colour: hovered === series.key || hovered === OTHERS ? CONTEXT_HOVER : CONTEXT_COLOUR,
         hoverColour: CONTEXT_HOVER,
         textColour: CHART_COLOURS.tick,
-        width: hovered === series.key ? 2.25 : 1.25,
+        width: hovered === series.key || hovered === OTHERS ? 2.25 : 1.25,
       };
     });
   })();
@@ -610,7 +625,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               />
             )}
             {!byMeasure &&
-              ordered.filter((line) => !groupsView || shownGroups.includes(line.key)).map((line) => (
+              ordered.filter((line) => isShown(line.key)).map((line) => (
                 <Line
                   key={line.key}
                   type="monotoneX"
@@ -631,7 +646,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             {!byMeasure && !groupsView && (
               <Customized
                 component={
-                  <EndLabels data={lineData} lines={lines} hovered={hovered} onHover={setHovered} narrow={narrow} />
+                  <EndLabels data={lineData} lines={lines.filter((line) => isShown(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />
                 }
               />
             )}
@@ -642,8 +657,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         </ResponsiveContainer>
       </div>
       <div className="chart-legend">
-        {/* All age groups: the chips are the key, one per line, to show or
-            hide it; the focus view names its lines at their ends */}
+        {/* The key, which also shows or hides each line: all age groups one
+            chip each; the focus view 16 to 24, all ages and one chip for the
+            other groups. Then the selected year's shading. */}
         {groupsView && (
           <SeriesToggle
             series={lines.map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
@@ -652,6 +668,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             onHover={setHovered}
             label="Age groups"
             narrow={narrow}
+            extras={[SELECTED_YEAR_KEY]}
+          />
+        )}
+        {focusView && (
+          <SeriesToggle
+            series={[
+              { key: FOCUS, label: FOCUS_LABEL, colour: FOCUS_COLOUR },
+              { key: ALL_BAND, label: "All ages", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH },
+              { key: OTHERS, label: "Other age groups", colour: CONTEXT_HOVER },
+            ]}
+            shown={shownFocus}
+            onChange={setShownFocus}
+            onHover={setHovered}
+            label="Age groups"
+            narrow={narrow}
+            extras={[SELECTED_YEAR_KEY]}
           />
         )}
       </div>

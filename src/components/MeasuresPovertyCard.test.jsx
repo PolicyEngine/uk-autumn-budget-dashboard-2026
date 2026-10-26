@@ -129,10 +129,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
     expect(rows[0]).toBe("Plan 2 threshold unfrozen");
-    expect(rows.at(-1)).toBe("Package");
+    expect(rows.at(-1)).toBe("All measures together");
     expect(rows).not.toContain("Employer NI relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
-    expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
+    expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
     expect(headline).toHaveTextContent(/^Of the measures, Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
@@ -145,15 +145,34 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(within(measures).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
     // The card's line is the figure; what it measures is in More info
-    fireEvent.click(within(change).getByRole("button", { name: "More info" }));
+    fireEvent.click(within(change).getByRole("button", { name: "About this chart" }));
     expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
     // More info: the £0 measures and that the parts need not add up
-    fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
+    fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
     expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);
     expect(none).toHaveTextContent(/change prices/);
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
+  });
+});
+
+describe("a published file with only the headline poverty column", () => {
+  it("still shows Which measures move poverty, on the headline measure, whatever ?poverty= says", async () => {
+    // As the per-measure artifacts publish metrics.csv: the headline column only
+    const HEADLINE = ["reform_id", "reform_name", "year", "people_affected", "gini_change", "poverty_change_pp", "poverty_change_pct"];
+    const narrow = metrics.map((row) => Object.fromEntries(HEADLINE.map((key) => [key, row[key]])));
+    window.history.replaceState({}, "", "/?sub=poverty&poverty=relative-ahc-children");
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={narrow} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    // No choice to make, and the steps are the headline measure's
+    expect(within(card).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    expect(within(card).getAllByRole("rowheader").length).toBeGreaterThan(0);
   });
 });

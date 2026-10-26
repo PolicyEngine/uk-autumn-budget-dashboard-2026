@@ -37,7 +37,8 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
-import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
+import { EndLabels, SELECTED_YEAR_KEY, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
+import SeriesToggle from "../SeriesToggle";
 import { pensionerMeasureSeries } from "./pensionersData";
 
 const FOCUS = "pensioners";
@@ -71,6 +72,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
+  // Which lines are drawn (SeriesToggle), both at first
+  const [shown, setShown] = useState([FOCUS, ALL_BAND]);
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
@@ -119,7 +122,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           point.net,
         ];
       })
-    : data.flatMap((point) => [point[FOCUS], point[ALL_BAND]]).filter((v) => v !== null && v !== undefined);
+    : data.flatMap((point) => shown.map((each) => point[each])).filter((v) => v !== null && v !== undefined);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = focusSeries.filter((point) => point.net === null);
@@ -272,7 +275,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
               />
             )}
             {!byMeasure &&
-              LINES.map((line) => (
+              LINES.filter((line) => shown.includes(line.key)).map((line) => (
                 <Line
                   key={line.key}
                   type="monotoneX"
@@ -280,6 +283,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
                   name={line.label}
                   stroke={line.colour}
                   strokeWidth={line.width}
+                  strokeOpacity={hovered && hovered !== line.key ? 0.3 : 1}
                   strokeDasharray={line.dash}
                   dot={{ r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5 }}
                   activeDot={{ r: 5 }}
@@ -287,13 +291,27 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
                 />
               ))}
             {!byMeasure && (
-              <Customized component={<EndLabels data={data} lines={LINES} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
+              <Customized component={<EndLabels data={data} lines={LINES.filter((line) => shown.includes(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
             )}
             {!cumulative && notes.length > 0 && <Customized component={<StepLabels notes={notes} valueAt={focusAt} narrow={narrow} />} />}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="chart-legend" />
+      <div className="chart-legend">
+        {/* The key, which also shows or hides each line, then the selected
+            year's shading */}
+        {!byMeasure && (
+          <SeriesToggle
+            series={[...LINES].reverse().map((line) => ({ key: line.key, label: line.label, colour: line.colour, dash: line.dash }))}
+            shown={shown}
+            onChange={setShown}
+            onHover={setHovered}
+            label="Lines"
+            narrow={narrow}
+            extras={[SELECTED_YEAR_KEY]}
+          />
+        )}
+      </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
