@@ -743,9 +743,7 @@
   transform: scaleX(1);
 }
 
-/* Foot: what the figure is based on. The facts run in one line, each a
-   compact label and value with its "i", separated by dots; they wrap only
-   when the width runs out. The breakdown link sits on its own row. */
+/* Foot: what the figure is based on */
 .result-card-foot {
   display: flex;
   flex-wrap: wrap;
@@ -765,39 +763,22 @@
   color: var(--pe-gray-400);
 }
 
-.result-foot-title {
-  flex-basis: 100%;
-}
-
 .result-foot-items {
   display: flex;
-  flex: 1 1 100%;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 0;
-  min-width: 0;
+  gap: 6px 20px;
   margin: 0;
 }
 
 .result-foot-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  max-width: 100%;
+  gap: 6px;
   font-size: var(--fs-caption);
-}
-
-.result-foot-item:not(:last-child)::after {
-  content: "·";
-  margin: 0 10px 0 4px;
-  font-weight: 600;
-  color: var(--pe-gray-400);
 }
 
 .result-foot-item dt {
   display: inline-flex;
-  flex: none;
-  white-space: nowrap;
   align-items: center;
   gap: 5px;
   color: var(--pe-gray-500);
@@ -1089,6 +1070,11 @@
 
   .result-value {
     font-size: 2rem;
+  }
+
+  .result-foot-items {
+    flex-direction: column;
+    gap: 6px;
   }
 
   .result-card-more {

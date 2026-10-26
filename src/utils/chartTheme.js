@@ -87,35 +87,6 @@ export const POLICY_RAMPS = {
 };
 
 /**
- * Income groups from the lowest-income to the highest-income end: a
- * diverging ramp, amber (low) through a grey midpoint to teal (high), each
- * arm darkest at its end. The JS mirror of the --income-ramp-* tokens in
- * src/app/globals.css (chartTheme.test.js keeps the two equal).
- * incomeGroupColours samples it for any number of groups.
- */
-export const INCOME_RAMP = ["#8A3A0C", "#B8641C", "#E0954A", "#9CA3AF", "#5FB3AA", "#2A8C84", "#0F5F59"];
-
-const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-const rgbToHex = (rgb) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
-
-/**
- * `n` colours along INCOME_RAMP, evenly spaced from its low-income end to its
- * high-income end (an odd count puts the middle group on the grey midpoint),
- * interpolated between neighbouring stops.
- */
-export function incomeGroupColours(n) {
-  if (n <= 1) return [INCOME_RAMP[INCOME_RAMP.length - 1]];
-  const last = INCOME_RAMP.length - 1;
-  return Array.from({ length: n }, (_, i) => {
-    const t = (i / (n - 1)) * last;
-    const lo = Math.min(Math.floor(t), last - 1);
-    const f = t - lo;
-    const [a, b] = [hexToRgb(INCOME_RAMP[lo]), hexToRgb(INCOME_RAMP[lo + 1])];
-    return rgbToHex(a.map((v, k) => v + (b[k] - v) * f));
-  });
-}
-
-/**
  * Names ordered by size, largest first: the mean absolute value over the
  * points given (a point marked `unpublished` is left out). Ties keep the
  * order given.
