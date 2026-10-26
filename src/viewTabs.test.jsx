@@ -8,7 +8,8 @@ beforeEach(() => {
   const manifest = { ...original, measures: { alpha: original.measures.alpha }, combined: {} };
   const serve = fixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest) } });
   vi.stubGlobal("fetch", (url, init) => serve(`${BASE_PATH}${url}`, init));
-  window.history.replaceState({}, "", "/");
+  // The bare address is the landing page, with no tab bar (landing.test.jsx)
+  window.history.replaceState({}, "", "/?tab=dashboard");
 });
 
 afterEach(() => {

@@ -1,0 +1,87 @@
+/* The band's home button (HomeButton.jsx): a translucent circle in the
+   family of the Year and Measures pills */
+.title-head {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.title-row .home-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--band-ink);
+  background: var(--band-ink-hover);
+  border: 1px solid var(--band-ink-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
+}
+
+.title-row .home-button:hover,
+.title-row .home-button[aria-current="page"] {
+  background: var(--band-ink-active);
+  border-color: var(--band-ink-border-hover);
+}
+
+.title-row .home-button[aria-current="page"] {
+  cursor: default;
+}
+
+.title-row .home-button:focus-visible {
+  outline: 2px solid var(--band-ink);
+  outline-offset: 2px;
+}
+
+/* Its tip, as a mini card above the band */
+.tip:has(> .home-tip) {
+  z-index: 1200;
+  max-width: 260px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow-strong);
+}
+
+.home-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--pe-gray-700);
+}
+
+.home-tip-title {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.home-tip-hint {
+  color: var(--c-gain-text);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .title-head {
+    gap: 10px;
+  }
+
+  .title-row .home-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-row .home-button {
+    transition: none;
+  }
+}
