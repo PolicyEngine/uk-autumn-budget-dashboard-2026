@@ -376,8 +376,20 @@ function useMeasureChoice(metric, rows) {
 }
 
 /**
+ * A run's value of a measure in its row, or null where the row does not
+ * carry it: absent (a run written before the poverty and inequality
+ * measures), empty or null is never a change of 0.
+ */
+export function metricValue(row, key) {
+  const raw = row?.[key];
+  const value = raw === undefined || raw === null || raw === "" ? NaN : Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
  * One point per shown year: the metric for the whole selection's run, or
- * null where that run has no row for the year (not yet published).
+ * null where that run has no row for the year, or a row without the metric
+ * (not yet published).
  *
  * @param {Array<Object>} rows - metrics.csv rows (strings, as parsed)
  * @param {string|null} run - The run to read (wholeSelectionRun)
@@ -389,8 +401,8 @@ export function metricByYear(rows, run, metric) {
     const row = (rows ?? []).find(
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
-    const raw = row ? Number(row[metric.key]) : NaN;
-    return { year, value: Number.isFinite(raw) ? raw * (metric.scale ?? 1) : null };
+    const value = metricValue(row, metric.key);
+    return { year, value: value === null ? null : value * (metric.scale ?? 1) };
   });
 }
 
