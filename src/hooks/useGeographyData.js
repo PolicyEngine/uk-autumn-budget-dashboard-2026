@@ -22,7 +22,10 @@ import { parseGeographyTable } from "../utils/geography/parse";
  * file's answer.
  */
 
-export const BOUNDARIES_FILE = "uk_constituencies_2024.geojson";
+// The 2024 boundaries as TopoJSON: the GeoJSON's shapes on a 12 m grid with
+// the four properties the page reads, a sixth of its size gzipped, drawn the
+// same at the map's size and zoom (data_inputs/public_data_review.csv)
+export const BOUNDARIES_FILE = "uk_constituencies_2024.topo.json";
 
 /**
  * Whether the release routes results by area, as uk_budget_data.area_routing
@@ -117,7 +120,14 @@ export async function loadBoundaries({
     if (!response.ok) {
       return failure("error", `${BOUNDARIES_FILE}: HTTP ${response.status}`);
     }
-    const geojson = await response.json();
+    const body = await response.json();
+    // TopoJSON is decoded to features here, with its decoder loaded only now
+    let geojson = body;
+    if (body?.type === "Topology" && body.objects && typeof body.objects === "object") {
+      const { feature } = await import("topojson-client");
+      const objects = Object.values(body.objects);
+      geojson = objects.length === 1 ? feature(body, objects[0]) : null;
+    }
     if (!Array.isArray(geojson?.features)) {
       return failure("error", `${BOUNDARIES_FILE}: not a feature collection`);
     }
