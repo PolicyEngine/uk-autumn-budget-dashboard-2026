@@ -1,0 +1,75 @@
+/* The Budget-day report. Colours are the dashboard's tokens (src/utils/chartTheme.js). */
+@page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+@page :first { margin: 0 0 18mm 0; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: #1F2937; font-size: 9.6pt; line-height: 1.5; margin: 0; background: #FFFFFF; }
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; color: #1F2937; }
+h2 { font-size: 16pt; color: #285E61; margin: 0 0 3mm; break-after: avoid; }
+h3 { font-size: 10.5pt; margin: 5mm 0 2mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+a { color: inherit; text-decoration: none; }
+code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8pt; }
+.page { margin-top: 10mm; }
+#summary, #revenue, #measures { break-before: page; margin-top: 0; }
+.kicker, h2, section > p { break-after: avoid; }
+p { orphans: 3; widows: 3; }
+.kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 7.5pt; font-weight: 600; color: #0F766E; margin: 0 0 1mm; }
+.muted { color: #4B5563; }
+
+/* Provisional: a watermark on every page, and the dashboard's label */
+.watermark { position: fixed; top: 45%; left: 0; right: 0; text-align: center; transform: rotate(-30deg);
+  font-size: 66pt; font-weight: 700; color: #B45309; opacity: 0.08; letter-spacing: 0.04em; pointer-events: none; z-index: 0; text-transform: uppercase; }
+.status-banner, .status-inline { background: #FFF7E6; color: #7A5A1F; border: 1px solid #FDE68A; border-radius: 1.5mm; padding: 2.5mm 3.5mm; font-weight: 600; font-size: 9pt; }
+.status-banner { display: inline-block; margin: 8mm 0 0; }
+
+/* Cover */
+.cover { height: 279mm; position: relative; padding: 24mm 20mm; background: linear-gradient(165deg, #EAF5F4 0%, #FFFFFF 60%); }
+.cover .logo { width: 56mm; height: auto; display: block; }
+.cover h1 { font-size: 30pt; line-height: 1.12; margin: 42mm 0 6mm; max-width: 160mm; }
+.cover .sub { font-size: 12.5pt; color: #4B5563; max-width: 150mm; line-height: 1.45; }
+.cover-meta { position: absolute; left: 20mm; right: 20mm; bottom: 16mm; border-top: 1px solid #E5E7EB; padding-top: 4mm; margin: 0;
+  display: grid; grid-template-columns: 1fr 1.6fr 1.6fr; gap: 4mm; font-size: 8.5pt; }
+.cover-meta dt { color: #4B5563; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.06em; }
+.cover-meta dd { margin: 0.5mm 0 0; color: #1F2937; }
+
+/* Summary */
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4mm; margin: 4mm 0 5mm; }
+.tile { border: 1px solid #E5E7EB; border-radius: 2.5mm; padding: 4mm 4.5mm; break-inside: avoid; }
+.tile .v { font-size: 18pt; font-weight: 700; color: #285E61; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tile .v .vs { font-size: 10pt; font-weight: 600; color: #4B5563; }
+.tile .l { font-size: 8.4pt; color: #4B5563; margin-top: 1.5mm; }
+ul.findings { padding-left: 5mm; margin: 0 0 4mm; }
+ul.findings li { margin-bottom: 1.5mm; }
+nav h3 { margin-top: 6mm; }
+ol.toc { list-style: none; padding: 0; margin: 2mm 0; columns: 2; column-gap: 10mm; }
+ol.toc li { border-bottom: 1px dotted #9CA3AF; padding: 1.4mm 0; font-size: 9.4pt; break-inside: avoid; }
+
+/* Figures and tables */
+figure { margin: 2mm 0 4mm; break-inside: avoid; }
+figure img { width: 100%; height: auto; }
+.ftitle { font-weight: 600; font-size: 9.6pt; margin-bottom: 1mm; color: #1F2937; }
+.caption { font-size: 8.2pt; color: #4B5563; margin-top: 1mm; }
+.key { font-size: 8.4pt; color: #374151; margin: 1mm 0 1.5mm; }
+.key .sw { display: inline-block; width: 3mm; height: 3mm; border-radius: 0.6mm; vertical-align: -0.4mm; margin: 0 1.5mm 0 4mm; }
+.key .sw:first-child { margin-left: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 8.4pt; margin: 2mm 0 3mm; }
+table.keep, .keep { break-inside: avoid; }
+caption { text-align: left; font-weight: 600; font-size: 9.2pt; color: #1F2937; padding-bottom: 1.5mm; caption-side: top; }
+th, td { padding: 1.3mm 1.6mm; vertical-align: top; border-bottom: 1px solid #E5E7EB; }
+thead th { text-align: left; font-weight: 600; color: #374151; border-bottom: 1.4px solid #1F2937; font-size: 8pt; }
+tbody th { text-align: left; font-weight: 500; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.costs, td.gain { color: #0F766E; }
+td.raises, td.loss { color: #B45309; }
+tr.total th, tr.total td { font-weight: 700; border-top: 1.4px solid #1F2937; }
+td.total-col { font-weight: 600; }
+table.compact { font-size: 7.9pt; }
+table.compact th, table.compact td { padding: 1.1mm 1.2mm; }
+table.households .def { font-weight: 400; font-size: 7.6pt; color: #4B5563; margin-top: 0.6mm; max-width: 105mm; }
+.note { font-size: 8.2pt; color: #4B5563; }
+.notice { border: 1.4px dashed #9CA3AF; border-radius: 2.5mm; padding: 5mm 6mm; color: #374151; margin: 4mm 0; break-inside: avoid; }
+.notice p { margin: 0; }
+section > ul { padding-left: 5mm; }
+section > ul li { margin-bottom: 1.5mm; }
+table.households .at { font-size: 7.2pt; color: #4B5563; font-weight: 400; }
