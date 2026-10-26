@@ -1,6 +1,6 @@
 import { createElement, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import CountUpText from "./CountUpText";
-import { ArrowRight, Coins, Flame, Fuel, Percent, Zap } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Coins, Flame, Fuel, Percent, Table, Zap } from "lucide-react";
 import {
   FIRST_YEAR,
   MONTHS,
@@ -282,6 +282,7 @@ function Reveal({ show, hide, children }) {
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
       >
+        <Table size={14} aria-hidden="true" />
         {open ? hide : show}
       </button>
       <div id={id} hidden={!open}>
@@ -310,7 +311,10 @@ export default function PolicyChange({ entry, direction, onHighlight }) {
   if (!main) return null;
   const title = (
     <div className="pchg-head">
-      <p className="pchg-title" id={`${id}-title`}>What changes</p>
+      <p className="pchg-title" id={`${id}-title`}>
+        <ArrowRightLeft size={14} aria-hidden="true" />
+        What changes
+      </p>
       {(entry.display === "path" || entry.display === "schedule") && <Key />}
     </div>
   );

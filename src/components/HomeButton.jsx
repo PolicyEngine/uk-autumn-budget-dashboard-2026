@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import Tip from "./Tip";
 import { PanelLeftOpen } from "lucide-react";
 import mark from "@/assets/policyengine-white-square.svg";
-import tealMark from "@/assets/policyengine-teal-square.svg";
 import "./HomeButton.css";
 
 /**
@@ -69,7 +68,8 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       const height = Math.round(bottom - box.top) - 2;
       own.current.style.height = `${height}px`;
       // The mark over the icon where they fit, else the mark alone
-      own.current.dataset.short = String(height < 52);
+      // Two rows tall: the mark over the icon; one row: side by side
+      own.current.dataset.short = String(height < 70);
     };
     const later = () => {
       if (!frame) frame = requestAnimationFrame(place);
@@ -118,8 +118,11 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
         onClick={onToggle}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={tealMark.src ?? tealMark} alt="" className="edge-about-mark" />
-        <PanelLeftOpen className="edge-about-icon" size={15} strokeWidth={2} aria-hidden="true" />
+        <span className="edge-about-icons">
+          <img src={mark.src ?? mark} alt="" className="edge-about-mark" />
+          <PanelLeftOpen className="edge-about-icon" size={14} strokeWidth={2.2} aria-hidden="true" />
+        </span>
+        <span className="edge-about-label" aria-hidden="true">About</span>
       </button>
     </Tip>
   );

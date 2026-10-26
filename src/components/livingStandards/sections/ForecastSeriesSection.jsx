@@ -132,9 +132,11 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
     },
     // Chart or table: one choice for every card, as icons in its header
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
-    // One chip per line, in its colour: the card's key, so no legend repeats
-    // the names. A card of one line needs none: its title names it.
-    controls: allLines.length > 1 && (
+  };
+  // One chip per line, in its colour: the card's key, under the plot (as
+  // every chart's key), so no legend repeats the names. A card of one line
+  // needs none: its title names it.
+  const chips = allLines.length > 1 && (
       <SeriesToggle
         series={allLines.map((l) => ({ key: l.key, label: l.name, short: SHORT_NAMES[l.key], colour: l.colour, dash: l.dash }))}
         shown={shown}
@@ -143,8 +145,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
         label="Lines"
         narrow={narrow}
       />
-    ),
-  };
+  );
 
   if (view === "table") {
     return (
@@ -171,6 +172,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
             </tbody>
           </table>
         </div>
+        {chips && <div className="chart-legend">{chips}</div>}
       </LsCard>
     );
   }
@@ -191,6 +193,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
         endLabels={allLines.length > 1}
         legend={false}
         focusKey={hovered}
+        keyContent={chips || null}
       />
     </LsCard>
   );
