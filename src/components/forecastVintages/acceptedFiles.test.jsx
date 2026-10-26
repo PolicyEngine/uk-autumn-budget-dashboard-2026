@@ -1,17 +1,29 @@
 /**
- * A forecasts file the loader accepts can always be drawn
- * (utils/forecastVintages/load.js promises it). Each case changes one field
- * of the committed file to something it should not hold; the loader must
- * refuse the file, or else every view of it builds, with its notes,
- * sentences, label layout, ticks, CSV and legend, and the view mounts
- * without falling back to "cannot be drawn".
+ * Whatever one field of the forecasts file holds, the loader
+ * (utils/forecastVintages/load.js) refuses the file or the page draws it
+ * truly. Every field of the committed file, in every measure, is changed
+ * in turn: to nothing, to the wrong type, to text the page reads as a
+ * name (a unit, a frequency, "__proto__"), to a neighbour's value, and to
+ * nearby numbers.
+ *
+ * - The loader accepts exactly the changes FILE_OK, written here apart
+ *   from the loader, accepts (A). Two readings of one contract: where
+ *   they differ, one of them is wrong.
+ * - A file it accepts draws every view on an axis that holds every point
+ *   (or says the view is unavailable, never with a zero), and a change to
+ *   a field that holds no figure leaves every figure as it was; a field
+ *   the page does not read leaves every word as it was too (B).
+ * - It mounts, with nothing that "cannot be drawn" (C).
+ *
+ * WHAT_IT_HOLDS names every field the file has. A field it does not name
+ * fails the test, so a field added to the file must be added there.
  */
 import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import { cleanup, render, screen } from "@testing-library/react";
-import ForecastVintagesView, { cardNotes, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
+import ForecastVintagesView, { cardNotes, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
 import { chartLayout, legendItems, xTicks } from "./VintageChart";
 import { forecastVintagesProblem, resetForecastVintages } from "../../utils/forecastVintages/load";
 import { UNIT_ORDER, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
@@ -34,28 +46,353 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Every field of the file: each object's keys, the first and last item of
-// a list, and of a series ({period: value}) its first and last periods and
-// one it does not have
+// ---------------------------------------------------------------------
+// What the file may hold, from the brief and the file's own words
+// (meta.launch_rules), not from load.js
+// ---------------------------------------------------------------------
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// The newest forecast shown (the brief: March 2026)
+const NEWEST = 2026 * 12 + 3;
+// No figure in the file comes near this in its own units
+const LIMIT = 1e9;
+
+const str = (v) => typeof v === "string" && v.length > 0;
+const plain = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+const num = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= LIMIT;
+const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+const missing = (v) => v === undefined || v === null;
+const distinct = (xs) => new Set(xs).size === xs.length;
+const https = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v);
+const hex64 = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+const day = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+const slug = (v) => typeof v === "string" && /^[a-z][a-z0-9_]*$/.test(v);
+const among = (list) => (v) => typeof v === "string" && list.includes(v);
+
+/** "2024", 2024, "2024-25" or "2024Q2" as a number counting periods; null if it is none. */
+function periodNo(key, frequency) {
+  const s = frequency === "calendar" && Number.isInteger(key) ? String(key) : key;
+  if (typeof s !== "string") return null;
+  let m;
+  let year;
+  let no;
+  if (frequency === "calendar" && (m = /^(\d{4})$/.exec(s))) [year, no] = [+m[1], +m[1]];
+  else if (frequency === "fiscal" && (m = /^(\d{4})-(\d{2})$/.exec(s)) && +m[2] === (+m[1] + 1) % 100) [year, no] = [+m[1], +m[1]];
+  else if (frequency === "quarterly" && (m = /^(\d{4})Q([1-4])$/.exec(s))) [year, no] = [+m[1], +m[1] * 4 + +m[2] - 1];
+  else return null;
+  return year >= 1900 && year <= 2100 ? no : null;
+}
+
+const periodText = (no, frequency) =>
+  frequency === "quarterly"
+    ? `${Math.floor(no / 4)}Q${(no % 4) + 1}`
+    : frequency === "fiscal"
+      ? `${no}-${String((no + 1) % 100).padStart(2, "0")}`
+      : String(no);
+
+// The launch rules in the file's words: two quarters before the quarter
+// of publication; the calendar year before; the last complete fiscal
+// year (April to March) before
+function launchOf(frequency, year, month) {
+  if (frequency === "quarterly") return year * 4 + Math.floor((month - 1) / 3) - 2;
+  if (frequency === "calendar") return year - 1;
+  return month >= 4 ? year - 1 : year - 2;
+}
+
+/** {period: number}, with no period missing between its ends, as a Map; null if not. */
+function seriesOf(values, frequency) {
+  if (!plain(values)) return null;
+  const out = new Map();
+  for (const [k, v] of Object.entries(values)) {
+    const t = periodNo(k, frequency);
+    if (t === null || !num(v)) return null;
+    out.set(t, v);
+  }
+  const ts = [...out.keys()].sort((a, b) => a - b);
+  if (!ts.length || ts.some((t, i) => i > 0 && t !== ts[i - 1] + 1)) return null;
+  return out;
+}
+
+const firstOf = (series) => [...series.keys()].reduce((a, b) => Math.min(a, b));
+
+function vintageOk(v, frequency, kind) {
+  if (!plain(v) || !int(v.year, 1900, 2100) || !int(v.month, 1, 12)) return false;
+  if (!slug(v.id) || v.label !== `${MONTH_NAMES[v.month - 1]} ${v.year}`) return false;
+  const launch = launchOf(frequency, v.year, v.month);
+  if (periodNo(v.launch, frequency) !== launch) return false;
+  const values = seriesOf(v.values, frequency);
+  if (!values) return false;
+  const first = firstOf(values);
+  return kind === "index" ? first === launch : first === launch || first === launch + 1;
+}
+
+// What its kind says of a forecast's figures: an index is above zero; a
+// growth rate is under 100% and starts within 10 points of the outturn's
+// own; a level starts within half the outturn's largest size of it
+function readsAsKind(v, kind, outturn, frequency) {
+  const values = seriesOf(v.values, frequency);
+  const first = firstOf(values);
+  const all = [...values.values()];
+  if (kind === "index") return all.every((x) => x > 0);
+  if (kind === "growth") {
+    const [now, before] = [outturn.get(first), outturn.get(first - (frequency === "quarterly" ? 4 : 1))];
+    const near = !(before > 0 && now !== undefined) || Math.abs(values.get(first) - 100 * (now / before - 1)) <= 10;
+    return all.every((x) => Math.abs(x) < 100) && near;
+  }
+  const size = Math.max(...[...outturn.values()].map(Math.abs));
+  return !outturn.has(first) || Math.abs(values.get(first) - outturn.get(first)) <= 0.5 * size;
+}
+
+function checkOk(c, m, outturn, frequency) {
+  if (!plain(c) || !str(c.against) || !str(c.in) || typeof c.tolerance_is_share !== "boolean") return false;
+  if (!Array.isArray(c.periods) || !c.periods.length) return false;
+  const ts = c.periods.map((p) => periodNo(p, frequency));
+  if (ts.some((t, i) => t === null || !outturn.has(t) || (i > 0 && t <= ts[i - 1]))) return false;
+  if (!num(c.tolerance) || !(c.tolerance > 0) || (c.tolerance_is_share && !(c.tolerance < 1))) return false;
+  const at = periodNo(c.largest_gap_period, frequency);
+  if (!num(c.largest_gap) || at === null || !c.periods.includes(c.largest_gap_period)) return false;
+  const gap = Math.abs(c.largest_gap);
+  // Written to four decimals; a share's gap is of the OBR's figure, the
+  // outturn less the gap, and a growth measure's is of rates not in the file
+  if (!c.tolerance_is_share) return gap <= c.tolerance + 1e-4;
+  return m.kind === "growth" || gap <= c.tolerance * Math.abs(outturn.get(at) - c.largest_gap) + 1e-4;
+}
+
+function measureOk(m, frequency) {
+  if (!plain(m) || !among(["growth", "index", "level"])(m.kind)) return false;
+  if (!str(m.unit) || !str(m.outturn_source) || !str(m.forecast_source) || !int(m.decimals, 0, 6)) return false;
+  const outturn = seriesOf(m.outturn, frequency);
+  if (!outturn || (!missing(m.check) && !checkOk(m.check, m, outturn, frequency))) return false;
+  if (!Array.isArray(m.vintages) || !m.vintages.length || !m.vintages.every((v) => vintageOk(v, frequency, m.kind))) return false;
+  const dates = m.vintages.map((v) => v.year * 12 + v.month);
+  if (!distinct(m.vintages.map((v) => v.id)) || dates.some((d, i) => i > 0 && d <= dates[i - 1])) return false;
+  return dates[dates.length - 1] === NEWEST && m.vintages.every((v) => readsAsKind(v, m.kind, outturn, frequency));
+}
+
+function unitsOk(variable) {
+  const units = variable.units;
+  if (!plain(units) || !Object.keys(units).length) return false;
+  for (const [unit, spec] of Object.entries(units)) {
+    if (!["level", "index", "pct"].includes(unit)) return false;
+    if (!plain(spec) || !str(spec.label) || !str(spec.axis) || !among(["level", "share"])(spec.from)) return false;
+    // % alone is a change on a year earlier; £ alone is at an annual
+    // rate, and only for a quarterly measure
+    if (!missing(spec.transform) && !(spec.transform === "growth" && unit === "pct")) return false;
+    if (!missing(spec.annualise) && typeof spec.annualise !== "boolean") return false;
+    if (spec.annualise === true && !(unit === "level" && variable.frequency === "quarterly")) return false;
+  }
+  return among(["level", "index", "pct"])(variable.default_unit) && Object.hasOwn(units, variable.default_unit);
+}
+
+function variableOk(v) {
+  if (!plain(v) || !slug(v.id) || !str(v.label) || !among(["calendar", "fiscal", "quarterly"])(v.frequency)) return false;
+  if (!missing(v.notes) && !(Array.isArray(v.notes) && v.notes.every(str))) return false;
+  if (!unitsOk(v)) return false;
+  const read = new Set(Object.values(v.units).map((spec) => spec.from));
+  if (![...read].every((name) => measureOk(v[name], v.frequency))) return false;
+  // A % shown as published reads a measure in %; £ or people never do
+  return Object.entries(v.units).every(([unit, spec]) => {
+    const inPct = v[spec.from].unit.startsWith("%");
+    return !(unit === "pct" && spec.transform !== "growth" && !inPct) && !(unit === "level" && inPct);
+  });
+}
+
+function metaOk(meta, frequencies) {
+  if (!plain(meta)) return false;
+  const { parliament, launch_rules: rules, left_out: leftOut, gaps, sources } = meta;
+  if (![...frequencies].every((f) => plain(rules) && str(rules[f]))) return false;
+  // A quarterly measure's annual totals are calendar years
+  const dated = new Set(frequencies);
+  if (dated.has("quarterly")) dated.add("calendar");
+  for (const f of dated) {
+    const [a, b] = [periodNo(parliament?.start?.[f], f), periodNo(parliament?.end?.[f], f)];
+    if (a === null || b === null || a >= b) return false;
+  }
+  if (!Array.isArray(leftOut) || !leftOut.every((x) => plain(x) && str(x.what) && str(x.why))) return false;
+  if (!distinct(leftOut.map((x) => x.what)) || !Array.isArray(gaps) || !gaps.every(str) || !distinct(gaps)) return false;
+  if (!plain(sources)) return false;
+  const { obr, ons, hpi } = sources;
+  const obrOk = (x) => plain(x) && str(x.id) && str(x.title) && https(x.url) && (missing(x.archive_url) || https(x.archive_url)) && hex64(x.sha256);
+  const onsOk = (x) => plain(x) && str(x.cdid) && str(x.dataset) && https(x.page) && str(x.title) && day(x.release_date) && hex64(x.sha256);
+  if (!Array.isArray(obr) || !obr.length || !obr.every(obrOk) || !distinct(obr.map((x) => x.id))) return false;
+  if (!Array.isArray(ons) || !ons.length || !ons.every(onsOk) || !distinct(ons.map((x) => x.cdid))) return false;
+  return missing(hpi) || (plain(hpi) && https(hpi.page) && str(hpi.title) && hex64(hpi.sha256));
+}
+
+/** Whether the page may draw `data`. */
+function FILE_OK(data) {
+  if (!plain(data) || !Array.isArray(data.variables) || !data.variables.length) return false;
+  if (!data.variables.every(variableOk) || !distinct(data.variables.map((v) => v.id))) return false;
+  return metaOk(data.meta, new Set(data.variables.map((v) => v.frequency)));
+}
+
+// ---------------------------------------------------------------------
+// Every field, and what a change to it may change on the page
+// ---------------------------------------------------------------------
+
+// figures: may change what is drawn; words: may change only text;
+// unread: changes nothing the page shows
+const FIGURES = "figures";
+const WORDS = "words";
+const UNREAD = "unread";
+const M = "variables.[].{measure}";
+const WHAT_IT_HOLDS = {
+  "": FIGURES,
+  garbage: UNREAD,
+  variables: FIGURES,
+  "variables.[]": FIGURES,
+  "variables.[].garbage": UNREAD,
+  "variables.[].id": WORDS,
+  "variables.[].label": WORDS,
+  "variables.[].group": UNREAD,
+  "variables.[].frequency": FIGURES,
+  // Which unit opens first; each unit is drawn as before
+  "variables.[].default_unit": WORDS,
+  "variables.[].notes": WORDS,
+  "variables.[].notes.[]": WORDS,
+  "variables.[].units": FIGURES,
+  "variables.[].units.{unit}": FIGURES,
+  "variables.[].units.{unit}.garbage": UNREAD,
+  "variables.[].units.{unit}.label": WORDS,
+  "variables.[].units.{unit}.axis": WORDS,
+  "variables.[].units.{unit}.from": FIGURES,
+  "variables.[].units.{unit}.transform": FIGURES,
+  "variables.[].units.{unit}.annualise": FIGURES,
+  [M]: FIGURES,
+  [`${M}.garbage`]: UNREAD,
+  [`${M}.kind`]: FIGURES,
+  // How figures are written (£, %, decimals), not the figures
+  [`${M}.unit`]: WORDS,
+  [`${M}.decimals`]: WORDS,
+  [`${M}.outturn_source`]: WORDS,
+  [`${M}.forecast_source`]: WORDS,
+  [`${M}.outturn`]: FIGURES,
+  [`${M}.outturn.{period}`]: FIGURES,
+  [`${M}.check`]: WORDS,
+  [`${M}.check.garbage`]: UNREAD,
+  [`${M}.check.against`]: WORDS,
+  [`${M}.check.in`]: WORDS,
+  [`${M}.check.periods`]: WORDS,
+  [`${M}.check.periods.[]`]: WORDS,
+  [`${M}.check.tolerance`]: WORDS,
+  [`${M}.check.tolerance_is_share`]: WORDS,
+  [`${M}.check.largest_gap`]: WORDS,
+  [`${M}.check.largest_gap_period`]: WORDS,
+  [`${M}.vintages`]: FIGURES,
+  [`${M}.vintages.[]`]: FIGURES,
+  [`${M}.vintages.[].garbage`]: UNREAD,
+  [`${M}.vintages.[].id`]: WORDS,
+  [`${M}.vintages.[].label`]: WORDS,
+  [`${M}.vintages.[].year`]: FIGURES,
+  [`${M}.vintages.[].month`]: FIGURES,
+  [`${M}.vintages.[].launch`]: FIGURES,
+  [`${M}.vintages.[].values`]: FIGURES,
+  [`${M}.vintages.[].values.{period}`]: FIGURES,
+  meta: FIGURES,
+  "meta.garbage": UNREAD,
+  "meta.built_by": UNREAD,
+  // The newest forecast's name comes from load.js's NEWEST_SHOWN
+  "meta.newest_vintage": UNREAD,
+  "meta.parliament": FIGURES,
+  "meta.parliament.garbage": UNREAD,
+  "meta.parliament.start": FIGURES,
+  "meta.parliament.start.{frequency}": FIGURES,
+  "meta.parliament.end": FIGURES,
+  "meta.parliament.end.{frequency}": FIGURES,
+  "meta.launch_rules": WORDS,
+  "meta.launch_rules.{frequency}": WORDS,
+  "meta.left_out": WORDS,
+  "meta.left_out.[]": WORDS,
+  "meta.left_out.[].garbage": UNREAD,
+  "meta.left_out.[].what": WORDS,
+  "meta.left_out.[].why": WORDS,
+  "meta.gaps": WORDS,
+  "meta.gaps.[]": WORDS,
+  "meta.sources": WORDS,
+  "meta.sources.garbage": UNREAD,
+  "meta.sources.obr": WORDS,
+  "meta.sources.obr.[]": WORDS,
+  "meta.sources.obr.[].garbage": UNREAD,
+  "meta.sources.obr.[].id": WORDS,
+  "meta.sources.obr.[].title": WORDS,
+  "meta.sources.obr.[].url": WORDS,
+  "meta.sources.obr.[].archive_url": WORDS,
+  "meta.sources.obr.[].file": UNREAD,
+  "meta.sources.obr.[].member": UNREAD,
+  "meta.sources.obr.[].sha256": WORDS,
+  "meta.sources.ons": WORDS,
+  "meta.sources.ons.[]": WORDS,
+  "meta.sources.ons.[].garbage": UNREAD,
+  "meta.sources.ons.[].cdid": WORDS,
+  "meta.sources.ons.[].dataset": WORDS,
+  "meta.sources.ons.[].file": UNREAD,
+  "meta.sources.ons.[].page": WORDS,
+  "meta.sources.ons.[].release_date": WORDS,
+  "meta.sources.ons.[].retrieved": UNREAD,
+  "meta.sources.ons.[].sha256": WORDS,
+  "meta.sources.ons.[].title": WORDS,
+  "meta.sources.ons.[].url": UNREAD,
+  "meta.sources.hpi": WORDS,
+  "meta.sources.hpi.garbage": UNREAD,
+  "meta.sources.hpi.file": UNREAD,
+  "meta.sources.hpi.latest_month": UNREAD,
+  "meta.sources.hpi.page": WORDS,
+  "meta.sources.hpi.retrieved": UNREAD,
+  "meta.sources.hpi.sha256": WORDS,
+  "meta.sources.hpi.title": WORDS,
+  "meta.sources.hpi.url": UNREAD,
+};
+
+/** A field's place in WHAT_IT_HOLDS: list items as [], and the keys that vary as {period}, {unit}, {frequency} and {measure}. */
+function patternOf(path) {
+  const parts = path.map((key, i) => {
+    const before = path[i - 1];
+    if (typeof key === "number") return "[]";
+    if (before === "outturn" || before === "values") return "{period}";
+    if (before === "units") return "{unit}";
+    if (before === "launch_rules" || ((before === "start" || before === "end") && path[i - 2] === "parliament")) return "{frequency}";
+    if (i === 2 && path[0] === "variables" && (key === "level" || key === "share")) return "{measure}";
+    return String(key);
+  });
+  const pattern = parts.join(".");
+  if (!(pattern in WHAT_IT_HOLDS)) throw new Error(`WHAT_IT_HOLDS does not name ${pattern}`);
+  return pattern;
+}
+
+const valueAt = (data, path) => path.reduce((o, k) => (o == null ? undefined : o[k]), data);
+const frequencyAt = (data, path) => (path[0] === "variables" ? data.variables[path[1]]?.frequency : null);
+
+// Every field: each object's keys and one it does not have, every
+// variable, another list's first and last items, and of a series its
+// first, a middle and its last periods, the period after its last, one
+// two after (a gap) and a key that is no period
 function fieldPaths(value, path = [], out = []) {
   out.push(path);
   if (Array.isArray(value)) {
-    const items = value.length > 1 ? [0, value.length - 1] : value.length ? [0] : [];
+    const items = path.join() === "variables" ? value.keys() : new Set([0, value.length - 1].filter((i) => i >= 0));
     for (const i of items) fieldPaths(value[i], [...path, i], out);
-  } else if (value && typeof value === "object") {
+  } else if (plain(value)) {
     const keys = Object.keys(value);
-    const series = ["outturn", "values"].includes(path[path.length - 1]);
-    for (const key of series ? [keys[0], keys[keys.length - 1], "garbage"] : keys) {
-      fieldPaths(value[key], [...path, key], out);
+    const last = path[path.length - 1];
+    if (last === "outturn" || last === "values") {
+      const frequency = frequencyAt(DATA, path);
+      const nos = keys.map((k) => periodNo(k, frequency)).sort((a, b) => a - b);
+      const [lo, hi] = [nos[0], nos[nos.length - 1]];
+      for (const no of [lo, Math.floor((lo + hi) / 2), hi, hi + 1, hi + 2]) out.push([...path, periodText(no, frequency)]);
+      out.push([...path, "garbage"]);
+    } else {
+      for (const key of keys) fieldPaths(value[key], [...path, key], out);
+      out.push([...path, "garbage"]);
     }
   }
   return out;
 }
 
 const DELETE = Symbol("delete");
-// What a field should not hold: nothing, the wrong type, text that is no
-// period, periods that do not exist, numbers out of range or too large
-const BAD = [
+// What a field should not hold, and some it may: nothing, the wrong
+// type, a period written wrongly, names the page looks up (a unit, a
+// frequency, an object's own keys), addresses, checksums and dates
+const VALUES = [
   DELETE,
   null,
   "",
@@ -63,116 +400,278 @@ const BAD = [
   "2024Q5",
   "2024-99",
   "2024.0",
+  "2024",
+  2024,
+  "2024Q2",
+  "2024-25",
   -1,
   0,
   1.5,
   7,
   13,
+  1e10,
   1e308,
   -1e308,
   true,
+  false,
+  "true",
+  "false",
+  "1",
   [],
   {},
   ["garbage"],
   { garbage: 1 },
+  ["level"],
+  "toString",
+  "__proto__",
+  "constructor",
+  "level",
+  "index",
+  "pct",
+  "share",
+  "growth",
+  "calendar",
+  "fiscal",
+  "quarterly",
+  "javascript:alert(1)",
+  "https://example.org/x",
+  "a".repeat(64),
+  "2026-10-20",
+  "March 2026",
 ];
 
-function changed(path, value) {
-  const data = structuredClone(DATA);
+/** Values for `path` besides VALUES: a neighbour's in the list it is in, and numbers near its own. */
+function nearby(path) {
+  const own = valueAt(DATA, path);
+  const out = [];
+  const at = path.findLastIndex((k) => typeof k === "number");
+  if (at >= 0) {
+    const list = valueAt(DATA, path.slice(0, at));
+    const other = path[at] > 0 ? path[at] - 1 : list.length > 1 ? 1 : null;
+    if (other !== null) out.push(valueAt(DATA, [...path.slice(0, at), other, ...path.slice(at + 1)]));
+  }
+  if (typeof own === "number") out.push(own + 1, own * 1.01, -own, Math.round(own * 2));
+  return out.filter((v) => v !== undefined);
+}
+
+/** `data` with the field at `path` set to `value` (or removed), copying only the objects on the way. */
+function changed(data, path, value) {
   if (!path.length) return value === DELETE ? undefined : value;
-  const parent = path.slice(0, -1).reduce((o, k) => o?.[k], data);
-  if (parent == null || typeof parent !== "object") return data;
-  const key = path[path.length - 1];
-  if (value !== DELETE) parent[key] = value;
-  else if (Array.isArray(parent)) parent.splice(key, 1);
-  else delete parent[key];
+  const [key, ...rest] = path;
+  const copy = Array.isArray(data) ? [...data] : { ...data };
+  if (rest.length) copy[key] = changed(data[key], rest, value);
+  else if (value !== DELETE) copy[key] = value;
+  else if (Array.isArray(copy)) copy.splice(key, 1);
+  else delete copy[key];
+  return copy;
+}
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const show = (path, value) => `${path.join(".")} = ${value === DELETE ? "(deleted)" : JSON.stringify(value)}`;
+const noChange = (path, value) =>
+  value === DELETE ? valueAt(DATA, path) === undefined : same(valueAt(DATA, path), value) && typeof valueAt(DATA, path) === typeof value;
+
+// Smaller files to change, so the sweep is quick: a variable alone, or
+// with its neighbour where a change could repeat the neighbour's id; one
+// variable of each frequency for meta. The loader checks a variable
+// apart from the others, but for their ids and meta, so a change it
+// refuses in the smaller file it refuses in the whole one; B and C make
+// the changes it accepts to the whole file
+const ONE_PER_FREQUENCY = ["calendar", "fiscal", "quarterly"].map((f) => DATA.variables.find((v) => v.frequency === f));
+function smaller(path) {
+  if (path[0] === "variables" && typeof path[1] === "number") {
+    const i = path[1];
+    const others = path.length <= 3 ? [DATA.variables[i > 0 ? i - 1 : 1]] : [];
+    return { data: { ...DATA, variables: [DATA.variables[i], ...others] }, path: ["variables", 0, ...path.slice(2)] };
+  }
+  if (path[0] === "meta") return { data: { ...DATA, variables: ONE_PER_FREQUENCY }, path };
+  return { data: DATA, path };
+}
+
+const PATHS = fieldPaths(DATA);
+const CASES = PATHS.flatMap((path) => [...VALUES, ...nearby(path)].filter((v) => !noChange(path, v)).map((value) => ({ path, value })));
+
+/** Where the loader and FILE_OK disagree, and every change both accept. */
+function sweep() {
+  const disagree = [];
+  const accepted = [];
+  for (const { path, value } of CASES) {
+    patternOf(path);
+    const small = smaller(path);
+    const data = changed(small.data, small.path, value);
+    const loader = forecastVintagesProblem(data) === null;
+    if (loader !== FILE_OK(data)) disagree.push(`${show(path, value)}: the loader ${loader ? "accepts" : "refuses"} it`);
+    else if (loader) accepted.push({ path, value });
+  }
+  return { disagree, accepted };
+}
+
+let swept = null;
+const RESULT = () => (swept ??= sweep());
+
+/** The whole file with an accepted change, which the loader and FILE_OK accept too. */
+function acceptedWhole({ path, value }) {
+  const data = changed(DATA, path, value);
+  if (forecastVintagesProblem(data) !== null || !FILE_OK(data)) throw new Error(`${show(path, value)}: refused in the whole file`);
   return data;
 }
+
+// ---------------------------------------------------------------------
+// Drawing an accepted file
+// ---------------------------------------------------------------------
 
 const CANVASES = [
   { canvasWidth: 926, narrow: false },
   { canvasWidth: 254, narrow: true },
 ];
 
-/** Builds everything the page draws for `variables`; throws where it cannot. */
+/**
+ * Every view of `variables` as the page draws it: its figures (by
+ * forecast name, so a renamed id draws the same) and its words. Throws
+ * where a view cannot be drawn truly: no axis, a point off its axis, a
+ * note that says "as the OBR published it" of figures that are not.
+ */
 function drawEverything(data, variables) {
+  const drawn = {};
   for (const v of variables) {
-    for (const unit of UNIT_ORDER.filter((u) => v.units[u])) {
+    for (const unit of UNIT_ORDER.filter((u) => Object.hasOwn(v.units, u))) {
       for (const annual of v.frequency === "quarterly" ? [false, true] : [false]) {
         for (const showPast of [true, false]) {
+          const viewKey = `${unit}${annual ? " A" : ""}${showPast ? "" : " F off"}`;
+          const where = `${v.id} ${viewKey}`;
           const view = buildView(data, v, { unit, annual, showPast });
-          if (view.unavailable) continue;
+          if (view.unavailable) {
+            if (!str(view.unavailable)) throw new Error(`${where}: unavailable, saying nothing`);
+            drawn[viewKey] = { unavailable: view.unavailable };
+            continue;
+          }
+          const names = Object.fromEntries(view.vintages.map((x) => [x.key, x.label]));
+          const figures = view.rows.map((row) =>
+            Object.fromEntries(Object.entries(row).map(([k, y]) => [names[k] ?? k, y])),
+          );
           const newest = view.vintages[view.vintages.length - 1];
-          cardNotes(v, view, { showPast });
-          startsSentence(data.meta.launch_rules, v.frequency, annual, {
-            reanchored: newest.reanchored,
-            earlier: view.vintages.length > 1,
-          });
-          legendItems(view, showPast);
-          vintageCsv({ title: v.label, units: view.axisLabel, view, rows: view.rows });
-          const tickLabel = (x) => (view.frequency === "quarterly" ? String(Math.floor(x / 4)) : view.label(x));
-          for (const rows of [view.rows.slice(view.windowStart), view.rows]) {
-            pointsSentence(view, pointsIn(view.points, rows));
-            for (const canvas of CANVASES) {
-              const layout = chartLayout(view, rows, canvas);
-              for (const tick of layout.axis.ticks) view.format(tick, stepDecimals(layout.axis.step));
-              const ticks = xTicks(rows, view.frequency, { plotWidth: layout.plotWidth, label: tickLabel });
-              ticks.forEach(tickLabel);
+          const note = drawnNote(view.measure.kind, view);
+          if (note === "Each forecast is drawn as the OBR published it.") {
+            for (const x of view.vintages) {
+              const published = view.measure.vintages.find((p) => p.id === x.id).values;
+              for (const [t, y] of x.values) {
+                if (published[periodText(t, view.frequency)] !== y) throw new Error(`${where}: "as published" of a figure that is not`);
+              }
             }
           }
+          const words = [
+            ...cardNotes(v, view, { showPast }),
+            startsSentence(data.meta.launch_rules, v.frequency, annual, { reanchored: newest.reanchored, earlier: view.vintages.length > 1 }),
+            JSON.stringify(legendItems(view, showPast)),
+            vintageCsv({ title: v.label, units: view.axisLabel, view, rows: view.rows }),
+          ];
+          const tickLabel = (x) => (view.frequency === "quarterly" ? String(Math.floor(x / 4)) : view.label(x));
+          for (const rows of [view.rows.slice(view.windowStart), view.rows]) {
+            words.push(pointsSentence(view, pointsIn(view.points, rows)));
+            for (const canvas of CANVASES) {
+              const layout = chartLayout(view, rows, canvas);
+              if (!layout) throw new Error(`${where}: no axis`);
+              const [bottom, top] = layout.axis.domain;
+              for (const row of rows) {
+                for (const [k, y] of Object.entries(row)) {
+                  if (k !== "x" && y != null && !(y >= bottom && y <= top)) throw new Error(`${where}: ${y} off the axis`);
+                }
+              }
+              words.push(layout.axis.ticks.map((t) => view.format(t, stepDecimals(layout.axis.step))).join(" "));
+              words.push(xTicks(rows, view.frequency, { plotWidth: layout.plotWidth, label: tickLabel }).map(tickLabel).join(" "));
+            }
+          }
+          drawn[viewKey] = { figures, points: view.points, undrawn: view.undrawn, words };
         }
       }
     }
   }
+  return drawn;
 }
 
-const PATHS = fieldPaths(DATA);
-// The variables a change to `path` can reach: its own, or all of them
-const reached = (data, path) =>
-  path[0] === "variables" && typeof path[1] === "number" && path.length > 2
-    ? [data.variables[path[1]]].filter(Boolean)
-    : data.variables;
+// The variables a change to `path` can reach, each with itself as it is
+// in the committed file: its own, one of each frequency for meta, or all
+function reached(data, path) {
+  const pair = (v) => [v, DATA.variables.find((o) => o.id === v.id)];
+  if (path[0] === "variables" && typeof path[1] === "number" && path.length > 2) {
+    return [[data.variables[path[1]], DATA.variables[path[1]]]];
+  }
+  if (path[0] === "meta") return ONE_PER_FREQUENCY.map((o) => pair(data.variables.find((v) => v.id === o.id)));
+  return data.variables.map(pair);
+}
+
+const ORIGINAL = new Map();
+const originalOf = (variable) => {
+  if (!ORIGINAL.has(variable.id)) ORIGINAL.set(variable.id, drawEverything(DATA, [variable]));
+  return ORIGINAL.get(variable.id);
+};
+const strip = (drawn) => Object.fromEntries(Object.entries(drawn).map(([k, d]) => [k, { ...d, words: undefined }]));
+
+/** Throws where an accepted change is not drawn truly. */
+function checkDrawn({ path, value }) {
+  const data = acceptedWhole({ path, value });
+  const what = WHAT_IT_HOLDS[patternOf(path)];
+  for (const [v, original] of reached(data, path)) {
+    const now = drawEverything(data, [v]);
+    if (what === FIGURES) continue;
+    const before = originalOf(original);
+    if (!same(strip(now), strip(before))) throw new Error(`${show(path, value)}: changed the figures of ${v.id}`);
+    if (what === UNREAD && !same(now, before)) throw new Error(`${show(path, value)}: changed the words of ${v.id}`);
+  }
+}
 
 describe("a forecasts file the loader accepts", () => {
-  it("covers every kind of field", () => {
-    const leaves = PATHS.map((p) => p[p.length - 1]);
-    for (const field of ["periods", "largest_gap_period", "decimals", "launch", "month", "start", "end", "garbage"]) {
-      expect(leaves).toContain(field);
+  it("names every field the file has, and changes each in every measure", () => {
+    const patterns = new Set(PATHS.map(patternOf));
+    // Every field named is in the file (none named for nothing) ...
+    for (const pattern of Object.keys(WHAT_IT_HOLDS)) expect(patterns.has(pattern), pattern).toBe(true);
+    // ... and every variable, both measures and every unit are reached
+    for (const [i, v] of DATA.variables.entries()) {
+      for (const name of ["level", "share"].filter((m) => v[m])) {
+        for (const field of ["check", "outturn", "vintages", "kind"]) {
+          if (field !== "check" || v[name].check) expect(PATHS.some((p) => p[1] === i && p[2] === name && p[3] === field)).toBe(true);
+        }
+      }
+      for (const unit of Object.keys(v.units)) expect(PATHS.some((p) => p[1] === i && p[3] === unit)).toBe(true);
     }
+    expect(CASES.length).toBeGreaterThan(50000);
   });
 
-  it("can always be drawn, whatever one field holds", () => {
-    let accepted = 0;
-    fc.assert(
-      fc.property(fc.constantFrom(...PATHS), fc.constantFrom(...BAD), (path, value) => {
-        const data = changed(path, value);
-        if (forecastVintagesProblem(data) !== null) return;
-        accepted += 1;
-        drawEverything(data, reached(data, path));
-      }),
-      { numRuns: 400 },
-    );
+  it("is exactly a file FILE_OK takes, whatever one field holds (A)", () => {
+    expect(RESULT().disagree).toEqual([]);
     // Some changes leave a file the page draws (a label that is other
-    // text, say), so the drawing is exercised too
-    expect(accepted).toBeGreaterThan(0);
-  }, 120000);
+    // text, a figure a little higher), so B and C have files to draw
+    expect(RESULT().accepted.length).toBeGreaterThan(500);
+    const figureChanges = RESULT().accepted.filter(({ path }) => WHAT_IT_HOLDS[patternOf(path)] === FIGURES);
+    expect(figureChanges.length).toBeGreaterThan(100);
+  }, 300000);
 
-  it("mounts without falling back to 'cannot be drawn', whatever one field holds", async () => {
+  it("is drawn truly: a field that holds no figure changes none, and one the page does not read changes nothing (B)", () => {
+    // One accepted change to every field, and a sample of all of them
+    const each = [...new Map(RESULT().accepted.map((change) => [change.path.join("."), change])).values()];
+    for (const change of each) checkDrawn(change);
+    fc.assert(
+      fc.property(fc.constantFrom(...RESULT().accepted), (change) => checkDrawn(change)),
+      { numRuns: 200 },
+    );
+  }, 300000);
+
+  it("mounts with nothing that cannot be drawn (C)", async () => {
     await fc.assert(
-      fc.asyncProperty(fc.constantFrom(...PATHS), fc.constantFrom(...BAD), async (path, value) => {
-        const data = changed(path, value);
-        if (forecastVintagesProblem(data) !== null) return;
-        const shown = reached(data, path)[0];
+      fc.asyncProperty(fc.constantFrom(...RESULT().accepted), async ({ path, value }) => {
+        const data = acceptedWhole({ path, value });
+        const [shown] = reached(data, path)[0];
         resetForecastVintages();
         window.history.replaceState({}, "", `/?tab=forecasts&variable=${encodeURIComponent(shown.id)}`);
         vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(data))));
         render(<ForecastVintagesView />);
         await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
         expect(screen.queryByText(/cannot be drawn: /)).toBeNull();
+        expect(screen.queryByText("This range of the chart cannot be drawn.")).toBeNull();
         cleanup();
         vi.unstubAllGlobals();
       }),
-      { numRuns: 60 },
+      { numRuns: 40 },
     );
-  }, 120000);
+  }, 300000);
 });
