@@ -4,8 +4,40 @@ import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
-import ModellingFacts, { limitationCount } from "./ModellingFacts";
-import { measureModellingFacts } from "../utils/measureModelling";
+import Disclosure from "./Disclosure";
+import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
+
+/** The one name of every Policies card's disclosure. */
+export const HOW_IT_IS_MODELLED = "How it is modelled";
+
+// A details sentence that states a limitation: one of the published
+// limitations' patterns, or the words the details use for them
+const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b/i;
+const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
+
+/**
+ * A measure's "How it is modelled", in About this chart's sections: its
+ * modelling details and fact labels as How it's calculated, and as Caveats
+ * every stated limitation the card does not already show and any modelling
+ * note. A limitation is said once: in the details' own words where they
+ * state it, else in the published description's.
+ */
+export function modellingInfo(policy) {
+  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
+  const details = sentences(policy.details);
+  return {
+    how: [
+      ...details.filter((sentence) => !isLimit(sentence)),
+      modelling.facts.length > 0 && `Modelled with: ${modelling.facts.join(" · ")}.`,
+    ],
+    caveats: [
+      ...details.filter(isLimit),
+      ...modelling.limits.filter((limit) => !limit.said).map((limit) => limit.sentence),
+      ...modelling.notePoints,
+    ],
+  };
+}
 import Tip from "./Tip";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
@@ -206,11 +238,8 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
   // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
-  // What the published wording says about how it is modelled: fact and
-  // limitation chips, and any modelling note
-  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
-  const hasModelling = Boolean(policy.details) || modelling.facts.length > 0 || modelling.limits.length > 0 || modelling.notePoints.length > 0;
-  const limitations = limitationCount(modelling.limits);
+  // What the published wording says about how it is modelled
+  const modelling = modellingInfo(policy);
   return (
     <li
       className="policy-card"
@@ -279,15 +308,15 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
           </a>
           </Tip>
         )}
-        {hasModelling && (
-          <details className="policy-card-details">
-            <summary>
-              How it is modelled
-              {limitations && <span className="policy-card-limit-count">{limitations}</span>}
-            </summary>
-            {policy.details && <p>{policy.details}</p>}
-            <ModellingFacts modelling={modelling} />
-          </details>
+        {hasInfo(modelling) && (
+          <Disclosure
+            compact
+            title={HOW_IT_IS_MODELLED}
+            className="policy-card-details"
+            preview={infoPreview(modelling)}
+          >
+            <InfoSections info={modelling} />
+          </Disclosure>
         )}
         {onShowEffect && (
           <button

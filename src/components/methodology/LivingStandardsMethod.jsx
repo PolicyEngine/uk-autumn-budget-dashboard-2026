@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
-import { SourceLink, Tag } from "./MethodUi";
+import { ExternalLink, SourceLink, Tag } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
 import { METHOD_ANCHORS } from "./anchors";
@@ -18,7 +18,9 @@ import { METHOD_ANCHORS } from "./anchors";
 const UNVALIDATED = /unvalidated|not yet validated/i;
 const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
-const ext = { target: "_blank", rel: "noopener noreferrer" };
+// A package's GitHub release, by the version the outlook file records
+// (each tag is the bare version, e.g. policyengine.py 6.10.2, policyengine-uk 2.132.6)
+const releaseUrl = (repo, version) => `https://github.com/PolicyEngine/${repo}/releases/tag/${version}`;
 
 /** The deflators in a few words, from meta.deflator. */
 function deflatorWords(text = "") {
@@ -41,9 +43,9 @@ function ucHealthElementFix({ fix, engine }) {
     value: (
       <>
         Patched for {span} (
-        <a href={fix.upstream_fix_url} {...ext}>
+        <ExternalLink href={fix.upstream_fix_url}>
           {fix.upstream_fix.replace(/^PolicyEngine\//, "").replace("#", " #")}
-        </a>
+        </ExternalLink>
         )
       </>
     ),
@@ -117,7 +119,13 @@ export default function LivingStandardsMethod() {
         <h3 className="method-card-title">Engine and data</h3>
         <FactList
           items={[
-            ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
+            [
+              "Model",
+              <>
+                <ExternalLink href={releaseUrl("policyengine.py", meta.policyengine)}>policyengine {meta.policyengine}</ExternalLink>{" "}
+                (<ExternalLink href={releaseUrl("policyengine-uk", meta.policyengine_uk)}>policyengine-uk {meta.policyengine_uk}</ExternalLink>)
+              </>,
+            ],
             ["Data", dataset],
             unvalidated && ["Status", <Tag key="status" tone="warning">Unvalidated</Tag>],
             meta.headline_start_year &&
@@ -136,9 +144,7 @@ export default function LivingStandardsMethod() {
               {
                 value: (
                   <>
-                    <a href={hbai.url || HBAI_URL} {...ext}>
-                      DWP HBAI
-                    </a>
+                    <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
                     ; <SourceLink id="obr_efo_current" />
                   </>
                 ),

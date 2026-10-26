@@ -17,6 +17,7 @@ import {
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -452,9 +453,12 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       <div className="chart-footer">
         {isChange && smallChange && <p className="chart-note">The change is under 1% of net income at every salary.</p>}
         {youSentence && (
-          <ChartMoreInfo>
-            <p>{description}</p>
-          </ChartMoreInfo>
+          <ChartMoreInfo
+            info={{
+              shows: description,
+              method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
+            }}
+          />
         )}
       </div>
     </div>

@@ -956,6 +956,12 @@ function HouseholdCalculator({
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
+              household={{
+                tenure: (submitted?.inputs ?? inputs).tenure,
+                regionLabel: REGION_OPTIONS.find(([value]) => value === (submitted?.inputs ?? inputs).region)?.[1] ?? null,
+                partner: Boolean((submitted?.inputs ?? inputs).has_partner),
+                children: parseChildrenAges((submitted?.inputs ?? inputs).children_ages).length,
+              }}
             />
           )}
         </div>

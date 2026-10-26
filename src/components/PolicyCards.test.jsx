@@ -90,10 +90,10 @@ describe("PolicyCards", () => {
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
-    const details = card.querySelector("details");
-    expect(details.open).toBe(false);
-    fireEvent.click(within(card).getByText("How it is modelled"));
-    expect(details.open).toBe(true);
+    const toggle = within(card).getByRole("button", { name: "How it is modelled" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("marks a lasting measure as continuing, with no end date", () => {
@@ -121,7 +121,7 @@ describe("PolicyCards", () => {
     expect(card.querySelector(".policy-card-start")).toBeEmptyDOMElement();
     expect(card.querySelector(".policy-card-type")).toBeEmptyDOMElement();
     expect(card).not.toHaveTextContent("Temporary");
-    expect(card.querySelector("details")).toBeNull();
+    expect(card.querySelector(".policy-card-details")).toBeNull();
     expect(screen.queryByRole("img", { name: /^In force/ })).toBeNull();
   });
 
@@ -150,56 +150,59 @@ describe("how it is modelled (measureModelling.js)", () => {
   const caveat = "The base is likely 1.5 to 1.7 times too high.";
   const modelled = (description, id = ALPHA) => ({ ...catalogue.byId.get(ALPHA), id, description: `${description} ${caveat}` });
 
-  it("signals a limitation on the closed modelling, saying nothing the card already shows", () => {
+  // Open a card's "How it is modelled" and return it
+  const open = () => {
+    const details = document.querySelector(".policy-card-details");
+    fireEvent.click(within(details).getByRole("button", { name: "How it is modelled" }));
+    return details;
+  };
+
+  it("has no modelling disclosure when the card's own text already says all of it", () => {
+    // The card shows the whole published description, so its fact and its
+    // limitation are not said again
     const policy = modelled("Prices are day-weighted to fiscal years.", "a_mock_measure");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
-    const details = document.querySelector(".policy-card-details");
-    expect(details.open).toBe(false);
-    // The caveat is signalled while closed
-    expect(details.querySelector("summary")).toHaveTextContent("How it is modelled1 known limitation");
-    // The card shows the whole published description here, so a fact it
-    // states gets no chip, and the limitation's chip opens to nothing new
-    expect(details.querySelectorAll(".mf-chip")).toHaveLength(1);
-    expect(details).toHaveTextContent("Known limitation");
-    expect(within(details).queryByRole("button", { name: "Known limitation" })).toBeNull();
-    expect(details.querySelectorAll(".mf-limit")).toHaveLength(0);
+    expect(document.querySelector(".policy-card-details")).toBeNull();
     cleanup();
   });
 
-  it("opens a limitation chip to its sentence when the card's own text does not state it", () => {
+  it("names the caveats in the closed preview, with no count chip", () => {
     const policy = published("badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
     const details = document.querySelector(".policy-card-details");
-    expect(details.querySelector("summary")).toHaveTextContent("1 known limitation");
-    const chip = within(details).getByRole("button", { name: "Known limitation" });
-    const sentence = document.getElementById(chip.getAttribute("aria-controls"));
-    details.open = true;
-    expect(sentence).not.toBeVisible();
-    fireEvent.click(chip);
-    expect(sentence).toBeVisible();
-    expect(sentence).toHaveTextContent("1.5 to 1.7 times too high");
+    expect(within(details).getByRole("button", { name: "How it is modelled" })).toHaveAttribute("aria-expanded", "false");
+    expect(details.querySelector(".disclosure-preview")).toHaveTextContent(/Caveats/);
+    expect(details.querySelector(".disclosure-chip")).toBeNull();
     cleanup();
   });
 
-  it("says each caveat once: no chip or sentence for what the card's details already state", () => {
+  it("gives a limitation its sentence under Caveats when the card's own text does not state it", () => {
+    const policy = published("badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = open();
+    const caveats = details.querySelector(".info-caveats");
+    expect(caveats).toHaveTextContent("1.5 to 1.7 times too high");
+    cleanup();
+  });
+
+  it("says each caveat once: the details' own words, not the description's again", () => {
     // The Warm Home Discount card's details say it is paid in Great Britain
     // and that eligibility in Scotland is approximate
     const policy = published("warm_home_discount_top_up", "Warm Home Discount top-up");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
-    const details = document.querySelector(".policy-card-details");
+    const details = open();
     expect(details).not.toHaveTextContent("Great Britain only");
-    expect(within(details).queryByRole("button", { name: "Approximate for Scotland" })).toBeNull();
-    expect(details).toHaveTextContent("Approximate for Scotland");
-    expect(details.querySelectorAll(".mf-limit")).toHaveLength(0);
+    const caveats = details.querySelector(".info-caveats");
+    expect(caveats.textContent.match(/Scotland/g)).toHaveLength(1);
     cleanup();
   });
 
-  it("shows the modelling note as bullets in its measure's card", () => {
+  it("shows the modelling note as caveats in its measure's card", () => {
     const policy = published("employer_ni_relief_under_25s", "Employer NI relief for under-25s");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
-    const note = within(document.querySelector(".policy-card-details")).getByRole("list", { name: "Modelling note", hidden: true });
-    expect(within(note).getAllByRole("listitem", { hidden: true }).length).toBeGreaterThan(1);
-    expect(note).toHaveTextContent("HMRC");
+    const caveats = open().querySelector(".info-caveats");
+    expect(caveats.querySelectorAll("li").length).toBeGreaterThan(1);
+    expect(caveats).toHaveTextContent("HMRC");
     cleanup();
   });
 
@@ -401,9 +404,13 @@ describe("the card's frame", () => {
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
     // A tip's wrapper (display: contents) is looked through
-    expect([...foot.children].map((child) => (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className)).toEqual([
-      "policy-card-source", "policy-card-details", "policy-card-effect",
-    ]);
+    const named = ["policy-card-source", "policy-card-details", "policy-card-effect"];
+    expect(
+      [...foot.children].map((child) => {
+        const node = child.classList.contains("tip-anchor") ? child.firstElementChild : child;
+        return named.find((name) => node.classList.contains(name));
+      }),
+    ).toEqual(named);
     expect(within(foot).getByRole("link", { name: /^Source: Business Asset Disposal Relief/ })).toBeTruthy();
     const arrow = screen.getByRole("listitem").querySelector(".ptl-arrow");
     fireEvent.mouseEnter(arrow);
