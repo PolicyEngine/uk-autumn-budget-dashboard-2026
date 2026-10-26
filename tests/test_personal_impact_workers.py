@@ -843,6 +843,10 @@ def test_concurrent_calculations_never_run_more_processes_than_slots():
 def test_a_later_calculation_starts_before_an_earlier_one_finishes():
     """Not one whole calculation after another: the second starts its first
     run while the first still has runs to go."""
+    # Warm the forkserver first: a cold one's engine preload (8 s seen on
+    # CI when no earlier test on this xdist worker started it) is not what
+    # the bound below measures.
+    personal_impact.run_in_workers(1, [(os.getpid, ())], 180)
     slots = personal_impact.FairSlots(1)
     started = {}
 
