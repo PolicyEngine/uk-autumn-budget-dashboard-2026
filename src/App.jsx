@@ -6,24 +6,20 @@ import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
-import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
-import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
-import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import SourceLink from "./components/SourceLink";
 import useScrollReveal from "./hooks/useScrollReveal";
-import HouseholdPicker from "./components/HouseholdPicker";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
-import Disclosure from "./components/Disclosure";
-import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import LivingStandardsTab, { CurrentLawSection } from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { DISPLAY_YEARS } from "./utils/displayYears";
@@ -33,17 +29,22 @@ import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
+import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
-// but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them. Young
-// people is a sub-tab of Population impact (PopulationImpactView).
+// but are hidden. Pre-measures forecast is the outlook before the Budget's
+// measures, Policies describes every measure and Methodology is text: no
+// pill applies to them. Population impact's sub-tabs (Public finances, All
+// households, Young people, Pensioners, Living standards, Poverty) are in
+// PopulationImpactView.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },
-  { value: "living", label: "Living standards", year: false, policies: false },
+  { value: "outlook", label: "Pre-measures forecast", year: false, policies: false },
+  { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
 
@@ -51,7 +52,9 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
-const VIEW_ALIASES = { personal: "household" };
+// (?tab=living was the pre-measures forecast's address; its ?sub= values,
+// baseline and forecast, carry over unchanged)
+const VIEW_ALIASES = { personal: "household", living: "outlook" };
 const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
 
 // The default view has no ?tab= in the URL; ?tab=dashboard is read too
@@ -128,7 +131,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
   const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
-  const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
@@ -141,6 +143,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // flight carry on
   const [visited, setVisited] = useState([DEFAULT_VIEW]);
   if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
+
+  // Every "i" tooltip stays inside the screen (a phone's edge columns)
+  useEffect(() => installInfoTooltipClamp(), []);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
@@ -172,6 +177,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
+    // Every verified run's rows: the summary statistics read one run, not a
+    // sum (the receipted metrics carry the contract's columns only, #104)
+    rawMetrics: published.metrics,
   }), [published, catalogue, selectedPolicies]);
 
   const handlePolicyToggle = (policyId) => {
@@ -256,6 +264,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = tab !== activeTab;
   };
+  // A Policies card's "See its effect": Population impact with only that
+  // measure selected (the address then carries ?policies=<id>)
+  const handleShowEffect = (policyId) => {
+    setChosenPolicies([policyId]);
+    setSelectionChosen(true);
+    handleTabChange("dashboard");
+  };
   useLayoutEffect(() => {
     if (!tabScrollPending.current) return;
     tabScrollPending.current = false;
@@ -321,6 +336,137 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   );
 
 
+  // A Population impact sub-tab's content. With no policies chosen, each
+  // offers the full Budget; the charts wait for the CSVs.
+  const populationPanel = (sub) => {
+    if (selectedPolicies.length === 0) return emptyState;
+    if (sub === "young") {
+      // Young people (16 to 24): results by age, #young-people
+      return (
+        <YoungPeopleSection
+          selectedPolicies={selectedPolicies}
+          selectedYear={distributionalYear}
+          policies={POLICIES}
+        />
+      );
+    }
+    if (sub === "pensioners") {
+      // Pensioners (at or over State Pension age): results by age
+      return (
+        <PensionersSection
+          selectedPolicies={selectedPolicies}
+          selectedYear={distributionalYear}
+          policies={POLICIES}
+        />
+      );
+    }
+    if (!results) return null;
+    if (sub === "living") {
+      return (
+        <div className="results-container">
+          <SectionHeading
+            title="How the measures change incomes"
+            subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures are below."
+          />
+          <section id="deciles" className="report-section distributional-section">
+            <div className="charts-grid">
+              <WaterfallChart
+                rawData={results.rawWinnersLosers}
+                selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
+              />
+              <DistributionalChart
+                rawData={results.rawDistributional}
+                selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
+              />
+            </div>
+          </section>
+          <SectionHeading title="Inequality" />
+          <section id="inequality" className="report-section hero-chart">
+            <SummaryMetricChart
+              metric={SUMMARY_METRICS.inequality}
+              rows={results.rawMetrics}
+              policies={POLICIES}
+              selectedPolicies={selectedPolicies}
+              selectedYear={distributionalYear}
+            />
+          </section>
+          {/* The Pre-measures forecast's incomes cards, as there */}
+          <CurrentLawSection id="incomes" />
+        </div>
+      );
+    }
+    if (sub === "poverty") {
+      return (
+        <div className="results-container">
+          <SectionHeading
+            title="How the measures change poverty"
+            subtitle="With the selected measures: how they change poverty rates in the selected year. Poverty without the measures is below."
+          />
+          <section id="poverty" className="report-section hero-chart">
+            <SummaryMetricChart
+              metric={SUMMARY_METRICS.poverty}
+              rows={results.rawMetrics}
+              policies={POLICIES}
+              selectedPolicies={selectedPolicies}
+              selectedYear={distributionalYear}
+            />
+          </section>
+          {/* The Pre-measures forecast's poverty cards, as there */}
+          <CurrentLawSection id="poverty" />
+        </div>
+      );
+    }
+    if (sub === "finances") {
+      return (
+        <div className="results-container">
+          <SectionHeading
+            title="Public finances"
+            subtitle="Net effect of the selected policies on government revenue and spending, by year."
+          />
+          <section id="revenue" className="report-section hero-chart">
+            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} />
+            {/* OBR comparison: an expandable row at the foot of the card
+                once the OBR has costed the measures */}
+            <ObrComparisonFoot
+              selectedPolicies={selectedPolicies}
+              selectedYear={distributionalYear}
+            />
+          </section>
+        </div>
+      );
+    }
+    // All households: places, and how changes vary between households
+    return (
+      <div className="results-container">
+        {/* The constituency map, then the household scatter below it, each
+            full width. The scatter shows binned groups of households only:
+            the per-household scatter stays withdrawn, as it showed survey
+            households one by one. Results by region are hidden for now
+            (RegionView is kept, not rendered). */}
+        <SectionHeading
+          title="Where and who"
+          subtitle="Average change by constituency, and how changes vary between households."
+        />
+        <section id="constituencies" className="report-section charts-stack">
+          <ConstituencyMap
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+            policies={POLICIES}
+            showRegionLink={false}
+          />
+          <HouseholdScatter
+            selectedPolicies={selectedPolicies}
+            policies={POLICIES}
+            selectedYear={distributionalYear}
+          />
+        </section>
+
+      </div>
+    );
+  };
+
   return (
     // A view without the year pill has a one-row band on a phone
     <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"}>
@@ -368,7 +514,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           This dashboard uses <SourceLink source="policyengine_uk_model" /> to
           show how Autumn Budget 2026 measures would affect the public
           finances and households: by income, area and age, and
-          for your own household, alongside the living standards outlook.
+          for your own household, alongside the pre-measures forecast.
           Costings are our own; forecast:{" "}
           <SourceLink source="obr_efo_current" />. Choose a year and
           policies in the bar above.
@@ -421,8 +567,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               </>
             )}
           </UnavailableNotice>
-        ) : value === "living" ? (
-          <LivingStandardsTab active={activeTab === value} />
+        ) : value === "outlook" ? (
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
+        ) : value === "policies" ? (
+          // Every published measure's card, whatever the band's selection
+          <div className="results-container">
+            <SectionHeading
+              title="Policies"
+              subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
+            />
+            <section id="policy-details" className="report-section policy-details-content">
+              <PolicyCards
+                policies={POLICIES}
+                selectedPolicies={defaultPolicies}
+                onShowEffect={handleShowEffect}
+              />
+            </section>
+          </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
@@ -434,149 +595,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             active={activeTab === value}
           />
         ) : (
-          // Population impact: All households and Young people sub-tabs
+          // Population impact and its sub-tabs (populationPanel)
           <PopulationImpactView note={showingLine} active={activeTab === value}>
-          {(sub) => sub === "young" ? (
-          selectedPolicies.length === 0 ? (
-            emptyState
-          ) : (
-            // Young people (16 to 24): results by age, #young-people
-            <YoungPeopleSection
-              selectedPolicies={selectedPolicies}
-              selectedYear={distributionalYear}
-              policies={POLICIES}
-            />
-          )
-        ) : (
-          <>
-            {selectedPolicies.length === 0 ? (
-              emptyState
-            ) : (
-              <div className="results-container">
-                {results && (
-                  <>
-                    {/* Hero Chart: Revenue Impact */}
-                    <SectionHeading
-                      title="Public finances"
-                      subtitle="Net effect of the selected policies on government revenue and spending, by year."
-                    />
-                    <section id="revenue" className="report-section hero-chart">
-                      <BudgetaryImpactChart
-                        data={results.budgetData}
-                        selectedYear={distributionalYear}
-                      />
-                      {/* OBR comparison: an expandable row at the foot of the
-                          card once the OBR has costed the measures */}
-                      <ObrComparisonFoot
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                      />
-                    </section>
-
-                    {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
-                    <SectionHeading
-                      title="Households by income"
-                      subtitle="How net income changes across the income distribution in the selected year."
-                    />
-                    <section
-                      id="deciles"
-                      className="report-section distributional-section"
-                    >
-                      <div className="charts-grid">
-                        <WaterfallChart
-                          rawData={results.rawWinnersLosers}
-                          selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
-                        />
-                        <DistributionalChart
-                          rawData={results.rawDistributional}
-                          selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
-                        />
-                      </div>
-                    </section>
-
-                    {/* Row 2: the constituency map beside the household
-                        scatter. The scatter shows binned groups of
-                        households only: the per-household scatter stays
-                        withdrawn, as it showed survey households one by
-                        one. Results by region are hidden for now
-                        (RegionView is kept, not rendered). */}
-                    <SectionHeading
-                      title="Where and who"
-                      subtitle="Average change by constituency, and how changes vary between households."
-                    />
-                    <section
-                      id="constituencies"
-                      className="report-section charts-grid charts-row-2"
-                    >
-                      <ConstituencyMap
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                        policies={POLICIES}
-                        showRegionLink={false}
-                      />
-                      <HouseholdScatter
-                        selectedPolicies={selectedPolicies}
-                        policies={POLICIES}
-                        selectedYear={distributionalYear}
-                      />
-                    </section>
-
-                    {/* Row 3: example households, one chooser above both
-                        charts */}
-                    <SectionHeading
-                      title="Example households"
-                      subtitle="Net income of five example households across their incomes."
-                    />
-                    <div className="example-household-picker">
-                      <HouseholdPicker
-                        value={exampleHouseholdId}
-                        onChange={setExampleHouseholdId}
-                      />
-                    </div>
-                    <section
-                      id="household"
-                      className="report-section charts-grid charts-row-3"
-                    >
-                      <EmploymentIncomeChart
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                        household={exampleHouseholdId}
-                        onHouseholdChange={setExampleHouseholdId}
-                        showPicker={false}
-                      />
-                      <EmploymentIncomeDiffChart
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                        household={exampleHouseholdId}
-                        onHouseholdChange={setExampleHouseholdId}
-                        showPicker={false}
-                      />
-                    </section>
-
-                    {/* Policy Details Footer */}
-                    <SectionHeading
-                      title="Policies"
-                      subtitle="What each selected policy does and how it is modelled."
-                    />
-                    <section id="policy-details" className="report-section">
-                      <Disclosure
-                        title="About selected policies"
-                        contentClassName="policy-details-content"
-                      >
-                        <PolicyCards
-                          policies={POLICIES}
-                          selectedPolicies={selectedPolicies}
-                        />
-                      </Disclosure>
-                    </section>
-                  </>
-                )}
-              </div>
-            )}
-          </>
-        )}
+            {populationPanel}
           </PopulationImpactView>
         )}
         </div>

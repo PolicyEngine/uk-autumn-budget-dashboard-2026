@@ -2,15 +2,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "./householdExamples";
+import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
+import { EXAMPLE_ICONS } from "../components/personal/HouseholdCards";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { buildHouseholdRequest } from "./householdImpactApi";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { fiscalYearTick } from "./chartTheme";
 
+const REGISTRY = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "uk_budget_data", "reforms.py"), "utf8");
+
 describe("the example households", () => {
-  it("come in two groups, with unique ids, a name and a one-line description each", () => {
-    expect(EXAMPLE_GROUPS.map((group) => group.title)).toEqual(["Young people", "Other households"]);
+  it("are seven, with unique ids, a name, a one-line description, a measure and an icon each", () => {
+    expect(HOUSEHOLD_EXAMPLES).toHaveLength(7);
     const ids = HOUSEHOLD_EXAMPLES.map((example) => example.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const example of HOUSEHOLD_EXAMPLES) {
@@ -18,6 +21,12 @@ describe("the example households", () => {
       expect(example.description.length).toBeGreaterThan(0);
       expect(example.description.length).toBeLessThanOrEqual(60);
       expect(example.note.length).toBeGreaterThan(0);
+      // The measure its card features: an id the registry defines (the card
+      // shows it only while the catalogue publishes it), named short enough
+      // for a tag
+      expect(REGISTRY, example.id).toContain(`"${example.measure}"`);
+      expect(example.tag.length, example.id).toBeLessThanOrEqual(25);
+      expect(Object.keys(EXAMPLE_ICONS), example.id).toContain(example.icon);
     }
   });
 

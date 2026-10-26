@@ -1,0 +1,24 @@
+/**
+ * A link to another view at one of its sub-tabs, switched to in place
+ * (App.jsx handleTabChange), scrolling to `hash` once it is shown. The href
+ * is the same address, so it also works opened in a new tab.
+ */
+export default function ViewLink({ tab, sub, hash, onShowTab, children }) {
+  return (
+    <a
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
+      onClick={(event) => {
+        if (!onShowTab) return;
+        event.preventDefault();
+        onShowTab(tab, sub);
+        if (hash) {
+          setTimeout(() => {
+            document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
+          }, 50);
+        }
+      }}
+    >
+      {children}
+    </a>
+  );
+}

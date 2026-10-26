@@ -409,7 +409,15 @@ class HouseholdAnswersRequest(BaseModel):
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(
-        default=0, ge=0, le=MAX_AMOUNT
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Pension paid by salary sacrifice, £ a year. employment_income "
+            "is pay after the sacrifice, as policyengine-uk reads it: the "
+            "sacrifice changes no figure until the £2,000 cap from April "
+            "2029, which returns the excess to pay"
+        ),
     )
     state_pension: Optional[float] = Field(
         default=None,

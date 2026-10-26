@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
+import { useScopedParam } from "./urlScope";
 
 // The years two-year comparisons on Living standards run between, kept in
 // the address (?ls_from=2027&ls_to=2031) and shared by every card that
-// compares two years, so choosing a range in one changes it in all
+// compares two years, so choosing a range in one changes it in all. Within
+// one place only: Population impact's copies of the cards keep their own
+// range (?pop_ls_from, urlScope.js)
 const EVENT = "ls-year-range";
 const startOf = (fy) => Number(String(fy).slice(0, 4));
 
-function readRange(years, fallback) {
+function readRange(years, fallback, fromParam, toParam) {
   const known = new Set(years.map(startOf));
   let from = fallback[0];
   let to = fallback[1];
   if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search);
-    const f = Number(params.get("ls_from"));
-    const t = Number(params.get("ls_to"));
+    const f = Number(params.get(fromParam));
+    const t = Number(params.get(toParam));
     if (known.has(f)) from = years.find((fy) => startOf(fy) === f);
     if (known.has(t)) to = years.find((fy) => startOf(fy) === t);
   }
@@ -26,29 +29,32 @@ function readRange(years, fallback) {
  * from before to.
  */
 export function useYearRange(years, fallback) {
-  const [range, setRange] = useState(() => readRange(years, fallback));
+  const fromParam = useScopedParam("ls_from");
+  const toParam = useScopedParam("ls_to");
+  const event = `${EVENT}:${fromParam}`;
+  const [range, setRange] = useState(() => readRange(years, fallback, fromParam, toParam));
   useEffect(() => {
-    const onChange = (event) => setRange(event.detail);
-    window.addEventListener(EVENT, onChange);
-    return () => window.removeEventListener(EVENT, onChange);
-  }, []);
+    const onChange = (e) => setRange(e.detail);
+    window.addEventListener(event, onChange);
+    return () => window.removeEventListener(event, onChange);
+  }, [event]);
   const choose = useCallback(
     (from, to) => {
       if (!(startOf(from) < startOf(to))) return;
       const params = new URLSearchParams(window.location.search);
       const isDefault = from === fallback[0] && to === fallback[1];
       if (isDefault) {
-        params.delete("ls_from");
-        params.delete("ls_to");
+        params.delete(fromParam);
+        params.delete(toParam);
       } else {
-        params.set("ls_from", String(startOf(from)));
-        params.set("ls_to", String(startOf(to)));
+        params.set(fromParam, String(startOf(from)));
+        params.set(toParam, String(startOf(to)));
       }
       const query = params.toString();
       window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
-      window.dispatchEvent(new CustomEvent(EVENT, { detail: [from, to] }));
+      window.dispatchEvent(new CustomEvent(event, { detail: [from, to] }));
     },
-    [fallback],
+    [fallback, fromParam, toParam, event],
   );
   return [range, choose];
 }
