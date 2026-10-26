@@ -607,8 +607,9 @@ function App() {
             />
             <section id="policy-details" className="report-section policy-details-content">
               <p className="policy-timeline-key">
-                Each card&apos;s bar shows when the measure is in force over the years the
-                charts cover, 2026-27 to 2031-32. &ldquo;See its effect&rdquo; opens Population
+                Each card&apos;s timeline shows when the measure is in force over the years
+                the charts cover, 2026-27 to 2031-32, with Budget day marked; an arrow at the
+                right means it has no end date. &ldquo;See its effect&rdquo; opens Population
                 impact with only that measure selected.
               </p>
               <PolicyCards

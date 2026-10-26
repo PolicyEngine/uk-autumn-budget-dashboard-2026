@@ -13,7 +13,7 @@ const GROUPS = [
 ];
 
 // The timeline runs over the charts' years: April 2026 to March 2032
-// (2026-27 to 2031-32), one segment a year, month by month
+// (2026-27 to 2031-32), month by month
 export const TIMELINE_START_YEAR = 2026;
 export const TIMELINE_YEARS = 6;
 const TIMELINE_MONTHS = TIMELINE_YEARS * 12;
@@ -30,28 +30,137 @@ export function timelineMonth(month) {
 
 /** The share of the timeline before `from`, and the share it covers. */
 export function timelineSpan({ from, to }) {
-  const clamp = (value) => Math.min(Math.max(value, 0), TIMELINE_MONTHS);
-  const start = clamp(timelineMonth(from));
-  const end = to ? clamp(timelineMonth(to) + 1) : TIMELINE_MONTHS;
+  const start = clampMonth(timelineMonth(from));
+  const end = to ? clampMonth(timelineMonth(to) + 1) : TIMELINE_MONTHS;
   return { left: start / TIMELINE_MONTHS, width: (end - start) / TIMELINE_MONTHS };
 }
 
+const clampMonth = (value) => Math.min(Math.max(value, 0), TIMELINE_MONTHS);
+const share = (months) => `${(clampMonth(months) / TIMELINE_MONTHS) * 100}%`;
+
+// Budget day, 28 October 2026, for orientation on every timeline
+export const BUDGET_DAY_MONTH = timelineMonth("2026-10") + 27 / 31;
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const monthName = (month) => {
+  const [year, number] = month.split("-").map(Number);
+  return `${MONTH_NAMES[number - 1]} ${year}`;
+};
+
+/** How many months a temporary measure is in force, in words. */
+export function durationLabel(policy) {
+  if (policy.duration) return policy.duration;
+  const { from, to } = policy.inForce;
+  const months = timelineMonth(to) - timelineMonth(from) + 1;
+  return months === 1 ? "1 month" : `${months} months`;
+}
+
+/** The timeline in words, for screen readers. */
+export function timelineDescription(policy) {
+  const { from, to } = policy.inForce;
+  const steps = (policy.steps ?? [])
+    .map((step) => `${step.label} in ${monthName(step.month)}`)
+    .join(", ");
+  let text = `In force from ${monthName(from)}`;
+  if (to) text += ` to ${monthName(to)} (${durationLabel(policy).toLowerCase()})`;
+  if (steps) text += `; ${steps}`;
+  if (!to) text += "; no end date";
+  return `${text}.`;
+}
+
+// The axis: a tick each month, a taller one each April
+const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => month);
+
 /**
- * When a measure is in force, drawn on a bar of years. Decorative: the
- * card states the start and end in words beside it.
+ * When a measure is in force, on a small time axis from April 2026 to
+ * March 2032: ticks for months and years, a line at Budget day, a dot where
+ * the measure starts, and either an end dot with its length (a temporary
+ * measure) or a fade and an arrow off the right edge (a lasting one). Steps
+ * within it, such as fuel duty coming back in two stages, are diamonds,
+ * labelled below the axis; after the last step the remaining effect is
+ * drawn thinner. One image, described
+ * in words for screen readers.
  */
-function PolicyTimeline({ inForce, temporary }) {
-  const { left, width } = timelineSpan(inForce);
+function PolicyTimeline({ policy }) {
+  const { from, to } = policy.inForce;
+  const start = timelineMonth(from);
+  const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
+  const steps = policy.steps ?? [];
+  // A lasting measure with steps: full strength until its last step, then a
+  // thinner tail for what remains
+  const fullEnd = !to && steps.length ? timelineMonth(steps[steps.length - 1].month) : end;
+  const stepLabel = steps.length ? policy.stepsLabel : null;
+  const stepStart = steps.length ? timelineMonth(steps[0].month) : null;
   return (
-    <div className="policy-timeline" aria-hidden="true">
-      <div className="policy-timeline-track">
-        {TIMELINE_LABELS.map((label) => (
-          <span key={label} className="policy-timeline-year" />
-        ))}
-        <span
-          className={`policy-timeline-bar${temporary ? " is-temporary" : " is-lasting"}`}
-          style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
-        />
+    <div className="ptl" role="img" aria-label={timelineDescription(policy)}>
+      <div className="ptl-plot">
+        <div className="ptl-notes">
+          <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
+            Budget
+          </span>
+          {!to && <span className="ptl-continues">Continues</span>}
+        </div>
+        <div className="ptl-track">
+          <svg
+            className="ptl-axis"
+            viewBox={`0 0 ${TIMELINE_MONTHS} 12`}
+            preserveAspectRatio="none"
+            focusable="false"
+          >
+            <line x1="0" x2={TIMELINE_MONTHS} y1="6" y2="6" />
+            {AXIS_TICKS.map((month) => {
+              const year = month % 12 === 0;
+              return (
+                <line
+                  key={month}
+                  className={year ? "is-year" : undefined}
+                  x1={month}
+                  x2={month}
+                  y1={year ? 0 : 4}
+                  y2={year ? 12 : 8}
+                />
+              );
+            })}
+          </svg>
+          <span className="ptl-budget-line" style={{ left: share(BUDGET_DAY_MONTH) }} />
+          <span
+            className={`ptl-span${!to && !steps.length ? " is-lasting" : ""}`}
+            style={{ left: share(start), width: share(fullEnd - start) }}
+          />
+          {!to && steps.length > 0 && (
+            <span
+              className="ptl-tail is-lasting"
+              style={{ left: share(fullEnd), width: share(TIMELINE_MONTHS - fullEnd) }}
+            />
+          )}
+          <span className="ptl-dot" style={{ left: share(start) }} />
+          {to && <span className="ptl-dot is-end" style={{ left: share(end) }} />}
+          {steps.map((step) => (
+            <span
+              key={step.month}
+              className="ptl-diamond"
+              style={{ left: share(timelineMonth(step.month)) }}
+            />
+          ))}
+          {!to && <span className="ptl-arrow" />}
+        </div>
+        {(to || stepLabel) && (
+          <div className="ptl-chips">
+            {to && (
+              <span className="ptl-chip" style={{ left: share(start) }}>
+                {durationLabel(policy)}
+              </span>
+            )}
+            {stepLabel && (
+              <span className="ptl-step-label" style={{ left: share(stepStart) }}>
+                {stepLabel}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="policy-timeline-labels">
         {TIMELINE_LABELS.map((label) => (
@@ -91,12 +200,14 @@ function PolicyCard({ policy, onShowEffect }) {
             <dt>Starts</dt>
             <dd className="policy-card-start">{policy.starts}</dd>
           </div>
-          <div>
-            <dt>Ends</dt>
-            <dd className="policy-card-end">{temporary ? policy.ends : "No end date"}</dd>
-          </div>
+          {temporary && (
+            <div>
+              <dt>Ends</dt>
+              <dd className="policy-card-end">{policy.ends}</dd>
+            </div>
+          )}
         </dl>
-        {policy.inForce && <PolicyTimeline inForce={policy.inForce} temporary={temporary} />}
+        {policy.inForce && <PolicyTimeline policy={policy} />}
       </div>
 
       <div className="policy-card-foot">

@@ -333,7 +333,7 @@ body {
 
 /* Tabs out of sight at either end of a scrolling row fade out there */
 .view-tabs.fade-end {
-  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 40px), transparent);
 }
 
 .view-tabs.fade-start {
@@ -1701,54 +1701,180 @@ body {
   font-weight: 500;
 }
 
-.policy-timeline-track {
+/* The in-force timeline (PolicyTimeline): an axis of months and years,
+   Budget day, the measure's span with its start (and end) dots, steps as
+   diamonds, and a fade and arrow for a lasting measure. Positions are
+   shares of April 2026 to March 2032. */
+.ptl {
+  padding: 0 8px;
+}
+
+.ptl-plot {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  height: 12px;
 }
 
-.policy-timeline-year {
-  background: var(--pe-gray-200);
+.ptl-notes {
+  position: relative;
+  height: 18px;
+  font-size: var(--fs-micro);
+  line-height: 18px;
+  color: var(--pe-gray-500);
 }
 
-.policy-timeline-year + .policy-timeline-year {
-  border-left: 2px solid var(--pe-gray-50);
-}
-
-.policy-timeline-year:first-child {
-  border-radius: 999px 0 0 999px;
-}
-
-.policy-timeline-year:last-child {
-  border-radius: 0 999px 999px 0;
-}
-
-.policy-timeline-bar {
+.ptl-budget-label {
   position: absolute;
   top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Under the first diamond, with a tick up to it */
+.ptl-step-label {
+  position: absolute;
+  top: 0;
+  padding-left: 7px;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+  border-left: 1.5px solid var(--pe-gray-400);
+  transform: translateX(-1px);
+}
+
+.ptl-budget-label {
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.ptl-continues {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-weight: 500;
+  color: var(--pe-gray-600);
+}
+
+.ptl-track {
+  position: relative;
+  height: 22px;
+}
+
+.ptl-axis {
+  position: absolute;
+  inset: 5px 0;
+  width: 100%;
+  height: 12px;
+  overflow: visible;
+}
+
+.ptl-axis line {
+  stroke: var(--pe-gray-300);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ptl-axis line.is-year {
+  stroke: var(--pe-gray-400);
+  stroke-width: 1.5;
+}
+
+/* Budget day: a dashed line from its label down through the axis */
+.ptl-budget-line {
+  position: absolute;
+  top: -14px;
   bottom: 0;
-  min-width: 6px;
+  width: 0;
+  border-left: 1.5px dashed var(--pe-gray-500);
+}
+
+.ptl-span,
+.ptl-tail {
+  position: absolute;
+  top: 50%;
+  min-width: 10px;
+  height: 10px;
   background: var(--policy-accent, var(--c-after));
-  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 70%, var(--pe-gray-900));
   border-radius: 999px;
+  transform: translateY(-50%);
   transform-origin: left center;
-  animation: policy-timeline-grow 0.6s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation: ptl-draw 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
-/* A lasting measure runs off the end of the timeline, square-ended */
-.policy-timeline-bar.is-lasting {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-right: 0;
+.ptl-tail {
+  height: 4px;
+  animation-delay: 0.5s;
 }
 
-@keyframes policy-timeline-grow {
+/* A lasting measure fades towards the arrow at the right edge */
+.ptl-span.is-lasting,
+.ptl-tail.is-lasting {
+  border-radius: 999px 0 0 999px;
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), rgb(0 0 0 / 0.2));
+  mask-image: linear-gradient(to right, black calc(100% - 40px), rgb(0 0 0 / 0.2));
+}
+
+.ptl-dot,
+.ptl-diamond {
+  position: absolute;
+  top: 50%;
+  box-sizing: border-box;
+  background: var(--c-surface);
+  border: 2.5px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 55%, var(--pe-gray-900));
+}
+
+.ptl-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.ptl-diamond {
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ptl-arrow {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 55%, var(--pe-gray-900));
+  transform: translateY(-50%);
+}
+
+.ptl-chips {
+  position: relative;
+  height: 24px;
+  margin-top: 4px;
+}
+
+.ptl-chip {
+  position: absolute;
+  top: 0;
+  padding: 1px 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--pe-gray-800);
+  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 20%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 50%, var(--c-surface));
+  border-radius: 999px;
+  transform: translateX(-7px);
+}
+
+@keyframes ptl-draw {
   from {
-    transform: scaleX(0);
+    clip-path: inset(0 100% 0 0);
   }
   to {
-    transform: scaleX(1);
+    clip-path: inset(0 0 0 0);
   }
 }
 
@@ -1801,9 +1927,7 @@ body {
 }
 
 .policy-card-source {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline;
   min-width: 0;
   max-width: 100%;
   color: var(--pe-teal-700);
@@ -1812,8 +1936,11 @@ body {
   text-underline-offset: 3px;
 }
 
+/* The external-link icon stays with the last word when the label wraps */
 .policy-card-source svg {
-  flex: 0 0 auto;
+  display: inline;
+  margin-left: 5px;
+  vertical-align: -2px;
 }
 
 .policy-card-source:hover {
@@ -1888,7 +2015,8 @@ body {
     transform: none;
   }
 
-  .policy-timeline-bar {
+  .ptl-span,
+  .ptl-tail {
     animation: none;
   }
 }
