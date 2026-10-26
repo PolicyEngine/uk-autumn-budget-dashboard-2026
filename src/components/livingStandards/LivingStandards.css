@@ -627,6 +627,8 @@
 .forecast-tile {
   display: flex;
   flex-direction: column;
+  /* A grid cell that may shrink below its content: long captions wrap */
+  min-width: 0;
   gap: 12px;
   padding: 16px 18px;
   border: 1px solid var(--pe-gray-200);
