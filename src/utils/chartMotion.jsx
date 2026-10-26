@@ -1,11 +1,17 @@
 import { CHART_COLOURS } from "./chartTheme";
 /**
- * How the Recharts series move when the data change (a year change, or the
- * year pill's Play): they tween from the old values to the new ones over
- * CHART_MOTION_MS, eased in and out, rather than redraw from zero. With
+ * How the charts move when the data change (a year, the measures, an
+ * option, or the year pill's Play): Recharts series tween from the old
+ * values to the new ones over CHART_MOTION_MS, eased out, rather than
+ * redraw from zero; the custom SVG charts (the year band, the map's fills)
+ * take the same duration and curve. The JS mirror of --motion-chart and
+ * --ease-out in globals.css (the dashboard's motion tokens). With
  * prefers-reduced-motion they jump straight to the new values.
  */
-export const CHART_MOTION_MS = 850;
+export const CHART_MOTION_MS = 300;
+
+/** --ease-out, for a CSS transition set from JS */
+export const MOTION_EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /** Whether the reader asked for reduced motion (false on the server). */
 export function prefersReducedMotion() {
@@ -21,8 +27,21 @@ export function chartMotion() {
     isAnimationActive: !prefersReducedMotion(),
     animationBegin: 0,
     animationDuration: CHART_MOTION_MS,
-    animationEasing: "ease-in-out",
+    animationEasing: "ease-out",
   };
+}
+
+/**
+ * An inline CSS transition for SVG or HTML chart parts that move with the
+ * series ("transform", "width"): CHART_MOTION_MS, eased out; none with
+ * prefers-reduced-motion.
+ *
+ * @param {...string} properties
+ * @returns {string|undefined}
+ */
+export function chartTransition(...properties) {
+  if (prefersReducedMotion()) return undefined;
+  return properties.map((property) => `${property} ${CHART_MOTION_MS}ms ${MOTION_EASE_OUT}`).join(", ");
 }
 
 /**

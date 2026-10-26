@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
+import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import OutcomeToggle from "./OutcomeToggle";
 import PillSelect from "./PillSelect";
 import { shortNameOf } from "../utils/policyDetails";
@@ -573,12 +574,13 @@ export default function ConstituencyMap({
       node.attr("data-state", states.get(seatCode(feature))?.kind ?? "no-data");
       // A pattern's url() cannot be blended with a colour, so only a
       // change from one colour to another is animated.
-      if (isColour(previous) && isColour(style.fill) && previous !== style.fill) {
+      if (isColour(previous) && isColour(style.fill) && previous !== style.fill && !prefersReducedMotion()) {
         const blend = d3.interpolateRgb(previous, style.fill);
         // Ends on the colour exactly as written, not as rgb().
         node
           .transition()
-          .duration(500)
+          .duration(CHART_MOTION_MS)
+          .ease(d3.easeCubicOut)
           .attrTween("fill", () => (t) => (t < 1 ? blend(t) : style.fill));
       } else {
         node.attr("fill", style.fill);
