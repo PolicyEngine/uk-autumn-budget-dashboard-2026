@@ -43,7 +43,7 @@ const selectedViewTabs = () =>
   within(tabBar())
     .getAllByRole("tab")
     .filter((tab) => tab.getAttribute("aria-selected") === "true");
-const home = () => screen.getByRole("button", { name: "Back to the start: about this dashboard" });
+const home = () => screen.getByRole("link", { name: "Back to the start" });
 const search = () => new URLSearchParams(window.location.search);
 
 describe("the landing page", () => {
@@ -172,7 +172,7 @@ describe("the landing page", () => {
   });
 });
 
-describe("the band's home button", () => {
+describe("the band's home link", () => {
   it("is marked current on the landing page, where it does nothing", async () => {
     await renderApp();
     expect(home()).toHaveAttribute("aria-current", "page");
@@ -181,12 +181,13 @@ describe("the band's home button", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("says what the dashboard is on hover or focus", async () => {
+  it("is the mark alone, a link to the bare address, with no card", async () => {
     await renderApp();
+    expect(home()).toHaveAttribute("href", "/");
+    expect(home().querySelector("img")).toHaveAttribute("alt", "");
     fireEvent.focus(home());
-    const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/^About this dashboard/);
-    expect(home()).toHaveAttribute("aria-describedby", tip.id);
+    fireEvent.mouseEnter(home());
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("goes back to the landing page from any view, in place", async () => {

@@ -3,34 +3,34 @@ import Tip from "./Tip";
 import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
 
-// How long a first tap on a touch screen waits for a second (which goes
-// to the start); the first only shows the tip
-const TAP_AGAIN_MS = 4000;
+// The bare address: the landing page
+const START = process.env.NEXT_PUBLIC_BASE_PATH || "/";
 
 /**
- * The band's home button, left of the title: a mini card says what the
- * dashboard is on hover, focus or a first tap; a click (a second tap on a
- * touch screen) goes back to the landing page, in place. On the landing
- * page itself it is marked current and does nothing.
+ * The band's home link, left of the title: PolicyEngine's mark alone, back
+ * to the landing page in place (a new tab or window opens the bare
+ * address). On the landing page itself it is marked current and does
+ * nothing. What the dashboard is, is the edge tab's (EdgeAboutTab).
  *
  * @param {Object} props
  * @param {boolean} props.current - Whether the landing page is shown
  * @param {() => void} props.onHome - Go to the landing page (App's goHome)
  */
 export default function HomeButton({ current, onHome }) {
-  const props = useHomeClick(current, onHome);
   return (
-    <Tip content={<AboutTip current={current} />}>
-      <button
-        type="button"
-        className="home-button"
-        aria-label="Back to the start: about this dashboard"
-        aria-current={current ? "page" : undefined}
-        {...props}
-      >
-        <Mark className="home-button-mark" />
-      </button>
-    </Tip>
+    <a
+      href={START}
+      className="home-button"
+      aria-label="Back to the start"
+      aria-current={current ? "page" : undefined}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        if (!current) onHome();
+      }}
+    >
+      <Mark className="home-button-mark" />
+    </a>
   );
 }
 
@@ -40,38 +40,15 @@ function Mark({ className }) {
   return <img src={mark.src ?? mark} alt="" className={className} />;
 }
 
-/** The card both buttons show: what the dashboard is, and the way back. */
-function AboutTip({ current, hint }) {
+/** The edge tab's card: what the dashboard is, and what a click does. */
+function AboutTip({ hint }) {
   return (
     <span className="home-tip">
       <span className="home-tip-title">About this dashboard</span>
       <span>Our estimates of how Autumn Budget 2026 changes the public finances and household incomes.</span>
-      <span className="home-tip-hint">{hint ?? (current ? "You are at the start." : "Click to return to the start.")}</span>
+      <span className="home-tip-hint">{hint}</span>
     </span>
   );
-}
-
-/**
- * A click goes to the start; on a touch screen the first tap shows the card
- * and a second (within TAP_AGAIN_MS) goes.
- */
-function useHomeClick(current, onHome) {
-  const touch = useRef(false);
-  const armedAt = useRef(0);
-  return {
-    onPointerDown: (event) => {
-      touch.current = event.pointerType === "touch";
-    },
-    onClick: () => {
-      if (current) return;
-      if (touch.current && Date.now() - armedAt.current > TAP_AGAIN_MS) {
-        armedAt.current = Date.now();
-        return;
-      }
-      armedAt.current = 0;
-      onHome();
-    },
-  };
 }
 
 // Set once the edge tab's attention cue has played this session
@@ -132,7 +109,7 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
     if (!seen) setCue(true);
   }, []);
   return (
-    <Tip content={<AboutTip current={false} hint="Click to open the overview." />}>
+    <Tip content={<AboutTip hint="Click to open the overview." />}>
       <button
         ref={(node) => {
           own.current = node;

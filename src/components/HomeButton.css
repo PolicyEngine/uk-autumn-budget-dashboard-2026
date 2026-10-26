@@ -19,12 +19,11 @@
   border: 0;
   border-radius: 4px;
   cursor: pointer;
-  transition: opacity var(--landing-motion) ease, transform var(--landing-motion) ease;
+  transition: opacity var(--landing-motion) ease;
 }
 
 .title-row .home-button:hover {
-  opacity: 0.85;
-  transform: scale(1.06);
+  opacity: 0.8;
 }
 
 .title-row .home-button[aria-current="page"] {
@@ -45,7 +44,7 @@
   object-fit: contain;
 }
 
-/* Its tip, as a mini card above the band */
+/* The edge tab's tip, as a mini card */
 .tip:has(> .home-tip) {
   z-index: 1200;
   max-width: 260px;
@@ -91,9 +90,6 @@
     transition: none;
   }
 
-  .title-row .home-button:hover {
-    transform: none;
-  }
 }
 
 /* The "About" tab on the window's left edge (EdgeAboutTab): teal,
