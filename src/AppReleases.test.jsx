@@ -515,6 +515,8 @@ describe("a past event in the dashboard", () => {
     expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    // The notice names what is unavailable; no count of a selection with it
+    expect(document.querySelector(".showing-line")).toBeNull();
     expect(within(document.getElementById("coverage")).getByText("Partly expressible")).toBeInTheDocument();
     expect(document.getElementById("policy-details")).toHaveTextContent("About the modelled measures");
     expect(document.getElementById("policy-details")).toHaveTextContent("Measures not modelled");
@@ -522,6 +524,32 @@ describe("a past event in the dashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove missing from the selection" }));
     await screen.findByTestId("budget-figures");
     expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(document.querySelector(".showing-line")).toHaveTextContent("Showing: Alpha");
+  });
+
+  it("names an unknown measure in a link without a selection note, alone or on an event with no figures", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=missing`);
+    vi.stubGlobal("fetch", fetchImpl);
+    const view = render(<App />);
+    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(document.querySelector(".showing-line")).toBeNull();
+    expect(document.body).not.toHaveTextContent("undefined");
+    view.unmount();
+
+    // Its one measure's receipt is missing, so it has no figures and no
+    // years; the notice still comes first, with its remove button
+    const missing = { [`${FIXTURE_MEASURES.alpha.artifact}/receipt.json`]: 404 };
+    const empty = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(["alpha"]), measures: ["alpha"], overrides: missing } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=missing`);
+    vi.stubGlobal("fetch", empty);
+    render(<App />);
+    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("No figures for this event are published yet.")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove missing from the selection" }));
+    expect(await screen.findByText("No figures for this event are published yet.")).toBeInTheDocument();
+    // An explicit selection stays explicit, now empty, as on the 2026 page
+    expect(param("policies")).toBe("");
   });
 
   it("shows nothing when its root holds another release's manifest", async () => {

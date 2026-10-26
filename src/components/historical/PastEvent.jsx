@@ -287,8 +287,10 @@ export function PastEventBanner({ release, years }) {
  * Population impact for a past event: its coverage, the revenue and decile
  * charts with the OBR comparison, and its measures, modelled and not. A past
  * event has no other view (question 4). `figuresNotice`, when given, stands
- * in for the charts (a selection with an unavailable measure); the
- * coverage and measures do not depend on the selection, so they still show.
+ * in for the charts and the selection note (a selection with an unavailable
+ * measure), even when the event has no figures, so the notice's remove
+ * button is always there; the coverage and measures do not depend on the
+ * selection, so they still show.
  */
 export function PastEventPopulation({ published, views, selectedPolicies, selectedYear, years, budgetData, emptyState, note, figuresNotice = null }) {
   const catalogue = useMeasureCatalogue();
@@ -296,7 +298,7 @@ export function PastEventPopulation({ published, views, selectedPolicies, select
   const rawWinnersLosers = published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id));
   return (
     <>
-      {note}
+      {!figuresNotice && note}
       <SectionHeading title="Coverage" subtitle="How much of the event the scorecard's replay computed, and how much of it has figures here." />
       <section id="coverage" className="report-section">
         {views.coverage.value
@@ -304,12 +306,12 @@ export function PastEventPopulation({ published, views, selectedPolicies, select
           : <UnavailableNotice reason="The coverage of this event is unavailable"><p>{views.coverage.error}</p></UnavailableNotice>}
       </section>
 
-      {years.length === 0 ? (
+      {figuresNotice ? (
+        figuresNotice
+      ) : years.length === 0 ? (
         <div className="empty-state">
           <p>No figures for this event are published yet.</p>
         </div>
-      ) : figuresNotice ? (
-        figuresNotice
       ) : selectedPolicies.length === 0 ? (
         emptyState
       ) : (
