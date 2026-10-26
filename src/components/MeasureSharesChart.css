@@ -96,3 +96,9 @@
     display: none;
   }
 }
+
+/* The focus row (16 to 24 on Young people): its name in bold */
+.msc-label.is-focus {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}

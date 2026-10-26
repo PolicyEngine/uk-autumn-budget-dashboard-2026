@@ -173,8 +173,14 @@ describe("YoungPeopleSection", () => {
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
-    // Three Recharts charts; Effect of each policy is a dot plot of rows
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
+    // Two Recharts charts; Effect of each policy is a dot plot of rows, and
+    // Better and worse off the shared rows chart: age groups, 16 to 24 in
+    // bold (no background band), ▲/▼ in two fixed columns
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
+    const shares = document.querySelector(".young-people-shares .msc");
+    expect(shares.querySelectorAll("[role='rowheader']").length).toBeGreaterThan(1);
+    expect(shares.querySelector(".msc-label.is-focus")).toHaveTextContent(/16 to 24/);
+    expect(shares.querySelectorAll("[role='columnheader']")).toHaveLength(2);
   });
 
   it("switches average change by age to single years of age", async () => {

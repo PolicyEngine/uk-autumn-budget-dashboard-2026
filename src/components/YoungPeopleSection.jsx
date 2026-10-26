@@ -117,30 +117,6 @@ const signedPounds = (value) =>
 const percent = formatShare;
 const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
 
-/** The split column's width, as the dumbbell's value column, and each half's. */
-const SPLIT_WIDTH = 112;
-const SPLIT_WIDTH_NARROW = 108;
-const SPLIT_COLUMN = 58;
-
-/** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
-function SplitTick({ x, y, payload, data, narrow }) {
-  const row = data.find((point) => point.group === payload.value);
-  if (!row) return null;
-  // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
-  // (Recharts puts x 8px into the axis), as the dumbbell's value column
-  const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
-  return (
-    <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
-      <tspan x={end - SPLIT_COLUMN} textAnchor="end">
-        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
-      </tspan>
-      <tspan x={end} textAnchor="end">
-        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
-      </tspan>
-    </text>
-  );
-}
-
 /** The real shares of a hovered group, each to the page's rule. */
 function SharesTooltip({ active, payload, label, yearLabel }) {
   if (!active || !payload?.length) return null;
@@ -622,27 +598,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
 }
 
 /** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
-const ROW_LABEL_SIZE = 13;
 
-/** The group tick: 16 to 24 in bold, all ages after a gap, as usual. */
-function GroupTick({ x, y, payload, narrow }) {
-  const band = AGE_BANDS.find((candidate) => candidate.label === payload.value);
-  const young = band?.key === YOUNG_BAND;
-  const label = narrow ? (band ? band.short : "All") : payload.value;
-  return (
-    <text
-      x={x - 6}
-      y={y}
-      textAnchor="end"
-      dominantBaseline="middle"
-      fontSize={ROW_LABEL_SIZE}
-      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
-      fontWeight={young || !band ? 600 : 400}
-    >
-      {label}
-    </text>
-  );
-}
 
 function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId }) {
   const chartRef = useRef(null);
@@ -814,79 +770,15 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         ) : perMeasure && data.length ? (
           <MeasureSharesChart rows={filtered.rows} groupLabel={groupLabel} yearLabel={yearLabel} />
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={plotMargin(narrow)}
-              barCategoryGap="36%"
-            >
-              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              {/* The 16 to 24 row's highlight, as in "Average change by age" */}
-              <ReferenceArea
-                y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                fill={YOUNG_FILL}
-                fillOpacity={0.6}
-                radius={6}
-                ifOverflow="visible"
-              />
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                ticks={[0, 25, 50, 75, 100]}
-                tickFormatter={(value) => `${value}%`}
-                tick={TICK_STYLE}
-                axisLine={AXIS_LINE}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                label={{
-                  value: "Share of people in the group",
-                  position: "insideBottom",
-                  offset: 0,
-                  style: AXIS_TITLE_STYLE,
-                }}
-              />
-              <YAxis
-                type="category"
-                dataKey="group"
-                tick={<GroupTick narrow={narrow} />}
-                width={narrow ? 52 : 96}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              {/* Each row's better / worse split, at its right */}
-              <YAxis
-                yAxisId="split"
-                orientation="right"
-                type="category"
-                dataKey="group"
-                tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <Tooltip
-                {...TOOLTIP_PROPS}
-                cursor={HOVER_CURSOR}
-                content={<SharesTooltip yearLabel={yearLabel} />}
-              />
-              {OUTCOMES.map((outcome) => (
-                <Bar
-                  key={outcome.key}
-                  dataKey={outcome.key}
-                  name={outcome.label}
-                  fill={outcome.color}
-                  stackId="share"
-                  shape={SHARE_BAR_SHAPE}
-                  {...chartMotion()}
-                >
-                </Bar>
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+          // The one run's groups, as the per-measure view: names, a 100% bar
+          // and the ▲/▼ shares in two fixed columns
+          <MeasureSharesChart
+            rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
+            groupLabel=""
+            yearLabel={yearLabel}
+            emphasis={YOUNG_BAND}
+            labelFor={({ name }) => `People aged ${name}, ${yearLabel}`}
+          />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>No shares are published for this selection in {yearLabel}.</p>
