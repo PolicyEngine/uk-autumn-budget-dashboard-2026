@@ -12,6 +12,14 @@ describe("measure modelling, read from the published wording", () => {
     expect(modellingFacts("A plain measure.")).toEqual({ facts: [], limits: [] });
   });
 
+  it("leaves out what the card's own text already states", () => {
+    const text = "Paid in Great Britain, so households in Scotland are approximate. The data identify no apprentices.";
+    const { facts, limits } = modellingFacts(text, "Paid to households in Great Britain; eligibility in Scotland is approximate.");
+    expect(facts).toEqual([]);
+    expect(limits.map(({ label, said }) => [label, said])).toEqual([["Approximate for Scotland", true], ["Data limit: no apprentices flagged", false]]);
+    expect(modellingFacts(text).limits.every((limit) => !limit.said)).toBe(true);
+  });
+
   it("adds the one modelling note only to its measure", () => {
     const other = { id: "another_measure", description: "Published." };
     expect(measureModellingFacts(other).notePoints).toEqual([]);

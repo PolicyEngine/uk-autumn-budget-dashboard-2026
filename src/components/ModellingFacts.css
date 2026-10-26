@@ -69,8 +69,12 @@ button.mf-chip-limit:focus-visible {
   margin-top: 2px;
 }
 
-/* "How it is modelled · 1 known limitation": a caveat signalled while closed */
+/* "1 known limitation" under "How it is modelled": a caveat signalled while closed */
 .policy-card-limit-count {
+  display: block;
+  margin: -8px 0 4px;
+  font-size: var(--fs-caption);
   font-weight: 500;
+  line-height: 1.3;
   color: var(--c-notice-text);
 }

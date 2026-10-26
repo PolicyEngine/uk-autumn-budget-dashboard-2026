@@ -12,14 +12,13 @@ export function limitationCount(limits) {
  * A measure's modelling, read from its published wording: fact chips
  * (Day-weighted, Wages held fixed and so on), limitation chips that open
  * to the sentence stating the limit, and any modelling note as bullets. A
- * limitation whose sentence the card already shows is a plain chip, so no
- * sentence is said twice.
+ * limitation the card's own text already states is a plain chip, so no
+ * caveat is said twice (measureModellingFacts' `shown`).
  *
  * @param {Object} props
- * @param {{facts: string[], limits: {label: string, sentence: string}[], notePoints: string[]}} props.modelling
- * @param {string} [props.shown] - Text the card already shows
+ * @param {{facts: string[], limits: {label: string, sentence: string, said: boolean}[], notePoints: string[]}} props.modelling
  */
-function ModellingFacts({ modelling, shown = "" }) {
+function ModellingFacts({ modelling }) {
   const [open, setOpen] = useState([]);
   const id = useId();
   const { facts, limits, notePoints } = modelling;
@@ -36,7 +35,7 @@ function ModellingFacts({ modelling, shown = "" }) {
             </span>
           ))}
           {limits.map((limit, index) =>
-            shown.includes(limit.sentence) ? (
+            limit.said ? (
               <span key={limit.sentence} className="mf-chip mf-chip-limit">
                 <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
                 {limit.label}
@@ -58,7 +57,7 @@ function ModellingFacts({ modelling, shown = "" }) {
         </div>
       )}
       {limits.map((limit, index) =>
-        shown.includes(limit.sentence) ? null : (
+        limit.said ? null : (
           <p key={limit.sentence} id={`${id}-limit-${index}`} className="mf-limit" hidden={!open.includes(index)}>
             {limit.sentence}
           </p>

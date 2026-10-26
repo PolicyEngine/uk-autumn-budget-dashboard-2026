@@ -203,7 +203,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled: fact and
   // limitation chips, and any modelling note
-  const modelling = measureModellingFacts(policy);
+  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
   const hasModelling = Boolean(policy.details) || modelling.facts.length > 0 || modelling.limits.length > 0 || modelling.notePoints.length > 0;
   const limitations = limitationCount(modelling.limits);
   return (
@@ -277,10 +277,10 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
           <details className="policy-card-details">
             <summary>
               How it is modelled
-              {limitations && <span className="policy-card-limit-count"> · {limitations}</span>}
+              {limitations && <span className="policy-card-limit-count">{limitations}</span>}
             </summary>
             {policy.details && <p>{policy.details}</p>}
-            <ModellingFacts modelling={modelling} shown={policy.summary ?? policy.description} />
+            <ModellingFacts modelling={modelling} />
           </details>
         )}
         {onShowEffect && (

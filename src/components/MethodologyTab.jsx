@@ -226,12 +226,21 @@ function MethodologyTab({ onShowTab }) {
           id={METHOD_SECTIONS.model}
           title="Model and measures"
           summary={
-            <p>
-              PolicyEngine UK works out each household&apos;s taxes, benefits and net income under
-              current law, then again with a measure; the difference between the two runs is the
-              measure&apos;s effect. The estimates are static: households do not change their
-              behaviour in response.
-            </p>
+            <>
+              <p>
+                PolicyEngine UK works out each household&apos;s taxes, benefits and net income
+                under current law, then again with a measure; the difference between the two runs
+                is the measure&apos;s effect. The estimates are static: households do not change
+                their behaviour in response.
+              </p>
+              <p className="method-pointer">
+                What each measure does and how it is modelled is on{" "}
+                <ViewLink tab="policies" onShowTab={onShowTab}>
+                  Policies
+                  <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+                </ViewLink>
+              </p>
+            </>
           }
           details={
             <>
@@ -253,13 +262,6 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <p className="method-pointer">
-            What each measure does and how it is modelled is on{" "}
-            <ViewLink tab="policies" onShowTab={onShowTab}>
-              Policies
-              <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-            </ViewLink>
-          </p>
 
           {UNAVAILABLE.length > 0 && (
             <div className="card method-card mm-card">

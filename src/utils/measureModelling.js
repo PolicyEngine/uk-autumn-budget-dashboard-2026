@@ -44,27 +44,42 @@ export const MODELLING_FACTS = [
   { pattern: /\bimputed\b/i, label: "Imputed data" },
 ];
 
+// Each limitation also says when a card's own text already states it, so
+// the chip need not open to the sentence again.
+const mentions = (text, ...words) => words.every((word) => new RegExp(`\\b${word}`, "i").test(text));
+
 export const MODELLING_LIMITS = [
   {
     pattern: /\b(?:households|people) in (Scotland|Wales|Northern Ireland) are approximate\b/i,
     label: (match) => `Approximate for ${match[1]}`,
+    saidIn: (text, match) => mentions(text, match[1], "approximate"),
   },
-  { pattern: /\bdata identif(?:y|ies) no ([a-z-]+)/i, label: (match) => `Data limit: no ${match[1]} flagged` },
+  {
+    pattern: /\bdata identif(?:y|ies) no ([a-z-]+)/i,
+    label: (match) => `Data limit: no ${match[1]} flagged`,
+    saidIn: (text, match) => mentions(text, "identif", match[1]),
+  },
   {
     pattern: /\btoo (?:high|low)\b|\b(?:overstat|understat|under-record|over-record)/i,
     label: () => "Known limitation",
+    saidIn: (text, match, sentence) => text.includes(sentence),
   },
 ];
 
-/** The fact chips and limitation chips a measure's published text supports. */
-export function modellingFacts(text) {
-  const facts = MODELLING_FACTS.filter(({ pattern }) => pattern.test(text ?? "")).map(({ label }) => label);
+/**
+ * The fact chips and limitation chips a measure's published text supports.
+ * With `shown`, the text a card already shows: a fact it states gets no
+ * chip, and a limitation it states is marked `said`, so its chip does not
+ * open to the sentence again (each fact once).
+ */
+export function modellingFacts(text, shown = "") {
+  const facts = MODELLING_FACTS.filter(({ pattern }) => pattern.test(text ?? "") && !pattern.test(shown)).map(({ label }) => label);
   const limits = [];
   for (const sentence of sentences(text)) {
-    for (const { pattern, label } of MODELLING_LIMITS) {
+    for (const { pattern, label, saidIn } of MODELLING_LIMITS) {
       const match = sentence.match(pattern);
       if (match) {
-        limits.push({ label: label(match), sentence });
+        limits.push({ label: label(match), sentence, said: Boolean(shown) && saidIn(shown, match, sentence) });
         break;
       }
     }
@@ -75,12 +90,12 @@ export function modellingFacts(text) {
 /**
  * A measure's modelling, from its published description and any modelling
  * note: fact chips, limitation chips (each with its sentence) and the
- * note's sentences.
+ * note's sentences, less what `shown` (the card's own text) already says.
  */
-export function measureModellingFacts(measure) {
+export function measureModellingFacts(measure, shown = "") {
   const note = measure?.id === MODELLING_NOTE.id ? MODELLING_NOTE.note : null;
   return {
-    ...modellingFacts([measure?.description, note].filter(Boolean).join(" ")),
+    ...modellingFacts([measure?.description, note].filter(Boolean).join(" "), shown),
     notePoints: sentences(note),
   };
 }
