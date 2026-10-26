@@ -25,6 +25,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
 
+from rich.markup import escape
+
 # ``remote(units)`` yields one outcome per unit, in unit order.
 Remote = Callable[[Sequence], Iterable]
 # ``remote_artifacts(jobs, smoke)`` yields ``(outcome, relative path,
@@ -337,7 +339,10 @@ class ModalRunner:
                 # artifact is written.
                 key = jobs[index].key
                 failed[key] = f"{type(returned).__name__}: {returned}"
-                self.say(f"{key}: FAILED in its Modal container: {returned}")
+                self.say(
+                    f"{key}: FAILED in its Modal container: "
+                    f"{escape(str(returned))}"
+                )
                 continue
             outcome, relative, files = returned
             if outcome.key != jobs[index].key:
