@@ -31,9 +31,9 @@ export function clearBasisIncomeCache() {
  * sweep or split by policy).
  *
  * #104: the session cache is read under useHouseholdImpact's own keys (the
- * publication snapshot, then the request), so only answers that passed its
- * checks are used. This hook's own request is refused when its package
- * versions differ from the receipts' (`expectedEngine`), as the page's are.
+ * publication snapshot, then the request), and an answer there counts only
+ * when its package versions are the receipts' (`expectedEngine`). This
+ * hook's own request is refused when they differ, as the page's are.
  *
  * @param {Object} params
  * @param {Object|null} params.inputs - The answers the result was asked with
@@ -67,7 +67,7 @@ export default function useBasisIncome({
   const primary = keys[0] ?? null;
   const fromCache = () => {
     for (const key of keys) {
-      const data = peekHouseholdImpact(key);
+      const data = peekHouseholdImpact(key, expectedEngine);
       if (data && Number.isFinite(data.net?.before)) return data.net.before;
     }
     return primary !== null && fetchedIncomes.has(primary) ? fetchedIncomes.get(primary) : null;

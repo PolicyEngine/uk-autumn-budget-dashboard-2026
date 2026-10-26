@@ -63,16 +63,22 @@ function currentEntries(file, policies = file?.policies ?? []) {
   });
 }
 
-/** Whether the file's engine is the published one (any, when none is). */
+/**
+ * Whether the file's engine is the published one. Never when no engine is
+ * known: the file's answers would then be shown unchecked (#104).
+ */
 const engineMatches = (file, expectedEngine) =>
-  !expectedEngine || engineDifferences(expectedEngine, file?.engine).length === 0;
+  Boolean(expectedEngine) &&
+  Object.keys(expectedEngine).length > 0 &&
+  engineDifferences(expectedEngine, file?.engine).length === 0;
 
 /**
  * Each example's change in net income by year, with every measure, and
  * each measure's own part (that measure alone, as the breakdown shows it;
  * with interactions the parts need not add up to the change), from the file, for the cards' figures:
  * { [presetId]: { [year]: { change, byPolicy: { [measureId]: change } } } }.
- * An entry that no longer matches its example is left out, as above.
+ * An entry that no longer matches its example is left out, as above, and
+ * the whole file unless its engine is `expectedEngine`.
  */
 export function presetChanges(file, { policies, expectedEngine = null } = {}) {
   const changes = {};
@@ -94,7 +100,8 @@ export function presetChanges(file, { policies, expectedEngine = null } = {}) {
  * The file's answers as [requestKey, page-shaped result] pairs. Each key is
  * rebuilt from today's example and form, not read from the file: if either
  * has changed since the file was written, its entry no longer matches any
- * request and the live API answers instead.
+ * request and the live API answers instead. None unless the file's engine
+ * is `expectedEngine` (the receipts' for every published measure).
  */
 export function presetCacheEntries(file, { policies, expectedEngine = null, publicationKey = "" } = {}) {
   if (!engineMatches(file, expectedEngine)) return [];

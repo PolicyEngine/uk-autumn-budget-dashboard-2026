@@ -19,11 +19,24 @@ import {
 const cache = new Map();
 
 /**
- * A result already in the session cache for a request key (fetched, or a
- * precomputed example), or null. Its headline may be all it has.
+ * A cache entry's result when it was answered by `expectedEngine` (or no
+ * engine is expected), else null. Every reader checks this, whoever wrote
+ * the entry: a fetched answer was checked when it arrived, but a seeded one
+ * was checked against whatever engine its writer had (#104).
  */
-export function peekHouseholdImpact(key) {
-  return cache.get(key)?.data ?? null;
+function underEngine(entry, expectedEngine) {
+  if (!entry) return null;
+  if (expectedEngine && engineDifferences(expectedEngine, entry.data?.engine).length) return null;
+  return entry;
+}
+
+/**
+ * A result already in the session cache for a request key (fetched, or a
+ * precomputed example), or null; null too when `expectedEngine` is given and
+ * the result's package versions differ. Its headline may be all it has.
+ */
+export function peekHouseholdImpact(key, expectedEngine = null) {
+  return underEngine(cache.get(key), expectedEngine)?.data ?? null;
 }
 
 /** Empty the session cache (for tests). */
@@ -96,7 +109,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
 
   useEffect(() => {
     if (!enabled || policies.length === 0) return undefined;
-    const cached = cache.get(key);
+    // An entry from other package versions is a miss: the live answer
+    // replaces it
+    const cached = underEngine(cache.get(key), expectedEngine);
     if (cached?.complete) {
       setState({
         key,

@@ -321,6 +321,7 @@ function HouseholdCalculator({
   year = DEFAULT_DISPLAY_YEAR,
   publicationKey = "",
   expectedEngine = null,
+  presetEngine = null,
   confirmPublication = null,
   active = true,
 }) {
@@ -366,7 +367,9 @@ function HouseholdCalculator({
   const [presetChanges, setPresetChanges] = useState({});
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
-  // answers count only for exactly these, under this publication's engine.
+  // answers count only for exactly these, under the engine their receipts
+  // record (`presetEngine`, not the selection's: with nothing selected that
+  // is null, and none are loaded then).
   const presetPolicies = useMemo(
     () => policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     [policies],
@@ -374,7 +377,7 @@ function HouseholdCalculator({
   const presetKey = presetPolicies.join(",");
   useEffect(() => {
     let live = true;
-    const options = { policies: presetPolicies, expectedEngine, publicationKey };
+    const options = { policies: presetPolicies, expectedEngine: presetEngine, publicationKey };
     loadPresetResults(options).then((entries) => {
       if (!live || entries.length === 0) return;
       seedHouseholdImpactCache(entries);
@@ -386,9 +389,9 @@ function HouseholdCalculator({
     return () => {
       live = false;
     };
-    // presetKey stands for presetPolicies; expectedEngine for its own JSON
+    // presetKey stands for presetPolicies; presetEngine for its own JSON
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetKey, publicationKey, JSON.stringify(expectedEngine)]);
+  }, [presetKey, publicationKey, JSON.stringify(presetEngine)]);
 
   // The example shown, if any: its salary's source goes in "Based on"
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);

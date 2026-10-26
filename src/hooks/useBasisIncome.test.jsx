@@ -82,3 +82,11 @@ it("never puts its own answer in the page's cache, which shows it as the headlin
   expect(again.result.current.status).toBe("ready");
   expect(asked).toBe(1);
 });
+
+it("ignores an answer cached under this snapshot from another engine, and asks for its own", async () => {
+  const stale = { ...answer(), engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "0.0.0-other" } };
+  seedHouseholdImpactCache([[pageKey(PUBLICATION), stale]]);
+  const { result } = render();
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  expect(asked).toBe(1);
+});
