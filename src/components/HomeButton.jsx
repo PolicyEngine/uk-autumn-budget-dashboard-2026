@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Tip from "./Tip";
 import { PanelLeftOpen } from "lucide-react";
 import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
@@ -19,25 +18,14 @@ function Mark({ className, hidden = false }) {
   return <img src={mark.src ?? mark} alt="" className={className} aria-hidden={hidden ? "true" : undefined} />;
 }
 
-/** The edge tab's card: what the dashboard is, and what a click does. */
-function AboutTip({ hint }) {
-  return (
-    <span className="home-tip">
-      <span className="home-tip-title">About this dashboard</span>
-      <span>Our estimates of how Autumn Budget 2026 changes the public finances and household incomes.</span>
-      <span className="home-tip-hint">{hint}</span>
-    </span>
-  );
-}
-
 // Set once the edge tab's attention cue has played this session
 const CUE_KEY = "ab2026-about-cue";
 
 /**
  * "About", at the start of the view tabs row and styled as its tabs are
  * (App.jsx passes it to ViewTabs as `leading`; it is not on the landing
- * page), but a button, never a chosen tab: the card on hover or focus, and
- * a click that opens the overview drawer (OverviewDrawer.jsx); hidden
+ * page), but a button, never a chosen tab, with no hover card: a click
+ * opens the overview drawer (OverviewDrawer.jsx); hidden
  * while the drawer is open. It pulses softly once per session (not under
  * reduced motion).
  *
@@ -60,19 +48,17 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
     if (!seen) setCue(true);
   }, []);
   return (
-    <Tip content={<AboutTip hint="Click to open the overview." />}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className={`view-tab edge-about${cue ? " is-cue" : ""}`}
-        aria-label="About this dashboard: open the overview"
-        aria-expanded={open}
-        aria-controls="overview-drawer"
-        onClick={onToggle}
-      >
-        <PanelLeftOpen className="view-tab-icon" size={18} strokeWidth={1.8} aria-hidden="true" />
-        <span className="view-tab-label" aria-hidden="true">About</span>
-      </button>
-    </Tip>
+    <button
+      ref={buttonRef}
+      type="button"
+      className={`view-tab edge-about${cue ? " is-cue" : ""}`}
+      aria-label="About this dashboard"
+      aria-expanded={open}
+      aria-controls="overview-drawer"
+      onClick={onToggle}
+    >
+      <PanelLeftOpen className="view-tab-icon" size={18} strokeWidth={1.8} aria-hidden="true" />
+      <span className="view-tab-label" aria-hidden="true">About</span>
+    </button>
   );
 }

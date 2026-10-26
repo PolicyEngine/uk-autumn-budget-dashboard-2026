@@ -1,5 +1,5 @@
 import SourceLink from "./SourceLink";
-import { ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import TitleIcon from "./TitleIcon";
 import "./LandingPage.css";
 
@@ -97,6 +97,18 @@ export function LandingBoxes({ onOpen, list = false, labelledBy }) {
         {BOXES.map(([tab, sub, icon, title, description]) => (
           <LandingRow key={tab} tab={tab} sub={sub} icon={icon} title={title} description={description} onOpen={onOpen} />
         ))}
+        {/* The PolicyEngine website, in a new tab */}
+        <li>
+          <a className="landing-row" href="https://policyengine.org/uk" target="_blank" rel="noopener noreferrer">
+            <TitleIcon name="compass" size={18} className="landing-row-icon" />
+            <span className="landing-row-text">
+              <span className="landing-row-title">PolicyEngine</span>
+              <span className="landing-row-description">More research, the model and the API</span>
+            </span>
+            <span className="visually-hidden"> (opens in a new tab)</span>
+            <ArrowUpRight className="landing-row-chevron" size={18} strokeWidth={2} aria-hidden="true" />
+          </a>
+        </li>
       </ul>
     );
   }

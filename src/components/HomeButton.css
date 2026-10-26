@@ -17,36 +17,6 @@
   object-fit: contain;
 }
 
-/* The edge tab's tip, as a mini card */
-.tip:has(> .home-tip) {
-  z-index: 1200;
-  max-width: 260px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px var(--shadow-strong);
-}
-
-.home-tip {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: var(--fs-caption);
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--pe-gray-700);
-}
-
-.home-tip-title {
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.home-tip-hint {
-  color: var(--c-gain-text);
-  font-weight: 500;
-}
-
 @media (max-width: 768px) {
   .title-head {
     gap: 10px;
@@ -89,7 +59,7 @@
   right: -5px;
   width: 1px;
   height: 22px;
-  background: var(--card-border);
+  background: var(--c-grid);
   transform: translateY(-50%);
 }
 
@@ -107,8 +77,9 @@
     padding: 0 12px;
   }
 
+  /* The divider, midway across the 8px to the first tab */
   .view-tabs-bar.has-leading .edge-about::after {
-    display: none;
+    right: -4px;
   }
 
   .view-tabs-bar.has-leading .edge-about .view-tab-label {
