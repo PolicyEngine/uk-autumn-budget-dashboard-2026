@@ -647,7 +647,7 @@ NET_INCOME_LEVEL_VARIABLES = (
 # with its sign (taxes negative): the head's employment income, the rest of
 # market income, the benefits, then the taxes and deductions; named as the
 # programme table's rows, and besides the main programmes, each one a
-# measure moves (the Warm Home Discount top-up, fuel duty and VAT). The
+# measure moves (the Warm Home Discount, fuel duty and VAT). The
 # "other" benefits are the rest of household_benefits, and "other_taxes"
 # the rest of net income, so the parts add up to it to the penny.
 NET_INCOME_PARTS = (
@@ -656,7 +656,7 @@ NET_INCOME_PARTS = (
     "universal_credit",
     "child_benefit",
     "state_pension",
-    "warm_home_discount_top_up",
+    "warm_home_discount",
     "other_benefits",
     "income_tax",
     "national_insurance",
@@ -1541,7 +1541,7 @@ def net_income_parts(employment_income: float, net: float, levels: dict):
         "universal_credit": levels["universal_credit"],
         "child_benefit": levels["child_benefit"],
         "state_pension": levels["state_pension"],
-        "warm_home_discount_top_up": levels["cost_of_living_support_payment"],
+        "warm_home_discount": levels["cost_of_living_support_payment"],
         "other_benefits": levels["household_benefits"] - named_benefits,
         "income_tax": -(levels["income_tax"] - charge),
         "national_insurance": -levels["national_insurance"],

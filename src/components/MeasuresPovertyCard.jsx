@@ -22,17 +22,16 @@ import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
+import { shortNameOf } from "../utils/policyDetails";
 import { legendMembership } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
 
-// Why a measure moves no one across the poverty line, where the model says
-// so by construction: poverty is measured on household income (HBAI), which
-// counts neither prices nor capital gains (policyDetails.js's
-// povertyNoEffect, used only while it describes the published measure)
-const noEffectReason = (measure) => policyDetailsFor(measure)?.povertyNoEffect ?? null;
+// Why the measures with no effect move no one: one sentence, true of every
+// such measure, not a reason per measure
+const NO_EFFECT_TEXT =
+  "These measures change prices (VAT, fuel duty), capital gains or employers' costs, which the income used to measure poverty (household net income before or after housing costs) doesn't include, or they move no one across the poverty line in this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -155,15 +154,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     <>No measure on its own moves anyone across this line in {year}.</>
   );
 
-  const reasons = [...new Set(zero.map((m) => noEffectReason(m)).filter(Boolean))];
-  const zeroInfo = [
-    reasons.includes("prices") && "VAT and fuel duty change prices, which the household income poverty is measured on does not count.",
-    reasons.includes("gains") && "Business Asset Disposal Relief taxes capital gains, which that income leaves out too.",
-    zero.some((m) => !noEffectReason(m)) && `The others change incomes in ${year} but move no one across this line on their own.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
     <LsCard
       title="Which measures move poverty"
@@ -202,7 +192,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
               the chart */}
           {zero.length > 0 && (
             <p className="wf-none">
-              <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}.{zeroInfo && ` ${zeroInfo}`}
+              <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
             </p>
           )}
           <p>

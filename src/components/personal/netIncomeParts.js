@@ -18,7 +18,7 @@ export const NET_LAYERS = [
   { key: "universal_credit", label: "Universal Credit", color: CHART_COLOURS.mtrUniversalCredit },
   { key: "child_benefit", label: "Child Benefit", color: CHART_COLOURS.mtrChildBenefit },
   { key: "state_pension", label: "State Pension", color: CHART_COLOURS.netStatePension },
-  { key: "warm_home_discount_top_up", label: "Warm Home Discount top-up", color: CHART_COLOURS.netWarmHomeDiscount },
+  { key: "warm_home_discount", label: "Warm Home Discount", color: CHART_COLOURS.netWarmHomeDiscount },
   { key: "other_benefits", label: "Other benefits", color: CHART_COLOURS.mtrOtherBenefits },
   { key: "income_tax", label: "Income tax", color: CHART_COLOURS.mtrIncomeTax },
   { key: "national_insurance", label: "National Insurance", color: CHART_COLOURS.mtrNationalInsurance },

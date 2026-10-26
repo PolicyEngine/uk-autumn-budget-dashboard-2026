@@ -5,9 +5,8 @@
 // PolicyEngine/uk-living-standards-outlook.
 
 import { useMemo, useState } from "react";
-import YearRangeSelect from "../YearRangeSelect";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
-import { housingOption, periodOption } from "../controlOptions";
+import { housingOption, periodOption, yearsOption } from "../controlOptions";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   EMPTY,
@@ -92,13 +91,10 @@ export default function useInequalityView(data, range = null, setRange = null) {
             }),
         }
       : null,
-    // The years compared as the pill (the only card in its section that
-    // compares two years); the rest under the card's Options (ControlBar)
+    // One Options pill: the years compared first, then the rest (ControlBar)
     controls: {
-      primary: range && setRange && rangeYears(data).length > 2 && (
-        <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
-      ),
       options: [
+        yearsOption(rangeYears(data), range, setRange),
         {
           label: "Inequality measure",
           value: measure,

@@ -545,9 +545,16 @@
 
 .household-cards-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* The page's section heading (SectionHeading), its own margin here the
+   head's */
+.household-cards-head .section-heading {
+  margin: 0;
 }
 
 /* Once a household is chosen: the grid folds away and a strip of chips
@@ -625,6 +632,10 @@
 
 .household-cards.is-folded {
   margin-bottom: 16px;
+}
+
+.household-cards.is-folded .household-cards-head {
+  margin-bottom: 6px;
 }
 
 /* The chips: the eight cards in the same order and grid they fold from,
@@ -780,28 +791,11 @@
   }
 }
 
-.household-cards-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--pe-gray-800);
-}
-
-.household-cards-subtitle {
-  margin: 0 0 14px;
+/* Over the examples, once their figures show: what the figures are */
+.household-cards-note {
+  margin: 0 0 12px;
   font-size: var(--fs-small);
   line-height: 1.5;
-  color: var(--pe-gray-500);
-}
-
-/* "Example households", over the grid */
-.household-cards-label {
-  margin: 0 0 10px;
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--pe-gray-500);
 }
 

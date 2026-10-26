@@ -25,7 +25,8 @@ import {
   trimProjection,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
-import { periodOption } from "../controlOptions";
+import { periodOption, yearsOption } from "../controlOptions";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
 
@@ -156,10 +157,11 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     download: chartData.length
       ? { filename: `living-standards-${metric}-${adjustment}`, legendItems: lineLegendItems(series), csv }
       : null,
-    // The years compared are the section's (CurrentLawSection); the card's
-    // one Options pill holds the average first, then the rest (ControlBar)
+    // The card's one Options pill: the years compared, the average, then
+    // the rest (ControlBar)
     controls: {
       options: [
+        yearsOption(rangeYears(data), range, setRange),
         {
           label: "Average",
           value: metric.startsWith("mean") ? "mean" : "median",
