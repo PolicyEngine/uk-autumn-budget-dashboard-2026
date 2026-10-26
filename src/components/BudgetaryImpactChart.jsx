@@ -39,6 +39,8 @@ import {
 } from "../utils/displayYears";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import { revenueSentence } from "../utils/plainSentences";
+import ChartMoreInfo from "./ChartMoreInfo";
 
 // Net impact labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
@@ -293,7 +295,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <TitleIcon name="landmark" />
             <span className="title-text">Revenue impact</span>
           </h3>
-          <p className="chart-description">{CHART_DESCRIPTION}</p>
+          {/* One plain sentence for the selected year; what the chart
+              measures is in More info */}
+          <p className="chart-description">
+            {revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear)) ?? CHART_DESCRIPTION}
+          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
@@ -409,6 +415,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+      <div className="chart-footer">
+        <ChartMoreInfo year={selectedYear}>
+          <p>{CHART_DESCRIPTION}</p>
+        </ChartMoreInfo>
       </div>
     </div>
   );
