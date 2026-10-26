@@ -17,6 +17,7 @@ forecast's launch quarter from its publication date
 """
 
 import io
+import math
 import re
 import zipfile
 from pathlib import Path
@@ -129,6 +130,8 @@ def read_rhdi_per_person(source: Path, member: str = None) -> dict:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             if label in values:
                 raise EfoTableError(f"Table 1.5 has {label} twice")
+            if not math.isfinite(value):
+                raise EfoTableError(f"Table 1.5's {label} is not a number")
             values[label] = float(value)
     if "2008Q1" not in values or abs(values["2008Q1"] - 100) > 1e-6:
         raise EfoTableError("Table 1.5's RHDI index is not 100 in 2008Q1")

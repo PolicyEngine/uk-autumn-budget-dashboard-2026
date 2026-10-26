@@ -16,6 +16,7 @@ month and year, or a cell that is not a number, is never guessed at: the
 row is left out, or the cell missing.
 """
 
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -115,6 +116,8 @@ def _number(value) -> Optional[float]:
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, (int, float)):
+        if not math.isfinite(value):
+            raise HofdError(f"Not a finite number: {value!r}")
         return float(value)
     return None
 

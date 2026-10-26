@@ -5,7 +5,8 @@
   Kingdom's average price, saved unedited;
 - the OBR files: from their Internet Archive captures, only when the
   committed copy is missing, and kept only if the bytes match the SHA-256
-  pinned in :mod:`.sources`. obr.uk itself is never fetched.
+  pinned in :mod:`.sources`. obr.uk itself is never fetched: the client
+  refuses any request to it, a redirect's included.
 
 What each ONS and House Price Index download got, and when, goes into
 ``retrieved.json``; the build checks the saved files against it.
@@ -30,6 +31,25 @@ USER_AGENT = (
 
 class FetchError(RuntimeError):
     """A download that failed or did not hold what was expected."""
+
+
+def _refuse_obr(request: httpx.Request) -> None:
+    """Stop any request to obr.uk, which sits behind a human check."""
+    host = request.url.host
+    if host == "obr.uk" or host.endswith(".obr.uk"):
+        raise FetchError(f"{request.url}: obr.uk is never fetched")
+
+
+def make_client(transport: httpx.BaseTransport = None) -> httpx.Client:
+    """The client every download uses: it follows redirects, but never to
+    obr.uk."""
+    return httpx.Client(
+        headers={"User-Agent": USER_AGENT},
+        follow_redirects=True,
+        timeout=60.0,
+        event_hooks={"request": [_refuse_obr]},
+        transport=transport,
+    )
 
 
 def _get(client: httpx.Client, url: str, tries: int = 4) -> bytes:
@@ -118,15 +138,11 @@ def fetch_archived(client: httpx.Client, root: Path, log=print) -> None:
 
 def fetch_all(root: Path = Path("."), today: date = None, log=print) -> dict:
     today = today or date.today()
-    with httpx.Client(
-        headers={"User-Agent": USER_AGENT},
-        follow_redirects=True,
-        timeout=60.0,
-    ) as client:
-        fetch_archived(client, root, log)
+    with make_client() as http:
+        fetch_archived(http, root, log)
         retrieved = {
-            "ons": fetch_ons(client, root, log),
-            "hpi": fetch_hpi(client, root, today, log),
+            "ons": fetch_ons(http, root, log),
+            "hpi": fetch_hpi(http, root, today, log),
         }
     path = root / sources.RETRIEVED_PATH
     path.write_text(json.dumps(retrieved, indent=2, sort_keys=True) + "\n")

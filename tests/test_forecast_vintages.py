@@ -15,6 +15,7 @@ import math
 import shutil
 from pathlib import Path
 
+import httpx
 import openpyxl
 import pytest
 from hypothesis import given
@@ -22,7 +23,14 @@ from hypothesis import strategies as st
 
 from uk_budget_data.cli import parse_args
 from uk_budget_data.forecast_vintages import build as B
-from uk_budget_data.forecast_vintages import efo, hofd, ons, periods, sources
+from uk_budget_data.forecast_vintages import (
+    efo,
+    fetch,
+    hofd,
+    ons,
+    periods,
+    sources,
+)
 from uk_budget_data.forecast_vintages import variables as V
 
 pytestmark = pytest.mark.xdist_group("forecast_vintages")
@@ -559,6 +567,113 @@ def test_house_prices_average_complete_years_only(tmp_path):
     months["2025-01"] = 5.0
     by_year = V._house_prices({}, months)
     assert by_year == {2024: pytest.approx(650.0)}
+
+
+# --- Values that are not numbers, and growth across a gap -------------------
+
+
+@pytest.mark.parametrize("text", ["NaN", "nan", "inf", "-Infinity"])
+def test_an_ons_value_that_is_not_a_number_is_refused(tmp_path, text):
+    path = _ons_file(
+        tmp_path / "x.json", years=[("2024", "1.0"), ("2025", text)]
+    )
+    with pytest.raises(ons.OnsSeriesError, match="finite"):
+        ons.read_series(path, "CRXX", "UKEA")
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_an_obr_value_that_is_not_a_number_is_refused(value):
+    with pytest.raises(hofd.HofdError, match="finite"):
+        hofd._number(value)
+
+
+def test_a_house_price_that_is_not_a_number_is_refused(tmp_path):
+    path = tmp_path / "hpi.csv"
+    path.write_text(
+        '"Name","URI","Period","Average price All property types"\n'
+        '"United Kingdom","x","2024-01","290000"\n'
+        '"United Kingdom","x","2024-02","NaN"\n'
+    )
+    with pytest.raises(B.BuildError, match="2024-02"):
+        B.read_hpi(path)
+
+
+def test_an_outturn_that_is_not_a_number_is_refused():
+    row = {periods.fiscal_label(y): 100.0 for y in range(2010, 2020)}
+    mine = dict(row, **{"2015-16": math.nan})
+    with pytest.raises(B.BuildError, match="2015-16"):
+        B.check_outturn(_variable(), _measure(tolerance=1.0), mine, row)
+
+
+def test_the_file_is_never_written_with_a_value_that_is_not_a_number():
+    with pytest.raises(ValueError):
+        B.output_text({"values": {"2025": math.nan}})
+
+
+def test_growth_needs_the_period_before():
+    assert ons.growth({2020: 100.0, 2022: 121.0}) == {}
+    assert ons.growth({2020: 100.0, 2021: 110.0, 2023: 121.0}) == {
+        2021: pytest.approx(10.0)
+    }
+    assert ons.growth({"2023-24": 100.0, "2025-26": 110.0}) == {}
+    assert ons.growth({"2024Q4": 100.0, "2025Q1": 101.0}) == {
+        "2025Q1": pytest.approx(1.0)
+    }
+
+
+@given(st.sets(st.integers(1950, 2030), min_size=1, max_size=40))
+def test_growth_is_only_ever_on_the_year_before(years):
+    levels = {y: 100.0 + y for y in years}
+    out = ons.growth(levels)
+    assert set(out) == {y for y in years if y - 1 in years}
+    for y, rate in out.items():
+        assert rate == pytest.approx((levels[y] / levels[y - 1] - 1) * 100)
+    assert list(out) == sorted(out)
+
+
+def test_growth_outturn_two_years_apart_has_nothing_to_check():
+    # Every other year, each 2% up: no year has the year before it
+    levels = {
+        y: 100.0 * 1.02 ** ((y - 2000) // 2) for y in range(2000, 2018, 2)
+    }
+    row = {y: 2.0 for y in range(2010, 2018)}
+    with pytest.raises(B.BuildError, match="only 0"):
+        B.check_outturn(
+            _variable("calendar"), _measure(kind="growth"), levels, row
+        )
+
+
+# --- Downloads never reach obr.uk --------------------------------------------
+
+
+def test_a_redirect_to_obr_uk_is_never_followed(tmp_path):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        # An archive capture that redirects to the live page
+        return httpx.Response(
+            302, headers={"Location": "https://obr.uk/docs/dlm_uploads/x.xlsx"}
+        )
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="obr.uk is never fetched"):
+            fetch.fetch_archived(http, tmp_path, log=lambda _: None)
+    assert seen == ["web.archive.org"]
+
+
+def test_obr_uk_is_never_requested_directly():
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(200, content=b"")
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        for url in ("https://obr.uk/x", "https://www.obr.uk/x"):
+            with pytest.raises(fetch.FetchError):
+                fetch._get(http, url)
+    assert seen == []
 
 
 # --- Periods and launches ----------------------------------------------------

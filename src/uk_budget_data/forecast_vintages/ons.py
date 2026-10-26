@@ -17,9 +17,12 @@ A period the ONS leaves blank is missing, never zero.
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+from uk_budget_data.forecast_vintages import periods
 
 ONS_DATA_URL = "https://www.ons.gov.uk/{uri}/data"
 MONTHS = (
@@ -64,9 +67,13 @@ def _number(text) -> Optional[float]:
     if not text:
         return None
     try:
-        return float(text)
+        value = float(text)
     except ValueError:
         return None
+    # "NaN" and "inf" parse as floats; they are not observations
+    if not math.isfinite(value):
+        raise OnsSeriesError(f"Not a finite number: {text!r}")
+    return value
 
 
 def _quarter_key(date: str) -> str:
@@ -157,10 +164,27 @@ def calendar_from_quarters(quarters: dict, how: str = "mean") -> dict:
 
 
 def growth(levels: dict) -> dict:
-    """Percentage change on the previous period, for consecutive keys."""
-    keys = sorted(levels)
+    """Percentage change on the period before, where both are there.
+
+    A period whose period before is missing has no growth: a change over
+    two or more periods is never taken for one period's.
+    """
     out = {}
-    for prev, key in zip(keys, keys[1:]):
-        if levels[prev]:
-            out[key] = (levels[key] / levels[prev] - 1) * 100
-    return out
+    for key, value in levels.items():
+        prev = levels.get(_period_before(key))
+        if prev:
+            out[key] = (value / prev - 1) * 100
+    return dict(
+        sorted(out.items(), key=lambda item: periods.sort_key(item[0]))
+    )
+
+
+def _period_before(key):
+    if isinstance(key, int):
+        return key - 1
+    if periods.QUARTER.match(key):
+        return periods.quarter_from_number(periods.quarter_number(key) - 1)
+    match = periods.FISCAL.match(key)
+    if match:
+        return periods.fiscal_label(int(match[1]) - 1)
+    raise ValueError(f"Not a period: {key!r}")

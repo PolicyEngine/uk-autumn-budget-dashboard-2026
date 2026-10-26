@@ -29,6 +29,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 
 from uk_budget_data.forecast_vintages import efo, hofd, ons, periods, sources
@@ -136,7 +137,10 @@ def read_hpi(path: Path) -> dict:
             raise BuildError(f"{path}: {month} twice")
         text = (row[column] or "").strip()
         if text:
-            prices[month] = float(text)
+            price = float(text)
+            if not math.isfinite(price):
+                raise BuildError(f"{path}: {month}'s price is {text!r}")
+            prices[month] = price
     return prices
 
 
@@ -180,6 +184,14 @@ def check_outturn(
     for period in common:
         gap = mine[period] - row[period]
         size = abs(gap) / abs(row[period]) if measure.relative else abs(gap)
+        # A value that is not a number (or a zero row under a relative
+        # tolerance) never passes
+        if not math.isfinite(size):
+            raise BuildError(
+                f"{variable.id} ({measure.unit}): outturn {mine[period]!r} "
+                f"in {period} cannot be set against the database's "
+                f"{row[period]!r}"
+            )
         gaps.append((period, gap, size))
     worst = max(gaps, key=lambda g: g[2])
     if worst[2] > measure.tolerance:
@@ -489,5 +501,9 @@ def build(root: Path = Path(".")) -> dict:
 
 
 def output_text(doc: dict) -> str:
-    """The file's bytes: two-space JSON and a final newline."""
-    return json.dumps(doc, indent=2, ensure_ascii=True) + "\n"
+    """The file's bytes: two-space JSON and a final newline.
+
+    A value that is not a number (NaN, infinity) has no JSON form and
+    stops the build rather than writing what a browser cannot read.
+    """
+    return json.dumps(doc, indent=2, ensure_ascii=True, allow_nan=False) + "\n"
