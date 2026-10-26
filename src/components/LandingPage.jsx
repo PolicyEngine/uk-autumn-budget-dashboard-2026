@@ -34,7 +34,7 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
 
 /** The three ways in, in order: [tab, sub, icon, title, line]. */
 const BOXES = [
-  ["dashboard", "finances", "users", "The Budget and society", "Public finances, and who gains and loses"],
+  ["dashboard", "finances", "users", "The Budget and society", "Costs and who gains or loses"],
   ["household", undefined, "house", "Your household", "See how your income changes"],
   ["policies", undefined, "list", "What's in the Budget", "Every measure, and how we model it"],
 ];

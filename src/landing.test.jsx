@@ -56,7 +56,7 @@ describe("the landing page", () => {
     expect(container).not.toHaveTextContent("Choose a year and policies");
     // Each box: a title, one short line and "Explore", and no figure
     expect(within(page).getAllByRole("link", { name: /Explore$/ }).map((link) => [link.getAttribute("href"), link.textContent])).toEqual([
-      ["?tab=dashboard&sub=finances", "The Budget and societyPublic finances, and who gains and losesExplore→"],
+      ["?tab=dashboard&sub=finances", "The Budget and societyCosts and who gains or losesExplore→"],
       ["?tab=household", "Your householdSee how your income changesExplore→"],
       ["?tab=policies", "What's in the BudgetEvery measure, and how we model itExplore→"],
     ]);
@@ -228,7 +228,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     // The ways in, as a list of three rows under "Go to"
     const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
     expect(rows.map((row) => row.textContent)).toEqual([
-      "The Budget and societyPublic finances, and who gains and loses",
+      "The Budget and societyCosts and who gains or loses",
       "Your householdSee how your income changes",
       "What's in the BudgetEvery measure, and how we model it",
       "PolicyEngineMore research, the model and the API (opens in a new tab)",
