@@ -41,6 +41,7 @@ import TitleIcon from "./TitleIcon";
 import { revenueSentence } from "../utils/plainSentences";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { PE_MODEL_SOURCE } from "./InfoSections";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 
 // Net impact labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
@@ -205,15 +206,15 @@ const CHART_DESCRIPTION =
 
 // The card's "About this chart"
 const REVENUE_INFO = {
-  shows:
-    "How much the selected measures change the government's budget each year, in £ billion in cash terms: above zero they raise money, below zero they cost the Treasury.",
+  shows: "How much the selected measures change government revenue each year, in £ billion, cash terms.",
   how: [
-    "Each measure's figure is taxes collected less benefits and other spending, with the measure and under current law, for the whole UK.",
+    "Taxes collected less benefits and other spending, with each measure against current law.",
     "The Plan 2 student loan measure is costed as the change in loan repayments.",
     "The net line adds up the selected measures' separate figures.",
   ],
-  definitions: [{ ref: "ownRuns" }, { ref: "static" }],
+  caveats: ["Static costings: no behavioural responses, and no interactions between measures in the net line."],
   sources: [PE_MODEL_SOURCE],
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
 };
 
 function BudgetaryImpactChart({ data, selectedYear }) {

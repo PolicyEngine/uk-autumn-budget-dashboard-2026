@@ -41,6 +41,7 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { PE_MODEL_SOURCE } from "./InfoSections";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
@@ -61,13 +62,13 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 // The card's "About this chart"
 const ABSOLUTE_INFO = {
-  shows: "The average change in household net income per household in each income decile, in £ a year in cash terms.",
+  shows: "Average change in household net income per household in each income decile, £ a year, cash terms.",
   how: [
-    "Households are ranked into deciles each year by their equivalised income before housing costs under current law.",
-    "Each bar stacks the selected measures' own effects; its total adds them up.",
+    "Deciles rank households each year by equivalised income before housing costs, under current law.",
+    "Each bar stacks the selected measures' own effects.",
   ],
-  definitions: [{ ref: "netIncome" }, { ref: "incomeGroups" }, { ref: "ownRuns" }],
   sources: [PE_MODEL_SOURCE],
+  method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {

@@ -41,6 +41,7 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { PE_MODEL_SOURCE } from "./InfoSections";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
@@ -72,12 +73,10 @@ const decileOrder = [
 
 // The card's "About this chart"
 const RELATIVE_INFO = {
-  shows: "Each income decile's total change in household net income, as a percentage of its total net income under current law.",
-  how: [
-    "Totals are over every household in the decile, weighted to the UK, so a household with a larger income counts for more than in an average of each household's own percentage.",
-  ],
-  definitions: [{ ref: "netIncome" }, { ref: "incomeGroups" }],
+  shows: "Each decile's total change in household net income, as a percentage of its total net income.",
+  how: ["Totals over all its households, so larger incomes weigh more than in an average of percentages."],
   sources: [PE_MODEL_SOURCE],
+  method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {

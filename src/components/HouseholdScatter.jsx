@@ -29,7 +29,7 @@ import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { PE_MODEL_SOURCE } from "./InfoSections";
-import { MethodLink } from "../utils/methodLink";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
@@ -37,9 +37,6 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
 import PillSelect from "./PillSelect";
 import { shortNameOf } from "../utils/policyDetails";
-
-// Methodology's Population impact section, where the scatter's bands are set out
-const METHOD_SCATTER_ANCHOR = "method-population";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -104,18 +101,14 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each group's row is its ${basisLabel} net income before the measures, in every year shown, so a dot moves only sideways when the year changes and its row is the same households.`,
-          `A dot sits within its group's ${pounds(SCATTER_BINS.income_band_width)} income band and change band, not on any one household.`,
-          `The change axis covers the 1st to 99th percentile of changes across all years, never beyond ±${pounds(CHANGE_AXIS_DOMAIN[1])}, and stays put when the year changes; larger changes sit at its edge.`,
-          "A group with no change (under £1 either way) is an unfilled ring on £0.",
-          <>
-            How the groups and bands are set:{" "}
-            <MethodLink anchor={METHOD_SCATTER_ANCHOR}>Methodology</MethodLink>.
-          </>,
+          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the measures, fixed across years.`,
+          "So a dot moves only sideways when the year changes, and its row stays the same households.",
+          `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
+          "No change (under £1 either way) is an unfilled ring on £0.",
         ],
-        definitions: [{ ref: "netIncome" }, { ref: "static" }],
         caveats: ["Groups with too few survey households are left out."],
         sources: [PE_MODEL_SOURCE],
+        method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
       }}
     />
   );
