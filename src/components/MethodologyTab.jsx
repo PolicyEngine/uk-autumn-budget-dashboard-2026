@@ -4,7 +4,8 @@ import ForecastFeedMethod from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
 import MethodGlossary from "./methodology/MethodGlossary";
 import { HIGHEST_PERCENTILE, LOWEST_PERCENTILE, ordinal } from "../utils/incomePosition";
-import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "./methodology/anchors";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
@@ -585,21 +586,20 @@ function MethodologyTab({ onShowTab }) {
               <div id={METHOD_SECTIONS.singleYear} className="method-anchor">
                 <h3 className="method-card-title">Household calculation</h3>
                 <p>
-                  The same model and measures, applied to one household&apos;s answers. How it works
-                  is under{" "}
-                  <ViewLink tab="household" hash={HOUSEHOLD_ABOUT_ID} onShowTab={onShowTab}>
-                    &ldquo;About these figures&rdquo;
-                  </ViewLink>
-                  , below the results on the{" "}
+                  The same model and measures, applied to one household&apos;s answers on the{" "}
                   <ViewLink tab="household" onShowTab={onShowTab}>
                     Household impact tab
                   </ViewLink>
-                  .
+                  . How it works is under Technical details, below.
                 </p>
               </div>
             }
             details={
               <>
+                <h3 id={METHOD_ANCHORS.householdCalc} className="method-details-title method-anchor">
+                  How the household calculation works
+                </h3>
+                <FactList items={SINGLE_YEAR_METHOD.map(([term, text]) => [term, text])} />
                 <h3 id={METHOD_ANCHORS.incomePosition} className="method-details-title method-anchor">
                   Your place in the UK
                 </h3>

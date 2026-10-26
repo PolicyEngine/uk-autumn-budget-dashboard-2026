@@ -8,7 +8,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
 const INTRO =
-  /^Estimates from PolicyEngine UK of how Autumn Budget 2026 measures affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, March 2026\.$/;
+  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 measures affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, March 2026( \(opens in a new tab\))?\.$/;
 
 const BOXES = {
   society: /^The Budget and society/,
@@ -70,8 +70,9 @@ describe("the landing page", () => {
     const tabbable = [...container.querySelectorAll(".main-content a[href], .main-content button, .main-content [tabindex]")]
       .filter((node) => !node.closest(".title-row, [hidden], [inert]") && node.tabIndex >= 0);
     expect(tabbable.slice(0, 5).map((node) => node.textContent)).toEqual([
-      "PolicyEngine UK",
-      "Economic and fiscal outlook, March 2026",
+      // A source link says it opens in a new tab, to a screen reader
+      "PolicyEngine UK (opens in a new tab)",
+      "Economic and fiscal outlook, March 2026 (opens in a new tab)",
       expect.stringMatching(BOXES.society),
       expect.stringMatching(BOXES.household),
       expect.stringMatching(BOXES.policies),
