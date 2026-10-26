@@ -120,7 +120,11 @@ describe("the committed file", () => {
       /outturn/,
     ],
     ["a value no larger than any figure the file holds", (d) => (byId(d, "cpi").level.outturn["2020"] = MAX_VALUE * 2), /outturn/],
-    ["an annual rate only for a quarterly measure's £", (d) => (byId(d, "real_gdp").units.level.annualise = true), /transform/],
+    ["an annual rate only for a quarterly measure's £", (d) => (byId(d, "real_gdp").units.level.annualise = true), /annual rate/],
+    // Found by the sixth review: a quarter's figure under an axis that
+    // names a year
+    ["a quarterly measure's £ always at an annual rate", (d) => (byId(d, "rhdi_per_person").units.level.annualise = false), /annual rate/],
+    ["a quarterly measure's £ that says it is at an annual rate", (d) => delete byId(d, "rhdi_per_person").units.level.annualise, /annual rate/],
     ["an annual-rate flag that is true or false", (d) => (byId(d, "rhdi_per_person").units.level.annualise = "true"), /transform/],
     ["a % change only in %", (d) => (byId(d, "real_gdp").units.level.transform = "growth"), /transform/],
     ["a check's largest gap within its tolerance", (d) => (byId(d, "real_gdp").level.check.largest_gap = 1.5), /beyond its tolerance/],
@@ -189,12 +193,24 @@ describe("the committed file", () => {
       },
       /only one value/,
     ],
+    // Found by the sixth review: launch figures that meet no outturn set
+    // no kind, so levels drawn from growth rates passed
+    [
+      "a launch figure that meets the outturn",
+      (d) => {
+        const m = byId(d, "real_gdp").level;
+        m.outturn = { 1948: m.outturn["1948"], 1949: m.outturn["1949"] };
+        m.kind = "level";
+        Object.assign(m.check, { in: m.unit, periods: ["1948", "1949"], largest_gap_period: "1948" });
+      },
+      /no forecast's launch figure meets the outturn/,
+    ],
     [
       "a forecast with a figure for its launch period",
       (d) => {
         for (const v of byId(d, "real_gdp").level.vintages) delete v.values[String(v.launch)];
       },
-      /no forecast has a figure for its launch period/,
+      /no forecast's launch figure meets the outturn/,
     ],
     [
       "an index with one base",

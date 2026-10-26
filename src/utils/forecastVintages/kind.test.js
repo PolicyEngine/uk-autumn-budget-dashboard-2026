@@ -41,6 +41,8 @@ function apply(data, op) {
     let size = 0;
     for (const x of Object.values(measure.outturn)) size = Math.max(size, Math.abs(x));
     vintage.values[launch] = measure.outturn[launch] + op.by * size;
+  } else if (op.op === "keep_outturn") {
+    measure.outturn = Object.fromEntries(Object.entries(measure.outturn).filter(([k]) => op.periods.includes(k)));
   } else throw new Error(`Unknown kind case op ${op.op}`);
 }
 

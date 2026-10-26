@@ -224,7 +224,9 @@ function measureProblem(id, name, measure, frequency) {
  * under 100% either way. Each forecast's figure for its launch period, an
  * estimate of outturn: a level's is near the outturn; a growth rate's near
  * the outturn's own rate; an index's ratio to the outturn is the same in
- * every forecast. At least one forecast has that figure, so the kind is
+ * every forecast. At least one forecast's launch figure is set against the
+ * outturn (the outturn has that period, and for a growth rate the one a
+ * year before, above zero; for an index it is above zero), so the kind is
  * set against something. The build refuses to write a file this refuses
  * (check_kind in src/uk_budget_data/forecast_vintages/build.py), on the
  * cases in tests/fixtures/forecast_vintages_kind_cases.json.
@@ -242,7 +244,7 @@ export function kindProblem(id, measure, frequency) {
   let size = 0;
   for (const v of outturn.values()) size = Math.max(size, Math.abs(v));
   const lag = frequency === "quarterly" ? 4 : 1;
-  let estimates = 0;
+  let compared = 0;
   let [low, high] = [Infinity, -Infinity];
   for (const v of measure.vintages) {
     const launch = periodIndex(v.launch, frequency);
@@ -252,17 +254,24 @@ export function kindProblem(id, measure, frequency) {
       measure.kind === "index" ? all.every((x) => x > 0) : measure.kind === "growth" ? all.every((x) => Math.abs(x) < MAX_GROWTH) : true;
     const estimate = values.get(launch);
     const [now, before] = [outturn.get(launch), outturn.get(launch - lag)];
+    // Set against the outturn only where the outturn has what it needs
     if (reads && estimate !== undefined) {
-      estimates += 1;
-      if (measure.kind === "level" && now !== undefined) reads = Math.abs(estimate - now) <= NEAR_LEVEL * size;
+      if (measure.kind === "level" && now !== undefined) {
+        compared += 1;
+        reads = Math.abs(estimate - now) <= NEAR_LEVEL * size;
+      }
       if (measure.kind === "growth" && now !== undefined && before > 0) {
+        compared += 1;
         reads = Math.abs(estimate - 100 * (now / before - 1)) <= NEAR_GROWTH;
       }
-      if (measure.kind === "index" && now > 0) [low, high] = [Math.min(low, estimate / now), Math.max(high, estimate / now)];
+      if (measure.kind === "index" && now > 0) {
+        compared += 1;
+        [low, high] = [Math.min(low, estimate / now), Math.max(high, estimate / now)];
+      }
     }
     if (!reads) return `${id}: the ${v.label} forecast's figures do not read as ${KIND_WORDS[measure.kind]}`;
   }
-  if (!estimates) return `${id}: no forecast has a figure for its launch period to set its kind against`;
+  if (!compared) return `${id}: no forecast's launch figure meets the outturn to set its kind against`;
   if (high > INDEX_SPREAD * low) return `${id}: its forecasts do not read as one index`;
   return null;
 }
@@ -275,7 +284,10 @@ function unitProblem(id, unit, spec, frequency) {
   // £ is a quarter at an annual rate
   if (!absent(spec.transform) && !(spec.transform === "growth" && unit === "pct")) return `${id}: an unknown unit transform`;
   if (!absent(spec.annualise) && typeof spec.annualise !== "boolean") return `${id}: an unknown unit transform`;
-  if (spec.annualise && !(unit === "level" && frequency === "quarterly")) return `${id}: an unknown unit transform`;
+  // and it always is: its axis names a year, and its figures are a quarter's
+  if (Boolean(spec.annualise) !== (unit === "level" && frequency === "quarterly")) {
+    return `${id}: £ is at an annual rate only, and always, for a quarterly measure`;
+  }
   return null;
 }
 

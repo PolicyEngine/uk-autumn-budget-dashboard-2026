@@ -698,6 +698,10 @@ def _apply_kind_op(data: dict, op: dict) -> None:
         vintage["values"][launch] = (
             measure["outturn"][launch] + op["by"] * size
         )
+    elif op["op"] == "keep_outturn":
+        measure["outturn"] = {
+            k: x for k, x in measure["outturn"].items() if k in op["periods"]
+        }
     else:
         raise ValueError(f"Unknown kind case op {op['op']!r}")
 
@@ -821,6 +825,66 @@ def test_a_gap_within_its_tolerance_only_before_rounding_is_refused():
         B.check_as_read(
             "test", "calendar", "level", "£ billion", check, B._ordered(mine)
         )
+
+
+def test_a_mistyped_tolerance_is_refused_as_the_page_reads_it():
+    # check_outturn takes True for 1; the page refuses a tolerance that is
+    # not a number, so the build does too
+    row = {y: 100.0 for y in range(2010, 2020)}
+    check = B.check_outturn(
+        _variable("calendar"), _measure(tolerance=True), row, row
+    )
+    with pytest.raises(B.BuildError, match="incomplete"):
+        B.check_as_read(
+            "test",
+            "calendar",
+            "level",
+            "£ billion",
+            json.loads(json.dumps(check)),
+            B._ordered(row),
+        )
+
+
+def _units(variable_id: str, unit: str, **spec):
+    variable = next(v for v in V.VARIABLES if v.id == variable_id)
+    units = {**variable.units, unit: {**variable.units[unit], **spec}}
+    return dataclasses.replace(variable, units=units)
+
+
+def test_every_variables_units_can_be_drawn():
+    for variable in V.VARIABLES:
+        B.check_units(variable)
+
+
+@pytest.mark.parametrize(
+    "variable",
+    [
+        _units("rhdi_per_person", "level", annualise=False),
+        dataclasses.replace(
+            _units("rhdi_per_person", "level"),
+            units={
+                **_units("rhdi_per_person", "level").units,
+                "level": {
+                    k: x
+                    for k, x in _units("rhdi_per_person", "level")
+                    .units["level"]
+                    .items()
+                    if k != "annualise"
+                },
+            },
+        ),
+        _units("real_gdp", "level", annualise=True),
+        _units("rhdi_per_person", "index", annualise=True),
+    ],
+    ids=["quarterly £ not annual", "quarterly £ unsaid", "annual £", "index"],
+)
+def test_a_quarterly_measures_pounds_and_only_those_are_at_an_annual_rate(
+    variable,
+):
+    # Its axis names a year and its figures are a quarter's; the page's
+    # loader refuses a file otherwise
+    with pytest.raises(B.BuildError, match="annual rate"):
+        B.check_units(variable)
 
 
 # --- An outturn check reads as true -------------------------------------------

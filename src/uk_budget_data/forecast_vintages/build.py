@@ -33,6 +33,7 @@ import hashlib
 import io
 import json
 import math
+import re
 from pathlib import Path
 
 from uk_budget_data.forecast_vintages import efo, hofd, ons, periods, sources
@@ -240,56 +241,128 @@ def check_terms(kind: str, unit: str) -> str:
     return unit if kind == "level" else "% change on a year earlier"
 
 
+# The page's loader refuses a figure past this (load.js, MAX_VALUE)
+MAX_VALUE = 1e9
+_PAGE_PERIODS = {
+    "quarterly": re.compile(r"([0-9]{4})Q([1-4])"),
+    "fiscal": re.compile(r"([0-9]{4})-([0-9]{2})"),
+    "calendar": re.compile(r"[0-9]{4}"),
+}
+
+
+def _page_text(value) -> str:
+    """``String(value)`` in the page's JavaScript, for text and integers.
+
+    JSON has one kind of number, so ``2017.0`` reaches the page as 2017.
+    """
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _is_page_number(value) -> bool:
+    """A number the page's loader takes (isNumber in load.js)."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and abs(value) <= MAX_VALUE
+    )
+
+
+def page_period(key, frequency: str):
+    """The period number the page reads ``key`` as, or None if not one.
+
+    As the page's loader (isPeriod in load.js) and periodIndex
+    (transforms.js) read a key: non-empty text or an integer, written as
+    the data writes that period, in a year from 1900 to 2100.
+    """
+    if isinstance(key, bool):
+        return None
+    if not (
+        (isinstance(key, str) and key)
+        or (
+            isinstance(key, (int, float))
+            and math.isfinite(key)
+            and float(key).is_integer()
+        )
+    ):
+        return None
+    text = _page_text(key)
+    match = _PAGE_PERIODS[frequency].fullmatch(text)
+    if not match:
+        return None
+    if frequency == "quarterly":
+        index = int(match[1]) * 4 + int(match[2]) - 1
+        back, year = f"{index // 4}Q{index % 4 + 1}", index // 4
+    elif frequency == "fiscal":
+        index = int(match[1])
+        back, year = f"{index}-{str(index + 1)[-2:]}", index
+    else:
+        index = int(text)
+        back, year = str(index), index
+    return index if back == text and 1900 <= year <= 2100 else None
+
+
 def check_as_read(
     name: str, frequency: str, kind: str, unit: str, check, outturn: dict
 ) -> None:
     """Raise unless the page reads ``check`` as written as a true check.
 
-    Takes the check and the outturn as written, so its figures are the
-    ones the page reads; the page's loader (load.js, checkProblem) refuses
-    a check this refuses, on the cases in
+    Takes the check and the outturn as written (as JSON reads them back),
+    so its fields are the ones the page reads; the page's loader (load.js,
+    checkProblem) refuses exactly the checks this refuses, on the cases in
     tests/fixtures/forecast_vintages_check_cases.json. Every measure has
-    one, in its kind's terms (:func:`check_terms`), over periods of the
-    outturn in order, the largest gap's among them. A tolerance is a share
-    of the value only on gaps in the value's units (a forecast of levels),
-    and under one; no tolerance is finer than the four decimals a gap is
-    written to, and a gap is 0 or no finer. The gap as written is within
-    the tolerance as written, as the page states both: the gap is set
-    against the tolerance before it is rounded, and rounding could carry
-    it past.
+    one: a source in words, in its kind's terms (:func:`check_terms`), over
+    periods of the outturn in order, the largest gap's among them. A
+    tolerance is a share of the value only on gaps in the value's units (a
+    forecast of levels), and under one; no tolerance is finer than the
+    four decimals a gap is written to, and a gap is 0 or no finer. The gap
+    as written is within the tolerance as written, as the page states
+    both: the gap is set against the tolerance before it is rounded, and
+    rounding could carry it past.
     """
     where = f"{name}: its outturn check"
     if not isinstance(check, dict):
         raise BuildError(f"{name}: no outturn check")
-    if check.get("in") != check_terms(kind, unit):
-        raise BuildError(f"{where} is not in {check_terms(kind, unit)}")
-    keys = check.get("periods") or []
-    order = [periods.sort_key(_period(k, frequency)) for k in keys]
-    if (
-        not keys
-        or any(str(k) not in outturn for k in keys)
-        or any(b <= a for a, b in zip(order, order[1:]))
-        or check.get("largest_gap_period") not in keys
-    ):
-        raise BuildError(f"{where}'s periods are not the outturn's in order")
-    tolerance, share = check["tolerance"], check["tolerance_is_share"]
-    gap = abs(check["largest_gap"])
-    if tolerance < 10**-DECIMALS:
+    keys = check.get("periods")
+    numbers = (
+        [page_period(k, frequency) for k in keys]
+        if isinstance(keys, list)
+        else []
+    )
+    tolerance, gap = check.get("tolerance"), check.get("largest_gap")
+    share = check.get("tolerance_is_share")
+    at = check.get("largest_gap_period")
+    whole = (
+        isinstance(check.get("against"), str)
+        and check["against"] != ""
+        and check.get("in") == check_terms(kind, unit)
+        and numbers
+        and all(t is not None for t in numbers)
+        and all(_page_text(k) in outturn for k in keys)
+        and all(b > a for a, b in zip(numbers, numbers[1:]))
+        and isinstance(share, bool)
+        and _is_page_number(tolerance)
+        and tolerance >= 10**-DECIMALS
+        and (not share or (tolerance < 1 and kind == "level"))
+        and _is_page_number(gap)
+        and (gap == 0 or abs(gap) >= 10**-DECIMALS)
+        and page_period(at, frequency) is not None
+        and at in keys
+    )
+    if not whole:
         raise BuildError(
-            f"{where}: a tolerance finer than {DECIMALS} decimals"
+            f"{where} is incomplete (it must be in "
+            f"{check_terms(kind, unit)}, over the outturn's periods in "
+            f"order, with a tolerance and gap of {DECIMALS} decimals or "
+            "more, and a share of the value only for levels)"
         )
-    if share and not (tolerance < 1 and kind == "level"):
-        raise BuildError(
-            f"{where}: a share of the value needs levels and is under one"
-        )
-    if gap != 0 and gap < 10**-DECIMALS:
-        raise BuildError(f"{where}: a gap finer than {DECIMALS} decimals")
     if share:
         # A share of the OBR's own figure, the outturn less the gap
-        at = outturn[str(check["largest_gap_period"])]
-        within = gap <= tolerance * abs(at - check["largest_gap"])
+        within = abs(gap) <= tolerance * abs(outturn[_page_text(at)] - gap)
     else:
-        within = gap <= tolerance
+        within = abs(gap) <= tolerance
     if not within:
         raise BuildError(f"{where}'s largest gap is beyond its tolerance")
 
@@ -322,8 +395,10 @@ def check_kind(
     an index's ratio to the outturn is the same in every forecast, the
     largest within 1.5 times the smallest. The figures after it are
     forecasts, never set against the outturn. Every growth rate is under
-    100% either way and every index above zero, and at least one forecast
-    has its launch figure, so the kind is set against something.
+    100% either way and every index above zero, and at least one
+    forecast's launch figure is set against the outturn (it has that
+    period, and for a growth rate the one a year before above zero; for an
+    index it is above zero), so the kind is set against something.
     """
     lag = 4 if frequency == "quarterly" else 1
     known = {
@@ -331,7 +406,7 @@ def check_kind(
     }
     size = max(abs(v) for v in known.values())
     ratios = []
-    estimates = 0
+    compared = 0
     for vintage in vintages:
         where = f"{name}: the {vintage['label']} forecast's figures"
         values = {
@@ -345,10 +420,10 @@ def check_kind(
         launch = periods.sort_key(_period(vintage["launch"], frequency))
         if launch not in values:
             continue
-        estimates += 1
         estimate = values[launch]
         now, before = known.get(launch), known.get(launch - lag)
         if kind == "level" and now is not None:
+            compared += 1
             if abs(estimate - now) > NEAR_LEVEL * size:
                 raise BuildError(f"{where} do not start near the outturn")
         if (
@@ -356,14 +431,18 @@ def check_kind(
             and now is not None
             and before is not None
             and before > 0
-            and abs(estimate - 100 * (now / before - 1)) > NEAR_GROWTH
         ):
-            raise BuildError(f"{where} do not start near the outturn's rate")
+            compared += 1
+            if abs(estimate - 100 * (now / before - 1)) > NEAR_GROWTH:
+                raise BuildError(
+                    f"{where} do not start near the outturn's rate"
+                )
         if kind == "index" and now is not None and now > 0:
+            compared += 1
             ratios.append(estimate / now)
-    if not estimates:
+    if not compared:
         raise BuildError(
-            f"{name}: no forecast has a figure for its launch period"
+            f"{name}: no forecast's launch figure meets the outturn"
         )
     if ratios and max(ratios) > INDEX_SPREAD * min(ratios):
         raise BuildError(f"{name}: its forecasts are not one index")
@@ -462,12 +541,13 @@ def build_measure(
             "person by total population (index, 2008 Q1 = 100)"
         )
     written = _ordered(outturn)
+    # As the page reads it: JSON written and read back
     check_as_read(
         variable.id,
         variable.frequency,
         measure.kind,
         measure.unit,
-        check,
+        json.loads(json.dumps(check)),
         written,
     )
     check_kind(
@@ -605,6 +685,26 @@ def _sources_meta(series: dict, retrieved: dict, hpi: dict) -> dict:
     }
 
 
+def check_units(variable: V.Variable) -> None:
+    """Raise unless the variable's unit pills are ones the page can draw."""
+    for unit, spec in variable.units.items():
+        if spec["from"] == "share" and variable.share is None:
+            raise BuildError(f"{variable.id}: {unit} reads a share it lacks")
+        # A quarterly measure's £ is always at an annual rate (its axis
+        # names a year), and nothing else is: the page's loader refuses a
+        # file otherwise
+        quarterly_pounds = (
+            unit == "level" and variable.frequency == "quarterly"
+        )
+        if spec.get("annualise", False) is not quarterly_pounds:
+            raise BuildError(
+                f"{variable.id}: {unit} is at an annual rate only if it is "
+                "a quarterly measure's £"
+            )
+    if variable.default_unit not in variable.units:
+        raise BuildError(f"{variable.id}: default unit not offered")
+
+
 def build(root: Path = Path(".")) -> dict:
     verify_archived(sources.HOFD, root)
     retrieved = read_retrieved(root)
@@ -634,13 +734,7 @@ def build(root: Path = Path(".")) -> dict:
                 else None
             ),
         }
-        for unit, spec in variable.units.items():
-            if spec["from"] == "share" and variable.share is None:
-                raise BuildError(
-                    f"{variable.id}: {unit} reads a share it lacks"
-                )
-        if variable.default_unit not in variable.units:
-            raise BuildError(f"{variable.id}: default unit not offered")
+        check_units(variable)
         out.append(record)
 
     return {

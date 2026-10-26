@@ -28,8 +28,9 @@
  *   leaves every word as it was too (B).
  * - It mounts on its default unit, showing what the builder makes of that
  *   view and nothing else: its reason it cannot be drawn, or a chart with
- *   a line for the outturn and each forecast and the view's labelled
- *   points, with their values, in the window it opens on (C).
+ *   a line for each forecast and the outturn, each through its own
+ *   series' points on one axis, and the view's labelled points with their
+ *   values, in the window it opens on (C).
  *
  * WHAT_IT_HOLDS names every field the file has. A field it does not name
  * fails the test, so a field added to the file must be added there.
@@ -42,7 +43,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import ForecastVintagesView, { cardNotes, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
 import { chartLayout, legendItems, xTicks } from "./VintageChart";
 import { forecastVintagesProblem, resetForecastVintages } from "../../utils/forecastVintages/load";
-import { UNIT_ORDER, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
 
 vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
@@ -151,8 +152,9 @@ function vintageOk(v, frequency, kind) {
 // already over, near the outturn as its kind reads it (a level within
 // half the outturn's largest size, a growth rate within 10 points of the
 // outturn's rate, an index's ratio to the outturn within 1.5 times of
-// every other forecast's); one forecast at least with that figure. The
-// figures after the launch are forecasts and are never set against it
+// every other forecast's), where the outturn has what that needs; one
+// forecast's at least so set. The figures after the launch are forecasts
+// and are never set against it
 function kindReads(m, outturn, frequency) {
   const lag = frequency === "quarterly" ? 4 : 1;
   const size = Math.max(...[...outturn.values()].map(Math.abs));
@@ -165,11 +167,13 @@ function kindReads(m, outturn, frequency) {
     if (m.kind === "growth" && all.some((x) => Math.abs(x) >= 100)) return false;
     const launch = periodNo(v.launch, frequency);
     if (!values.has(launch)) continue;
-    estimates += 1;
     const [estimate, now, before] = [values.get(launch), outturn.get(launch), outturn.get(launch - lag)];
-    if (m.kind === "level" && now !== undefined && Math.abs(estimate - now) > 0.5 * size) return false;
-    if (m.kind === "growth" && now !== undefined && before > 0 && Math.abs(estimate - 100 * (now / before - 1)) > 10) return false;
-    if (m.kind === "index" && now > 0) ratios.push(estimate / now);
+    const set = m.kind === "level" ? now !== undefined : m.kind === "growth" ? now !== undefined && before > 0 : now > 0;
+    if (!set) continue;
+    estimates += 1;
+    if (m.kind === "level" && Math.abs(estimate - now) > 0.5 * size) return false;
+    if (m.kind === "growth" && Math.abs(estimate - 100 * (now / before - 1)) > 10) return false;
+    if (m.kind === "index") ratios.push(estimate / now);
   }
   return estimates > 0 && !(ratios.length && Math.max(...ratios) > 1.5 * Math.min(...ratios));
 }
@@ -216,10 +220,10 @@ function unitsOk(variable) {
     if (!["level", "index", "pct"].includes(unit)) return false;
     if (!plain(spec) || !str(spec.label) || !str(spec.axis) || !among(["level", "share"])(spec.from)) return false;
     // % alone is a change on a year earlier; £ alone is at an annual
-    // rate, and only for a quarterly measure
+    // rate, and always for a quarterly measure (the build's units check)
     if (!missing(spec.transform) && !(spec.transform === "growth" && unit === "pct")) return false;
     if (!missing(spec.annualise) && typeof spec.annualise !== "boolean") return false;
-    if (spec.annualise === true && !(unit === "level" && variable.frequency === "quarterly")) return false;
+    if ((spec.annualise === true) !== (unit === "level" && variable.frequency === "quarterly")) return false;
   }
   return among(["level", "index", "pct"])(variable.default_unit) && Object.hasOwn(units, variable.default_unit);
 }
@@ -788,18 +792,36 @@ describe("a forecasts file the loader accepts", () => {
     if (notice !== expected.unavailable) throw new Error(`${where}: shows ${JSON.stringify(notice)}, not ${JSON.stringify(expected.unavailable)}`);
     if (Boolean(chart) === Boolean(expected.unavailable)) throw new Error(`${where}: ${chart ? "a chart" : "no chart"} beside ${JSON.stringify(notice)}`);
     if (expected.unavailable) return;
-    // The chart holds what the view does: a line for the outturn and one
-    // for each forecast, and the view's labelled points in the window it
-    // opens on, each with its value in the view's format
-    const lines = document.querySelectorAll(".recharts-line").length;
-    if (lines !== expected.vintages.length + 1) throw new Error(`${where}: ${lines} lines for ${expected.vintages.length} forecasts and the outturn`);
+    // The chart holds what the view does: a line for each earlier
+    // forecast, the newest and the outturn, in the order they are drawn,
+    // each through its own series' points in the window it opens on, all
+    // on one axis (each pixel an affine function of period and value)
+    const lines = [...document.querySelectorAll(".recharts-line")];
+    if (lines.length !== expected.vintages.length + 1) throw new Error(`${where}: ${lines.length} lines for ${expected.vintages.length} forecasts and the outturn`);
     const opened = expected.rows.slice(expected.windowStart ?? 0);
+    const keys = [...expected.vintages.filter((x) => !x.newest), expected.vintages.find((x) => x.newest)].map((x) => x.key);
+    const pairs = [];
+    [...keys, OUTTURN_KEY].forEach((key, i) => {
+      const d = lines[i].querySelector(".recharts-line-curve")?.getAttribute("d") ?? "";
+      const drawn = [...d.matchAll(/[ML]\s*(-?[\d.]+(?:e-?\d+)?)[ ,]\s*(-?[\d.]+(?:e-?\d+)?)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      const want = opened.filter((row) => Number.isFinite(row[key])).map((row) => [row.x, row[key]]);
+      if (drawn.length !== want.length) throw new Error(`${where}: line ${i} (${key}) has ${drawn.length} points, its series ${want.length}`);
+      want.forEach(([x, y], j) => pairs.push({ x, y, px: drawn[j][0], py: drawn[j][1], key }));
+    });
+    const affine = (get, put) => {
+      const [lo, hi] = [pairs.reduce((a, b) => (get(b) < get(a) ? b : a)), pairs.reduce((a, b) => (get(b) > get(a) ? b : a))];
+      if (get(hi) === get(lo)) return pairs.every((q) => Math.abs(put(q) - put(lo)) < 0.01);
+      const slope = (put(hi) - put(lo)) / (get(hi) - get(lo));
+      return pairs.every((q) => Math.abs(put(lo) + slope * (get(q) - get(lo)) - put(q)) < 0.01);
+    };
+    if (!affine((q) => q.x, (q) => q.px)) throw new Error(`${where}: a line's points are not at their periods`);
+    if (!affine((q) => q.y, (q) => q.py)) throw new Error(`${where}: a line's points are not at its series' values`);
     const want = pointsIn(expected.points, opened).map((p) => `${p.role} ${expected.format(p.y)}`);
     const got = [...document.querySelectorAll(".fv-point-label")].map((g) => `${g.dataset.role} ${g.querySelector("text").textContent}`);
     if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${where}: labels ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);
   }
 
-  it("mounts on its default unit, showing the builder's chart (its lines and labelled points) or its reason, and nothing else (C)", async () => {
+  it("mounts on its default unit, showing the builder's chart (each line through its own series, and the labelled points) or its reason, and nothing else (C)", async () => {
     // Every accepted change to which unit opens, and a sample of the rest
     const opens = RESULT().accepted.filter(({ path }) => WHAT_IT_HOLDS[patternOf(path)] === OPENS);
     expect(opens.length).toBeGreaterThan(10);
