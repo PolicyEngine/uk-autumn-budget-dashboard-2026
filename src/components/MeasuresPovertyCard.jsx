@@ -6,6 +6,9 @@
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
 // throughout. Measures that move no one are one muted line, not empty rows.
+// A run that does not carry the chosen measure (one written before the
+// poverty and inequality measures) is never a step of 0: the card then shows
+// the headline measure, as the chart beside it does (choiceRows).
 // The poverty choice is shared with the Change in the poverty rate chart
 // beside it (usePovertyChoice, ?poverty=).
 
@@ -33,11 +36,21 @@ import "./MeasuresPovertyCard.css";
 // povertyNoEffect, used only while it describes the published measure)
 const noEffectReason = (measure) => policyDetailsFor(measure)?.povertyNoEffect ?? null;
 
+// A run's value of a measure, or null where its row does not carry it: a
+// run written before the poverty and inequality measures has only the
+// headline column, and that is not a change of 0
+function valueIn(row, key) {
+  const raw = row?.[key];
+  const value = raw === undefined || raw === null || raw === "" ? NaN : Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
  * measures that change incomes that year ({members} lists all, £0 ones
  * muted), and the package's (the combined run) when one run covers the
- * selection.
+ * selection. {missing} lists the runs read whose rows do not carry `key`;
+ * such a measure's value is null, never 0.
  */
 export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
@@ -48,13 +61,35 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
       id: member.id,
       name: shortNameOf(member),
       description: member.description,
-      value: Number(rowFor(member.id)?.[key]) || 0,
+      value: valueIn(rowFor(member.id), key),
       colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange,
     }));
   const combinedId = catalogue.combinedId;
   const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
-  const total = combinedId && run === combinedId ? Number(rowFor(run)?.[key]) : NaN;
-  return { members, measures, total: Number.isFinite(total) ? total : null };
+  const packageRow = combinedId && run === combinedId ? rowFor(run) : undefined;
+  const total = packageRow ? valueIn(packageRow, key) : null;
+  const missing = [
+    ...measures.filter((measure) => measure.value === null).map((measure) => measure.id),
+    ...(packageRow && total === null ? [run] : []),
+  ];
+  return { members, measures, total, missing };
+}
+
+// The headline poverty measure: metrics' own column, which every run carries
+const HEADLINE = povertyMetric({ basis: "absolute", housing: "bhc", group: "all" });
+
+/**
+ * The card's poverty measure and rows in `year`: the chosen measure where
+ * every run the card reads carries it; otherwise the headline, as the chart
+ * beside it shows for a run written before the poverty and inequality
+ * measures (choiceRows); null where not even the headline is carried.
+ */
+export function povertyCardRows(rows, catalogue, selectedPolicies, year, chosen) {
+  for (const metric of chosen.key === HEADLINE.key ? [chosen] : [chosen, HEADLINE]) {
+    const read = measurePovertyRows(rows, catalogue, selectedPolicies, year, metric.key);
+    if (read.missing.length === 0) return { metric, ...read };
+  }
+  return null;
 }
 
 /**
@@ -109,15 +144,17 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const plotRef = useRef(null);
   const catalogue = useMeasureCatalogue();
   const { poverty, controls } = usePovertyChoice();
-  const metric = povertyMetric(poverty);
+  const read = povertyCardRows(rows, catalogue, selectedPolicies, selectedYear, povertyMetric(poverty));
+  const metric = read?.metric ?? povertyMetric(poverty);
   const { tip, handlers } = useFloatingTooltip(plotRef, `${metric.key}-${selectedYear}`);
-  if (!hasColumn(rows, metric.key)) return null;
+  if (!read || !hasColumn(rows, metric.key)) return null;
 
   const year = fiscalYearTick(selectedYear);
-  const { members, measures, total } = measurePovertyRows(rows, catalogue, selectedPolicies, selectedYear, metric.key);
-  const millions = population ? population(selectedYear, poverty.group) : null;
+  const { members, measures, total } = read;
+  // The shown measure's people: the headline's when the card falls back
+  const millions = population ? population(selectedYear, metric.group) : null;
   const { steps, zero, peopleMode } = povertyWaterfall(measures, total, millions);
-  const who = poverty.group === "children" ? "children" : "people";
+  const who = metric.group === "children" ? "children" : "people";
 
   // "≈4,000 fewer" (people) or "−0.005pp" (no population)
   const main = (step, noun = false) => {

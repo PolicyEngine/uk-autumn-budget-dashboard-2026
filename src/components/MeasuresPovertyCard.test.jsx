@@ -2,10 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
-import { PovertyMeasuresRow, measurePovertyRows, povertyWaterfall } from "./MeasuresPovertyCard";
+import fc from "fast-check";
+import { PovertyMeasuresRow, measurePovertyRows, povertyCardRows, povertyWaterfall } from "./MeasuresPovertyCard";
+import { povertyMetric } from "./SummaryMetricChart";
+import { wholeSelectionRun } from "../utils/ageImpact";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
+import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
 const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", file), "utf8"));
@@ -144,5 +148,106 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
+  });
+});
+
+describe("a measure whose artifact predates the poverty and inequality measures", () => {
+  // Plan 2's run as an artifact written before poverty_inequality: its
+  // metrics rows have only the contract's columns, while every other run's
+  // carry the measures too (loadArtifact's withPovertyInequality)
+  const OLDER = "plan_2_threshold_unfreeze";
+  const EXTRAS = new Set(FLAT_EXTRA_COLUMNS.metrics.map(([column]) => column));
+  const without = (row) => Object.fromEntries(Object.entries(row).filter(([column]) => !EXTRAS.has(column)));
+  const mixed = metrics.map((row) => (row.reform_id === OLDER ? without(row) : row));
+  const CHILD_REL_AHC = povertyMetric({ basis: "relative", housing: "ahc", group: "children" });
+  const HEADLINE = povertyMetric({ basis: "absolute", housing: "bhc", group: "all" });
+
+  const renderCard = async (rows, selected) => {
+    window.history.replaceState({}, "", "/?sub=poverty&poverty=relative-ahc-children");
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={rows} policies={catalogue.measures} selectedPolicies={selected} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    return heading.closest(".charts-grid > div");
+  };
+
+  it("reads the measure the run lacks as missing, not as no change", () => {
+    const read = measurePovertyRows(mixed, catalogue, [OLDER], 2027, CHILD_REL_AHC.key);
+    expect(read.measures.map((m) => [m.id, m.value])).toEqual([[OLDER, null]]);
+    expect(read.missing).toEqual([OLDER]);
+  });
+
+  it("shows the headline for every measure then, as the chart beside it does", () => {
+    const card = povertyCardRows(mixed, catalogue, [OLDER], 2027, CHILD_REL_AHC);
+    expect(card.metric.key).toBe(HEADLINE.key);
+    expect(card.measures.map((m) => [m.id, m.value])).toEqual([[OLDER, Number(metrics.find((r) => r.reform_id === OLDER && r.year === "2027").poverty_change_pp)]]);
+    // The chosen measure, where every run read carries it
+    const carried = povertyCardRows(mixed, catalogue, ["state_pension_income_tax_protection"], 2027, CHILD_REL_AHC);
+    expect(carried.metric.key).toBe(CHILD_REL_AHC.key);
+    expect(carried.measures.map((m) => m.value)).toEqual([0]);
+  });
+
+  it("falls back when the package's combined run lacks the measure, though every measure's carries it", () => {
+    const rows = metrics.map((row) => (row.reform_id === COMBINED ? without(row) : row));
+    expect(measurePovertyRows(rows, catalogue, ALL, 2027, CHILD_REL_AHC.key).missing).toEqual([COMBINED]);
+    const card = povertyCardRows(rows, catalogue, ALL, 2027, CHILD_REL_AHC);
+    expect(card.metric.key).toBe(HEADLINE.key);
+    expect(card.total).toBe(Number(metrics.find((r) => r.reform_id === COMBINED && r.year === "2027").poverty_change_pp));
+  });
+
+  it("is never said to have no effect on a measure its run does not carry", async () => {
+    const card = await renderCard(mixed, [OLDER]);
+    expect(within(card).queryByText(/^No effect on poverty: /)).toBeNull();
+    // The headline instead, with Plan 2 a step
+    expect(card.querySelector(".chart-description")).toHaveTextContent(/^Change in absolute poverty \(BHC\)/);
+    expect(within(card).getAllByRole("rowheader").map((r) => r.textContent)).toEqual(["Plan 2 threshold unfrozen"]);
+    // In people, as the headline counts them, not the children chosen
+    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people/), { timeout: 5000 });
+  });
+
+  it("still says so of a measure whose run carries the measure as no change", async () => {
+    const card = await renderCard(mixed, ["state_pension_income_tax_protection"]);
+    expect(card.querySelector(".chart-description")).toHaveTextContent(/^Change in relative child poverty \(AHC\)/);
+    expect(within(card).getByText(/^No effect on poverty: /)).toBeInTheDocument();
+  });
+
+  it("lists as a step or no effect only what a run carries, and keeps the chosen measure exactly when every run read carries it", () => {
+    const CHOICES = ["absolute", "relative"].flatMap((basis) =>
+      ["bhc", "ahc"].flatMap((housing) => ["all", "children"].map((group) => povertyMetric({ basis, housing, group }))),
+    );
+    const value = fc.oneof(fc.constant(0), fc.double({ min: -1, max: 1, noNaN: true }));
+    const run = fc.record({ affected: fc.oneof(fc.constant(0), fc.double({ min: 0.001, max: 100, noNaN: true })), headline: value, chosen: fc.option(value) });
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...CHOICES),
+        fc.oneof(fc.constant(ALL), fc.subarray(ALL, { minLength: 1 })),
+        fc.tuple(...[...ALL, COMBINED].map(() => run)),
+        (chosen, selected, runs) => {
+          const rows = [...ALL, COMBINED].map((id, i) => ({
+            reform_id: id,
+            year: "2027",
+            people_affected: String(runs[i].affected),
+            [HEADLINE.key]: String(runs[i].headline),
+            ...(runs[i].chosen === null ? {} : { [chosen.key]: String(runs[i].chosen) }),
+          }));
+          const rowOf = (id) => rows.find((row) => row.reform_id === id);
+          const card = povertyCardRows(rows, catalogue, selected, 2027, chosen);
+          expect(card).not.toBeNull();
+          // Every value shown is the run's own, under the measure shown
+          for (const measure of card.measures) {
+            expect(rowOf(measure.id)).toHaveProperty(card.metric.key);
+            expect(measure.value).toBe(Number(rowOf(measure.id)[card.metric.key]));
+          }
+          const { zero } = povertyWaterfall(card.measures, card.total, null);
+          for (const measure of zero) expect(Number(rowOf(measure.id)[card.metric.key])).toBe(0);
+          const read = card.members.filter((member) => !member.muted).map((member) => member.id);
+          if (wholeSelectionRun(catalogue.displayable, selected, COMBINED) === COMBINED) read.push(COMBINED);
+          expect(card.metric.key === chosen.key).toBe(read.every((id) => chosen.key in rowOf(id)));
+        },
+      ),
+      { numRuns: 300 },
+    );
   });
 });
