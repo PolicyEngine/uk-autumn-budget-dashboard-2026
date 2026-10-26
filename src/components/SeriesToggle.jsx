@@ -46,11 +46,32 @@ function markHintSeen() {
  * @param {string} [props.label] - What the chips are, for screen readers ("Lines")
  * @param {boolean} [props.narrow] - Short labels (`short`) where given
  * @param {string} [props.lead] - The lead-in before the chips ("Show lines:"; "Show:" for layers)
+ * @param {boolean} [props.collapseDisabled] - Fold the disabled chips into one
+ *   "+N with no effect for you" chip that opens them in place
+ * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
+ * @param {(open: boolean) => void} [props.onExpandedChange]
  * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
  *   items that are not lines (the selected year's shading), after the chips,
  *   as a swatch and a label, not a button
  */
-export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false, extras = [], lead = "Show lines:" }) {
+export default function SeriesToggle({
+  series,
+  shown,
+  onChange,
+  onHover,
+  label = "Lines",
+  narrow = false,
+  extras = [],
+  lead = "Show lines:",
+  collapseDisabled = false,
+  expanded: expandedProp,
+  onExpandedChange,
+}) {
+  // The disabled chips folded into one "+N with no effect for you" chip
+  // (`collapseDisabled`), opened in place; open or not can be shared
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const expanded = expandedProp ?? ownExpanded;
+  const setExpanded = onExpandedChange ?? setOwnExpanded;
   // Read after mount, so the server and first render agree
   const [hint, setHint] = useState(false);
   useEffect(() => {
@@ -79,7 +100,7 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
         <span className="series-toggle-lead" aria-hidden="true">
           {lead}
         </span>
-        {series.map((s) => {
+        {(collapseDisabled ? series.filter((s) => !s.disabled || expanded) : series).map((s) => {
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
@@ -123,6 +144,16 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
             </Tip>
           );
         })}
+        {collapseDisabled && off.size > 0 && (
+          <button
+            type="button"
+            className="series-toggle-chip series-toggle-more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Show fewer" : `+${off.size} with no effect for you`}
+          </button>
+        )}
         {extras.map((item) => (
           <span key={item.key} className="series-toggle-extra">
             <span className="series-toggle-band" style={{ background: item.fill }} aria-hidden="true" />

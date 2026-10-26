@@ -402,6 +402,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               setHiddenKeys([...hiddenKeys.filter((key) => !mine.includes(key)), ...mine.filter((key) => !next.includes(key))]);
             }}
             onHover={setFocus}
+            collapseDisabled
+            expanded={sync?.expanded}
+            onExpandedChange={sync?.setExpanded}
             narrow={narrow}
           />
         ) : (
