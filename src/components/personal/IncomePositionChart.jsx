@@ -244,7 +244,8 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   const left = narrow ? 44 : 56;
   const right = 12;
   const plotW = Math.max(width - left - right, 80);
-  const top = 26;
+  // A row above the plot for the You label, clear of the bars' labels
+  const top = 48;
   const plotH = narrow ? 200 : 240;
   const height = top + plotH + 52;
   const values = Array.from({ length: 10 }, (_, i) => (unit === "pct" ? percents?.[i + 1] : averages?.[i + 1]) ?? 0);
@@ -288,8 +289,11 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         return (
           <g key={i}>
             {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
-            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine ? 1 : UNSELECTED_OPACITY} />
-            {grow > 0.98 && (!narrow || mine) && (
+            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine ? 1 : UNSELECTED_OPACITY}>
+              {/* On a phone the figures are on hover or tap only */}
+              <title>{`Tenth ${i + 1}: ${fmt(v)}${pounds !== undefined && unit === "pct" ? ` (${signedPounds(pounds)})` : ""}`}</title>
+            </rect>
+            {grow > 0.98 && !narrow && (
               <text x={cx} y={v >= 0 ? y0 - 6 : y0 + h + 13} textAnchor="middle" fontSize={narrow ? 9.5 : 11} fontWeight={mine ? 700 : 500} fill={TEXT}>
                 {fmt(v)}
               </text>
@@ -324,10 +328,21 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
             stroke={TEXT}
             strokeWidth={2.5}
           />
+          {/* The label in its own row above the plot, a leader down to the
+              marker, so it never sits on a neighbouring bar's figures */}
+          <line
+            x1={left + slot * (decile - 0.5)}
+            x2={left + slot * (decile - 0.5)}
+            y1={36}
+            y2={y(own * grow) - 3}
+            stroke={TEXT}
+            strokeWidth={1}
+            strokeDasharray={REFERENCE_DASH}
+          />
           <Label
-            x={decile > 6 ? left + slot * (decile - 1) - 4 : left + slot * decile + 4}
-            y={y(own * grow) + 4}
-            anchor={decile > 6 ? "end" : "start"}
+            x={Math.min(Math.max(left + slot * (decile - 0.5), left + 40), left + plotW - 40)}
+            y={31}
+            anchor="middle"
             size={12}
           >
             {`You: ${fmt(own)}`}
