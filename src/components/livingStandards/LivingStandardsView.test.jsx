@@ -303,7 +303,7 @@ describe("the OBR forecast view", () => {
     // start year, for every breakdown, with its reference group
     const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
     // One short line on the card; the full sentence in About this chart
-    expect(who.querySelector(".chart-description").textContent).toMatch(/^Highest: [a-z].*, \d+\.\d%/);
+    expect(who.querySelector(".chart-description").textContent).toMatch(/^Under current law, [a-z].* have the highest .*: \d+\.\d% in \d{4}-\d{2}/);
     fireEvent.click(within(who).getByRole("button", { name: "About this chart" }));
     // Couples with children: 19.8% in both years, said once on the bar
     const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
@@ -336,12 +336,12 @@ describe("the OBR forecast view", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
     const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
     choose(inequality, "Inequality measure", "90/10 ratio");
-    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, the gap between incomes near the top and near the bottom \(the 90:10 ratio\) (rises|falls|stays)/);
+    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, the gap between top and bottom incomes \(90:10 ratio\) (rises|falls|stays)/);
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
     // Year by year and vigintiles by default (Vahid, 26 October): one short
     // line, from the second-lowest twentieth (vigintile 1 left out)
     const headline = () => growth.querySelector(".chart-description").textContent;
-    expect(headline()).toMatch(/^Under current law, from \d{4}-\d{2} to \d{4}-\d{2}, income for the second-lowest-income twentieth changes by .+% a year after inflation, and for the highest-income twentieth by .+%\.$/);
+    expect(headline()).toMatch(/^Under current law, real incomes grow (about as fast at the bottom as at the top|faster at the (top|bottom) than at the (bottom|top)) \(\S+% a year at the bottom, \S+% at the top\)\.$/);
     // The full sentence and the vigintile note are in About this chart
     expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
@@ -367,7 +367,7 @@ describe("the OBR forecast view", () => {
       "ahc",
       "non_pensioners",
     ]);
-    expect(headline()).toMatch(/^Under current law, from 2028-29 to 2031-32, income for the lowest-income tenth /);
+    expect(within(growth).getByText(/^Bottom is the lowest-income tenth, top the highest-income tenth among non-pensioners\. Each year from 2028-29 to 2031-32/)).toBeInTheDocument();
     expect(within(growth).getByText(/^Decile 1 \(lowest income\)/)).toBeInTheDocument();
     // Decile 1 after housing costs: kept, with a short caution under the
     // key and the fuller line in About this chart
@@ -378,7 +378,7 @@ describe("the OBR forecast view", () => {
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
     // the second-lowest twentieth, the key at vigintile 2, the note in About
     expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
-    expect(headline()).toMatch(/second-lowest-income twentieth/);
+    expect(within(growth).getByText(/^Bottom is the second-lowest-income twentieth/)).toBeInTheDocument();
     expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
     expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
     expect(within(growth).queryByText(/^Vigintile 1\b/)).toBeNull();
@@ -413,8 +413,8 @@ describe("the OBR forecast view", () => {
     expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
     // Titles carry no years (the pill, axes and sentence do): the sentences follow
     expect(await heading(/^Who is in poverty$/)).toBeInTheDocument();
-    expect(within(who).getByText(/since 2029-30/)).toBeInTheDocument();
-    expect(growth.querySelector(".chart-description").textContent).toMatch(/^Under current law, from 2030-31 to 2031-32, /);
+    expect(who.querySelector(".chart-description").textContent).toMatch(/since 2029-30|the same as in 2029-30/);
+    expect(within(growth).getByText(/Each year from 2030-31 to 2031-32/)).toBeInTheDocument();
 
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
     expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);

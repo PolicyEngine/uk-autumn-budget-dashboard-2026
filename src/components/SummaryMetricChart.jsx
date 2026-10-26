@@ -133,6 +133,9 @@ const POVERTY_LINES = {
 
 const HOUSING = { bhc: "before housing costs", ahc: "after housing costs" };
 
+/** "0.008 percentage points" or "0.1%": a change's size in words, unsigned. */
+const plainAmount = (value) => formatPp(Math.abs(value)).replace(/^[+−-]/, "").replace(/pp$/, " percentage points");
+
 /** The poverty chart's metric for one choice of line, housing costs and people. */
 export function povertyMetric({ basis, housing, group }) {
   const children = group === "children";
@@ -428,8 +431,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           <p className="chart-description">
             {selected?.value != null ? (
               <>
-                {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
-                {selectedPeople && <> ({selectedPeople})</>}.
+                In {fiscalYearTick(selectedYear)}, the selected measures{" "}
+                {Math.round(selected.value * 1e6) === 0 ? (
+                  <>do not change {metric.title.replace(/^Change in /, "")}</>
+                ) : (
+                  <>
+                    {selected.value < 0 ? "lower" : "raise"} {metric.title.replace(/^Change in /, "")} by{" "}
+                    <strong>{plainAmount(selected.value)}</strong>
+                    {selectedPeople && <> ({selectedPeople.replace(/^≈/, "about ")})</>}
+                  </>
+                )}
+                .
               </>
             ) : byMeasure ? (
               (() => {
