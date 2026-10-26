@@ -3,7 +3,9 @@
  * view's "Terms used on the charts" (MethodGlossary), where each has its
  * own anchor. A card's "About this chart" names a shared term and links
  * here rather than restating it (InfoSections' definitions, `{ ref }`).
- * A term only one card uses is defined in that card instead.
+ * A term only one card uses is defined in that card instead. `sources`
+ * links a phrase of the meaning to its source (src/utils/sources.js); the
+ * meaning stays plain text for any other use.
  */
 export const GLOSSARY = {
   netIncome: {
@@ -15,11 +17,14 @@ export const GLOSSARY = {
     term: "Before and after housing costs (BHC, AHC)",
     meaning:
       "Household net income before or after rent, mortgage interest, water rates and other housing costs are taken off, as in the official Households Below Average Income statistics.",
+    sources: { "Households Below Average Income": "dwp_hbai" },
   },
   equivalised: {
     term: "Equivalised income",
     meaning:
       "Household net income adjusted for the household's size and make-up (the modified OECD scale), so households of different sizes compare; shown as the income of a couple with no children.",
+    // HBAI's methodology report explains the scale (its section 8)
+    sources: { "modified OECD scale": "dwp_hbai_methodology" },
   },
   median: {
     term: "Median",
@@ -70,6 +75,7 @@ export const GLOSSARY = {
   statePensionAge: {
     term: "State Pension age",
     meaning: "66 in 2026-27 and 67 from 2027-28, as in policyengine-uk. Pensioners are people at or over it.",
+    sources: { "policyengine-uk": "policyengine_uk" },
   },
 };
 
