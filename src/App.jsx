@@ -275,6 +275,33 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // The tab bar's place in the page, before it sticks under the band
   const tabsSentinelRef = useRef(null);
+  // Once the reader scrolls past it, the view tabs (and a sub-tab band)
+  // stick under the title row in a compact form (globals.css,
+  // data-tabs-stuck). The sentinel sits above the bar, so the bar's own
+  // change of height never flips this back.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const sentinel = tabsSentinelRef.current;
+      const app = appRef.current;
+      if (!sentinel || !app) return;
+      const band = parseFloat(getComputedStyle(app).getPropertyValue("--title-row-height")) || 0;
+      setTabsStuck(sentinel.getBoundingClientRect().top < band - 1);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    check();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   // Switch view. If the reader had scrolled past the tabs, bring the new
   // view's top up under them, so it does not open part way down. The band
@@ -335,6 +362,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
+  // The views with sub-tabs open into their band (SubTabs); not while
+  // Population impact shows its unavailable notice instead
+  const hasSubTabs = activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard"));
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   const yearShown = yearPillShown(activeTab);
@@ -564,7 +594,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"}>
+    <div
+      className="app"
+      ref={appRef}
+      data-band={yearShown ? undefined : "compact"}
+      data-sub-band={hasSubTabs ? "" : undefined}
+      data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -636,9 +671,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           onChange={handleTabChange}
           tabId={tabId}
           panelId={panelId}
-          // The views with sub-tabs open into their band (SubTabs); not
-          // while Population impact shows its unavailable notice instead
-          notch={activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard"))}
+          notch={hasSubTabs}
         />
 
         {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
