@@ -60,42 +60,28 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const isAHC = measure.endsWith("ahc");
   const groupName = poverty.groups[group].toLowerCase();
 
-  // One short line on the card; the full sentence (line, housing costs,
-  // years) in About this chart
+  // One plain sentence on the card; the poverty line and housing costs
+  // are defined in About this chart
   let summary = null;
-  let sentence = null;
   const span = headlineSpan(projection, data, range);
   if (span && span[0].rate != null && span[1].rate != null) {
     const [first, last] = span;
     const a = round1(first.rate * 100);
     const b = round1(last.rate * 100);
-    const verb = changeVerb(b - a, "pp");
-    const kind = isAbsolute ? "Absolute" : "Relative";
-    const line = isAbsolute ? "fixed real-terms line" : "60% of current median";
-    summary = verb ? (
-      <>
-        {kind} poverty{GROUP_SUFFIX[group] ?? ""} <strong>{verb}</strong>, from {formatPct(a)} to {formatPct(b)}.
-      </>
-    ) : (
-      <>
-        {kind} poverty{GROUP_SUFFIX[group] ?? ""} <strong>stays flat</strong> at {formatPct(a)}.
-      </>
-    );
-    sentence = (
-      <>
-        {kind} poverty{GROUP_SUFFIX[group] ?? ""} ({isAHC ? "AHC" : "BHC"}, {line}){" "}
-        {verb ? (
-          <>
-            <strong>{verb}</strong>, from {formatPct(a)} in {fyDash(first.year)} to {formatPct(b)} by{" "}
-            {fyDash(last.year)}.
-          </>
-        ) : (
-          <>
-            <strong>stays flat</strong> at {formatPct(a)} from {fyDash(first.year)} to {fyDash(last.year)}.
-          </>
-        )}
-      </>
-    );
+    const who = group === "all" ? "people" : groupName;
+    const kind = isAbsolute ? "absolute" : "relative";
+    summary =
+      a === b ? (
+        <>
+          Under current law, the share of {who} in {kind} poverty <strong>stays at {formatPct(a)}</strong> from{" "}
+          {fyDash(first.year)} to {fyDash(last.year)}.
+        </>
+      ) : (
+        <>
+          Under current law, the share of {who} in {kind} poverty <strong>{b > a ? "rises" : "falls"}</strong> from{" "}
+          {formatPct(a)} in {fyDash(first.year)} to {formatPct(b)} in {fyDash(last.year)}.
+        </>
+      );
   }
 
   const noOutturn = outturn.length === 0;
@@ -115,7 +101,6 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     summary,
     about: description,
     notes: [
-      sentence,
       !visibleEmpty &&
         noOutturn &&
         viewMode === "both" &&

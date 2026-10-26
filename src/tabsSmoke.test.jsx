@@ -63,7 +63,7 @@ const FAILURE_TEXT = [
 // out, so charts draw no values; these are the data-driven text around them.)
 const LOADED = {
   // App.jsx renders All households' sections only once the CSVs are read.
-  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
+  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "By area" }),
   // Population impact's other sub-tabs, by ?sub=
   living: (panel) => within(panel).findAllByRole("heading", { name: /Change in income inequality/ }),
   poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
@@ -400,11 +400,14 @@ describe("the income decile pair", () => {
     const panel = await screen.findByRole("tabpanel", { name: "All households" });
     const absolute = await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 });
     const relative = within(panel).getByRole("heading", { level: 3, name: /^Relative impact by income decile/ });
-    // Side by side under one measure key
+    // Side by side, under the tab's one measure key, above every section
     const section = absolute.closest("#deciles");
     expect(section).not.toBeNull();
     expect(relative.closest("#deciles")).toBe(section);
-    await waitFor(() => expect(section.querySelectorAll(".measure-key")).toHaveLength(1));
+    await waitFor(() => expect(panel.querySelectorAll(".measure-key")).toHaveLength(1));
+    const key = panel.querySelector(".measure-key");
+    expect(key.compareDocumentPosition(panel.querySelector("#constituencies")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(panel).getByRole("heading", { level: 2, name: "By income" })).toBeInTheDocument();
     const map = panel.querySelector("#constituencies");
     const scatter = panel.querySelector("#scatter");
     expect(map.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

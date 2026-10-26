@@ -43,6 +43,7 @@ import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { shortNameOf } from "../utils/policyDetails";
+import MeasureEffectsView, { EFFECT_VIEWS, yearEffects } from "./MeasureEffectsView";
 
 // The dashboard's bar style: each bar rounds its end away from zero (chartTheme)
 const VALUE_BAR_SHAPE = barShape(["value"]);
@@ -335,6 +336,8 @@ export function metricByYear(rows, run, metric) {
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const chartRef = useRef(null);
   const { metric, controls } = useMeasureChoice(family, rows);
+  // Each measure on its own: the selected year (default) or year by year
+  const [effectView, setEffectView] = useState("year");
   // People behind a poverty change (pp × the population), where the
   // population is known for the year (population(year, group) in millions)
   const peopleText = (year, value) =>
@@ -352,6 +355,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         .map((policy) => ({
           id: policy.id,
           name: shortNameOf(policy),
+          fullName: policy.label ?? policy.name,
           colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
           points: metricByYear(rows, policy.id, metric),
         }))
@@ -427,11 +431,24 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
                 {selectedPeople && <> ({selectedPeople})</>}.
               </>
+            ) : byMeasure ? (
+              (() => {
+                const top = yearEffects(byMeasure, selectedYear, metric.decimals).rows[0];
+                return top ? (
+                  <>
+                    {fiscalYearTick(selectedYear)}, each measure on its own: biggest {top.name},{" "}
+                    <strong>
+                      {top.value > 0 ? "+" : "−"}
+                      {metric.format(top.value)}
+                    </strong>
+                    .
+                  </>
+                ) : (
+                  <>{metric.short ?? metric.description} Each selected measure on its own.</>
+                );
+              })()
             ) : (
-              <>
-                {metric.short ?? metric.description}
-                {byMeasure && " Each selected measure on its own."}
-              </>
+              metric.short ?? metric.description
             )}
           </p>
         </div>
@@ -441,64 +458,20 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           choice ("Inequality measure: Gini ▾") under the description, in
           the card's controls row */}
       {/* With the choice above the pair (PovertyMeasuresRow), none here */}
-      {controls.length > 0 && !choiceAbove && (
+      {((controls.length > 0 && !choiceAbove) || byMeasure) && (
         <div className="chart-controls ls-controls summary-metric-choices">
-          <ControlBar name={metric.title} options={controls} />
+          <ControlBar
+            name={metric.title}
+            options={[
+              ...(choiceAbove ? [] : controls),
+              ...(byMeasure ? [{ label: "View", value: effectView, onChange: setEffectView, options: EFFECT_VIEWS }] : []),
+            ]}
+          />
         </div>
       )}
-      <div ref={chartRef} className={controls.length > 0 && !choiceAbove ? "summary-metric-plot" : undefined}>
-        {byMeasure && shown.length > 0 ? (
-          <>
-            <ResponsiveContainer width="100%" height={height}>
-              <BarChart
-                data={measureData}
-                margin={{ ...chartMargin(narrow, { top: 16 }), bottom: CHART_LOGO.height + CHART_LOGO.padding + 8 }}
-                barGap={1}
-              >
-                <CartesianGrid {...GRID_PROPS} />
-                <XAxis
-                  dataKey="year"
-                  tick={TICK_STYLE}
-                  axisLine={AXIS_LINE}
-                  tickLine={false}
-                  interval={0}
-                  tickFormatter={narrow ? shortFiscalYearTick : fiscalYearTick}
-                />
-                <YAxis
-                  domain={domain}
-                  ticks={ticks}
-                  width={axisWidth(ticks, tick)}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={TICK_STYLE}
-                  tickFormatter={tick}
-                />
-                <Tooltip
-                  {...TOOLTIP_PROPS}
-                  cursor={HOVER_CURSOR}
-                  content={<ChartTooltip format={metric.format} labelFormat={fiscalYearTick} showPlus showZero grouped={false} />}
-                />
-                {byMeasure.map((m) => (
-                  <Bar key={m.id} dataKey={m.id} name={m.name} fill={m.colour} shape={barShape([m.id])} {...chartMotion()}>
-                    {measureData.map((point) => (
-                      <Cell key={point.year} fillOpacity={point.year === selectedYear ? 1 : UNSELECTED_OPACITY} />
-                    ))}
-                  </Bar>
-                ))}
-                <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-                <Customized component={<ChartUnitLabel text={metric.unit} />} />
-                <Customized component={PolicyEngineLogo} />
-              </BarChart>
-            </ResponsiveContainer>
-            <ul className="summary-metric-key">
-              {byMeasure.map((m) => (
-                <li key={m.id}>
-                  <span className="summary-metric-swatch" style={{ background: m.colour }} aria-hidden="true" />
-                  {m.name}
-                </li>
-              ))}
-            </ul>
-          </>
+      <div ref={chartRef} className={(controls.length > 0 && !choiceAbove) || byMeasure ? "summary-metric-plot" : undefined}>
+        {byMeasure ? (
+          <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} />
         ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>No measure is selected that this chart covers</p>

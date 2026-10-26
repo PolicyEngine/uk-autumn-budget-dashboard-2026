@@ -760,13 +760,11 @@ export default function ConstituencyMap({
               </span>
             </h3>
             <p className="chart-description">
+              {/* What the map shows is in the section's subtitle */}
               {notRouted ? (
                 "Average change in household net income by constituency."
               ) : onMap ? (
-                <>
-                  Average change in household net income by constituency.
-                  Uncoloured where the estimate is too uncertain.
-                </>
+                "Uncoloured where the estimate is too uncertain."
               ) : (
                 <>
                   The {TABLE_SIZE} constituencies with the largest gains and

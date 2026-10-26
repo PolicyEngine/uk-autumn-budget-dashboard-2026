@@ -39,6 +39,9 @@ function unitFor(meta, metric) {
 }
 
 /** "Median equivalised income (BHC)" -> "Median income after adjusting for household size (BHC)". */
+/** "£43,100": pounds to the nearest £100, in full. */
+const poundsFull = (v) => `£${(Math.round(v / 100) * 100).toLocaleString("en-GB")}`;
+
 function plainMetric(label) {
   return label.replace(/equivalised income/i, "income after adjusting for household size");
 }
@@ -97,43 +100,29 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
   const series = lineSeries(effectiveView, !noOutturn);
   const yLabel = `${units ? units.split(",")[0] : "Household income"}${realSuffix}`;
 
-  // One sentence: what the measure is (a few words) and how it moves to the
-  // headline year. Units live in the unit label.
-  // The card shows one short line; the full sentence (measure, prices,
-  // years) is in About this chart
+  // One plain sentence on the card: who, how much, over which years. The
+  // measure's definition (housing costs, prices, household size) is in
+  // About this chart.
   let summary = null;
-  let sentence = null;
   const span = headlineSpan(projection, data, range);
   if (span) {
     const [first, last] = span;
     const a = first[adjustment];
     const b = last[adjustment];
     if (a != null && b != null && a !== 0) {
-      const verb = changeVerb(((b - a) / a) * 100, "%");
-      const average = metric.startsWith("mean") ? "Mean" : "Median";
+      const pct = ((b - a) / a) * 100;
+      const verb = changeVerb(pct, "%");
+      const who = metric.startsWith("mean") ? "the average household's income" : "the typical household's income";
+      const real = adjustment === "real" ? ", after inflation, " : ", ";
       summary = verb ? (
         <>
-          {average} income <strong>{verb}</strong>, from {formatPounds(a)} to {formatPounds(b)}.
+          Under current law{real}{who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
+          {poundsFull(b)} in {fyDash(last.year)}.
         </>
       ) : (
         <>
-          {average} income <strong>stays flat</strong> at {formatPounds(a)}.
-        </>
-      );
-      sentence = (
-        <>
-          {plainMetric(label)}
-          {adjustment === "real" ? ` in ${priceBase} prices` : " in cash terms"}{" "}
-          {verb ? (
-            <>
-              <strong>{verb}</strong>, from {formatPounds(a)} in {fyDash(first.year)} to {formatPounds(b)} by{" "}
-              {fyDash(last.year)}.
-            </>
-          ) : (
-            <>
-              <strong>stays flat</strong> at {formatPounds(a)} from {fyDash(first.year)} to {fyDash(last.year)}.
-            </>
-          )}
+          Under current law{real}{who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
+          {fyDash(last.year)}.
         </>
       );
     }
@@ -157,7 +146,6 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     summary,
     about: description,
     notes: [
-      sentence,
       noOutturn &&
         (realOnlyOutturn
           ? "Official incomes after housing costs are shown in real terms only."

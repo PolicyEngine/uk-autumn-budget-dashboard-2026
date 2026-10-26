@@ -852,8 +852,10 @@ body {
   }
 }
 
-/* A source named in a section's intro reads as a link */
-.section-heading p a {
+/* A source named in a section's intro reads as a link, as does the line
+   under a section pointing to another view */
+.section-heading p a,
+.section-link a {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1350,6 +1352,14 @@ body {
 }
 
 /* The logo's clear space under a legend is CHART_LOGO.gap (chartLogo.jsx) */
+/* A line under a section's last card that points to another view */
+.section-link {
+  margin: 12px 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
 /* Revenue impact: its measure key boxed under the plot, the logo below */
 .revenue-key .measure-key.is-section {
   margin: 8px 0 0;

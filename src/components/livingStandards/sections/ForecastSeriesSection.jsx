@@ -5,6 +5,7 @@
 // data (forecast.pre_label, post_label, pre_source, post_source).
 
 import LsCard from "../LsCard";
+import ControlBar from "../../ControlBar";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, OUTTURN_COLOUR, PROJECTION_COLOUR } from "../../../utils/livingStandards/baseline";
@@ -78,7 +79,7 @@ const SERIES_ICONS = {
   mortgage_interest: "percent",
 };
 
-function ForecastCard({ series, forecast, published, view }) {
+function ForecastCard({ series, forecast, published, view, onViewChange }) {
   const rows = toRows(series, published);
   if (!rows.length) return null;
   const derived = DERIVED.has(series.key);
@@ -89,12 +90,44 @@ function ForecastCard({ series, forecast, published, view }) {
   const period = rowsPeriod(rows);
   // The basis and the source are said once, in the section's intro; a card
   // says only what is its own: a series PolicyEngine derives
+  // One plain sentence on the card: the forecast's first and last years.
+  // Whether it is a PolicyEngine derivation is in About this chart.
+  const shown = (row) => (published && row.updated != null ? row.updated : row.previous);
+  const firstRow = rows.find((row) => shown(row) != null);
+  const lastRow = [...rows].reverse().find((row) => shown(row) != null);
+  const summary =
+    firstRow && lastRow && firstRow !== lastRow ? (
+      <>
+        The forecast has {series.label.charAt(0).toLowerCase() + series.label.slice(1)} growing by{" "}
+        <strong>{pctText(shown(firstRow))}</strong> in {firstRow.year} and <strong>{pctText(shown(lastRow))}</strong> in{" "}
+        {lastRow.year}.
+      </>
+    ) : null;
   const common = {
     title: series.label,
     icon: SERIES_ICONS[series.key],
     period,
-    summary: derived ? "A PolicyEngine derivation from the OBR forecast, not an OBR series." : null,
+    summary,
+    notes: [derived && "A PolicyEngine derivation from the OBR forecast, not an OBR series."],
     sourceText,
+    // Charts or tables: one choice for every card, offered in each card's
+    // Options pill
+    controls: onViewChange && (
+      <ControlBar
+        name={series.label}
+        options={[
+          {
+            label: "Show as",
+            value: view,
+            onChange: onViewChange,
+            options: [
+              { value: "chart", label: "Chart" },
+              { value: "table", label: "Table" },
+            ],
+          },
+        ]}
+      />
+    ),
   };
 
   if (view === "table") {
@@ -155,7 +188,7 @@ const pairs = (items) =>
   items.reduce((rows, item, i) => (i % 2 ? rows[rows.length - 1].push(item) : rows.push([item]), rows), []);
 
 /** One section per forecast group (inflation, incomes, housing), with its title on the page. */
-export default function ForecastSeriesSection({ data, view, subtitles = {} }) {
+export default function ForecastSeriesSection({ data, view, onViewChange, subtitles = {} }) {
   const forecast = data.forecast;
   const published = Boolean(forecast.post_published);
 
@@ -171,7 +204,7 @@ export default function ForecastSeriesSection({ data, view, subtitles = {} }) {
       {pairs(section.series).map((pair) => (
         <div className="charts-grid" key={pair[0].key}>
           {pair.map((series) => (
-            <ForecastCard key={series.key} series={series} forecast={forecast} published={published} view={view} />
+            <ForecastCard key={series.key} series={series} forecast={forecast} published={published} view={view} onViewChange={onViewChange} />
           ))}
         </div>
       ))}

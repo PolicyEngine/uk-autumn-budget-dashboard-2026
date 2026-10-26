@@ -11,7 +11,6 @@
 
 import { useState } from "react";
 import SectionHeading from "../SectionHeading";
-import PillSelect from "../PillSelect";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
@@ -53,21 +52,8 @@ function ForecastPanel({ forecast, data }) {
       />
       <section id="living-forecast" className="report-section">
         <ForecastHeadlineSection data={data} />
-        <div className="ls-section-controls">
-          <PillSelect
-            variant="light"
-            prefix="Show as"
-            name="Chart or table"
-            value={forecastView}
-            onChange={setForecastView}
-            options={[
-              { value: "chart", label: "Charts" },
-              { value: "table", label: "Tables" },
-            ]}
-          />
-        </div>
       </section>
-      <ForecastSeriesSection data={data} view={forecastView} />
+      <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} />
     </>
   );
 }
