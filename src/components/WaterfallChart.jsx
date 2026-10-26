@@ -274,9 +274,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published && activePolicies.length === 0 ? (
+        {published && activePolicies.length === 0 && !hasIncompleteResults ? (
           // Only measures that change no household's income this year (an
-          // employer cost): a note, not an empty plot of zero ticks
+          // employer cost): a note, not an empty plot of zero ticks. A
+          // measure with no published result is not 'no change': the
+          // unavailable notice above says so and the plot keeps its gaps
           <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
