@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   Cell,
   Customized,
-  LabelList,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -464,8 +463,6 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     const who = metric.group === "children" ? "children" : "people";
     return people < 1000 ? `under 1,000 ${who}` : `about ${(Math.round(people / 1000) * 1000).toLocaleString("en-GB")} ${who}`;
   })();
-  // Each bar's value, signed, at its end
-  const barLabel = (value) => (value == null || value === 0 ? "" : `${value > 0 ? "+" : "−"}${metric.format(value)}`);
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -633,24 +630,6 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
-                <LabelList
-                  dataKey="value"
-                  // On a phone only the chosen year's bar is labelled, so
-                  // neighbouring labels never meet
-                  content={({ x, y, width, height: h, value, index }) =>
-                    value == null || (narrow && data[index]?.year !== selectedYear) ? null : (
-                      <text
-                        x={x + width / 2}
-                        y={value < 0 ? Math.max(y, y + h) + 14 : Math.min(y, y + h) - 6}
-                        textAnchor="middle"
-                        fontSize={11}
-                        fill={CHART_COLOURS.text}
-                      >
-                        {barLabel(value)}
-                      </text>
-                    )
-                  }
-                />
                 {data.map((point) => {
                   const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
                   return (

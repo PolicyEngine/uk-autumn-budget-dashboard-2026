@@ -48,8 +48,12 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 // where the dot is too near the top of the plot), and moved clear of the
 // tag beside it. They are part of the chart's SVG, so the SVG and PNG
 // downloads carry them too.
-const formatNetLabel = (value) =>
-  value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+// A net that rounds to zero (a year before a measure starts) has no sign
+const formatNetLabel = (value) => {
+  const shown = Math.abs(value).toFixed(1);
+  if (Number(shown) === 0) return `£${shown}bn`;
+  return value < 0 ? `-£${shown}bn` : `+£${shown}bn`;
+};
 
 
 // The net line's dot radius (the Line's dot below)

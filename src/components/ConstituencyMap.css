@@ -180,34 +180,47 @@
   display: none;
 }
 
+/* Centred under the map, in the type and chips of the keys under the
+   other cards' plots (MeasureKey, SeriesToggle) */
 .map-key {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  font-size: var(--fs-micro);
-  line-height: 16px;
-  color: var(--pe-gray-700);
+  width: 100%;
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--c-text);
 }
 
-/* The title and its info icon on their own line */
+/* The title, its info icon and the hovered entry's seat count, centred */
 .map-key-head {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 4px 6px;
+  max-width: 100%;
 }
 
 .map-key-title {
   margin: 0;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  text-align: center;
 }
 
 .map-key-count {
-  margin-left: auto;
+  min-width: 0;
   color: var(--pe-teal-700);
+  font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.map-key-count:empty {
+  display: none;
 }
 
 /* The ramp, its breaks under the joins, Loss and Gain under its ends */
@@ -240,7 +253,7 @@
   position: absolute;
   top: 5px;
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 12px;
   color: var(--pe-gray-600);
   font-variant-numeric: tabular-nums;
@@ -260,33 +273,41 @@
 .map-key-ends {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 12px;
   color: var(--pe-gray-500);
 }
 
+/* The status patterns as chips, like MeasureKey's */
 .map-key-statuses {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 4px 14px;
-}
-
-.map-key-statuses-label {
-  color: var(--pe-gray-500);
+  gap: 6px;
+  max-width: 100%;
 }
 
 .map-key-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: none;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--c-surface);
   font: inherit;
-  color: inherit;
+  color: var(--c-text);
+  white-space: nowrap;
   cursor: pointer;
-  transition: opacity var(--motion-fast, 150ms) ease;
+  transition: opacity var(--motion-fast, 150ms) ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.map-key-item:hover,
+.map-key-item.is-active {
+  border-color: var(--pe-gray-400);
+  background: var(--c-hover);
 }
 
 .map-key-swatch {
@@ -319,28 +340,6 @@
     transition: none;
   }
 }
-
-/* The view switch: the shared segmented control on the row, its name
-   for screen readers only */
-.map-view-switch .control-bar-group {
-  display: block;
-}
-
-.map-view-switch .control-bar-group-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.map-view-switch .control-bar-segments {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  position: relative;
-}
-
 
 /* Map controls container */
 .map-controls-container {

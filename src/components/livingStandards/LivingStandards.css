@@ -629,11 +629,13 @@
   flex-direction: column;
   /* A grid cell that may shrink below its content: long captions wrap */
   min-width: 0;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid var(--pe-gray-200);
   border-radius: 12px;
-  background: var(--c-surface);
+  /* A light teal tint, so the tiles stand apart from the white cards
+     they sit in or beside; the same on every tab */
+  background: var(--pe-teal-50);
 }
 
 .forecast-tile-head {

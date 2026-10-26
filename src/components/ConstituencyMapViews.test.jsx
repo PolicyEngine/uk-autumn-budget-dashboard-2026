@@ -64,15 +64,25 @@ async function renderMap() {
   return utils;
 }
 
+// The view is chosen in the card's Options popover
+const viewGroup = () => {
+  if (!screen.queryByRole("radiogroup", { name: "View" })) {
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+  }
+  return screen.getByRole("radiogroup", { name: "View" });
+};
+const pickView = (name) => fireEvent.click(within(viewGroup()).getByRole("radio", { name }));
+
 const mapSvg = (container) => container.querySelector('svg[role="img"]');
 const seatPath = (container, code) =>
   container.querySelector(`path.constituency-path[data-code="${code}"]`);
 
 describe("ConstituencyMap views", () => {
-  it("offers Hex map, Map and Table, opening on the hex map", async () => {
+  it("offers Hex map, Map and Table in the Options popover, opening on the hex map", async () => {
     const { container } = await renderMap();
-    // The dashboard's shared segmented control
-    const switcher = screen.getByRole("radiogroup", { name: "Show constituencies as" });
+    // No view switch of its own: the pill names the view
+    expect(screen.getByRole("button", { name: /^Options:/ }).getAttribute("aria-label")).toMatch(/ · Hex map$/);
+    const switcher = viewGroup();
     const radios = within(switcher).getAllByRole("radio");
     expect(radios.map((radio) => radio.textContent)).toEqual(["Hex map", "Map", "Table"]);
     expect(within(switcher).getByRole("radio", { name: "Hex map" })).toHaveAttribute(
@@ -82,11 +92,11 @@ describe("ConstituencyMap views", () => {
     expect(mapSvg(container)).toHaveAttribute("data-view", "hex");
     expect(window.location.search).toBe("");
 
-    fireEvent.click(within(switcher).getByRole("radio", { name: "Map" }));
+    pickView("Map");
     await waitFor(() => expect(mapSvg(container)).toHaveAttribute("data-view", "map"));
     expect(window.location.search).toBe("?map=map");
 
-    fireEvent.click(within(switcher).getByRole("radio", { name: "Table" }));
+    pickView("Table");
     expect(window.location.search).toBe("?map=table");
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(container.querySelector(".map-content")).toHaveAttribute("hidden");
@@ -97,9 +107,9 @@ describe("ConstituencyMap views", () => {
     const row = () =>
       [...container.querySelector(".map-top-bar").children].map((child) => child.className);
     const hex = row();
-    expect(hex).toEqual(["map-view-switch", "control-bar", "map-search-section"]);
+    expect(hex).toEqual(["control-bar", "map-search-section"]);
     for (const view of ["Map", "Table", "Hex map"]) {
-      fireEvent.click(screen.getByRole("radio", { name: view }));
+      pickView(view);
       expect(row()).toEqual(hex);
       expect(screen.getAllByRole("searchbox")).toHaveLength(1);
       expect(screen.getAllByRole("button", { name: /^Options:/ })).toHaveLength(1);
@@ -123,7 +133,7 @@ describe("ConstituencyMap views", () => {
   it("opens the Table view from a link made for the old Rankings view", async () => {
     window.history.replaceState({}, "", "/?map=rankings");
     await renderMap();
-    expect(screen.getByRole("radio", { name: "Table" })).toHaveAttribute("aria-checked", "true");
+    expect(within(viewGroup()).getByRole("radio", { name: "Table" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
 
@@ -136,7 +146,7 @@ describe("ConstituencyMap views", () => {
     }
     // The same states as the boundary map draws
     const states = CODES.map((code) => seatPath(container, code).getAttribute("data-state"));
-    fireEvent.click(screen.getByRole("radio", { name: "Map" }));
+    pickView("Map");
     await waitFor(() => expect(mapSvg(container)).toHaveAttribute("data-view", "map"));
     await waitFor(() =>
       expect(CODES.map((code) => seatPath(container, code).getAttribute("data-state"))).toEqual(

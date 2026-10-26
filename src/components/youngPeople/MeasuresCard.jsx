@@ -226,6 +226,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     exportOptions,
     csv: csvText,
     published: published && shown.length > 0,
+    // The dumbbell is drawn in HTML, not as a Recharts SVG, so there is no
+    // chart image to export: the CSV only
+    image: false,
   };
 
   return (

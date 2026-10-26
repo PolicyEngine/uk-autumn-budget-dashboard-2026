@@ -3,7 +3,7 @@ import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
-import ControlBar, { Segmented } from "./ControlBar";
+import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
@@ -469,7 +469,6 @@ function MapKey({ outcome, counts, highlight, onHighlight }) {
         </div>
       </div>
       <div className="map-key-statuses">
-        <span className="map-key-statuses-label">Shown by pattern:</span>
         {STATUS_ENTRIES.map((entry) => (
           <button
             key={entry.key}
@@ -1008,10 +1007,11 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices besides the view, in its one Options pill: the
-  // measure shown (when several are selected) and how the change is shown
+  // The card's choices, in its one Options pill: the measure shown (when
+  // several selected measures have constituency results), how the change
+  // is shown, and the view
   const optionGroups = [
-    choice.focus && {
+    choice.focus && choice.focus.options.length > 1 && {
       label: "Measure",
       value: choice.reform,
       onChange: setFocusId,
@@ -1025,6 +1025,12 @@ export default function ConstituencyMap({
         value,
         label: OUTCOME_LABELS[value],
       })),
+    },
+    {
+      label: "View",
+      value: panel,
+      onChange: setPanel,
+      options: PANEL_OPTIONS,
     },
   ];
   const searchReady = view.kind === "rows";
@@ -1072,20 +1078,10 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
-        {/* The same row in every view: the view switch, the Options pill
-            and the search box, which picks a seat on a map and filters
-            the table */}
+        {/* The same row in every view: the Options pill (measure, how the
+            change is shown, and the view) and the search box, which picks
+            a seat on a map and filters the table */}
         <div className="map-top-bar">
-          <div className="map-view-switch">
-            <Segmented
-              group={{
-                label: "Show constituencies as",
-                value: panel,
-                onChange: setPanel,
-                options: PANEL_OPTIONS,
-              }}
-            />
-          </div>
           <ControlBar name={CHART_TITLE} options={optionGroups} />
           <div className="map-search-section">
             <div className="search-container">

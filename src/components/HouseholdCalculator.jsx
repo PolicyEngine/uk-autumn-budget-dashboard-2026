@@ -956,21 +956,8 @@ function HouseholdCalculator({
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
-              household={{
-                tenure: (submitted?.inputs ?? inputs).tenure,
-                regionLabel: REGION_OPTIONS.find(([value]) => value === (submitted?.inputs ?? inputs).region)?.[1] ?? null,
-                partner: Boolean((submitted?.inputs ?? inputs).has_partner),
-                children: parseChildrenAges((submitted?.inputs ?? inputs).children_ages).length,
-              }}
-              // "Edit" under the figure: the form, opened and scrolled to,
-              // with these answers (an example's become yours to change)
-              onEdit={() => {
-                if (formOpen) {
-                  document.getElementById(FORM_PANEL_ID)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-                  return;
-                }
-                chooseYours();
-              }}
+              requestHousehold={submitted ? buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household : null}
+              selected={submitted?.policies ?? householdPolicies}
             />
           )}
         </div>
