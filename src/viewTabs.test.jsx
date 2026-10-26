@@ -183,6 +183,7 @@ describe("the view tabs", () => {
   });
 
   it("open a sub-tab band only on views with sub-tabs, and keep the view tabs a keyboard tablist", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const bar = document.querySelector(".view-tabs-bar");
     expect(bar).toHaveClass("has-notch");

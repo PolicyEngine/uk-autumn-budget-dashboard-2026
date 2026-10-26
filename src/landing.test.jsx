@@ -64,8 +64,11 @@ describe("the landing page", () => {
       "?tab=household",
       "?tab=policies",
     ]);
-    // The tab bar stays, with no view chosen; its first tab is the Tab stop
+    // The tab bar stays, with no view chosen (no notch into a sub-tab
+    // band); its first tab is the Tab stop
     expect(selectedViewTabs()).toEqual([]);
+    expect(container.querySelector(".view-tabs-bar")).not.toHaveClass("has-notch");
+    expect(container.querySelector(".app")).not.toHaveAttribute("data-sub-band");
     expect(viewTab("Population impact")).toHaveAttribute("tabindex", "0");
     // Both pills apply: the boxes' figures follow them
     const band = container.querySelector(".title-row");
