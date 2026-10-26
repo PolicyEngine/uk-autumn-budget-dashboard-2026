@@ -817,11 +817,12 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto auto auto 1fr;
   grid-template-areas:
     "icon"
     "name"
     "result"
+    "position"
     "source"
     "description"
     "tag";
@@ -1207,6 +1208,55 @@
 }
 
 /* Where most of the change comes from, when not the card's own measure */
+/* Where the example sits in the UK income distribution: a strip with a
+   dot, and its percentile */
+.household-card-position-row {
+  grid-area: position;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  margin-top: 4px;
+}
+
+.household-card-position {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--pe-gray-600);
+}
+
+.household-card-position-track {
+  position: relative;
+  width: 64px;
+  height: 4px;
+}
+
+/* Lower incomes to higher, in the income groups' ramp, faint */
+.household-card-position-track::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--income-ramp-1), var(--income-ramp-4), var(--income-ramp-7));
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+.household-card-position-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--c-net);
+  border: 2px solid var(--pe-surface);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .household-card-source {
   grid-area: source;
   min-height: 1.45em;
@@ -1568,10 +1618,11 @@
 
   .household-card {
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto auto 1fr;
     grid-template-areas:
       "icon name"
       "icon result"
+      "icon position"
       "icon source"
       "icon description"
       "icon tag";

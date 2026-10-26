@@ -848,6 +848,7 @@ function HouseholdCalculator({
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
         presets={noneSelected ? null : presetsAnswer ? presetChanges : fill.figures}
         fill={noneSelected || presetsAnswer ? null : fill}
+        figurePolicies={householdPolicies}
         yoursChange={yoursChange}
         year={year}
         chosen={presetId !== null || formOpen || submitted !== null}

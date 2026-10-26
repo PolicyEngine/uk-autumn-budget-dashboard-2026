@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import SectionHeading from "../SectionHeading";
+import useDataFile from "../../hooks/useDataFile";
+import { buildHouseholdRequest } from "../../utils/householdImpactApi";
+import { presetInputs } from "../../utils/householdPresets";
+import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS } from "../../utils/displayYears";
@@ -92,6 +96,44 @@ export function cardFigures(example, byYear, year, catalogue = null) {
   const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
   return { change: current.change, ownPart, source, series };
+}
+
+/**
+ * Where an example sits in the UK income distribution in `year`, after the
+ * measures its figures are with: the percentile of its net income adjusted
+ * for household size, on the same curves and equivalisation as "Where you
+ * sit" (utils/incomePosition.js). Null without the year's net income or a
+ * published distribution for those measures.
+ */
+export function examplePercentile(example, point, { year, policies, rows, catalogue }) {
+  if (!rows || !point || !Number.isFinite(point.before) || !Number.isFinite(point.after)) return null;
+  const run = distributionRunFor(
+    policies,
+    catalogue?.displayable?.map((measure) => measure.id) ?? [],
+    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
+  );
+  const before = curveOf(rows, { reformId: run.reformId, year, side: "baseline" });
+  const after = curveOf(rows, { reformId: run.reformId, year, side: "reform" });
+  if (before.length < 2 || after.length < 2) return null;
+  const { household } = buildHouseholdRequest(presetInputs(example), { year, policies });
+  const position = householdPosition({ net: point, household, before, after });
+  const percentile = position.after.percentile;
+  return percentile === null ? null : Math.min(99, Math.max(1, Math.round(percentile)));
+}
+
+/** A small strip with a dot where the example sits, and its percentile. */
+function PositionStrip({ percentile, yearLabel }) {
+  return (
+    <span
+      className="household-card-position"
+      title={`Where they sit in the UK income distribution, ${yearLabel}: the ${ordinal(percentile)} percentile of household income adjusted for household size, after the measures`}
+    >
+      <span className="household-card-position-track" aria-hidden="true">
+        <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
+      </span>
+      <span className="household-card-position-label">{`${ordinal(percentile)} percentile`}</span>
+    </span>
+  );
 }
 
 /** "+£12 a year", "No change", or "calculating" for a year not yet in. */
@@ -225,6 +267,8 @@ export function YearBars({ series, year }) {
  * @param {Object|null} [props.fill] - The page's own figures' progress, when
  *   the file does not answer: { pending, failed (Sets of "id:year"), reduced
  *   (the measures asked with, when the API did not know every selected one) }
+ * @param {string[]} [props.figurePolicies] - The measures the figures are
+ *   with (for where each example sits)
  * @param {number|null} props.yoursChange - Your household's change, once calculated
  * @param {number} props.year
  * @param {boolean} [props.yoursSelected] - Your household is the one chosen
@@ -241,12 +285,16 @@ export default function HouseholdCards({
   onChoose,
   presets,
   fill = null,
+  figurePolicies = [],
   yoursChange = null,
   year,
   chosen = false,
   yoursSelected = false,
 }) {
   const catalogue = useMeasureCatalogue();
+  const distribution = useDataFile(DISTRIBUTION_FILE, parseDistribution);
+  // The measures the figures are with: those the API took, when fewer
+  const positionPolicies = fill?.reduced ?? figurePolicies;
   const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
   // What the figures are with: every measure (the file), the selected ones,
   // or those of them the calculator supports
@@ -311,6 +359,14 @@ export default function HouseholdCards({
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
           const waiting = !figures && Boolean(fill?.pending.has(`${example.id}:${year}`));
+          const percentile = figures
+            ? examplePercentile(example, presets[example.id]?.[year], {
+                year,
+                policies: positionPolicies,
+                rows: distribution.status === "ready" ? distribution.rows : null,
+                catalogue,
+              })
+            : null;
           const featured = featuresPublished(example, catalogue);
           const pressed = value === example.id;
           const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
@@ -359,6 +415,11 @@ export default function HouseholdCards({
                     Calculated when chosen
                   </span>
                 )}
+              </span>
+              {/* Where they sit: its own row, empty when not known, so every
+                  card keeps the same height */}
+              <span className="household-card-position-row">
+                {percentile !== null && <PositionStrip percentile={percentile} yearLabel={fiscalYearTick(year)} />}
               </span>
               <span className="household-card-source">
                 {figures?.source && `${signedMoney(figures.source.part)} from ${figures.source.name}`}
