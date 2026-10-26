@@ -31,7 +31,8 @@
   box-shadow: 0 2px 6px var(--shadow-faint);
 }
 
-/* The segmented control: the chosen tab on a white pill that slides */
+/* The chosen sub-tab is marked as the chosen view tab is: a stronger tint
+   behind it, square, no border or shadow, sliding from tab to tab */
 .sub-tabs {
   position: relative;
   display: flex;
@@ -69,12 +70,7 @@
   bottom: 0;
   left: 0;
   z-index: 0;
-  border-radius: 999px;
-  background: var(--pe-surface);
-  box-shadow:
-    0 1px 3px var(--shadow-faint),
-    0 2px 8px var(--shadow-faint),
-    inset 0 0 0 1px var(--c-subtab-rule);
+  background: var(--c-subtab-active);
   pointer-events: none;
 }
 
@@ -103,7 +99,7 @@
   color: var(--c-subtab-muted);
   background: transparent;
   border: none;
-  border-radius: 999px;
+  border-radius: 0;
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, min-height 180ms ease-out;
 }
@@ -118,10 +114,10 @@
   transition: color 0.15s ease;
 }
 
-/* A tint pill under the pointer; the chosen tab has its white pill */
+/* A light tint under the pointer; the chosen tab has its stronger one */
 .sub-tab:not([aria-selected="true"]):hover {
   color: var(--band-teal);
-  background: color-mix(in srgb, var(--pe-surface) 55%, transparent);
+  background: color-mix(in srgb, var(--c-subtab-active) 50%, transparent);
 }
 
 .sub-tab:hover .sub-tab-icon {
@@ -134,7 +130,7 @@
 }
 
 .sub-tab[aria-selected="true"] .sub-tab-icon {
-  color: var(--pe-teal-600);
+  color: var(--band-teal);
 }
 
 .sub-tabs .sub-tab:focus-visible {
