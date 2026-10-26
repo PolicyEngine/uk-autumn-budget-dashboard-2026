@@ -21,7 +21,7 @@ import { buildChartCsv } from "../utils/chartCsv";
 import { loadVerifiedTable } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -59,6 +59,7 @@ import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { AGE_METHOD } from "./methodology/anchors";
 import MeasureSharesChart from "./MeasureSharesChart";
 import { SHARE_FILTER_OPTIONS, filterShareRows, sharesByMeasure } from "../utils/measureShares";
 import {
@@ -485,6 +486,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* The net change: a dark dot per age */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
@@ -549,6 +551,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 name="netChange"
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
@@ -561,6 +564,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
@@ -584,14 +588,17 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       {published && (
         <div className="chart-footer">
           {notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-          <ChartMoreInfo members={members} year={selectedYear}>
-            {single && (
-              <p>
-                Single years of age rest on fewer households; a few large changes, such as capital gains under
-                Business Asset Disposal Relief, can move one age&apos;s average.
-              </p>
-            )}
-          </ChartMoreInfo>
+          <ChartMoreInfo
+            members={members}
+            year={selectedYear}
+            info={{
+              caveats: [
+                single &&
+                  "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",
+              ],
+              method: AGE_METHOD,
+            }}
+          />
         </div>
       )}
     </div>
@@ -801,16 +808,21 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
-        <ChartMoreInfo year={Number(selectedYear)}>
-          <p>Each person counts their household&apos;s change in net income.</p>
-          {perMeasure && (
-            <p>
-              Each row is one measure simulated on its own. The shares can&apos;t be added up across measures, and no
-              published run covers this selection together.
-              {perMeasure.missing.length > 0 && ` Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`}
-            </p>
-          )}
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          year={Number(selectedYear)}
+          info={{
+            how: perMeasure
+              ? [
+                  "No published run covers this selection together, so each row is one measure simulated on its own.",
+                  "The rows' shares can't be added up across measures.",
+                ]
+              : ["Shares come from one run of the whole selection, so they include how the measures interact."],
+            caveats: [
+              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
+            ],
+            method: AGE_METHOD,
+          }}
+        />
       </div>
     </div>
   );

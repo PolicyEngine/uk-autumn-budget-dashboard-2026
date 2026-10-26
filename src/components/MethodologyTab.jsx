@@ -258,6 +258,7 @@ function MethodologyTab({ onShowTab }) {
                     "Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                   ],
                   ["Years", "Fiscal years: 2027 means 2027-28."],
+                  ["Prices", "Population and Household impact figures are in cash terms for the year shown, not adjusted for inflation."],
                 ]}
               />
               <p className="method-more">
@@ -484,8 +485,15 @@ function MethodologyTab({ onShowTab }) {
                   "Who counts",
                   {
                     value: "People in households with an income decile.",
-                    more: [`A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`],
+                    more: [
+                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                      "Each person counts their whole household's change in net income, not equivalised, and averages are per person.",
+                    ],
                   },
+                ],
+                [
+                  "Pensioners",
+                  "People at or over State Pension age: 66 in 2026-27 and 67 from 2027-28, as in policyengine-uk.",
                 ],
                 [
                   "Better or worse off",

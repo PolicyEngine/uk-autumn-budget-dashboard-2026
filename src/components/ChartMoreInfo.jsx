@@ -1,6 +1,6 @@
 import Disclosure from "./Disclosure";
 import "./ChartMoreInfo.css";
-import InfoSections, { caveatChip, hasInfo, infoPreview } from "./InfoSections";
+import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 
 /** The one name of every chart card's disclosure. */
 export const ABOUT_THIS_CHART = "About this chart";
@@ -102,7 +102,6 @@ function ChartMoreInfo({ info = {}, members = [], year, period, children }) {
       title={ABOUT_THIS_CHART}
       className="chart-more-info"
       preview={infoPreview(full)}
-      chip={caveatChip(full)}
     >
       <InfoSections info={full} />
     </Disclosure>
