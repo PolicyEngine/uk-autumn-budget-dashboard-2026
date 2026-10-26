@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import App, { VIEWS, opensYoungPeople, viewFromLocation } from "./App";
+import App, { VIEWS, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
 
 beforeEach(() => {
   // An empty CSV for every data file: these tests are about the views
@@ -107,6 +107,9 @@ describe("the view tabs", () => {
       ["/?tab=outlook", "Pre-measures forecast"],
       // An old link: the pre-measures forecast was Living standards
       ["/?tab=living", "Pre-measures forecast"],
+      // Its old Baseline outlook sub-tab: now its Living standards
+      ["/?tab=outlook&sub=baseline", "Pre-measures forecast"],
+      ["/?tab=living&sub=baseline", "Pre-measures forecast"],
       ["/?tab=policies", "Policies"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
@@ -120,6 +123,10 @@ describe("the view tabs", () => {
     expect(viewFromLocation({ search: "?tab=personal", hash: "" })).toBe("household");
     expect(viewFromLocation({ search: "?tab=living", hash: "#young-people" })).toBe("dashboard");
     expect(viewFromLocation({ search: "?tab=young", hash: "" })).toBe("dashboard");
+    expect(viewFromLocation({ search: "?tab=outlook&sub=baseline", hash: "" })).toBe("outlook");
+    expect(oldOutlookBaseline({ search: "?tab=living&sub=baseline" })).toBe(true);
+    expect(oldOutlookBaseline({ search: "?tab=outlook&sub=forecast" })).toBe(false);
+    expect(oldOutlookBaseline({ search: "?sub=baseline" })).toBe(false);
     expect(opensYoungPeople({ search: "?tab=young", hash: "" })).toBe(true);
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
   });
@@ -298,7 +305,7 @@ describe("the view tabs", () => {
     expect(panel).not.toHaveTextContent("our research on the");
     expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
     const living = panel.querySelector("#method-living");
-    expect(within(living).getByRole("link", { name: "Pre-measures forecast" })).toBeInTheDocument();
+    expect(within(living).getByRole("link", { name: "OBR forecast" })).toHaveAttribute("href", "?tab=outlook&sub=forecast");
     // Said once on the page
     for (const phrase of [
       /dominance and p% rules/g,

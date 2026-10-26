@@ -20,7 +20,7 @@ import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
-import CurrentLawSection, { CurrentLawInequalityCard } from "./components/livingStandards/CurrentLawSection";
+import TwinLink from "./components/TwinLink";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -37,7 +37,10 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 // current-law baseline, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
-// PopulationImpactView.
+// PopulationImpactView; the Pre-measures forecast's (Living standards,
+// Poverty, OBR forecast) in LivingStandardsTab. Living standards and Poverty
+// are twins: with the selected measures on Population impact, without them
+// (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },
@@ -50,8 +53,8 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
-// (?tab=living was the pre-measures forecast's address; for its old ?sub=
-// values see oldOutlookSub)
+// (?tab=living was the pre-measures forecast's address; for its old
+// ?sub=baseline see oldOutlookBaseline)
 const VIEW_ALIASES = { personal: "household", living: "outlook" };
 const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
 
@@ -81,23 +84,19 @@ export function opensYoungPeople({ search, hash }) {
 }
 
 /**
- * An old link to one of the Pre-measures forecast's former sub-tabs
- * (?tab=outlook or ?tab=living, with ?sub=):
- * "baseline" (incomes and poverty under current law, now on Population
- * impact's Living standards sub-tab) or "forecast" (now the whole view);
- * null otherwise.
+ * Whether a page address is an old link to the Pre-measures forecast's
+ * former Baseline outlook sub-tab (?tab=outlook or ?tab=living, with
+ * ?sub=baseline): incomes and poverty under current law, now its Living
+ * standards sub-tab, the default.
  */
-export function oldOutlookSub({ search }) {
+export function oldOutlookBaseline({ search }) {
   const params = new URLSearchParams(search);
-  if (viewKey(params.get("tab")) !== "outlook") return null;
-  const sub = params.get(SUB_TAB_PARAM);
-  return sub === "baseline" || sub === "forecast" ? sub : null;
+  return viewKey(params.get("tab")) === "outlook" && params.get(SUB_TAB_PARAM) === "baseline";
 }
 
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
-  if (oldOutlookSub({ search }) === "baseline") return DEFAULT_VIEW;
   const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
@@ -203,11 +202,9 @@ function App() {
     // stays, so the page scrolls to the section
     const view = viewFromLocation(window.location);
     if (opensYoungPeople(window.location)) dropSubTab("young");
-    // The Pre-measures forecast has no sub-tabs now: an old Baseline
-    // outlook link opens its cards' new home, Living standards; any other
-    // ?sub= on the view (Forecast changes, which is now the whole view) goes
-    if (oldOutlookSub(window.location) === "baseline") dropSubTab("living");
-    else if (view === "outlook") dropSubTab(null);
+    // An old Baseline outlook link opens the Pre-measures forecast's Living
+    // standards, its default sub-tab (?sub=forecast is still its OBR forecast)
+    if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setActiveTab(view);
 
     if (policiesParam) {
@@ -555,100 +552,76 @@ function App() {
   // A Population impact sub-tab's content. With no policies chosen, each
   // offers the full Budget; the charts wait for the CSVs.
   const populationPanel = (sub) => {
-    // Living standards and Poverty end with incomes and poverty under
-    // current law, which need no policy: with none selected, only the
-    // measures' sections give way to the empty state
-    const noPolicies = selectedPolicies.length === 0;
-    const measures = !noPolicies && results;
+    if (selectedPolicies.length === 0) return emptyState;
+    // Living standards and Poverty show the selected measures' effect; their
+    // twins on the Pre-measures forecast (same names) show current law
+    const twin = (twinSub) => <TwinLink tab="outlook" sub={twinSub} onShow={handleTabChange} />;
     if (sub === "living") {
+      if (!results) return null;
       return (
         <div className="results-container">
-          {noPolicies && emptyState}
-          {measures && (
-            <>
-              <SectionHeading
-                title="How the measures change incomes"
-                subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures follow."
-              />
-              {/* Both cards colour by measure: one key above the pair
-                  (MeasureKey), and hovering a measure there shows it in
-                  both */}
-              <MeasureKeyProvider>
-                <section id="deciles" className="report-section distributional-section">
-                  <SectionMeasureKey />
-                  <div className="charts-grid">
-                    <WaterfallChart
-                      rawData={results.rawWinnersLosers}
-                      selectedPolicies={selectedPolicies}
-                      selectedYear={distributionalYear}
-                    />
-                    <DistributionalChart
-                      rawData={results.rawDistributional}
-                      selectedPolicies={selectedPolicies}
-                      selectedYear={distributionalYear}
-                    />
-                  </div>
-                </section>
-              </MeasureKeyProvider>
-            </>
-          )}
-          {/* Incomes without the measures, then inequality */}
-          <CurrentLawSection id="incomes" />
-          {/* Inequality: the measures' effect beside its level under
-              current law (side by side on a desktop, stacked on a phone) */}
           <SectionHeading
-            title="Inequality"
-            subtitle={
-              measures
-                ? "With the selected measures: the change in inequality each year. Without the measures: inequality under current law."
-                : "Without the measures: inequality under current law."
-            }
+            title="How the measures change incomes"
+            subtitle="With the selected measures: how they change net income across the income distribution in the selected year."
           />
-          <section id="inequality" className="report-section">
-            <div className="charts-grid">
-              {measures && (
-                <SummaryMetricChart
-                  metric={SUMMARY_METRICS.inequality}
-                  rows={results.rawMetrics}
-                  policies={POLICIES}
+          {/* Both cards colour by measure: one key above the pair
+              (MeasureKey), and hovering a measure there shows it in
+              both */}
+          <MeasureKeyProvider>
+            <section id="deciles" className="report-section distributional-section">
+              <SectionMeasureKey />
+              <div className="charts-grid">
+                <WaterfallChart
+                  rawData={results.rawWinnersLosers}
                   selectedPolicies={selectedPolicies}
                   selectedYear={distributionalYear}
                 />
-              )}
-              <CurrentLawInequalityCard />
+                <DistributionalChart
+                  rawData={results.rawDistributional}
+                  selectedPolicies={selectedPolicies}
+                  selectedYear={distributionalYear}
+                />
+              </div>
+            </section>
+          </MeasureKeyProvider>
+          <SectionHeading
+            title="Inequality"
+            subtitle={<>With the selected measures: the change in inequality each year. {twin("living")}</>}
+          />
+          <section id="inequality" className="report-section">
+            <div className="charts-grid">
+              <SummaryMetricChart
+                metric={SUMMARY_METRICS.inequality}
+                rows={results.rawMetrics}
+                policies={POLICIES}
+                selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
+              />
             </div>
           </section>
         </div>
       );
     }
     if (sub === "poverty") {
+      if (!results) return null;
       return (
         <div className="results-container">
-          {noPolicies && emptyState}
-          {measures && (
-            <>
-              <SectionHeading
-                title="How the measures change poverty"
-                subtitle="With the selected measures: the change in the poverty rate each year, and each measure's part in the selected year. Poverty without the measures is below."
-              />
-              {/* The change by year beside which measures move it, then
-                  current law: four cards, two a row on a desktop */}
-              <section id="poverty" className="report-section">
-                <PovertyMeasuresRow
-                  rows={results.rawMetrics}
-                  policies={POLICIES}
-                  selectedPolicies={selectedPolicies}
-                  selectedYear={distributionalYear}
-                />
-              </section>
-            </>
-          )}
-          {/* Poverty without the measures */}
-          <CurrentLawSection id="poverty" />
+          <SectionHeading
+            title="How the measures change poverty"
+            subtitle={<>With the selected measures: the change in the poverty rate each year, and each measure&apos;s part in the selected year. {twin("poverty")}</>}
+          />
+          {/* The change by year beside which measures move it */}
+          <section id="poverty" className="report-section">
+            <PovertyMeasuresRow
+              rows={results.rawMetrics}
+              policies={POLICIES}
+              selectedPolicies={selectedPolicies}
+              selectedYear={distributionalYear}
+            />
+          </section>
         </div>
       );
     }
-    if (noPolicies) return emptyState;
     if (sub === "young") {
       // Young people (16 to 24): results by age, #young-people
       return (
@@ -791,7 +764,7 @@ function App() {
           hidden={value !== activeTab}
         >
         {value === "outlook" ? (
-          <LivingStandardsTab />
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
         ) : value === "policies" ? (
           // Every measure's card, whatever the band's selection
           <div className="results-container">

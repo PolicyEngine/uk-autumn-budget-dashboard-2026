@@ -109,7 +109,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const offer = available(data);
   const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
-  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, offer.groupings[0]);
+  // Vigintiles by default, the finest split; deciles where the file has no
+  // vigintiles, then whatever it offers
+  const defaultGrouping = ["vigintile", "decile"].find((g) => offer.groupings.includes(g)) ?? offer.groupings[0];
+  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, defaultGrouping);
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");
 
