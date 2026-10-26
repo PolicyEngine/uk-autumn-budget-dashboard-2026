@@ -101,8 +101,13 @@ export function statePensionFor(year) {
 export const atStatePensionAge = (age, year) => age >= statePensionFor(year).age;
 
 /** The API's URL, or null when the build has none. */
+// Drill 5 (MOCK branch, never merged): every build of it, the Vercel bot's
+// previews included, calls the drill's own household app, which registers
+// the drill's 15 measures
+const DRILL_HOUSEHOLD_API = "https://policyengine--uk-budget-household-drill5-web.us-east.modal.run/api/household-impact";
+
 export function householdApiUrl() {
-  const url = process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL;
+  const url = DRILL_HOUSEHOLD_API;
   return url ? url.trim() : null;
 }
 
@@ -114,7 +119,7 @@ export function householdApiUrl() {
  */
 export const HOUSEHOLD_DETAIL_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL";
 export function householdDetailApiUrl() {
-  const url = process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL;
+  const url = DRILL_HOUSEHOLD_API;
   return url ? url.trim() : null;
 }
 
