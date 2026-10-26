@@ -5,7 +5,8 @@ import TitleIcon from "./TitleIcon";
 const TAB_ICONS = {
   dashboard: "users",
   household: "house",
-  living: "trend",
+  outlook: "trend",
+  policies: "list",
   methodology: "book",
 };
 

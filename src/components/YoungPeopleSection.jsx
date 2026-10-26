@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DISPLAY_YEARS } from "../utils/displayYears";
 import {
   Bar,
   BarChart,
@@ -35,7 +34,6 @@ import TrendCard from "./youngPeople/TrendCard";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
 } from "../utils/policyConfig";
 import {
   useNarrowViewport,
@@ -46,7 +44,7 @@ import {
   axisWidth,
   fiscalYearTick,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
@@ -61,6 +59,13 @@ import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import ChartMoreInfo from "./ChartMoreInfo";
+import {
+  legendMembership,
+  legendItems as membershipItems,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
@@ -87,8 +92,8 @@ const SHARES_DESCRIPTION =
 const SHARES_SINGLE_DESCRIPTION =
   "Share of people better or worse off (a change over 0.01%), by single year of age (10 to 40).";
 
-/** The two views of "Average change by age". */
-const AGE_VIEWS = [
+/** The two views of "Average change by age" (and Pensioners' Better and worse off). */
+export const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
 ];
@@ -110,16 +115,26 @@ const signedPounds = (value) =>
 const percent = formatShare;
 const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
 
+/** The split column's width, as the dumbbell's value column, and each half's. */
+const SPLIT_WIDTH = 112;
+const SPLIT_WIDTH_NARROW = 108;
+const SPLIT_COLUMN = 58;
+
 /** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
 function SplitTick({ x, y, payload, data, narrow }) {
   const row = data.find((point) => point.group === payload.value);
   if (!row) return null;
+  // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
+  // (Recharts puts x 8px into the axis), as the dumbbell's value column
+  const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
   return (
-    <text x={x + 4} y={y} dominantBaseline="middle" fontSize={narrow ? 10 : 11} fill={CHART_COLOURS.tick}>
-      <tspan fill={CHART_COLOURS.gain}>▲</tspan>
-      {` ${formatShare(row.real.pct_better_off)}  `}
-      <tspan fill={CHART_COLOURS.loss}>▼</tspan>
-      {` ${formatShare(row.real.pct_worse_off)}`}
+    <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
+      <tspan x={end - SPLIT_COLUMN} textAnchor="end">
+        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
+      </tspan>
+      <tspan x={end} textAnchor="end">
+        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
+      </tspan>
     </text>
   );
 }
@@ -145,7 +160,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
 
 
 /** Load age_impact.csv once per mount, typed by the publication contract. */
-function useAgeImpactRows() {
+export function useAgeImpactRows() {
   const [state, setState] = useState({ status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
@@ -232,7 +247,8 @@ function useBandDomain(rows, policies, selectedPolicies) {
         lo = Math.min(lo, down);
       }
     }
-    return zeroBasedAxis([lo, hi]);
+    // Symmetric about zero when ages gain and lose (divergingAxis)
+    return divergingAxis([lo, hi]);
   }, [rows, policies, selectedPolicies]);
 }
 
@@ -340,19 +356,18 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   });
   const { domain, ticks } = single ? singleAxis : bandAxis;
 
-  // Measures with an effect in any shown year, so the legend (and the
-  // plot's height) holds still when the year changes or Play runs
-  const activeNames = useMemo(
-    () =>
-      ALL_POLICY_NAMES.filter((name) =>
-        DISPLAY_YEARS.some((year) =>
-          meanChangeByBand(rows, policies, selectedPolicies, year).some(
-            (point) => Math.abs(point[name] ?? 0) > 0.01,
-          ),
-        ),
-      ),
-    [rows, policies, selectedPolicies],
-  );
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect at any age this year is greyed out, and the note under the
+  // chart says why (legendMembership)
+  const members = useMemo(() => {
+    const points = meanChangeByBand(rows, policies, selectedPolicies, selectedYear);
+    const nameOf = (id) => policies.find((policy) => policy.id === id)?.name;
+    return legendMembership(selectedPolicies, (id) =>
+      points.some((point) => Math.abs(point[nameOf(id)] ?? 0) > 0),
+    );
+  }, [rows, policies, selectedPolicies, selectedYear]);
+  const activeNames = drawnNames(members);
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
@@ -368,12 +383,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     logo: CHART_LOGO,
     reservedLegendHeight: 0,
     legendItems: [
-          ...activeNames.map((name) => ({
-            color: POLICY_COLORS[name],
-            label: name,
-            type: "rect",
-            group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
-          })),
+          ...exportLegendItems(members),
           ...(activeNames.length > 1
             ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
@@ -577,22 +587,31 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       </div>
       <div className="chart-legend">
         {published &&
-          <GroupedLegend names={activeNames} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
+          <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-      {published && single && (
-        <p className="chart-footnote">
-          Single years of age rest on fewer households; a few large changes, such as capital gains under
-          Business Asset Disposal Relief, can move one age&apos;s average.
-        </p>
+      {published && (
+        <div className="chart-footer">
+          {notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
+          <ChartMoreInfo members={members} year={selectedYear}>
+            {single && (
+              <p>
+                Single years of age rest on fewer households; a few large changes, such as capital gains under
+                Business Asset Disposal Relief, can move one age&apos;s average.
+              </p>
+            )}
+          </ChartMoreInfo>
+        </div>
       )}
     </div>
   );
 }
+
+/** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
+const ROW_LABEL_SIZE = 13;
 
 /** The group tick: 16 to 24 in bold, all ages after a gap, as usual. */
 function GroupTick({ x, y, payload, narrow }) {
@@ -605,7 +624,7 @@ function GroupTick({ x, y, payload, narrow }) {
       y={y}
       textAnchor="end"
       dominantBaseline="middle"
-      fontSize={TICK_STYLE.fontSize}
+      fontSize={ROW_LABEL_SIZE}
       fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young || !band ? 600 : 400}
     >
@@ -805,7 +824,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 type="category"
                 dataKey="group"
                 tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? 108 : 112}
+                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
                 axisLine={false}
                 tickLine={false}
                 interval={0}

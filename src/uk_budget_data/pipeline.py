@@ -26,6 +26,8 @@ from uk_budget_data.calculators import (
     DistributionalImpactCalculator,
     HouseholdScatterCalculator,
     IncomeCurveCalculator,
+    IncomeDistributionCalculator,
+    IncomeMobilityCalculator,
     MetricsCalculator,
     WinnersLosersCalculator,
 )
@@ -551,6 +553,7 @@ def generate_all_data(
 # age_impact.csv included; AGE and SCATTER alone are ``generate --only``.
 FLAT = frozenset({"flat"})
 AGE = frozenset({"age_impact"})
+DISTRIBUTION = frozenset({"income_distribution"})
 SCATTER = frozenset({"household_scatter"})
 
 
@@ -571,6 +574,8 @@ class FlatOutcome:
     reform_id: str
     result: Optional[ReformResult] = None
     age_rows: list = field(default_factory=list)
+    distribution_rows: list = field(default_factory=list)
+    mobility_rows: list = field(default_factory=list)
     scatter_cells: list = field(default_factory=list)
     messages: list = field(default_factory=list)
 
@@ -635,7 +640,7 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
         if built:
             warn(wealth_tax_refusal(*built))
     survey = None
-    if "household_scatter" in unit.tables:
+    if unit.tables & {"household_scatter", "income_distribution"}:
         survey = scatter_survey_households(baseline, dataset_path)
 
     # Every table is read while the watch runs, from the same two runs.
@@ -652,7 +657,31 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                         baseline, reformed, reform.id, reform.name, year
                     )
                 )
-        if survey is not None:
+        elif "income_distribution" in unit.tables:
+            calculator = IncomeDistributionCalculator()
+            mobility = IncomeMobilityCalculator()
+            for year in config.years:
+                outcome.distribution_rows.extend(
+                    calculator.calculate(
+                        baseline,
+                        reformed,
+                        reform.id,
+                        reform.name,
+                        year,
+                        survey_households=survey,
+                    )
+                )
+                outcome.mobility_rows.extend(
+                    mobility.calculate(
+                        baseline,
+                        reformed,
+                        reform.id,
+                        reform.name,
+                        year,
+                        survey_households=survey,
+                    )
+                )
+        if survey is not None and "household_scatter" in unit.tables:
             outcome.scatter_cells = _scatter_cells(
                 reform, config, dataset_path, baseline, reformed, survey
             )
@@ -787,6 +816,41 @@ def generate_age_impact(
         f"[green]Saved {len(frame)} rows to "
         f"{config.output_dir / 'age_impact.csv'}[/green]"
     )
+    return frame
+
+
+INCOME_DISTRIBUTION_FILE = "income_distribution.csv"
+INCOME_MOBILITY_FILE = "income_mobility.csv"
+
+
+def generate_income_distribution(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+    runner=None,
+) -> pd.DataFrame:
+    """Write only ``income_distribution.csv`` (percentiles of equivalised
+    household net income before and after each measure) and
+    ``income_mobility.csv`` (who changes place, by starting decile).
+
+    Builds the same two simulations per reform as the full run, on the same
+    baselines, and runs only IncomeDistributionCalculator. ``uk-budget-data
+    generate --only income_distribution`` calls it. The full run does not
+    write this file.
+    """
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    outcomes = flat_units(reforms, config, dataset_path, DISTRIBUTION, runner)
+    frame = pd.DataFrame(
+        [row for o in outcomes for row in o.distribution_rows]
+    )
+    path = config.output_dir / INCOME_DISTRIBUTION_FILE
+    save_csv(frame, path)
+    console.print(f"[green]Saved {len(frame)} rows to {path}[/green]")
+    mobility = pd.DataFrame([row for o in outcomes for row in o.mobility_rows])
+    path = config.output_dir / INCOME_MOBILITY_FILE
+    save_csv(mobility, path)
+    console.print(f"[green]Saved {len(mobility)} rows to {path}[/green]")
     return frame
 
 

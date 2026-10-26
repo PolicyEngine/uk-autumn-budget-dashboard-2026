@@ -79,9 +79,9 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 
 ### Key components
 - `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Household impact answers in the address.
-- `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people).
+- `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people, Living standards, Poverty, Public finances).
 - `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
-- `src/components/livingStandards/`: the Living standards tab.
+- `src/components/livingStandards/`: the Pre-measures forecast tab (`?tab=outlook`).
 - `src/components/MethodologyTab.jsx`: Methodology.
 - `src/components/SubTabs.jsx` and `ViewTabs.jsx`: tab and sub-tab bars (`?sub=`).
 
@@ -148,7 +148,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 ### Data files
 - The page reads files under `public/data/` written by `uk-budget-data` (for example `budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv`, `regional.csv`, `income_curve.csv`, `living_standards_outlook.json`). Fetch them under the base path: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/<file>`.
 - Every file under `public/` is a publication and needs a review row; see "Review and sign-off" in the README.
-- The Living standards file's shape is in `docs/DATA_CONTRACT.md`.
+- The Pre-measures forecast file's shape is in `docs/DATA_CONTRACT.md`.
 
 ## URL State Management
 - Sync state to URL: Update query params when policies/params change
