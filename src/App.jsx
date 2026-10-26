@@ -230,7 +230,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
-    // sum (the receipted metrics carry the contract's columns only, #104)
+    // sum; an artifact's poverty_inequality table is merged into its rows
     rawMetrics: published.metrics,
   }), [published, catalogue, selectedPolicies]);
 

@@ -28,9 +28,12 @@ ROWS_PER_YEAR = {
     "distributional_impact": 10,
     "winners_losers": 11,
     "metrics": 1,
+    "poverty_inequality": 1,
     # Every example household, at each point on its income grid
     "income_curve": CURVE_POINTS * len(HOUSEHOLD_IDS),
 }
+# Optional tables that, when an artifact has them, cover every year.
+COMPLETE_WHEN_PRESENT = frozenset({"poverty_inequality"})
 DECILES = frozenset(
     f"{n}{'st' if n == 1 else 'nd' if n == 2 else 'rd' if n == 3 else 'th'}"
     for n in range(1, 11)
@@ -136,7 +139,9 @@ def table_problems(
         for year in years:
             matching = by_year.get(year, [])
             if not matching:
-                if spec.required:
+                # An optional table may be absent, but one that is present
+                # covers every year, as metrics does
+                if spec.required or name in COMPLETE_WHEN_PRESENT:
                     problems.append(f"{name}: missing {year}")
                 continue
             count = expected_rows.get(name)
