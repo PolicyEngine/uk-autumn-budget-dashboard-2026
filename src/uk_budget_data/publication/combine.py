@@ -22,8 +22,10 @@ changes a parameter those steps read (whether Universal Credit rebalancing
 is active, for one) would give a different result combined than alone.
 ``tests/test_engine_order.py`` fails on an engine with the old order.
 
-**Conflicts.** Two members that set the same parameter for the same period
-to different values cannot be combined.
+**Conflicts.** Two members may not change one parameter, even to the same
+value, except a shared setting (``SHARED_SETTINGS``): a modelling setting
+that says how a member is scored, not a policy, which members may each set
+to the same values. The combination then sets it once.
 
 **Consistency.** Before simulating, ``check_consistency`` builds household
 simulations of each member alone and of the combination and compares every
@@ -41,6 +43,10 @@ from uk_budget_data.publication.artifacts import COMBINED_PREFIX
 
 MAX_KEY_LENGTH = 120
 ENGINE_BASELINE_COPY = "baseline"
+# Modelling settings members may share (path prefixes): the capital gains
+# realisation responses, which every measure that moves capital gains tax
+# sets to none (reforms.static_capital_gains), so its figure is static.
+SHARED_SETTINGS = ("gov.simulation.capital_gains_responses.",)
 
 # A single adult; the check reads parameters, not results.
 _SITUATION = {
@@ -95,16 +101,31 @@ def _merge(
     Members must change disjoint parameters (policyengine.py's composition
     v1): a second member touching a parameter another has changed is
     refused, even with the same value, since how two changes to one
-    parameter merge depends on their form.
+    parameter merge depends on their form. A shared setting is the one
+    exception: a second member may set it to exactly the same values for
+    the same periods, so the merge cannot depend on order or form.
     """
     for path, periods in (changes or {}).items():
         if path in owners and owners[path] != member_id:
+            if path.startswith(SHARED_SETTINGS):
+                if _same_periods(merged[path], periods):
+                    continue
+                raise CombineConflict(
+                    f"{side}: {path} is set differently by "
+                    f"{owners[path]} and {member_id}"
+                )
             raise CombineConflict(
                 f"{side}: {path} is changed by both {owners[path]} and "
                 f"{member_id}; make them one measure"
             )
         owners[path] = member_id
         merged.setdefault(path, {}).update(periods)
+
+
+def _same_periods(left: dict, right: dict) -> bool:
+    return set(left) == set(right) and all(
+        _same(left[period], right[period]) for period in left
+    )
 
 
 def merged_changes(measures: list[Reform], config: DataConfig) -> dict:

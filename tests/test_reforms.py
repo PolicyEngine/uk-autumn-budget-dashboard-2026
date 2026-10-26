@@ -33,6 +33,7 @@ from uk_budget_data.reforms import (
     get_reform,
     list_reform_ids,
     plan_2_unfrozen_thresholds,
+    static_capital_gains,
 )
 
 
@@ -609,7 +610,11 @@ def test_a_single_person_on_30000_pounds_in_2031_pays_52_pounds_more():
 
 
 def test_the_freeze_changes_only_2031():
-    changes = get_reform("threshold_freeze_2031_32").parameter_changes
+    """Its thresholds change in 2031 alone. It also carries the static
+    capital gains pin, in every policy year (test_capital_gains_pin)."""
+    changes = dict(get_reform("threshold_freeze_2031_32").parameter_changes)
+    for path in static_capital_gains():
+        changes.pop(path)
     assert all(set(values) == {"2031"} for values in changes.values())
 
 
