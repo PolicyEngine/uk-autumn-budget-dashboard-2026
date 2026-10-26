@@ -47,6 +47,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_POLICYENGINE_VERSION: lockedVersion('policyengine'),
+    NEXT_PUBLIC_POLICYENGINE_UK_VERSION: lockedVersion('policyengine-uk'),
     NEXT_PUBLIC_PUBLISHED_GEOGRAPHY: publishedGeography(),
   },
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
