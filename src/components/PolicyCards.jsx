@@ -149,7 +149,7 @@ function PolicyTimeline({ policy, highlight }) {
               style={{ left: share(timelineMonth(step.month)) }}
             />
           ))}
-          {!to && <span className="ptl-arrow" />}
+          {!to && <span className="ptl-arrow" title="No end date" />}
         </div>
         {" "}
         {/* Always there, empty when unused, so the years line up across a row */}
@@ -252,22 +252,22 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
         )}
       </div>
 
-      <p className="policy-card-source-line">
+      {/* The footer, one line: the source, how it is modelled, its effect */}
+      <div className="policy-card-foot">
         {policy.source && (
           <a
             className="policy-card-source"
             href={policy.source.href}
             target="_blank"
             rel="noopener noreferrer"
+            title={policy.source.label}
           >
-            Source: {policy.source.label}
+            Source
+            <span className="policy-sr-only">: {policy.source.label}</span>
             <ExternalLink size={14} aria-hidden="true" />
             <span className="policy-sr-only"> (opens in a new tab)</span>
           </a>
         )}
-      </p>
-
-      <div className="policy-card-foot">
         {policy.details && (
           <details className="policy-card-details">
             <summary>How it is modelled</summary>
