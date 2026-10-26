@@ -9,7 +9,7 @@ uv run uk-budget-data forecast-vintages           # build from the files committ
 
 ## OBR files
 
-obr.uk refuses scripted downloads (`docs/budget-day-runbook.md`), so these come from Internet Archive captures of their obr.uk addresses, read through the archive's `id_` route, which returns the captured bytes unaltered. They are committed unedited. The build refuses any whose SHA-256 differs from the one pinned in `sources.py` (and listed here). `--fetch` downloads one only if it is missing, and keeps it only if the bytes match.
+obr.uk refuses scripted downloads (`docs/budget-day-runbook.md`), so these come from Internet Archive captures of their obr.uk addresses, read through the archive's `id_` route, which returns the captured bytes unaltered. They are committed unedited. The build refuses any whose SHA-256 differs from the one pinned in `sources.py` (and listed here). `--fetch` downloads one only if it is missing, and keeps it only if the bytes match. It requests only web.archive.org, www.ons.gov.uk and landregistry.data.gov.uk (`fetch.SOURCE_HOSTS`), redirects included, so obr.uk itself is never requested, however its host is written.
 
 | File | What | Address | Capture | SHA-256 |
 |---|---|---|---|---|

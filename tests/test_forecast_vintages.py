@@ -676,6 +676,117 @@ def test_obr_uk_is_never_requested_directly():
     assert seen == []
 
 
+# obr.uk however DNS would read it: any case, a final dot (the review found
+# "obr.uk." passed the first hook), and any subdomain
+_OBR_SPELLINGS = (
+    "https://obr.uk./x",
+    "https://www.obr.uk./x",
+    "https://OBR.UK/x",
+    "https://Www.Obr.Uk./docs/x.xlsx",
+    "http://obr.uk:443/x",
+)
+
+
+@pytest.mark.parametrize("url", _OBR_SPELLINGS)
+def test_obr_uk_is_refused_however_its_host_is_written(url):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(200, content=b"")
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="obr.uk is never fetched"):
+            fetch._get(http, url)
+    assert seen == []
+
+
+@pytest.mark.parametrize("location", _OBR_SPELLINGS)
+def test_a_redirect_to_obr_uk_however_written_is_never_followed(location):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(302, headers={"Location": location})
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="obr.uk is never fetched"):
+            fetch._get(http, "https://web.archive.org/web/2025id_/x")
+    assert seen == ["web.archive.org"]
+
+
+_LABEL = st.text(
+    "abcdefghijklmnopqrstuvwxyz0123456789-", min_size=1, max_size=8
+)
+
+
+@given(
+    st.lists(_LABEL, max_size=3),
+    st.lists(st.booleans(), min_size=6, max_size=6),
+    st.booleans(),
+)
+def test_no_spelling_of_an_obr_uk_host_is_ever_requested(labels, upper, dot):
+    name = ".".join([*labels, "obr", "uk"])
+    host = "".join(
+        c.upper() if upper[i % len(upper)] else c for i, c in enumerate(name)
+    )
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(200, content=b"")
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="obr.uk is never fetched"):
+            fetch._get(http, f"https://{host}{'.' if dot else ''}/x")
+    assert seen == []
+
+
+@given(st.lists(_LABEL, min_size=1, max_size=4))
+def test_only_the_hosts_the_inputs_come_from_are_requested(labels):
+    host = ".".join(labels)
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(200, content=b"ok")
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        if host.rstrip(".") in fetch.SOURCE_HOSTS:
+            assert fetch._get(http, f"https://{host}/x") == b"ok"
+        else:
+            with pytest.raises(fetch.FetchError):
+                fetch._get(http, f"https://{host}/x")
+            assert seen == []
+
+
+def test_a_redirect_off_the_source_hosts_is_refused():
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(
+            302, headers={"Location": "https://example.com/data.json"}
+        )
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="not a host the inputs"):
+            fetch._get(http, sources.ONS["ABMI"].url)
+    assert seen == ["www.ons.gov.uk"]
+
+
+def test_every_download_is_from_a_source_host():
+    # fetch_all asks for these, so none may be refused
+    urls = [s.url for s in sources.ONS.values()]
+    urls.append(sources.HPI_URL.format(to="2026-01-01"))
+    urls += [
+        f.archive_url
+        for f in (sources.HOFD,) + sources.EFO_TABLES
+        if f.archive_url
+    ]
+    assert {httpx.URL(u).host for u in urls} == fetch.SOURCE_HOSTS
+
+
 # --- Periods and launches ----------------------------------------------------
 
 

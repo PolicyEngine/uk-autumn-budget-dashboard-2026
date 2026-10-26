@@ -6,7 +6,8 @@
 - the OBR files: from their Internet Archive captures, only when the
   committed copy is missing, and kept only if the bytes match the SHA-256
   pinned in :mod:`.sources`. obr.uk itself is never fetched: the client
-  refuses any request to it, a redirect's included.
+  requests only the hosts these come from, and refuses obr.uk by name,
+  however its host is written and a redirect's included.
 
 What each ONS and House Price Index download got, and when, goes into
 ``retrieved.json``; the build checks the saved files against it.
@@ -33,21 +34,37 @@ class FetchError(RuntimeError):
     """A download that failed or did not hold what was expected."""
 
 
-def _refuse_obr(request: httpx.Request) -> None:
-    """Stop any request to obr.uk, which sits behind a human check."""
-    host = request.url.host
+# The hosts the downloads come from: the Internet Archive's captures of
+# the OBR's files, the ONS's series and HM Land Registry's House Price
+# Index. Any other host, a redirect's included, is refused.
+SOURCE_HOSTS = frozenset(
+    {"web.archive.org", "www.ons.gov.uk", "landregistry.data.gov.uk"}
+)
+
+
+def _host(url: httpx.URL) -> str:
+    """A URL's host as DNS reads it: lower case, with no final dot."""
+    return url.host.lower().rstrip(".")
+
+
+def _only_sources(request: httpx.Request) -> None:
+    """Stop any request to obr.uk, which sits behind a human check, or to
+    any host the downloads do not come from."""
+    host = _host(request.url)
     if host == "obr.uk" or host.endswith(".obr.uk"):
         raise FetchError(f"{request.url}: obr.uk is never fetched")
+    if host not in SOURCE_HOSTS:
+        raise FetchError(f"{request.url}: not a host the inputs come from")
 
 
 def make_client(transport: httpx.BaseTransport = None) -> httpx.Client:
-    """The client every download uses: it follows redirects, but never to
-    obr.uk."""
+    """The client every download uses: it follows redirects, but only to
+    the hosts the inputs come from, never to obr.uk."""
     return httpx.Client(
         headers={"User-Agent": USER_AGENT},
         follow_redirects=True,
         timeout=60.0,
-        event_hooks={"request": [_refuse_obr]},
+        event_hooks={"request": [_only_sources]},
         transport=transport,
     )
 
