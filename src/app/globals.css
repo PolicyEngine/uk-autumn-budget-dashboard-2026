@@ -1758,7 +1758,8 @@ body {
   list-style: none;
 }
 
-/* Each card is five rows (head, summary, when, source, footer). The cards
+/* Each card is six rows (head, summary, what changes, when, source,
+   footer). The cards
    of a grid row share those rows through subgrid, so each row lines up
    across them and the cards are the same height; without subgrid the card
    is a flex column with its footer pinned to the bottom. */
@@ -1780,7 +1781,7 @@ body {
 @supports (grid-template-rows: subgrid) {
   .policy-card {
     display: grid;
-    grid-row: span 5;
+    grid-row: span 6;
     grid-template-rows: subgrid;
     row-gap: 16px;
     align-content: start;
@@ -2214,6 +2215,311 @@ body {
   transform: translateX(3px);
 }
 
+/* ---------- What changes (PolicySpecTable) ----------
+   The model's parameters for a measure, current law beside the measure:
+   one compact table, a group per parameter with its sparkline (current
+   law grey and dashed, the measure teal), and each change as a chip in the
+   gain or loss colour. A hovered line marks its years on the timeline. */
+.policy-card-spec {
+  min-width: 0;
+}
+
+.pspec {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--c-grid);
+  border-radius: 10px;
+}
+
+.pspec-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.pspec-title {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.pspec-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.pspec-key-before::before,
+.pspec-key-after::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-top: 2px dashed var(--c-before);
+}
+
+.pspec-key-after::before {
+  border-top-style: solid;
+  border-top-color: var(--c-after);
+}
+
+/* On a narrow card the table scrolls inside it, never the page */
+.pspec-scroll {
+  overflow-x: auto;
+}
+
+.pspec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.pspec-row-head th {
+  padding: 8px 0 2px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.pspec-group:first-of-type .pspec-row-head th {
+  padding-top: 2px;
+}
+
+.pspec-label {
+  margin-right: 8px;
+}
+
+.pspec-unit {
+  margin-right: 8px;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+.pspec-note {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.pspec-spark {
+  display: inline-block;
+  float: right;
+  margin: 1px 4px 0 8px;
+  overflow: visible;
+}
+
+.pspec-spark polyline {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pspec-spark-before {
+  stroke: var(--c-before);
+  stroke-dasharray: 3 2;
+}
+
+.pspec-spark-after {
+  stroke: var(--c-after);
+}
+
+.pspec-spark-mark {
+  stroke: var(--c-grid);
+  stroke-width: 6;
+}
+
+.pspec-line > * {
+  padding: 4px 0;
+  border-top: 1px solid var(--pe-gray-100);
+  white-space: nowrap;
+}
+
+.pspec-line {
+  cursor: default;
+  outline: none;
+  transition: background-color 0.15s ease;
+}
+
+.pspec-line:hover,
+.pspec-line:focus-visible,
+.pspec-line.is-lit {
+  background: var(--c-hover);
+}
+
+.pspec-line:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring, var(--c-gain-text));
+}
+
+.pspec-when {
+  padding-left: 4px;
+  padding-right: 10px;
+  text-align: left;
+  font-weight: 400;
+  color: var(--pe-gray-600);
+}
+
+.pspec-word {
+  white-space: nowrap;
+}
+
+.pspec-before {
+  text-align: right;
+  color: var(--pe-gray-500);
+}
+
+.pspec-after {
+  padding-left: 6px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.pspec-arrow {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: -1px;
+  color: var(--pe-gray-300);
+}
+
+.pspec-change {
+  padding-left: 10px;
+  padding-right: 4px;
+  text-align: right;
+  width: 1%;
+}
+
+.pspec-chip {
+  display: inline-block;
+  min-width: 52px;
+  padding: 1px 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  border-radius: 999px;
+}
+
+.pspec-chip.is-gain {
+  color: var(--c-gain-text);
+  background: var(--c-highlight-band);
+}
+
+.pspec-chip.is-loss {
+  color: var(--c-loss-text);
+  background: var(--c-loss-soft);
+}
+
+.pspec-chip.is-neutral {
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
+}
+
+.pspec-chip.is-same {
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+.pspec-line.is-same .pspec-after {
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+.pspec-more {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 4px 0;
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-teal-700);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.pspec-more:hover {
+  text-decoration-color: currentColor;
+}
+
+/* The years a hovered line covers, on the timeline */
+.ptl-year-band {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  background: var(--c-gain-light);
+  opacity: 0.35;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.policy-timeline-labels > span.is-lit {
+  font-weight: 700;
+  color: var(--c-gain-text);
+}
+
+@media (max-width: 768px) {
+  .pspec {
+    padding: 10px 10px 8px;
+  }
+
+  /* On a phone each line stacks: when it applies, then the two values and
+     the change beneath, so nothing scrolls */
+  .pspec-table,
+  .pspec-table tbody,
+  .pspec-row-head,
+  .pspec-row-head th {
+    display: block;
+  }
+
+  .pspec-line {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    column-gap: 6px;
+    border-top: 1px solid var(--pe-gray-100);
+  }
+
+  .pspec-line > * {
+    border-top: 0;
+  }
+
+  .pspec-when {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+    white-space: normal;
+  }
+
+  .pspec-before {
+    padding-left: 4px;
+  }
+
+  .pspec-after {
+    padding-left: 0;
+  }
+
+  .pspec-chip {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .policy-cards {
     grid-template-columns: minmax(0, 1fr);
@@ -2238,6 +2544,7 @@ body {
   }
 
   .policy-card-source-line:empty,
+  .policy-card-spec:empty,
   .ptl-chips:empty {
     display: none;
   }

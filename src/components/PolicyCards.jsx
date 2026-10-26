@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { withPolicyDetails } from "../utils/policyDetails";
+import { parameterTableFor } from "../utils/policyParameters";
+import PolicySpecTable, { usePolicyParameters } from "./PolicySpecTable";
 import TitleIcon from "./TitleIcon";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
@@ -83,7 +86,7 @@ const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => mon
  * back in two stages, are small diamonds labelled below the axis. One
  * image, described in words for screen readers.
  */
-function PolicyTimeline({ policy }) {
+function PolicyTimeline({ policy, highlight }) {
   const { from, to } = policy.inForce;
   const start = timelineMonth(from);
   const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
@@ -121,6 +124,16 @@ function PolicyTimeline({ policy }) {
               );
             })}
           </svg>
+          {/* The years a "What changes" line covers, while it is hovered */}
+          {highlight && (
+            <span
+              className="ptl-year-band"
+              style={{
+                left: share((highlight.from - TIMELINE_START_YEAR) * 12),
+                width: share((highlight.to - highlight.from + 1) * 12),
+              }}
+            />
+          )}
           <span className="ptl-budget-line" style={{ left: share(BUDGET_DAY_MONTH) }} />
           <span
             className={`ptl-span${to ? "" : " is-lasting"}`}
@@ -153,8 +166,15 @@ function PolicyTimeline({ policy }) {
         </div>
       </div>
       <div className="policy-timeline-labels">
-        {TIMELINE_LABELS.map((label) => (
-          <span key={label}>
+        {TIMELINE_LABELS.map((label, i) => (
+          <span
+            key={label}
+            className={
+              highlight && TIMELINE_START_YEAR + i >= highlight.from && TIMELINE_START_YEAR + i <= highlight.to
+                ? "is-lit"
+                : undefined
+            }
+          >
             <span className="policy-timeline-label-full">{label}</span>
             <span className="policy-timeline-label-short">{label.slice(2)}</span>{" "}
           </span>
@@ -165,15 +185,20 @@ function PolicyTimeline({ policy }) {
 }
 
 /**
- * One measure's card. Every card has the same five rows, in the same order,
+ * One measure's card. Every card has the same six rows, in the same order,
  * and the cards of a grid row share them (CSS subgrid), so each row lines
  * up across the cards: the head (type and any "Temporary" badge on one
- * line, then the name), the summary, when it is in force (Starts and Ends,
- * the Ends slot kept even when empty, then the timeline), the source, and
- * the footer ("How it is modelled" and "See its effect" on one line).
+ * line, then the name), the summary, what changes (the model's parameters,
+ * current law beside the measure; the slot kept, empty, when the file has
+ * no table for the measure as published), when it is in force (Starts and
+ * Ends, the Ends slot kept even when empty, then the timeline), the
+ * source, and the footer ("How it is modelled" and "See its effect" on
+ * one line).
  */
-function PolicyCard({ policy, onShowEffect }) {
+function PolicyCard({ policy, onShowEffect, parameterRows }) {
   const temporary = Boolean(policy.inForce?.to);
+  // The years a hovered "What changes" line covers, marked on the timeline
+  const [highlight, setHighlight] = useState(null);
   return (
     <li
       className="policy-card"
@@ -193,6 +218,17 @@ function PolicyCard({ policy, onShowEffect }) {
 
       <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
 
+      <div className="policy-card-spec">
+        {parameterRows && (
+          <PolicySpecTable
+            rows={parameterRows}
+            direction={policy.direction}
+            highlight={highlight}
+            onHighlight={setHighlight}
+          />
+        )}
+      </div>
+
       <div className="policy-card-when">
         <dl className="policy-card-dates">
           <div>
@@ -210,7 +246,7 @@ function PolicyCard({ policy, onShowEffect }) {
             )}
           </div>
         </dl>
-        {policy.inForce && <PolicyTimeline policy={policy} />}
+        {policy.inForce && <PolicyTimeline policy={policy} highlight={highlight} />}
       </div>
 
       <p className="policy-card-source-line">
@@ -258,10 +294,12 @@ function PolicyCard({ policy, onShowEffect }) {
  * description comes from policyDetails.js where it has the id. Each card gives what
  * changes, what kind of measure it is, when it starts and ends (with a
  * timeline over the charts' years), how it is modelled and a source where
- * one exists. Revenue figures stay in the charts: "See its effect" opens
+ * one exists, and what changes: the model's parameters before and after
+ * (public/data/policy_parameters.json). Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
  */
-function PolicyCards({ policies, selectedPolicies, onShowEffect }) {
+function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
+  const tables = usePolicyParameters(parameterTables);
   return GROUPS.map(({ heading, direction, arrow }) => {
     const items = policies
       .filter((policy) =>
@@ -288,7 +326,12 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect }) {
         </div>
         <ul className="policy-cards">
           {items.map((policy) => (
-            <PolicyCard key={policy.id} policy={policy} onShowEffect={onShowEffect} />
+            <PolicyCard
+              key={policy.id}
+              policy={policy}
+              onShowEffect={onShowEffect}
+              parameterRows={parameterTableFor(tables, policy)}
+            />
           ))}
         </ul>
       </section>
