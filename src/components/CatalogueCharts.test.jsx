@@ -174,11 +174,17 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
+    // The withdrawn package is never drawn: the shares card shows each
+    // measure's own run, one row per measure, and says so
+    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
-    // The shares card draws nothing; the average change and trend cards
-    // still chart (the measures card is a dumbbell, not a chart, since #128)
-    expect(container.querySelector('.young-people-shares [data-testid="chart-rows"]')).toBeNull();
+    const shares = container.querySelector(".young-people-shares");
+    expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.every((name) => [catalogue.byId.get(ALPHA), catalogue.byId.get(BETA)].some((m) => [m.label, m.name].includes(name)))).toBe(true);
+    // the average change and trend cards still chart (the measures card is a
+    // dumbbell, not a chart, since #128)
     expect(screen.getAllByTestId("chart-rows")).toHaveLength(2);
   });
 
@@ -192,7 +198,13 @@ describe("published measure catalogue in population views", () => {
     ));
     expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
-    expect(screen.getByText(/These shares come from one simulation/)).toBeInTheDocument();
+    // The combined run is refused: no package shares, only each measure's own
+    expect(screen.getByText(/each selected measure on its own/)).toBeInTheDocument();
+    const shares = container.querySelector(".young-people-shares");
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const alpha = catalogue.byId.get(ALPHA);
+    // Alpha has no supported figures this year, so it draws no row
+    expect(names.some((name) => [alpha.label, alpha.name].includes(name))).toBe(false);
   });
 
   it("recognises an unseen combined id when every measure is displayable", () => {
