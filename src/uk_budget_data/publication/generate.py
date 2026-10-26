@@ -75,6 +75,20 @@ class GenerationReport:
     refused: dict[str, str] = field(default_factory=dict)
 
 
+def _columns(rows: list[dict], table: str) -> list[dict]:
+    """The rows cut to one table's columns. A row from before the poverty
+    and inequality measures (none of them) gives no poverty_inequality row;
+    one with only some of them is refused when the table is written."""
+    names = TABLES[table].column_names
+    if table == "poverty_inequality":
+        extra = set(names) - {"reform_id", "reform_name", "year"}
+        rows = [row for row in rows if extra & set(row)]
+    return [
+        {column: row[column] for column in names if column in row}
+        for row in rows
+    ]
+
+
 def result_tables(
     result: ReformResult, years: Optional[list[int]] = None
 ) -> dict[str, list[dict]]:
@@ -89,13 +103,12 @@ def result_tables(
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
-        # The flat metrics.csv also carries the poverty and inequality
-        # measures the charts choose between; a receipted artifact keeps its
-        # contracted columns (TABLES["metrics"]) until the contract adds them.
-        "metrics": [
-            {column: row[column] for column in TABLES["metrics"].column_names}
-            for row in result.metrics
-        ],
+        # The flat metrics.csv carries the poverty and inequality measures
+        # beside the headline ones; a receipted artifact splits them: the
+        # headline columns in metrics (TABLES["metrics"]), the rest in
+        # poverty_inequality, so older artifacts' metrics.csv stays valid.
+        "metrics": _columns(result.metrics, "metrics"),
+        "poverty_inequality": _columns(result.metrics, "poverty_inequality"),
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,

@@ -44,6 +44,24 @@ class TableSpec:
         return f"{self.name}.csv"
 
 
+# poverty_inequality's measure columns, in the order MetricsCalculator
+# makes them: each poverty measure (absolute and relative, before and after
+# housing costs), for everyone and then for children, as a change in
+# percentage points and in % of the baseline rate; then the top 10% and top
+# 1% income shares' changes in percentage points and the 90/10 ratio's
+# relative change.
+POVERTY_INEQUALITY_COLUMNS: tuple[tuple[str, str], ...] = (
+    *(
+        (f"{group}poverty_{measure}_change_{unit}", FLOAT)
+        for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc")
+        for group in ("", "child_")
+        for unit in ("pp", "pct")
+    ),
+    ("top_10_share_change_pp", FLOAT),
+    ("top_1_share_change_pp", FLOAT),
+    ("p90_p10_change", FLOAT),
+)
+
 TABLES: dict[str, TableSpec] = {
     spec.name: spec
     for spec in (
@@ -91,6 +109,23 @@ TABLES: dict[str, TableSpec] = {
                 ("poverty_change_pct", FLOAT),
             ),
             ("reform_id", "year"),
+        ),
+        # The poverty and inequality measures beside metrics' headline ones
+        # (calculators.MetricsCalculator: POVERTY_MEASURES by POVERTY_GROUPS,
+        # then inequality_changes), which the Poverty and Inequality charts
+        # choose between. A table of its own, not more columns in metrics,
+        # and not required, so artifacts written before it existed keep
+        # their bytes, their digests and their approval.
+        TableSpec(
+            "poverty_inequality",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                *POVERTY_INEQUALITY_COLUMNS,
+            ),
+            ("reform_id", "year"),
+            required=False,
         ),
         # The example households' net income across one income each
         # (uk_budget_data.example_households): ``household`` names the
