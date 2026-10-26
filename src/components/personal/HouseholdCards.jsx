@@ -56,7 +56,7 @@ const SOURCE_NAMES = {
   plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
   threshold_freeze_2031_32: "the threshold freeze",
   warm_home_discount_top_up: "the Warm Home Discount top-up",
-  employer_ni_relief_under_25s: "employer NI relief",
+  employer_ni_relief_under_25s: "employer National Insurance relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
 };
 // A short name where there is one, else the catalogue's published name

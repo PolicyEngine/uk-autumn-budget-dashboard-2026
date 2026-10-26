@@ -50,7 +50,7 @@ const LINE_STYLE = {
 const FALLBACK_STYLES = [CHART_COLOURS.gain, CHART_COLOURS.highlight, CHART_COLOURS.marketIncome, CHART_COLOURS.reference];
 
 // Chip labels on a phone, for the long names
-const SHORT_NAMES = { cpi_ahc: "CPI AHC", non_labour_income: "Non-labour", social_rent: "Social rent" };
+const SHORT_NAMES = { cpi_ahc: "CPI after housing", non_labour_income: "Non-labour", social_rent: "Social rent" };
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;

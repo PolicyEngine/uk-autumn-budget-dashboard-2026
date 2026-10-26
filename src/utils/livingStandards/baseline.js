@@ -12,7 +12,7 @@ export const PROJECTION_COLOUR = CHART_COLOURS.after;
 /**
  * A short form of a measure or group name for a closed in-card pill, so a
  * card's pills fit one line; the list keeps the full name. "Absolute (BHC)"
- * becomes "Abs. BHC", "All people" "All".
+ * becomes "Absolute, before housing", "All people" "All".
  */
 export function shortLabel(label) {
   const text = String(label);
@@ -26,9 +26,11 @@ export function shortLabel(label) {
   };
   if (fixed[text]) return fixed[text];
   const basis = text.match(/^(Absolute|Relative) \((BHC|AHC)\)$/);
-  if (basis) return `${basis[1] === "Absolute" ? "Abs." : "Rel."} ${basis[2]}`;
+  // Plain words, not BHC / AHC
+  const housing = (code) => (code === "BHC" ? "before housing" : "after housing");
+  if (basis) return `${basis[1]}, ${housing(basis[2])}`;
   const income = text.match(/^(Mean|Median) equivalised income \((BHC|AHC)\)$/);
-  if (income) return `${income[1]} ${income[2]}`;
+  if (income) return `${income[1]}, ${housing(income[2])}`;
   return text;
 }
 

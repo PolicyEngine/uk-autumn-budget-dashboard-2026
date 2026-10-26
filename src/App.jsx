@@ -31,10 +31,15 @@ import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import HomeButton from "./components/HomeButton";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
-import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
+import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
+import { pruneVerifiedCache } from "./utils/publication/cache";
+import { prefetchGeography } from "./hooks/useGeographyData";
+import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
+import LoadingSkeleton from "./components/publication/LoadingSkeleton";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -152,6 +157,19 @@ const NOTHING_PUBLISHED = Object.freeze({
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
 
+// The tables no first view waits for, loaded when the page is idle
+const IDLE_TABLES = ["age_impact", "household_scatter_binned"];
+
+function whenIdle(run) {
+  if (typeof window === "undefined") return undefined;
+  if (typeof window.requestIdleCallback === "function") {
+    const handle = window.requestIdleCallback(run, { timeout: 2000 });
+    return () => window.cancelIdleCallback?.(handle);
+  }
+  const handle = setTimeout(run, 200);
+  return () => clearTimeout(handle);
+}
+
 function Dashboard({ published, unavailable = null, updated = false }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
@@ -167,6 +185,32 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
   const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
+  // Once the first view has painted, every other view's tables load and
+  // verify while the page is idle, so a tab switch need not wait
+  useEffect(() => {
+    if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
+    // One step per idle period, the views' own tables first
+    const steps = [
+      ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
+      () => prefetchGeography(catalogue),
+      () => loadOutlook().catch(() => {}),
+      () => loadPresetChanges().catch(() => {}),
+      () => pruneVerifiedCache().catch(() => {}),
+    ];
+    let cancel;
+    const next = () => {
+      const step = steps.shift();
+      if (!step) return;
+      cancel = whenIdle(() => {
+        Promise.resolve(step()).finally(next);
+      });
+    };
+    next();
+    return () => {
+      steps.length = 0;
+      cancel?.();
+    };
+  }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
@@ -230,7 +274,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
-    // sum (the receipted metrics carry the contract's columns only, #104)
+    // sum; an artifact's poverty_inequality table is merged into its rows
     rawMetrics: published.metrics,
   }), [published, catalogue, selectedPolicies]);
 
@@ -376,13 +420,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       openViewRef.current(tab);
       if (!anchor) return;
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${anchor}`);
-      setTimeout(() => {
+      // The view mounts, and some of its parts load their data, after the
+      // switch: look for the target for up to 3 seconds
+      let tries = 0;
+      const find = () => {
         const target = document.getElementById(anchor);
-        if (!target) return;
-        const folded = target.closest("details");
-        if (folded) folded.open = true;
+        if (!target) {
+          if ((tries += 1) < 30) setTimeout(find, 100);
+          return;
+        }
+        let folded = target.closest("details");
+        while (folded) {
+          folded.open = true;
+          folded = folded.parentElement?.closest("details");
+        }
         target.scrollIntoView?.({ block: "start" });
-      }, 300);
+      };
+      setTimeout(find, 100);
     };
     window.addEventListener(OPEN_VIEW_EVENT, onOpenView);
     return () => window.removeEventListener(OPEN_VIEW_EVENT, onOpenView);
@@ -738,6 +792,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           hidden={landing}
         />
 
+        {/* A link to a view, before the page's code opens it: the landing
+            page is hidden (LandingPage.css), so placeholders show instead */}
+        {landing && (
+          <div className="deep-link-skeleton">
+            <LoadingSkeleton />
+          </div>
+        )}
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
@@ -760,11 +821,15 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
-        {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
+        {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
+          // Placeholders at once while the verified figures load; the
+          // "not published yet" line is only for an empty publication
+          <LoadingSkeleton cards={value === "household" ? 4 : 2} height={value === "household" ? 120 : 260} />
+        ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              unavailable.empty && <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -903,7 +968,7 @@ function App() {
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet" }
+      ? { reason: "No Budget results are published yet", empty: true }
       : null;
   const shown = unavailable ? NOTHING_PUBLISHED : published;
   // One snapshot per mount: a newer one starts the views afresh

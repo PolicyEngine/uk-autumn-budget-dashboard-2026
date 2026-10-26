@@ -17,13 +17,13 @@ export const RATE_PARTS = [
   {
     name: "personal_allowance_taper",
     label: "Personal allowance taper",
-    phrase: "personal allowance taper",
+    phrase: "the personal allowance taper",
     color: CHART_COLOURS.mtrAllowanceTaper,
     info: "The personal allowance falls by £1 for every £2 of income above £100,000, until it is gone at £125,140: each extra pound also makes 50p more taxable.",
   },
   { name: "national_insurance", label: "National Insurance", color: CHART_COLOURS.mtrNationalInsurance },
   { name: "student_loan", label: "Student loan", phrase: "student loan", color: CHART_COLOURS.mtrStudentLoan },
-  { name: "universal_credit", label: "UC taper", color: CHART_COLOURS.mtrUniversalCredit },
+  { name: "universal_credit", label: "Universal Credit taper", color: CHART_COLOURS.mtrUniversalCredit },
   { name: "other_benefits", label: "Other benefits", phrase: "other benefits", color: CHART_COLOURS.mtrOtherBenefits },
   { name: "other", label: "Other", phrase: "other", color: CHART_COLOURS.mtrOther },
 ];

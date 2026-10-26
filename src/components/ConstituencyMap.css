@@ -180,21 +180,22 @@
   display: none;
 }
 
-/* The key: a diverging ramp from loss to gain with the breaks under its
-   joins, too uncertain beside it, and the status textures in a row */
 .map-key {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px;
   font-size: var(--fs-micro);
+  line-height: 16px;
   color: var(--pe-gray-700);
 }
 
+/* The title and its info icon on their own line */
 .map-key-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 18px;
+  width: 100%;
 }
 
 .map-key-title {
@@ -209,47 +210,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-.map-key-rows {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 24px;
-}
-
+/* The ramp, its breaks under the joins, Loss and Gain under its ends */
 .map-key-scale {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 4px 6px;
+  width: min(320px, 100%);
 }
 
-.map-key-end {
-  line-height: 12px;
-  color: var(--pe-gray-500);
-  white-space: nowrap;
-}
-
-/* Too uncertain sits after the ramp, or under it when the row is full */
-.map-key-scale > .map-key-item {
-  margin-left: 6px;
-}
-
-.map-key-end:first-child::after {
-  content: "\00a0\2190";
-}
-
-.map-key-ramp + .map-key-end::before {
-  content: "\2192\00a0";
-}
-
-/* Five joined segments; the ticks sit under the joins */
 .map-key-ramp {
-  position: relative;
   display: flex;
-  width: 200px;
-  flex: 0 1 auto;
-  min-width: 150px;
-  padding-bottom: 16px;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .map-key-segment {
@@ -258,41 +228,52 @@
   padding: 0;
   border: 0;
   cursor: pointer;
-  transition: opacity var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) ease;
+  transition: opacity var(--motion-fast, 150ms) ease;
 }
 
-.map-key-segment:first-child {
-  border-radius: 3px 0 0 3px;
-}
-
-.map-key-segment:nth-child(5) {
-  border-radius: 0 3px 3px 0;
+.map-key-ticks {
+  position: relative;
+  height: 18px;
 }
 
 .map-key-tick {
   position: absolute;
-  top: 13px;
+  top: 5px;
   transform: translateX(-50%);
   font-size: 10px;
-  line-height: 14px;
-  color: var(--pe-gray-500);
+  line-height: 12px;
+  color: var(--pe-gray-600);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  pointer-events: none;
 }
 
+/* A small mark from the join down to its label */
 .map-key-tick::before {
   content: "";
   position: absolute;
-  top: -2px;
+  top: -5px;
   left: 50%;
-  height: 3px;
+  height: 4px;
   border-left: 1px solid var(--pe-gray-400);
+}
+
+.map-key-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--pe-gray-500);
 }
 
 .map-key-statuses {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px 14px;
+}
+
+.map-key-statuses-label {
+  color: var(--pe-gray-500);
 }
 
 .map-key-item {
@@ -303,7 +284,6 @@
   border: 0;
   background: none;
   font: inherit;
-  line-height: 14px;
   color: inherit;
   cursor: pointer;
   transition: opacity var(--motion-fast, 150ms) ease;

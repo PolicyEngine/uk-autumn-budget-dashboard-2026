@@ -4,6 +4,18 @@ import { Y_TITLE_GUTTER, CHART_COLOURS } from "./chartTheme";
 const FONT_SIZE = 12;
 const MIN_FONT_SIZE = 10;
 
+// A title above the plot: its baseline sits this far above the plot's top,
+// so it clears the top tick label (centred on the plot's top edge, about
+// 7px above it) by at least 14px, descenders included
+const ABOVE_PLOT = 25;
+
+/**
+ * The top margin a chart with a title above its plot keeps: the title's
+ * height above its baseline, plus ABOVE_PLOT, plus a little air, so neither
+ * the title nor the top tick label is clipped.
+ */
+export const UNIT_LABEL_TOP_MARGIN = ABOVE_PLOT + FONT_SIZE + 6;
+
 /**
  * The font size at which a title fits along a plot `length` pixels tall:
  * 12px, or smaller (down to 10px) for a title longer than the plot.
@@ -37,7 +49,7 @@ function ChartUnitLabel({ text, yAxisMap, horizontal = false }) {
       <text
         className="chart-unit-label"
         x={yAxis.x}
-        y={yAxis.y - 12}
+        y={yAxis.y - ABOVE_PLOT}
         fontSize={FONT_SIZE}
         fontWeight={500}
         fill={CHART_COLOURS.axisTitle}

@@ -55,7 +55,7 @@ describe("marginal rate parts", () => {
   });
 
   it("puts your rate's parts in words, largest first", () => {
-    expect(describeParts(step(0.4, 0.2, 0.02))).toBe("income tax 40%, personal allowance taper 20%, National Insurance 2%");
+    expect(describeParts(step(0.4, 0.2, 0.02))).toBe("income tax 40%, the personal allowance taper 20%, National Insurance 2%");
     expect(describeParts(null)).toBe("");
   });
 });
@@ -78,7 +78,7 @@ describe("MarginalRateChart", () => {
     // One sentence: the rate, then the rate as money; its parts in More info
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/made up of income tax 40%, personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    expect(screen.getByText(/made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
   });

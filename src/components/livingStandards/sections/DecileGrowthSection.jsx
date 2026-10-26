@@ -365,7 +365,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
     info: {
-      shows: `The real change in each ${g.noun}'s median income, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
+      shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
       how: [
         measures && !diff && "Current law's growth plus the measures' effect, from the same pair of simulations.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
@@ -435,7 +435,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         // Each year's cluster fills most of its band (bars touching), the
         // years kept apart by a faint band behind every other year
         barGap={n > 10 ? 0 : 1}
-        maxBarSize={n > 5 ? 18 : 28}
+        maxBarSize={n > 10 ? 18 : n > 5 ? 30 : 44}
         barCategoryGap={n > 10 ? "12%" : "16%"}
         categoryBands
         legendNote={legendNote}

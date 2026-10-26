@@ -64,7 +64,7 @@ describe("measurePovertyRows and povertyWaterfall", () => {
 
   it("reads each measure's own change by its short name, the package from the combined run", () => {
     const { members, measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
-    expect(measures.map((m) => m.name)).toContain("Plan 2 threshold unfrozen");
+    expect(measures.map((m) => m.name)).toContain("Student loan threshold unfrozen");
     expect(total).toBe(-0.008);
     // Employer NI changes no household's income: in More info, not a step
     expect(members.find((member) => member.id === "employer_ni_relief_under_25s").muted).toBe(true);
@@ -128,14 +128,14 @@ describe("the Poverty sub-tab's measures pair", () => {
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
-    expect(rows[0]).toBe("Plan 2 threshold unfrozen");
+    expect(rows[0]).toBe("Student loan threshold unfrozen");
     expect(rows.at(-1)).toBe("All measures together");
-    expect(rows).not.toContain("Employer NI relief, under-25s");
+    expect(rows).not.toContain("Employer National Insurance relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Of the measures, Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
+    expect(headline).toHaveTextContent(/^Of the measures, Student loan threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -152,7 +152,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
-    expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);
+    expect(none).toHaveTextContent(/^No effect on poverty: .*Business sale relief limit halved/);
     expect(none).toHaveTextContent(/change prices/);
     // The card says each fact once: the people rule is in Methodology
     expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
