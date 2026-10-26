@@ -1,7 +1,8 @@
 /**
- * Whether the page takes the file as a whole: its variables, each once, and
- * the meta the page reads besides the forecasts (forecastVintagesProblem in
- * load.js). The build's check_document
+ * Whether the page takes the file as a whole: its variables, each once;
+ * the meta the page reads besides the forecasts; and of each measure a unit
+ * reads, its forecasts each once in date order, and the files it is built
+ * from, each under Sources (forecastVintagesProblem in load.js). The build's check_document
  * (src/uk_budget_data/forecast_vintages/build.py) is held to the same cases
  * in tests/test_forecast_vintages.py, so the build never writes a file the
  * page refuses.
@@ -36,6 +37,32 @@ describe("a file the page takes as a whole", () => {
     const data = structuredClone(DATA);
     data.variables.find((v) => v.id === "receipts").id = "spending";
     expect(forecastVintagesProblem(data)).toBe("a variable twice");
+  });
+
+  // Found by the fourteenth review: each card says every file it is built
+  // from is listed under Sources, and Sources could leave one out
+  it("refuses a file whose Sources leave out a file a measure is built from, naming the measure", () => {
+    const data = structuredClone(DATA);
+    delete data.meta.sources.hpi;
+    expect(forecastVintagesProblem(data)).toBe("house_prices: a file it is built from is not among the sources");
+    const cut = structuredClone(DATA);
+    cut.meta.sources.ons = cut.meta.sources.ons.filter((s) => s.cdid !== "D7BT");
+    expect(forecastVintagesProblem(cut)).toBe("cpi: a file it is built from is not among the sources");
+  });
+
+  it("finds every file each committed measure is built from under Sources", () => {
+    const { obr, ons, hpi } = DATA.meta.sources;
+    let files = 0;
+    for (const v of DATA.variables) {
+      for (const name of new Set(Object.values(v.units).map((spec) => spec.from))) {
+        const f = v[name].files;
+        for (const id of f.obr) expect(obr.map((s) => s.id)).toContain(id);
+        for (const cdid of f.ons) expect(ons.map((s) => s.cdid)).toContain(cdid);
+        if (f.hpi) expect(hpi).toBeTruthy();
+        files += f.obr.length + f.ons.length + Number(f.hpi);
+      }
+    }
+    expect(files).toBeGreaterThan(40);
   });
 
   it("says no release date is one the calendar lacks", () => {

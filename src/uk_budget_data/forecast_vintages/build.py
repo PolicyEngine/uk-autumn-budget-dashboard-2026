@@ -28,13 +28,14 @@ Before anything is written:
 A failed check raises :class:`BuildError` and writes nothing.
 """
 
+import calendar
 import csv
-import datetime
 import hashlib
 import io
 import json
 import math
 import re
+from collections.abc import Mapping
 from pathlib import Path
 
 from uk_budget_data.forecast_vintages import efo, hofd, ons, periods, sources
@@ -566,10 +567,36 @@ def _sheet_source(sheet: hofd.Sheet) -> str:
     )
 
 
+class _Reading(Mapping):
+    """A mapping that notes each key read from it, and all of them once it
+    is gone through: the files a measure's outturn is built from, as read."""
+
+    def __init__(self, data: dict):
+        self._data = data
+        self.read = set()
+
+    def __getitem__(self, key):
+        self.read.add(key)
+        return self._data[key]
+
+    def __iter__(self):
+        self.read.update(self._data)
+        return iter(self._data)
+
+    def __len__(self):
+        self.read.update(self._data)
+        return len(self._data)
+
+
 def build_measure(
     variable, measure, series, hpi, workbook, efo_tables
 ) -> dict:
-    outturn = measure.outturn(series, hpi)
+    # Every file it is built from is listed under Sources (check_document)
+    # and named here: the ONS series and the House Price Index as its
+    # outturn reads them, and the OBR files its forecasts and check are
+    # read from
+    series_read, hpi_read = _Reading(series), _Reading(hpi)
+    outturn = measure.outturn(series_read, hpi_read)
     if not outturn:
         raise BuildError(f"{variable.id}: no outturn")
     if measure.sheet:
@@ -583,6 +610,7 @@ def build_measure(
             for v in sheet.vintages
         ]
         forecast_source = _sheet_source(sheet)
+        obr_files = [sources.HOFD.id]
     else:
         vintages = [
             vintage_record(variable, measure, label, year, month, values)
@@ -594,6 +622,7 @@ def build_measure(
             "forecast: Table 1.5, real household disposable income per "
             "person by total population (index, 2008 Q1 = 100)"
         )
+        obr_files = [file.id for file in sources.EFO_TABLES]
     written = _ordered(outturn)
     # As the page reads them: JSON written and read back
     series_as_read(
@@ -624,6 +653,11 @@ def build_measure(
         "decimals": measure.decimals,
         "outturn_source": measure.outturn_source,
         "forecast_source": forecast_source,
+        "files": {
+            "obr": obr_files,
+            "ons": sorted(series_read.read),
+            "hpi": bool(hpi_read.read),
+        },
         "check": check,
         "outturn": written,
         "vintages": vintages,
@@ -693,9 +727,11 @@ def read_efo_tables(root: Path) -> list:
         values = efo.read_rhdi_per_person(path, file.member)
         tables.append((file.vintage, year, month, values))
     order = [(t[1], t[2]) for t in tables]
-    if order != sorted(order) or order[-1] != NEWEST_VINTAGE:
+    # Each forecast once, as the page takes them (and hofd.read_sheet)
+    if order != sorted(set(order)) or order[-1] != NEWEST_VINTAGE:
         raise BuildError(
-            "The economy tables are not in date order to March 2026"
+            "The economy tables are not in date order, each forecast "
+            "once, to March 2026"
         )
     return tables
 
@@ -886,8 +922,16 @@ def build(root: Path = Path(".")) -> dict:
     return document
 
 
-# As load.js's isUrl and isSha read them; a byte-order mark is no address
-_URL = re.compile(r"https://[^\s\ufeff\"'<>]+")
+# As load.js's isUrl and isSha read them, character for character: an
+# address holds no control character, no space of any kind (those
+# JavaScript's \s matches, with the byte-order mark) and no quote or angle
+# bracket. The class is written out, not \s, since Python's \s and
+# JavaScript's differ (\x1c to \x1f and \x85 are spaces only to Python)
+_NOT_IN_URL = (
+    "\\x00-\\x20\\x7f-\\x9f\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f"
+    "\\u205f\\u3000\\ufeff\"'<>"
+)
+_URL = re.compile(f"https://[^{_NOT_IN_URL}]+")
 _SHA = re.compile(r"[0-9a-f]{64}")
 
 
@@ -896,17 +940,21 @@ def _is_url(value) -> bool:
 
 
 def _is_date(value) -> bool:
-    """A day written YYYY-MM-DD that the calendar has (isDate in load.js)."""
-    if not (
-        isinstance(value, str)
-        and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value)
-    ):
+    """A day written YYYY-MM-DD that the calendar has (isDate in load.js).
+
+    The Gregorian calendar carried back to year 0, as JavaScript's Date
+    reads it: year 0 is a leap year. datetime has no year 0.
+    """
+    found = isinstance(value, str) and re.fullmatch(
+        r"([0-9]{4})-([0-9]{2})-([0-9]{2})", value
+    )
+    if not found:
         return False
-    try:
-        datetime.date.fromisoformat(value)
-    except ValueError:
+    year, month, day = (int(g) for g in found.groups())
+    if not 1 <= month <= 12:
         return False
-    return True
+    days = calendar.mdays[month] + (month == 2 and calendar.isleap(year))
+    return 1 <= day <= days
 
 
 def _once(items) -> bool:
@@ -926,14 +974,16 @@ def _at(value, *keys):
 def check_document(document: dict) -> None:
     """Raise unless the page's loader takes the file as a whole.
 
-    What forecastVintagesProblem and metaProblem (load.js) check across
-    the variables and in meta: some variables, each once; launch rules and
-    parliament dates for every frequency drawn (and calendar years, a
-    quarterly measure's annual totals); what is left out and the gaps,
-    each once; and the sources, each once, with https addresses, release
-    dates and checksums. Each variable's own fields are held to the page's
-    rules before it is built (check_variable, build_measure). The page
-    and the build are held to the same cases in
+    What forecastVintagesProblem, metaProblem and filesProblem (load.js)
+    check across the variables and in meta: some variables, each once;
+    launch rules and parliament dates for every frequency drawn (and
+    calendar years, a quarterly measure's annual totals); what is left out
+    and the gaps, each once; the sources, each once, with https addresses,
+    release dates and checksums; and of each measure a unit reads, its
+    forecasts each once in date order to March 2026, and the files it is
+    built from, each among the sources. Each variable's own fields are held
+    to the page's rules before it is built (check_variable, build_measure).
+    The page and the build are held to the same cases in
     tests/fixtures/forecast_vintages_document_cases.json.
     """
     variables = document.get("variables")
@@ -1025,6 +1075,84 @@ def check_document(document: dict) -> None:
         and _SHA.fullmatch(hpi["sha256"])
     ):
         raise BuildError("an incomplete House Price Index source")
+    listed = {
+        "obr": {s["id"] for s in obr},
+        "ons": {s["cdid"] for s in ons},
+        "hpi": hpi is not None,
+    }
+    for variable in variables:
+        for name, measure in _measures_read(variable):
+            where = f"{variable.get('id')} ({name})"
+            if not isinstance(measure, dict):
+                raise BuildError(f"{where}: no measure")
+            vintages_as_read(where, measure.get("vintages"))
+            files_as_read(where, measure.get("files"), listed)
+
+
+def _measures_read(variable: dict) -> list:
+    """The measures a variable's units read: the only ones the page reads
+    (earliestForecast in load.js), as (name, measure)."""
+    units = variable.get("units")
+    specs = units.values() if isinstance(units, dict) else []
+    names = {spec.get("from") for spec in specs if isinstance(spec, dict)}
+    return [
+        (name, variable.get(name))
+        for name in sorted(n for n in names if isinstance(n, str))
+    ]
+
+
+def vintages_as_read(where: str, vintages) -> None:
+    """Raise unless a measure's forecasts are each once, in date order, to
+    the newest the page shows (measureProblem in load.js)."""
+    if not isinstance(vintages, list) or not vintages:
+        raise BuildError(f"{where}: no forecasts")
+    ids, previous = set(), None
+    for vintage in vintages:
+        if not isinstance(vintage, dict):
+            raise BuildError(f"{where}: a forecast that is no object")
+        when = (vintage.get("year"), vintage.get("month"))
+        if not all(type(x) is int for x in when):
+            raise BuildError(f"{where}: a forecast with no date")
+        if not isinstance(vintage.get("id"), str) or vintage["id"] in ids:
+            raise BuildError(
+                f"{where}: the {vintage.get('label')} forecast twice"
+            )
+        ids.add(vintage["id"])
+        if previous is not None and when <= previous:
+            raise BuildError(f"{where}: forecasts out of date order")
+        previous = when
+    if previous != NEWEST_VINTAGE:
+        raise BuildError(f"{where}: its newest forecast is not March 2026")
+
+
+def _text_list(value) -> bool:
+    return isinstance(value, list) and all(_is_text(v) for v in value)
+
+
+def files_as_read(where: str, files, listed: dict) -> None:
+    """Raise unless a measure names the files it is built from, each listed
+    under Sources, as every card says (filesProblem in load.js): one OBR
+    file or more, the ONS series, each once, and whether it reads the House
+    Price Index; its outturn is read from at least one of those two."""
+    if not (
+        isinstance(files, dict)
+        and _text_list(files.get("obr"))
+        and files["obr"]
+        and _once(files["obr"])
+        and _text_list(files.get("ons"))
+        and _once(files["ons"])
+        and isinstance(files.get("hpi"), bool)
+        and (files["ons"] or files["hpi"])
+    ):
+        raise BuildError(f"{where}: no list of the files it is built from")
+    if not (
+        set(files["obr"]) <= listed["obr"]
+        and set(files["ons"]) <= listed["ons"]
+        and (listed["hpi"] or not files["hpi"])
+    ):
+        raise BuildError(
+            f"{where}: a file it is built from is not among the sources"
+        )
 
 
 def output_text(doc: dict) -> str:

@@ -1209,6 +1209,77 @@ def test_the_build_checks_the_file_as_json_reads_it(monkeypatch):
     assert seen[0] == json.loads(B.output_text(built))
 
 
+def test_each_measure_names_exactly_the_files_it_is_built_from(built):
+    # Found by the fourteenth review: Sources could leave out a file a
+    # measure is built from, under a card saying each file is listed. Each
+    # measure names its files as the build reads them: from those alone
+    # its outturn is the one written, and each one named is read
+    retrieved = B.read_retrieved(ROOT)
+    series, hpi = B.load_ons(ROOT, retrieved), B.load_hpi(ROOT, retrieved)
+    efo_ids = [file.id for file in sources.EFO_TABLES]
+    named = 0
+    for variable in V.VARIABLES:
+        record = next(v for v in built["variables"] if v["id"] == variable.id)
+        for name in ("level", "share"):
+            measure = getattr(variable, name)
+            if measure is None:
+                continue
+            files = record[name]["files"]
+            only = {cdid: series[cdid] for cdid in files["ons"]}
+            whole = B._ordered(measure.outturn(series, hpi))
+            assert (
+                B._ordered(measure.outturn(only, hpi if files["hpi"] else {}))
+                == whole
+            )
+            for cdid in files["ons"]:
+                without = {k: v for k, v in only.items() if k != cdid}
+                with pytest.raises(KeyError):
+                    measure.outturn(without, hpi)
+            if files["hpi"]:
+                assert measure.outturn(only, {}) == {}
+            assert files["obr"] == (
+                efo_ids if measure.sheet is None else [sources.HOFD.id]
+            )
+            named += len(files["ons"]) + files["hpi"]
+    assert named > 20
+    by_id = {v["id"]: v for v in built["variables"]}
+    assert by_id["receipts"]["share"]["files"]["ons"] == [
+        "ANBT",
+        "BKTL",
+        "IL65",
+    ]
+    assert by_id["house_prices"]["level"]["files"] == {
+        "obr": [sources.HOFD.id],
+        "ons": [],
+        "hpi": True,
+    }
+
+
+def test_the_economy_tables_hold_each_forecast_once(monkeypatch):
+    # Found by the fourteenth review: a second March 2026 entry (a
+    # re-issue, say) passed the date-order check and was written twice
+    reissue = dataclasses.replace(
+        sources.EFO_TABLES[-1], id="efo_march_2026_reissue"
+    )
+    monkeypatch.setattr(sources, "EFO_TABLES", sources.EFO_TABLES + (reissue,))
+    with pytest.raises(B.BuildError, match="each forecast once"):
+        B.read_efo_tables(ROOT)
+
+
+def test_the_build_writes_no_forecast_twice(monkeypatch):
+    # However the tables come to hold one twice, the build checks every
+    # measure's forecasts as the page does before writing them
+    read = B.read_efo_tables
+    monkeypatch.setattr(
+        B, "read_efo_tables", lambda root: (tables := read(root)) + tables[-1:]
+    )
+    with pytest.raises(
+        B.BuildError,
+        match="rhdi_per_person .level.: the March 2026 forecast twice",
+    ):
+        B.build(ROOT)
+
+
 # --- A forecast's figures after its launch -------------------------------------
 
 COMMITTED_TEXT = COMMITTED.read_text()

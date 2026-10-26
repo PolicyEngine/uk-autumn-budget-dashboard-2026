@@ -444,6 +444,15 @@
         "decimals": 1,
         "outturn_source": "ONS ABMI (QNA): GDP, chained volume measure, calendar-year total",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet UKGDP, Real GDP growth (per cent)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "ABMI"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -1085,6 +1094,15 @@
         "decimals": 1,
         "outturn_source": "ONS D7BT (MM23): CPI index, 2015 = 100, calendar-year average",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet CPI, CPI (Percentage change on a year earlier)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "D7BT"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -1686,6 +1704,15 @@
         "decimals": 1,
         "outturn_source": "ONS CHAW (MM23): RPI index, January 1987 = 100, calendar-year average",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet RPI, RPI (Percentage change on a year earlier)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "CHAW"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -2282,6 +2309,15 @@
         "decimals": 1,
         "outturn_source": "ONS MGSX (LMS): ILO unemployment rate, aged 16 and over, calendar-year average",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Unemplrate, ILO unemployment rate (Percentage rate)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "MGSX"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of the economically active",
@@ -2905,6 +2941,15 @@
         "decimals": 2,
         "outturn_source": "ONS MGRZ (LMS): people in employment, aged 16 and over, calendar-year average",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Empl, Employment (millions)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "MGRZ"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "million people",
@@ -3529,6 +3574,16 @@
         "decimals": 0,
         "outturn_source": "ONS ROYJ (UKEA): wages and salaries, divided by ONS MGRN (LMS): employees; calendar years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Earnings, Average earnings (Percentage change on a year earlier)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "MGRN",
+            "ROYJ"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -4141,6 +4196,30 @@
         "decimals": 0,
         "outturn_source": "ONS CRXX (UKEA): households' real disposable income per head, chained volume measure, seasonally adjusted",
         "forecast_source": "OBR, Economic and fiscal outlook, economy tables of each forecast: Table 1.5, real household disposable income per person by total population (index, 2008 Q1 = 100)",
+        "files": {
+          "obr": [
+            "efo_november_2016",
+            "efo_march_2017",
+            "efo_november_2017",
+            "efo_october_2018",
+            "efo_march_2019",
+            "efo_march_2020",
+            "efo_march_2021",
+            "efo_march_2022",
+            "efo_november_2022",
+            "efo_march_2023",
+            "efo_november_2023",
+            "efo_march_2024",
+            "efo_october_2024",
+            "efo_march_2025",
+            "efo_november_2025",
+            "efo_march_2026"
+          ],
+          "ons": [
+            "CRXX"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "Table 1.5 of the March 2026 forecast, to its launch quarter",
           "in": "% change on a year earlier",
@@ -5002,6 +5081,15 @@
         "decimals": 1,
         "outturn_source": "ONS NRJR (UKEA): households' and non-profit institutions' real disposable income, chained volume measure, calendar-year total",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet RHHDI, Real household disposable income (Percentage change on a year earlier)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "NRJR"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -5650,6 +5738,13 @@
         "decimals": 0,
         "outturn_source": "HM Land Registry and ONS, UK House Price Index: average price, all property types, United Kingdom, calendar-year average",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet Houseprices, House prices (Percentage change on a year earlier)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [],
+          "hpi": true
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% change on a year earlier",
@@ -6249,6 +6344,15 @@
         "decimals": 0,
         "outturn_source": "ONS BKTL (UKEA): GDP at market prices, current prices, fiscal-year total",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet NGDP, Nominal GDP (\u00a3 billion)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "BKTL"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -6898,6 +7002,15 @@
         "decimals": 1,
         "outturn_source": "ONS J5II (PUSF): public sector net borrowing excluding public sector banks, fiscal-year total (sign reversed: the ONS records borrowing as negative)",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSNB, Public sector net borrowing (\u00a3 billion)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "J5II"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -7535,6 +7648,16 @@
         "decimals": 1,
         "outturn_source": "ONS J5II (sign reversed) over ONS BKTL, fiscal years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSNB, Public sector net borrowing (per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "BKTL",
+            "J5II"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -8178,6 +8301,15 @@
         "decimals": 1,
         "outturn_source": "ONS HF6X (PUSF): public sector net debt excluding public sector banks, % of GDP, at the end of March",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSND, Public sector net debt (per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "HF6X"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -8795,6 +8927,16 @@
         "decimals": 0,
         "outturn_source": "ONS ANBT less IL65 (PUSF): public sector current receipts excluding public sector banks, fiscal-year total",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3PSCR, Public sector current receipts (\u00a3 billion)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "ANBT",
+            "IL65"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -9432,6 +9574,17 @@
         "decimals": 1,
         "outturn_source": "ONS ANBT less IL65 over ONS BKTL, fiscal years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSCR, Public sector current receipts (per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "ANBT",
+            "BKTL",
+            "IL65"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -10085,6 +10238,15 @@
         "decimals": 0,
         "outturn_source": "ONS KX5Q (PUSF): total managed expenditure excluding public sector banks, fiscal-year total",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3TME, Total managed expenditure (\u00a3 billion)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "KX5Q"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -10722,6 +10884,16 @@
         "decimals": 1,
         "outturn_source": "ONS KX5Q over ONS BKTL, fiscal years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet TME, Total managed expenditure (per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "BKTL",
+            "KX5Q"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -11370,6 +11542,15 @@
         "decimals": 1,
         "outturn_source": "ONS JW2T (PUSF): public sector current budget deficit excluding public sector banks, fiscal-year total (sign reversed: the ONS records a deficit as negative)",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet \u00a3CB, Current budget deficit (\u00a3 billion)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "JW2T"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "\u00a3 billion",
@@ -12006,6 +12187,16 @@
         "decimals": 1,
         "outturn_source": "ONS JW2T (sign reversed) over ONS BKTL, fiscal years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet CB, Current budget deficit (Per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "BKTL",
+            "JW2T"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",
@@ -12648,6 +12839,16 @@
         "decimals": 1,
         "outturn_source": "ONS JW2Z (PUSF): public sector net investment excluding public sector banks (sign reversed), over ONS BKTL, fiscal years",
         "forecast_source": "OBR, Historical official forecasts database, Spring 2026: sheet PSNI, Public sector net investment (Per cent of GDP)",
+        "files": {
+          "obr": [
+            "hofd_spring_2026"
+          ],
+          "ons": [
+            "BKTL",
+            "JW2Z"
+          ],
+          "hpi": false
+        },
         "check": {
           "against": "the outturn row of the OBR's database",
           "in": "% of GDP",

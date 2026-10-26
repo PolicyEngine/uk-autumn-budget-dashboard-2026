@@ -71,7 +71,10 @@ const isText = (v) => typeof v === "string" && v.length > 0;
 const textList = (v) => Array.isArray(v) && v.every(isText);
 const isObject = (v) => v != null && typeof v === "object" && !Array.isArray(v);
 const isId = (v) => typeof v === "string" && /^[a-z][a-z0-9_]*$/.test(v);
-const isUrl = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v);
+// No control character, no space of any kind (what \s matches, written
+// out so the build's _URL can say the same) and no quote or angle bracket
+const isUrl = (v) =>
+  typeof v === "string" && /^https:\/\/[^\x00-\x20\x7f-\x9f\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"'<>]+$/.test(v);
 const isSha = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
 // A day the calendar has: Date.parse reads 30 February as 2 March
 const isDate = (v) =>
@@ -204,6 +207,22 @@ function measureProblem(id, name, measure, frequency) {
   }
   if (!(Number.isInteger(measure.decimals) && measure.decimals >= 0 && measure.decimals <= MAX_DECIMALS)) {
     return `${id}: no decimals`;
+  }
+  // The files it is built from, each listed under Sources (filesProblem):
+  // one OBR file or more, the ONS series, each once, and whether it reads
+  // the House Price Index; its outturn is read from at least one of those
+  const files = measure.files;
+  if (
+    !isObject(files) ||
+    !textList(files.obr) ||
+    !files.obr.length ||
+    !unique(files.obr) ||
+    !textList(files.ons) ||
+    !unique(files.ons) ||
+    typeof files.hpi !== "boolean" ||
+    !(files.ons.length || files.hpi)
+  ) {
+    return `${id}: no list of the files it is built from`;
   }
   if (!isSeries(measure.outturn, frequency)) return `${id}: no outturn`;
   const check = checkProblem(measure.check, measure, frequency);
@@ -387,7 +406,24 @@ export function forecastVintagesProblem(data) {
   if (found) return found;
   const ids = data.variables.map((v) => v.id);
   if (!unique(ids)) return "a variable twice";
-  return metaProblem(data.meta, new Set(data.variables.map((v) => v.frequency)));
+  return metaProblem(data.meta, new Set(data.variables.map((v) => v.frequency))) ?? filesProblem(data);
+}
+
+// Every file a measure drawn is built from is listed under Sources, as
+// each card says. Called once the variables and meta are taken
+function filesProblem(data) {
+  const { obr, ons, hpi } = data.meta.sources;
+  const obrIds = new Set(obr.map((s) => s.id));
+  const cdids = new Set(ons.map((s) => s.cdid));
+  for (const v of data.variables) {
+    for (const name of new Set(Object.values(v.units).map((spec) => spec.from))) {
+      const { files } = v[name];
+      if (!files.obr.every((f) => obrIds.has(f)) || !files.ons.every((f) => cdids.has(f)) || (files.hpi && absent(hpi))) {
+        return `${v.id}: a file it is built from is not among the sources`;
+      }
+    }
+  }
+  return null;
 }
 
 /**

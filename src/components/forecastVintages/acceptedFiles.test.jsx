@@ -83,9 +83,19 @@ const num = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <=
 const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const missing = (v) => v === undefined || v === null;
 const distinct = (xs) => new Set(xs).size === xs.length;
-const https = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v);
+// An address: no control character, space of any kind, quote or angle bracket
+const UNSAFE = new Set(["\u00a0", "\u1680", "\u2028", "\u2029", "\u202f", "\u205f", "\u3000", "\ufeff", '"', "'", "<", ">"]);
+const unsafe = (c) => c <= " " || (c >= "\x7f" && c <= "\x9f") || (c >= "\u2000" && c <= "\u200a") || UNSAFE.has(c);
+const https = (v) => typeof v === "string" && v.startsWith("https://") && v.length > 8 && ![...v.slice(8)].some(unsafe);
 const hex64 = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
-const day = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+// A day the Gregorian calendar has, carried back to year 0 (a leap year)
+const day = (v) => {
+  const found = typeof v === "string" && /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(v);
+  if (!found) return false;
+  const [y, m, d] = found.slice(1).map(Number);
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  return m >= 1 && m <= 12 && d >= 1 && d <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+};
 const slug = (v) => typeof v === "string" && /^[a-z][a-z0-9_]*$/.test(v);
 const among = (list) => (v) => typeof v === "string" && list.includes(v);
 
@@ -210,6 +220,11 @@ function checkOk(c, m, outturn, frequency) {
 function measureOk(m, frequency) {
   if (!plain(m) || !among(["growth", "index", "level"])(m.kind)) return false;
   if (!str(m.unit) || !str(m.outturn_source) || !str(m.forecast_source) || !int(m.decimals, 0, 6)) return false;
+  // What it is built from: OBR files, and the ONS series or the House
+  // Price Index its outturn reads, each named once
+  const f = m.files;
+  const names = (xs) => Array.isArray(xs) && xs.every(str) && distinct(xs);
+  if (!plain(f) || !names(f.obr) || !f.obr.length || !names(f.ons) || typeof f.hpi !== "boolean" || (!f.ons.length && !f.hpi)) return false;
   const outturn = seriesOf(m.outturn, frequency);
   if (!outturn || !checkOk(m.check, m, outturn, frequency)) return false;
   if (!Array.isArray(m.vintages) || !m.vintages.length || !m.vintages.every((v) => vintageOk(v, frequency, m.kind))) return false;
@@ -276,7 +291,15 @@ function metaOk(meta, frequencies) {
 function FILE_OK(data) {
   if (!plain(data) || !Array.isArray(data.variables) || !data.variables.length) return false;
   if (!data.variables.every(variableOk) || !distinct(data.variables.map((v) => v.id))) return false;
-  return metaOk(data.meta, new Set(data.variables.map((v) => v.frequency)));
+  if (!metaOk(data.meta, new Set(data.variables.map((v) => v.frequency)))) return false;
+  // Every file a measure a unit reads is built from is under Sources, as each card says
+  const { obr, ons, hpi } = data.meta.sources;
+  return data.variables.every((v) =>
+    Object.values(v.units).every(({ from }) => {
+      const f = v[from].files;
+      return f.obr.every((id) => obr.some((x) => x.id === id)) && f.ons.every((id) => ons.some((x) => x.cdid === id)) && (!f.hpi || !missing(hpi));
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------
@@ -320,6 +343,14 @@ const WHAT_IT_HOLDS = {
   [`${M}.decimals`]: WORDS,
   [`${M}.outturn_source`]: WORDS,
   [`${M}.forecast_source`]: WORDS,
+  // Checked against Sources by the loader, never shown
+  [`${M}.files`]: UNREAD,
+  [`${M}.files.garbage`]: UNREAD,
+  [`${M}.files.obr`]: UNREAD,
+  [`${M}.files.obr.[]`]: UNREAD,
+  [`${M}.files.ons`]: UNREAD,
+  [`${M}.files.ons.[]`]: UNREAD,
+  [`${M}.files.hpi`]: UNREAD,
   [`${M}.outturn`]: FIGURES,
   [`${M}.outturn.{period}`]: FIGURES,
   [`${M}.check`]: WORDS,
@@ -545,10 +576,12 @@ const noChange = (path, value) =>
 
 // Smaller files to change, so the sweep is quick: a variable alone, or
 // with its neighbour where a change could repeat the neighbour's id; one
-// variable of each frequency for meta. The loader checks a variable
-// apart from the others, but for their ids and meta, so a change it
-// refuses in the smaller file it refuses in the whole one; B and C make
-// the changes it accepts to the whole file
+// variable of each frequency for meta, and every variable for its
+// sources, which the variables' files are checked against. The loader
+// checks a variable apart from the others, but for their ids, meta and
+// the sources they name, so a change it refuses in the smaller file it
+// refuses in the whole one; B and C make the changes it accepts to the
+// whole file
 const ONE_PER_FREQUENCY = ["calendar", "fiscal", "quarterly"].map((f) => DATA.variables.find((v) => v.frequency === f));
 function smaller(path) {
   if (path[0] === "variables" && typeof path[1] === "number") {
@@ -556,7 +589,7 @@ function smaller(path) {
     const others = path.length <= 3 ? [DATA.variables[i > 0 ? i - 1 : 1]] : [];
     return { data: { ...DATA, variables: [DATA.variables[i], ...others] }, path: ["variables", 0, ...path.slice(2)] };
   }
-  if (path[0] === "meta") return { data: { ...DATA, variables: ONE_PER_FREQUENCY }, path };
+  if (path[0] === "meta" && path[1] !== "sources") return { data: { ...DATA, variables: ONE_PER_FREQUENCY }, path };
   return { data: DATA, path };
 }
 
