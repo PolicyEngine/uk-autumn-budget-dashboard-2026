@@ -84,6 +84,54 @@ describe("a forecast's figures read as its kind", () => {
     );
   });
 
+  // The bounds every figure of a forecast of each kind keeps, and close to
+  // them: a growth rate under 100% either way, an index above zero
+  const BOUNDS = { growth: [-99.999999, 99.999999], index: [1e-6, 1e6], level: [-1e9, 1e9] };
+
+  it("whatever a forecast holds after its launch, within those bounds: from any case, taken or refused, the same verdict", () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...CASES),
+        fc.nat(),
+        fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { minLength: 128, maxLength: 128 }),
+        (c, which, draws) => {
+          const { variable, measure: name } = c.ops[0];
+          const verdicts = new Set();
+          let next = 0;
+          for (let round = 0; round < 2; round += 1) {
+            const data = copy();
+            for (const op of c.ops) apply(data, op);
+            const measure = data.variables.find((v) => v.id === variable)[name];
+            const vintage = measure.vintages[which % measure.vintages.length];
+            const [lo, hi] = BOUNDS[measure.kind];
+            for (const k of Object.keys(vintage.values)) {
+              // A draw in [0, 1] spread over the bounds, ends included
+              if (k !== String(vintage.launch)) vintage.values[k] = lo + draws[next++ % draws.length] * (hi - lo);
+            }
+            verdicts.add(problemOf(data, variable, name) === null);
+          }
+          expect(verdicts.size).toBe(1);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+
+  it("refuses a growth rate of 100% or more either way, or an index at or below zero, wherever it falls", () => {
+    const bounded = MEASURES.filter(({ id }) => ["cpi", "real_gdp", "rhdi_per_person"].includes(id));
+    fc.assert(
+      fc.property(fc.constantFrom(...bounded), fc.nat(), fc.nat(), fc.double({ min: 0, max: 1e9, noNaN: true }), fc.boolean(), ({ id, name }, which, at, size, down) => {
+        const data = copy();
+        const measure = data.variables.find((v) => v.id === id)[name];
+        const vintage = measure.vintages[which % measure.vintages.length];
+        const keys = Object.keys(vintage.values);
+        vintage.values[keys[at % keys.length]] = measure.kind === "growth" ? (down ? -1 : 1) * (100 + size) : -size;
+        expect(problemOf(data, id, name)).not.toBeNull();
+      }),
+      { numRuns: 300 },
+    );
+  });
+
   it("whichever forecasts start the period after their launch, as the build lets one, while one keeps its launch figure", () => {
     const growthOrLevel = MEASURES.filter(({ id, name }) => DATA.variables.find((v) => v.id === id)[name].kind !== "index");
     fc.assert(

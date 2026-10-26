@@ -125,13 +125,19 @@ export function launchPeriod(frequency, year, month) {
 // forecast or an index, whose figures are not in the outturn's units
 const checkTerms = (measure) => (measure.kind === "level" ? measure.unit : "% change on a year earlier");
 
-// What the page reads from a measure's outturn check (checkSentence): the
-// periods it covers, in order and all in the outturn; its terms; a
-// tolerance and a largest gap the sentence can state without
-// contradicting itself. A tolerance is a share of the value only where the
-// gaps are in the outturn's own units, the value's
-function checkProblem(check, measure, frequency) {
-  if (absent(check)) return null;
+/**
+ * What the page reads from a measure's outturn check (checkSentence): the
+ * periods it covers, in order and all in the outturn; its terms
+ * (checkTerms); a tolerance and a largest gap the sentence can state
+ * without contradicting itself, the gap within the tolerance as both are
+ * written. A tolerance is a share of the value only where the gaps are in
+ * the outturn's own units, the value's. Every measure has one: the build
+ * writes one for each, and refuses to write one this refuses
+ * (check_as_read in src/uk_budget_data/forecast_vintages/build.py), on the
+ * cases in tests/fixtures/forecast_vintages_check_cases.json.
+ */
+export function checkProblem(check, measure, frequency) {
+  if (absent(check)) return "it has no outturn check";
   const ok =
     isObject(check) &&
     isText(check.against) &&
@@ -150,10 +156,11 @@ function checkProblem(check, measure, frequency) {
     check.periods.includes(check.largest_gap_period);
   if (!ok) return "its outturn check is incomplete";
   const gap = Math.abs(check.largest_gap);
-  if (!check.tolerance_is_share) return gap <= check.tolerance + ROUNDING ? null : "its outturn check's largest gap is beyond its tolerance";
   // A share of the OBR's own figure, which is the outturn less the gap
-  const theirs = Math.abs(measure.outturn[check.largest_gap_period] - check.largest_gap);
-  return gap <= check.tolerance * theirs + ROUNDING ? null : "its outturn check's largest gap is beyond its tolerance";
+  const within = check.tolerance_is_share
+    ? gap <= check.tolerance * Math.abs(measure.outturn[check.largest_gap_period] - check.largest_gap)
+    : gap <= check.tolerance;
+  return within ? null : "its outturn check's largest gap is beyond its tolerance";
 }
 
 function vintageProblem(id, v, frequency, kind) {
@@ -218,11 +225,17 @@ function measureProblem(id, name, measure, frequency) {
  * estimate of outturn: a level's is near the outturn; a growth rate's near
  * the outturn's own rate; an index's ratio to the outturn is the same in
  * every forecast. At least one forecast has that figure, so the kind is
- * set against something. A forecast of levels marked as an index, with
- * every figure above zero, its outturn check in growth rates and one base,
- * passes: its figures cannot say which it is. The build refuses to write
- * a file this refuses (check_kind in src/uk_budget_data/forecast_vintages/
- * build.py), on the cases in tests/fixtures/forecast_vintages_kind_cases.json.
+ * set against something. The build refuses to write a file this refuses
+ * (check_kind in src/uk_budget_data/forecast_vintages/build.py), on the
+ * cases in tests/fixtures/forecast_vintages_kind_cases.json.
+ *
+ * Where neither the figures nor the check can say, the kind is taken as
+ * written. A forecast of levels, every figure above zero and each
+ * forecast's launch figure near one share of the outturn, marked as an
+ * index with its outturn check's terms changed to growth rates
+ * (checkTerms), passes: an index is checked in growth rates, and no figure
+ * in the file says the check's gaps are in other terms. It is then drawn
+ * carried on from today's outturn, as an index is, not as published.
  */
 export function kindProblem(id, measure, frequency) {
   const outturn = new Map(Object.entries(measure.outturn).map(([k, v]) => [periodIndex(k, frequency), v]));

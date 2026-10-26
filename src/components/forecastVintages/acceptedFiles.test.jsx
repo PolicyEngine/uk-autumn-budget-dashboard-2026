@@ -12,18 +12,24 @@
  * - The loader accepts exactly the changes FILE_OK accepts (A). FILE_OK
  *   is written here, apart from the loader, from what the build can write
  *   (src/uk_budget_data/forecast_vintages/build.py) and what the page
- *   needs of each field. Its kind rule is the one the build and the
- *   loader share; utils/forecastVintages/kind.test.js holds both to the
- *   same cases, and shows a forecast's figures after its launch never
- *   change whether a file is taken.
+ *   needs of each field. Its kind and check rules are the ones the build
+ *   and the loader share (check_kind and check_as_read in the build);
+ *   utils/forecastVintages/kind.test.js and check.test.js hold both to the
+ *   same cases, and kind.test.js shows a forecast's figures after its
+ *   launch, within the bounds every figure keeps, never change whether a
+ *   file is taken.
  * - A file it accepts draws every view on an axis that holds every point,
- *   or says in the builder's words why the view cannot be drawn (a %
- *   change on a series that falls below zero, say), never with a zero or
- *   an empty chart. A change to a field that holds no figure leaves every
- *   figure, and every view drawn, as it was; a field the page does not
- *   read leaves every word as it was too (B).
+ *   or gives one of the builder's reasons why the view cannot be drawn (a
+ *   % change on a series that falls below zero, say), naming the view's
+ *   newest forecast where it names one; never a zero or an empty chart.
+ *   Whether the reason is true of the data is not checked here;
+ *   view.test.js checks each on files made to give it. A change to a field that holds no figure leaves every figure,
+ *   and every view drawn, as it was; a field the page does not read
+ *   leaves every word as it was too (B).
  * - It mounts on its default unit, showing what the builder makes of that
- *   view, its chart or the reason it cannot be drawn, and nothing else (C).
+ *   view and nothing else: its reason it cannot be drawn, or a chart with
+ *   a line for the outturn and each forecast and the view's labelled
+ *   points, with their values, in the window it opens on (C).
  *
  * WHAT_IT_HOLDS names every field the file has. A field it does not name
  * fails the test, so a field added to the file must be added there.
@@ -168,11 +174,12 @@ function kindReads(m, outturn, frequency) {
   return estimates > 0 && !(ratios.length && Math.max(...ratios) > 1.5 * Math.min(...ratios));
 }
 
-// The build's outturn check (check_outturn, check_index): its gaps in the
-// measure's own units for a forecast of levels, else in growth rates; a
-// share of the value only where the gaps are in the value's units; a
-// tolerance no finer than the four decimals a gap is written to, and a
-// gap that is 0 or no finer
+// The build's outturn check, as check_as_read (build.py) lets it be
+// written: one for every measure; its gaps in the measure's own units for
+// a forecast of levels, else in growth rates; a share of the value only
+// where the gaps are in the value's units, and under one; a tolerance no
+// finer than the four decimals a gap is written to, and a gap that is 0
+// or no finer; the gap as written within the tolerance as written
 function checkOk(c, m, outturn, frequency) {
   const terms = m.kind === "level" ? m.unit : "% change on a year earlier";
   if (!plain(c) || !str(c.against) || c.in !== terms || typeof c.tolerance_is_share !== "boolean") return false;
@@ -187,15 +194,15 @@ function checkOk(c, m, outturn, frequency) {
   if (gap !== 0 && gap < 1e-4) return false;
   // A share's gap is of the OBR's figure: the build's gap is the outturn
   // less the OBR's, so the OBR's is the outturn less the gap
-  if (!c.tolerance_is_share) return gap <= c.tolerance + 1e-4;
-  return gap <= c.tolerance * Math.abs(outturn.get(at) - c.largest_gap) + 1e-4;
+  if (!c.tolerance_is_share) return gap <= c.tolerance;
+  return gap <= c.tolerance * Math.abs(outturn.get(at) - c.largest_gap);
 }
 
 function measureOk(m, frequency) {
   if (!plain(m) || !among(["growth", "index", "level"])(m.kind)) return false;
   if (!str(m.unit) || !str(m.outturn_source) || !str(m.forecast_source) || !int(m.decimals, 0, 6)) return false;
   const outturn = seriesOf(m.outturn, frequency);
-  if (!outturn || (!missing(m.check) && !checkOk(m.check, m, outturn, frequency))) return false;
+  if (!outturn || !checkOk(m.check, m, outturn, frequency)) return false;
   if (!Array.isArray(m.vintages) || !m.vintages.length || !m.vintages.every((v) => vintageOk(v, frequency, m.kind))) return false;
   const dates = m.vintages.map((v) => v.year * 12 + v.month);
   if (!distinct(m.vintages.map((v) => v.id)) || dates.some((d, i) => i > 0 && d <= dates[i - 1])) return false;
@@ -577,7 +584,16 @@ function drawEverything(data, variables) {
           const where = `${v.id} ${viewKey}`;
           const view = buildView(data, v, { unit, annual, showPast });
           if (view.unavailable) {
-            if (!str(view.unavailable)) throw new Error(`${where}: unavailable, saying nothing`);
+            // One of the builder's reasons, of this view: the newest
+            // forecast, which no older one replaces, or the outturn; an
+            // index's base only in the index unit
+            const newestLabel = v[v.units[unit].from].vintages.at(-1).label;
+            const reasons = [
+              `The ${newestLabel} forecast of this measure cannot be drawn in this unit.`,
+              "The outturn of this measure cannot be drawn in this unit.",
+              ...(unit === "index" ? ["There is no outturn above zero at the start of this parliament, so no index can be drawn."] : []),
+            ];
+            if (!reasons.includes(view.unavailable)) throw new Error(`${where}: unavailable, saying ${JSON.stringify(view.unavailable)}`);
             drawn[viewKey] = { unavailable: view.unavailable };
             continue;
           }
@@ -731,8 +747,8 @@ describe("a forecasts file the loader accepts", () => {
         for (const kind of ["growth", "index", "level"]) {
           for (const terms of [m.unit, "% change on a year earlier", "£ billion"]) {
             for (const share of [true, false]) {
-              for (const tolerance of [0.00001, 0.02, 0.5, 1.5]) {
-                for (const gap of [0, 1e-300, 0.0001, m.check.largest_gap, 2]) {
+              for (const tolerance of [0.00001, 0.005, 0.02, 0.5, 1.5]) {
+                for (const gap of [0, 1e-300, 0.0001, 0.005, 0.0051, m.check.largest_gap, 2]) {
                   const small = smaller(["variables", i, name]);
                   const check = { ...m.check, in: terms, tolerance_is_share: share, tolerance, largest_gap: gap };
                   const data = changed(small.data, small.path, { ...m, kind, check });
@@ -771,9 +787,19 @@ describe("a forecasts file the loader accepts", () => {
     const chart = document.querySelector(".recharts-surface");
     if (notice !== expected.unavailable) throw new Error(`${where}: shows ${JSON.stringify(notice)}, not ${JSON.stringify(expected.unavailable)}`);
     if (Boolean(chart) === Boolean(expected.unavailable)) throw new Error(`${where}: ${chart ? "a chart" : "no chart"} beside ${JSON.stringify(notice)}`);
+    if (expected.unavailable) return;
+    // The chart holds what the view does: a line for the outturn and one
+    // for each forecast, and the view's labelled points in the window it
+    // opens on, each with its value in the view's format
+    const lines = document.querySelectorAll(".recharts-line").length;
+    if (lines !== expected.vintages.length + 1) throw new Error(`${where}: ${lines} lines for ${expected.vintages.length} forecasts and the outturn`);
+    const opened = expected.rows.slice(expected.windowStart ?? 0);
+    const want = pointsIn(expected.points, opened).map((p) => `${p.role} ${expected.format(p.y)}`);
+    const got = [...document.querySelectorAll(".fv-point-label")].map((g) => `${g.dataset.role} ${g.querySelector("text").textContent}`);
+    if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${where}: labels ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);
   }
 
-  it("mounts on its default unit, showing the builder's chart or its reason, and nothing else (C)", async () => {
+  it("mounts on its default unit, showing the builder's chart (its lines and labelled points) or its reason, and nothing else (C)", async () => {
     // Every accepted change to which unit opens, and a sample of the rest
     const opens = RESULT().accepted.filter(({ path }) => WHAT_IT_HOLDS[patternOf(path)] === OPENS);
     expect(opens.length).toBeGreaterThan(10);

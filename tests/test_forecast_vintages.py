@@ -788,6 +788,195 @@ def test_a_tolerance_finer_than_a_gap_is_written_is_refused():
         B.check_outturn(_variable(), _measure(tolerance=0.00001), row, row)
 
 
+def test_an_index_is_never_checked_against_a_database_sheet():
+    # It is checked in growth rates against Table 1.5 (check_index); set
+    # against a sheet as it stands, its gaps would be in index points
+    row = {periods.fiscal_label(y): 100.0 for y in range(2010, 2020)}
+    with pytest.raises(B.BuildError, match="Table 1.5"):
+        B.check_outturn(_variable(), _measure(kind="index"), row, row)
+
+
+def test_a_check_is_written_in_its_kinds_terms():
+    levels = {y: 100.0 * 1.02 ** (y - 2000) for y in range(2000, 2020)}
+    rates = {y: 2.0 for y in range(2001, 2020)}
+    growth = B.check_outturn(
+        _variable("calendar"), _measure(kind="growth"), levels, rates
+    )
+    assert growth["in"] == "% change on a year earlier"
+    level = B.check_outturn(
+        _variable("calendar"), _measure(unit="£ billion"), levels, levels
+    )
+    assert level["in"] == "£ billion"
+
+
+def test_a_gap_within_its_tolerance_only_before_rounding_is_refused():
+    # 0.00026 is within a tolerance of 0.00026, but is written 0.0003: the
+    # page would state a gap beyond the tolerance it states
+    row = {y: 100.0 for y in range(2010, 2020)}
+    mine = {k: v + 0.00026 for k, v in row.items()}
+    variable, measure = _variable("calendar"), _measure(tolerance=0.00026)
+    check = B.check_outturn(variable, measure, mine, row)
+    assert check["largest_gap"] > measure.tolerance
+    with pytest.raises(B.BuildError, match="beyond its tolerance"):
+        B.check_as_read(
+            "test", "calendar", "level", "£ billion", check, B._ordered(mine)
+        )
+
+
+# --- An outturn check reads as true -------------------------------------------
+
+CHECK_CASES = json.loads(
+    (
+        ROOT / "tests" / "fixtures" / "forecast_vintages_check_cases.json"
+    ).read_text()
+)["cases"]
+
+
+def _apply_check_op(data: dict, op: dict) -> None:
+    """One change from the shared check cases, made in place."""
+    variable = next(v for v in data["variables"] if v["id"] == op["variable"])
+    measure = variable[op["measure"]]
+    if op["op"] == "set":
+        measure["check"][op["field"]] = op["to"]
+    elif op["op"] == "drop_check":
+        del measure["check"]
+    elif op["op"] == "kind":
+        measure["kind"] = op["to"]
+    else:
+        raise ValueError(f"Unknown check case op {op['op']!r}")
+
+
+def _check_check(data: dict, variable_id: str, name: str) -> None:
+    variable = next(v for v in data["variables"] if v["id"] == variable_id)
+    measure = variable[name]
+    B.check_as_read(
+        variable_id,
+        variable["frequency"],
+        measure["kind"],
+        measure["unit"],
+        measure.get("check"),
+        measure["outturn"],
+    )
+
+
+@pytest.mark.parametrize("case", CHECK_CASES, ids=lambda c: c["name"])
+def test_the_build_reads_checks_as_the_page_does(committed, case):
+    # The page's loader (checkProblem) is held to the same cases in
+    # src/utils/forecastVintages/check.test.js, so the two agree
+    data = json.loads(json.dumps(committed))
+    for op in case["ops"]:
+        _apply_check_op(data, op)
+    target = case["ops"][0]
+    if case["accepted"]:
+        _check_check(data, target["variable"], target["measure"])
+    else:
+        with pytest.raises(B.BuildError):
+            _check_check(data, target["variable"], target["measure"])
+
+
+def test_every_committed_check_reads_as_true(committed):
+    for variable in committed["variables"]:
+        for name in ("level", "share"):
+            if variable.get(name):
+                _check_check(committed, variable["id"], name)
+
+
+# --- A forecast's figures after its launch -------------------------------------
+
+COMMITTED_TEXT = COMMITTED.read_text()
+
+
+def _in_bounds(kind: str):
+    """Figures a forecast of `kind` may hold after its launch, any of them."""
+    if kind == "growth":
+        return st.floats(-99.999999, 99.999999)
+    if kind == "index":
+        return st.floats(1e-6, 1e6)
+    return st.floats(-1e9, 1e9)
+
+
+def _kind_verdict(data: dict, variable_id: str, name: str) -> bool:
+    try:
+        _kind_check(data, variable_id, name)
+    except B.BuildError:
+        return False
+    return True
+
+
+@given(st.sampled_from(KIND_CASES), st.integers(0, 64), st.data())
+def test_figures_after_the_launch_never_change_the_verdict(case, which, draw):
+    # From any shared case, taken or refused: two sets of figures after a
+    # forecast's launch, each within the bounds every figure keeps (a
+    # growth rate under 100% either way, an index above zero), give the
+    # same verdict
+    target = case["ops"][0]
+    verdicts = set()
+    for _ in range(2):
+        data = json.loads(COMMITTED_TEXT)
+        for op in case["ops"]:
+            _apply_kind_op(data, op)
+        variable = next(
+            v for v in data["variables"] if v["id"] == target["variable"]
+        )
+        measure = variable[target["measure"]]
+        vintage = measure["vintages"][which % len(measure["vintages"])]
+        for key in vintage["values"]:
+            if key != str(vintage["launch"]):
+                vintage["values"][key] = draw.draw(_in_bounds(measure["kind"]))
+        verdicts.add(
+            _kind_verdict(data, target["variable"], target["measure"])
+        )
+    assert len(verdicts) == 1
+
+
+@given(
+    st.sampled_from(
+        [m for m in _committed_measures() if m[0] in ("cpi", "real_gdp")]
+        + [("rhdi_per_person", "level")]
+    ),
+    st.integers(0, 64),
+    st.data(),
+)
+def test_a_figure_past_its_bounds_is_always_refused(target, which, draw):
+    # A growth rate of 100% or more either way, or an index at or below
+    # zero, wherever it falls in a forecast
+    data = json.loads(COMMITTED_TEXT)
+    variable_id, name = target
+    variable = next(v for v in data["variables"] if v["id"] == variable_id)
+    measure = variable[name]
+    vintage = measure["vintages"][which % len(measure["vintages"])]
+    key = draw.draw(st.sampled_from(sorted(vintage["values"])))
+    if measure["kind"] == "growth":
+        past = st.floats(100, 1e9) | st.floats(-1e9, -100)
+    else:
+        past = st.floats(-1e9, 0)
+    vintage["values"][key] = draw.draw(past)
+    assert not _kind_verdict(data, variable_id, name)
+
+
+@given(
+    st.sampled_from(
+        [
+            (v["id"], name)
+            for v in json.loads(COMMITTED_TEXT)["variables"]
+            for name in ("level", "share")
+            if v.get(name) and v[name]["kind"] != "index"
+        ]
+    ),
+    st.lists(st.booleans(), min_size=40, max_size=40),
+)
+def test_forecasts_may_start_the_period_after_their_launch(target, drop):
+    # As the build lets a level or growth forecast: whichever drop their
+    # launch figure, while the first keeps it, the file is still written
+    data = json.loads(COMMITTED_TEXT)
+    variable_id, name = target
+    variable = next(v for v in data["variables"] if v["id"] == variable_id)
+    for i, vintage in enumerate(variable[name]["vintages"]):
+        if i > 0 and drop[i % len(drop)]:
+            vintage["values"].pop(str(vintage["launch"]), None)
+    _kind_check(data, variable_id, name)
+
+
 # --- Downloads never reach obr.uk --------------------------------------------
 
 

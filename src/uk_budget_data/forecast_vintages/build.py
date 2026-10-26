@@ -16,7 +16,8 @@ Before anything is written:
   recorded in ``retrieved.json``;
 - each outturn is set against the database's own outturn row (the OBR's
   outturn "as available at last forecast") over the last eight periods
-  both have, and must agree within the variable's tolerance;
+  both have, and must agree within the variable's tolerance, as written
+  as well as before rounding (see :func:`check_as_read`);
 - each forecast's values must run on from its launch with no gaps, and
   read as its measure's kind where they can say otherwise (see
   :func:`check_kind`);
@@ -173,6 +174,14 @@ def check_outturn(
     variable: V.Variable, measure: V.Measure, outturn: dict, row: dict
 ) -> dict:
     """Set the outturn against the database's outturn row; raise if apart."""
+    # An index is checked only against its forecasts' own Table 1.5, in
+    # growth rates (check_index); this sets levels or growth rates against
+    # the row as they are
+    if measure.kind == "index":
+        raise BuildError(
+            f"{variable.id}: an index is checked against Table 1.5 "
+            "(check_index), not a database sheet"
+        )
     # The page states a share as "of the value", so only gaps in the
     # outturn's own units (a forecast of levels) can be a share; and no
     # tolerance is finer than the four decimals a gap is written to
@@ -215,20 +224,74 @@ def check_outturn(
             f"beyond the tolerance of {measure.tolerance}"
             + (" (share)" if measure.relative else "")
         )
-    in_terms = (
-        "% change on a year earlier"
-        if measure.kind == "growth"
-        else measure.unit
-    )
     return {
         "against": "the outturn row of the OBR's database",
-        "in": in_terms,
+        "in": check_terms(measure.kind, measure.unit),
         "periods": [_key(p) for p in common],
         "largest_gap": round(worst[1], DECIMALS),
         "largest_gap_period": _key(worst[0]),
         "tolerance": measure.tolerance,
         "tolerance_is_share": measure.relative,
     }
+
+
+def check_terms(kind: str, unit: str) -> str:
+    """The terms an outturn check is in: a level's own units, else growth."""
+    return unit if kind == "level" else "% change on a year earlier"
+
+
+def check_as_read(
+    name: str, frequency: str, kind: str, unit: str, check, outturn: dict
+) -> None:
+    """Raise unless the page reads ``check`` as written as a true check.
+
+    Takes the check and the outturn as written, so its figures are the
+    ones the page reads; the page's loader (load.js, checkProblem) refuses
+    a check this refuses, on the cases in
+    tests/fixtures/forecast_vintages_check_cases.json. Every measure has
+    one, in its kind's terms (:func:`check_terms`), over periods of the
+    outturn in order, the largest gap's among them. A tolerance is a share
+    of the value only on gaps in the value's units (a forecast of levels),
+    and under one; no tolerance is finer than the four decimals a gap is
+    written to, and a gap is 0 or no finer. The gap as written is within
+    the tolerance as written, as the page states both: the gap is set
+    against the tolerance before it is rounded, and rounding could carry
+    it past.
+    """
+    where = f"{name}: its outturn check"
+    if not isinstance(check, dict):
+        raise BuildError(f"{name}: no outturn check")
+    if check.get("in") != check_terms(kind, unit):
+        raise BuildError(f"{where} is not in {check_terms(kind, unit)}")
+    keys = check.get("periods") or []
+    order = [periods.sort_key(_period(k, frequency)) for k in keys]
+    if (
+        not keys
+        or any(str(k) not in outturn for k in keys)
+        or any(b <= a for a, b in zip(order, order[1:]))
+        or check.get("largest_gap_period") not in keys
+    ):
+        raise BuildError(f"{where}'s periods are not the outturn's in order")
+    tolerance, share = check["tolerance"], check["tolerance_is_share"]
+    gap = abs(check["largest_gap"])
+    if tolerance < 10**-DECIMALS:
+        raise BuildError(
+            f"{where}: a tolerance finer than {DECIMALS} decimals"
+        )
+    if share and not (tolerance < 1 and kind == "level"):
+        raise BuildError(
+            f"{where}: a share of the value needs levels and is under one"
+        )
+    if gap != 0 and gap < 10**-DECIMALS:
+        raise BuildError(f"{where}: a gap finer than {DECIMALS} decimals")
+    if share:
+        # A share of the OBR's own figure, the outturn less the gap
+        at = outturn[str(check["largest_gap_period"])]
+        within = gap <= tolerance * abs(at - check["largest_gap"])
+    else:
+        within = gap <= tolerance
+    if not within:
+        raise BuildError(f"{where}'s largest gap is beyond its tolerance")
 
 
 # How far a forecast's figure for its launch period may sit from the
@@ -399,6 +462,14 @@ def build_measure(
             "person by total population (index, 2008 Q1 = 100)"
         )
     written = _ordered(outturn)
+    check_as_read(
+        variable.id,
+        variable.frequency,
+        measure.kind,
+        measure.unit,
+        check,
+        written,
+    )
     check_kind(
         variable.id, variable.frequency, measure.kind, written, vintages
     )

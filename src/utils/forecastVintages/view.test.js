@@ -140,21 +140,24 @@ describe("the committed file", () => {
     ["growth rates marked as growth, by their check", (d) => (byId(d, "real_gdp").level.kind = "level"), /outturn check is incomplete/],
     ["levels marked as levels, by their check", (d) => (byId(d, "employment").level.kind = "growth"), /outturn check is incomplete/],
     [
-      "growth rates marked as growth",
+      "growth rates marked as growth, its check in its units",
       (d) => {
-        byId(d, "real_gdp").level.kind = "level";
-        delete byId(d, "real_gdp").level.check;
+        const m = byId(d, "real_gdp").level;
+        m.kind = "level";
+        m.check.in = m.unit;
       },
       /do not read as levels/,
     ],
     [
-      "levels marked as levels",
+      "levels marked as levels, its check in growth rates",
       (d) => {
-        byId(d, "employment").level.kind = "growth";
-        delete byId(d, "employment").level.check;
+        const m = byId(d, "employment").level;
+        m.kind = "growth";
+        Object.assign(m.check, { in: "% change on a year earlier", tolerance_is_share: false });
       },
       /do not read as growth rates/,
     ],
+    ["a measure with its outturn check", (d) => delete byId(d, "employment").level.check, /employment: it has no outturn check/],
     ["an index marked as an index", (d) => (byId(d, "rhdi_per_person").level.kind = "growth"), /do not read as growth rates/],
     ["an index above zero", (d) => (byId(d, "real_gdp").level.kind = "index"), /launch period|do not read as an index/],
     ["a level that starts near the outturn", (d) => (byId(d, "nominal_gdp").level.vintages[0].values["2009-10"] *= 3), /do not read as levels/],
@@ -171,6 +174,13 @@ describe("the committed file", () => {
     ],
     ["a tolerance no finer than a gap is written", (d) => (byId(d, "real_gdp").level.check.tolerance = 0.00001), /outturn check is incomplete/],
     ["a largest gap no finer than it is written", (d) => (byId(d, "real_gdp").level.check.largest_gap = 1e-300), /outturn check is incomplete/],
+    // Found by the fifth review: a gap past its tolerance by less than the
+    // rounding, which the page would state beside the tolerance
+    [
+      "a largest gap within its tolerance as both are written",
+      (d) => Object.assign(byId(d, "unemployment").level.check, { tolerance: 0.005, largest_gap: 0.0051 }),
+      /largest gap is beyond its tolerance/,
+    ],
     [
       "a forecast of two periods or more",
       (d) => {
@@ -409,10 +419,11 @@ describe("a forecast that cannot be drawn", () => {
       const key = Object.keys(values).sort().at(at);
       return { [key]: values[key] };
     };
-    // One year of outturn (so no check over eight), and each forecast's
-    // first two years
-    delete v.level.check;
+    // One year of outturn (so a check over that year alone), and each
+    // forecast's first two years
     v.level.outturn = only(v.level.outturn, -1);
+    const [year] = Object.keys(v.level.outturn);
+    Object.assign(v.level.check, { periods: [year], largest_gap_period: year });
     for (const vintage of v.level.vintages) {
       vintage.values = Object.fromEntries(Object.entries(vintage.values).slice(0, 2));
     }
@@ -658,14 +669,16 @@ describe("what the file says of itself", () => {
     expect(earliestForecast(data)).toBe("June 2010");
   });
 
-  // Its figures cannot say which it is: drawn, it moves with the
-  // forecast from the outturn, as an index would. Its outturn check, in
-  // £ billion, says otherwise, so it passes only without one
-  it("takes a forecast of levels marked as an index, above zero, starting at its launch, with one base and no check", () => {
+  // Neither its figures nor its check can say which it is: drawn, it
+  // moves with the forecast from the outturn, as an index would. Its
+  // outturn check, in £ billion, says otherwise, so it passes only with
+  // the check's terms changed to an index's (the boundary kindProblem names)
+  it("takes a forecast of levels marked as an index, above zero, starting at its launch, with one base and its check's terms changed to match", () => {
     const data = clone();
-    byId(data, "nominal_gdp").level.kind = "index";
+    const m = byId(data, "nominal_gdp").level;
+    m.kind = "index";
     expect(forecastVintagesProblem(data)).toMatch(/outturn check is incomplete/);
-    delete byId(data, "nominal_gdp").level.check;
+    Object.assign(m.check, { in: "% change on a year earlier", tolerance_is_share: false, tolerance: 25 });
     expect(forecastVintagesProblem(data)).toBeNull();
   });
 });
