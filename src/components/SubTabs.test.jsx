@@ -95,17 +95,20 @@ describe("SubTabs", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("scrollTo", scrollTo);
     render(<Harness />);
-    // The band around the tablist is what scrolls back
-    const list = screen.getByRole("tablist").closest(".sub-tabs-band");
+    // The band sticks: its place in the page is the sentinel before it,
+    // and its scroll margin holds the bars above it
+    const band = screen.getByRole("tablist").closest(".sub-tabs-band");
+    const sentinel = band.previousElementSibling;
+    expect(sentinel).toHaveClass("sub-tabs-sentinel");
     // Not scrolled past: the page stays put
     fireEvent.click(tab("Second"));
     expect(scrollTo).not.toHaveBeenCalled();
 
     // Scrolled 800px down, with the bar 500px down the page under a 112px band
-    vi.spyOn(list, "getBoundingClientRect").mockReturnValue({ top: -300 });
+    vi.spyOn(sentinel, "getBoundingClientRect").mockReturnValue({ top: -300 });
     const computed = window.getComputedStyle.bind(window);
     vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) =>
-      el === list ? { scrollMarginTop: "124px" } : computed(el, pseudo),
+      el === band ? { scrollMarginTop: "124px" } : computed(el, pseudo),
     );
     Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
     fireEvent.click(tab("Third"));

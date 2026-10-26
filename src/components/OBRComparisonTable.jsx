@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
 import PillSelect from "./PillSelect";
+import ViewToggle from "./ViewToggle";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import OBRDumbbellChart from "./OBRDumbbellChart";
@@ -190,17 +191,11 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             ]}
           />
         )}
-        <PillSelect
-          variant="light"
-          name="Show as"
-          prefix="Show"
-          value={showTable ? "table" : "chart"}
-          onChange={setView}
-          options={[
-            { value: "chart", label: "Chart" },
-            { value: "table", label: "Table" },
-          ]}
-        />
+        {/* Chart or table: the dashboard's icon switch, at the row's right
+            (this comparison sits in a card's foot, with no header of its own) */}
+        <span className="obr-view-toggle">
+          <ViewToggle value={view} onChange={setView} name="the OBR comparison" />
+        </span>
       </div>
 
       {!showTable && (
