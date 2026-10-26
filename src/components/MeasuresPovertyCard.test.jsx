@@ -157,3 +157,22 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
   });
 });
+
+describe("a published file with only the headline poverty column", () => {
+  it("still shows Which measures move poverty, on the headline measure, whatever ?poverty= says", async () => {
+    // As the per-measure artifacts publish metrics.csv: the headline column only
+    const HEADLINE = ["reform_id", "reform_name", "year", "people_affected", "gini_change", "poverty_change_pp", "poverty_change_pct"];
+    const narrow = metrics.map((row) => Object.fromEntries(HEADLINE.map((key) => [key, row[key]])));
+    window.history.replaceState({}, "", "/?sub=poverty&poverty=relative-ahc-children");
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={narrow} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    // No choice to make, and the steps are the headline measure's
+    expect(within(card).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    expect(within(card).getAllByRole("rowheader").length).toBeGreaterThan(0);
+  });
+});
