@@ -861,6 +861,32 @@ describe("the household answer's definitions", () => {
     expect(refused).toEqual([{ id: "beta", problems: ["no approved definition to check it against"] }]);
   });
 
+  // Mutant B9 on the review of 48584d69's fix: definitionDifferences, the
+  // Python check's twin, finds nothing between a missing approval and a
+  // report with no commit or identities (both sides' fields are null). An
+  // approval is a definition at a full commit (publishedDefinitions holds
+  // back any other), so anything else here is none.
+  it("refuses a measure whose approval is no definition at a full commit, whatever is reported", () => {
+    expect(definitionRefusals({ alpha: undefined }, { alpha: { baseline: {}, reform: {} } }, ["alpha"])).toEqual([
+      { id: "alpha", problems: ["no approved definition to check it against"] },
+    ]);
+    const approval = fc.oneof(
+      fc.constantFrom(undefined, null, {}, [], "c".repeat(40)),
+      fc.jsonValue(),
+      fc.record({ git_sha: fc.option(fc.string({ maxLength: 64 }), { nil: null }), baseline: fc.constant({}), reform: fc.constant({}) }),
+    );
+    const report = fc.oneof(fc.constant({ baseline: {}, reform: {} }), fc.constant(approvedDefinition()), fc.jsonValue());
+    fc.assert(fc.property(approval, report, (approved, reported) => {
+      const atCommit =
+        approved !== null && typeof approved === "object" && !Array.isArray(approved) &&
+        typeof approved.git_sha === "string" && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(approved.git_sha);
+      fc.pre(!atCommit);
+      expect(definitionRefusals({ alpha: approved }, { alpha: reported }, ["alpha"])).toEqual([
+        { id: "alpha", problems: ["no approved definition to check it against"] },
+      ]);
+    }));
+  });
+
   it("explains a refusal as a definition mismatch naming the measures", () => {
     const error = new DefinitionMismatchError([{ id: "alpha", problems: ["no definition reported"] }]);
     expect(error.kind).toBe("definition");

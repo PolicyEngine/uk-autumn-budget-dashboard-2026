@@ -668,7 +668,11 @@ export class StageMismatchError extends EngineMismatchError {
 /**
  * The selected measures whose reported definition differs from the
  * approved one, in id order. A measure with no approved definition, or
- * none reported, is refused: nothing is answered unchecked.
+ * none reported, is refused: nothing is answered unchecked. An approval
+ * is a definition at a full commit (publishedDefinitions holds back any
+ * other); anything else counts as none, since definitionDifferences, like
+ * the Python check it mirrors, finds nothing between a missing approval
+ * and a report with no commit or identities.
  *
  * @param {Object<string, Object>} expected - Approved definitions by id
  * @param {Object<string, Object>|null} reported - The answer's `definitions`
@@ -678,12 +682,22 @@ export class StageMismatchError extends EngineMismatchError {
 export function definitionRefusals(expected, reported, ids = Object.keys(expected ?? {})) {
   const approved = expected ?? {};
   const given = reported && typeof reported === "object" && !Array.isArray(reported) ? reported : {};
+  const approvalOf = (id) => {
+    const definition = Object.hasOwn(approved, id) ? approved[id] : null;
+    return definition !== null &&
+      typeof definition === "object" &&
+      !Array.isArray(definition) &&
+      typeof definition.git_sha === "string" &&
+      FULL_COMMIT.test(definition.git_sha)
+      ? definition
+      : null;
+  };
   return [...new Set(ids)]
     .sort()
     .map((id) => ({
       id,
-      problems: Object.hasOwn(approved, id)
-        ? definitionDifferences(approved[id], Object.hasOwn(given, id) ? given[id] : undefined)
+      problems: approvalOf(id)
+        ? definitionDifferences(approvalOf(id), Object.hasOwn(given, id) ? given[id] : undefined)
         : ["no approved definition to check it against"],
     }))
     .filter((item) => item.problems.length > 0);
