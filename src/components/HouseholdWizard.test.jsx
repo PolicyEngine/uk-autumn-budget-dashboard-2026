@@ -234,11 +234,13 @@ describe("the personal impact form", () => {
     expect(box("Your State Pension")).toHaveValue(9000);
   });
 
-  it("shows eight cards: your household first, then seven examples, each a name, who they are and its measure", () => {
+  it("shows eight example cards, each a name, who they are and its measure, then Your household below them", () => {
     render(<HouseholdCalculator />);
     const buttons = within(cards()).getAllByRole("button");
+    // Each example card is a box with one button (its name) over it
+    const card = (button) => button.closest(".household-card") ?? button;
+    expect(within(cards()).getByRole("heading", { name: "Example households" })).toBeInTheDocument();
     expect(buttons.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([
-      "Your household",
       "A 22-year-old renting",
       "A 19-year-old apprentice",
       "A pensioner on the State Pension",
@@ -246,11 +248,17 @@ describe("the personal impact form", () => {
       "A graduate on £35,000",
       "A driver with a long commute",
       "A higher earner on £110,000",
+      "A lone parent working part time",
+      "Your household",
     ]);
-    expect(buttons.every((item) => item.querySelector(".household-card-description").textContent.length > 0)).toBe(true);
+    const examples = buttons.slice(0, -1);
+    expect(examples.every((item) => card(item).querySelector(".household-card-description").textContent.length > 0)).toBe(true);
     // No catalogue here: no example features a measure it does not publish
     // (#185 on #104), so no tag
-    expect(buttons.slice(1).every((item) => item.querySelector(".household-card-tag") === null)).toBe(true);
+    expect(examples.every((item) => card(item).querySelector(".household-card-tag") === null)).toBe(true);
+    // Your household: what the form asks first, and the call to action
+    expect(yoursCard()).toHaveTextContent("Salary");
+    expect(yoursCard()).toHaveTextContent("Enter your household");
     // Every card is chosen the same way (aria-pressed); your household
     // also opens the form it controls
     expect(buttons.every((item) => item.getAttribute("aria-pressed") === "false")).toBe(true);
@@ -316,11 +324,12 @@ describe("the personal impact form", () => {
     expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
     applyExample("A 22-year-old renting");
-    // Folded: the grid's cards are hidden; eight chips, Your household first
+    // Folded: the grid's cards are hidden; eight example chips, then Your
+    // household below them
     const strip = within(cards()).getByRole("listbox", { name: "Households" });
-    const chips = within(strip).getAllByRole("option").slice(1);
-    expect(within(strip).getAllByRole("option")).toHaveLength(8);
-    expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
+    const chips = within(strip).getAllByRole("option").slice(0, -1);
+    expect(within(strip).getAllByRole("option")).toHaveLength(9);
+    expect(within(strip).getAllByRole("option")[8]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Renter, 22",
       "Apprentice",
@@ -329,6 +338,7 @@ describe("the personal impact form", () => {
       "Graduate",
       "Commuter",
       "High earner",
+      "Lone parent",
     ]);
     // The full name on hover, the short one cut if it runs out of room
     expect(chips[0]).toHaveAttribute("title", "A 22-year-old renting");
@@ -345,12 +355,17 @@ describe("the personal impact form", () => {
     const pensioner = exampleItem("A pensioner on the State Pension");
     fireEvent.keyDown(pensioner, { key: "ArrowRight" });
     expect(document.activeElement).toBe(exampleItem("A family on Universal Credit"));
-    fireEvent.keyDown(document.activeElement, { key: "End" });
+    fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
+    fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
+    fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     expect(document.activeElement).toBe(exampleItem("A higher earner on £110,000"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(true);
-    // Home and Enter: Your household, chosen with its tick, the form open
+    // Home: the first example; End and Enter: Your household, chosen with
+    // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "Home" });
+    expect(document.activeElement).toBe(exampleItem("A 22-year-old renting"));
+    fireEvent.keyDown(document.activeElement, { key: "End" });
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(yoursCard()).toHaveAttribute("aria-selected", "true");
