@@ -25,10 +25,12 @@ const TAB_ICONS = {
  * @param {(value: string) => void} props.onChange
  * @param {(value: string) => string} props.tabId - The id of a tab's button
  * @param {(value: string) => string} props.panelId - The id of a tab's panel
+ * @param {boolean} [props.hidden] - Out of sight and reach (the landing
+ *   page, whose boxes are the navigation there)
  * @param {boolean} [props.notch] - The chosen view has sub-tabs: its tab
  *   opens into their band below (SubTabs), with no rule between
  */
-function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
+function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden: barHidden = false }) {
   const refs = useRef({});
   const rowRef = useRef(null);
   // The chosen tab's tint and underline, sliding from tab to tab
@@ -92,7 +94,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
   };
 
   return (
-    <div className={`view-tabs-bar${notch ? " has-notch" : ""}`}>
+    <div className={`view-tabs-bar${notch ? " has-notch" : ""}`} hidden={barHidden}>
       <div
         ref={rowRef}
         className={`view-tabs${hidden.start ? " fade-start" : ""}${hidden.end ? " fade-end" : ""}`}

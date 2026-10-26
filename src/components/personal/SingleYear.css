@@ -1118,7 +1118,48 @@
 
 /* Under the waterfall: policies under £1, notes, and those with no effect */
 .result-card-notes {
-  padding: 0 28px 16px;
+  padding: 0;
+}
+
+/* "About this result", at the card's foot: the caution, what the figure
+   is based on and what has no effect, side by side where there is room */
+.result-card-about {
+  margin: 0 28px 12px;
+}
+
+.result-card-about .disclosure-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 32px;
+  align-items: start;
+}
+
+.result-card-about .result-caution,
+.result-card-about .result-card-notes {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.result-card-about .result-card-basis {
+  padding: 0;
+}
+
+.result-card-no-effect ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+.result-card-no-effect li + li {
+  margin-top: 3px;
+}
+
+@media (max-width: 599px) {
+  .result-card-about {
+    margin: 0 16px 8px;
+  }
 }
 
 .result-card-notes .single-year-quiet {

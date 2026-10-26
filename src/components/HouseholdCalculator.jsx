@@ -540,7 +540,7 @@ function HouseholdCalculator({
         const target = panel?.querySelector("form") ?? panel;
         if (!target) return;
         target.querySelector("input, select, textarea")?.focus({ preventScroll: true });
-        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
       });
     });
     return () => cancelAnimationFrame(frame);
@@ -565,7 +565,7 @@ function HouseholdCalculator({
       const { top } = target.getBoundingClientRect();
       if (top >= offset - 1 && top <= window.innerHeight / 3) return;
       const behavior = prefersReducedMotion() ? "auto" : "smooth";
-      target.scrollIntoView({ behavior, block: "start" });
+      target.scrollIntoView?.({ behavior, block: "start" });
       const page = document.documentElement;
       let height = page.scrollHeight;
       const until = performance.now() + 1500;
@@ -574,7 +574,7 @@ function HouseholdCalculator({
         if (page.scrollHeight !== height) {
           height = page.scrollHeight;
           if (Math.abs(target.getBoundingClientRect().top - offset) > 1) {
-            target.scrollIntoView({ behavior, block: "start" });
+            target.scrollIntoView?.({ behavior, block: "start" });
           }
         }
         frame = requestAnimationFrame(follow);
@@ -596,7 +596,7 @@ function HouseholdCalculator({
       if (!target) return;
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
-        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
       }
     });
   };

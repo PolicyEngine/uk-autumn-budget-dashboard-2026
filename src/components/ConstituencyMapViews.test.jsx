@@ -13,7 +13,7 @@ import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
 
 // The fixture's fake seats (Z14...) placed on a small hex grid, so the hex
 // view draws every one of them: two rows of four.
-vi.mock("../utils/geography/constituencyHexes.json", () => ({
+vi.mock("../../data_inputs/constituency_hexes.json", () => ({
   default: {
     Z14000001: [0, 0],
     Z14000002: [1, 0],

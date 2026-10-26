@@ -7,6 +7,8 @@
 // gain colour, a rise in the loss colour) with its value.
 
 import { CHART_LOGO } from "../utils/chartLogo";
+import MeasureRowLabel from "./MeasureRowLabel";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import "./MeasureEffectsView.css";
@@ -40,6 +42,7 @@ export function yearsEffects(byMeasure, year, decimals) {
 }
 
 export default function MeasureEffectsView({ byMeasure, metric, selectedYear, view, narrow, years = DISPLAY_YEARS }) {
+  const { byId } = useMeasureCatalogue();
   const signed = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${metric.format(v)}`;
   const { rows, hidden } =
     view === "years" ? yearsEffects(byMeasure, selectedYear, metric.decimals) : yearEffects(byMeasure, selectedYear, metric.decimals);
@@ -78,7 +81,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
               {rows.map((m) => (
                 <tr key={m.id}>
                   <th scope="row" title={m.fullName ?? m.name}>
-                    {m.name}
+                    <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                   </th>
                   {years.map((year) => {
                     const v = m.points.find((p) => p.year === year)?.value ?? null;
@@ -107,7 +110,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
             return (
               <div className="mev-row" role="row" key={m.id}>
                 <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
-                  {m.name}
+                  <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                 </span>
                 <span className="mev-track" role="cell">
                   <span className="mev-zero" style={{ left: `${zero}%` }} />

@@ -7,10 +7,13 @@ it("prerenders the shell without a browser or any Budget figures", () => {
   expect(typeof window).toBe("undefined");
   const html = renderToString(<App />);
   expect(html).toContain("UK Autumn Budget 2026");
-  for (const label of ["Population impact", "Household impact", "Before the Budget", "Policies", "Methodology"]) {
+  for (const label of ["Population impact", "Household impact", "Pre-measures forecast", "Policies", "Methodology"]) {
     expect(html).toContain(label);
   }
-  expect(html).toContain("Loading published measures");
+  // The landing page, whole, with no view mounted under it
+  expect(html).toContain("What Autumn Budget 2026 means");
+  expect(html).toContain('class="landing-backdrop"');
+  expect(html).not.toContain('role="tabpanel"');
   expect(html).not.toContain('id="revenue"');
   expect(html).not.toContain('class="chart-plot');
   expect(html).not.toContain("£");

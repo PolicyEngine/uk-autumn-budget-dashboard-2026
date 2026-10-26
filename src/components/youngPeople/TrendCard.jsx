@@ -17,7 +17,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
 import SeriesToggle from "../SeriesToggle";
-import { measureOpacity, useMeasureKey } from "../MeasureKey";
+import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import {
   GRID_PROPS,
   TICK_STYLE,
@@ -48,6 +48,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { AGE_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -65,13 +66,15 @@ const FOCUS_LABEL = SERIES.find((series) => series.key === FOCUS).label;
 // The focus group in the brand colour, all ages as the reference, the rest
 // as faint context
 const FOCUS_COLOUR = CHART_COLOURS.gain;
-const CONTEXT_COLOUR = CHART_COLOURS.axis;
-const CONTEXT_HOVER = CHART_COLOURS.tick;
+// The other age groups in the focus view: each its own muted colour and
+// dash, so a line matches its chip; faint until hovered
+const CONTEXT_DASH = { "0-15": "2 3", "25-34": undefined, "35-49": "8 3", "50-64": "1 2", "65+": "6 2 1 2" };
+const CONTEXT_OPACITY = 0.45;
+// The invisible stroke over each line that takes the hover, so a thin line
+// is easy to point at
+const HIT_WIDTH = 12;
 const SELECTED_FILL = CHART_COLOURS.highlightBand;
-// The focus view's one chip for every other age group
-const OTHERS = "others";
-/** The key's swatch for the selected year's shading. */
-export const SELECTED_YEAR_KEY = { key: "selected-year", label: "Selected year", fill: SELECTED_FILL };
+
 
 const COMPARE_OPTIONS = [
   { value: "focus", label: `${FOCUS_LABEL} vs all ages`, summary: `${FOCUS_LABEL} vs all` },
@@ -297,7 +300,7 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
         {fiscalYearTick(year)}
-        {year === Number(selectedYear) ? " · the year chosen above (shaded)" : ""}
+        {year === Number(selectedYear) ? " · selected year" : ""}
       </p>
       <div className="chart-tooltip-row">
         <span className="chart-tooltip-swatch" style={{ background: FOCUS_COLOUR }} />
@@ -338,14 +341,15 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const groupsView = compare === "groups" && view === "lines";
   // The focus view: 16 to 24, all ages and the other groups (one chip for
   // all of them), every one at first
-  const [shownFocus, setShownFocus] = useState([FOCUS, ALL_BAND, OTHERS]);
+  // Every group on at first: 16 to 24 and all ages strong, the others faint
+  const [shownFocus, setShownFocus] = useState(() => SERIES.map((series) => series.key));
   const focusView = compare === "focus" && view === "lines";
   /** Whether a line is drawn in the view shown. */
   const isShown = (key) =>
     groupsView
       ? shownGroups.includes(key)
       : focusView
-        ? shownFocus.includes(key === FOCUS || key === ALL_BAND ? key : OTHERS)
+        ? shownFocus.includes(key)
         : true;
   const cumulative = years === "total";
   const byMeasure = view === "measures";
@@ -462,10 +466,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         key: series.key,
         label: series.label,
         short: series.short,
-        colour: hovered === series.key || hovered === OTHERS ? CONTEXT_HOVER : CONTEXT_COLOUR,
-        hoverColour: CONTEXT_HOVER,
-        textColour: CHART_COLOURS.tick,
-        width: hovered === series.key || hovered === OTHERS ? 2.25 : 1.25,
+        colour: series.color,
+        dash: CONTEXT_DASH[series.key],
+        context: true,
+        width: hovered === series.key ? 2.5 : 1.5,
       };
     });
   })();
@@ -617,6 +621,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               <Line
                 type="monotoneX"
                 dataKey="net"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={{ r: 3.5, fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5 }}
@@ -634,10 +639,30 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   stroke={line.colour}
                   strokeWidth={line.width}
                   // All age groups: a hovered chip or line brings its line forward
-                  strokeOpacity={groupsView && hovered && hovered !== line.key ? 0.22 : 1}
+                  strokeOpacity={
+                    groupsView && hovered && hovered !== line.key ? 0.22 : line.context && hovered !== line.key ? CONTEXT_OPACITY : 1
+                  }
                   strokeDasharray={line.dash}
                   dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
                   activeDot={line.strong ? { r: 5 } : false}
+                  isAnimationActive={false}
+                  onMouseEnter={() => setHovered(line.key)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              ))}
+            {/* A wide invisible stroke over each line takes the hover */}
+            {!byMeasure &&
+              ordered.filter((line) => isShown(line.key)).map((line) => (
+                <Line
+                  key={`hit-${line.key}`}
+                  type="monotoneX"
+                  dataKey={line.key}
+                  stroke="transparent"
+                  strokeWidth={HIT_WIDTH}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                  tooltipType="none"
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
                   onMouseLeave={() => setHovered(null)}
@@ -659,7 +684,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       <div className="chart-legend">
         {/* The key, which also shows or hides each line: all age groups one
             chip each; the focus view 16 to 24, all ages and one chip for the
-            other groups. Then the selected year's shading. */}
+            other groups. The shaded year is explained in the tooltip. */}
         {groupsView && (
           <SeriesToggle
             series={lines.map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
@@ -668,22 +693,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             onHover={setHovered}
             label="Age groups"
             narrow={narrow}
-            extras={[SELECTED_YEAR_KEY]}
           />
         )}
         {focusView && (
           <SeriesToggle
+            // 16 to 24 and all ages first, then each other group in its
+            // line's own colour and dash
             series={[
-              { key: FOCUS, label: FOCUS_LABEL, colour: FOCUS_COLOUR },
-              { key: ALL_BAND, label: "All ages", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH },
-              { key: OTHERS, label: "Other age groups", colour: CONTEXT_HOVER },
-            ]}
+              ...lines.filter((line) => line.key === FOCUS),
+              ...lines.filter((line) => line.key === ALL_BAND),
+              ...lines.filter((line) => line.context),
+            ].map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
             shown={shownFocus}
             onChange={setShownFocus}
             onHover={setHovered}
             label="Age groups"
             narrow={narrow}
-            extras={[SELECTED_YEAR_KEY]}
           />
         )}
       </div>
@@ -693,27 +718,24 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
-        <ChartMoreInfo members={members} year={Number(selectedYear)}>
-          <p>
-            Each point is the average change in household net income per person in the age group, the sum of each
-            selected policy&apos;s own effect; each person counts their household&apos;s change (not equivalised).
-            The curve between the annual points never goes past them: the results are for whole fiscal years, with nothing measured in between.
-          </p>
-          <p>
-            {FOCUS_LABEL} is drawn in colour and all ages dashed; the other age groups are the grey lines behind (hover
-            one to bring it forward and see its name), or all in colour with Compare set to all age groups. A label on the
-            line names the measure behind each of the largest year-on-year steps, worked out from each measure&apos;s
-            own rows. The shaded year is the one chosen in the bar above.
-          </p>
-          <p>
-            Breakdown by measure stacks each measure&apos;s own change for {FOCUS_LABEL}-year-olds, with the net
-            change as the line; the running total adds each year&apos;s change from {first}. A share of income is not
-            shown: the results by age carry no income to divide by.
-          </p>
-          {unpublished.length > 0 && (
-            <p>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</p>
-          )}
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          members={members}
+          year={Number(selectedYear)}
+          info={{
+            how: [
+              "Each point is a whole fiscal year: the sum of each selected policy's own effect.",
+              "The curve between points never goes past them; nothing is measured between years.",
+              `Labels name the measure behind the largest year-on-year steps. Breakdown by measure stacks each one's own change.`,
+              `The running total adds each year's change from ${first}.`,
+            ],
+            caveats: [
+              "No share of income is shown: the results by age carry no income to divide by.",
+              unpublished.length > 0 &&
+                `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
+            ],
+            method: AGE_METHOD,
+          }}
+        />
       </div>
     </div>
   );

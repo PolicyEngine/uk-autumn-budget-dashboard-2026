@@ -56,7 +56,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.geography, title: "Figures by area", icon: MapPinned },
   { id: METHOD_SECTIONS.young, title: "Young people", icon: Users },
   { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
-  { id: METHOD_SECTIONS.living, title: "Before the Budget", icon: TrendingUp },
+  { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
 ];
 
@@ -140,7 +140,7 @@ function SectionLink({ id, children }) {
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay on Policies, and
  * the household calculation with Household impact's "About these
- * figures". Before the Budget states the engine, data, notes and gaps
+ * figures". Pre-measures forecast states the engine, data, notes and gaps
  * of that view's projections.
  *
  * @param {Object} props
@@ -258,6 +258,7 @@ function MethodologyTab({ onShowTab }) {
                     "Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                   ],
                   ["Years", "Fiscal years: 2027 means 2027-28."],
+                  ["Prices", "Population and Household impact figures are in cash terms for the year shown, not adjusted for inflation."],
                 ]}
               />
               <p className="method-more">
@@ -484,8 +485,15 @@ function MethodologyTab({ onShowTab }) {
                   "Who counts",
                   {
                     value: "People in households with an income decile.",
-                    more: [`A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`],
+                    more: [
+                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                      "Each person counts their whole household's change in net income, not equivalised, and averages are per person.",
+                    ],
                   },
+                ],
+                [
+                  "Pensioners",
+                  "People at or over State Pension age: 66 in 2026-27 and 67 from 2027-28, as in policyengine-uk.",
                 ],
                 [
                   "Better or worse off",
@@ -519,7 +527,7 @@ function MethodologyTab({ onShowTab }) {
 
           <MethodSection
             id={METHOD_SECTIONS.living}
-            title="Before the Budget"
+            title="Pre-measures forecast"
             summary={
               <p>
                 Incomes and poverty under current law, with no measures applied, are projected on
@@ -531,7 +539,7 @@ function MethodologyTab({ onShowTab }) {
                 <ViewLink tab="outlook" sub="poverty" onShowTab={onShowTab}>
                   Poverty
                 </ViewLink>{" "}
-                tabs of Before the Budget, whose{" "}
+                tabs of the Pre-measures forecast, whose{" "}
                 <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
                   Forecast changes
                 </ViewLink>{" "}

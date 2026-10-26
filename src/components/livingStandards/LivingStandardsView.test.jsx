@@ -42,7 +42,8 @@ beforeEach(() => {
         : new Response("reform_id,year,value\n", { status: 200 });
     }),
   );
-  window.history.replaceState({}, "", "/");
+  // A view: the bare address is the landing page, with no tab bar
+  window.history.replaceState({}, "", "/?tab=dashboard");
 });
 
 afterEach(() => {
@@ -88,8 +89,10 @@ function openOptions(card) {
 /** A card's Options summary ("Absolute · Before housing costs · …"). */
 const optionsSummary = (card) => within(card).getByRole("button", { name: /^Options:/, hidden: true }).getAttribute("aria-label");
 
-describe("the Before the Budget view", () => {
+describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
+    // A view's address: the bare one is the landing page, with no tab bar
+    window.history.replaceState({}, "", "/?tab=dashboard");
     const { container } = await renderVerified();
     await screen.findByRole("tablist", { name: "Views" });
     // The Population view has the year and policy pills
@@ -97,14 +100,14 @@ describe("the Before the Budget view", () => {
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
-    expect(tabs[2]).toHaveTextContent("Before the Budget");
+    expect(tabs[2]).toHaveTextContent("Pre-measures forecast");
     fireEvent.click(tabs[2]);
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
-    const panel = screen.getByRole("tabpanel", { name: "Before the Budget" });
+    const panel = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
     // Its sub-tabs mirror Population impact's names: Living standards (the
     // default), Poverty, then Forecast changes
-    const subTabs = within(screen.getByRole("tablist", { name: "Before the Budget sections" })).getAllByRole("tab");
+    const subTabs = within(screen.getByRole("tablist", { name: "Pre-measures forecast sections" })).getAllByRole("tab");
     expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "Forecast changes"]);
     expect(subTabs[0]).toHaveAttribute("aria-selected", "true");
     expect(await within(panel).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
@@ -235,7 +238,7 @@ describe("the Before the Budget view", () => {
     expect(panel).not.toHaveTextContent(/Without the measures \(current law\)|Without the measures:/);
     // The link opens the twin in place, the address following
     fireEvent.click(link);
-    expect(screen.getByRole("tab", { name: "Before the Budget" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
     const twin = screen.getByRole("tabpanel", { name: label });
     expect(twin).not.toBe(panel);
     expect(await within(twin).findByRole("heading", { level: 2, name: `${label} under current law` }, { timeout: 5000 })).toBeInTheDocument();
@@ -488,7 +491,7 @@ describe("the Before the Budget view", () => {
   it("opens its Living standards for an old Baseline outlook link", async () => {
     window.history.replaceState({}, "", "/?tab=outlook&sub=baseline&ls_from=2028");
     await renderVerified();
-    expect(screen.getByRole("tab", { name: "Before the Budget" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
     expect(await within(living).findByRole("heading", { name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
@@ -501,7 +504,7 @@ describe("the Before the Budget view", () => {
   it("states its engine, data, status, notes and gaps once, in Methodology", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderVerified();
-    const section = await screen.findByRole("region", { name: "Before the Budget" });
+    const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
@@ -528,7 +531,7 @@ describe("the Before the Budget view", () => {
       expect(pill).toHaveAttribute("aria-hidden", "true");
       expect(pill).toHaveAttribute("inert");
     }
-    expect(screen.getByRole("tab", { name: "Before the Budget" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

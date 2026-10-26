@@ -12,10 +12,10 @@
  * (open-innovations/constituencies, src/_data/hexjson/
  * uk-constituencies-2024.hexjson, file commit 1d43262f; visualisations
  * CC BY 4.0, Open Innovations), with identical q and r for every English
- * seat. constituencyHexes.json keeps only each seat's [q, r], by GSS code.
+ * seat. data_inputs/constituency_hexes.json keeps only each seat's [q, r], by GSS code.
  */
 
-import HEXES from "./constituencyHexes.json";
+import HEXES from "../../../data_inputs/constituency_hexes.json";
 
 /** Each seat's [q, r] in the odd-r layout, by GSS code. */
 export const CONSTITUENCY_HEXES = HEXES;

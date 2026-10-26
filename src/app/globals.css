@@ -136,13 +136,11 @@ code {
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
      the heading and paragraph; less around and below the boxes), its blur,
-     the glass panels' blur, the least height of the view it shows, and the
-     boxes' hover motion */
-  --landing-fade: 58%;
+     the glass panels' blur, and the boxes' hover motion */
+  --landing-fade: 42%;
   --landing-fade-top: 80%;
   --landing-blur: 2px;
   --landing-glass-blur: 10px;
-  --landing-min-height: 620px;
   --landing-motion: 0.2s;
   /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
@@ -2893,7 +2891,9 @@ body {
     height var(--motion-slide) var(--ease-out);
 }
 
-.has-thumb > button {
+/* The options paint over the thumb: descendants, not only children, as
+   a Tip wraps some of them */
+.has-thumb :is(.control-bar-segment, .view-toggle-button, .obr-view-option) {
   position: relative;
   z-index: 1;
   transition: color var(--motion-slide) var(--ease-out);
@@ -2920,12 +2920,15 @@ body {
   background: transparent;
 }
 
-/* The household charts' view switches */
+/* The view switches (household charts, Map / Rankings): the shared
+   segmented look, a white thumb on a light track */
 .obr-view-switch > .segment-thumb {
-  background: var(--band-teal);
+  border-radius: 999px;
+  background: var(--pe-surface);
+  box-shadow: 0 1px 2px var(--shadow-strong);
 }
 
-.obr-view-switch.has-thumb > .obr-view-option[aria-pressed="true"] {
+.obr-view-switch.has-thumb .obr-view-option[aria-pressed="true"] {
   background: transparent;
 }
 
@@ -2946,7 +2949,7 @@ body {
   }
 }
 
-/* A table that replaces a chart (Chart or table, on Before the Budget's
+/* A table that replaces a chart (Chart or table, on the Pre-measures forecast's
    cards) rises in as a swapped view does */
 .ls-table-wrapper {
   animation: swap-in var(--motion-base) var(--ease-out);

@@ -40,23 +40,17 @@ export const hasInfo = (info) => {
   return Boolean(p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length);
 };
 
-/** The closed disclosure's one line: what is inside, in order ("How it's calculated · Definitions · Source"). */
+/** The closed disclosure's one line: what is inside, in order ("How it's calculated · Caveats · Source"). */
 export function infoPreview(info) {
   const p = infoParts(info);
   const parts = [
     p.how.length > 0 && "How it's calculated",
     (p.own.length > 0 || p.shared.length > 0) && "Definitions",
+    p.caveats.length > 0 && "Caveats",
     p.sources.length > 0 && (p.sources.length > 1 ? "Sources" : "Source"),
   ].filter(Boolean);
   if (!parts.length && p.shows) parts.push("What it shows");
   return parts.join(" · ");
-}
-
-/** "1 caveat", "3 caveats", or nothing. */
-export function caveatChip(info) {
-  const n = infoParts(info).caveats.length;
-  if (!n) return null;
-  return `${n} ${n === 1 ? "caveat" : "caveats"}`;
 }
 
 function Section({ icon: Icon, title, tone, children }) {
@@ -159,9 +153,3 @@ export default function InfoSections({ info }) {
     </div>
   );
 }
-
-/** The source of every figure the page models itself. */
-export const PE_MODEL_SOURCE = {
-  label: "PolicyEngine UK on the Family Resources Survey 2024-25",
-  href: "https://github.com/PolicyEngine/policyengine-uk",
-};
