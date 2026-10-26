@@ -82,17 +82,37 @@ export function modellingFacts(text) {
   return { facts, limits };
 }
 
+// A sentence this short says no more than the fact chip read from it.
+const CHIP_WORDS = 12;
+
+/**
+ * The published sentences an opened row adds, each said once: not the
+ * leading label, the summary line, a limitation chip's sentence, or a short
+ * sentence a fact chip already states.
+ */
+export function remainingPoints(text, summary, limits) {
+  const shown = new Set([summary, ...limits.map((limit) => limit.sentence)]);
+  return sentences(text).filter((sentence, index) => {
+    if (shown.has(sentence)) return false;
+    if (index === 0 && isLabel(sentence)) return false;
+    const chipped = MODELLING_FACTS.some(({ pattern }) => pattern.test(sentence));
+    return !(chipped && sentence.split(/\s+/).length <= CHIP_WORDS);
+  });
+}
+
 export function measureModelling(catalogue) {
   return catalogue.displayable.map((measure) => {
     const note = measure.id === MODELLING_NOTE.id ? MODELLING_NOTE.note : null;
+    const summary = measureSummary(measure.description);
+    const found = modellingFacts([measure.description, note].filter(Boolean).join(" "));
     return {
       ...measure,
       how: measure.description,
       note,
-      summary: measureSummary(measure.description),
-      points: sentences(measure.description),
-      notePoints: sentences(note),
-      ...modellingFacts([measure.description, note].filter(Boolean).join(" ")),
+      summary,
+      points: remainingPoints(measure.description, summary, found.limits),
+      notePoints: remainingPoints(note, null, found.limits),
+      ...found,
       from: measure.years.filter((year) => !measure.unsupported_years.includes(year)).sort((a, b) => a - b)[0] ?? null,
     };
   });
