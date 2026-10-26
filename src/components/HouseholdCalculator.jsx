@@ -956,6 +956,8 @@ function HouseholdCalculator({
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
+              requestHousehold={submitted ? buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household : null}
+              selected={submitted?.policies ?? householdPolicies}
               household={{
                 tenure: (submitted?.inputs ?? inputs).tenure,
                 regionLabel: REGION_OPTIONS.find(([value]) => value === (submitted?.inputs ?? inputs).region)?.[1] ?? null,

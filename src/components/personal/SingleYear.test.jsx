@@ -110,7 +110,7 @@ function toResults() {
 }
 
 // The headline card's label, once a result is shown
-const HEADLINE = /^Change in your net income$/;
+const HEADLINE = /^Your change$/;
 /** The headline card (there is none before a result). */
 const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
@@ -282,22 +282,29 @@ describe("the household calculation, from the fixture", () => {
     await within(panel).findByText("+£3,765");
     const card = headlineCard();
     expect(card).toHaveClass("is-gain");
-    expect(card.querySelector(".result-card-label")).toHaveTextContent("Change in your net income");
-    // The year and the number of policies as pills
-    const pills = [...card.querySelectorAll(".result-pill")].map((pill) => pill.textContent);
-    expect(pills).toEqual(["2029-30", `${SUPPORTED_POLICY_IDS.length} policies`]);
+    // No eyebrow: the tiles lead the card
+    expect(card.querySelector(".result-card-label")).toBeNull();
+    // Three tiles on top: the change (the year and policies under it), its
+    // share, your place
+    const tiles = [...card.querySelectorAll(".result-tiles .forecast-tile")];
+    expect(tiles.map((tile) => tile.querySelector(".forecast-tile-name").textContent)).toEqual([
+      "Your change",
+      "Share of your income",
+      "Your place (percentile)",
+    ]);
+    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(card.querySelector(".result-figure")).toHaveTextContent(/^\+£3,765 a year$/);
-    // Its share as a chip, and the waterfall from net income before to after
-    expect(card.querySelector(".result-chip")).toHaveTextContent("Up 5.8% of net income");
+    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
+    // Its share, and the waterfall from net income before to after
+    expect(tiles[1].querySelector(".forecast-tile-value")).toHaveTextContent("+5.76%");
     const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
     expect(ends).toEqual(["Net income before£65,371", "Net income after£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
-    expect(panel).not.toHaveTextContent("before and after the selected policies.");
+    expect(card).not.toHaveTextContent("before and after the selected policies.");
     // Only the essentials show: what it is based on is under "About this
     // result", closed at first
     expect(card.querySelector("dl.result-foot-items")).toBeNull();
