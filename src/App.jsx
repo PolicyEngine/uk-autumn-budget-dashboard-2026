@@ -40,7 +40,8 @@ import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
-import LoadingSkeleton from "./components/publication/LoadingSkeleton";
+import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
+import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
@@ -176,6 +177,14 @@ const NOTHING_PUBLISHED = Object.freeze({
 
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
+
+// The placeholder for a Budget view while its results load: the linked
+// sub-tab's on Population impact (bootView), as the server's HTML drew it
+function loadingView(value) {
+  if (value !== "dashboard") return value;
+  const linked = typeof window === "undefined" ? "dashboard:finances" : bootView(window.location);
+  return linked.startsWith("dashboard:") ? linked : "dashboard:finances";
+}
 
 // The tables no first view waits for, loaded when the page is idle
 const IDLE_TABLES = ["age_impact", "household_scatter_binned"];
@@ -790,11 +799,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         {/* A link to a view, before the page's code opens it: the landing
             page is hidden (LandingPage.css), so placeholders show instead */}
-        {landing && (
-          <div className="deep-link-skeleton">
-            <LoadingSkeleton />
-          </div>
-        )}
+        {landing && <BootSkeleton viewTabs={VIEWS} />}
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
@@ -820,7 +825,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
           // "not published yet" line is only for an empty publication
-          <LoadingSkeleton cards={value === "household" ? 4 : 2} height={value === "household" ? 120 : 260} />
+          <ViewSkeleton view={loadingView(value)} />
         ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}

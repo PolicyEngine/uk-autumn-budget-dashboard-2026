@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
 import { useSlidingIndicator } from "./SubTabs";
 
-// Each view's icon, drawn as the chart titles' are
-const TAB_ICONS = {
+// Each view's icon, drawn as the chart titles' are (also by the loading
+// placeholder's copy of this bar, publication/ViewSkeleton.jsx)
+export const TAB_ICONS = {
   dashboard: "users",
   household: "house",
   outlook: "trend",

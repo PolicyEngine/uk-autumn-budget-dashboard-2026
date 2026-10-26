@@ -13,7 +13,7 @@ import { DISPLAYABLE, MANIFEST_FILE, RECEIPT_FILE } from "./manifest";
 export const EARLY_FILES = ["budgetary_impact", "distributional_impact", "winners_losers", "metrics", "poverty_inequality"].map((table) => contract.tables[table].file);
 // A link to Young people or Pensioners also needs the age table at once
 const AGE_FILE = contract.tables.age_impact.file;
-const AGE_VIEWS = ["young", "pensioners"];
+const AGE_VIEWS = ["age", "young", "pensioners"];
 // A link to Household impact: its example households' precomputed answers
 // (householdPresets.js), an unverified file it reads as before
 export const PRESETS_URL_FILE = "household_presets.json";
