@@ -10,7 +10,7 @@ const OUTLOOK = readFileSync(
 );
 
 beforeEach(() => {
-  // The outlook JSON for the Living standards view; an empty CSV for the rest
+  // The outlook JSON for the Pre-measures forecast view; an empty CSV for the rest
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) =>
@@ -28,7 +28,7 @@ afterEach(() => {
 
 const band = (container) => container.querySelector(".title-row");
 
-describe("the Living standards view", () => {
+describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
     // The Population view has the year and policy pills
@@ -36,11 +36,11 @@ describe("the Living standards view", () => {
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
-    expect(tabs[2]).toHaveTextContent("Living standards");
+    expect(tabs[2]).toHaveTextContent("Pre-measures forecast");
     fireEvent.click(tabs[2]);
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel", { name: "Living standards" })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: "Pre-measures forecast" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     // Baseline outlook is the sub-tab it opens on
     expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
@@ -48,13 +48,13 @@ describe("the Living standards view", () => {
     // Its engine and data are said in Methodology, not on this view
     expect(screen.queryByText(/policyengine 6\.8\.0/)).toBeNull();
     expect(screen.queryByText("Demo")).toBeNull();
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro shared", async () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
-    const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
+    const subTabs = await screen.findByRole("tablist", { name: "Pre-measures forecast sections" });
     const [baseline, forecast] = within(subTabs).getAllByRole("tab");
     expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
     // No tab-level intro: the sections start straight under the sub-tabs
@@ -107,7 +107,7 @@ describe("the Living standards view", () => {
 
     fireEvent.click(baseline);
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("compares the years chosen in the range pill on Incomes and Poverty over time", async () => {
@@ -126,7 +126,7 @@ describe("the Living standards view", () => {
   });
 
   it("switches each card's view with its switch, and never shows a signed zero", async () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
     const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
     const choose = (card, pill, option) => {
@@ -198,9 +198,11 @@ describe("the Living standards view", () => {
   });
 
   it("opens the sub-tab a link names, and drops it on another view", async () => {
+    // An old link (?tab=living): the view at its new address, its sub-tab kept
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("tab")).toBe("outlook");
     expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
 
@@ -209,9 +211,9 @@ describe("the Living standards view", () => {
     expect(params.get("tab")).toBe("methodology");
     expect(params.has("sub")).toBe(false);
 
-    // Back on Living standards (kept mounted), the sub-tab left open stays,
+    // Back on Pre-measures forecast (kept mounted), the sub-tab left open stays,
     // with its ?sub= again
-    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
     expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
   });
@@ -220,13 +222,13 @@ describe("the Living standards view", () => {
     window.history.replaceState({}, "", "/?tab=living&sub=nonsense");
     render(<App />);
     expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("states its engine, data, status, notes and gaps once, in Methodology", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     render(<App />);
-    const section = await screen.findByRole("region", { name: "Living standards" });
+    const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
@@ -243,7 +245,7 @@ describe("the Living standards view", () => {
   });
 
   it("hides the year and policy pills but keeps the band's layout", () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     const { container } = render(<App />);
     for (const selector of [".band-year", ".band-policy"]) {
       const pill = band(container).querySelector(selector);
@@ -252,7 +254,7 @@ describe("the Living standards view", () => {
       expect(pill).toHaveAttribute("aria-hidden", "true");
       expect(pill).toHaveAttribute("inert");
     }
-    expect(screen.getByRole("tab", { name: "Living standards" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

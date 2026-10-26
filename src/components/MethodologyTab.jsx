@@ -59,7 +59,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.geography, title: "Figures by area", icon: MapPinned },
   { id: METHOD_SECTIONS.young, title: "Young people", icon: Users },
   { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
-  { id: METHOD_SECTIONS.living, title: "Living standards", icon: TrendingUp },
+  { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
 ];
 
@@ -150,9 +150,9 @@ function SectionLink({ id, children }) {
 /**
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
- * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the household calculation with Household impact's "About
- * these figures". Living standards states the engine, data, notes and gaps
+ * nowhere else on the page; the policy descriptions stay on Policies, and
+ * the household calculation with Household impact's "About these
+ * figures". Pre-measures forecast states the engine, data, notes and gaps
  * of that view's projections.
  *
  * @param {Object} props
@@ -160,7 +160,7 @@ function SectionLink({ id, children }) {
  */
 function MethodologyTab({ onShowTab }) {
   const policyNotes = (text) => (
-    <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
+    <ViewLink tab="policies" onShowTab={onShowTab}>
       {text}
     </ViewLink>
   );
@@ -243,8 +243,8 @@ function MethodologyTab({ onShowTab }) {
               PolicyEngine UK works out each household&apos;s taxes, benefits and net income under
               current law, then again with a measure; the difference between the two runs is the
               measure&apos;s effect. The estimates are static: households do not change their
-              behaviour in response. What each measure does is in the{" "}
-              {policyNotes("policy notes on Population impact")}; how the model represents it is
+              behaviour in response. What each measure does is on the{" "}
+              {policyNotes("Policies tab")}; how the model represents it is
               below.
             </p>
           }
@@ -422,6 +422,23 @@ function MethodologyTab({ onShowTab }) {
                   ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
                 ]}
               />
+              <h3 className="method-details-title">Poverty and inequality</h3>
+              <FactList
+                items={[
+                  [
+                    "Poverty rate",
+                    "The share of people in households below the absolute poverty line before housing costs (60% of the 2024-25 median, held in real terms), with and without the policies. The poverty line is measured on HBAI income, which is before indirect taxes, so the VAT and fuel duty measures do not change it.",
+                  ],
+                  [
+                    "Inequality",
+                    "The relative change in the Gini coefficient of equivalised household net income, people weighted.",
+                  ],
+                  [
+                    "Which run",
+                    "Neither adds up across policies, so each is read from one run: a policy's own, or the combined run when every policy is selected.",
+                  ],
+                ]}
+              />
               <h3 className="method-details-title">Household scatter</h3>
               <FactList
                 items={[
@@ -586,12 +603,12 @@ function MethodologyTab({ onShowTab }) {
 
           <MethodSection
             id={METHOD_SECTIONS.living}
-            title="Living standards"
+            title="Pre-measures forecast"
             summary={
               <p>
                 The{" "}
-                <ViewLink tab="living" onShowTab={onShowTab}>
-                  Living standards
+                <ViewLink tab="outlook" onShowTab={onShowTab}>
+                  Pre-measures forecast
                 </ViewLink>{" "}
                 view projects incomes and poverty under current law, with no measures applied, on
                 the engine and data below.

@@ -4,7 +4,7 @@
  * candidate modelled before the Budget on 28 October 2026, not announced
  * policy; the page says so once, in the banner under the intro.
  *
- * Card fields, for "About selected policies":
+ * Card fields, for the Policies view:
  * - summary: one plain line on what changes;
  * - starts: when it takes effect;
  * - type: tax, duty, benefit or the like;

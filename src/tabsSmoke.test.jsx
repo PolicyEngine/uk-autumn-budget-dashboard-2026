@@ -1,6 +1,6 @@
 /**
- * Smoke test of the four tabs, and Population impact's Young people
- * sub-tab, on the real data.
+ * Smoke test of the five tabs, and Population impact's other sub-tabs,
+ * on the real data.
  *
  * Each tab is opened by its address (?tab=, ?sub=), as a shared link opens it, and
  * rendered with every data file served from public/ as the deployed page
@@ -48,8 +48,12 @@ const FAILURE_TEXT = [
 // What each tab shows only once its data has loaded. (jsdom lays nothing
 // out, so charts draw no values; these are the data-driven text around them.)
 const LOADED = {
-  // App.jsx renders the Public finances section only once the CSVs are read.
-  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
+  // App.jsx renders All households' sections only once the CSVs are read.
+  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
+  // Population impact's other sub-tabs, by ?sub=
+  living: (panel) => within(panel).findAllByRole("heading", { name: "Households by income" }),
+  poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
+  finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The form's card: its More details section; the results are checked
   // below.
   household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
@@ -57,7 +61,9 @@ const LOADED = {
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
   // The Incomes heading shows once the outlook is read.
-  living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  // Every measure's card, whatever the band's selection
+  policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -122,11 +128,15 @@ afterEach(() => {
 // Each tab by its address, and Population impact's Young people sub-tab:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
-  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/" : `/?tab=${v.value}`, v.label]),
+  // Population impact opens on Public finances; All households is ?sub=all
+  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+  ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
+  ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
+  ["Population impact: Public finances", "finances", "/", "Public finances"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on the real data", () => {
+describe("each of the five tabs and Population impact's sub-tabs, on the real data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -233,7 +243,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
   });
 
   it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
@@ -242,10 +252,10 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
   });
 
   it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
