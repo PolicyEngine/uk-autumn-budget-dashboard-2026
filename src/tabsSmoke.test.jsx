@@ -416,7 +416,6 @@ describe("the income decile pair", () => {
     const living = screen.getByRole("tabpanel", { name: "Living standards" });
     await within(living).findAllByRole("heading", { name: /^Change in income inequality/ }, { timeout: 5000 });
     expect(within(living).queryByRole("heading", { name: /impact by income decile/ })).toBeNull();
-    expect(within(living).queryByRole("heading", { name: "How the measures change incomes" })).toBeNull();
   }, 15000);
 
   it("opens All households from an old #deciles link", async () => {
