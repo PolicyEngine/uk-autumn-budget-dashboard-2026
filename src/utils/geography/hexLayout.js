@@ -44,13 +44,14 @@ export function hexPath(cx, cy, radius) {
 
 /**
  * Every seat's hexagon fitted into a width × height drawing area with
- * `padding` on each side, centred, as the boundary map is fitted.
+ * `padding` on each side, centred, as the boundary map is fitted; `left`
+ * keeps a column clear at the left (for the exported legend).
  *
  * @param {string[]} codes - The seats to place (those without a hex are left out)
  * @returns {{paths: Map<string, string>, bounds: Map<string, number[][]>,
  *   radius: number, missing: string[]}}
  */
-export function fitHexes(codes, { width, height, padding = 20, hexes = CONSTITUENCY_HEXES }) {
+export function fitHexes(codes, { width, height, padding = 20, left = 0, hexes = CONSTITUENCY_HEXES }) {
   const placed = codes.filter((code) => hexes[code]);
   const missing = codes.filter((code) => !hexes[code]);
   const centres = new Map(placed.map((code) => [code, hexCentre(hexes[code])]));
@@ -62,10 +63,10 @@ export function fitHexes(codes, { width, height, padding = 20, hexes = CONSTITUE
   const yMin = Math.min(...ys) - HEX_RADIUS;
   const yMax = Math.max(...ys) + HEX_RADIUS;
   const scale = Math.min(
-    (width - 2 * padding) / (xMax - xMin),
+    (width - left - 2 * padding) / (xMax - xMin),
     (height - 2 * padding) / (yMax - yMin),
   );
-  const offsetX = (width - (xMax - xMin) * scale) / 2;
+  const offsetX = left + (width - left - (xMax - xMin) * scale) / 2;
   const offsetY = (height - (yMax - yMin) * scale) / 2;
   const radius = HEX_RADIUS * scale;
   const paths = new Map();
