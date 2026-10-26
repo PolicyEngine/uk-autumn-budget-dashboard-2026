@@ -9,7 +9,7 @@
 .wf {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(120px, 34%) minmax(0, 1fr) 96px;
+  grid-template-columns: minmax(120px, 32%) minmax(0, 1fr) 112px;
   column-gap: 12px;
   font-size: var(--fs-caption);
 }
@@ -21,7 +21,7 @@
 .wf-row > * {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .wf-label {
@@ -149,11 +149,21 @@
 
 @container (max-width: 520px) {
   .wf {
-    grid-template-columns: minmax(96px, 36%) minmax(0, 1fr) 76px;
+    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr) 96px;
     column-gap: 8px;
   }
 
   .wf-key {
     display: none;
   }
+}
+
+/* Beside a taller card the plot sits in the middle of its row and the
+   logo keeps its size at the foot */
+.mp-card .chart-plot {
+  align-self: center;
+}
+
+.mp-card .chart-logo {
+  align-items: flex-end;
 }
