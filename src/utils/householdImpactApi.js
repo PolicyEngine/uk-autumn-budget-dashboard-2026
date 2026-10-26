@@ -24,7 +24,7 @@
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
 import contract from "./publication/contract.json";
-import { definitionDifferences, definitionQuery } from "./publication/definitions";
+import { FULL_COMMIT as APPROVED_COMMIT, definitionDifferences, definitionQuery } from "./publication/definitions";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -670,7 +670,7 @@ export class StageMismatchError extends EngineMismatchError {
  * approved one, in id order. A measure with no approved definition, or
  * none reported, is refused: nothing is answered unchecked. An approval
  * is a definition at a full commit (publishedDefinitions holds back any
- * other); anything else counts as none, since definitionDifferences, like
+ * other, by the same contract pattern); anything else counts as none, since definitionDifferences, like
  * the Python check it mirrors, finds nothing between a missing approval
  * and a report with no commit or identities.
  *
@@ -688,7 +688,7 @@ export function definitionRefusals(expected, reported, ids = Object.keys(expecte
       typeof definition === "object" &&
       !Array.isArray(definition) &&
       typeof definition.git_sha === "string" &&
-      FULL_COMMIT.test(definition.git_sha)
+      APPROVED_COMMIT.test(definition.git_sha)
       ? definition
       : null;
   };
