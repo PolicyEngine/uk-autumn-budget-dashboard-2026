@@ -49,3 +49,12 @@ describe("the two Across earnings cards", () => {
     expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/withdrawn £1 for every £1 of other income/);
   });
 });
+
+describe("tenths in plain words", () => {
+  it("names the lowest and highest, and the rest in words", async () => {
+    const { tenthName } = await import("./IncomePositionChart");
+    expect(tenthName(1)).toBe("Lowest tenth");
+    expect(tenthName(3)).toBe("Third tenth");
+    expect(tenthName(10)).toBe("Highest tenth");
+  });
+});
