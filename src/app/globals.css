@@ -1604,6 +1604,10 @@ body {
   list-style: none;
 }
 
+/* Each card is five rows (head, summary, when, source, footer). The cards
+   of a grid row share those rows through subgrid, so each row lines up
+   across them and the cards are the same height; without subgrid the card
+   is a flex column with its footer pinned to the bottom. */
 .policy-card {
   position: relative;
   display: flex;
@@ -1619,6 +1623,16 @@ body {
 }
 
 /* The measure's colour, as a band along the top */
+@supports (grid-template-rows: subgrid) {
+  .policy-card {
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 16px;
+    align-content: start;
+  }
+}
+
 .policy-card::before {
   content: "";
   position: absolute;
@@ -1656,8 +1670,18 @@ body {
   min-width: 0;
 }
 
+/* The type and any "Temporary" badge share the first line */
+.policy-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+  margin-bottom: 2px;
+}
+
 .policy-card-type {
-  margin: 0 0 2px;
+  margin: 0;
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1800,9 +1824,13 @@ body {
 }
 
 .ptl-axis line {
-  stroke: var(--pe-gray-300);
+  stroke: var(--pe-gray-200);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+}
+
+.ptl-axis line.is-base {
+  stroke: var(--pe-gray-300);
 }
 
 .ptl-axis line.is-year {
@@ -1819,8 +1847,7 @@ body {
   border-left: 1.5px dashed var(--pe-gray-500);
 }
 
-.ptl-span,
-.ptl-tail {
+.ptl-span {
   position: absolute;
   top: 50%;
   min-width: 10px;
@@ -1832,17 +1859,9 @@ body {
   animation: ptl-draw 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
-.ptl-tail {
-  height: 4px;
-  animation-delay: 0.5s;
-}
-
-/* A lasting measure fades towards the arrow at the right edge */
-.ptl-span.is-lasting,
-.ptl-tail.is-lasting {
+/* A lasting measure runs to the arrowhead at the right edge */
+.ptl-span.is-lasting {
   border-radius: 999px 0 0 999px;
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), rgb(0 0 0 / 0.2));
-  mask-image: linear-gradient(to right, black calc(100% - 40px), rgb(0 0 0 / 0.2));
 }
 
 .ptl-dot,
@@ -1929,12 +1948,19 @@ body {
 
 .policy-card-foot {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: auto;
   padding-top: 14px;
   font-size: var(--fs-small);
   border-top: 1px solid var(--c-grid);
+}
+
+.policy-card-details {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: 9px;
 }
 
 .policy-card-details summary {
@@ -1950,12 +1976,24 @@ body {
   color: var(--pe-gray-600);
 }
 
-.policy-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+/* The source: one line in the same slot on every card, empty when none */
+.policy-card-source-line {
+  align-self: end;
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.policy-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .policy-card-source {
@@ -1981,6 +2019,7 @@ body {
 
 .policy-card-effect {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
   margin-left: auto;
@@ -2013,8 +2052,21 @@ body {
     gap: 16px;
   }
 
+  /* One column: nothing to line up across, so a plain column with no
+     empty source slot */
   .policy-card {
+    display: flex;
+    grid-row: auto;
     padding: 22px 16px 16px;
+  }
+
+  .policy-card-source-line {
+    align-self: auto;
+  }
+
+  .policy-card-source-line:empty,
+  .ptl-chips:empty {
+    display: none;
   }
 
   .policy-card-start {
@@ -2030,10 +2082,6 @@ body {
     display: inline;
   }
 
-  .policy-card-effect {
-    justify-content: center;
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2047,8 +2095,7 @@ body {
     transform: none;
   }
 
-  .ptl-span,
-  .ptl-tail {
+  .ptl-span {
     animation: none;
   }
 }

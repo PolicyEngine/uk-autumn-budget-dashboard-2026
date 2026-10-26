@@ -70,6 +70,9 @@ describe("PolicyCards", () => {
     expect(details.open).toBe(false);
     fireEvent.click(within(card).getByText("How it is modelled"));
     expect(details.open).toBe(true);
+    // Every card keeps the same rows, the source in its own slot
+    expect(card.querySelector(".policy-card-source-line")).toBeTruthy();
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitTemporary");
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
@@ -79,18 +82,26 @@ describe("PolicyCards", () => {
     render(<PolicyCards policies={POLICIES} selectedPolicies={["badr_lifetime_limit_cut"]} />);
     const card = screen.getByRole("listitem");
     expect(card).not.toHaveTextContent("Ends");
+    // The Ends slot is kept, empty, so the timeline lines up across a row
+    expect(card.querySelector(".policy-card-ends")).toBeEmptyDOMElement();
     expect(card).not.toHaveTextContent("Temporary");
     const timeline = within(card).getByRole("img", {
       name: "In force from April 2027; no end date.",
     });
     expect(timeline).toHaveTextContent("Continues");
     expect(timeline).toHaveTextContent("Budget");
+    // The labels never run together, even as plain text
+    expect(timeline.textContent).not.toMatch(/BudgetContinues/);
+    // One solid span: no fades or thinner stretches
+    expect(timeline.querySelectorAll(".ptl-span")).toHaveLength(1);
+    expect(timeline.querySelector(".ptl-tail")).toBeNull();
   });
 
   it("shows fuel duty's two-step restore as diamonds", () => {
     render(<PolicyCards policies={POLICIES} selectedPolicies={["fuel_duty_rise_deferral"]} />);
     const timeline = screen.getByRole("img", { name: /^In force from January 2027;/ });
     expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
+    expect(timeline.querySelectorAll(".ptl-span")).toHaveLength(1);
     expect(timeline.getAttribute("aria-label")).toBe(
       "In force from January 2027; 3p of the 5p restored in September 2027, the other 2p restored in December 2027; no end date.",
     );
