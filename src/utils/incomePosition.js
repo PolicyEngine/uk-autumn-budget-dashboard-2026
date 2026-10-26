@@ -70,17 +70,22 @@ export function parseDistribution(text) {
   }));
 }
 
+const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
+
 /**
  * Which published run stands for the selection: one measure is its own
- * run; two or more are the whole package's run, which is exact only when
- * every measure is selected (`exact`), since runs for part of the package
- * are not published.
+ * run; two or more are the whole package's run, which is exact (`exact`)
+ * only when every published measure is selected and the package was run
+ * with exactly those (`packageIds`, the catalogue's package members, or
+ * null when it publishes none), since runs for part of the package are not
+ * published. After a measure is withdrawn the package's run still holds it,
+ * so it is never exact then (#104 review).
  */
-export function distributionRunFor(selected, allIds) {
+export function distributionRunFor(selected, allIds, packageIds = null) {
   const ids = [...new Set(selected ?? [])];
   if (ids.length === 1) return { reformId: ids[0], exact: true };
-  const all = allIds.length > 0 && allIds.every((id) => ids.includes(id));
-  return { reformId: COMBINED_REFORM_ID, exact: all };
+  const exact = Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
+  return { reformId: COMBINED_REFORM_ID, exact };
 }
 
 /** One curve, sorted by percentile: [{ percentile, income }]. */

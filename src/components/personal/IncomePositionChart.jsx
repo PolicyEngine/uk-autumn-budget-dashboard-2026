@@ -543,11 +543,12 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const relative = useFile("distributional_impact.csv", parseRecords);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected
-  const { displayable } = useMeasureCatalogue();
+  // when all of them are selected, and it was run with exactly those
+  const catalogue = useMeasureCatalogue();
   const run = distributionRunFor(
     policies,
-    displayable.map((measure) => measure.id),
+    catalogue.displayable.map((measure) => measure.id),
+    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
   );
   // Bars grow from zero each time their view opens
   const grow = useEased(1, { key: view, from: 0 });
@@ -815,7 +816,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           </p>
           {!run.exact && (
             <p>
-              {"With part of the package selected, the UK distribution after is all the measures together; your own income after uses only the measures you selected."}
+              {"The UK distribution after is the whole package's run, with measures beyond those selected (or, after one is withdrawn, no longer published); your own income after uses only the measures you selected."}
             </p>
           )}
         </ChartMoreInfo>
