@@ -982,7 +982,7 @@ body {
    under a section and a card's subtitle link pointing to another view */
 .section-heading p a,
 .section-link a,
-.chart-description a.twin-link {
+.main-content .chart-description a.twin-link {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
