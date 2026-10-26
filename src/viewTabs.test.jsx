@@ -124,14 +124,13 @@ describe("the view tabs", () => {
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
   });
 
-  it("describe every measure on Policies, whatever the selection, and link there from Population impact", async () => {
+  it("describe every measure on Policies, whatever the selection", () => {
     window.history.replaceState({}, "", "/?sub=all&policies=fuel_duty_rise_deferral");
     render(<App />);
-    const link = await screen.findByRole("link", { name: "Policies" });
-    expect(link).toHaveAttribute("href", "?tab=policies");
-    // Population impact no longer repeats the cards
+    // Population impact neither repeats the cards nor points to them
     expect(screen.queryByText("About selected policies")).toBeNull();
-    fireEvent.click(link);
+    expect(screen.queryByText(/What each measure does is on/)).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
     expect(within(panel).getAllByRole("listitem")).toHaveLength(9);
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");

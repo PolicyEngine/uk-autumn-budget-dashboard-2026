@@ -669,20 +669,6 @@ function App() {
           />
         </section>
 
-        {/* The measures are described once, on Policies */}
-        <p className="policies-link-line">
-          What each measure does is on{" "}
-          <a
-            href="?tab=policies"
-            onClick={(event) => {
-              event.preventDefault();
-              handleTabChange("policies");
-            }}
-          >
-            Policies
-          </a>
-          .
-        </p>
       </div>
     );
   };
