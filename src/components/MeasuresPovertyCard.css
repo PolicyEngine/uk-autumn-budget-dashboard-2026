@@ -185,3 +185,13 @@
 .mp-card .chart-logo {
   align-items: flex-end;
 }
+
+/* The axis's end ticks sit inside the track, so "0" and the last never run
+   into each other on a narrow card */
+.wf-axis .wf-tick:first-child {
+  transform: none;
+}
+
+.wf-axis .wf-tick:last-child {
+  transform: translateX(-100%);
+}

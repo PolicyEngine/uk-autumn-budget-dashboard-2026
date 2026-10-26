@@ -133,8 +133,22 @@ const POVERTY_LINES = {
 
 const HOUSING = { bhc: "before housing costs", ahc: "after housing costs" };
 
-/** "0.008 percentage points" or "0.1%": a change's size in words, unsigned. */
-const plainAmount = (value) => formatPp(Math.abs(value)).replace(/^[+−-]/, "").replace(/pp$/, " percentage points");
+/**
+ * A change's size in words, unsigned, in the metric's own unit: a rate or a
+ * share in percentage points ("less than 0.1 percentage points", "0.3
+ * percentage points"), a relative change (the Gini, the 90/10 ratio) in
+ * per cent ("0.16%"), never one for the other.
+ */
+const plainAmount = (metric, value) => {
+  const size = Math.abs(value);
+  const text = metric.format(size);
+  if (!/pp$/.test(text)) return text;
+  return size < 0.1 ? "less than 0.1 percentage points" : `${size.toFixed(1)} percentage points`;
+};
+
+/** What the sentence names: "income inequality (the Gini coefficient)", "the poverty rate". */
+const subjectOf = (metric) =>
+  metric.key === "gini_change" ? "income inequality (the Gini coefficient)" : metric.title.replace(/^Change in /, "");
 
 /** The poverty chart's metric for one choice of line, housing costs and people. */
 export function povertyMetric({ basis, housing, group }) {
@@ -369,7 +383,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  const data = byMeasure ? [] : metricByYear(rows, run, metric);
+  // 2026-27 is shown only where the selection changes something then (a
+  // measure in force from autumn 2026); otherwise the axis starts in 2027-28
+  const emptyFirst = (points) => {
+    const first = points.find((point) => point.year === DISPLAY_YEARS[0]);
+    return !first || first.value === null || Number(Math.abs(first.value).toFixed(metric.decimals)) === 0;
+  };
+  const firstYearShown = byMeasure
+    ? !byMeasure.every((m) => emptyFirst(m.points))
+    : !emptyFirst(metricByYear(rows, run, metric));
+  const years = firstYearShown ? DISPLAY_YEARS : DISPLAY_YEARS.slice(1);
+  const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);
@@ -433,11 +457,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <>
                 In {fiscalYearTick(selectedYear)}, the selected measures{" "}
                 {Math.round(selected.value * 1e6) === 0 ? (
-                  <>do not change {metric.title.replace(/^Change in /, "")}</>
+                  <>do not change {subjectOf(metric)}</>
                 ) : (
                   <>
-                    {selected.value < 0 ? "lower" : "raise"} {metric.title.replace(/^Change in /, "")} by{" "}
-                    <strong>{plainAmount(selected.value)}</strong>
+                    {selected.value < 0 ? "reduce" : "increase"} {subjectOf(metric)} by{" "}
+                    <strong>{plainAmount(metric, selected.value)}</strong>
                     {selectedPeople && <> ({selectedPeople.replace(/^≈/, "about ")})</>}
                   </>
                 )}
@@ -483,7 +507,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
       )}
       <div ref={chartRef} className={(controls.length > 0 && !choiceAbove) || byMeasure ? "summary-metric-plot" : undefined}>
         {byMeasure ? (
-          <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} />
+          <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} years={years} />
         ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>No measure is selected that this chart covers</p>
