@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
+import { clearBasisIncomeCache } from "./hooks/useBasisIncome";
 import { clearOutlookCache } from "./utils/livingStandards/outlook";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
@@ -133,6 +134,7 @@ beforeEach(() => {
   consoleErrors = [];
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   clearHouseholdImpactCache();
+  clearBasisIncomeCache();
   // Each test reads the outlook afresh, so its requests can be counted
   clearOutlookCache();
   // Each tab opens as a new visit would: the form at its first step

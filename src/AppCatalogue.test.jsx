@@ -23,7 +23,12 @@ vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
-vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
+// #185 added CurrentLawSection, which Population impact's Living standards
+// sub-tab shows beside the decile charts
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({
+  default: () => <div data-testid="living-view" />,
+  CurrentLawSection: () => <div data-testid="current-law" />,
+}));
 
 // The decile charts are on Population impact's Living standards sub-tab
 // since #185 (Public finances is the default)

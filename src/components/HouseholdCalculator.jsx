@@ -783,6 +783,9 @@ function HouseholdCalculator({
   const basisIncome = useBasisIncome({
     inputs: submitted?.inputs ?? null,
     policies: submitted?.policies ?? [],
+    presetPolicies,
+    publicationKey,
+    expectedEngine,
     basisYear,
     enabled: placed !== null,
   });

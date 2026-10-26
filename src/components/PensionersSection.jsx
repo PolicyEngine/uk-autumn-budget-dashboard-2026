@@ -28,7 +28,7 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
-import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
 import PillSelect from "./PillSelect";
@@ -464,10 +464,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
   const title = `Effect of each policy, ${yearLabel}`;
   const description = "Each policy's average change per person: pensioners vs all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
+  // No reason per measure, as in MeasuresCard: a list of them by id would
+  // be a measure list of the page's own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
     color: catalogue.byId.get(policy.id)?.color ?? CHART_COLOURS.noChange,
-    reason: noEffectReason(policy, year),
   }));
   const download = {
     chartRef,

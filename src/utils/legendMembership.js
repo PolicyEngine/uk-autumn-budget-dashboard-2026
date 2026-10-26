@@ -20,8 +20,8 @@ import { DISPLAY_YEARS } from "./displayYears";
  * the engine's wage pass-through reads the unchanged NI parameters, so
  * wages and household incomes are fixed.
  */
-// (#185 on #104: told by the published name, as youngPeopleData's
-// noEffectReason does, so the page keeps no list of measures)
+// (#185 on #104: told by the published name, so the page keeps no list
+// of measures)
 export function zeroForHouseholds(measure) {
   return /^employer\b/i.test(measure?.name ?? "")
     ? "Wages are held fixed in this model, so no household's income changes"
