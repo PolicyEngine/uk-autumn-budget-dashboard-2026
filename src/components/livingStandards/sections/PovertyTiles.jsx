@@ -1,17 +1,19 @@
-// Poverty at a glance, on the OBR forecast's Poverty sub-tab: one tile per
-// age group (children, working-age adults, pensioners) on the measure the
-// cards open on (absolute, before housing costs). Each tile has an icon,
-// the share in poverty in the first year compared, a small line of the
-// years compared, and one line on where it ends up. All people is the
-// Poverty over time card's own figure, so it has no tile. The years are the
-// cards' shared range (useYearRange), so the tiles follow a change there.
+// Poverty at a glance, on the OBR forecast's Poverty sub-tab: one tile
+// (HeadlineTile) per age group (children, working-age adults, pensioners)
+// on the sub-tab's measure (usePovertyMeasure: the same choice as both
+// cards' Options, so a switch to relative or after housing costs moves the
+// tiles too). Each tile has the share in poverty in the first year
+// compared, the measure's definition in an info tip, a trend of the
+// official years and the projection to the last year compared, and one
+// line on where it ends up. All people is the Poverty over time card's own
+// figure, so it has no tile. The years are the cards' shared range.
 
 import { Armchair, Baby, Briefcase } from "lucide-react";
-import { Sparkline } from "./ForecastHeadlineSection";
+import HeadlineTile from "../HeadlineTile";
 import { defaultRange, rangeYears, useYearRange } from "../../../utils/livingStandards/yearRange";
-import { formatPct, fyDash, round1 } from "../../../utils/livingStandards/outlook";
-
-export const POVERTY_TILE_MEASURE = "absolute_bhc";
+import { DEFAULT_POVERTY_MEASURE, povertyDefinition, usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
+import { projectionStartYear } from "../../../utils/livingStandards/baseline";
+import { formatPct, fyDash, fyLabel, fyStart, round1 } from "../../../utils/livingStandards/outlook";
 
 const TILES = [
   { group: "children", icon: Baby },
@@ -19,61 +21,68 @@ const TILES = [
   { group: "pensioners", icon: Armchair },
 ];
 
+const pct = (v) => formatPct(round1(v));
+
 /** Where the rate ends up, without repeating the tile's figure. */
 export function povertyTileMeaning(a, b, to) {
   const d = round1(b) - round1(a);
   if (Math.abs(d) < 0.05) return `The same in ${fyDash(to)} under current law.`;
-  return `${d > 0 ? "Rises" : "Falls"} to ${formatPct(round1(b))} by ${fyDash(to)} under current law.`;
+  return `${d > 0 ? "Rises" : "Falls"} to ${pct(b)} by ${fyDash(to)} under current law.`;
+}
+
+/** A group's official years and projection to `end`, oldest first. */
+function trendRows(outturn, projection, startYear, end) {
+  const byYear = {};
+  const put = (rows, key, keep) =>
+    (rows || []).forEach((r) => {
+      const yr = fyStart(r.year);
+      if (r.rate == null || !keep(yr)) return;
+      byYear[yr] = { ...(byYear[yr] || { official: null, projection: null }), [key]: r.rate * 100 };
+    });
+  put(outturn, "official", (yr) => yr <= end);
+  put(projection, "projection", (yr) => yr >= startYear && yr <= end);
+  return Object.keys(byYear)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((yr) => ({ label: fyLabel(yr), start: yr, ...byYear[yr] }));
 }
 
 export default function PovertyTiles({ data }) {
   const years = rangeYears(data);
   const [[from, to]] = useYearRange(years, defaultRange(years));
+  const [chosen] = usePovertyMeasure();
   const poverty = data.poverty;
-  const series = poverty?.projection?.[POVERTY_TILE_MEASURE];
-  if (!series) return null;
-  const start = Number(String(from).slice(0, 4));
-  const end = Number(String(to).slice(0, 4));
+  const measure = poverty?.projection?.[chosen] ? chosen : DEFAULT_POVERTY_MEASURE;
+  const projection = poverty?.projection?.[measure];
+  if (!projection) return null;
+  const outturn = poverty.outturn?.[measure] || {};
+  const startYear = projectionStartYear(data);
+  const kind = measure.startsWith("absolute") ? "absolute" : "relative";
+
   const tiles = TILES.map((t) => {
-    const rows = (series[t.group] || [])
-      .filter((r) => {
-        const y = Number(String(r.year).slice(0, 4));
-        return y >= start && y <= end;
-      })
-      .map((r) => ({ year: fyDash(r.year), value: r.rate == null ? null : r.rate * 100 }));
-    const a = rows.find((r) => r.year === fyDash(from))?.value;
-    const b = rows.find((r) => r.year === fyDash(to))?.value;
+    const rows = trendRows(outturn[t.group], projection[t.group], startYear, fyStart(to));
+    const a = rows.find((r) => r.start === fyStart(from))?.projection;
+    const b = rows.find((r) => r.start === fyStart(to))?.projection;
     if (a == null || b == null) return null;
     return { ...t, name: poverty.groups?.[t.group] ?? t.group, rows, a, b };
   }).filter(Boolean);
   if (!tiles.length) return null;
 
   return (
-    <>
-    <p className="poverty-tiles-caption">Absolute poverty, before housing costs</p>
     <div className="forecast-tiles poverty-tiles">
-      {tiles.map((t) => {
-        const Icon = t.icon;
-        return (
-          <div key={t.group} className="forecast-tile">
-            <div className="forecast-tile-head">
-              <span className="forecast-tile-icon" aria-hidden="true">
-                <Icon size={16} strokeWidth={1.8} />
-              </span>
-              <span className="forecast-tile-name">{t.name}</span>
-            </div>
-            <div className="forecast-tile-body">
-              <div>
-                <p className="forecast-tile-value">{formatPct(round1(t.a))}</p>
-                <p className="forecast-tile-sub">in poverty in {fyDash(from)}</p>
-              </div>
-              <Sparkline rows={t.rows} label={`${t.name}, ${t.rows.map((r) => `${r.year}: ${formatPct(round1(r.value))}`).join(", ")}`} />
-            </div>
-            <p className="forecast-tile-meaning">{povertyTileMeaning(t.a, t.b, to)}</p>
-          </div>
-        );
-      })}
+      {tiles.map((t) => (
+        <HeadlineTile
+          key={t.group}
+          icon={t.icon}
+          name={t.name}
+          info={povertyDefinition(measure)}
+          value={pct(t.a)}
+          caption={`in ${kind} poverty in ${fyDash(from)}`}
+          rows={t.rows}
+          format={pct}
+          meaning={povertyTileMeaning(t.a, t.b, to)}
+        />
+      ))}
     </div>
-    </>
   );
 }
