@@ -146,6 +146,29 @@
   color: var(--pe-gray-500);
 }
 
+/* The years compared: two compact lists, from → to */
+.control-bar-years {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-bar-select {
+  min-height: 28px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-700);
+  background: var(--pe-gray-100);
+  border: none;
+  border-radius: 8px;
+}
+
+.control-bar-select:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 1px;
+}
+
 .control-bar-segments {
   display: flex;
   flex-wrap: wrap;

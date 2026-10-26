@@ -3,7 +3,8 @@
 
 import { useMemo, useState } from "react";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
-import { periodOption } from "../controlOptions";
+import { periodOption, yearsOption } from "../controlOptions";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
@@ -128,6 +129,7 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     // choice sits under the card's Options (ControlBar)
     controls: {
       options: [
+        yearsOption(rangeYears(data), range, setRange),
         ...povertyMeasureOptions(measure, measureIds, setMeasure),
         {
           label: "People",

@@ -140,10 +140,21 @@ def _yearly(
     ]
 
 
-def _row(label, unit, points, source, *, primary=True, note=None) -> dict:
+# A row's unit in plain words, for the page: what one of its values is
+UNIT_WORDS = {
+    PERCENT: None,  # a rate reads as itself: "15% → 0%"
+    PENCE_A_LITRE: "pence a litre",
+    POUNDS: "£ a year",
+}
+
+
+def _row(
+    label, unit, points, source, *, primary=True, note=None, unit_words=None
+) -> dict:
     row = {
         "label": label,
         "unit": unit,
+        "unit_words": unit_words if unit_words is not None else UNIT_WORDS[unit],
         "primary": primary,
         "points": points,
         "source": source,
@@ -250,7 +261,7 @@ def _vat_rows(
     }
     return [
         _row(
-            f"{label} while in force",
+            label,
             PERCENT,
             [
                 _point(
@@ -297,8 +308,9 @@ def _fuel_duty(reform) -> list[dict]:
 
     # The dates on the page's timeline, April 2026 to March 2032
     first, last = date(POLICY_YEARS[0], 4, 1), date(POLICY_YEARS[-1] + 1, 3, 31)
+    # The rates in force on the timeline's first day, then each change
     days = sorted(
-        {d for d, _ in current + deferred if first <= d <= last}
+        {first} | {d for d, _ in current + deferred if first <= d <= last}
     )
     dated = [
         _point(
@@ -312,7 +324,7 @@ def _fuel_duty(reform) -> list[dict]:
     ]
     return [
         _row(
-            "Fuel duty from each date it changes",
+            "Fuel duty",
             PENCE_A_LITRE,
             dated,
             _source(
@@ -406,6 +418,7 @@ def _warm_home_discount(reform) -> list[dict]:
                     ],
                 },
             ),
+            unit_words="£ a household, once",
             note=f"Paid to {values['pension_credit_receipt_rate']:.0%} of "
             "eligible Pension Credit households and "
             f"{values['other_receipt_rate']:.0%} of other eligible "
@@ -562,6 +575,7 @@ def _badr(reform) -> list[dict]:
                 _engine_source(path),
                 _change_source(path, "_create_badr_lifetime_limit_cut()"),
             ),
+            unit_words="£ of gains over a lifetime",
         )
     ]
 
@@ -598,14 +612,73 @@ BUILDERS = {
 }
 
 
+# --- How the page shows each measure ---------------------------------------
+#
+# Chosen from the shape of the data, so a measure changed on Budget day gets
+# the display its new shape needs:
+# - "switch": one value for a window or a single period, then back (a VAT
+#   rate for some months, a one-winter payment): drawn on the card's own
+#   timeline, the in-force span labelled with the change;
+# - "schedule": rates that change on dates within years: a step plot on a
+#   true time axis, the yearly averages behind a toggle;
+# - "table": several parameters that change together in one year: a short
+#   table for that year;
+# - "before-after": one permanent change from a date on, current law
+#   constant: the two values and the change;
+# - "path": values that part from current law over the years: a step plot
+#   with the gap shaded.
+SWITCH, SCHEDULE, TABLE, BEFORE_AFTER, PATH = (
+    "switch",
+    "schedule",
+    "table",
+    "before-after",
+    "path",
+)
+# A measure whose shape reads better another way, by id (none needed now)
+DISPLAY_OVERRIDES: dict[str, str] = {}
+
+
+def _differs(point: dict) -> bool:
+    before, after = point["before"], point["after"]
+    if before is None or after is None:
+        return before is not after
+    return abs(before - after) > 1e-9
+
+
+def display_for(rows: list[dict]) -> str:
+    """The display a measure's rows call for (see above)."""
+    main = next(row for row in rows if row["primary"])
+    points = main["points"]
+    if len(points) == 1:
+        return SWITCH
+    if all(re.fullmatch(r"\d{4}-\d{2}-\d{2}", p["key"]) for p in points):
+        return SCHEDULE
+    changed = [row for row in rows if any(_differs(p) for p in row["points"])]
+    years = {p["year"] for row in changed for p in row["points"] if _differs(p)}
+    if len(changed) >= 3 and len(years) == 1:
+        return TABLE
+    moved = [p for p in points if _differs(p)]
+    first = points.index(moved[0])
+    if all(
+        abs(p["before"] - points[0]["before"]) < 1e-9 for p in points
+    ) and all(
+        _differs(p) and abs(p["after"] - moved[0]["after"]) < 1e-9
+        for p in points[first:]
+    ):
+        return BEFORE_AFTER
+    return PATH
+
+
 def build() -> dict:
     """Every candidate measure's table, in the registry's order."""
     measures = {}
     for measure_id in registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         reform = registry.get_reform(measure_id)
+        rows = BUILDERS[measure_id](reform)
         measures[measure_id] = {
             "description": reform.description,
-            "rows": BUILDERS[measure_id](reform),
+            "display": DISPLAY_OVERRIDES.get(measure_id, display_for(rows)),
+            "rows": rows,
         }
     return {
         "schema": SCHEMA,

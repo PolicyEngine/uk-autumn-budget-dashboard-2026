@@ -94,9 +94,12 @@ function LoadedCard({ data, rows, run, twinLink }) {
     !run.exact && run.reformId === COMBINED_REFORM_ID
       ? "With part of the package selected, this is the whole package (runs for part of it are not published)."
       : null;
+  // Only the link to the twin (and, rarely, which run this is); "with the
+  // measures" is said in About this chart
   const subtitle = (
     <>
-      With the measures: real growth of each group&apos;s median income.{packageNote ? ` ${packageNote}` : ""} {twinLink}
+      {twinLink}
+      {packageNote ? ` ${packageNote}` : ""}
     </>
   );
   if (noEffect || !view) {

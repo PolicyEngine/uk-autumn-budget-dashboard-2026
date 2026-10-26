@@ -15,7 +15,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import TitleIcon from "../TitleIcon";
+import SectionHeading from "../SectionHeading";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, money } from "../../utils/singleYear";
@@ -189,10 +189,11 @@ export function YearBars({ series, year }) {
 }
 
 /**
- * The Household impact view's cards: eight example households under
- * "Example households", all the same size, each of which fills the form
- * and shows its result at once; then, below them all, one wide "Your
- * household" card, which opens the form below it. Each example names who
+ * The Household impact view's cards: first one wide "Your household"
+ * card, which opens the form below the cards; then eight example
+ * households under "Example households", all the same size, each of which
+ * fills the form and shows its result at once. One section heading over
+ * them, the page's own (SectionHeading), as on every tab. Each example names who
  * it is and, on its tag, the measure it is for, in that measure's colour.
  * Once the precomputed results are in and every measure is selected, it
  * shows its change in net income in the year chosen, a bar for each year,
@@ -242,15 +243,11 @@ export default function HouseholdCards({
     action();
   };
   return (
-    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-labelledby="household-cards-title">
+    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-label="Choose a household">
+      {/* The page's section heading, as on every tab, with "Show all
+          households" beside it once a household is chosen */}
       <div className="household-cards-head">
-        <h2 className="household-cards-title" id="household-cards-title">
-          {/* The section icon every tab's headings carry (SectionHeading) */}
-          <span className="section-icon" aria-hidden="true">
-            <TitleIcon name="users" bare size={20} />
-          </span>
-          Choose a household
-        </h2>
+        <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
         {chosen && (
           <button
             type="button"
@@ -279,15 +276,20 @@ export default function HouseholdCards({
       />
       <div className={`household-cards-fold ${folded ? "" : "is-open"}`.trim()} aria-hidden={folded || undefined} inert={folded || undefined}>
       <div className="household-cards-fold-inner">
-      <p className="household-cards-subtitle">
-        Start from an example, or enter your own household below them.
-        {anyFigures &&
-          ` Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
-      </p>
-      <h3 className="household-cards-label" id="household-cards-examples">
-        Example households
-      </h3>
-      <div className="household-cards-grid" id="household-cards-grid" role="group" aria-labelledby="household-cards-examples">
+      <YourHouseholdCard
+        selected={yoursSelected}
+        formOpen={formOpen}
+        formId={formId}
+        change={yoursChange}
+        onClick={() => choose(onYours)}
+      />
+      {/* What the examples' figures are, once they show */}
+      {anyFigures && (
+        <p className="household-cards-note">
+          {`Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
+        </p>
+      )}
+      <div className="household-cards-grid" id="household-cards-grid" role="group" aria-label="Example households">
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
@@ -298,7 +300,7 @@ export default function HouseholdCards({
             <div
               key={example.id}
               className={`household-card ${pressed ? "is-selected" : ""}`.trim()}
-              style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index }}
+              style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={1.8} />
@@ -349,13 +351,6 @@ export default function HouseholdCards({
           );
         })}
       </div>
-      <YourHouseholdCard
-        selected={yoursSelected}
-        formOpen={formOpen}
-        formId={formId}
-        change={yoursChange}
-        onClick={() => choose(onYours)}
-      />
       </div>
       </div>
     </section>
@@ -370,7 +365,7 @@ const YOURS_HINTS = [
 ];
 
 /**
- * "Your household", below the examples, the width of the grid: an
+ * "Your household", above the examples, the width of the grid: an
  * invitation to enter your own, with what the form asks first, and once
  * calculated, your result. Pressing it opens the form below (pressed, with
  * a tick, as an example is); pressing it again closes it.
@@ -432,9 +427,9 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
 
 /**
  * The cards folded: a chip for each card, in the cards' order and grid
- * (the eight examples, then Your household the width of the grid below
- * them), each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household last (choosing it opens
+ * (Your household the width of the grid, then the eight examples below
+ * it), each its icon, a short name and its change, the chosen one in its
+ * colour with a tick. One listbox, Your household first (choosing it opens
  * the form, which it controls; choosing it again while chosen closes or
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
@@ -444,6 +439,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
   // A chip's accent only while the catalogue publishes its measures (#104)
   const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
   const items = [
+    { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
     ...examples.map((example) => ({
       id: example.id,
       label: example.label,
@@ -452,10 +448,8 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       change: presets ? (cardFigures(example, presets[example.id], year)?.change ?? null) : null,
       accent: accentOf(example),
     })),
-    { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
   ];
-  const yours = items.length - 1;
-  const selected = yoursSelected ? yours : items.findIndex((item) => item.id !== null && item.id === value);
+  const selected = yoursSelected ? 0 : items.findIndex((item) => item.id !== null && item.id === value);
   // The chip Tab lands on: the chosen one, until the arrow keys move on
   // (a new choice starts from it again)
   const [moved, setMoved] = useState({ from: selected, index: null });

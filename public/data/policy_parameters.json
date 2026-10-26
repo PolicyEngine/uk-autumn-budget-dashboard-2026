@@ -16,12 +16,21 @@
   "measures": {
     "fuel_duty_rise_deferral": {
       "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "display": "schedule",
       "rows": [
         {
-          "label": "Fuel duty from each date it changes",
+          "label": "Fuel duty",
           "unit": "pence_per_litre",
+          "unit_words": "pence a litre",
           "primary": true,
           "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 52.95,
+              "after": 52.95
+            },
             {
               "key": "2027-01-01",
               "label": "1 January 2027",
@@ -100,6 +109,7 @@
         {
           "label": "Fuel duty, averaged over the year",
           "unit": "pence_per_litre",
+          "unit_words": "pence a litre",
           "primary": false,
           "points": [
             {
@@ -161,10 +171,12 @@
     },
     "state_pension_income_tax_protection": {
       "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+      "display": "path",
       "rows": [
         {
           "label": "Income tax allowance over State Pension age",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -226,10 +238,12 @@
     },
     "warm_home_discount_top_up": {
       "description": "Candidate measure. The Warm Home Discount rises from £150 to £250 for winter 2026-27 only: £100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
+      "display": "switch",
       "rows": [
         {
           "label": "Warm Home Discount",
           "unit": "gbp",
+          "unit_words": "£ a household, once",
           "primary": true,
           "points": [
             {
@@ -256,10 +270,12 @@
     },
     "domestic_electricity_zero_vat": {
       "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
+      "display": "switch",
       "rows": [
         {
-          "label": "VAT on domestic electricity in Great Britain while in force",
+          "label": "VAT on domestic electricity in Great Britain",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -284,6 +300,7 @@
         {
           "label": "VAT on domestic electricity in Great Britain, averaged over the year",
           "unit": "percent",
+          "unit_words": null,
           "primary": false,
           "points": [
             {
@@ -345,10 +362,12 @@
     },
     "employer_ni_relief_under_25s": {
       "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
+      "display": "before-after",
       "rows": [
         {
           "label": "Employer National Insurance rate, employees aged 21 to 24",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -409,6 +428,7 @@
         {
           "label": "Earnings relieved for ages 21 to 24, up to",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": false,
           "points": [
             {
@@ -469,10 +489,12 @@
     },
     "threshold_freeze_2031_32": {
       "description": "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year, 2031-32, instead of rising with inflation to £12,830 and £38,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at £12,570 and £50,270 too; the employer secondary threshold is not held.",
+      "display": "table",
       "rows": [
         {
           "label": "Personal allowance",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -532,6 +554,7 @@
         {
           "label": "Higher rate threshold",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -592,6 +615,7 @@
         {
           "label": "Basic rate band",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": false,
           "points": [
             {
@@ -652,10 +676,12 @@
     },
     "badr_lifetime_limit_cut": {
       "description": "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+      "display": "before-after",
       "rows": [
         {
           "label": "Business Asset Disposal Relief lifetime limit",
           "unit": "gbp",
+          "unit_words": "£ of gains over a lifetime",
           "primary": true,
           "points": [
             {
@@ -716,10 +742,12 @@
     },
     "road_fuel_vat_cut": {
       "description": "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
+      "display": "switch",
       "rows": [
         {
-          "label": "VAT on petrol and diesel while in force",
+          "label": "VAT on petrol and diesel",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -744,6 +772,7 @@
         {
           "label": "VAT on petrol and diesel, averaged over the year",
           "unit": "percent",
+          "unit_words": null,
           "primary": false,
           "points": [
             {
@@ -805,10 +834,12 @@
     },
     "plan_2_threshold_unfreeze": {
       "description": "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to £30,267 in 2027-28), reversing the freeze at £29,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
+      "display": "path",
       "rows": [
         {
           "label": "Plan 2 repayment threshold",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {

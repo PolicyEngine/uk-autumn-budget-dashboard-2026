@@ -5,7 +5,8 @@
 // step closes the gap; the package total ends it. People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
-// throughout. Measures that move no one are one muted line, not empty rows.
+// throughout. Measures that move no one are one line in More info, not
+// empty rows.
 // The poverty choice is shared with the Change in the poverty rate chart
 // beside it (usePovertyChoice, ?poverty=).
 
@@ -21,17 +22,16 @@ import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
+import { shortNameOf } from "../utils/policyDetails";
 import { legendMembership } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
 
-// Why a measure moves no one across the poverty line, where the model says
-// so by construction: poverty is measured on household income (HBAI), which
-// counts neither prices nor capital gains (policyDetails.js's
-// povertyNoEffect, used only while it describes the published measure)
-const noEffectReason = (measure) => policyDetailsFor(measure)?.povertyNoEffect ?? null;
+// Why the measures with no effect move no one: one sentence, true of every
+// such measure, not a reason per measure
+const NO_EFFECT_TEXT =
+  "These measures change prices (VAT, fuel duty), capital gains or employers' costs, which the income used to measure poverty (household net income before or after housing costs) doesn't include, or they move no one across the poverty line in this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -154,15 +154,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     <>No measure on its own moves anyone across this line in {year}.</>
   );
 
-  const reasons = [...new Set(zero.map((m) => noEffectReason(m)).filter(Boolean))];
-  const zeroInfo = [
-    reasons.includes("prices") && "VAT and fuel duty change prices, which the household income poverty is measured on does not count.",
-    reasons.includes("gains") && "Business Asset Disposal Relief taxes capital gains, which that income leaves out too.",
-    zero.some((m) => !noEffectReason(m)) && `The others change incomes in ${year} but move no one across this line on their own.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
     <LsCard
       title="Which measures move poverty"
@@ -197,6 +188,13 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       controls={!choiceAbove && <ControlBar name={metric.title} options={controls} />}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
+          {/* The measures that move no one, and why, here rather than under
+              the chart */}
+          {zero.length > 0 && (
+            <p className="wf-none">
+              <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
+            </p>
+          )}
           <p>
             Each step is a selected measure modelled on its own, largest first, and the package bar all of them together,
             in {year}: the change in {metric.phrase}.{metric.detail ? ` ${metric.detail}` : ""}
@@ -271,23 +269,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           </div>
           <FloatingTooltip tip={tip} />
         </div>
-      </div>
-      <div className="chart-legend">
-        {zero.length > 0 && (
-          <p className="wf-none">
-            No effect on poverty: {zero.map((m) => m.name).join(", ")}
-            {zeroInfo && (
-              <span className="info-icon-wrapper wf-info">
-                <button type="button" className="info-icon" aria-label="Why these move no one">
-                  i
-                </button>
-                <span className="info-tooltip" role="tooltip">
-                  {zeroInfo}
-                </span>
-              </span>
-            )}
-          </p>
-        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

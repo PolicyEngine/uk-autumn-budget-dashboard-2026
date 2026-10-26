@@ -16,7 +16,9 @@ import "./ControlBar.css";
  * @param {Object} props
  * @param {React.ReactNode} [props.children] - The primary pills
  * @param {Array<{label: string, value: string, onChange: (value: string) => void,
- *   options: Array<{value: string, label: string, badge?: string, disabled?: boolean, title?: string}>}>} [props.options]
+ *   options: Array<{value: string, label: string, badge?: string, disabled?: boolean, title?: string}>}
+ *   | {label: string, summary: string, control: React.ReactNode}>} [props.options] - A
+ *   group with `control` shows that control in place of segments (the years compared)
  * @param {string} [props.name] - What the options are for, for the dialog's name
  */
 export default function ControlBar({ children, options = [], name = "Chart" }) {
@@ -31,6 +33,8 @@ export default function ControlBar({ children, options = [], name = "Chart" }) {
 
 /** The short form of a group's chosen option, for the summary. */
 function chosenText(group) {
+  // A group with its own control (the years compared) gives its summary
+  if (group.control) return group.summary ?? "";
   const option = group.options.find((candidate) => candidate.value === group.value) ?? group.options[0];
   return option?.summary ?? option?.label ?? "";
 }
@@ -135,11 +139,24 @@ function OptionsButton({ groups, name }) {
               </button>
             </div>
             {groups.map((group) => (
-              <Segmented key={group.label} group={group} />
+              group.control ? <CustomGroup key={group.label} group={group} /> : <Segmented key={group.label} group={group} />
             ))}
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** A choice with its own control (two year lists), labelled as the others. */
+function CustomGroup({ group }) {
+  const labelId = useId();
+  return (
+    <div className="control-bar-group" role="group" aria-labelledby={labelId}>
+      <span id={labelId} className="control-bar-group-label">
+        {group.label}
+      </span>
+      {group.control}
     </div>
   );
 }

@@ -5,7 +5,7 @@
 // file without it falls back to income_by_decile's quintiles and deciles
 // (all people). The view of the Growth across the distribution card.
 
-import { housingOption } from "../controlOptions";
+import { housingOption, yearsOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
 import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
@@ -59,11 +59,28 @@ const POPULATIONS = { all: "All people", non_pensioners: "Non-pensioners" };
 // households their growth swings from year to year. Quintiles and deciles
 // keep their bottom group, which is wider and steadier.
 const SKIPPED = { vigintile: 1 };
-export const VIGINTILE_NOTE =
-  "The lowest-income 5% are left out: incomes at the very bottom of the survey are often temporarily low or under-reported, so they say little about living standards and swing from year to year.";
 const VIGINTILE_ABOUT =
   "Vigintile 1, the lowest-income 5% of people, is left out. Incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, so they say little about living standards, and with few households behind them their growth swings from year to year. The chart starts at vigintile 2, the 5th to 10th percentile.";
+// Decile 1 after housing costs is kept, but its growth swings: a short
+// line under the key, the fuller one in About this chart
+export const DECILE_AHC_NOTE =
+  "The lowest-income tenth after housing costs swings from year to year: incomes at the very bottom of the survey are often temporarily low or under-reported.";
+const DECILE_AHC_ABOUT =
+  "Decile 1 after housing costs, the lowest-income tenth, is shown, but read it with care: incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, while housing costs are not, so income after housing costs there is small and its growth swings from year to year.";
 const VIEWS = { period: "Whole period", annual: "Year by year" };
+
+/** "−0.9%" or "+0.1%"; an unsigned "0.0" for a change that rounds to zero. */
+const signed = (v, unit) => {
+  const r = round1(v);
+  return `${r > 0 ? "+" : r < 0 ? "−" : ""}${formatOneDp(Math.abs(r))}${unit}`;
+};
+/** "−0.9% to +0.1%", or one value when every year rounds the same. */
+const signedRange = (values, unit) => {
+  const r = values.map(round1);
+  const lo = Math.min(...r);
+  const hi = Math.max(...r);
+  return lo === hi ? signed(lo, unit) : `${signed(lo, unit)} to ${signed(hi, unit)}`;
+};
 
 /**
  * One series' rows, { year, real_median: [...], cumulative: [...],
@@ -204,7 +221,22 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const highAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[n - 1] * 100);
   const income = `real median income growth (${basisShort})${who}`;
 
-  const summary = diff ? (
+  // The card's one visible line: the lowest and highest group shown
+  const unit = diff ? "pp" : "%";
+  const ends = `${skip ? "Second-lowest" : "Lowest"} vs highest ${g.share}`;
+  const summary = annual ? (
+    <>
+      {ends}: <strong>{signedRange(lowAnnual, unit)}</strong> vs <strong>{signedRange(highAnnual, unit)}</strong> a year
+      {diff ? " from the measures" : ""}.
+    </>
+  ) : (
+    <>
+      {ends}: <strong>{signed(periodRows[0].growth, unit)}</strong> vs <strong>{signed(periodRows.at(-1).growth, unit)}</strong>
+      {diff ? " from the measures" : ""}.
+    </>
+  );
+  // The full sentence, in About this chart
+  const sentence = diff ? (
     annual ? (
       <>
         Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, the measures&apos; effect on {income} in the {lowest} is{" "}
@@ -228,12 +260,17 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     </>
   );
 
+  // Under the key only the short decile-1 (AHC) caution; the vigintile
+  // note is in About this chart, with the key starting at vigintile 2
+  const legendNote = grouping === "decile" && basis === "ahc" ? DECILE_AHC_NOTE : null;
+
   // The years compared are the section's (CurrentLawSection); the view is
   // the card's pill and the rest sits under Options (ControlBar)
   const controls = {
     // One Options pill: the view first, then the groups, housing costs and
     // population ("Year by year · Vigintiles · Before housing costs · All people")
     options: [
+      yearsOption(twinRows?.map((r) => r.year) ?? [], range, setRange),
       {
         label: "View",
         value: view,
@@ -260,11 +297,11 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
   const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}, ranked among themselves.` : "";
   const measuresAbout = !measures
-    ? ""
+    ? " Without the measures (current law): real growth of each group's median income before any Budget measure."
     : diff
       ? " With the selected measures: each bar is the measures' effect on that growth, in percentage points: real growth with the measures less growth without them, from the same pair of simulations (the measure's or the package's run and its own baseline)."
       : " With the selected measures: current law's growth (the OBR forecast tab's chart) plus the measures' effect on it, from the same pair of simulations (the measure's or the package's run and its own baseline). So with less without is exactly the effect.";
-  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}`;
+  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}${grouping === "decile" && basis === "ahc" ? ` ${DECILE_AHC_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
   const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected measures" : ", with the selected measures"}` : t);
 
@@ -273,6 +310,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     summary,
     about,
     notes: [
+      sentence,
       basis === "ahc" && data.meta.cpi_ahc_note,
       grouping === "vigintile" &&
         `The second-lowest-income twentieth's median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,
@@ -332,7 +370,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         barGap={n > 10 ? 0 : 1}
         maxBarSize={n > 5 ? 14 : 24}
         barCategoryGap={n > 10 ? "8%" : "20%"}
-        legendNote={skip ? VIGINTILE_NOTE : null}
+        legendNote={legendNote}
       />
     ) : (
       <LsBarChart
@@ -342,7 +380,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         xLabel={axisLabel}
         series={[{ key: "growth", name: `${diff ? "Effect on real change" : "Real change"}, ${fyDash(first.year)} to ${fyDash(end.year)}`, colour: colours.at(-1) }]}
         cellColours={colours}
-        legendNote={skip ? VIGINTILE_NOTE : null}
+        legendNote={legendNote}
         legendItems={legendItems}
         yFormat={diff ? ppTick : pctTick}
         tooltipFormat={diff ? pp : pct}

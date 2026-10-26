@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import PolicyCards, {
   BUDGET_DAY_MONTH,
   TIMELINE_START_YEAR,
@@ -186,104 +186,137 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"),
   );
   const alpha = catalogue.byId.get(ALPHA);
-  const mock = {
-    measures: {
-      [ALPHA]: {
-        description: alpha.description,
-        rows: [
-          {
-            label: "A threshold",
-            unit: "gbp",
-            primary: true,
-            points: [2026, 2027, 2028, 2029, 2030, 2031].map((year) => ({
-              key: String(year),
-              label: `${year}-${String((year + 1) % 100).padStart(2, "0")}`,
-              year,
-              before: 1000,
-              after: year >= 2027 ? 1200 : 1000,
-            })),
-            source: { before: { kind: "engine_parameter" }, after: { kind: "measure_parameter_change" } },
-          },
-          {
-            label: "A rate",
-            unit: "percent",
-            primary: false,
-            points: [{ key: "2027", label: "2027-28", year: 2027, before: 0.2, after: 0.15 }],
-            source: { before: { kind: "engine_parameter" }, after: { kind: "modifier_constant" } },
-          },
-        ],
-      },
-    },
+  const yearly = (before, after) =>
+    [2026, 2027, 2028, 2029, 2030, 2031].map((year) => ({
+      key: String(year),
+      label: `${year}-${String((year + 1) % 100).padStart(2, "0")}`,
+      year,
+      before: before(year),
+      after: after(year),
+    }));
+  const source = { before: { kind: "engine_parameter" }, after: { kind: "modifier_constant" } };
+  const tables = (display, rows) => ({ measures: { [ALPHA]: { description: alpha.description, display, rows } } });
+  const rising = tables("path", [
+    { label: "A threshold", unit: "gbp", unit_words: "£ a year", primary: true, source,
+      points: yearly(() => 1000, (year) => (year >= 2027 ? 1000 + 100 * (year - 2026) : 1000)) },
+  ]);
+  const card = (parameterTables, policy = alpha) => {
+    render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} parameterTables={parameterTables} />);
+    return screen.getByRole("listitem");
   };
 
-  it("shows each card's table from the file, the years that differ first", () => {
-    const id = "badr_lifetime_limit_cut";
-    render(
-      <PolicyCards
-        policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]}
-        selectedPolicies={[id]}
-        parameterTables={file}
-      />,
-    );
-    const table = screen.getByRole("region", { name: "What changes" });
-    const lines = within(table).getAllByRole("row").filter((row) => row.classList.contains("pspec-line"));
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toHaveTextContent("2027-28 to 2031-32£1,000,000£500,000−£500,000");
-    expect(lines[0].querySelector(".pspec-chip")).toHaveClass("is-loss");
+  it("path: a step plot of current law against the measure, labelled once, values hidden for screen readers", () => {
+    const block = within(card(rising)).getByRole("region", { name: "What changes" });
+    expect(block.querySelector(".pchg-caption")).toHaveTextContent("A threshold, £ a year");
+    const plot = within(block).getByRole("img");
+    expect(plot.getAttribute("aria-label")).toContain("2029-30: £1,000 → £1,300 (+£300)");
+    expect(plot.querySelector(".pchg-gap").getAttribute("d")).not.toBe("");
+    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["+£500"]);
+    expect(plot).toHaveClass("is-gain");
+    // The values' table sits inside a visually hidden box (a table ignores
+    // a 1px width of its own)
+    const hidden = block.querySelector("table");
+    expect(hidden.parentElement).toHaveClass("policy-sr-only");
+    expect(within(hidden).getAllByRole("row")).toHaveLength(7);
   });
 
-  it("puts a card's table between its summary and its timing", () => {
-    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const card = screen.getByRole("listitem");
-    const order = [...card.children].map((child) => child.className);
+  it("puts the block between the card's summary and its timing", () => {
+    const order = [...card(rising).children].map((child) => child.className);
     expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-summary") + 1);
     expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-spec") + 1);
   });
 
-  it("collapses to the primary rows' changes, and opens every year and row", () => {
-    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const table = screen.getByRole("region", { name: "What changes" });
-    const lines = () => table.querySelectorAll(".pspec-line");
-    expect(lines()).toHaveLength(1);
-    expect(lines()[0]).toHaveTextContent("2027-28 to 2031-32£1,000£1,200+£200");
-    expect(lines()[0].querySelector(".pspec-chip")).toHaveClass("is-gain");
-    expect(table).not.toHaveTextContent("A rate");
-    const button = within(table).getByRole("button", { name: "Show all years" });
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(button);
-    expect(lines()).toHaveLength(7);
-    expect(lines()[0]).toHaveTextContent("2026-27£1,000£1,000No change");
-    expect(table).toHaveTextContent("A rate");
-    expect(lines()[6]).toHaveTextContent("2027-2820%15%−5pp");
-    expect(within(table).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
+  it("marks a picked step on the card's timeline, and says it in words", () => {
+    const item = card(rising, { ...alpha, inForce: { from: "2027-04" } });
+    const plot = item.querySelector(".pchg-svg");
+    plot.focus();
+    for (let i = 0; i < 4; i += 1) fireEvent.keyDown(plot, { key: "ArrowRight" });
+    expect(item.querySelector(".pchg-tip")).toHaveTextContent("2029-30: £1,000 → £1,300 (+£300)");
+    const band = item.querySelector(".ptl-year-band");
+    expect(parseFloat(band.style.left)).toBeCloseTo(300 / 6);
+    expect(item.querySelector(".policy-timeline-labels > .is-lit").textContent).toContain("2029-30");
+    fireEvent.keyDown(plot, { key: "Escape" });
+    expect(item.querySelector(".ptl-year-band")).toBeNull();
   });
 
-  it("marks a hovered line's years on the timeline", () => {
-    const policy = { ...alpha, inForce: { from: "2027-04" } };
-    render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const card = screen.getByRole("listitem");
-    expect(card.querySelector(".ptl-year-band")).toBeNull();
-    fireEvent.mouseEnter(card.querySelector(".pspec-line"));
-    const band = card.querySelector(".ptl-year-band");
-    expect(parseFloat(band.style.left)).toBeCloseTo(100 / 6);
-    expect(parseFloat(band.style.width)).toBeCloseTo(500 / 6);
-    expect([...card.querySelectorAll(".policy-timeline-labels > .is-lit")].map((label) => label.textContent.trim().slice(0, 7))).toEqual([
-      "2027-28", "2028-29", "2029-30", "2030-31", "2031-32",
+  it("before-after: the two values and, for an amount, the change; a rate as two rates", () => {
+    const amount = tables("before-after", [
+      { label: "A limit", unit: "gbp", unit_words: "£", primary: true, source, points: yearly(() => 1000, (y) => (y >= 2027 ? 500 : 1000)) },
     ]);
-    fireEvent.mouseLeave(card.querySelector(".pspec-line"));
-    expect(card.querySelector(".ptl-year-band")).toBeNull();
+    let block = within(card(amount)).getByRole("region", { name: "What changes" });
+    expect(block).toHaveTextContent("A limit, from 2027-28£1,000 → £500−£500");
+    cleanup();
+    const rate = tables("before-after", [
+      { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
+    ]);
+    block = within(card(rate)).getByRole("region", { name: "What changes" });
+    expect(block).toHaveTextContent("A rate, from 2027-2815% → 0%");
+    expect(block.textContent).not.toMatch(/pp\b/);
+    expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
 
-  it("shows no table for a measure described otherwise than when the file was built, keeping the empty slot", () => {
-    const changed = { ...alpha, description: "Changed on Budget day." };
-    render(<PolicyCards policies={[changed]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const card = screen.getByRole("listitem");
-    expect(screen.queryByRole("region", { name: "What changes" })).toBeNull();
-    expect(card.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
+  it("table: only the parameters and year that differ", () => {
+    const three = tables("table", ["A", "B", "C"].map((label, i) => ({
+      label, unit: "gbp", unit_words: "£ a year", primary: i < 2, source,
+      points: yearly(() => 100 * (i + 1), (y) => (y === 2031 ? 100 * (i + 1) - 10 : 100 * (i + 1))),
+    })));
+    const table = within(card(three)).getByRole("table");
+    expect(within(table).getAllByRole("row").map((row) => row.textContent)).toEqual([
+      "2031-32Current lawWith the measureChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
+    ]);
   });
 
-  it("shows no table without the file", () => {
-    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={null} />);
-    expect(screen.queryByRole("region", { name: "What changes" })).toBeNull();
+  it("switch: nothing in the block; the timeline's in-force span says the change", () => {
+    const window = tables("switch", [
+      { label: "A VAT rate", unit: "percent", unit_words: null, primary: true, source,
+        points: [{ key: "2026-10-01/2028-03-31", label: "October 2026 to March 2028", year: 2026, before: 0.05, after: 0 }] },
+    ]);
+    const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
+    expect(within(item).queryByRole("region", { name: "What changes" })).toBeNull();
+    expect(item.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
+    expect(item.querySelector(".ptl-chip")).toHaveTextContent("5% → 0%18 months");
+    expect(within(item).getByRole("img", { name: /While in force: 5% → 0%\.$/ })).toBeTruthy();
+  });
+
+  it("draws the real file's nine measures each their own way", () => {
+    const cases = [
+      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "cost", ".pchg-svg"],
+      ["state_pension_income_tax_protection", "State Pension income tax protection", "cost", ".pchg-svg"],
+      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "cost", ".pchg-svg"],
+      ["badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue", ".pchg-ba"],
+      ["employer_ni_relief_under_25s", "Employer NI relief for under-25s", "cost", ".pchg-ba"],
+      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "revenue", ".pchg-table"],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", null],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", null],
+      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", null],
+    ];
+    const chips = { warm_home_discount_top_up: "£150 → £250", domestic_electricity_zero_vat: "5% → 0%", road_fuel_vat_cut: "20% → 15%" };
+    for (const [id, name, direction, selector] of cases) {
+      render(<PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />);
+      const item = screen.getByRole("listitem");
+      if (selector) expect(item.querySelector(selector), id).toBeTruthy();
+      else expect(item.querySelector(".ptl-change"), id).toHaveTextContent(chips[id]);
+      cleanup();
+    }
+  });
+
+  it("shows the fuel duty yearly averages only when asked", () => {
+    render(<PolicyCards policies={[published("fuel_duty_rise_deferral", "Fuel duty rises deferred")]} selectedPolicies={["fuel_duty_rise_deferral"]} parameterTables={file} />);
+    const button = screen.getByRole("button", { name: "Show the yearly averages" });
+    expect(screen.queryByRole("table", { name: /As modelled/ })).toBeNull();
+    fireEvent.click(button);
+    const table = screen.getByRole("table", { name: /As modelled/ });
+    expect(within(table).getAllByRole("row")).toHaveLength(7);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
+  });
+
+  it("shows nothing for a measure described otherwise than when the file was built, keeping the empty slot", () => {
+    const item = card(rising, { ...alpha, description: "Changed on Budget day." });
+    expect(within(item).queryByRole("region", { name: "What changes" })).toBeNull();
+    expect(item.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing without the file", () => {
+    expect(within(card(null)).queryByRole("region", { name: "What changes" })).toBeNull();
   });
 });

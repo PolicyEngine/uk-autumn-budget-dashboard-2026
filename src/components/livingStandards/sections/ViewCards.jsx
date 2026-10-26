@@ -36,10 +36,9 @@ export function IncomesOverTimeCard({ data }) {
 IncomesOverTimeCard.requires = "living_standards";
 
 export function InequalityOverTimeCard({ data }) {
-  // The years come from the section's Years compared, above the cards
-  // (SectionYearRange), so the card has no years pill of its own
-  const [range] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
-  const inequality = useInequalityView(data, range, null);
+  // The years compared are the first choice in the card's Options pill
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const inequality = useInequalityView(data, range, setRange);
   return (
     <ViewCard
       title="Inequality over time (current law)"
@@ -68,10 +67,9 @@ export function GrowthCard({ data, onShowTab }) {
       id={GROWTH_CURRENT_LAW_ANCHOR}
       title="Growth across the distribution"
       subtitle={
-        <>
-          Without the measures (current law): real growth of each group&apos;s median income.{" "}
-          <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
-        </>
+        // Only the link to the twin; "without the measures" is said in
+        // About this chart
+        <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
       }
       icon="bars"
       name="Distribution view"

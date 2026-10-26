@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import GrowthWithMeasuresCard, { WITH_MEASURES_TITLE, clearGrowthWithMeasuresCache } from "./GrowthWithMeasuresCard";
 import { clearOutlookCache } from "../../utils/livingStandards/outlook";
 
@@ -31,7 +31,9 @@ describe("Growth across the distribution, with the selected measures", () => {
   it("shows the measures' effect by default, labelled with the measures, with a link to its twin", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32"]} twinLink={<a href="?tab=outlook&sub=living">twin</a>} />);
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
-    expect(screen.getByText(/With the measures: real growth/)).toBeTruthy();
+    // The header holds only the twin link; "with the measures" is in About
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(screen.getByText(/With the selected measures: each bar is the measures' effect/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
     expect(screen.getAllByText(/Difference from current law/).length).toBeGreaterThan(0);
     expect(screen.getByText(/the measures' effect on real median income growth/)).toBeTruthy();
