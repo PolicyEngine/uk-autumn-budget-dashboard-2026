@@ -42,6 +42,8 @@ export default function LsCard({
   notes,
   source,
   sourceText,
+  // A chart/table switch (ViewToggle), in the header left of Download
+  viewToggle,
   // A footer of the card's own in place of "About this chart" (e.g. a
   // measures chart's "More info")
   footer,
@@ -88,7 +90,14 @@ export default function LsCard({
             summary && <p className="chart-description">{summary}</p>
           )}
         </div>
-        {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />}
+        {viewToggle ? (
+          <div className="chart-header-actions">
+            {viewToggle}
+            {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />}
+          </div>
+        ) : (
+          downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />
+        )}
       </div>
       <div className="chart-controls ls-controls">{controls}</div>
       {/* display: contents, so the plot, legend and logo are rows of the card */}

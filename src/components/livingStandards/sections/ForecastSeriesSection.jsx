@@ -7,7 +7,7 @@
 // this chart" and downloads.
 
 import LsCard from "../LsCard";
-import ControlBar from "../../ControlBar";
+import ViewToggle from "../../ViewToggle";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH } from "../../../utils/livingStandards/baseline";
@@ -107,23 +107,8 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
           `; ${seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName).join(" and ")}: ${CSV_SOURCES.peDerived}`}
       </>
     ),
-    // Chart or table: one choice for every card, in each card's Options pill
-    controls: onViewChange && (
-      <ControlBar
-        name={card.title}
-        options={[
-          {
-            label: "Show as",
-            value: view,
-            onChange: onViewChange,
-            options: [
-              { value: "chart", label: "Chart" },
-              { value: "table", label: "Table" },
-            ],
-          },
-        ]}
-      />
-    ),
+    // Chart or table: one choice for every card, as icons in its header
+    viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
   };
 
   if (view === "table") {
