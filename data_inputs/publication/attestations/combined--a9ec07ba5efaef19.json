@@ -1,8 +1,8 @@
 {
   "measure_id": "combined--a9ec07ba5efaef19",
-  "receipt_sha256": "21fd272f6a036250778879f798be36111f2998b98395fe9980d3592548c3b47e",
-  "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated combined run (14 Drill 5 measures, including the hand-written employer NI relief) on drill5-wednesday-path only so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
+  "receipt_sha256": "bede49c1be3585a3572310790c0da1ab4b482bd103e704148a203073248241a5",
+  "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated combined run (14 Drill 5 measures on policyengine-uk 2.151.0, including the two hand-written modifiers) on drill5-wednesday-path-newpair only so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
   "checker": "DRILL 5 MOCK checker (Budget coordinator)",
   "second": "DRILL 5 MOCK second (Budget coordinator)",
-  "released_at": "2026-10-26T13:15:00Z"
+  "released_at": "2026-10-26T14:45:00Z"
 }
