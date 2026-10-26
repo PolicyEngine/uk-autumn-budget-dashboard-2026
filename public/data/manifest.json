@@ -1,0 +1,788 @@
+{
+  "basis": {
+    "calibration": {
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+      "status": "pre_budget",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "forecast": {
+      "source": "policyengine-uk default economic assumptions",
+      "status": "pre_budget",
+      "vintage": "as shipped in the installed policyengine-uk"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
+  "combined": {
+    "combined--a9ec07ba5efaef19": {
+      "artifact": "artifacts/combined--a9ec07ba5efaef19/8411be48a1d64e4e",
+      "artifact_sha256": "8411be48a1d64e4e6a857bdeb65a632c4d37ee43fdbb282fba15ddf17fa1af12",
+      "attestation": {
+        "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+        "measure_id": "combined--a9ec07ba5efaef19",
+        "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch combined run (14 Drill 5 measures, including the hand-written employer NI relief) so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
+        "receipt_sha256": "430adefc5c2d0fbd25fc7abcf2edf5d366904ecee211f8828de5b5244b68727e",
+        "released_at": "2026-10-26T10:00:00+00:00",
+        "second": "REHEARSAL MOCK second (Budget coordinator)"
+      },
+      "data_limits": [],
+      "description": "One simulation of: badr_lifetime_limit_cut, cgt_main_rates_up_2pp, council_tax_surcharge_from_1_5m, dividend_rates_up_1pp, domestic_electricity_zero_vat, domestic_gas_zero_vat, employer_ni_relief_under_25s, employer_ni_secondary_threshold_raised, fuel_duty_rise_deferral, lha_reset_april_2027, state_pension_income_tax_protection, threshold_freeze_2031_32, uc_standard_allowance_below_cpi, warm_home_discount_top_up",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "measures": [
+        "badr_lifetime_limit_cut",
+        "cgt_main_rates_up_2pp",
+        "council_tax_surcharge_from_1_5m",
+        "dividend_rates_up_1pp",
+        "domestic_electricity_zero_vat",
+        "domestic_gas_zero_vat",
+        "employer_ni_relief_under_25s",
+        "employer_ni_secondary_threshold_raised",
+        "fuel_duty_rise_deferral",
+        "lha_reset_april_2027",
+        "state_pension_income_tax_protection",
+        "threshold_freeze_2031_32",
+        "uc_standard_allowance_below_cpi",
+        "warm_home_discount_top_up"
+      ],
+      "member_outputs_sha256": {
+        "badr_lifetime_limit_cut": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5",
+        "cgt_main_rates_up_2pp": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+        "council_tax_surcharge_from_1_5m": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+        "dividend_rates_up_1pp": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
+        "domestic_electricity_zero_vat": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+        "domestic_gas_zero_vat": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
+        "employer_ni_relief_under_25s": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+        "employer_ni_secondary_threshold_raised": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
+        "fuel_duty_rise_deferral": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+        "lha_reset_april_2027": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
+        "state_pension_income_tax_protection": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+        "threshold_freeze_2031_32": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+        "uc_standard_allowance_below_cpi": "2439937922eb078f0e98996e85852b550a58fb87be5cb8c8e7c4ef9528b27cc7",
+        "warm_home_discount_top_up": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+      },
+      "name": "Combined: Business Asset Disposal Relief restricted, Capital gains tax main rates up 2 points, Council tax surcharge from \u00a31.5m, Dividend tax rates up 1 point, Zero VAT on domestic electricity, Zero VAT on domestic gas, Employer NI relief for under-25s, Employer NI threshold raised by \u00a31,000, Fuel duty rises deferred, Local Housing Allowance reset in April 2027, State Pension income tax protection, Threshold freeze to 2031-32, UC standard allowance uprated below CPI, Warm Home Discount top-up",
+      "outputs_sha256": "deaee7a18e25f9a3bf9730b1a7abd7ed361b9df061f947166822578c6fb120d4",
+      "receipt_sha256": "106216e1a84aa913d827af29f9f00fdf49de7c6ca270e144d77c69bdfe397647",
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    }
+  },
+  "execution": {
+    "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+    "identity": {
+      "certificate": {
+        "bundle_version": "6.10.2",
+        "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "certified_for_core_version": "3.33.3",
+        "certified_for_model_version": "2.132.6",
+        "compatibility_basis": "built_with_model_package",
+        "country_id": "uk"
+      },
+      "certification_status": "certified",
+      "core": {
+        "name": "policyengine-core",
+        "version": "3.33.3"
+      },
+      "country_id": "uk",
+      "data": {
+        "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "build_model_version": "2.132.6",
+        "data_package": "microcosm-data",
+        "dataset": "microcosm_uk_2024_25",
+        "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_version": "0.1.0"
+      },
+      "model": {
+        "name": "policyengine-uk",
+        "version": "2.132.6"
+      },
+      "schema_version": 1,
+      "wrapper": {
+        "name": "policyengine",
+        "version": "6.10.2"
+      }
+    }
+  },
+  "flat_aliases": {},
+  "flat_files": {},
+  "measures": {
+    "badr_lifetime_limit_cut": {
+      "approval": {
+        "artifact_sha256": "661e9695a09eed5cd5dd6e245b75955ecfe37aae7ad7383b062262da7cf99c58",
+        "at": "2026-10-26T09:45:18.723317+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5"
+      },
+      "artifact": "artifacts/badr_lifetime_limit_cut/661e9695a09eed5c",
+      "artifact_sha256": "661e9695a09eed5cd5dd6e245b75955ecfe37aae7ad7383b062262da7cf99c58",
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from \u00a31 million to \u00a3500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Business Asset Disposal Relief restricted",
+      "outputs_sha256": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5",
+      "receipt_sha256": "0bd8bc16ed5b4afbcde3f031e6b79cc0b22762abfd4d64497b09758075809770",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "cgt_main_rates_up_2pp": {
+      "approval": {
+        "artifact_sha256": "60b515f198c58c36bd9f46d1b31127f0f0d21bec496e9a974ab7515c99cd6439",
+        "at": "2026-10-26T09:45:24.477103+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480"
+      },
+      "artifact": "artifacts/cgt_main_rates_up_2pp/60b515f198c58c36",
+      "artifact_sha256": "60b515f198c58c36bd9f46d1b31127f0f0d21bec496e9a974ab7515c99cd6439",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. From 6 April 2027 the main capital gains tax rates rise from 18% and 24% to 20% and 26%.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Capital gains tax main rates up 2 points",
+      "outputs_sha256": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+      "receipt_sha256": "6b599def2f7fbe50059c9b2a36de2ea4c049ecbfe1c77c89cc8ed8054a256366",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "accepted"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "council_tax_surcharge_from_1_5m": {
+      "artifact": "artifacts/council_tax_surcharge_from_1_5m/7acbf72c9caae614",
+      "artifact_sha256": "7acbf72c9caae6144a24d3868cec82c898dd4dc24b83da31ea7a383286b9d234",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. The High Value Council Tax Surcharge starts at \u00a31.5 million instead of \u00a32 million (2026 prices, uprated as current law), so homes from \u00a31.5 million pay the first band's \u00a32,500 from April 2028.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Council tax surcharge from \u00a31.5m",
+      "outputs_sha256": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+      "receipt_sha256": "cab019efc7e09a034a1085334707dcc7129931d99fbbc681107c4b03bb0f39b5",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "dividend_rates_up_1pp": {
+      "approval": {
+        "artifact_sha256": "d68a9ebe81fa37307324de977607eac453e9df28c8eec13e2f3c387329f53cd9",
+        "at": "2026-10-26T09:45:29.874737+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c"
+      },
+      "artifact": "artifacts/dividend_rates_up_1pp/d68a9ebe81fa3730",
+      "artifact_sha256": "d68a9ebe81fa37307324de977607eac453e9df28c8eec13e2f3c387329f53cd9",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. From 6 April 2027 each dividend tax rate rises by one point (basic 10.75% to 11.75%).",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Dividend tax rates up 1 point",
+      "outputs_sha256": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
+      "receipt_sha256": "eb960e66c81c3ca58b29fac52dd7eadb26b57196ebe054b50607ecc987ff52ba",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "domestic_electricity_zero_vat": {
+      "artifact": "artifacts/domestic_electricity_zero_vat/15f67804182a4e41",
+      "artifact_sha256": "15f67804182a4e417c0214c3608cd618b18054ceb65f14c623ed4ff4e0561542",
+      "data_limits": [],
+      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, day-weighted in 2026-27.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Zero VAT on domestic electricity",
+      "outputs_sha256": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+      "receipt_sha256": "4d67419d1e8394714736b6ae080fa49463db2e1ee920fb5afe8aa45deb33071f",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "domestic_gas_zero_vat": {
+      "artifact": "artifacts/domestic_gas_zero_vat/6cb4df40cd44268c",
+      "artifact_sha256": "6cb4df40cd44268ca11a99a8fa1f67fbe487a77a7ec42978b289194010a45d5b",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. No VAT on household gas bills, instead of 5%, from 1 April 2027 to 31 March 2028.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Zero VAT on domestic gas",
+      "outputs_sha256": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
+      "receipt_sha256": "0cf577f45e7c5c444892555ab1482b83df15a5a03532a949a4bc2c6a27b74d7b",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "employer_ni_relief_under_25s": {
+      "approval": {
+        "artifact_sha256": "ac43f0d9a425caa6a24340b4942b13bcb948230ddc1b3955a316825fe406d90e",
+        "at": "2026-10-26T09:55:30.981131+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8"
+      },
+      "artifact": "artifacts/employer_ni_relief_under_25s/ac43f0d9a425caa6",
+      "artifact_sha256": "ac43f0d9a425caa6a24340b4942b13bcb948230ddc1b3955a316825fe406d90e",
+      "attestation": {
+        "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+        "measure_id": "employer_ni_relief_under_25s",
+        "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch receipt only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+        "receipt_sha256": "e337077b65211cfe7acfcf90548a28c0ee77eb1d475b7c14d2639a2ac6fdeb8f",
+        "released_at": "2026-10-26T09:55:00+00:00",
+        "second": "REHEARSAL MOCK second (Budget coordinator)"
+      },
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (\u00a350,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Employer NI relief for under-25s",
+      "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+      "receipt_sha256": "45e098a452edd62f2f1d7e8084e8dbe43f077ffa46fc8e88d6965c12f663f8e0",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "employer_ni_secondary_threshold_raised": {
+      "approval": {
+        "artifact_sha256": "6b67e8eb93ad95f560b1e4a0c6241481317e5bda016b300764d15ce0c481d43c",
+        "at": "2026-10-26T09:45:54.855594+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68"
+      },
+      "artifact": "artifacts/employer_ni_secondary_threshold_raised/6b67e8eb93ad95f5",
+      "artifact_sha256": "6b67e8eb93ad95f560b1e4a0c6241481317e5bda016b300764d15ce0c481d43c",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. The employer National Insurance secondary threshold rises by \u00a31,000 a year from April 2027 (\u00a35,000 to \u00a36,000 in 2027-28).",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Employer NI threshold raised by \u00a31,000",
+      "outputs_sha256": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
+      "receipt_sha256": "1c555e869393612f8a52cb8103212d0cee7cc8c7bddd52f09b6cd4c3c75007e9",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "fuel_duty_rise_deferral": {
+      "artifact": "artifacts/fuel_duty_rise_deferral/aa93b06dd58bb3b5",
+      "artifact_sha256": "aa93b06dd58bb3b5467eead4d043e75eb5ddf5c16e2f1361e1c075a856a360fa",
+      "data_limits": [],
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Fuel duty rises deferred",
+      "outputs_sha256": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+      "receipt_sha256": "acb0e24f70cf9a3fb14b101b8d5008b8f82e72f8a2e1ec092717ace809acebfa",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "lha_reset_april_2027": {
+      "approval": {
+        "artifact_sha256": "ec4452b1ca3a253daee3d49f2d63d1e48bac40bfa66bc53e8803645a832d82ce",
+        "at": "2026-10-26T09:46:01.572735+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294"
+      },
+      "artifact": "artifacts/lha_reset_april_2027/ec4452b1ca3a253d",
+      "artifact_sha256": "ec4452b1ca3a253daee3d49f2d63d1e48bac40bfa66bc53e8803645a832d82ce",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. Local Housing Allowance rates are reset to the 30th percentile of local rents in April 2027, then frozen in cash terms again.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Local Housing Allowance reset in April 2027",
+      "outputs_sha256": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
+      "receipt_sha256": "6647f094d239f2d07bad97fd53c464f65cfaaa709b75ec66a2c0b489fce06828",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "state_pension_income_tax_protection": {
+      "approval": {
+        "artifact_sha256": "9fdad754ec0db709770b0f32322deedd0c47e0ce9172bf8f438db733fdc78e72",
+        "at": "2026-10-26T09:56:09.153601+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719"
+      },
+      "artifact": "artifacts/state_pension_income_tax_protection/9fdad754ec0db709",
+      "artifact_sha256": "9fdad754ec0db709770b0f32322deedd0c47e0ce9172bf8f438db733fdc78e72",
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to \u00a310: \u00a313,040 in 2027-28), withdrawn \u00a31 for \u00a31 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "State Pension income tax protection",
+      "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+      "receipt_sha256": "7dbe4fe1f6bc68ecd56368116185696f8862aeed7fb46d5759267b0750581b43",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "state_pension_income_tax_protection_extended": {
+      "approval": {
+        "artifact_sha256": "46d9081681f0b06f9d4b5e3c54325faebff936f1ddd3cba9f1946e75c83d7ba9",
+        "at": "2026-10-26T09:59:00.338725+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "2d8a2ad4ad490fa450528d8e91d37336179e2830db5f56f9cb39f6520ef6f320"
+      },
+      "artifact": "artifacts/state_pension_income_tax_protection_extended/46d9081681f0b06f",
+      "artifact_sha256": "46d9081681f0b06f9d4b5e3c54325faebff936f1ddd3cba9f1946e75c83d7ba9",
+      "data_limits": [],
+      "description": "Drill 5 mock measure, an alternative to the State Pension income tax protection. People over State Pension age get a personal allowance of the full new State Pension from 2027-28, kept whatever their other income or State Pension increments.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "State Pension income tax protection, extended",
+      "outputs_sha256": "2d8a2ad4ad490fa450528d8e91d37336179e2830db5f56f9cb39f6520ef6f320",
+      "receipt_sha256": "109df65cc2219a8b29efc791cc21872ed0d5a89d1bead7b3db4d6f9026099a75",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "threshold_freeze_2031_32": {
+      "approval": {
+        "artifact_sha256": "217124e286809fd241ef6688166217c676530c86ebee25e6379e5d351154c2ec",
+        "at": "2026-10-26T09:46:20.297055+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6"
+      },
+      "artifact": "artifacts/threshold_freeze_2031_32/217124e286809fd2",
+      "artifact_sha256": "217124e286809fd241ef6688166217c676530c86ebee25e6379e5d351154c2ec",
+      "data_limits": [],
+      "description": "Candidate measure. The income tax personal allowance stays at \u00a312,570 and the basic rate band at \u00a337,700 (a higher rate threshold of \u00a350,270) for one more year, 2031-32, instead of rising with inflation to \u00a312,830 and \u00a338,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at \u00a312,570 and \u00a350,270 too; the employer secondary threshold is not held.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Threshold freeze to 2031-32",
+      "outputs_sha256": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+      "receipt_sha256": "0cd55dbf5112f1531f7690066edbbef89c290062817c5cdfeea230f0c8590339",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "uc_standard_allowance_below_cpi": {
+      "artifact": "artifacts/uc_standard_allowance_below_cpi/eff50eb23c5168f8",
+      "artifact_sha256": "eff50eb23c5168f8bf8be0c6fea59b51f152ca659f069121fbbda002761aa543",
+      "data_limits": [],
+      "description": "Drill 5 mock measure. The Universal Credit standard allowance rises by one point less than CPI in April 2027, so from 2027-28 every claimant type's allowance is 1% below current law.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "UC standard allowance uprated below CPI",
+      "outputs_sha256": "2439937922eb078f0e98996e85852b550a58fb87be5cb8c8e7c4ef9528b27cc7",
+      "receipt_sha256": "76c958556d3066c7bb7b49522bc2d36af8a9f039428c0e894473f5ef1c85181f",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "warm_home_discount_top_up": {
+      "approval": {
+        "artifact_sha256": "0038f1fbaa9736664e5db50ec58af3120eb602adaf8dfddd12477a6361b08947",
+        "at": "2026-10-26T09:55:15.158742+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+      },
+      "artifact": "artifacts/warm_home_discount_top_up/0038f1fbaa973666",
+      "artifact_sha256": "0038f1fbaa9736664e5db50ec58af3120eb602adaf8dfddd12477a6361b08947",
+      "data_limits": [],
+      "description": "Candidate measure. The Warm Home Discount rises from \u00a3150 to \u00a3250 for winter 2026-27 only: \u00a3100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Warm Home Discount top-up",
+      "outputs_sha256": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5",
+      "receipt_sha256": "32179b3f21e1a545ac184100da2b94db250b00c935c59d3628368e9c1db7c3ea",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    }
+  },
+  "release": "uk-autumn-budget-2026",
+  "revision": 34,
+  "schema": "uk-budget-dashboard/publication-manifest/v1",
+  "superseded": [
+    {
+      "entry": {
+        "artifact": "artifacts/fuel_duty_rise_deferral/c3364c6572bfe95b",
+        "artifact_sha256": "c3364c6572bfe95bf6b3b0681fe3131e2dec077b99ebb551a1108baf621814c1",
+        "data_limits": [],
+        "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Fuel duty rises deferred",
+        "outputs_sha256": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+        "receipt_sha256": "00779bf398f26c8e5200e5383c5df919ee39314d001ef1ee20316f7ff23ec026",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "awaiting_source"
+        },
+        "status": "provisional",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "fuel_duty_rise_deferral",
+      "superseded_at": "2026-10-26T09:54:05.597301+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/domestic_electricity_zero_vat/3abb93ce13a89eb5",
+        "artifact_sha256": "3abb93ce13a89eb58fd7e3317114e730127704a3177f01c69d0ceb4a0fd7f8b9",
+        "data_limits": [],
+        "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, day-weighted in 2026-27.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Zero VAT on domestic electricity",
+        "outputs_sha256": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+        "receipt_sha256": "fdef52b6659295a038b2188166137e082b988387b95571db25f636baa7dc9a6e",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "awaiting_source"
+        },
+        "status": "provisional",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "domestic_electricity_zero_vat",
+      "superseded_at": "2026-10-26T09:54:11.757887+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "6dae12c4a67d90461c7757e4bd5bd4be1c053e16ce3cf30c93e15c4898107ac1",
+          "at": "2026-10-26T09:46:25.794362+00:00",
+          "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+          "outputs_sha256": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+        },
+        "artifact": "artifacts/warm_home_discount_top_up/6dae12c4a67d9046",
+        "artifact_sha256": "6dae12c4a67d90461c7757e4bd5bd4be1c053e16ce3cf30c93e15c4898107ac1",
+        "data_limits": [],
+        "description": "Candidate measure. The Warm Home Discount rises from \u00a3150 to \u00a3250 for winter 2026-27 only: \u00a3100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Warm Home Discount top-up",
+        "outputs_sha256": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5",
+        "receipt_sha256": "5159ba4d673e9393b0ced4c2f241e56db460279a2d2a6db9c7033ffaa0d902da",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "warm_home_discount_top_up",
+      "superseded_at": "2026-10-26T09:55:12.072101+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "841154e44f62824236642a2a1f49cf3f6f8a13780fa60a585910d01f944b64c1",
+          "at": "2026-10-26T09:47:08.624661+00:00",
+          "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+          "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8"
+        },
+        "artifact": "artifacts/employer_ni_relief_under_25s/841154e44f628242",
+        "artifact_sha256": "841154e44f62824236642a2a1f49cf3f6f8a13780fa60a585910d01f944b64c1",
+        "attestation": {
+          "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+          "measure_id": "employer_ni_relief_under_25s",
+          "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch receipt only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+          "receipt_sha256": "ce375b463f4abcba926df55a18fefd05776fcac89d2c7274b6a841b5c3c54c18",
+          "released_at": "2026-10-26T09:47:00+00:00",
+          "second": "REHEARSAL MOCK second (Budget coordinator)"
+        },
+        "data_limits": [],
+        "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (\u00a350,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Employer NI relief for under-25s",
+        "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+        "receipt_sha256": "bc379a13b7943e15cac3712ceb8af4a32e21b15cd0c772f5bf4869b828ba31b5",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "employer_ni_relief_under_25s",
+      "superseded_at": "2026-10-26T09:55:27.566785+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/domestic_gas_zero_vat/c5edb92497776212",
+        "artifact_sha256": "c5edb924977762122bf9aca522b5709e5bc2fd485ac9175e6d4036990e22ccbc",
+        "data_limits": [],
+        "description": "Drill 5 mock measure. No VAT on household gas bills, instead of 5%, from 1 April 2027 to 31 March 2028.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Zero VAT on domestic gas",
+        "outputs_sha256": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
+        "receipt_sha256": "026db57d3336a60970a008923230adf095d8321232f2b34dc925b1e8742b1f59",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "awaiting_source"
+        },
+        "status": "provisional",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "domestic_gas_zero_vat",
+      "superseded_at": "2026-10-26T09:56:01.010190+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "3f0b05113daaf633ee8cc948882048830043eda0fc19d895d0474aea752b056f",
+          "at": "2026-10-26T09:46:07.244602+00:00",
+          "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+          "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719"
+        },
+        "artifact": "artifacts/state_pension_income_tax_protection/3f0b05113daaf633",
+        "artifact_sha256": "3f0b05113daaf633ee8cc948882048830043eda0fc19d895d0474aea752b056f",
+        "data_limits": [],
+        "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to \u00a310: \u00a313,040 in 2027-28), withdrawn \u00a31 for \u00a31 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "State Pension income tax protection",
+        "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+        "receipt_sha256": "a10ccbe7d07470dc359f60f8775442493b2b75659d8e058609f590439c69efdb",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "state_pension_income_tax_protection",
+      "superseded_at": "2026-10-26T09:56:06.393582+00:00"
+    },
+    {
+      "entry": {
+        "approval": {
+          "artifact_sha256": "f7bde430bd82fb38d169c6921f2167053c8248a88580f35ec9fa04dedbbb0a97",
+          "at": "2026-10-26T09:57:59.938962+00:00",
+          "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+          "outputs_sha256": "2d8a2ad4ad490fa450528d8e91d37336179e2830db5f56f9cb39f6520ef6f320"
+        },
+        "artifact": "artifacts/state_pension_income_tax_protection_extended/f7bde430bd82fb38",
+        "artifact_sha256": "f7bde430bd82fb38d169c6921f2167053c8248a88580f35ec9fa04dedbbb0a97",
+        "data_limits": [],
+        "description": "Drill 5 mock measure, an alternative to the State Pension income tax protection. People over State Pension age get a personal allowance of the full new State Pension from 2027-28, kept whatever their other income or State Pension increments.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "State Pension income tax protection, extended",
+        "outputs_sha256": "2d8a2ad4ad490fa450528d8e91d37336179e2830db5f56f9cb39f6520ef6f320",
+        "receipt_sha256": "fa86bcc1e52f295ac82229fde9ca718c407113c92bcb849c3a03fe03de65c5c1",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "approved",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "state_pension_income_tax_protection_extended",
+      "superseded_at": "2026-10-26T09:58:58.138443+00:00"
+    }
+  ],
+  "updated_at": "2026-10-26T10:00:20.471824+00:00"
+}

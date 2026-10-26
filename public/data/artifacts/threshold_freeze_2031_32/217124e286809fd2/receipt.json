@@ -1,0 +1,171 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. The income tax personal allowance stays at \u00a312,570 and the basic rate band at \u00a337,700 (a higher rate threshold of \u00a350,270) for one more year, 2031-32, instead of rising with inflation to \u00a312,830 and \u00a338,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at \u00a312,570 and \u00a350,270 too; the employer secondary threshold is not held.",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+      "receipt_sha256": "0cd55dbf5112f1531f7690066edbbef89c290062817c5cdfeea230f0c8590339"
+    },
+    "files": {
+      "age_impact.csv": "bf679d42b0a85153e21165bdaa4d81038508affb1de6e7aa075dd9ca80470d8d",
+      "budgetary_impact.csv": "660f636d15f37ba09b3724a21def6c1f06a4226ecfb6118c75711047dc1ac891",
+      "distributional_impact.csv": "cf000ff98d049e6d94635cc541ef556ff72baa2d49678b0843c544c7f6c8ac53",
+      "household_scatter_binned.csv": "672d3d80e717b166693700c76a9b0f85d911e822d1761aa2b267b1be8bca8c09",
+      "income_curve.csv": "b9f9a24fce36d6ff83ecfb60c7332fa8da3a5bf553bcc952cea37de97c58b9b4",
+      "metrics.csv": "2a950c7cecc4701b262660feda57f28e0f29b56560aef558ae5eb734e48d75a5",
+      "winners_losers.csv": "1be953950f1a17de83d63d5bd5799660a5e9e1ef9b8bac922e2b8bbecc44dbf8"
+    },
+    "generated_at": "2026-10-26T09:35:02.365150+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/reviews/budget-coordinator/rehearsal-1026-wt/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--reforms",
+      "uc_standard_allowance_below_cpi",
+      "employer_ni_secondary_threshold_raised",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "9e649e1d0e539aeb8531ecb658faeb89cb642f00",
+    "key": "threshold_freeze_2031_32",
+    "measure_ids": [
+      "threshold_freeze_2031_32"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "Threshold freeze to 2031-32",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "threshold_freeze_2031_32 baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "threshold_freeze_2031_32",
+      "reform_sha256": "063198c6a6e3feafc408048ec32bee806d2ab113a01315e43690d6eabad61a21",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

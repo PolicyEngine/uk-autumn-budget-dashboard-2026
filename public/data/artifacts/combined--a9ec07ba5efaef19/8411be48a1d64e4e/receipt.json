@@ -1,0 +1,498 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": {
+      "baseline_applied_before_data_load": false,
+      "reform_applied_before_data_load": false
+    },
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "One simulation of: badr_lifetime_limit_cut, cgt_main_rates_up_2pp, council_tax_surcharge_from_1_5m, dividend_rates_up_1pp, domestic_electricity_zero_vat, domestic_gas_zero_vat, employer_ni_relief_under_25s, employer_ni_secondary_threshold_raised, fuel_duty_rise_deferral, lha_reset_april_2027, state_pension_income_tax_protection, threshold_freeze_2031_32, uc_standard_allowance_below_cpi, warm_home_discount_top_up",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "deaee7a18e25f9a3bf9730b1a7abd7ed361b9df061f947166822578c6fb120d4",
+      "receipt_sha256": "106216e1a84aa913d827af29f9f00fdf49de7c6ca270e144d77c69bdfe397647"
+    },
+    "files": {
+      "age_impact.csv": "6116436943ca4cd7196bca594c57616443d0c0bfff5723ec6bf27fb55bbe29fb",
+      "budgetary_impact.csv": "69bc5ab91f0a536591a429262223d88be4e706c6aa6f8efa3739443728be7baa",
+      "distributional_impact.csv": "cdf27bcb071deb858154a1bc590518e6b0a1a4a2b9452ad2565d52fbc269dad2",
+      "household_scatter_binned.csv": "9231870ff484752583ef1f0e41823250f30952c73194b0bf8abbc834310b6047",
+      "income_curve.csv": "01ea8d64ea100444a70a8f274a40e1e317cb0b78da18661b08a5024a19d4bf67",
+      "metrics.csv": "770206cec0258ed36ab84bee366f7aab96abb52e879ede2edd774be39fceff17",
+      "winners_losers.csv": "931d39ebbca1380f68515956b166c8736212d30281300011d05b412142bd5ca9"
+    },
+    "generated_at": "2026-10-26T09:58:52.683125+00:00",
+    "generation_id": "da32659bf668413a999ee2a3a8af238a",
+    "generator_argv": [
+      "/Users/maxghenis/reviews/budget-coordinator/rehearsal-1026-wt/src/uk_budget_data/cli.py",
+      "generate",
+      "--combined",
+      "uc_standard_allowance_below_cpi",
+      "employer_ni_secondary_threshold_raised",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut",
+      "state_pension_income_tax_protection",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "domestic_electricity_zero_vat",
+      "employer_ni_relief_under_25s",
+      "domestic_gas_zero_vat"
+    ],
+    "git_sha": "1946a32d939c4cdd00dab5d56e3b10812e03b7e3",
+    "key": "combined--a9ec07ba5efaef19",
+    "measure_ids": [
+      "badr_lifetime_limit_cut",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "dividend_rates_up_1pp",
+      "domestic_electricity_zero_vat",
+      "domestic_gas_zero_vat",
+      "employer_ni_relief_under_25s",
+      "employer_ni_secondary_threshold_raised",
+      "fuel_duty_rise_deferral",
+      "lha_reset_april_2027",
+      "state_pension_income_tax_protection",
+      "threshold_freeze_2031_32",
+      "uc_standard_allowance_below_cpi",
+      "warm_home_discount_top_up"
+    ],
+    "member_outputs_sha256": {
+      "badr_lifetime_limit_cut": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5",
+      "cgt_main_rates_up_2pp": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+      "council_tax_surcharge_from_1_5m": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+      "dividend_rates_up_1pp": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
+      "domestic_electricity_zero_vat": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+      "domestic_gas_zero_vat": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
+      "employer_ni_relief_under_25s": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+      "employer_ni_secondary_threshold_raised": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
+      "fuel_duty_rise_deferral": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+      "lha_reset_april_2027": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
+      "state_pension_income_tax_protection": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+      "threshold_freeze_2031_32": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+      "uc_standard_allowance_below_cpi": "2439937922eb078f0e98996e85852b550a58fb87be5cb8c8e7c4ef9528b27cc7",
+      "warm_home_discount_top_up": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+    },
+    "members": [
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "badr_lifetime_limit_cut baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": true,
+        "id": "badr_lifetime_limit_cut",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "badr_lifetime_limit_cut",
+          "reform_sha256": "205cb3ed6fcee61a541f972b8d632251bfed2afff08357523360999d742c38f2",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "cgt_main_rates_up_2pp baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "cgt_main_rates_up_2pp",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "cgt_main_rates_up_2pp",
+          "reform_sha256": "5fb2aebbed64d4e47ab081d937253f40390cfbb7c9f3f99470c67e027d8e86cb",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "council_tax_surcharge_from_1_5m baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "council_tax_surcharge_from_1_5m",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "council_tax_surcharge_from_1_5m",
+          "reform_sha256": "07ed2b958ace643489bfdadd8945657691d4ff45f5d41dd973b7f572f1559472",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "dividend_rates_up_1pp baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "dividend_rates_up_1pp",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "dividend_rates_up_1pp",
+          "reform_sha256": "3bcf624e8bce642df507223da29f5914091b64617fc373697aeeaa4bab2cd312",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "domestic_electricity_zero_vat baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "domestic_electricity_zero_vat",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "domestic_electricity_zero_vat",
+          "reform_sha256": "984aa86fd762d53f5a08ba55145c03f90630e9eaaf920923912898e5ad0415f7",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "domestic_gas_zero_vat baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "domestic_gas_zero_vat",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "domestic_gas_zero_vat",
+          "reform_sha256": "0991165934742d9c6d8689a0806bb93a05b5e4b503151daec6312576fd713765",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "employer_ni_relief_under_25s baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "employer_ni_relief_under_25s",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "employer_ni_relief_under_25s",
+          "reform_sha256": "d4965f680b9a21a3b16bf054501e05334496b2f00db19f79f3f343953d416692",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "employer_ni_secondary_threshold_raised baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "employer_ni_secondary_threshold_raised",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "employer_ni_secondary_threshold_raised",
+          "reform_sha256": "ed3e2c0c47cce5c21cede92e1aca6ab93363ab4b0b97ae08b16d2e527679dc0c",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "fuel_duty_rise_deferral baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "fuel_duty_rise_deferral",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "fuel_duty_rise_deferral",
+          "reform_sha256": "86532f682a16c5ccda7e247e17e759560eca4b5bbfd4bc698d1b44622583be97",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "lha_reset_april_2027 baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "lha_reset_april_2027",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "lha_reset_april_2027",
+          "reform_sha256": "52ccdf8ee1176d7e42ce604b81b3bbd2bac1b715e4e203a8bf25ef77bb2004ec",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "state_pension_income_tax_protection baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "state_pension_income_tax_protection",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "state_pension_income_tax_protection",
+          "reform_sha256": "5cef8c52866e4caee2ee539de06ebcd0647d4be20b532c3c1a9daa1f760bbab1",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "threshold_freeze_2031_32 baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "threshold_freeze_2031_32",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "threshold_freeze_2031_32",
+          "reform_sha256": "063198c6a6e3feafc408048ec32bee806d2ab113a01315e43690d6eabad61a21",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "uc_standard_allowance_below_cpi baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "uc_standard_allowance_below_cpi",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "uc_standard_allowance_below_cpi",
+          "reform_sha256": "c072ca4efb5dc7285d8b66663fd199aaacb4f8b4ca38879c3eba389902ccfbdb",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "warm_home_discount_top_up baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "warm_home_discount_top_up",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "warm_home_discount_top_up",
+          "reform_sha256": "714b1c0eb5fd10957dbd759251c327a72a71281fd9b52c5f8fbf3395f6e07a19",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      }
+    ],
+    "model_limits": [
+      {
+        "key": "benefit_uprating_september_cpi",
+        "parameters": [
+          "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD",
+          "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG",
+          "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD",
+          "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG",
+          "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold"
+        ],
+        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast, and so do the triple lock's CPI leg and the September CPI index, by which additional State Pension and new State Pension protected payments rise once policyengine-uk #2336 is in the model. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
+      },
+      {
+        "key": "vat_consumption_coverage",
+        "parameters": [
+          "variable:vat",
+          "variable:vat_change"
+        ],
+        "reason": "The installed model grosses household VAT up to receipts by a single factor of 0.38 (gov.simulation.microdata_vat_coverage). policyengine-uk #2187 divides instead by survey consumption coverage times the household share of VAT receipts, 0.67 \u00d7 0.7 = 0.469, so this model's VAT is about 23% higher (the UK hub's notice 59 puts it about 24% high on Microcosm), and a measure that moves a VAT rate, the VAT base or the consumption VAT is charged on can be overstated by as much. A measure built with the VAT base template is held too, though the term the template adds is not grossed. #2187 is not in this model. Until a pair with it is adopted, such measures are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_vat_base_change"
+        ],
+        null,
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_age_conditioned_allowance"
+        ],
+        [
+          "apply_benefit_receipt_payment"
+        ]
+      ]
+    },
+    "name": "Combined: Business Asset Disposal Relief restricted, Capital gains tax main rates up 2 points, Council tax surcharge from \u00a31.5m, Dividend tax rates up 1 point, Zero VAT on domestic electricity, Zero VAT on domestic gas, Employer NI relief for under-25s, Employer NI threshold raised by \u00a31,000, Fuel duty rises deferred, Local Housing Allowance reset in April 2027, State Pension income tax protection, Threshold freeze to 2031-32, UC standard allowance uprated below CPI, Warm Home Discount top-up",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "badr_lifetime_limit_cut+cgt_main_rates_up_2pp+council_tax_surcharge_from_1_5m+dividend_rates_up_1pp+domestic_electricity_zero_vat+domestic_gas_zero_vat+employer_ni_relief_under_25s+employer_ni_secondary_threshold_raised+fuel_duty_rise_deferral+lha_reset_april_2027+state_pension_income_tax_protection+threshold_freeze_2031_32+uc_standard_allowance_below_cpi+warm_home_discount_top_up baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "deaee7a18e25f9a3bf9730b1a7abd7ed361b9df061f947166822578c6fb120d4",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "badr_lifetime_limit_cut+cgt_main_rates_up_2pp+council_tax_surcharge_from_1_5m+dividend_rates_up_1pp+domestic_electricity_zero_vat+domestic_gas_zero_vat+employer_ni_relief_under_25s+employer_ni_secondary_threshold_raised+fuel_duty_rise_deferral+lha_reset_april_2027+state_pension_income_tax_protection+threshold_freeze_2031_32+uc_standard_allowance_below_cpi+warm_home_discount_top_up",
+      "reform_sha256": "1156fc46da71e737de3adf765b615af2d9ad6ef82092e3b40d05ea4f5ca37d50",
+      "representation": "policyengine-uk.scenario_composition/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

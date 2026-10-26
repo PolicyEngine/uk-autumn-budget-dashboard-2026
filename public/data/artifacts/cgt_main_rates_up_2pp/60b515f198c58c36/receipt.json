@@ -1,0 +1,171 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Drill 5 mock measure. From 6 April 2027 the main capital gains tax rates rise from 18% and 24% to 20% and 26%.",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+      "receipt_sha256": "6b599def2f7fbe50059c9b2a36de2ea4c049ecbfe1c77c89cc8ed8054a256366"
+    },
+    "files": {
+      "age_impact.csv": "66c3fc99e9c8f66f79fa7fe5f55f13602d6fe91f72e38b9aeb29b13c7bfb8bfa",
+      "budgetary_impact.csv": "7bccbedfbe52a4c288d505bc6f1ac2f33951d17b1efc711ed1fed4838fa08e4a",
+      "distributional_impact.csv": "062af42fb9e2783928513cdd8dca9c669f0354e9b196369bf7b8dece11ca4803",
+      "household_scatter_binned.csv": "0f62619250b44c38ef2ae775e7b39b0896745541a06d7cd497e3361fc1d74787",
+      "income_curve.csv": "7f96e3162e43bf65f370bc8a406cf20acac68a71c7873c9532715f40d87620f9",
+      "metrics.csv": "84edebe5d4ca5d5616b841aa919645ebc803285198a6f122f589941cb9476ba6",
+      "winners_losers.csv": "871ff823c52d35436a84a61e7b3f0bde6f25fabd7397b7057f12653d4beb8a49"
+    },
+    "generated_at": "2026-10-26T09:28:44.628232+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/reviews/budget-coordinator/rehearsal-1026-wt/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--reforms",
+      "uc_standard_allowance_below_cpi",
+      "employer_ni_secondary_threshold_raised",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "9e649e1d0e539aeb8531ecb658faeb89cb642f00",
+    "key": "cgt_main_rates_up_2pp",
+    "measure_ids": [
+      "cgt_main_rates_up_2pp"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "Capital gains tax main rates up 2 points",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "cgt_main_rates_up_2pp baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "cgt_main_rates_up_2pp",
+      "reform_sha256": "5fb2aebbed64d4e47ab081d937253f40390cfbb7c9f3f99470c67e027d8e86cb",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}
