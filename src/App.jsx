@@ -376,13 +376,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       openViewRef.current(tab);
       if (!anchor) return;
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${anchor}`);
-      setTimeout(() => {
+      // The view mounts, and some of its parts load their data, after the
+      // switch: look for the target for up to 3 seconds
+      let tries = 0;
+      const find = () => {
         const target = document.getElementById(anchor);
-        if (!target) return;
-        const folded = target.closest("details");
-        if (folded) folded.open = true;
+        if (!target) {
+          if ((tries += 1) < 30) setTimeout(find, 100);
+          return;
+        }
+        let folded = target.closest("details");
+        while (folded) {
+          folded.open = true;
+          folded = folded.parentElement?.closest("details");
+        }
         target.scrollIntoView?.({ block: "start" });
-      }, 300);
+      };
+      setTimeout(find, 100);
     };
     window.addEventListener(OPEN_VIEW_EVENT, onOpenView);
     return () => window.removeEventListener(OPEN_VIEW_EVENT, onOpenView);
