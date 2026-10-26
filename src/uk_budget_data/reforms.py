@@ -546,10 +546,10 @@ def _create_uc_standard_allowance_below_cpi() -> Reform:
         id=UC_BELOW_CPI_ID,
         name="UC standard allowance uprated below CPI",
         description=(
-            "Drill 5 mock measure. The Universal Credit standard allowance "
-            "rises by one point less than CPI in April 2027, so from "
-            "2027-28 every claimant type's allowance is 1% below current "
-            "law."
+            "Drill 5 mock measure, a stand-in for uprating below inflation. "
+            "From April 2027 every claimant type's Universal Credit standard "
+            "allowance is 1% below current law, which already includes the "
+            "Universal Credit Act 2025's increases above CPI."
         ),
         parameter_changes=changes,
     )
