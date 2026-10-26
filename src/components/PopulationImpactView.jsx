@@ -7,6 +7,7 @@ export const POPULATION_SUB_TABS = [
   { value: "finances", label: "Public finances", icon: "landmark" },
   { value: "all", label: "All households", icon: "users" },
   { value: "young", label: "Young people", icon: "cap" },
+  { value: "pensioners", label: "Pensioners", icon: "armchair" },
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
 ];
@@ -65,10 +66,11 @@ function PopulationSubTabs({ note, active = true, children }) {
 /**
  * The Population impact view: Public finances first, then All households
  * (places, how changes vary, example households), Young people (results by
- * age), Living standards (income changes by decile, inequality) and Poverty,
- * as pill sub-tabs under the view tabs. The open sub-tab is ?sub=
- * (useSubTabParam): Public finances has no parameter, the others are
- * ?sub=all, young, living and poverty. App.jsx turns the old links (?tab=young, #young-people)
+ * age), Pensioners (people at or over State Pension age), Living standards
+ * (income changes by decile, inequality) and Poverty, as pill sub-tabs
+ * under the view tabs. The open sub-tab is ?sub= (useSubTabParam): Public
+ * finances has no parameter, the others are ?sub=all, young, pensioners,
+ * living and poverty. App.jsx turns the old links (?tab=young, #young-people)
  * into ?sub=young before this view first reads the address.
  *
  * The sub-tab is read from the address, which the server does not have, so

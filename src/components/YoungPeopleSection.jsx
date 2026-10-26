@@ -150,7 +150,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
 
 
 /** Load age_impact.csv once per mount, typed by the publication contract. */
-function useAgeImpactRows() {
+export function useAgeImpactRows() {
   const [state, setState] = useState({ status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;

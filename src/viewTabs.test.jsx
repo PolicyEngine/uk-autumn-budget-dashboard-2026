@@ -177,7 +177,7 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Methodology" })).toBeInTheDocument();
   });
 
-  it("split Population impact into five sub-tabs, Public finances first", async () => {
+  it("split Population impact into six sub-tabs, Public finances first", async () => {
     render(<App />);
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The pill sits directly under the view tabs, inside the view's panel
@@ -186,6 +186,7 @@ describe("the view tabs", () => {
       "Public finances",
       "All households",
       "Young people",
+      "Pensioners",
       "Living standards",
       "Poverty",
     ]);
@@ -210,6 +211,21 @@ describe("the view tabs", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+  });
+
+  it("open the Pensioners sub-tab from ?sub=pensioners, and write it on choosing it", async () => {
+    window.history.replaceState({}, "", "/?sub=pensioners");
+    const { unmount } = render(<App />);
+    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tabpanel", { name: "Pensioners" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
+    unmount();
+
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Pensioners" }));
+    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
   });
 
   it("open the Young people sub-tab from the old links, keeping the hash", () => {

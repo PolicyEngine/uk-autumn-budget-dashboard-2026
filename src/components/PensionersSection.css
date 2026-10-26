@@ -1,0 +1,18 @@
+/* Pensioners: the Young people layout (YoungPeopleSection.css), with a
+   line under the second pair of cards pointing to the example household. */
+
+#pensioners {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.pensioners-household-link {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.pensioners-household-link a {
+  color: var(--c-highlight, var(--pe-teal-700));
+  font-weight: 600;
+}

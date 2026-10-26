@@ -21,6 +21,7 @@ import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
@@ -33,7 +34,7 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 // but are hidden. Pre-measures forecast is the outlook before the Budget's
 // measures, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
-// households, Young people, Living standards, Poverty) are in
+// households, Young people, Pensioners, Living standards, Poverty) are in
 // PopulationImpactView.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
@@ -550,6 +551,17 @@ function App() {
           selectedPolicies={selectedPolicies}
           selectedYear={distributionalYear}
           policies={POLICIES}
+        />
+      );
+    }
+    if (sub === "pensioners") {
+      // Pensioners (at or over State Pension age): results by age
+      return (
+        <PensionersSection
+          selectedPolicies={selectedPolicies}
+          selectedYear={distributionalYear}
+          policies={POLICIES}
+          onOpenHousehold={() => handleTabChange("household")}
         />
       );
     }
