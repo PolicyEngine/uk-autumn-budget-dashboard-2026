@@ -23,10 +23,13 @@ describe("SeriesToggle", () => {
   it("shows and hides several lines, in series order, and keeps the last one on", () => {
     render(<Harness />);
     const chip = (name) => screen.getByRole("button", { name });
+    // A first-visit hint, gone after the first click
+    expect(screen.getByText("Click to show or hide")).toBeInTheDocument();
     expect(chip("Alpha")).toHaveAttribute("aria-pressed", "true");
     expect(chip("Gamma")).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(chip("Gamma"));
     expect(document.querySelector("output")).toHaveTextContent("a,b,c");
+    expect(screen.queryByText("Click to show or hide")).toBeNull();
     fireEvent.click(chip("Alpha"));
     fireEvent.click(chip("Beta"));
     expect(document.querySelector("output")).toHaveTextContent("c");
