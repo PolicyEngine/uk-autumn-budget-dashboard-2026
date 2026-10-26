@@ -20,7 +20,7 @@
 
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
-import { chooseReform } from "./geography/selection";
+import { chooseReform, focusChoice } from "./geography/selection";
 import {
   bandLabel,
   changeBandLabel as describeChangeBand,
@@ -133,21 +133,38 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageId, focusId = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  const choice = chooseReform({ selectedIds, policyIds, reforms, packageId });
+  // Several measures and no single published reform: one at a time, the
+  // reader's or the one moving the most households' incomes the most
+  const size = (id) => {
+    let weight = 0;
+    let total = 0;
+    for (const row of data.rows) {
+      if (row.reform_id !== id || row.year !== year) continue;
+      const middle = changeBandMiddle(row.change_band, row.change_band_upper);
+      if (!Number.isFinite(middle)) continue;
+      weight += row.households;
+      total += Math.abs(middle) * row.households;
+    }
+    return weight ? total / weight : 0;
+  };
+  const choice = focusChoice(chooseReform({ selectedIds, policyIds, reforms, packageId }), {
+    selectedIds,
+    policyIds,
+    reforms,
+    focusId,
+    size,
+  });
   if (choice.kind === "none") {
     return notice("Select a measure to see household results.");
   }
   if (choice.kind === "pick") {
-    return notice(
-      "Household results are shown for one measure at a time, or for all measures together.",
-      "Select one measure, or all of them. Groups of households are published for each measure separately and are not added together.",
-    );
+    return notice("Household results are not yet published for the selected measures.");
   }
   if (choice.kind === "no-package") {
     return notice(
@@ -192,6 +209,8 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
   return {
     kind: "points",
     reform: choice.reform,
+    // Several measures: the offered ones, for the card's Measure picker
+    focus: choice.focus ?? null,
     points,
     yearPoints: years.map(cellsIn).filter((cells) => cells.length > 0),
     basisYear,

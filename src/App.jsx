@@ -18,6 +18,7 @@ import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
+import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
@@ -672,8 +673,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
+              subtitle="What each measure changes, when, and how it is modelled."
             />
+            <Disclosure title="More info" className="policies-more-info">
+              <p>
+                Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end
+                date. “See its effect” shows that measure alone on Population impact.
+              </p>
+            </Disclosure>
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
                 policies={POLICIES}

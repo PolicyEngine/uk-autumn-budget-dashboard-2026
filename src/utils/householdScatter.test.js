@@ -107,8 +107,16 @@ describe("scatterView", () => {
       policyIds: ["a", "b", "c"],
       year: 2029,
     });
-    expect(result.kind).toBe("notice");
-    expect(result.reason).toMatch(/one measure at a time/);
+    // One selected measure at a time, its own cells, never a sum: the
+    // picker offers the selected measures the data carries
+    expect(result.kind).toBe("points");
+    expect(["a", "b"]).toContain(result.reform);
+    expect(result.focus.options.every((id) => ["a", "b"].includes(id))).toBe(true);
+    const own = scatterView({ data: ready, selectedIds: [result.reform], policyIds: ["a", "b", "c"], year: 2029 });
+    expect(result.points).toEqual(own.points);
+    // The reader's choice is kept
+    const chosen = scatterView({ data: ready, selectedIds: ["a", "b"], policyIds: ["a", "b", "c"], year: 2029, focusId: result.focus.options.at(-1) });
+    expect(chosen.reform).toBe(result.focus.options.at(-1));
   });
 
   it("says when nothing is published", () => {
