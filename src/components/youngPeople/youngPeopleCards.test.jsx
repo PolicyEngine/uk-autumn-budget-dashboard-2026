@@ -147,7 +147,7 @@ describe("young people cards", () => {
     expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/vs all ages|≈ all ages/).length).toBeGreaterThan(0);
     // No effect: in the card's More info row, closed at first
-    const more = screen.getByRole("button", { name: "More info" });
+    const more = screen.getByRole("button", { name: "About this chart" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(more);
     expect(screen.getByText("No effect in 2028-29 (1)")).toBeInTheDocument();
