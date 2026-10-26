@@ -199,9 +199,9 @@ function MethodologyTab({ onShowTab }) {
                   "Dataset",
                   <>
                     The national file (<code>microcosm_uk_2024_25</code>), certified and pinned with
-                    the model version by the policyengine.py release named at the{" "}
-                    <AnchorLink id="replication">foot of the page</AnchorLink>, so the two cannot
-                    drift apart.
+                    the model version by the policyengine.py release this build uses
+                    {process.env.NEXT_PUBLIC_POLICYENGINE_VERSION ? ` (${process.env.NEXT_PUBLIC_POLICYENGINE_VERSION}, in About this dashboard's Built with)` : " (in About this dashboard's Built with)"}, so the
+                    two cannot drift apart.
                   </>,
                 ],
                 [
@@ -670,7 +670,7 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, and surveys under-record some incomes."
         >
-          <Topic title="Measures added up" preview="Which charts leave out interactions between measures">
+          <Topic title="Measures added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
             <p className="method-more">
               Each measure is also simulated on its own. Where several are selected, the revenue,
               decile and age charts add up their separate effects, so they leave out interactions

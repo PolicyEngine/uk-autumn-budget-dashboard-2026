@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import ReplicationLine, { replicationLinks } from "./ReplicationLine";
+import { describe, expect, it } from "vitest";
+import { replicationLinks } from "./ReplicationLine";
 
 describe("Reproduce these results", () => {
   it("links the code, and the policyengine.py release the lockfile pins", () => {
@@ -15,24 +14,17 @@ describe("Reproduce these results", () => {
     expect(replicationLinks({}).map((link) => link.key)).toEqual(["code"]);
   });
 
-  it("renders each as a chip with an icon, opening in a new tab", () => {
-    vi.stubEnv("NEXT_PUBLIC_POLICYENGINE_VERSION", "6.10.2");
-    render(<ReplicationLine />);
-    const section = screen.getByRole("region", { name: "Reproduce these results" });
-    expect(section.textContent.replace(/ \(opens in a new tab\)/g, "")).toBe(
-      "Built with our replication code on policyengine.py 6.10.2.",
-    );
-    const links = screen.getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual([
-      "replication code (opens in a new tab)",
-      "policyengine.py 6.10.2 (opens in a new tab)",
-    ]);
-    for (const link of links) {
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      expect(link.querySelector("svg")).not.toBeNull();
-    }
-    expect(section.id).toBe("replication");
-    vi.unstubAllEnvs();
+});
+
+describe("the build's versions, said once", () => {
+  it("are in About this dashboard's Built with only: no line at the foot of every tab", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = join(fileURLToPath(import.meta.url), "..", "..");
+    expect(readFileSync(join(src, "App.jsx"), "utf8")).not.toMatch(/<ReplicationLine/);
+    expect(readFileSync(join(src, "components", "OverviewDrawer.jsx"), "utf8")).toMatch(/replicationLinks\(/);
+    // Nothing points at the removed line
+    expect(readFileSync(join(src, "components", "MethodologyTab.jsx"), "utf8")).not.toMatch(/id="replication"/);
   });
 });

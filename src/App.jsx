@@ -17,7 +17,6 @@ import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
-import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
@@ -934,7 +933,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             />
           </>
         )}
-        <ReplicationLine />
       </main>
     </div>
   );
