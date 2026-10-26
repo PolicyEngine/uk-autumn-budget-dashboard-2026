@@ -231,7 +231,11 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
   };
 }
 
-// The map's drawing area, in SVG units.
+// The map's drawing area, in SVG units. The exported file shows all of it,
+// with the SVG's legend in the top-left corner, so the seats are fitted to
+// the right of the legend's column; on screen the viewBox is the seats' own
+// box, so this space is never shown there.
+const EXPORT_LEGEND_SPACE = 290;
 const WIDTH = 800;
 const HEIGHT = 600;
 // The space kept round the map at its full fit, in SVG units
@@ -286,10 +290,10 @@ function gridProjection(features) {
   const dataWidth = bounds.xMax - bounds.xMin;
   const dataHeight = bounds.yMax - bounds.yMin;
   const scale = Math.min(
-    (WIDTH - 2 * padding) / dataWidth,
+    (WIDTH - EXPORT_LEGEND_SPACE - 2 * padding) / dataWidth,
     (HEIGHT - 2 * padding) / dataHeight,
   );
-  const offsetX = (WIDTH - dataWidth * scale) / 2;
+  const offsetX = EXPORT_LEGEND_SPACE + (WIDTH - EXPORT_LEGEND_SPACE - dataWidth * scale) / 2;
   const offsetY = (HEIGHT - dataHeight * scale) / 2;
   return d3.geoTransform({
     point(x, y) {
@@ -314,6 +318,7 @@ export function seatGeometry(features, mode) {
     const { paths, bounds } = fitHexes(features.map(seatCode), {
       width: WIDTH,
       height: HEIGHT,
+      left: EXPORT_LEGEND_SPACE,
     });
     return {
       mode,
@@ -1028,9 +1033,14 @@ export default function ConstituencyMap({
                 {choice.focus && <span className="map-title-focus">: {focusName(choice.reform)}</span>}
               </span>
             </h3>
-            <p className="chart-description">
-              Average change in household net income by constituency.
-            </p>
+            {/* What the card shows is the section's subtitle, and how to
+                read it is in About this chart; a release that routes no
+                results by area gets a line describing the measure only */}
+            {notRouted && (
+              <p className="chart-description">
+                Average change in household net income by constituency.
+              </p>
+            )}
           </div>
           {downloadsReady ? (
             <ChartDownloadMenu
