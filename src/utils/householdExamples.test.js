@@ -21,12 +21,17 @@ describe("the example households", () => {
       expect(example.description.length).toBeGreaterThan(0);
       expect(example.description.length).toBeLessThanOrEqual(60);
       expect(example.note.length).toBeGreaterThan(0);
+      expect(Object.keys(EXAMPLE_ICONS), example.id).toContain(example.icon);
       // The measure its card features: an id the registry defines (the card
       // shows it only while the catalogue publishes it), named short enough
-      // for a tag
+      // for a tag. On #104 the higher earner features none: the frontend
+      // names no 2031-32 freeze measure (measureCatalogue.test.jsx)
+      if (example.id === "higher-earner") {
+        expect(example.measure, example.id).toBeUndefined();
+        continue;
+      }
       expect(REGISTRY, example.id).toContain(`"${example.measure}"`);
       expect(example.tag.length, example.id).toBeLessThanOrEqual(25);
-      expect(Object.keys(EXAMPLE_ICONS), example.id).toContain(example.icon);
     }
   });
 

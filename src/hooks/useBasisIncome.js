@@ -23,9 +23,11 @@ import { peekHouseholdImpact, rememberHouseholdHeadline } from "./useHouseholdIm
  * @param {string[]} params.policies - The policies it was asked with
  * @param {number|null} params.basisYear - The scatter's basis year
  * @param {boolean} params.enabled - Look only while a result is shown
+ * @param {string} [params.publicationKey] - The publication the answers
+ *   were asked under (useHouseholdImpact's cache keys start with it)
  * @returns {{ status: "idle"|"loading"|"ready"|"error", income: number|null }}
  */
-export default function useBasisIncome({ inputs, policies, basisYear, enabled }) {
+export default function useBasisIncome({ inputs, policies, basisYear, enabled, publicationKey = "" }) {
   // #185 on #104: the page keeps no list of measures, so only the selection
   // itself is looked up (the examples' file covers its own measures)
   const policySets = [policies];
@@ -33,7 +35,9 @@ export default function useBasisIncome({ inputs, policies, basisYear, enabled })
     enabled && inputs && basisYear
       ? policySets
           .filter((set) => Array.isArray(set) && set.length > 0)
-          .map((set) => requestKey(buildHouseholdRequest(inputs, { year: basisYear, policies: set })))
+          // Keyed as useHouseholdImpact keys its cache on #104: under the
+          // publication the answer was asked for
+          .map((set) => `${publicationKey}:${requestKey(buildHouseholdRequest(inputs, { year: basisYear, policies: set }))}`)
       : [];
   const primary = keys[0] ?? null;
   const fromCache = () => {

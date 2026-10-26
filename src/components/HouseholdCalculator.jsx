@@ -785,6 +785,7 @@ function HouseholdCalculator({
     policies: submitted?.policies ?? [],
     basisYear,
     enabled: placed !== null,
+    publicationKey,
   });
   const you = placed
     ? {
