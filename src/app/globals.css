@@ -219,6 +219,7 @@ body {
 .card,
 .hero-chart,
 .charts-grid > div,
+.charts-stack > div,
 .disclosure-card {
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
@@ -725,7 +726,8 @@ body {
   margin-bottom: 0;
 }
 
-.charts-grid > div {
+.charts-grid > div,
+.charts-stack > div {
   padding: var(--card-padding);
 }
 
@@ -891,6 +893,20 @@ body {
 }
 
 .charts-grid > div {
+  min-width: 0;
+}
+
+/* Cards stacked one above the other, each full width (All households'
+   map, then its household scatter). Not a charts-grid, so the paired-card
+   subgrid rules never apply: the scatter keeps its own 400px plot. */
+.charts-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0;
+}
+
+.charts-stack > div {
   min-width: 0;
 }
 
@@ -2122,6 +2138,12 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Household impact's income charts, below the calculator */
+.income-curve-examples {
+  margin-top: 48px;
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
 /* Example households: one chooser above the pair of charts */

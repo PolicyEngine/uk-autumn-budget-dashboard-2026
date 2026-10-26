@@ -348,12 +348,12 @@ function MethodologyTab({ onShowTab }) {
             <p>
               The national charts add up every household&apos;s change with its weight: the revenue
               chart as the change in the government&apos;s balance, the decile charts by income
-              group, and the household scatter and{" "}
-              <ViewLink tab="dashboard" hash="household" onShowTab={onShowTab}>
-                example households
+              group, and the household scatter for the spread behind the averages. Counts are
+              rounded and no household is ever shown on its own. The{" "}
+              <ViewLink tab="household" hash="household" onShowTab={onShowTab}>
+                example households&apos; income charts
               </ViewLink>{" "}
-              for the spread behind the averages. Counts are rounded and no household is ever
-              shown on its own.
+              on Household impact follow five fixed households instead.
             </p>
           }
           details={
@@ -487,7 +487,9 @@ function MethodologyTab({ onShowTab }) {
               />
               <h3 className="method-details-title">Example households</h3>
               <p className="method-more">
-                Each chart varies one income, from £0 to the top of its axis, for a fixed household.
+                The income charts on Household impact follow five fixed households, a different set
+                from the calculator&apos;s example cards. Each chart varies one income, from £0 to the
+                top of its axis, for a fixed household.
               </p>
               <ul className="method-households">
                 {EXAMPLE_HOUSEHOLDS.map((household) => (

@@ -8,16 +8,12 @@ import WaterfallChart from "./components/WaterfallChart";
 import ZeroMeasuresNote from "./components/ZeroMeasuresNote";
 import { decileMembership } from "./utils/legendMembership";
 import ConstituencyMap from "./components/ConstituencyMap";
-import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
-import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
-import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import SourceLink from "./components/SourceLink";
 import useScrollReveal from "./hooks/useScrollReveal";
-import HouseholdPicker from "./components/HouseholdPicker";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
@@ -81,9 +77,20 @@ export function opensYoungPeople({ search, hash }) {
   );
 }
 
+/**
+ * Whether a page address is an old link to the example households' income
+ * charts (#household on Population impact), now on Household impact.
+ */
+export function opensIncomeCurves({ search, hash }) {
+  if (hash !== "#household") return false;
+  const tab = new URLSearchParams(search).get("tab");
+  return !tab || tab === DEFAULT_VIEW;
+}
+
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
+  if (opensIncomeCurves({ search, hash })) return "household";
   const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
@@ -164,10 +171,6 @@ function App() {
   const [selectedYear] = useState(DEFAULT_DISPLAY_YEAR);
   // The year every chart shows, chosen with the header pill
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
-  // One example household for both household cards, so they always match
-  const [exampleHouseholdId, setExampleHouseholdId] = useState(
-    EXAMPLE_HOUSEHOLDS[0].id,
-  );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   // Cards fade and rise in as they scroll into view
@@ -189,6 +192,9 @@ function App() {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
     if (opensYoungPeople(window.location)) dropSubTab("young");
+    // An old link to the income charts (?sub=all#household) opens Household
+    // impact, which has no sub-tabs
+    else if (opensIncomeCurves(window.location)) dropSubTab();
     setActiveTab(viewFromLocation(window.location));
 
     if (policiesParam) {
@@ -630,46 +636,20 @@ function App() {
         </div>
       );
     }
-    // All households: example households, places, and how changes vary
+    // All households: places, and how changes vary between households
     return (
       <div className="results-container">
-        {/* Example households first, so the view does not open on the
-            constituency card, the last result to publish. One chooser
-            above both charts */}
-        <SectionHeading
-          title="Example households"
-          subtitle="Net income of five example households across their incomes."
-        />
-        <div className="example-household-picker">
-          <HouseholdPicker value={exampleHouseholdId} onChange={setExampleHouseholdId} />
-        </div>
-        <section id="household" className="report-section charts-grid charts-row-3">
-          <EmploymentIncomeChart
-            selectedPolicies={selectedPolicies}
-            selectedYear={distributionalYear}
-            household={exampleHouseholdId}
-            onHouseholdChange={setExampleHouseholdId}
-            showPicker={false}
-          />
-          <EmploymentIncomeDiffChart
-            selectedPolicies={selectedPolicies}
-            selectedYear={distributionalYear}
-            household={exampleHouseholdId}
-            onHouseholdChange={setExampleHouseholdId}
-            showPicker={false}
-          />
-        </section>
-
-        {/* The constituency map beside the household scatter. The scatter
-            shows binned groups of households only: the per-household
-            scatter stays withdrawn, as it showed survey households one by
-            one. Results by region are hidden for now (RegionView is kept,
-            not rendered). */}
+        {/* The constituency map, then the household scatter below it, each
+            full width. The scatter shows binned groups of households only:
+            the per-household scatter stays withdrawn, as it showed survey
+            households one by one. Results by region are hidden for now
+            (RegionView is kept, not rendered). The example households'
+            income charts are on Household impact. */}
         <SectionHeading
           title="Where and who"
           subtitle="Average change by constituency, and how changes vary between households."
         />
-        <section id="constituencies" className="report-section charts-grid charts-row-2">
+        <section id="constituencies" className="report-section charts-stack">
           <ConstituencyMap
             selectedPolicies={selectedPolicies}
             selectedYear={distributionalYear}

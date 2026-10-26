@@ -159,7 +159,22 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
         (r) => r.status !== 200 && !NOT_YET_PUBLISHED.has(r.url),
       );
       expect(missing).toEqual([]);
+      if (value === "dashboard") {
+        // The example households' income charts moved to Household impact:
+        // each fact once, so All households no longer shows them
+        expect(within(panel).queryByRole("heading", { name: "Example households" })).toBeNull();
+        expect(within(panel).queryAllByRole("heading", { name: /^Household net income/ })).toHaveLength(0);
+      }
       if (value === "household") {
+        // Below the calculator: the example households' income charts
+        expect(
+          within(panel).getByRole("heading", {
+            name: "How example households' net income changes with income",
+          }),
+        ).toBeInTheDocument();
+        expect(
+          await within(panel).findAllByRole("heading", { name: /^Household net income/ }, { timeout: 5000 }),
+        ).not.toHaveLength(0);
         // "Your household" opens the form; its first box is the head's
         // age, with its default
         fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
