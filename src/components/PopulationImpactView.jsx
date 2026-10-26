@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import SubTabs, { SubTabPanel, useSubTabParam } from "./SubTabs";
+import { OPEN_POPULATION_SUB } from "../utils/populationSub";
+import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
 import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 
 /** Population impact's sub-tabs; the first, Public finances, is the default. */
@@ -35,6 +36,18 @@ function PopulationSubTabs({ note, active = true, children }) {
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
+  }, [setSub]);
+
+  // A link elsewhere on the page that opens a sub-tab (openPopulationSub)
+  useEffect(() => {
+    const onOpen = (event) => {
+      if (!SUB_TAB_VALUES.includes(event.detail)) return;
+      dropYoungHash();
+      setSub(event.detail);
+      document.getElementById(subTabId(ID_PREFIX, event.detail))?.scrollIntoView?.({ block: "center" });
+    };
+    window.addEventListener(OPEN_POPULATION_SUB, onOpen);
+    return () => window.removeEventListener(OPEN_POPULATION_SUB, onOpen);
   }, [setSub]);
 
   // The #young-people hash belongs to the Young people sub-tab, so it goes

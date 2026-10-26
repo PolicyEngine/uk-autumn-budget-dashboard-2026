@@ -60,6 +60,7 @@ import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import CollapsibleNote from "./CollapsibleNote";
 import {
   legendMembership,
   legendItems as membershipItems,
@@ -586,10 +587,12 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       {published && <ZeroMeasuresNote members={members} year={selectedYear} />}
       {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
       {published && single && (
-        <p className="chart-footnote">
-          Single years of age rest on fewer households; a few large changes, such as capital gains under
-          Business Asset Disposal Relief, can move one age&apos;s average.
-        </p>
+        <CollapsibleNote lead="Single years of age rest on fewer households.">
+          <p>
+            A few large changes, such as capital gains under Business Asset Disposal Relief, can move one
+            age&apos;s average.
+          </p>
+        </CollapsibleNote>
       )}
     </div>
   );

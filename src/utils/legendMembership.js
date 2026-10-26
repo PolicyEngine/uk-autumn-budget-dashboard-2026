@@ -11,6 +11,7 @@
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "./policyConfig";
 import { POLICIES } from "./policies";
 import { CHART_COLOURS } from "./chartTheme";
+import { DISPLAY_YEARS } from "./displayYears";
 
 /**
  * Measures that are £0 for every household by construction, and why, in the
@@ -21,7 +22,7 @@ import { CHART_COLOURS } from "./chartTheme";
  */
 export const ZERO_FOR_HOUSEHOLDS = {
   employer_ni_relief_under_25s:
-    "employers pay less National Insurance, and wages are held fixed in this model, so no household's income changes",
+    "Wages are held fixed in this model, so no household's income changes",
 };
 
 // The swatch of a greyed-out measure, in the export too
@@ -72,12 +73,46 @@ export function decileMembership(rows, valueKey, selectedPolicies, year) {
   return legendMembership(selectedPolicies, (id) => ids.has(id));
 }
 
-/** Why a greyed-out measure is £0 in `year`. */
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+// "2027-04" -> "April 2027"
+const monthYear = (month) => `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
+// 2027 -> "2027-28"
+const fiscalYear = (year) => `${year}-${String(year + 1).slice(-2)}`;
+
+/**
+ * When a measure is in force, in words, from its `inForce` months in
+ * policies.js: "winter 2026-27 only" for one October-to-March winter,
+ * otherwise "in force from April 2031" or "in force December 2026 to May
+ * 2027", with "(2031-32 only)" when that is the one year shown it is in
+ * force.
+ */
+export function inForceText(policy) {
+  const window = policy?.inForce;
+  if (!window) return null;
+  const { from, to } = window;
+  const fromYear = Number(from.slice(0, 4));
+  if (to && from.slice(5) === "10" && to.slice(5) === "03" && Number(to.slice(0, 4)) === fromYear + 1) {
+    return `winter ${fiscalYear(fromYear)} only`;
+  }
+  const years = DISPLAY_YEARS.filter((year) => inForceIn(policy, year));
+  const span = to ? `in force ${monthYear(from)} to ${monthYear(to)}` : `in force from ${monthYear(from)}`;
+  return years.length === 1 ? `${span} (${fiscalYear(years[0])} only)` : span;
+}
+
+/**
+ * Why a greyed-out measure is £0 for households in `year`, as
+ * {kind, text}: "employer" (ZERO_FOR_HOUSEHOLDS: £0 by construction),
+ * "not_in_force" (when it is in force instead) or "none" (in force, but no
+ * household shown is changed).
+ */
 export function zeroReason(id, year) {
-  if (ZERO_FOR_HOUSEHOLDS[id]) return ZERO_FOR_HOUSEHOLDS[id];
+  if (ZERO_FOR_HOUSEHOLDS[id]) return { kind: "employer", text: ZERO_FOR_HOUSEHOLDS[id] };
   const policy = POLICIES.find((entry) => entry.id === id);
-  if (!inForceIn(policy, year)) return "not in force that year";
-  return "no change for the households shown";
+  if (!inForceIn(policy, year)) return { kind: "not_in_force", text: inForceText(policy) };
+  return { kind: "none", text: "no change for the households shown" };
 }
 
 /** The legend items (GroupedLegend `items`), greyed out where muted. */

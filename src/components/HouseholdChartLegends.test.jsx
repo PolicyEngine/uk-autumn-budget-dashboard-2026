@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
+import ZeroMeasuresNote from "./ZeroMeasuresNote";
 import { POLICIES } from "../utils/policies";
-import { legendMembership, zeroReason, inForceIn } from "../utils/legendMembership";
+import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
 
 // The household decile charts must list every selected measure in their
 // legend, £0 ones too (greyed out, with the reason under the chart): a
@@ -51,11 +52,15 @@ describe("legendMembership", () => {
   });
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
-    expect(zeroReason(EMPLOYER_NI, 2027)).toMatch(/wages are held fixed/);
+    expect(zeroReason(EMPLOYER_NI, 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
     const whd = POLICIES.find((policy) => policy.id === "warm_home_discount_top_up");
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);
-    expect(zeroReason(whd.id, 2027)).toBe("not in force that year");
+    expect(zeroReason(whd.id, 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
+    const freeze = POLICIES.find((policy) => policy.id === "threshold_freeze_2031_32");
+    expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
+    const fuelVat = POLICIES.find((policy) => policy.id === "road_fuel_vat_cut");
+    expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
   });
 });
 
@@ -76,13 +81,69 @@ describe.each([
       (node) => node.textContent === "Employer NI relief for under-25s",
     );
     expect(item.className).toContain("is-muted");
-    const note = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
-    expect(note.textContent).toMatch(/wages are held fixed/);
+    // One short line, the detail closed until "More info" is opened
+    const note = container.querySelector(".zero-measures-note");
+    expect(note.querySelector(".note-line").textContent).toBe("3 measures are £0 for households in 2027-28. More info");
+    const toggle = within(note).getByRole("button", { name: "More info" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(note.querySelector(".note-detail")).not.toBeVisible();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveTextContent("Less info");
+    expect(note.querySelector(".note-detail")).toBeVisible();
+    const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
+    expect(employer.textContent).toMatch(/Wages are held fixed/);
+    expect(within(employer).getByRole("link", { name: "Public finances" })).toHaveAttribute(
+      "href",
+      "?tab=dashboard&sub=finances",
+    );
     // The Warm Home Discount top-up is paid in 2026-27 only
     expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).not.toBeNull();
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(screen.getAllByText("Fuel duty rises deferred")[0].closest("li").className).not.toContain("is-muted");
-    within(container).getByText(/so greyed out in the key/);
+    within(container).getByText("Greyed out in the key and left out of the tooltip.");
+  });
+});
+
+describe("ZeroMeasuresNote", () => {
+  const members = [
+    { id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true },
+    { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
+  ];
+
+  it("says one measure in the singular, and lists only the £0 ones", () => {
+    const { container } = render(<ZeroMeasuresNote members={members} year={2028} />);
+    expect(container.querySelector(".note-line").textContent).toBe("1 measure is £0 for households in 2028-29. More info");
+    expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
+      EMPLOYER_NI,
+    ]);
+  });
+
+  it("renders nothing when every measure has an effect", () => {
+    const { container } = render(<ZeroMeasuresNote members={[members[1]]} year={2028} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("ZeroMeasuresNote's employer NI revenue", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("quotes the published revenue for the year shown", async () => {
+    const csv = readFileSync(path.join(process.cwd(), "public", "data", "budgetary_impact.csv"), "utf8");
+    const value = Number(
+      csv.split("\n").find((line) => line.startsWith(`${EMPLOYER_NI},`) && line.split(",")[2] === "2027").split(",")[3],
+    );
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, text: () => Promise.resolve(csv) })));
+    render(
+      <ZeroMeasuresNote
+        members={[{ id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true }]}
+        year={2027}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    expect(
+      await screen.findByText(new RegExp(`about £${Math.abs(value).toFixed(1)}bn in 2027-28`)),
+    ).toBeInTheDocument();
   });
 });
