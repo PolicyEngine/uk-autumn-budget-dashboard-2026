@@ -307,7 +307,7 @@ function readJson(response, signal) {
     signal.addEventListener("abort", onAbort, { once: true });
     Promise.resolve()
       .then(() => response.json())
-      .then(resolve, () => (signal.aborted ? onAbort() : resolve(null)))
+      .then(resolve, () => resolve(null))
       .finally(() => signal.removeEventListener("abort", onAbort));
   });
 }
