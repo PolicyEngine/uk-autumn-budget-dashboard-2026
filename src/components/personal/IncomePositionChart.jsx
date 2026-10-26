@@ -27,6 +27,7 @@ import {
 import { parseCsv } from "../../utils/publication/csv";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import useElementWidth from "../../hooks/useElementWidth";
+import useDataFile from "../../hooks/useDataFile";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import PillSelect from "../PillSelect";
@@ -43,7 +44,6 @@ const AFTER = CHART_COLOURS.after;
 const TEXT = CHART_COLOURS.text;
 const GAIN = CHART_COLOURS.gain;
 const LOSS = CHART_COLOURS.loss;
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const POSITION_VIEWS = [
   { value: "where", label: "Where you sit" },
@@ -62,32 +62,7 @@ const UNIT_OPTIONS = [
   { value: "gbp", label: "£ a year" },
 ];
 
-// Each file is loaded once per page: every household and year reads it
-const files = {};
-function useFile(name, parse) {
-  const [state, setState] = useState(() => files[name] ?? { status: "loading", rows: null });
-  useEffect(() => {
-    if (files[name]) return undefined;
-    let cancelled = false;
-    fetch(`${BASE}/data/${name}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`${name}: ${response.status}`);
-        return response.text();
-      })
-      .then((text) => {
-        files[name] = { status: "ready", rows: parse(text) };
-        if (!cancelled) setState(files[name]);
-      })
-      .catch((error) => {
-        console.error(`Error loading ${name}:`, error);
-        if (!cancelled) setState({ status: "error", rows: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [name, parse]);
-  return state;
-}
+const useFile = useDataFile;
 
 function parseRecords(text) {
   const [header, ...body] = parseCsv(text).filter((row) => row.length > 1);
