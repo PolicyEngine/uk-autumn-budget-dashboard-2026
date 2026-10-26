@@ -36,7 +36,7 @@ import subprocess
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor
 from concurrent.futures import wait as wait_futures
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional, Protocol, Sequence
 
 GB = 1024**3
@@ -445,14 +445,26 @@ def add_jobs_arguments(parser, modal: bool = False) -> None:
 # -- carrying a measure to a worker ------------------------------------------
 
 
+# The environment variable that selects the registered measures (main's,
+# or a drill's: ``reforms._measure_factories``).
+MEASURE_SET = "UK_BUDGET_MEASURE_SET"
+
+
+def _measure_set() -> str:
+    return os.environ.get(MEASURE_SET, "")
+
+
 @dataclass(frozen=True)
 class RegisteredReform:
     """A registered measure, sent by id: some registered measures carry
     simulation modifiers defined inside functions, which cannot be pickled.
     The worker looks the id up in the same registry (``reforms.get_reform``),
-    from the same code."""
+    from the same code and the same measure set: the reference records the
+    set it was made under, since under another set one id can name another
+    measure (the drill's combined reform is not main's)."""
 
     id: str
+    measure_set: str = field(default_factory=_measure_set)
 
 
 def portable(reform, runner=None):
@@ -489,5 +501,11 @@ def resolve_reform(reference):
     if isinstance(reference, RegisteredReform):
         from uk_budget_data.reforms import get_reform
 
+        if reference.measure_set != _measure_set():
+            raise RuntimeError(
+                f"{reference.id} was sent under {MEASURE_SET}="
+                f"{reference.measure_set!r}, but this worker has "
+                f"{_measure_set()!r}: set it where the worker runs"
+            )
         return get_reform(reference.id)
     return reference

@@ -634,3 +634,15 @@ def test_a_unit_still_ramping_up_counts_at_its_whole_estimate():
         parallel_helpers.timed_echo, [0.5, 0.0]
     )
     assert start_b < end_a
+
+
+def test_a_registered_reform_resolves_only_under_its_measure_set(monkeypatch):
+    """Under the drill's measure set the combined reform has the drill's
+    members; a worker without the set would build main's under the same
+    id, so it refuses (as a Modal container without the variable would)."""
+    monkeypatch.setenv("UK_BUDGET_MEASURE_SET", "drill5")
+    reference = RegisteredReform("autumn_budget_2026_combined")
+    assert reference.measure_set == "drill5"
+    monkeypatch.delenv("UK_BUDGET_MEASURE_SET")
+    with pytest.raises(RuntimeError, match="UK_BUDGET_MEASURE_SET"):
+        resolve_reform(reference)

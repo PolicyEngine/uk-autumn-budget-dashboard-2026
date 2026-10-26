@@ -12,8 +12,9 @@ The image installs exactly what ``uv.lock`` pins (``uv_sync``), as the
 household app of #97 does, so the containers calculate with the same
 policyengine.py, policyengine-uk and policyengine-core as a local run. The
 container needs the Hugging Face token to download the bundle's Microcosm
-dataset: it comes from the Modal secret ``HF_SECRET`` alone, and nothing
-else is given to the container. Cold starts restore a memory snapshot
+dataset: it comes from the Modal secret ``HF_SECRET`` alone. The image
+also carries the measure set (``UK_BUDGET_MEASURE_SET``) the command runs
+under, so a measure sent by id resolves to the same measure there. Cold starts restore a memory snapshot
 taken after the engine and its parameters are imported.
 
 Modal imports this module twice: where the command runs, with the
@@ -54,7 +55,14 @@ def build_image() -> modal.Image:
     return (
         modal.Image.debian_slim(python_version=python_version)
         .uv_sync(str(project_root), frozen=True)
-        .env({"GIT_SHA": os.environ.get("GIT_SHA", "")})
+        .env(
+            {
+                "GIT_SHA": os.environ.get("GIT_SHA", ""),
+                "UK_BUDGET_MEASURE_SET": os.environ.get(
+                    "UK_BUDGET_MEASURE_SET", ""
+                ),
+            }
+        )
         .add_local_python_source("uk_budget_data", ignore=PACKAGE_IGNORE)
     )
 
