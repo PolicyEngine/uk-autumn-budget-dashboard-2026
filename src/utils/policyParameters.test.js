@@ -11,23 +11,22 @@ import {
   parameterTableFor,
   resetPolicyParameters,
   segmentsFor,
-  summaryFor,
-  visualFor,
+  switchChange,
 } from "./policyParameters";
 
 const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
 const rowsOf = (id) => Object.fromEntries(file.measures[id].rows.map((row) => [row.label, row]));
 
 describe("policy_parameters.json, as the page reads it", () => {
-  it("has the page's schema, and every measure a picture and a line of words", () => {
+  it("has the page's schema, and a display the page draws for every measure", () => {
     expect(file.schema).toBe(POLICY_PARAMETERS_SCHEMA);
     for (const [id, table] of Object.entries(file.measures)) {
-      const main = table.rows.find((row) => row.primary && visualFor(row));
-      expect(main, id).toBeTruthy();
-      expect(summaryFor(main), id).toMatch(/\.$/);
-      expect(summaryFor(main), id).not.toMatch(/pp\b|NaN|undefined/);
+      expect(parameterTableFor(file, { id, description: table.description }), id).toBeTruthy();
       for (const row of table.rows) expect(row.unit_words, `${id} ${row.label}`).not.toBe("pounds");
     }
+    expect(switchChange(file.measures.road_fuel_vat_cut)).toBe("20% → 15%");
+    expect(switchChange(file.measures.warm_home_discount_top_up)).toBe("£150 → £250");
+    expect(switchChange(file.measures.badr_lifetime_limit_cut)).toBeNull();
   });
 
   it("draws fuel duty on a time axis, stepping on each date", () => {
@@ -46,15 +45,6 @@ describe("policy_parameters.json, as the page reads it", () => {
     expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
   });
 
-  it("shows one-off changes as pairs and changes over time as plots", () => {
-    expect(visualFor(rowsOf("badr_lifetime_limit_cut")["Business Asset Disposal Relief lifetime limit"]).kind).toBe("pair");
-    expect(visualFor(rowsOf("warm_home_discount_top_up")["Warm Home Discount"]).kind).toBe("pair");
-    expect(visualFor(rowsOf("employer_ni_relief_under_25s")["Employer National Insurance rate, employees aged 21 to 24"]).kind).toBe("pair");
-    expect(visualFor(rowsOf("state_pension_income_tax_protection")["Income tax allowance over State Pension age"]).kind).toBe("plot");
-    expect(visualFor(rowsOf("plan_2_threshold_unfreeze")["Plan 2 repayment threshold"]).kind).toBe("plot");
-    expect(visualFor(rowsOf("threshold_freeze_2031_32")["Personal allowance"]).kind).toBe("plot");
-    expect(visualFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity in Great Britain"]).kind).toBe("plot");
-  });
 });
 
 describe("words", () => {
@@ -83,9 +73,10 @@ describe("words", () => {
 });
 
 describe("parameterTableFor", () => {
-  const tables = { measures: { a: { description: "As built.", rows: [{ label: "x" }] } } };
-  it("gives a measure's rows only for the description they were built from", () => {
-    expect(parameterTableFor(tables, { id: "a", description: "As built." })).toEqual([{ label: "x" }]);
+  const tables = { measures: { a: { description: "As built.", display: "path", rows: [{ label: "x" }] } } };
+  it("gives a measure's entry only for the description it was built from, and a known display", () => {
+    expect(parameterTableFor(tables, { id: "a", description: "As built." })).toEqual({ display: "path", rows: [{ label: "x" }] });
+    expect(parameterTableFor({ measures: { a: { ...tables.measures.a, display: "other" } } }, { id: "a", description: "As built." })).toBeNull();
     expect(parameterTableFor(tables, { id: "a", description: "Changed." })).toBeNull();
     expect(parameterTableFor(tables, { id: "b", description: "As built." })).toBeNull();
     expect(parameterTableFor(null, { id: "a", description: "As built." })).toBeNull();

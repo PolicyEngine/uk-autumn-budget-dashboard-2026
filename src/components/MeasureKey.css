@@ -167,6 +167,30 @@ button.measure-key-chip:focus-visible,
   background: var(--pe-gray-100);
 }
 
+/* "Clear": unpins every highlighted measure; shown while any is pinned */
+.measure-key-clear {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--pe-teal-100);
+  border-radius: 999px;
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.measure-key-clear:hover,
+.measure-key-clear:focus-visible {
+  border-color: var(--c-gain);
+}
+
+.measure-key-clear:focus-visible {
+  outline: 2px solid var(--pe-accent);
+  outline-offset: 2px;
+}
+
 /* In a card: under the plot, as the legend was */
 .measure-key.is-card {
   padding-top: 8px;

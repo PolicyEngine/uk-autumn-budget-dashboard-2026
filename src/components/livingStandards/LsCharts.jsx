@@ -19,6 +19,7 @@ import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import useElementWidth from "../../hooks/useElementWidth";
 import {
+  barShape,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   GRID_PROPS,
@@ -268,6 +269,7 @@ export function LsBarChart({
               name={s.name}
               fill={s.colour}
               stackId={stacked ? "stack" : undefined}
+              shape={barShape(stacked ? series.map((item) => item.key) : [s.key])}
               maxBarSize={maxBarSize}
               isAnimationActive={false}
             >

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { withPolicyDetails } from "../utils/policyDetails";
-import { parameterTableFor } from "../utils/policyParameters";
+import { parameterTableFor, switchChange } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
 import { policyCardId } from "./methodology/MeasureDescriptions";
@@ -87,7 +87,7 @@ const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => mon
  * back in two stages, are small diamonds labelled below the axis. One
  * image, described in words for screen readers.
  */
-function PolicyTimeline({ policy, highlight }) {
+function PolicyTimeline({ policy, highlight, change }) {
   const { from, to } = policy.inForce;
   const start = timelineMonth(from);
   const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
@@ -95,7 +95,7 @@ function PolicyTimeline({ policy, highlight }) {
   const stepLabel = steps.length ? policy.stepsLabel : null;
   const stepStart = steps.length ? timelineMonth(steps[0].month) : null;
   return (
-    <div className="ptl" role="img" aria-label={timelineDescription(policy)}>
+    <div className="ptl" role="img" aria-label={change ? `${timelineDescription(policy)} While in force: ${change}.` : timelineDescription(policy)}>
       <div className="ptl-plot">
         <div className="ptl-notes">
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
@@ -155,7 +155,9 @@ function PolicyTimeline({ policy, highlight }) {
         {/* Always there, empty when unused, so the years line up across a row */}
         <div className="ptl-chips">
           {to && (
-            <span className="ptl-chip" style={{ left: share(start) }}>
+            <span className={`ptl-chip${change ? " has-change" : ""}`} style={{ left: share(start) }}>
+              {/* A switch measure's change, on its span: "5% → 0%" */}
+              {change && <strong className="ptl-change">{change}</strong>}
               {durationLabel(policy)}
             </span>
           )}
@@ -196,7 +198,7 @@ function PolicyTimeline({ policy, highlight }) {
  * source, and the footer ("How it is modelled" and "See its effect" on
  * one line).
  */
-function PolicyCard({ policy, onShowEffect, parameterRows }) {
+function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
   // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
@@ -221,9 +223,9 @@ function PolicyCard({ policy, onShowEffect, parameterRows }) {
       <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
 
       <div className="policy-card-spec">
-        {parameterRows && (
+        {parameters && (
           <PolicyChange
-            rows={parameterRows}
+            entry={parameters}
             direction={policy.direction}
             onHighlight={setHighlight}
           />
@@ -247,7 +249,9 @@ function PolicyCard({ policy, onShowEffect, parameterRows }) {
             )}
           </div>
         </dl>
-        {policy.inForce && <PolicyTimeline policy={policy} highlight={highlight} />}
+        {policy.inForce && (
+          <PolicyTimeline policy={policy} highlight={highlight} change={switchChange(parameters)} />
+        )}
       </div>
 
       <p className="policy-card-source-line">
@@ -331,7 +335,7 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
               key={policy.id}
               policy={policy}
               onShowEffect={onShowEffect}
-              parameterRows={parameterTableFor(tables, policy)}
+              parameters={parameterTableFor(tables, policy)}
             />
           ))}
         </ul>

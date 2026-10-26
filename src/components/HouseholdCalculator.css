@@ -1137,6 +1137,63 @@
   transform: none;
 }
 
+/* Calculated in the background: a shimmer where the figure and the bars
+   will be */
+.household-card-shimmer {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.household-card-shimmer-figure,
+.household-card-shimmer-bars {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--c-muted-fill) 0%,
+    color-mix(in srgb, var(--c-muted-fill) 40%, var(--pe-surface)) 50%,
+    var(--c-muted-fill) 100%
+  );
+  background-size: 200% 100%;
+  animation: household-shimmer 1.3s ease-in-out infinite;
+}
+
+.household-card-shimmer-figure {
+  width: 104px;
+  height: 26px;
+}
+
+.household-card-shimmer-bars {
+  width: 80px;
+  height: 34px;
+}
+
+@keyframes household-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.household-card-spark rect.is-pending {
+  fill: var(--c-no-change);
+  opacity: 0.5;
+  animation: household-pending-bar 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes household-pending-bar {
+  to {
+    opacity: 0.15;
+  }
+}
+
 /* No precomputed figure: a dashed pill says when it comes */
 .household-card-pending {
   margin-bottom: 4px;
@@ -1229,10 +1286,10 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   width: 100%;
-  margin-bottom: 22px;
-  padding: 24px 28px;
+  margin-bottom: 20px;
+  padding: 14px 20px 14px 18px;
   font: inherit;
   text-align: left;
   color: var(--pe-gray-800);
@@ -1288,42 +1345,37 @@
     var(--pe-shadow-sm);
 }
 
-/* A house in two soft rings */
+/* A house in a soft ring */
 .household-yours-art {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
+  margin: 0 4px;
   color: var(--pe-surface);
   background: var(--pe-teal-700);
   border-radius: 50%;
-  box-shadow:
-    0 0 0 7px color-mix(in srgb, var(--pe-teal-500) 18%, transparent),
-    0 0 0 14px color-mix(in srgb, var(--pe-teal-500) 8%, transparent);
-  margin: 0 8px 0 6px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--pe-teal-500) 14%, transparent);
 }
 
 .household-yours-words {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
-.household-yours-eyebrow.household-card-name {
-  display: block;
-  min-height: 0;
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pe-teal-700);
+/* The subtitle and the hints, on one line where they fit */
+.household-yours-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
 }
 
 .household-yours-title {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.015em;
@@ -1340,14 +1392,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
 }
 
 .household-yours-hint {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px 3px 8px;
+  padding: 1px 9px 1px 7px;
   font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 1.4;
@@ -1359,9 +1410,8 @@
 
 .household-yours-side {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  gap: 16px;
 }
 
 .household-yours-result {
@@ -1381,8 +1431,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 42px;
-  padding: 0 20px;
+  height: 40px;
+  padding: 0 18px;
   font-size: 0.92rem;
   font-weight: 600;
   white-space: nowrap;
@@ -1432,6 +1482,12 @@
   .household-card-spark rect {
     transition: none;
   }
+
+  .household-card-shimmer-figure,
+  .household-card-shimmer-bars,
+  .household-card-spark rect.is-pending {
+    animation: none;
+  }
 }
 
 /* A tablet or phone: the words beside the house, the call to action the
@@ -1439,33 +1495,33 @@
 @media (max-width: 767px) {
   .household-yours {
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 14px 16px;
-    padding: 20px;
+    gap: 10px 12px;
+    padding: 14px;
   }
 
   .household-yours-art {
-    align-self: start;
-    width: 48px;
-    height: 48px;
-    margin: 4px 4px 0 2px;
-    box-shadow:
-      0 0 0 5px color-mix(in srgb, var(--pe-teal-500) 18%, transparent),
-      0 0 0 10px color-mix(in srgb, var(--pe-teal-500) 8%, transparent);
+    width: 40px;
+    height: 40px;
+    margin: 0 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--pe-teal-500) 14%, transparent);
   }
 
   .household-yours-art svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .household-yours-title {
-    font-size: 1.12rem;
+    font-size: 1.05rem;
+  }
+
+  /* On a phone the hints go: the subtitle says enough */
+  .household-yours-hints {
+    display: none;
   }
 
   .household-yours-side {
     grid-column: 1 / -1;
-    flex-direction: row;
-    align-items: center;
     justify-content: space-between;
   }
 
@@ -1476,6 +1532,7 @@
   .household-yours-action {
     flex: 1;
     justify-content: center;
+    height: 38px;
   }
 
   .household-yours-result + .household-yours-action {

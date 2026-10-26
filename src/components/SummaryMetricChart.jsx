@@ -22,6 +22,7 @@ import "./SummaryMetricChart.css";
 // The in-card pill styles (.ls-controls), shared with the current-law cards
 import "./livingStandards/LivingStandards.css";
 import {
+  barShape,
   AXIS_LINE,
   CHART_COLOURS,
   GRID_PROPS,
@@ -41,6 +42,9 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
+
+// The dashboard's bar style: each bar rounds its end away from zero (chartTheme)
+const VALUE_BAR_SHAPE = barShape(["value"]);
 
 /**
  * The summary statistics from metrics.csv that Population impact charts,
@@ -468,6 +472,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 dataKey="value"
                 name={metric.title}
                 fill={CHART_COLOURS.gain}
+                shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
                 {data.map((point) => {

@@ -55,14 +55,30 @@ export function formatChange(before, after, unit) {
 const same = (a, b) => (a ?? null) === (b ?? null) || (a != null && b != null && Math.abs(a - b) < 1e-9);
 export const differs = (item) => !same(item.before, item.after);
 
+export const DISPLAYS = ["switch", "before-after", "path", "schedule", "table"];
+
 /**
- * A measure's rows, or null: none unless the file describes the measure
- * exactly as the publication now does.
+ * A measure's entry ({ display, rows }), or null: none unless the file
+ * describes the measure exactly as the publication now does, and gives it
+ * a display the page draws.
  */
 export function parameterTableFor(tables, policy) {
   const table = tables?.measures?.[policy?.id];
   if (!table || table.description !== policy.description) return null;
-  return Array.isArray(table.rows) && table.rows.length ? table.rows : null;
+  if (!DISPLAYS.includes(table.display) || !Array.isArray(table.rows) || !table.rows.length) return null;
+  return { display: table.display, rows: table.rows };
+}
+
+/** The main row: the first the file marks primary. */
+export const mainRow = (entry) => entry?.rows?.find((row) => row.primary) ?? null;
+
+/** A switch's change, for the card's timeline: "5% → 0%", "£150 → £250". */
+export function switchChange(entry) {
+  if (entry?.display !== "switch") return null;
+  const point = mainRow(entry)?.points?.[0];
+  if (!point || !differs(point)) return null;
+  const { unit } = mainRow(entry);
+  return `${formatValue(point.before, unit)} \u2192 ${formatValue(point.after, unit)}`;
 }
 
 // --- Time ------------------------------------------------------------------
@@ -132,71 +148,7 @@ export function segmentsFor(row) {
     .map((segment) => ({ ...segment, from: yearOfMonth(segment.start), to: yearOfMonth(segment.end - 1e-6) }));
 }
 
-/**
- * How a row reads best. A single change that holds from when it starts
- * (current law one value throughout, the measure another) is a pair:
- * before and after, to scale. Anything that moves over time is a plot.
- */
-export function visualFor(row) {
-  const points = row.points ?? [];
-  const changed = points.filter(differs);
-  if (!changed.length) return null;
-  if (points.length === 1 && !isWindow(points[0])) {
-    return { kind: "pair", before: points[0].before, after: points[0].after, when: points[0].label };
-  }
-  if (points.every(isYearly)) {
-    const first = points.indexOf(changed[0]);
-    const flat = points.every((p) => same(p.before, points[0].before));
-    const held = points.slice(first).every((p) => differs(p) && same(p.after, changed[0].after));
-    if (flat && held) {
-      return { kind: "pair", before: changed[0].before, after: changed[0].after, when: `from ${changed[0].label}` };
-    }
-  }
-  const segments = segmentsFor(row);
-  return segments.length ? { kind: "plot", segments } : null;
-}
-
 // --- Words -----------------------------------------------------------------
-
-const periodWords = (segment) =>
-  /^(From|Before|After) /.test(segment.label) ? segment.label.replace(/^From/, "from") : `in ${segment.label}`;
-
-const direction = (segment) => (segment.after > segment.before ? "higher" : "lower");
-
-/**
- * One line on what a row's change is, stated once: for a plot, its first
- * gap, its largest if that is another, and its latest; for a pair, from
- * what to what.
- */
-export function summaryFor(row) {
-  const visual = visualFor(row);
-  if (!visual) return "";
-  const { unit } = row;
-  const { label } = row;
-  if (visual.kind === "pair") {
-    const verb = visual.after > visual.before ? "rises" : "falls";
-    return `${label} ${verb} from ${formatValue(visual.before, unit)} to ${formatValue(visual.after, unit)} ${visual.when.startsWith("from") ? visual.when : `for ${visual.when.toLowerCase()}`}.`;
-  }
-  const gaps = visual.segments.filter(differs);
-  if (unit === "percent") {
-    // A rate reads as the two rates while it applies
-    return gaps
-      .map((g) => `${label} is ${formatValue(g.after, unit)} instead of ${formatValue(g.before, unit)} ${g.label.match(/^\D+ \d{4} to /) ? `from ${g.label}` : periodWords(g)}.`)
-      .join(" ");
-  }
-  const size = (g) => Math.abs(g.after - g.before);
-  const first = gaps[0];
-  const last = gaps[gaps.length - 1];
-  const largest = gaps.reduce((big, g) => (size(g) > size(big) + 1e-9 ? g : big), first);
-  const words = (g) => `${formatSize(g.before, g.after, unit)} ${direction(g)}`;
-  let text = `${label} is ${words(first)} than under current law ${periodWords(first)}`;
-  if (gaps.length === 1) return `${text}.`;
-  if (largest !== first && largest !== last) text += `, up to ${words(largest)} ${periodWords(largest)}`;
-  if (same(size(last), size(first)) && largest === first) {
-    return `${text}, through ${last.label.replace(/^From /, "")}.`;
-  }
-  return `${text}, and ${words(last)} ${periodWords(last).replace(/^in /, "by ").replace(/^from /, "from ")}.`;
-}
 
 /** A step in words, for the plot's tooltip and its text alternative. */
 export function describeSegment(segment, unit) {

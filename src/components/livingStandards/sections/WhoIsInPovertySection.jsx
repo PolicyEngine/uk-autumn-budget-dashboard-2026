@@ -14,6 +14,7 @@ import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
+import { yearsOption } from "../controlOptions";
 import { useYearRange } from "../../../utils/livingStandards/yearRange";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -216,12 +217,12 @@ export default function WhoIsInPovertySection({ data }) {
           }),
       }}
       controls={
-        // The years compared are the section's (CurrentLawSection); the
-        // card's one Options pill holds the breakdown first, then the
-        // poverty measure
+        // The card's one Options pill: the years compared, the breakdown,
+        // then the poverty measure
         <ControlBar
           name="Who is in poverty"
           options={[
+            yearsOption(years, [from, to], setRange),
             {
               label: "Breakdown",
               value: breakdown,
