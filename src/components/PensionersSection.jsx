@@ -69,9 +69,6 @@ import "./PensionersSection.css";
 /** The section's anchor: link to it as #pensioners. */
 export const PENSIONERS_ANCHOR = "pensioners";
 
-/** The pensioner example household on Household impact (householdExamples.js). */
-export const PENSIONER_EXAMPLE_LABEL = "A pensioner on the State Pension";
-
 const UNIT = "Average change per pensioner (£ a year)";
 const AGE_UNIT = "Average change per person (£ a year)";
 // The pensioners' ages and the selected year: the page's highlight tint
@@ -716,9 +713,8 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
  * @param {Array<string>} props.selectedPolicies
  * @param {number} props.selectedYear
  * @param {Array<{id: string, name: string}>} props.policies
- * @param {() => void} [props.onOpenHousehold] - Open the Household impact view
  */
-function PensionersSection({ selectedPolicies, selectedYear, policies, onOpenHousehold }) {
+function PensionersSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
   const { status, rows } = useAgeImpactRows();
   const props = { rows, policies, selectedPolicies, selectedYear, narrow };
@@ -751,21 +747,6 @@ function PensionersSection({ selectedPolicies, selectedYear, policies, onOpenHou
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           <SharesCard {...props} height={narrow ? 260 : 400} />
         </div>
-        <p className="pensioners-household-link">
-          For one household, open{" "}
-          <a
-            href="?tab=household"
-            onClick={(event) => {
-              if (!onOpenHousehold) return;
-              event.preventDefault();
-              onOpenHousehold();
-            }}
-          >
-            Household impact
-          </a>{" "}
-          and choose &ldquo;{PENSIONER_EXAMPLE_LABEL}&rdquo;: aged 70 with the full new State Pension and no other
-          income.
-        </p>
       </section>
     </>
   );

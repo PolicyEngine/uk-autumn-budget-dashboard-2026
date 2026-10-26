@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import PensionersSection, { PENSIONER_EXAMPLE_LABEL } from "../PensionersSection";
+import { render, screen } from "@testing-library/react";
+import PensionersSection from "../PensionersSection";
 import {
   aggregateFrom,
   pensionerAge,
@@ -126,13 +126,11 @@ describe("PensionersSection", () => {
   });
 
   it("renders its four cards from the data, defines pensioners once and links to the example household", async () => {
-    const onOpenHousehold = vi.fn();
     render(
       <PensionersSection
         selectedPolicies={ALL}
         selectedYear={2027}
         policies={POLICIES}
-        onOpenHousehold={onOpenHousehold}
       />,
     );
     expect(await screen.findByRole("heading", { name: /Change per pensioner by year/ })).toBeInTheDocument();
@@ -144,8 +142,7 @@ describe("PensionersSection", () => {
     expect(
       screen.getByRole("row", { name: /State Pension income tax protection: Pensioners £100, all ages £20/ }),
     ).toBeInTheDocument();
-    expect(document.body.textContent).toContain(PENSIONER_EXAMPLE_LABEL);
-    fireEvent.click(screen.getByRole("link", { name: "Household impact" }));
-    expect(onOpenHousehold).toHaveBeenCalledTimes(1);
+    // No pointer to the example card: removed at Vahid's request
+    expect(screen.queryByRole("link", { name: "Household impact" })).toBeNull();
   });
 });

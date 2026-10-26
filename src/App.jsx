@@ -561,7 +561,6 @@ function App() {
           selectedPolicies={selectedPolicies}
           selectedYear={distributionalYear}
           policies={POLICIES}
-          onOpenHousehold={() => handleTabChange("household")}
         />
       );
     }
