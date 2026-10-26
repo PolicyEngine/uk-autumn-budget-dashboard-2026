@@ -110,14 +110,30 @@ describe("Forecast changes with one forecast", () => {
     expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
     // One comparable card per group: the four price measures on one chart
     const prices = card(/^Inflation measures$/);
-    const legend = prices.querySelector(".chart-legend");
-    for (const name of ["CPI", "CPIH", "CPI after housing costs", "RPI"]) expect(legend).toHaveTextContent(name);
-    expect(legend).not.toHaveTextContent("Budget forecast");
+    // Its chips are the key: one per line, all on, and no legend repeating them
+    const chips = within(within(prices).getByRole("group", { name: "Lines: show or hide" })).getAllByRole("button");
+    expect(chips.map((c) => c.textContent)).toEqual(["CPI", "CPIH", "CPI after housing costs", "RPI"]);
+    expect(chips.every((c) => c.getAttribute("aria-pressed") === "true")).toBe(true);
+    expect(prices.querySelector(".chart-legend")).toBeNull();
+    expect(prices).not.toHaveTextContent("Budget forecast");
+    // A chip hides its line; the last one on stays on
+    fireEvent.click(chips[3]);
+    expect(chips[3]).toHaveAttribute("aria-pressed", "false");
+    for (const chip of chips.slice(1, 3)) fireEvent.click(chip);
+    fireEvent.click(chips[0]);
+    expect(chips[0]).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(chips[3]);
     for (const name of [/^Earnings and other income$/, /^House prices and rents$/, /^Mortgage interest payments$/]) {
       expect(card(name)).toBeTruthy();
     }
     // No sentence repeats its series' name as a verb ("growth growing")
     expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
+    // How the forecast feeds the figures is in Methodology, one link away
+    expect(screen.getByRole("link", { name: "How these forecasts feed our figures →" })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-forecast-feed",
+    );
+    expect(screen.queryByText(/What this means for the Budget figures/)).toBeNull();
     // The tile shows one value and no change
     expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
@@ -126,8 +142,11 @@ describe("Forecast changes with one forecast", () => {
   it("switches every card to a table of the series by year", async () => {
     await renderForecast(unpublishedOutlook());
     const prices = card(/^Inflation measures$/);
-    fireEvent.click(within(prices).getByRole("button", { name: "Options: Chart" }));
-    fireEvent.click(await screen.findByRole("radio", { name: "Table" }));
+    // An icon switch in the header, left of Download; no Options pill
+    expect(within(prices).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    const toggle = within(prices).getByRole("radiogroup", { name: "Show Inflation measures as" });
+    expect(toggle.closest(".chart-header-actions").lastElementChild).toHaveClass("chart-download");
+    fireEvent.click(within(toggle).getByRole("radio", { name: "Show as table" }));
     const table = await within(card(/^Inflation measures$/)).findByRole("table");
     expect(within(table).getByRole("columnheader", { name: "CPIH" })).toBeInTheDocument();
     expect(within(table).getAllByRole("row")).toHaveLength(1 + REAL.forecast.sections[0].series[0].pre.length);

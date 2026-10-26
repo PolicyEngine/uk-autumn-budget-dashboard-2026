@@ -1,27 +1,41 @@
-/* A view's sub-tabs (SubTabs.jsx): a band right under the view tabs, in
-   the chosen view tab's tint and with no rule between them, so the band
-   reads as that tab opened out. It spans the window like the view tab
-   bar; the control inside keeps to the page column. */
+/* A view's sub-tabs (SubTabs.jsx): a second row right under the view
+   tabs, white like them, one rule under it, sticking with them. The chosen
+   sub-tab is marked as the chosen view tab is: a light tint and a teal
+   underline on the rule, sliding from tab to tab. The row starts under the
+   chosen view tab (--view-tab-x, ViewTabs.jsx). */
+.sub-tabs-sentinel {
+  height: 0;
+}
+
 .sub-tabs-band {
+  position: sticky;
+  top: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* Under the view tabs, above the charts */
+  z-index: 1085;
   /* The tab panel's top padding is the band's place: it sits flush under
      the view tabs, and the content keeps its distance below it */
   margin: -32px calc(50% - 50vw) 32px;
-  padding: 8px max(40px, calc((100vw - 1120px) / 2));
-  background: var(--pe-teal-50);
-  box-shadow: 0 1px 2px var(--shadow-faint), 0 1px 0 var(--pe-teal-100);
-  /* Choosing a sub-tab scrolls the band back to just under the sticky
-     band and view tabs; SubTabs.jsx reads this */
-  scroll-margin-top: var(--sticky-offset);
+  padding: 0 max(40px, calc((100vw - 1120px) / 2));
+  background: var(--pe-surface);
+  border-bottom: 1px solid var(--card-border);
+  /* Choosing a sub-tab brings the panel's top back to just under the band;
+     SubTabs.jsx reads this: the height of the bars above it */
+  scroll-margin-top: calc(var(--title-row-height) + var(--view-tabs-height));
 }
 
-/* The segmented control: the chosen tab on a white pill that slides */
+/* Stuck, the view tabs and the band are one compact bar */
+.app[data-tabs-stuck] .sub-tabs-band {
+  box-shadow: 0 2px 6px var(--shadow-faint);
+}
+
+/* The row of sub-tabs */
 .sub-tabs {
   position: relative;
   display: flex;
   width: fit-content;
-  max-width: 100%;
-  gap: 2px;
-  margin: 0;
+  max-width: calc(100% - var(--view-tab-x, 0px));
+  gap: 4px;
+  margin: 0 0 0 var(--view-tab-x, 0px);
   padding: 0;
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
@@ -52,10 +66,20 @@
   bottom: 0;
   left: 0;
   z-index: 0;
-  border-radius: 8px;
-  background: var(--pe-surface);
-  box-shadow: 0 1px 2px var(--shadow-faint), inset 0 0 0 1px var(--pe-teal-100);
+  background: var(--pe-teal-50);
   pointer-events: none;
+}
+
+/* Its underline, as the chosen view tab's, a step thinner */
+.sub-tabs-pill::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--band-teal);
 }
 
 /* It slides once it has a place to start from */
@@ -71,41 +95,49 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 16px;
   font-family: inherit;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
-  color: var(--pe-gray-600);
+  color: var(--c-subtab-muted);
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, min-height 180ms ease-out;
+}
+
+.app[data-tabs-stuck] .sub-tab {
+  min-height: 38px;
 }
 
 .sub-tab-icon {
   display: inline-flex;
-  color: var(--pe-gray-500);
+  color: var(--c-subtab-muted);
   transition: color 0.15s ease;
 }
 
-/* A soft tint under the pointer; the chosen tab has its pill */
+/* A light tint under the pointer; the chosen tab has its stronger one */
 .sub-tab:not([aria-selected="true"]):hover {
   color: var(--band-teal);
-  background: color-mix(in srgb, var(--pe-teal-100) 60%, transparent);
+  background: color-mix(in srgb, var(--pe-teal-50) 60%, transparent);
 }
 
-.sub-tab:hover .sub-tab-icon,
-.sub-tab[aria-selected="true"] .sub-tab-icon {
+.sub-tab:hover .sub-tab-icon {
   color: var(--band-teal);
 }
 
 .sub-tab[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--band-teal);
+}
+
+.sub-tab[aria-selected="true"] .sub-tab-icon {
   color: var(--band-teal);
 }
 
@@ -114,21 +146,37 @@
   outline-offset: -2px;
 }
 
-/* A phone: the band runs edge to edge and its row scrolls sideways */
+/* A phone: the band runs edge to edge under the title row, starts at the
+   left, and its row scrolls sideways */
 @media (max-width: 600px) {
   .sub-tabs-band {
     margin: -32px -16px 24px;
-    padding: 8px 12px;
+    padding: 0 12px;
   }
 
   .sub-tabs {
     width: auto;
+    max-width: 100%;
+    margin-left: 0;
   }
 
   .sub-tab {
-    min-height: 40px;
-    padding: 0 12px;
+    padding: 0 14px;
     font-size: 0.875rem;
+  }
+
+  /* Stuck on a phone: icons only, the names kept for assistive tech */
+  .app[data-tabs-stuck] .sub-tab {
+    padding: 0 12px;
+  }
+
+  .app[data-tabs-stuck] .sub-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

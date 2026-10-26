@@ -87,12 +87,12 @@ export function useSlidingIndicator(rowRef, itemRefs, value) {
 }
 
 /**
- * A view's sub-tabs: a band right under the view tabs, in the chosen view
- * tab's tint, so it reads as that tab opened out (the notch). Inside it, a
- * segmented control: icon and label, the chosen one on a white pill that
- * slides to it. A WAI-ARIA tablist with automatic activation: Left/Right
- * (wrapping) and Home/End move to a tab and show it; only the chosen tab
- * is in the Tab order. On a phone the row scrolls sideways, faded at an
+ * A view's sub-tabs: a second row right under the view tabs, white like
+ * them, sticking with them. The chosen sub-tab is marked as the chosen
+ * view tab is: a light tint and a teal underline, sliding from tab to tab.
+ * Icon and label. A WAI-ARIA tablist with automatic activation:
+ * Left/Right (wrapping) and Home/End move to a tab and show it; only the
+ * chosen tab is in the Tab order. On a phone the row scrolls sideways, faded at an
  * edge with more beyond, the chosen tab kept in sight. If the reader had
  * scrolled past the band, choosing a sub-tab brings it back up under the
  * sticky view tabs.
@@ -110,6 +110,8 @@ export function useSlidingIndicator(rowRef, itemRefs, value) {
 export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) {
   const refs = useRef({});
   const barRef = useRef(null);
+  // Where the band sits in the page: the band sticks, so its own box moves
+  const sentinelRef = useRef(null);
   const rowRef = useRef(null);
   const scrollPending = useRef(false);
   const pill = useSlidingIndicator(rowRef, refs, value);
@@ -129,16 +131,18 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
     onChange(next);
   };
 
-  // Once the new panel is laid out: if the band had gone up under the
-  // sticky view tabs, bring it back to sit just below them
+  // Once the new panel is laid out: if the reader had scrolled past the
+  // band (it sticks, so the panel's top had gone under it), bring the
+  // panel's top back to just below it
   useLayoutEffect(() => {
     if (!scrollPending.current) return;
     scrollPending.current = false;
     const bar = barRef.current;
-    if (!bar) return;
-    // scroll-margin-top (SubTabs.css) holds the sticky bars' height
+    const sentinel = sentinelRef.current;
+    if (!bar || !sentinel) return;
+    // scroll-margin-top (SubTabs.css) holds the height of the bars above
     const offset = parseFloat(getComputedStyle(bar).scrollMarginTop) || 0;
-    const top = bar.getBoundingClientRect().top + window.scrollY - offset;
+    const top = sentinel.getBoundingClientRect().top + window.scrollY - offset;
     if (window.scrollY > top) window.scrollTo({ top });
   }, [value]);
 
@@ -178,6 +182,8 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
   };
 
   return (
+    <>
+    <div ref={sentinelRef} className="sub-tabs-sentinel" aria-hidden="true" />
     <div ref={barRef} className="sub-tabs-band">
       <div
         ref={rowRef}
@@ -218,6 +224,7 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
         })}
       </div>
     </div>
+    </>
   );
 }
 

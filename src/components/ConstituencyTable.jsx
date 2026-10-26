@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { RANK_METRICS, rankConstituencies } from "../utils/constituencyRanking";
 import { formatFigure } from "../utils/geography/format";
+import Tip from "./Tip";
 import "./ConstituencyTable.css";
 
 export const APPROXIMATE_MARK = "≈";
@@ -23,10 +24,12 @@ function Figure({ row, outcome }) {
   return (
     <>
       {state === "approximate" && (
-        <span className="ctable-approximate" title={APPROXIMATE_NOTE}>
-          <span aria-hidden="true">{APPROXIMATE_MARK} </span>
-          <span className="visually-hidden">approximately </span>
-        </span>
+        <Tip content={APPROXIMATE_NOTE}>
+          <span className="ctable-approximate">
+            <span aria-hidden="true">{APPROXIMATE_MARK} </span>
+            <span className="visually-hidden">approximately </span>
+          </span>
+        </Tip>
       )}
       {formatFigure(outcome, row.value)}
     </>

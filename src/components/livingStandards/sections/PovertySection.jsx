@@ -149,7 +149,9 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         compare={range}
         data={chartData}
         series={series}
-        yFormat={formatPctAxis}
+        // A fitted axis can step by half a point: one decimal where a tick
+        // is not whole, so no two ticks read alike
+        yFormat={(v) => (Math.abs(v - Math.round(v)) < 1e-9 ? formatPctAxis(v) : formatPct(v))}
         tooltipFormat={formatPct}
         yLabel="Poverty rate"
       />

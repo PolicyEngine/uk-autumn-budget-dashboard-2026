@@ -17,13 +17,14 @@ import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import CurrentLawSection from "./CurrentLawSection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
-import ForecastFeedNote from "./sections/ForecastFeedNote";
+import ViewLink from "../ViewLink";
+import { FORECAST_FEED_ANCHOR } from "../methodology/ForecastFeedMethod";
 import { forecastName } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
 import "./LivingStandards.css";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
-function ForecastPanel({ forecast, data }) {
+function ForecastPanel({ forecast, data, onShowTab }) {
   // Charts or tables
   const [forecastView, setForecastView] = useState("chart");
   // `obr-forecast` updates an independent baseline JSON. Its Budget-day
@@ -48,13 +49,15 @@ function ForecastPanel({ forecast, data }) {
         title={`${forecastName(forecast.pre_label) || "OBR"} economic forecast`}
         subtitle={
           <>
-            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.
+            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.{" "}
+            <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
+              How these forecasts feed our figures →
+            </ViewLink>
           </>
         }
       />
       <section id="living-forecast" className="report-section">
         <ForecastHeadlineSection data={data} />
-        <ForecastFeedNote forecast={forecast} />
       </section>
       <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} />
     </>
@@ -109,7 +112,7 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
             {value === "forecast" ? (
               <>
                 <OutlookStatus loading={loading} error={error} />
-                {data?.forecast && <ForecastPanel forecast={data.forecast} data={data} />}
+                {data?.forecast && <ForecastPanel forecast={data.forecast} data={data} onShowTab={onShowTab} />}
               </>
             ) : (
               <CurrentLawSection id={value} outlook={outlook} onShowTab={onShowTab} />

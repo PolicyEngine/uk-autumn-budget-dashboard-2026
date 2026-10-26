@@ -566,7 +566,8 @@
 
   /* The map fits the body's height whole: the SVG takes the height left
      and scales the drawing area into it, so nothing is cut off */
-  .constituency-body > .map-content:not([hidden]) {
+  .constituency-body > .swap-transition-inner,
+  .constituency-body .map-content:not([hidden]) {
     height: 100%;
   }
 
@@ -580,7 +581,7 @@
     max-height: 100%;
   }
 
-  .constituency-body > .rankings-panel {
+  .constituency-body .rankings-panel {
     height: 100%;
   }
 }

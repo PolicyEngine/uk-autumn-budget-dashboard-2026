@@ -809,8 +809,7 @@ def test_the_methodology_note_is_for_a_registered_measure():
     from pathlib import Path
 
     source = (
-        Path(__file__).resolve().parents[1]
-        / "src/utils/measureModelling.js"
+        Path(__file__).resolve().parents[1] / "src/utils/measureModelling.js"
     ).read_text()
     (measure_id,) = re.findall(
         r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source

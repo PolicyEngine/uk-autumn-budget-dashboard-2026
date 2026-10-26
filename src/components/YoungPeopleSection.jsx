@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import SwapTransition from "./SwapTransition";
 import {
   Bar,
   BarChart,
@@ -440,7 +441,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       <div className="chart-controls young-people-controls">
         <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
       </div>
-      <div ref={chartRef} className="chart-plot young-people-plot">
+      <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
           <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
         )}
@@ -570,7 +571,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
             </ComposedChart>
           </ResponsiveContainer>
         )}
-      </div>
+      </SwapTransition>
       <div className="chart-legend">
         {published && !key.shared && (
           <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
@@ -712,7 +713,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
-      <div ref={chartRef} className="chart-plot young-people-plot">
+      <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length && single ? (
@@ -784,7 +785,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             <p>No shares are published for this selection in {yearLabel}.</p>
           </div>
         )}
-      </div>
+      </SwapTransition>
       <div className="chart-legend">{data.length > 0 && <RowLegend />}</div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

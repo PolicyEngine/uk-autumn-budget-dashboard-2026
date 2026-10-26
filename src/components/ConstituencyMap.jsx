@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
+import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import ControlBar from "./ControlBar";
 import PillSelect from "./PillSelect";
 import ViewSwitch from "./ViewSwitch";
@@ -62,6 +64,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS, useNarrowViewport } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
+import Tip from "./Tip";
 
 /**
  * A hovered seat's tooltip rows from describeSeat's lines: the figure under
@@ -643,12 +646,13 @@ export default function ConstituencyMap({
       node.attr("data-state", states.get(seatCode(feature))?.kind ?? "no-data");
       // A pattern's url() cannot be blended with a colour, so only a
       // change from one colour to another is animated.
-      if (isColour(previous) && isColour(style.fill) && previous !== style.fill) {
+      if (isColour(previous) && isColour(style.fill) && previous !== style.fill && !prefersReducedMotion()) {
         const blend = d3.interpolateRgb(previous, style.fill);
         // Ends on the colour exactly as written, not as rgb().
         node
           .transition()
-          .duration(500)
+          .duration(CHART_MOTION_MS)
+          .ease(d3.easeCubicOut)
           .attrTween("fill", () => (t) => (t < 1 ? blend(t) : style.fill));
       } else {
         node.attr("fill", style.fill);
@@ -971,7 +975,7 @@ export default function ConstituencyMap({
         </div>
       </div>
 
-      <div className="chart-plot constituency-body">
+      <SwapTransition swapKey={panel} className="chart-plot constituency-body">
         {view.kind === "loading" && (
           <p className="constituency-loading">Loading map…</p>
         )}
@@ -1014,10 +1018,10 @@ export default function ConstituencyMap({
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="zoom-controls">
+                  <Tip content="Zoom in">
                   <button
                     className="zoom-control-btn"
                     onClick={() => handleZoom(1.5)}
-                    title="Zoom in"
                     aria-label="Zoom in"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -1026,10 +1030,11 @@ export default function ConstituencyMap({
                       <path d="M15 15L20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
+                  </Tip>
+                  <Tip content="Zoom out">
                   <button
                     className="zoom-control-btn"
                     onClick={() => handleZoom(0.67)}
-                    title="Zoom out"
                     aria-label="Zoom out"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -1038,10 +1043,11 @@ export default function ConstituencyMap({
                       <path d="M15 15L20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
+                  </Tip>
+                  <Tip content="Reset zoom">
                   <button
                     className="zoom-control-btn"
                     onClick={handleResetZoom}
-                    title="Reset zoom"
                     aria-label="Reset zoom"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -1060,6 +1066,7 @@ export default function ConstituencyMap({
                       />
                     </svg>
                   </button>
+                  </Tip>
                 </div>
               </div>
 
@@ -1085,7 +1092,7 @@ export default function ConstituencyMap({
             </div>
           </div>
         )}
-      </div>
+      </SwapTransition>
 
       <div className="chart-legend">
         {/* While the results load, the scale without values (kept, unseen,

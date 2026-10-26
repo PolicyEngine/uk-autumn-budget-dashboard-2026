@@ -91,7 +91,7 @@ export function showDependantsNote(data) {
  * chosen) for one line under the headline. The full explanations are in
  * "About these figures".
  */
-export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null, salarySource = null } = {}) {
+export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null, salarySource = null, spendingSource = null } = {}) {
   const items = [];
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
@@ -135,9 +135,13 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
             ? "Spending a year (assumed)"
             : "Spending a year",
       value: parts.join(", "),
-      detail: assumed
-        ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
-        : "petrol, diesel and electricity, from More details",
+      // An example's own figures say where they come from
+      detail:
+        assumed === "example" && spendingSource
+          ? `${spendingSource}. Fuel and electricity measures scale with what you spend; change these in More details to match your household.`
+          : assumed
+            ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
+            : "petrol, diesel and electricity, from More details",
     });
   }
   if (showDependantsNote(data)) {
@@ -378,6 +382,7 @@ export function SingleYearHeadline({
   policyCount = 0,
   startedAt = null,
   salarySource = null,
+  spendingSource = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -421,7 +426,7 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             policyCount={policyCount}
-            items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource })}
+            items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}

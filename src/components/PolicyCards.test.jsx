@@ -400,10 +400,13 @@ describe("the card's frame", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
-    expect([...foot.children].map((child) => child.className)).toEqual([
+    // A tip's wrapper (display: contents) is looked through
+    expect([...foot.children].map((child) => (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className)).toEqual([
       "policy-card-source", "policy-card-details", "policy-card-effect",
     ]);
     expect(within(foot).getByRole("link", { name: /^Source: Business Asset Disposal Relief/ })).toBeTruthy();
-    expect(screen.getByRole("listitem").querySelector(".ptl-arrow")).toHaveAttribute("title", "No end date");
+    const arrow = screen.getByRole("listitem").querySelector(".ptl-arrow");
+    fireEvent.mouseEnter(arrow);
+    expect(document.getElementById(arrow.getAttribute("aria-describedby"))).toHaveTextContent("No end date");
   });
 });

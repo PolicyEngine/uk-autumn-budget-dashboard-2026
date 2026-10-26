@@ -64,10 +64,32 @@
   --pe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
-  /* Transitions */
-  --pe-transition-fast: 150ms ease;
-  --pe-transition-base: 200ms ease;
-  --pe-transition-slow: 300ms ease;
+  /* Motion: every change animates, short and eased out. --motion-fast for
+     small state changes (hover, a pill, a popover), --motion-base for
+     content swaps, disclosures and sliding indicators, --motion-chart for
+     chart data (the JS mirror is CHART_MOTION_MS and MOTION_EASE_OUT in
+     src/utils/chartMotion.jsx). All are 0ms with prefers-reduced-motion,
+     below; JS motion checks prefersReducedMotion() itself. */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-chart: 300ms;
+  /* A segmented control's chosen pill sliding to a new choice */
+  --motion-slide: 250ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Transitions (the ui-kit names, on the motion tokens) */
+  --pe-transition-fast: var(--motion-fast) var(--ease-out);
+  --pe-transition-base: var(--motion-base) var(--ease-out);
+  --pe-transition-slow: var(--motion-chart) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-chart: 0ms;
+    --motion-slide: 0ms;
+  }
 }
 
 * {
@@ -111,6 +133,19 @@ code {
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* The landing page (LandingPage.css): how much of the page background
+     lies over the Public finances view behind it (more at the top, behind
+     the heading and paragraph; less around and below the boxes), its blur,
+     the glass panels' blur, the least height of the view it shows, and the
+     boxes' hover motion */
+  --landing-fade: 58%;
+  --landing-fade-top: 80%;
+  --landing-blur: 2px;
+  --landing-glass-blur: 10px;
+  --landing-min-height: 620px;
+  --landing-motion: 0.2s;
+  /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
+  --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
 
@@ -119,6 +154,9 @@ code {
      translucent states */
   --band-ink: #ffffff;
   --band-ink-muted: color-mix(in srgb, var(--band-ink) 70%, transparent);
+  /* A label beside a value on a band control: muted, but still 4.5:1 on
+     the band under the control's translucent fill */
+  --band-ink-label: color-mix(in srgb, var(--band-ink) 90%, transparent);
   --band-ink-border: color-mix(in srgb, var(--band-ink) 60%, transparent);
   --band-ink-border-hover: color-mix(in srgb, var(--band-ink) 80%, transparent);
   --band-ink-hover: color-mix(in srgb, var(--band-ink) 12%, transparent);
@@ -359,10 +397,59 @@ body {
   display: none !important;
 }
 
+/* Switching view or sub-tab: the new content fades in, rising 8px. The
+   content moves, never the sub-tab band (it sticks), and nothing keeps a
+   transform afterwards (fill backwards only). None under reduced motion. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.tab-panel:not([hidden]) > :not(.sub-tabs-band):not(.sub-tabs-sentinel),
+.sub-panel:not([hidden]) {
+  animation: panel-in 180ms ease-out backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel:not([hidden]) > :not(.sub-tabs-band):not(.sub-tabs-sentinel),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
+
 /* The view tabs: an underline tab bar under the intro, the chosen view
    underlined in the band's teal. It sticks under the band. Its background
    spans the window so nothing shows beside it while it is stuck; the tabs
    and their one rule keep to the page column. */
+/* What the sticky bars cover, on .app so a view's own heights count: the
+   title row, the view tabs and, for a view with sub-tabs, their band.
+   Once stuck the view tabs and band are compact (App.jsx sets
+   data-tabs-stuck). */
+.app {
+  --sub-band-height: 0px;
+  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
+}
+
+.app[data-sub-band] {
+  --sub-band-height: 45px;
+}
+
+@media (min-width: 601px) {
+  .app[data-tabs-stuck] {
+    --view-tabs-height: 40px;
+  }
+
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 39px;
+  }
+
+  .app[data-tabs-stuck] .view-tabs-bar {
+    box-shadow: 0 2px 6px var(--shadow-faint);
+  }
+}
+
 .view-tabs-sentinel {
   height: 0;
 }
@@ -386,6 +473,7 @@ body {
   display: flex;
   gap: 4px;
   height: var(--view-tabs-height);
+  transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
   overflow-y: hidden;
@@ -488,74 +576,53 @@ body {
     width 220ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
-   same tint, no rule and no underline between them, so the band reads as
-   that tab's own */
+/* A view with sub-tabs: their row follows right under this one (SubTabs),
+   white too, one rule between them and no shadow over it */
 .view-tabs-bar.has-notch {
-  border-bottom-color: transparent;
   box-shadow: none;
 }
 
-.view-tabs-bar.has-notch .view-tabs-indicator::after {
-  display: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .view-tabs-indicator.is-ready {
+  .view-tabs-indicator.is-ready,
+  .view-tabs {
     transition: none;
   }
 }
 
-/* On a phone all five views show at once, two by two, and the bar
-   scrolls with the page: only the band sticks */
+/* On a phone the view tabs are one row that scrolls sideways (faded at an
+   edge with more beyond, the chosen tab kept in sight) and stick with the
+   sub-tab band under the title row: nothing scrolls away. Stuck, both show
+   icons only, the names kept for assistive tech. */
 @media (max-width: 600px) {
   :root {
-    --view-tabs-height: 0px;
+    --view-tabs-height: 48px;
   }
 
-  .view-tabs-bar {
-    position: static;
-    padding-block: 8px;
+  .app[data-tabs-stuck] {
+    --view-tabs-height: 44px;
   }
 
-  .view-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 39px;
+  }
+
+  .view-tab {
     gap: 6px;
-    height: auto;
-    overflow: visible;
-    mask-image: none !important;
-  }
-
-  .view-tab {
-    justify-content: center;
-    min-height: 44px;
-    padding: 0 8px;
+    padding: 0 12px;
     font-size: 0.9375rem;
-    border-radius: 8px;
-    border: 1px solid var(--card-border);
   }
 
-  .view-tab[aria-selected="true"] {
-    border-color: var(--band-teal);
-    background: var(--pe-teal-50);
+  .app[data-tabs-stuck] .view-tab {
+    padding: 0 14px;
   }
 
-  /* Pills two by two: each chosen pill is its own tint */
-  .view-tabs-indicator {
-    display: none;
-  }
-}
-
-@media (max-width: 400px) {
-  .view-tab {
-    gap: 4px;
-    padding: 0 4px;
-    font-size: 0.875rem;
-    /* "OBR forecast" wraps rather than overflow on a small phone */
-    white-space: normal;
-    text-align: center;
-    line-height: 1.2;
+  .app[data-tabs-stuck] .view-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -628,10 +695,11 @@ body {
 /* The band's two controls (year, measures; YearSlider.jsx and
    PolicySelector.jsx): the card Options pill's shape (a full pill, a
    1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent white pill with white text. A small label sits over the
-   value. Their lists stay white. */
+   translucent white pill with white text. The label and the value share
+   one line, the label regular and muted, the value bold. Their lists stay
+   white. */
 .title-row .band-control {
-  height: 44px;
+  height: 40px;
   min-width: 0;
   padding: 0 14px 0 12px;
   gap: 8px;
@@ -669,22 +737,20 @@ body {
   color: var(--band-ink);
 }
 
-/* The label over the value, left-aligned */
+/* "Year 2027-28": the label and the value on one line */
 .band-control-text {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
-  line-height: 1.15;
-  text-align: left;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-/* White, not muted: muted white on the band is under 4.5:1 at this size */
 .band-control-label {
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--band-ink);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--band-ink-label);
 }
 
 .band-control-value {
@@ -710,32 +776,6 @@ body {
 .title-row .band-control .policy-selector-icon {
   color: var(--band-ink);
   margin-left: 2px;
-}
-
-/* Standfirst: the full content width */
-/* 28px to the tab bar below (20px on a phone), with no banner between */
-.dashboard-intro {
-  font-size: var(--fs-lead);
-  color: var(--pe-gray-700);
-  line-height: 1.6;
-  margin: 24px 0 28px;
-}
-
-@media (max-width: 600px) {
-  .dashboard-intro {
-    margin-bottom: 20px;
-  }
-}
-
-.dashboard-intro a {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.dashboard-intro a:hover {
-  text-decoration-color: currentColor;
 }
 
 /* A view's own lede, above its first section (Living standards) */
@@ -944,10 +984,11 @@ body {
 
 }
 
-/* A source named in a section's intro reads as a link, as does the line
-   under a section pointing to another view */
+/* A source named in a section's intro reads as a link, as do the line
+   under a section and a card's subtitle link pointing to another view */
 .section-heading p a,
-.section-link a {
+.section-link a,
+.main-content .chart-description a.twin-link {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1525,7 +1566,6 @@ body {
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {
     --title-row-height: 60px;
-    --sticky-offset: calc(60px + var(--view-tabs-height));
   }
 
   .app[data-band="compact"] .title-row {
@@ -1597,9 +1637,6 @@ body {
     margin-top: 3px;
   }
 
-  .dashboard-intro {
-    font-size: var(--fs-body-lg);
-  }
 
 
   .preset-buttons {
@@ -1683,55 +1720,33 @@ body {
    last visible section): 48px above the rule, 24px below the chips. The
    auto top margin keeps it at the bottom of a short page. */
 .replication-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 12px;
   margin: auto 0 0;
   padding: 48px 0 24px;
   font-size: var(--fs-caption);
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--pe-gray-500);
   text-align: center;
 }
 
+.replication-sentence {
+  margin: 0;
+}
+
 .replication-line::before {
   content: "";
-  flex: 0 0 100%;
+  display: block;
   height: 1px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   background: var(--card-border);
 }
 
-.replication-title {
-  font-weight: 500;
-}
-
-.replication-links {
-  display: contents;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Each link after the label, set off by a middle dot */
-.replication-links li {
-  display: inline-flex;
-  align-items: center;
-}
-
-.replication-links li::before {
-  content: "·";
-  margin-right: 12px;
-  color: var(--pe-gray-400);
-}
-
 /* A plain link with its icon, underlined on hover, a small arrow then */
+/* A link inside the sentence: its icon, its words, an arrow on hover */
 .replication-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  vertical-align: bottom;
   font-weight: 500;
   color: var(--pe-teal-700);
   text-decoration: none;
@@ -1748,19 +1763,24 @@ body {
   text-underline-offset: 2px;
 }
 
+/* The arrow takes no room until shown, so the comma and full stop sit
+   against the link's words */
 .replication-link-arrow {
   flex: none;
+  width: 0;
+  margin-left: -4px;
   opacity: 0;
-  transform: translate(-2px, 2px);
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease;
+    width 0.15s ease,
+    margin 0.15s ease;
 }
 
 .replication-link:hover .replication-link-arrow,
 .replication-link:focus-visible .replication-link-arrow {
+  width: 12px;
+  margin-left: 0;
   opacity: 1;
-  transform: none;
 }
 
 .replication-link:focus-visible {
@@ -2806,6 +2826,157 @@ body {
   }
 }
 
+
+/* ---------- Popovers and menus (usePresence.js) ---------- */
+/* In: a fade and a scale from 0.98, from the edge it opens from. Out: a
+   fade, while the hook keeps it mounted for --motion-fast. */
+.popover-motion {
+  transform-origin: top center;
+  animation: popover-in var(--motion-fast) var(--ease-out);
+}
+
+.popover-motion.is-leaving {
+  pointer-events: none;
+  animation: popover-out var(--motion-fast) ease-in forwards;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-motion,
+  .popover-motion.is-leaving {
+    animation: none;
+  }
+}
+
+/* ---------- Segmented controls: the chosen pill slides (useSegmentThumb) ---------- */
+/* The thumb sits under the options; once it has a place, the chosen
+   option's own background gives way to it, and it slides to a new choice */
+.control-bar-segments,
+.view-toggle,
+.obr-view-switch {
+  position: relative;
+}
+
+.segment-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment-thumb.is-ready {
+  opacity: 1;
+  transition:
+    transform var(--motion-slide) var(--ease-out),
+    width var(--motion-slide) var(--ease-out),
+    height var(--motion-slide) var(--ease-out);
+}
+
+.has-thumb > button {
+  position: relative;
+  z-index: 1;
+  transition: color var(--motion-slide) var(--ease-out);
+}
+
+/* Options popovers: the white pill on the grey track */
+.control-bar-segments > .segment-thumb {
+  border-radius: 6px;
+  background: var(--pe-surface);
+  box-shadow: 0 1px 2px var(--shadow-strong);
+}
+
+.control-bar-segments.has-thumb > .control-bar-segment.is-checked {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Chart or table */
+.view-toggle > .segment-thumb {
+  background: var(--pe-teal-50);
+}
+
+.view-toggle.has-thumb > .view-toggle-button.is-checked {
+  background: transparent;
+}
+
+/* The household charts' view switches */
+.obr-view-switch > .segment-thumb {
+  background: var(--band-teal);
+}
+
+.obr-view-switch.has-thumb > .obr-view-option[aria-pressed="true"] {
+  background: transparent;
+}
+
+/* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
+/* The new content of a card whose view changed: a fade and a 6px rise */
+.swap-transition-inner.swap-in {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A table that replaces a chart (Chart or table, on the OBR forecast's
+   cards) rises in as a swapped view does */
+.ls-table-wrapper {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+/* A view or sub-tab's content fades in when it is shown (they stay
+   mounted and are hidden, so the animation replays on each showing).
+   Opacity only: a transform would move the sticky parts inside. */
+.tab-panel:not([hidden]),
+.sub-panel:not([hidden]) {
+  animation: panel-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap-transition-inner.swap-in,
+  .ls-table-wrapper,
+  .tab-panel:not([hidden]),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {

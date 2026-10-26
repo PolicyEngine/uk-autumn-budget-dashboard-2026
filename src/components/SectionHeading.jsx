@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
+import Tip from "./Tip";
 
 /** "Who gains and from what" -> "who-gains-and-from-what" */
 export const sectionSlug = (text) =>
@@ -67,16 +68,17 @@ function SectionHeading({ title, subtitle, id, icon, className = "" }) {
         <div className="section-heading-title">
           <h2>{title}</h2>
           {anchor && (
+            <Tip content={copied ? "Link copied" : "Copy a link to this section"}>
             <a
               className={`section-anchor ${copied ? "is-copied" : ""}`.trim()}
               href={`#${anchor}`}
               onClick={copyLink}
               aria-label={copied ? "Link copied" : `Copy a link to “${title}”`}
-              title={copied ? "Link copied" : "Copy a link to this section"}
             >
               {/* "#" or "Copied" is drawn by CSS, so the heading's text stays
                   its title and subtitle */}
             </a>
+            </Tip>
           )}
         </div>
         {subtitle && <p>{subtitle}</p>}

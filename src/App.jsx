@@ -11,7 +11,7 @@ import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
 import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
-import SourceLink from "./components/SourceLink";
+import LandingPage from "./components/LandingPage";
 import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
@@ -26,19 +26,19 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
-import { DISPLAY_YEARS } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, yearLabel } from "./utils/displayYears";
+import { measureCountFigure, netRevenueFigure, opensLanding } from "./utils/landing";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
-import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
 import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
 
-// The views, as tabs under the intro. `year` and `policies` say which of
+// The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. OBR forecast is current law (incomes and poverty without
 // the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
@@ -65,7 +65,10 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 const VIEW_ALIASES = { personal: "household", living: "outlook" };
 const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
 
-// The default view has no ?tab= in the URL; ?tab=dashboard is read too
+// The view under the landing page, and the one an address with no ?tab=
+// opens when it links to a section or selection (?sub=, ?policies=,
+// #young-people). The bare address is the landing page (utils/landing.js);
+// every view, this one included, writes its ?tab=.
 const DEFAULT_VIEW = "dashboard";
 
 const tabId = (view) => `tab-${view}`;
@@ -164,6 +167,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
+  // The landing page (LandingPage.jsx), at the bare address only, over the
+  // default view (Public finances), which stays mounted behind it, faded
+  // and inert. Choosing any view leaves it.
+  const [landing, setLanding] = useState(true);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
@@ -189,6 +196,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // An old Baseline outlook link opens the OBR forecast's Living
     // standards, its default sub-tab (?sub=forecast is still its Forecast changes)
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
+    setLanding(opensLanding(window.location));
     setActiveTab(view);
     setLocationReady(true);
   }, []);
@@ -196,7 +204,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   useEffect(() => {
     if (!locationReady) return;
     const params = new URLSearchParams(window.location.search);
-    if (activeTab === DEFAULT_VIEW) params.delete("tab");
+    if (landing) params.delete("tab");
     else params.set("tab", activeTab);
     if (!unavailable) {
       // A chosen selection, an empty one included, stays in the address on
@@ -209,7 +217,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       else params.delete("policies");
     }
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, locationReady, unavailable]);
+  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable]);
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
@@ -266,6 +274,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
         dropSubTab("young");
+        setLanding(false);
         setActiveTab(DEFAULT_VIEW);
       }
     };
@@ -275,6 +284,33 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // The tab bar's place in the page, before it sticks under the band
   const tabsSentinelRef = useRef(null);
+  // Once the reader scrolls past it, the view tabs (and a sub-tab band)
+  // stick under the title row in a compact form (globals.css,
+  // data-tabs-stuck). The sentinel sits above the bar, so the bar's own
+  // change of height never flips this back.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const sentinel = tabsSentinelRef.current;
+      const app = appRef.current;
+      if (!sentinel || !app) return;
+      const band = parseFloat(getComputedStyle(app).getPropertyValue("--title-row-height")) || 0;
+      setTabsStuck(sentinel.getBoundingClientRect().top < band - 1);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    check();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   // Switch view. If the reader had scrolled past the tabs, bring the new
   // view's top up under them, so it does not open part way down. The band
@@ -287,12 +323,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // `sub` opens the new view at one of its sub-tabs (Methodology's links).
   const handleTabChange = (requested, sub) => {
     const tab = viewKey(requested);
+    // Leaving the landing page opens the view even when it is the one
+    // behind it (a box, or the Population impact tab)
+    const changing = tab !== activeTab || landing;
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
-    if (tab !== activeTab) {
+    if (changing) {
       dropSubTab(sub);
-      tabScroll.current[activeTab] = window.scrollY;
+      if (!landing) tabScroll.current[activeTab] = window.scrollY;
     }
+    setLanding(false);
     setActiveTab(tab);
     // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
@@ -300,7 +340,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       window.history.replaceState({}, "", window.location.pathname + window.location.search);
     }
     // Choosing the open view changes nothing, so there is nothing to keep
-    tabScrollPending.current = tab !== activeTab;
+    tabScrollPending.current = changing;
   };
   // A Policies card's "See its effect": Population impact with only that
   // measure selected (the address then carries ?policies=<id>)
@@ -322,7 +362,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     const saved = tabScroll.current[activeTab];
     if (saved !== undefined && saved > top) window.scrollTo({ top: saved });
     else if (window.scrollY > top) window.scrollTo({ top });
-  }, [activeTab]);
+  }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another
   // selection. Household impact applies its own year-aware gate; Population
@@ -335,9 +375,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
+  // The views with sub-tabs open into their band (SubTabs); not while
+  // Population impact shows its unavailable notice instead, nor on the
+  // landing page, where no view tab is chosen
+  const hasSubTabs = !landing && (activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard")));
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
-  const yearShown = yearPillShown(activeTab);
+  // The landing page's figures follow the band's year and selection, so
+  // both pills show there
+  const yearShown = landing || yearPillShown(activeTab);
+  const policiesShown = landing || view.policies;
+
+  // A caveat on the results while any shown measure is provisional: one
+  // small badge on the landing page, nowhere above the views
+  const provisional =
+    catalogue.manifest &&
+    catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional");
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -542,21 +595,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               selectedPolicies={selectedPolicies}
               policies={POLICIES}
               selectedYear={distributionalYear}
+              descriptionLink={
+                <>
+                  Where would yours be?{" "}
+                  <a
+                    className="twin-link"
+                    href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      handleTabChange("household");
+                    }}
+                  >
+                    Work it out on Household impact →
+                  </a>
+                </>
+              }
             />
           </section>
-          <p className="section-link">
-            Where would your household be?{" "}
-            <a
-              className="twin-link"
-              href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
-              onClick={(event) => {
-                event.preventDefault();
-                handleTabChange("household");
-              }}
-            >
-              Work it out on Household impact →
-            </a>
-          </p>
         </MeasureKeyProvider>
       </div>
     );
@@ -564,7 +619,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"}>
+    <div
+      className="app"
+      ref={appRef}
+      data-band={yearShown ? undefined : "compact"}
+      data-sub-band={hasSubTabs ? "" : undefined}
+      data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -591,9 +651,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             />
           </div>
           <div
-            className={`band-policy ${view.policies ? "" : "is-hidden"}`}
-            aria-hidden={view.policies ? undefined : "true"}
-            inert={!view.policies}
+            className={`band-policy ${policiesShown ? "" : "is-hidden"}`}
+            aria-hidden={policiesShown ? undefined : "true"}
+            inert={!policiesShown}
           >
             <PolicySelector
               policies={POLICIES}
@@ -603,24 +663,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </div>
         </div>
 
-        {/* Lead: what the page shows, and where its controls are. It sits
-            above the tabs, so it holds for every view. */}
-        <p className="dashboard-intro">
-          This dashboard uses <SourceLink source="policyengine_uk_model" /> to
-          show how Autumn Budget 2026 measures would affect the public
-          finances and households: by income, area and age, and
-          for your own household, alongside the OBR forecast.
-          Costings are our own; forecast:{" "}
-          <SourceLink source="obr_efo_current" />. Choose a year and
-          policies in the bar above.
-        </p>
         {updated && (
           <p className="publication-updated" role="status">
             Newer results were published while this page was open; it now shows them.
           </p>
-        )}
-        {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
-          <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
         )}
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
@@ -632,15 +678,29 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
           tabs={VIEWS}
-          value={activeTab}
+          value={landing ? null : activeTab}
           onChange={handleTabChange}
           tabId={tabId}
           panelId={panelId}
-          // The views with sub-tabs open into their band (SubTabs); not
-          // while Population impact shows its unavailable notice instead
-          notch={activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard"))}
+          notch={hasSubTabs}
         />
 
+        <div className={`view-stage${landing ? " is-landing" : ""}`}>
+        {landing && (
+          <LandingPage
+            onOpen={handleTabChange}
+            year={distributionalYear}
+            allSelected={!selectionChosen}
+            financesFigure={unavailable || selectedPolicies.length === 0 ? null : netRevenueFigure(results.budgetData, distributionalYear, yearLabel)}
+            measuresFigure={unavailable ? null : measureCountFigure(catalogue.displayable.length)}
+            provisional={provisional && (
+              <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
+            )}
+          />
+        )}
+        {/* Behind the landing page, the default view (Public finances),
+            live but faded, blurred and out of reach (LandingPage.css) */}
+        <div className="view-panels" inert={landing} aria-hidden={landing ? "true" : undefined}>
         {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
         <div
           key={value}
@@ -703,6 +763,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         )}
         </div>
         ))}
+        </div>
+        </div>
         <ReplicationLine />
       </main>
     </div>
