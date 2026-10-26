@@ -1,4 +1,6 @@
+
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import { chartDownloads } from "../utils/chartDownloads";
 import "./ChartDownloadMenu.css";
 
@@ -44,6 +46,7 @@ function DownloadIcon() {
 function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLabel, disabledReason }) {
   const formats = formatsProp ?? (download ? chartDownloads(download) : null);
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const [busy, setBusy] = useState(null);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
@@ -121,8 +124,8 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLab
       >
         <DownloadIcon />
       </button>
-      {open && (
-        <ul className="chart-download-menu" id={menuId}>
+      {presence.mounted && (
+        <ul className={`chart-download-menu ${popoverClass(presence.shown)}`} id={menuId} {...leavingProps(presence.shown)}>
           {available.map((format) => (
             <li key={format}>
               <button

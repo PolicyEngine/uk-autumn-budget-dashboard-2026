@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./YearSlider.css";
 import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
@@ -44,6 +45,7 @@ function YearSlider({ selectedYear, onYearChange }) {
 
   const currentIndex = YEARS.indexOf(selectedYear);
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const [activeIndex, setActiveIndex] = useState(currentIndex);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
@@ -162,8 +164,8 @@ function YearSlider({ selectedYear, onYearChange }) {
         )}
       </button>
 
-      {open && (
-        <div className="year-picker-dropdown">
+      {presence.mounted && (
+        <div className={`year-picker-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
           <button type="button" className="year-picker-play" onClick={startPlaying}>
             ▶ Play through years
           </button>

@@ -6,11 +6,13 @@ import { resetPresetResults } from "./utils/householdPresets";
 import {
   DEEP_LINK_HASHES,
   DEEP_LINK_SCRIPT,
+  householdFigure,
   measureCountFigure,
   netRevenueFigure,
   opensLanding,
 } from "./utils/landing";
 import { yearLabel } from "./utils/displayYears";
+import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
 const INTRO =
@@ -42,7 +44,7 @@ async function renderApp() {
   return rendered;
 }
 
-const landing = () => screen.queryByRole("region", { name: "Start here" });
+const landing = () => screen.queryByRole("region", { name: "What Autumn Budget 2026 means" });
 const box = (name) => screen.getByRole("link", { name: BOXES[name] });
 const viewTab = (name) => within(screen.getByRole("tablist", { name: "Views" })).getByRole("tab", { name });
 const selectedViewTabs = () =>
@@ -83,7 +85,10 @@ describe("the landing page", () => {
   it("shows each box's live figure from the publication, and none it cannot read", async () => {
     await renderApp();
     // The fixture publishes one measure
-    expect(within(box("policies")).getByText("1 measure")).toHaveClass("landing-box-figure");
+    expect(box("policies").querySelector(".landing-box-figure")).toHaveTextContent(/^1 measure$/);
+    expect(box("policies").querySelector(".landing-box-figure-value")).toHaveTextContent(/^1$/);
+    // Each box ends in a clear way in
+    for (const name of Object.keys(BOXES)) expect(box(name)).toHaveTextContent(/Explore→$/);
     // The fixture has no household_presets.json: no figure, the box still shows
     expect(box("household").querySelector(".landing-box-figure")).toBeNull();
     // Public finances: the selection's net change in the band's year, and
@@ -93,7 +98,7 @@ describe("the landing page", () => {
     expect(box("society")).toHaveTextContent(/^What this Budget means for society/);
   });
 
-  it("keeps the provisional caveat as a small notice under the paragraph, and a badge above the views after", async () => {
+  it("keeps the provisional caveat in one place: a small badge on the landing page, none over the views", async () => {
     const original = fixtureJson("manifest.json");
     const manifest = {
       ...original,
@@ -103,14 +108,14 @@ describe("the landing page", () => {
     const serve = fixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest) } });
     vi.stubGlobal("fetch", (url, init) => serve(`${BASE_PATH}${url}`, init));
     const { container } = await renderApp();
-    const notes = () => container.querySelectorAll(".app > main > .publication-provisional, .landing .publication-provisional");
-    // Once, on the landing page, under the paragraph
+    const notes = () => container.querySelectorAll(".publication-provisional");
+    // Once, on the landing page, under the paragraph, in the manifest's
+    // own wording (provisionalLabel)
     expect(notes()).toHaveLength(1);
-    expect(landing().querySelector(".publication-provisional")).toHaveTextContent(/^Provisional/);
+    expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
+    // Not over any view
     fireEvent.click(box("policies"));
-    // Once, as a badge above the tab bar
-    expect(notes()).toHaveLength(1);
-    expect(container.querySelector(".provisional-badge")).toHaveTextContent(/^Provisional/);
+    expect(notes()).toHaveLength(0);
   });
 
   it("puts the live Public finances view behind it, faded and out of reach", async () => {
@@ -225,18 +230,25 @@ describe("the landing page's rules", () => {
       { year: 2028, netImpact: 2.25 },
       { year: 2029, netImpact: null },
     ];
-    expect(netRevenueFigure(data, 2027, yearLabel)).toBe("−£8.8bn in 2027-28");
-    expect(netRevenueFigure(data, 2028, yearLabel)).toBe("+£2.3bn in 2028-29");
-    expect(netRevenueFigure(data, 2026, yearLabel)).toBe("£0.0bn in 2026-27");
+    expect(netRevenueFigure(data, 2027, yearLabel)).toEqual({
+      value: "−£8.8bn", context: "change in government revenue, 2027-28", tone: "loss",
+    });
+    expect(netRevenueFigure(data, 2028, yearLabel)).toMatchObject({ value: "+£2.3bn", tone: "gain" });
+    expect(netRevenueFigure(data, 2026, yearLabel)).toMatchObject({ value: "£0.0bn", tone: "neutral" });
     // Not fully published, or not there: no figure
     expect(netRevenueFigure(data, 2029, yearLabel)).toBeNull();
     expect(netRevenueFigure(data, 2031, yearLabel)).toBeNull();
     expect(netRevenueFigure(undefined, 2027, yearLabel)).toBeNull();
   });
 
-  it("counts the measures", () => {
-    expect(measureCountFigure(9)).toBe("9 measures");
-    expect(measureCountFigure(1)).toBe("1 measure");
+  it("writes the household figure from the example's change, and counts the measures", () => {
+    const who = "a 22-year-old renting";
+    expect(householdFigure(88.4, who)).toEqual({ value: "+£88", context: `a year for ${who}`, tone: "gain" });
+    expect(householdFigure(-1234, who)).toMatchObject({ value: "−£1,234", tone: "loss" });
+    expect(householdFigure(0.3, who)).toEqual({ value: "No change", context: `for ${who}`, tone: "neutral" });
+    expect(householdFigure(undefined, who)).toBeNull();
+    expect(measureCountFigure(9)).toEqual({ value: "9", context: "measures", tone: "neutral" });
+    expect(measureCountFigure(1)).toMatchObject({ value: "1", context: "measure" });
     expect(measureCountFigure(0)).toBeNull();
   });
 });

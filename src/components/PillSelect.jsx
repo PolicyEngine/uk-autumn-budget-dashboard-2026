@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PillSelect.css";
 import PillChevron from "./PillChevron";
 
@@ -36,6 +37,7 @@ function PillSelect({
   stableWidth = false,
 }) {
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const current = Math.max(
     0,
     options.findIndex((option) => option.value === value),
@@ -147,11 +149,12 @@ function PillSelect({
         <PillChevron />
       </button>
 
-      {open && (
+      {presence.mounted && (
         <ul
           ref={listRef}
           id={listId}
-          className="pill-select-list"
+          {...leavingProps(presence.shown)}
+          className={`pill-select-list ${popoverClass(presence.shown)}`}
           role="listbox"
           aria-label={name}
           tabIndex={-1}

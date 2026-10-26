@@ -10,6 +10,9 @@ import { CHART_COLOURS } from "./chartTheme";
  */
 export const CHART_MOTION_MS = 300;
 
+/** --motion-fast, for a popover or menu timed from JS */
+export const MOTION_FAST_MS = 150;
+
 /** --motion-base, for a content swap or disclosure timed from JS */
 export const MOTION_BASE_MS = 220;
 
