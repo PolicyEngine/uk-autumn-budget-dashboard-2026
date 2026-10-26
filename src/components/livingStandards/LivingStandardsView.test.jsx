@@ -182,6 +182,32 @@ describe("the Pre-measures forecast view", () => {
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth/)).not.toBeInTheDocument();
+    // Year by year, deciles, after housing costs, non-pensioners: each
+    // choice in the address, the sentence following
+    choose(growth, "Growth view", "Year by year");
+    choose(growth, "Income groups", "Deciles");
+    choose(growth, "Housing costs", "After housing costs");
+    choose(growth, "Population", "Non-pensioners");
+    const chosen = new URLSearchParams(window.location.search);
+    expect([chosen.get("ls_growth"), chosen.get("ls_groups"), chosen.get("ls_housing"), chosen.get("ls_pop")]).toEqual([
+      "annual",
+      "decile",
+      "ahc",
+      "non_pensioners",
+    ]);
+    expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32, real median income \(AHC\) among non-pensioners/)).toBeInTheDocument();
+    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
+    // Vigintiles clear the household floor, so they are offered
+    choose(growth, "Income groups", "Vigintiles");
+    expect(within(growth).getByText(/lowest-income twentieth/)).toBeInTheDocument();
+    // Back to the defaults: nothing left in the address
+    choose(growth, "Growth view", "Whole period");
+    choose(growth, "Income groups", "Quintiles");
+    choose(growth, "Housing costs", "Before housing costs");
+    choose(growth, "Population", "All people");
+    for (const param of ["ls_growth", "ls_groups", "ls_housing", "ls_pop"]) {
+      expect(new URLSearchParams(window.location.search).has(param)).toBe(false);
+    }
 
     // The two years compared: chosen in one card, kept in the address and
     // followed by every card comparing two years

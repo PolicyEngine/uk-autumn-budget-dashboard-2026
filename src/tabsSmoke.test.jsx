@@ -60,6 +60,9 @@ const LOADED = {
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
+  // Population impact's Pensioners sub-tab (?sub=pensioners): the cards
+  // render once age_impact.csv is read.
+  pensioners: (panel) => within(panel).findAllByRole("heading", { name: /Change per pensioner by year/ }),
   // The Incomes heading shows once the outlook is read.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
   // Every measure's card, whatever the band's selection
@@ -125,12 +128,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Each tab by its address, and Population impact's Young people sub-tab:
+// Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
   // Population impact opens on Public finances; All households is ?sub=all
   ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+  ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
   ["Population impact: Public finances", "finances", "/", "Public finances"],

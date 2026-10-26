@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import SubTabs, { SubTabPanel, useSubTabParam } from "./SubTabs";
+import { OPEN_POPULATION_SUB } from "../utils/populationSub";
+import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
 import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 
 /** Population impact's sub-tabs; the first, Public finances, is the default. */
@@ -7,6 +8,7 @@ export const POPULATION_SUB_TABS = [
   { value: "finances", label: "Public finances", icon: "landmark" },
   { value: "all", label: "All households", icon: "users" },
   { value: "young", label: "Young people", icon: "cap" },
+  { value: "pensioners", label: "Pensioners", icon: "armchair" },
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
 ];
@@ -34,6 +36,18 @@ function PopulationSubTabs({ note, active = true, children }) {
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
+  }, [setSub]);
+
+  // A link elsewhere on the page that opens a sub-tab (openPopulationSub)
+  useEffect(() => {
+    const onOpen = (event) => {
+      if (!SUB_TAB_VALUES.includes(event.detail)) return;
+      dropYoungHash();
+      setSub(event.detail);
+      document.getElementById(subTabId(ID_PREFIX, event.detail))?.scrollIntoView?.({ block: "center" });
+    };
+    window.addEventListener(OPEN_POPULATION_SUB, onOpen);
+    return () => window.removeEventListener(OPEN_POPULATION_SUB, onOpen);
   }, [setSub]);
 
   // The #young-people hash belongs to the Young people sub-tab, so it goes
@@ -65,10 +79,11 @@ function PopulationSubTabs({ note, active = true, children }) {
 /**
  * The Population impact view: Public finances first, then All households
  * (places, how changes vary, example households), Young people (results by
- * age), Living standards (income changes by decile, inequality) and Poverty,
- * as pill sub-tabs under the view tabs. The open sub-tab is ?sub=
- * (useSubTabParam): Public finances has no parameter, the others are
- * ?sub=all, young, living and poverty. App.jsx turns the old links (?tab=young, #young-people)
+ * age), Pensioners (people at or over State Pension age), Living standards
+ * (income changes by decile, inequality) and Poverty, as pill sub-tabs
+ * under the view tabs. The open sub-tab is ?sub= (useSubTabParam): Public
+ * finances has no parameter, the others are ?sub=all, young, pensioners,
+ * living and poverty. App.jsx turns the old links (?tab=young, #young-people)
  * into ?sub=young before this view first reads the address.
  *
  * The sub-tab is read from the address, which the server does not have, so

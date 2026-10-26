@@ -94,8 +94,11 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
-    // Besides the examples' precomputed file, only the household route
-    const urls = fetch.mock.calls.map(([url]) => url).filter((url) => !url.endsWith("/household_presets.json"));
+    // Besides the examples' precomputed file and the example households'
+    // income charts below the calculator, only the household route
+    const urls = fetch.mock.calls
+      .map(([url]) => url)
+      .filter((url) => !url.endsWith("/household_presets.json") && !url.endsWith("/income_curve.csv"));
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
   });
