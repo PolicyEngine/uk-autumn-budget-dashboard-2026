@@ -26,8 +26,8 @@ const GROUPS = [
  * @param {boolean} [props.loading] - The publication is still loading
  * @param {string} [props.noneReason] - Why none are published, if none are
  * @param {string} [props.inactiveReason] - Why the policies do not change the
- *   view shown: the pill stays in place, faded, does not open, and says so
- *   in a Tip
+ *   view shown: the pill stays in place, faded, does not open; the reason
+ *   is in its accessible name only (no visible tip)
  */
 function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason, loading = false, noneReason, inactiveReason }) {
   const { displayable } = useMeasureCatalogue();
@@ -68,7 +68,8 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
 
   return (
     <div className="policy-selector" ref={dropdownRef}>
-      <Tip content={inactiveReason ?? reason}>
+      {/* A faded pill has no visible tip: its reason is in its name */}
+      <Tip content={inactiveReason ? undefined : reason}>
       <button
         className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}

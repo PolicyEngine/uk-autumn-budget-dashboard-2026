@@ -3,7 +3,6 @@ import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./YearSlider.css";
 import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
-import Tip from "./Tip";
 import { SELECTABLE_YEARS, yearLabel } from "../utils/displayYears";
 
 // The years a reader can choose (from 2027-28; see utils/displayYears.js)
@@ -16,8 +15,8 @@ export const PLAY_STEP_MS = 2250;
 /**
  * @param {Object} props
  * @param {string} [props.inactiveReason] - Why the year does not change the
- *   view shown: the pill stays in place, faded, does not open, and says so
- *   in a Tip
+ *   view shown: the pill stays in place, faded, does not open; the reason
+ *   is in its accessible name only (no visible tip)
  */
 function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -141,7 +140,6 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
 
   return (
     <div className="year-picker" ref={rootRef}>
-      <Tip content={inactiveReason}>
       <button
         ref={buttonRef}
         type="button"
@@ -183,7 +181,6 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
           <PillChevron />
         )}
       </button>
-      </Tip>
 
       {presence.mounted && (
         <div className={`year-picker-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
