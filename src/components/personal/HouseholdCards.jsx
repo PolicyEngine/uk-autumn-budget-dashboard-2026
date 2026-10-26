@@ -264,7 +264,7 @@ export default function HouseholdCards({
       {/* The page's section heading, as on every tab, with "Show all
           households" beside it once a household is chosen */}
       <div className="household-cards-head">
-        <SectionHeading title="Choose a household" subtitle="Enter your own household, or start from an example below." />
+        <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
         {chosen && (
           <button
             type="button"

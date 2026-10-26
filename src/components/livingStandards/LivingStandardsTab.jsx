@@ -43,6 +43,7 @@ function ForecastPanel({ forecast, data }) {
   return (
     <>
       <SectionHeading
+        icon="refresh"
         title="Forecast changes"
         subtitle={
           forecast.post_published

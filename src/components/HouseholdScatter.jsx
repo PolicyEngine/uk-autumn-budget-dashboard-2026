@@ -12,6 +12,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
+  CHANGE_AXIS_DOMAIN,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
@@ -26,6 +27,7 @@ import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartMoreInfo from "./ChartMoreInfo";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
@@ -82,7 +84,38 @@ const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
 const describe = (perDot, basisLabel) =>
-  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households.`;
+  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose. Dots keep their row across years, so you can follow them.`;
+
+/**
+ * The card's "More info": how to read a dot and the axes, in a few lines.
+ * The subtitle already gives the households per dot and that dots keep
+ * their row, so these say why and what is left out.
+ */
+function ScatterMoreInfo({ basisLabel }) {
+  return (
+    <ChartMoreInfo>
+      <p>
+        A dot is a group of households with similar {basisLabel} income and a similar change. It
+        sits within its group&apos;s {pounds(SCATTER_BINS.income_band_width)} income band and change band, not on any one household.
+      </p>
+      <p>
+        Income is {basisLabel} net income in every year, before the measures. Households keep their
+        income band when the year changes, so a dot moves only sideways and its row is the same
+        households.
+      </p>
+      <p>
+        The change axis fits most groups across all years (from the 1st to the 99th percentile of
+        changes, never beyond ±{pounds(CHANGE_AXIS_DOMAIN[1])}) and stays put when the year changes. Groups with larger
+        changes sit at the axis edge.
+      </p>
+      <p>A group with no change (less than £1 either way) is drawn as an unfilled ring on £0.</p>
+      <p>
+        The estimates are static: households do not change their behaviour in response. Groups
+        with too few survey households are left out.
+      </p>
+    </ChartMoreInfo>
+  );
+}
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
 
 // Dots move between years and selections as the other charts' bars do:
@@ -605,6 +638,8 @@ function HouseholdScatter({
           ))}
         </ul>
       )}
+
+      {ready && !embedded && <ScatterMoreInfo basisLabel={basisLabel} />}
 
       {!embedded && (
         <div className="chart-logo">

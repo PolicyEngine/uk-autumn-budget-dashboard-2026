@@ -17,6 +17,28 @@ const SUB_TAB_VALUES = POPULATION_SUB_TABS.map((tab) => tab.value);
 
 const ID_PREFIX = "population";
 
+// The income decile pair, on All households (App.jsx's DECILES_ANCHOR)
+const DECILES_HASH = "#deciles";
+
+/**
+ * Once the sub-tab holding an anchor shows it, bring it into view: the
+ * cards wait for their data, so the browser's own jump on load misses it.
+ * Gives up after a few seconds.
+ */
+function scrollToHashWhenShown(hash) {
+  const started = Date.now();
+  const step = () => {
+    if (window.location.hash !== hash) return;
+    const element = document.getElementById(hash.slice(1));
+    if (element && element.offsetParent !== null) {
+      element.scrollIntoView?.({ block: "start" });
+      return;
+    }
+    if (Date.now() - started < 8000) setTimeout(step, 150);
+  };
+  step();
+}
+
 /** Take #young-people out of the address, keeping the rest. */
 function dropYoungHash() {
   if (window.location.hash !== `#${YOUNG_PEOPLE_ANCHOR}`) return;
@@ -33,10 +55,21 @@ function PopulationSubTabs({ note, active = true, children }) {
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) setSub("young");
+      if (window.location.hash === DECILES_HASH) {
+        setSub("all");
+        scrollToHashWhenShown(DECILES_HASH);
+      }
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [setSub]);
+
+  // Opened from a link to the decile pair: show it once it has loaded
+  useEffect(() => {
+    if (sub === "all" && window.location.hash === DECILES_HASH) scrollToHashWhenShown(DECILES_HASH);
+    // Only on the first render: later visits come through hashchange
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A link elsewhere on the page that opens a sub-tab (openPopulationSub)
   useEffect(() => {

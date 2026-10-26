@@ -10,11 +10,10 @@ import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
-import ExpandableText from "./methodology/ExpandableText";
+import { MeasureDescriptions, ReasonList } from "./methodology/MeasureDescriptions";
 import {
   Calculator,
   ChevronDown,
-  CircleSlash,
   ChartColumn,
   Compass,
   Database,
@@ -143,8 +142,9 @@ function SectionLink({ id, children }) {
  *
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
+ * @param {(id: string) => void} [props.onShowEffect] - Show one measure alone on Population impact
  */
-function MethodologyTab({ onShowTab }) {
+function MethodologyTab({ onShowTab, onShowEffect }) {
   const catalogue = useMeasureCatalogue();
   const MEASURE_MODELLING = measureModelling(catalogue);
   const UNAVAILABLE = unavailableMeasures(catalogue);
@@ -258,94 +258,30 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <div className="card method-card method-table-card">
+          <div className="card method-card mm-card">
             <h3 className="method-card-title">Published measure descriptions</h3>
-            <table className="method-measures">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Published description</th>
-                  <th scope="col">Results from</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MEASURE_MODELLING.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">
-                      <span
-                        className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
-                        aria-hidden="true"
-                      />
-                      {measure.name}
-                    </th>
-                    <td>
-                      <ExpandableText text={measure.how} />
-                      {measure.note && (
-                        <p className="method-measure-note">
-                          <span className="method-measure-note-label">Modelling note: </span>
-                          {measure.note}
-                        </p>
-                      )}
-                    </td>
-                    <td className="method-measure-year">
-                      <Tag tone="teal">
-                        <span className="method-cell-label">Results from </span>
-                        {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
-                      </Tag>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <MeasureDescriptions
+              measures={MEASURE_MODELLING}
+              colors={POLICY_COLORS}
+              onShowTab={onShowTab}
+              onShowEffect={onShowEffect}
+            />
           </div>
 
-          <div className="card method-card method-table-card">
-            <h3 className="method-card-title">Unavailable measures</h3>
-            <p className="method-more">
-              These measures have no verified results in the current publication.
-            </p>
-            <table className="method-measures">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Why results are unavailable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {UNAVAILABLE.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">{measure.name}</th>
-                    <td>{measure.why}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {UNAVAILABLE.length > 0 && (
+            <div className="card method-card mm-card">
+              <h3 className="method-card-title">Unavailable measures</h3>
+              <p className="method-more">
+                These measures have no verified results in the current publication.
+              </p>
+              <ReasonList items={UNAVAILABLE} />
+            </div>
+          )}
 
-          <div className="card method-card method-table-card method-muted-card">
+          <div className="card method-card mm-card method-muted-card">
             <h3 className="method-card-title">Not modelled</h3>
-            <table className="method-measures method-measures-muted method-measures-compact">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Why the household model cannot cost it</th>
-                </tr>
-              </thead>
-              <tbody>
-                {NOT_MODELLED.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">
-                      <span className="method-row-name">
-                        <CircleSlash className="method-row-icon" aria-hidden="true" strokeWidth={1.75} />
-                        {measure.name}
-                      </span>
-                    </th>
-                    <td>{measure.why}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <p className="method-more">Measures the household model cannot cost, and why.</p>
+            <ReasonList items={NOT_MODELLED} icon />
           </div>
         </MethodSection>
 

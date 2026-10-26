@@ -24,6 +24,7 @@ import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -344,6 +345,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                   fillOpacity={measureOpacity(key.highlight, policyName)}
                   name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
+                  shape={barShape(ALL_POLICY_NAMES)}
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
                   // starts in a later year grows in place instead of remounting

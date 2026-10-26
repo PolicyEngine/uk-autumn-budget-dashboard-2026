@@ -166,7 +166,7 @@ describe("YoungPeopleSection", () => {
   it("has a linkable heading, no headline tiles and every card", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
     const heading = await screen.findByRole("heading", { level: 2, name: "Change by age" });
-    expect(heading.parentElement).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
+    expect(heading.closest(".section-heading")).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
     expect(
       await screen.findByRole("heading", { level: 3, name: /Average change by age, 2029-30/ }),
     ).toBeInTheDocument();

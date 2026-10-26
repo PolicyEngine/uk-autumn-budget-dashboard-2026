@@ -98,9 +98,20 @@ export function oldOutlookBaseline({ search }) {
   return viewKey(params.get("tab")) === "outlook" && params.get(SUB_TAB_PARAM) === "baseline";
 }
 
+/**
+ * Whether a page address links to the income decile pair (#deciles), which
+ * is on Population impact's All households sub-tab (it was on Living
+ * standards before).
+ */
+export const DECILES_ANCHOR = "deciles";
+export function opensDeciles({ hash }) {
+  return hash === `#${DECILES_ANCHOR}`;
+}
+
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
+  if (opensDeciles({ hash })) return DEFAULT_VIEW;
   const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
@@ -173,6 +184,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // stays, so the page scrolls to the section
     const view = viewFromLocation(window.location);
     if (opensYoungPeople(window.location)) dropSubTab("young");
+    // A link to the decile pair opens All households, where it now is
+    else if (opensDeciles(window.location)) dropSubTab("all");
     // An old Baseline outlook link opens the OBR forecast's Living
     // standards, its default sub-tab (?sub=forecast is still its Forecast changes)
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
@@ -373,29 +386,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       return (
         <div className="results-container">
           <SectionHeading
+            icon="wallet"
             title="How the measures change incomes"
-            subtitle="With the selected measures: how they change net income across the income distribution in the selected year."
+            subtitle="With the selected measures: how they change income growth across the income distribution. The change by income decile is on All households."
           />
-          {/* Both cards colour by measure: one key above the pair
-              (MeasureKey), and hovering a measure there shows it in
-              both */}
-          <MeasureKeyProvider>
-            <section id="deciles" className="report-section distributional-section">
-              <SectionMeasureKey />
-              <div className="charts-grid">
-                <WaterfallChart
-                  rawData={results.rawWinnersLosers}
-                  selectedPolicies={selectedPolicies}
-                  selectedYear={distributionalYear}
-                />
-                <DistributionalChart
-                  rawData={results.rawDistributional}
-                  selectedPolicies={selectedPolicies}
-                  selectedYear={distributionalYear}
-                />
-              </div>
-            </section>
-          </MeasureKeyProvider>
           {/* Growth across the distribution with the measures: the twin of
               the Pre-measures forecast's chart (current law), which links
               back here */}
@@ -410,6 +404,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             </div>
           </section>
           <SectionHeading
+            id="inequality-heading"
+            icon="scale"
             title="Inequality"
             subtitle={<>With the selected measures: the change in inequality each year. {twin("living")}</>}
           />
@@ -432,6 +428,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       return (
         <div className="results-container">
           <SectionHeading
+            icon="lifebuoy"
             title="How the measures change poverty"
             subtitle={<>With the selected measures: the change in the poverty rate each year, and each measure&apos;s part in the selected year. {twin("poverty")}</>}
           />
@@ -472,6 +469,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       return (
         <div className="results-container">
           <SectionHeading
+            icon="banknote"
             title="Public finances"
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
@@ -490,14 +488,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // All households: places, and how changes vary between households
     return (
       <div className="results-container">
-        {/* The constituency map, then the household scatter below it, each
-            full width. The scatter shows binned groups of households only:
-            the per-household scatter stays withdrawn, as it showed survey
-            households one by one. Results by region are hidden for now
-            (RegionView is kept, not rendered). */}
+        {/* The constituency map, then the decile pair under one measure
+            key, then the household scatter: each full width but the pair,
+            side by side. The scatter shows binned groups of households
+            only: the per-household scatter stays withdrawn, as it showed
+            survey households one by one. Results by region are hidden for
+            now (RegionView is kept, not rendered). */}
         <SectionHeading
+          icon="compass"
           title="Where and who"
-          subtitle="Average change by constituency, and how changes vary between households."
+          subtitle="Average change by constituency and by income decile, and how changes vary between households."
         />
         <section id="constituencies" className="report-section charts-stack">
           <ConstituencyMap
@@ -506,13 +506,33 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             policies={POLICIES}
             showRegionLink={false}
           />
+        </section>
+        {/* Both decile cards colour by measure: one key above the pair
+            (MeasureKey), and hovering a measure there shows it in both */}
+        <MeasureKeyProvider>
+          <section id={DECILES_ANCHOR} className="report-section distributional-section">
+            <SectionMeasureKey />
+            <div className="charts-grid">
+              <WaterfallChart
+                rawData={results.rawWinnersLosers}
+                selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
+              />
+              <DistributionalChart
+                rawData={results.rawDistributional}
+                selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
+              />
+            </div>
+          </section>
+        </MeasureKeyProvider>
+        <section id="scatter" className="report-section charts-stack">
           <HouseholdScatter
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             selectedYear={distributionalYear}
           />
         </section>
-
       </div>
     );
   };
@@ -625,6 +645,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           // Every published measure's card, whatever the band's selection
           <div className="results-container">
             <SectionHeading
+              icon="fileText"
               title="Policies"
               subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
             />
@@ -637,7 +658,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             </section>
           </div>
         ) : value === "methodology" ? (
-          <MethodologyTab onShowTab={handleTabChange} />
+          <MethodologyTab onShowTab={handleTabChange} onShowEffect={handleShowEffect} />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
@@ -737,7 +758,7 @@ function App() {
     };
   }, []);
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…" }
+    ? { reason: "Loading published measures…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"

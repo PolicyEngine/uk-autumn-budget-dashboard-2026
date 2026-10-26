@@ -17,9 +17,12 @@ import "./MeasureKey.css";
  *   are folded into one "+N with no effect" chip that opens them; they stay
  *   in the key, so no measure silently disappears. Why each is £0 stays in
  *   the card's More info.
- * - Hovering or focusing a chip highlights that measure in every chart that
- *   reads the same key (the others fade); a click keeps it highlighted until
- *   it is clicked again.
+ * - Clicking a chip pins it: the pinned measures stay full colour in every
+ *   chart that reads the same key and the others fade. Clicking more chips
+ *   adds them to the set; clicking a pinned chip takes it out, and "Clear"
+ *   unpins them all. Hovering or focusing a chip previews that measure on
+ *   top of the pinned set. Tooltips keep listing every measure, so totals
+ *   still add up while some are faded.
  *
  * A section shares one key: wrap its cards in <MeasureKeyProvider> and put
  * <SectionMeasureKey /> above them. Each card calls useMeasureKey(members):
@@ -35,9 +38,19 @@ export const FADED_OPACITY = 0.18;
 /** A member's highlight key: the series key its charts draw it under. */
 const keyOf = (member) => member.key ?? `measure:${member.id}`;
 
-/** Fill opacity for a measure's series given the highlighted series key. */
+/**
+ * Whether a series is in the highlight: `highlight` is the highlighted
+ * series keys (or one key); null or empty highlights none.
+ */
+export function isHighlighted(highlight, seriesKey) {
+  if (!highlight || highlight.length === 0) return false;
+  return Array.isArray(highlight) ? highlight.includes(seriesKey) : highlight === seriesKey;
+}
+
+/** Fill opacity for a measure's series given the highlighted series keys. */
 export function measureOpacity(highlight, seriesKey) {
-  return highlight && highlight !== seriesKey ? FADED_OPACITY : 1;
+  if (!highlight || highlight.length === 0) return 1;
+  return isHighlighted(highlight, seriesKey) ? 1 : FADED_OPACITY;
 }
 
 /** Members from several cards as one list: a measure is muted only when it
@@ -180,19 +193,29 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
   const colorOf = (member) => (member.muted ? MUTED_SWATCH : catalogue.byId.get(member.id)?.color ?? MUTED_SWATCH);
   const raises = (member) => catalogue.byId.get(member.id)?.direction === "revenue";
   const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(null);
+  const [pinned, setPinned] = useState([]);
   const [hovered, setHovered] = useState(null);
   // A pinned measure that leaves the key (deselected, or no effect this
   // year) no longer counts
-  const pinnedLive = pinned && members.some((member) => keyOf(member) === pinned && !member.muted) ? pinned : null;
-  // The charts follow the hovered chip, else the pinned one
-  const wanted = hovered ?? pinnedLive;
+  const live = new Set(members.filter((member) => !member.muted).map(keyOf));
+  const pinnedLive = pinned.filter((key) => live.has(key));
+  // The charts follow the pinned set, with a hovered chip previewed on top;
+  // null when nothing is pinned or hovered
+  const wantedList = hovered && !pinnedLive.includes(hovered) ? [...pinnedLive, hovered] : pinnedLive;
+  const wanted = wantedList.length > 0 ? wantedList : null;
+  const wantedKey = wanted ? wanted.join("\u0000") : "";
   useEffect(() => {
-    if (onHighlight && wanted !== highlight) onHighlight(wanted);
-    // Only a change of chip moves the highlight
+    const currentKey = highlight ? [highlight].flat().join("\u0000") : "";
+    if (onHighlight && wantedKey !== currentKey) onHighlight(wanted);
+    // Only a change of chips moves the highlight
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wanted]);
-  const pin = (key) => setPinned(pinnedLive === key ? null : key);
+  }, [wantedKey]);
+  const pin = (key) =>
+    setPinned(pinnedLive.includes(key) ? pinnedLive.filter((item) => item !== key) : [...pinnedLive, key]);
+  const clear = () => {
+    setPinned([]);
+    setHovered(null);
+  };
   const listId = useId();
   const active = members.filter((member) => !member.muted);
   const muted = members.filter((member) => member.muted);
@@ -217,7 +240,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                   key={member.id}
                   member={member}
                   color={colorOf(member)}
-                  pinned={pinnedLive === keyOf(member)}
+                  pinned={pinnedLive.includes(keyOf(member))}
                   onHover={setHovered}
                   onPin={pin}
                 />
@@ -225,7 +248,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
             </ul>
           </div>
         ))}
-        {(netLabel || muted.length > 0) && (
+        {(netLabel || muted.length > 0 || pinnedLive.length > 0) && (
           <div className="measure-key-group measure-key-extra">
             <ul className="measure-key-chips">
               {netLabel && (
@@ -235,6 +258,18 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                     <circle cx="9" cy="5" r="3" />
                   </svg>
                   <span className="measure-key-label">{netLabel}</span>
+                </li>
+              )}
+              {pinnedLive.length > 0 && (
+                <li className="measure-key-clear-item">
+                  <button
+                    type="button"
+                    className="measure-key-clear"
+                    onClick={clear}
+                    aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted measure" : `${pinnedLive.length} highlighted measures`}`}
+                  >
+                    Clear
+                  </button>
                 </li>
               )}
               {muted.length > 0 && (
