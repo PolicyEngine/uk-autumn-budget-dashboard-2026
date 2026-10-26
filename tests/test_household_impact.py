@@ -920,6 +920,21 @@ def test_the_rate_at_your_salary_is_over_the_next_step():
     assert household_impact.own_rate(1_000, 1_072, 100) == pytest.approx(0.28)
 
 
+def test_the_own_rate_step_sees_the_child_benefit_charge_once():
+    """From £60,000 to £80,000 the High Income Child Benefit Charge is one
+    percentage point per whole £200 of income (ITEPA 2003 s. 681C). The step
+    for the rate at your salary crosses exactly one of those points wherever
+    it starts, so with three children (£3,268.20 of Child Benefit a year in
+    2026-27) it reads the charge's average, about 16 points, not 0 or 32."""
+    step = household_impact.OWN_RATE_STEP
+
+    def points(income):
+        return min(max(income - 60_000, 0) * 100 // 20_000, 100)
+
+    for income in range(60_000, 80_000 - step, 37):
+        assert points(income + step) - points(income) == step // 200
+
+
 def test_salary_in_the_chosen_year_is_returned():
     answers = household_impact.HouseholdAnswers(employment_income=30_000)
     result = calculate(answers, ["threshold_freeze_2031_32"])
