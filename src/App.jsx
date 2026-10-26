@@ -126,15 +126,12 @@ export function releaseAddress({ pathname, search, hash }, release, own = DEFAUL
  * A past event's address, from the one a link opened it at. A past event
  * has no sub-tabs and no Young people section, so a link's ?sub= and
  * #young-people (this Budget's) go, as releaseAddress drops them on a
- * switch. Everything else stays as it was, unchanged when neither is there.
+ * switch. Every other pair is kept as the link wrote it, byte for byte.
  */
 export function pastEventAddress({ pathname, search, hash }) {
-  const params = new URLSearchParams(search);
-  const young = hash === `#${YOUNG_PEOPLE_ANCHOR}`;
-  if (!params.has(SUB_TAB_PARAM) && !young) return `${pathname}${search}${hash}`;
-  params.delete(SUB_TAB_PARAM);
-  const query = params.toString();
-  return `${pathname}${query ? `?${query}` : ""}${young ? "" : hash}`;
+  const kept = search.replace(/^\?/, "").split("&").filter((pair) => !new URLSearchParams(pair).has(SUB_TAB_PARAM));
+  const query = kept.join("&");
+  return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
 }
 
 
@@ -211,11 +208,7 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
   useLayoutEffect(() => {
-    if (past) {
-      const { pathname, search, hash } = window.location;
-      const address = pastEventAddress(window.location);
-      if (address !== `${pathname}${search}${hash}`) window.history.replaceState({}, "", address);
-    } else if (opensYoungPeople(window.location)) dropSubTab("young");
+    if (!past && opensYoungPeople(window.location)) dropSubTab("young");
     setActiveTab(viewFromLocation(window.location, views));
     setLocationReady(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the address is read once, at mount; a release is its own mount
@@ -783,6 +776,16 @@ function App({ releaseId } = {}) {
       const params = new URLSearchParams(window.location.search);
       params.delete(RELEASE_PARAM);
       window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
+    }
+    // Only now is the release the address opens known: a past event's own
+    // route can name this Budget, whose ?sub= and #young-people a link
+    // keeps. A past event's address loses both. The page's own Dashboard
+    // has read the address already (a past event's reads neither), and its
+    // address writer is a passive effect, so it runs after this.
+    if ((named && named !== own ? named : own).kind === "historical") {
+      const { pathname, search, hash } = window.location;
+      const address = pastEventAddress(window.location);
+      if (address !== `${pathname}${search}${hash}`) window.history.replaceState({}, "", address);
     }
     setLocated(true);
   }, [own]);

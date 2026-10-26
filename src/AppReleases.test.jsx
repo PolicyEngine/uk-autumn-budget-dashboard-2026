@@ -293,6 +293,19 @@ describe("the budget selector", () => {
     expect(param(RELEASE_PARAM)).toBe(AB2025.id);
   });
 
+  // This Budget's page mounts first, on Population impact, before the
+  // link's ?budget= is read; its sub-tab must not write ?sub= back
+  it.each(["sub=living", "sub=young", "sub=young#young-people", "tab=young"])("opens a past event from a link to this Budget's sub-tab, without it (%s)", async (link) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&${link}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(window.location.search).toBe(`?${RELEASE_PARAM}=${AB2025.id}`);
+    expect(window.location.hash).toBe("");
+  });
+
   it("names the release a link opens, but lets only a verified one be chosen", async () => {
     // The build lists both; only Autumn Budget 2025 has files
     const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
@@ -612,6 +625,37 @@ describe("a past event in the dashboard", () => {
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026"));
     expect(param(RELEASE_PARAM)).toBe(DEFAULT_RELEASE.id);
   });
+
+  // The route's own release, a past event, mounts first; the link's
+  // ?budget= is read after it, so a past event's address cleanup must wait
+  // for it, or this Budget would lose the sub-tab the link opens
+  it.each([
+    ["sub=young#young-people", "young", "Young people"],
+    ["sub=living", "living", "Living standards"],
+  ])("opens this Budget's sub-tab when the route's link names this Budget (%s)", async (link, sub, tab) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}?${RELEASE_PARAM}=${DEFAULT_RELEASE.id}&${link}`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026"));
+    const sections = await screen.findByRole("tablist", { name: "Population impact sections" }, { timeout: 5000 });
+    expect(within(sections).getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    expect(param("sub")).toBe(sub);
+    expect(param(RELEASE_PARAM)).toBe(DEFAULT_RELEASE.id);
+  });
+
+  it("drops this Budget's sub-tab and Young people hash from a link to a past event's own route", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}?sub=living&policies=alpha#young-people`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(window.location.pathname).toBe(`/budgets/${AB2025.id}`);
+    expect(window.location.search).toBe("?policies=alpha");
+    expect(window.location.hash).toBe("");
+  });
 });
 
 // A link's address, in its parts, as window.location gives them
@@ -628,23 +672,27 @@ const addressParts = (address) => {
 
 describe("a past event's address from a link", () => {
   // A link's query as written, not as URLSearchParams would write it: a
-  // value can hold a comma or a plus, which writing it again would encode
+  // value can hold a comma or a plus, which writing it again would encode,
+  // and a key can be written encoded (%73ub is sub)
   const pairs = fc.array(
-    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "policies", "year", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
+    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "%73ub", "subs", "policies", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
     { maxLength: 6 },
   );
   const hashes = fc.constantFrom("", "#young-people", "#coverage", "#young-people-2");
+  const isSub = (key) => decodeURIComponent(key) === "sub";
 
-  it("loses only ?sub= and #young-people, keeps the rest in order, and is unchanged with neither", () => {
+  it("loses only ?sub= and #young-people, and keeps every other pair as written, in order", () => {
     fc.assert(
       fc.property(pairs, hashes, (link, hash) => {
         const search = link.length ? `?${link.map(([key, value]) => `${key}=${value}`).join("&")}` : "";
         const address = pastEventAddress({ pathname: "/budgets/x", search, hash });
         const parts = addressParts(address);
         expect(parts.pathname).toBe("/budgets/x");
+        const kept = link.filter(([key]) => !isSub(key)).map(([key, value]) => `${key}=${value}`).join("&");
+        expect(parts.search).toBe(kept ? `?${kept}` : "");
         expect([...new URLSearchParams(parts.search)]).toEqual([...new URLSearchParams(search)].filter(([key]) => key !== "sub"));
         expect(parts.hash).toBe(hash === "#young-people" ? "" : hash);
-        if (!link.some(([key]) => key === "sub") && hash !== "#young-people") expect(address).toBe(`/budgets/x${search}${hash}`);
+        if (!link.some(([key]) => isSub(key)) && hash !== "#young-people") expect(address).toBe(`/budgets/x${search}${hash}`);
         expect(pastEventAddress(parts)).toBe(address);
       }),
       { numRuns: 300 },
