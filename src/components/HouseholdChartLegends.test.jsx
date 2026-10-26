@@ -109,6 +109,12 @@ describe.each([
     expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
   });
 
+  it("says so in place of an empty plot when no selected measure changes a household", () => {
+    render(<Chart rawData={rows} selectedPolicies={[EMPLOYER_NI]} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
+    expect(document.querySelector(".recharts-wrapper")).toBeNull();
+  });
+
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
     const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
