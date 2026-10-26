@@ -99,6 +99,33 @@ def _unpack(files: bytes) -> dict[str, bytes]:
     return out
 
 
+def _same_artifact(existing: dict, returned: dict) -> bool:
+    """Whether a returned artifact is the one already written, as
+    ``write_artifact`` decides it locally: every table byte for byte, and a
+    receipt with the same artifact digest. The digest leaves out when and
+    how the receipt was generated (``VOLATILE_DASHBOARD_FIELDS``), so a
+    rerun of the same measure at the same commit is unchanged, not refused.
+    """
+    import json
+
+    from uk_budget_data.publication.artifacts import RECEIPT_FILE
+    from uk_budget_data.publication.receipt import artifact_sha256
+
+    if set(existing) != set(returned):
+        return False
+    for name, data in returned.items():
+        if name != RECEIPT_FILE and existing[name] != data:
+            return False
+    if existing.get(RECEIPT_FILE) == returned.get(RECEIPT_FILE):
+        return True
+    try:
+        return artifact_sha256(
+            json.loads(existing[RECEIPT_FILE])
+        ) == artifact_sha256(json.loads(returned[RECEIPT_FILE]))
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 def assemble(outcome, relative: Optional[str], files: Optional[bytes], root):
     """Write a container's artifact under ``root``, as ``write_artifact``
     would: atomically, and never over different bytes. Returns the outcome
@@ -125,7 +152,7 @@ def assemble(outcome, relative: Optional[str], files: Optional[bytes], root):
     created = True
     if target.exists():
         existing = {path.name: path.read_bytes() for path in target.iterdir()}
-        if existing != contents:
+        if not _same_artifact(existing, contents):
             raise ArtifactError(
                 f"{target} already exists with different files"
             )

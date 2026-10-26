@@ -73,6 +73,29 @@ def test_assembly_never_replaces_published_bytes(tmp_path):
         assemble(*_returned("alpha", changed), tmp_path)
 
 
+def test_assembly_keeps_a_rerun_whose_receipt_differs_only_in_when(
+    tmp_path, monkeypatch
+):
+    """A rerun at the same commit writes the same tables and a receipt
+    whose artifact digest is the same (only the time and command line
+    differ): unchanged, as locally, and the first receipt is kept."""
+    from uk_budget_data.publication import receipt
+
+    monkeypatch.setattr(
+        receipt, "artifact_sha256", lambda document: document["digest"]
+    )
+    first = {**FILES, "receipt.json": b'{"digest": "d", "at": "1"}\n'}
+    rerun = {**FILES, "receipt.json": b'{"digest": "d", "at": "2"}\n'}
+    assemble(*_returned("alpha", first), tmp_path)
+    again = assemble(*_returned("alpha", rerun), tmp_path)
+    assert not again.reference.created
+    target = tmp_path / "alpha" / "abcd1234abcd1234"
+    assert (target / "receipt.json").read_bytes() == first["receipt.json"]
+    other = {**FILES, "receipt.json": b'{"digest": "e", "at": "2"}\n'}
+    with pytest.raises(ArtifactError, match="different files"):
+        assemble(*_returned("alpha", other), tmp_path)
+
+
 def test_assembly_refuses_paths_outside_the_measure(tmp_path):
     outcome, _, files = _returned("alpha", FILES)
     for relative in ("beta/abcd", "../alpha/abcd", "/alpha/abcd"):
