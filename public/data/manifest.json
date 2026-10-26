@@ -155,6 +155,12 @@
       ]
     },
     "cgt_main_rates_up_2pp": {
+      "approval": {
+        "artifact_sha256": "78032509ad799bbdeaac0e52b20652e95c58584c81da9d553ec414cb3f55b6f0",
+        "at": "2026-10-26T13:44:56.181286+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "1d9f215d48b771447d0070b5922fdac7538e5445f65e46972fd65dc883e5e082"
+      },
       "artifact": "artifacts/cgt_main_rates_up_2pp/78032509ad799bbd",
       "artifact_sha256": "78032509ad799bbdeaac0e52b20652e95c58584c81da9d553ec414cb3f55b6f0",
       "data_limits": [],
@@ -165,9 +171,9 @@
       "receipt_sha256": "bd29dfd3e7ea2b046843df584728a6a922b4ff5aea6ed99aa420a27324aa9b9e",
       "reconciliation": {
         "responsiveness_status": "responsive",
-        "summary_status": "failed"
+        "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -337,6 +343,12 @@
       ]
     },
     "employer_ni_secondary_threshold_raised": {
+      "approval": {
+        "artifact_sha256": "66e8c919ba16557166483fbe0eee11e756e92b632364cb7eae56ccf2f00f4537",
+        "at": "2026-10-26T13:45:05.678841+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "1cd0f7e36faf764c3f5c9b09fd90f6cdc58df1b6463b7524c0b43e2bf4ef94a9"
+      },
       "artifact": "artifacts/employer_ni_secondary_threshold_raised/66e8c919ba165571",
       "artifact_sha256": "66e8c919ba16557166483fbe0eee11e756e92b632364cb7eae56ccf2f00f4537",
       "data_limits": [],
@@ -347,9 +359,9 @@
       "receipt_sha256": "0d1212c1a8cbe5ae50e414d78debe497a937e18fb7fb05807ebbfb752bee2b9c",
       "reconciliation": {
         "responsiveness_status": "responsive",
-        "summary_status": "failed"
+        "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -421,6 +433,12 @@
       ]
     },
     "state_pension_income_tax_protection": {
+      "approval": {
+        "artifact_sha256": "8735fe12cd2e6338cea84aff6e960d6bb4fac16f0840ad85fdec967fa3378b7e",
+        "at": "2026-10-26T13:45:07.599845+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "9ae6274f4e2e7031bdee9b5e03c41b021a788907d4873dba38f1a5d2a8745789"
+      },
       "artifact": "artifacts/state_pension_income_tax_protection/8735fe12cd2e6338",
       "artifact_sha256": "8735fe12cd2e6338cea84aff6e960d6bb4fac16f0840ad85fdec967fa3378b7e",
       "attestation": {
@@ -439,9 +457,9 @@
       "receipt_sha256": "fff6ec0023ffa9dfb1ef358307a31015aa8f173ddd1b82d1092043a30dae1fa1",
       "reconciliation": {
         "responsiveness_status": "responsive",
-        "summary_status": "failed"
+        "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -513,6 +531,12 @@
       ]
     },
     "uc_standard_allowance_below_cpi": {
+      "approval": {
+        "artifact_sha256": "359f4fe6ecbe65eea138de5f1672666d6810fd51700fa1bffb65f6346538c219",
+        "at": "2026-10-26T13:45:09.541258+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "60518617c2365cdee845d5b2b3ba2537e9d1098826ef7fd87ac2abc73d9872ce"
+      },
       "artifact": "artifacts/uc_standard_allowance_below_cpi/359f4fe6ecbe65ee",
       "artifact_sha256": "359f4fe6ecbe65eea138de5f1672666d6810fd51700fa1bffb65f6346538c219",
       "data_limits": [],
@@ -523,9 +547,9 @@
       "receipt_sha256": "c71c6494d36b070d210cc3cc1d858ed427f4ece56bf178fc2fe4e25b74127949",
       "reconciliation": {
         "responsiveness_status": "responsive",
-        "summary_status": "failed"
+        "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -568,7 +592,7 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 83,
+  "revision": 87,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [
     {
@@ -1802,5 +1826,5 @@
       "superseded_at": "2026-10-26T13:43:39.297875+00:00"
     }
   ],
-  "updated_at": "2026-10-26T13:44:16.499036+00:00"
+  "updated_at": "2026-10-26T13:45:09.541566+00:00"
 }
