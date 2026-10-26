@@ -12,6 +12,9 @@ import SourceLink from "../SourceLink";
 import { GrowthCard, IncomesOverTimeCard, InequalityOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import { OutlookStatus, useOutlook } from "./useOutlook";
+import YearRangeSelect from "./YearRangeSelect";
+import { rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
+import { headlineStartYear, headlineYear } from "../../utils/livingStandards/outlook";
 import "./LivingStandards.css";
 
 // Each section is one row of two cards that line up (a card alone takes the
@@ -50,6 +53,7 @@ export default function CurrentLawSection({ id }) {
       {cards.length > 0 && (
         <>
           <SectionHeading title={section.title} subtitle={section.subtitle} />
+          <SectionYearRange data={data} />
           <section id={`current-law-${id}`} className="report-section ls-section">
             <div className="charts-grid">
               {cards.map((S, j) => (
@@ -60,6 +64,22 @@ export default function CurrentLawSection({ id }) {
         </>
       )}
     </>
+  );
+}
+
+/**
+ * The years every card in the section compares, chosen once above the
+ * cards (each card reads the same ?ls_from / ?ls_to, useYearRange).
+ */
+export function SectionYearRange({ data }) {
+  const years = rangeYears(data);
+  const [range, setRange] = useYearRange(years, [headlineStartYear(data), headlineYear(data)]);
+  if (years.length <= 2) return null;
+  return (
+    <div className="section-controls">
+      <span className="section-controls-label">Years compared</span>
+      <YearRangeSelect years={years} from={range[0]} to={range[1]} onChange={setRange} />
+    </div>
   );
 }
 

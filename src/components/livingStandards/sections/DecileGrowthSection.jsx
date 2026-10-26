@@ -6,7 +6,7 @@
 // (all people). The view of the Growth across the distribution card.
 
 import PillSelect from "../../PillSelect";
-import YearRangeSelect from "../YearRangeSelect";
+import { housingOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
 import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
@@ -175,8 +175,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     </>
   );
 
-  const controls = (
-    <>
+  // The years compared are the section's (CurrentLawSection); the view is
+  // the card's pill and the rest sits under Options (ControlBar)
+  const controls = {
+    primary: (
       <PillSelect
         variant="light"
         prefix="View"
@@ -186,37 +188,23 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         options={Object.entries(VIEWS).map(([value, label]) => ({ value, label }))}
         stableWidth
       />
-      {setRange && <YearRangeSelect years={byYear.map((r) => r.year)} from={first.year} to={end.year} onChange={setRange} />}
-      {offer.groupings.length > 1 && (
-        <PillSelect
-          variant="light"
-          prefix="Groups"
-          name="Income groups"
-          value={grouping}
-          onChange={setGrouping}
-          options={offer.groupings.map((id) => ({ value: id, label: GROUPINGS[id].label }))}
-        />
-      )}
-      <PillSelect
-        variant="light"
-        prefix="Housing costs"
-        name="Housing costs"
-        value={basis}
-        onChange={setBasis}
-        options={offer.bases.map((id) => ({ value: id, label: id === "bhc" ? "Before housing costs" : "After housing costs", badge: id === "bhc" ? "Before" : "After" }))}
-      />
-      {offer.populations.length > 1 && (
-        <PillSelect
-          variant="light"
-          prefix="People"
-          name="Population"
-          value={population}
-          onChange={setPopulation}
-          options={offer.populations.map((id) => ({ value: id, label: POPULATIONS[id] }))}
-        />
-      )}
-    </>
-  );
+    ),
+    options: [
+      offer.groupings.length > 1 && {
+        label: "Income groups",
+        value: grouping,
+        onChange: setGrouping,
+        options: offer.groupings.map((id) => ({ value: id, label: GROUPINGS[id].label })),
+      },
+      housingOption(basis, setBasis, offer.bases),
+      offer.populations.length > 1 && {
+        label: "Population",
+        value: population,
+        onChange: setPopulation,
+        options: offer.populations.map((id) => ({ value: id, label: POPULATIONS[id] })),
+      },
+    ].filter(Boolean),
+  };
 
   const block = data.income_growth_by_group?.groupings && Object.keys(data.income_growth_by_group.groupings).length ? data.income_growth_by_group : null;
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");

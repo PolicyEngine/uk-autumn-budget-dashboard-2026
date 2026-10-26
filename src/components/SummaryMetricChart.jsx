@@ -325,7 +325,7 @@ export function metricByYear(rows, run, metric) {
  * no single run (two or more policies, not all), it says to choose one
  * policy or all, as Young people's shares do.
  */
-function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population }) {
+function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const chartRef = useRef(null);
   const { metric, controls } = useMeasureChoice(family, rows);
   // People behind a poverty change (pp × the population), where the
@@ -400,7 +400,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
       {/* The measure, as the cards beside it choose theirs: one pill per
           choice ("Inequality measure: Gini ▾") under the description, in
           the card's controls row */}
-      {controls.length > 0 && (
+      {/* With the choice above the pair (PovertyMeasuresRow), none here */}
+      {controls.length > 0 && !choiceAbove && (
         <div className="chart-controls ls-controls summary-metric-choices">
           {controls.map((control) => (
             <PillSelect
@@ -415,7 +416,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           ))}
         </div>
       )}
-      <div ref={chartRef} className={controls.length > 0 ? "summary-metric-plot" : undefined}>
+      <div ref={chartRef} className={controls.length > 0 && !choiceAbove ? "summary-metric-plot" : undefined}>
         {!run ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>Choose one policy or all policies</p>

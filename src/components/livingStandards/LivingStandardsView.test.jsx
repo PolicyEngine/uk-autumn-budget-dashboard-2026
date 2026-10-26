@@ -36,6 +36,28 @@ afterEach(() => {
 
 const band = (container) => container.querySelector(".title-row");
 
+/**
+ * Choose `option` for the choice `name` in `scope`: from its pill when it
+ * has one, otherwise from the card's Options dialog (ControlBar), opened
+ * if it is not open yet.
+ */
+function choose(scope, name, option) {
+  const pill = within(scope).queryByRole("button", { name: new RegExp(`^${name}:`) });
+  if (pill) {
+    fireEvent.click(pill);
+    fireEvent.click(within(scope).getByRole("option", { name: option }));
+    return;
+  }
+  if (!within(scope).queryByRole("dialog")) {
+    fireEvent.click(within(scope).getByRole("button", { name: /^Options:/ }));
+  }
+  const group = within(scope).getByRole("radiogroup", { name });
+  fireEvent.click(within(group).getByRole("radio", { name: option }));
+}
+
+/** A card's Options summary ("Absolute · Before housing costs · …"). */
+const optionsSummary = (card) => within(card).getByRole("button", { name: /^Options:/ }).getAttribute("aria-label");
+
 describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
@@ -150,9 +172,16 @@ describe("the Pre-measures forecast view", () => {
     const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
     const poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
+    // The section's range pill (Incomes, Poverty) and the Inequality card's
+    // show the chosen years
+    for (const scope of [incomes.closest("[role=tabpanel]"), inequality, poverty.closest("[role=tabpanel]")]) {
+      expect(within(scope).getAllByRole("group", { name: "Years compared", hidden: true })[0]).toHaveTextContent(/2028-29.*2030-31/);
+    }
+    // Incomes and Poverty over time have none of their own
+    expect(within(incomes).queryByRole("group", { name: "Years compared", hidden: true })).toBeNull();
+    expect(within(poverty).queryByRole("group", { name: "Years compared", hidden: true })).toBeNull();
     for (const card of [incomes, inequality, poverty]) {
-      // The shared pill shows the chosen years, and the sentence compares them
-      expect(within(card).getByRole("group", { name: "Years compared", hidden: true })).toHaveTextContent(/2028-29.*2030-31/);
+      // The sentence compares the chosen years
       expect(card).toHaveTextContent(/2028-29/);
       expect(card).toHaveTextContent(/2030-31/);
       expect(card.querySelector(".ls-summary, p")).not.toHaveTextContent(/from 2027-28 to 2031-32/);
@@ -163,24 +192,32 @@ describe("the Pre-measures forecast view", () => {
     window.history.replaceState({}, "", "/?sub=poverty");
     render(<App />);
     const heading = (re) => screen.findByRole("heading", { level: 3, name: re }, { timeout: 5000 });
-    const choose = (card, pill, option) => {
-      fireEvent.click(within(card).getByRole("button", { name: new RegExp(`^${pill}:`) }));
-      fireEvent.click(within(card).getByRole("option", { name: option }));
-    };
 
-    // Poverty over time: Rate (with its Poverty line, Housing costs, People
-    // and Period pills, worded as on Population impact) or Depth
+    // Poverty over time: Rate (its Poverty line, Housing costs, People and
+    // Period under one Options button, worded as on Population impact) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    expect(within(poverty).getByRole("button", { name: /^People:/ })).toBeInTheDocument();
-    // The view is a "Show" pill (Rate or Depth), short labels in the pills
+    // The view is a "Show" pill (Rate or Depth); one row of controls
     expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
     // The same default as Population impact: absolute, before housing costs, all people
-    expect(within(poverty).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Absolute");
-    expect(within(poverty).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("Before");
-    expect(within(poverty).getByRole("button", { name: /^People:/ })).toHaveTextContent("All people");
+    expect(optionsSummary(poverty)).toBe("Options: Absolute · Before housing costs · All people · Outturn and projection");
+    // The Options dialog: a radio group per choice, focus inside, Escape closes
+    const optionsButton = within(poverty).getByRole("button", { name: /^Options:/ });
+    expect(optionsButton).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(optionsButton);
+    expect(optionsButton).toHaveAttribute("aria-expanded", "true");
+    const dialog = within(poverty).getByRole("dialog", { name: "Poverty over time options" });
+    expect(within(dialog).getAllByRole("radiogroup").map((g) => g.textContent.length > 0)).toHaveLength(4);
+    expect(dialog).toContainElement(document.activeElement);
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(within(poverty).queryByRole("dialog")).toBeNull();
+    expect(optionsButton).toHaveFocus();
+    choose(poverty, "People", "Children");
+    expect(optionsSummary(poverty)).toMatch(/· Children ·/);
+    choose(poverty, "People", "All people");
+    fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
     choose(poverty, "Poverty view", "Depth");
     poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
-    expect(within(poverty).queryByRole("button", { name: /^People:/ })).toBeNull();
+    expect(within(poverty).queryByRole("button", { name: /^Options:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the
@@ -208,8 +245,9 @@ describe("the Pre-measures forecast view", () => {
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
     // Children's breakdowns are after housing costs only: Before is listed, disabled
-    expect(within(who).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
+    expect(optionsSummary(who)).toMatch(/· After housing costs$/);
     choose(who, "Poverty line", "Absolute");
+    expect(within(who).getByRole("radio", { name: "Before housing costs" })).toBeDisabled();
     expect(within(who).getByText(/absolute child poverty rate/)).toBeInTheDocument();
 
     // On Living standards: Inequality over time and Growth across the distribution
@@ -265,7 +303,8 @@ describe("the Pre-measures forecast view", () => {
     // The two years compared: chosen in one card, kept in the address and
     // followed by every card comparing two years, on either sub-tab
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
-    choose(who, "Compare from", "2029-30");
+    // Chosen once for the section, above its cards
+    choose(screen.getByRole("tabpanel", { name: "Poverty" }), "Compare from", "2029-30");
     expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
     // Titles carry no years (the pill, axes and sentence do): the sentences follow
     expect(await heading(/^Who is in poverty$/)).toBeInTheDocument();

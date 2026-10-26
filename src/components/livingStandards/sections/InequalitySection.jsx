@@ -8,10 +8,10 @@ import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
 import YearRangeSelect from "../YearRangeSelect";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
+import { housingOption, periodOption } from "../controlOptions";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   EMPTY,
-  VIEW_OPTIONS,
   lineSeries,
   mergeSeries,
   rangeAxis,
@@ -93,34 +93,30 @@ export default function useInequalityView(data, range = null, setRange = null) {
             }),
         }
       : null,
-    controls: (
-      <>
-        {range && setRange && rangeYears(data).length > 2 && (
-          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
-        )}
-        <PillSelect
-          variant="light"
-          prefix="Inequality measure"
-          name="Inequality measure"
-          value={measure}
-          onChange={setMeasure}
-          options={Object.keys(ineq.measures).map((id) => ({
-            value: id,
-            label: label(id),
-            badge: label(id),
-          }))}
-        />
-        <PillSelect
-          variant="light"
-          prefix="Housing costs"
-          name="Housing costs"
-          value={basis}
-          onChange={setBasis}
-          options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before housing costs" : "After housing costs", badge: id === "bhc" ? "Before" : "After" }))}
-        />
-        <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
-      </>
-    ),
+    // The years compared and the measure as pills; the rest under the
+    // card's Options (ControlBar)
+    controls: {
+      primary: (
+        <>
+          {range && setRange && rangeYears(data).length > 2 && (
+            <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
+          )}
+          <PillSelect
+            variant="light"
+            prefix="Inequality measure"
+            name="Inequality measure"
+            value={measure}
+            onChange={setMeasure}
+            options={Object.keys(ineq.measures).map((id) => ({
+              value: id,
+              label: label(id),
+              badge: label(id),
+            }))}
+          />
+        </>
+      ),
+      options: [housingOption(basis, setBasis, Object.keys(ineq.bases)), periodOption(viewMode, setViewMode)],
+    },
     chart: (
       <LsLineChart
           highlight={range}

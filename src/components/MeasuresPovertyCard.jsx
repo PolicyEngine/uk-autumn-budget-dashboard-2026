@@ -106,7 +106,7 @@ function niceTicks(lo, hi) {
   return ticks;
 }
 
-export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population }) {
+export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const plotRef = useRef(null);
   const { poverty, controls } = usePovertyChoice();
   const metric = povertyMetric(poverty);
@@ -193,7 +193,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             })),
           }),
       }}
-      controls={controls.map((control) => (
+      // With the choice above the pair (PovertyMeasuresRow), none in the card
+      controls={!choiceAbove && controls.map((control) => (
         <PillSelect
           key={control.label}
           variant="light"
@@ -317,9 +318,33 @@ export function PovertyMeasuresRow({ rows, policies, selectedPolicies, selectedY
   const population = outlookPopulation(data);
   const props = { rows, policies, selectedPolicies, selectedYear, population };
   return (
-    <div className="charts-grid">
-      <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} />
-      <MeasuresPovertyCard {...props} />
+    <>
+      {/* The poverty measure both cards show, chosen once above them */}
+      <PovertyChoiceBar />
+      <div className="charts-grid">
+        <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} choiceAbove />
+        <MeasuresPovertyCard {...props} choiceAbove />
+      </div>
+    </>
+  );
+}
+
+/** "Poverty line [Absolute ▾] Housing costs [Before ▾] People [All ▾]", for a pair. */
+export function PovertyChoiceBar() {
+  const { controls } = usePovertyChoice();
+  return (
+    <div className="section-controls" role="group" aria-label="Poverty measure">
+      {controls.map((control) => (
+        <PillSelect
+          key={control.label}
+          variant="light"
+          prefix={control.label}
+          name={control.label}
+          options={control.options}
+          value={control.value}
+          onChange={control.onChange}
+        />
+      ))}
     </div>
   );
 }

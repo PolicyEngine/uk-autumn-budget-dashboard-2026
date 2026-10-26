@@ -93,9 +93,11 @@ describe("the Poverty sub-tab", () => {
     expect(overTime.parentElement).toBe(who.parentElement);
     expect(change.parentElement).not.toBe(overTime.parentElement);
 
-    // Every card chooses at the top, with dropdowns
+    // The pair's one poverty choice sits above both cards, not in each
+    const choice = within(panel).getByRole("group", { name: "Poverty measure" });
+    expect(choice.nextElementSibling).toBe(change.parentElement);
     for (const c of [change, measures]) {
-      expect(within(c).getByRole("button", { name: /^Poverty line:/ })).toBeInTheDocument();
+      expect(within(c).queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
     }
     // The change in people, from the outlook's population
     expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/);
@@ -110,10 +112,11 @@ describe("the Poverty sub-tab", () => {
     expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
 
     // One poverty choice for both cards
-    fireEvent.click(within(measures).getByRole("button", { name: /^Poverty line:/ }));
-    fireEvent.click(within(measures).getByRole("option", { name: "Relative" }));
-    expect(within(change).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Relative");
+    fireEvent.click(within(choice).getByRole("button", { name: /^Poverty line:/ }));
+    fireEvent.click(within(choice).getByRole("option", { name: "Relative" }));
+    expect(within(choice).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Relative");
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
+    expect(change.querySelector(".chart-description")).toHaveTextContent(/relative/i);
 
     // More info: the £0 measures and that the parts need not add up
     fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
