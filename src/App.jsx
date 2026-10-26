@@ -577,6 +577,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <div className="charts-grid">
               <GrowthWithMeasuresCard
                 selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
                 twinLink={
                   <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the measures" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
                 }
@@ -852,7 +853,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ) : value === "outlook" ? (
           // Current law needs no publication: its sub-tabs read only the
           // independent outlook, so they show whatever Population impact shows
-          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} selectedYear={distributionalYear} />
         ) : value === "policies" ? (
           // Every published measure's card, whatever the band's selection
           <div className="results-container">
