@@ -981,7 +981,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             {(width) => (
               <div ref={compareRef} role="img" aria-label={compareAlt}>
                 {compareBy === "tenths" ? (
-                  percents || averages ? (
+                  winners.status === "loading" || relative.status === "loading" ? (
+                    // Still loading: an empty plot, not "not available"
+                    <div className="position-plot-loading" aria-busy="true" />
+                  ) : percents || averages ? (
                     <GainsView width={width} narrow={narrow} unit={unit} percents={percents} averages={averages} decile={decile} ownPct={ownPct} ownChange={ownChange} grow={grow} />
                   ) : (
                     <p className="single-year-quiet">The changes by tenth are not available for this selection and year.</p>
