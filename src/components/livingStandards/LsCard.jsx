@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import Disclosure from "../Disclosure";
+import InfoSections, { hasInfo, infoPreview } from "../InfoSections";
+import { ABOUT_THIS_CHART } from "../ChartMoreInfo";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { fyDash } from "../../utils/livingStandards/outlook";
 import { plainWords } from "./sources";
@@ -44,8 +46,10 @@ export default function LsCard({
   sourceText,
   // A chart/table switch (ViewToggle), in the header left of Download
   viewToggle,
-  // A footer of the card's own in place of "About this chart" (e.g. a
-  // measures chart's "More info")
+  // The card's "About this chart" in fixed sections (InfoSections); about,
+  // notes and source then feed only the downloads
+  info,
+  // A footer of the card's own in place of "About this chart"
   footer,
   className = "",
 }) {
@@ -106,8 +110,13 @@ export default function LsCard({
       </div>
       <div className="ls-card-footer">
         {footer}
-        {!footer && (about || aboutNotes.length > 0 || source) && (
-          <Disclosure inCard title="About this chart">
+        {!footer && info && hasInfo(info) && (
+          <Disclosure inCard title={ABOUT_THIS_CHART} preview={infoPreview(info)}>
+            <InfoSections info={info} />
+          </Disclosure>
+        )}
+        {!footer && !info && (about || aboutNotes.length > 0 || source) && (
+          <Disclosure inCard title={ABOUT_THIS_CHART}>
             {about && <p>{text(about)}</p>}
             {aboutNotes.length > 0 && (
               <ul className="ls-about-notes">

@@ -48,7 +48,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
-import { AGE_METHOD } from "../methodology/anchors";
+import { BY_YEAR_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -722,18 +722,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
-            how: [
-              "Each point is a whole fiscal year: the sum of each selected policy's own effect.",
-              "The curve between points never goes past them; nothing is measured between years.",
-              `Labels name the measure behind the largest year-on-year steps. Breakdown by measure stacks each one's own change.`,
-              `The running total adds each year's change from ${first}.`,
-            ],
             caveats: [
-              "No share of income is shown: the results by age carry no income to divide by.",
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],
-            method: AGE_METHOD,
+            method: BY_YEAR_METHOD,
           }}
         />
       </div>

@@ -20,6 +20,7 @@ import {
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const EMPTY_ROWS = [];
 
@@ -69,7 +70,15 @@ export default function useDepthView(data) {
       </>
     ),
     about:
-      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is JRF's very deep poverty; the three bands add up to the relative poverty rate.",
+      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is very deep poverty; the three bands add up to the relative poverty rate.",
+    info: {
+      how: [
+        "Bands of the model's own median income after housing costs each year: below 40%, 40% to 50%, 50% to 60%.",
+        "Below 40% is very deep poverty; the three bands add up to the relative poverty rate.",
+      ],
+      caveats: ["Read very deep poverty as a change, not a level."],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+    },
     notes: (data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n)),
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,

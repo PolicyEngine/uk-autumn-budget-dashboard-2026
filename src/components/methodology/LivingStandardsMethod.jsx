@@ -10,7 +10,8 @@ import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
 import { ExternalLink, SourceLink, Tag } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
-import { HBAI_URL, plainWords } from "../livingStandards/sources";
+import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
+import { METHOD_ANCHORS } from "./anchors";
 
 // Notes said elsewhere: the validation status (Status, below) and the Budget
 // forecast date (the Forecast changes subtitle).
@@ -56,16 +57,45 @@ function ucHealthElementFix({ fix, engine }) {
   };
 }
 
+/**
+ * The data's notes on each chart, moved here from the cards' About this
+ * chart, which keep only what is needed to read the chart and link here.
+ */
+function ChartNotes({ outlook, meta }) {
+  if (!outlook) return null;
+  const groups = [
+    ["Incomes over time", [meta.cpi_ahc_note]],
+    ["Inequality over time", outlook.inequality?.notes],
+    ["Growth across the distribution", outlook.income_by_decile?.notes],
+    ["Poverty over time", outlook.poverty?.notes],
+    ["Depth of poverty", outlook.deep_poverty?.notes],
+    ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
+  ]
+    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote)])
+    .filter(([, notes]) => notes.length);
+  if (!groups.length) return null;
+  return (
+    <div id={METHOD_ANCHORS.lsNotes} className="card method-card method-anchor">
+      <h3 className="method-card-title">Notes on the forecast charts</h3>
+      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, TriangleAlert])} />
+    </div>
+  );
+}
+
 /** The engine, data and status of the Living standards baseline, then its notes and gaps. */
 export default function LivingStandardsMethod() {
   const [meta, setMeta] = useState(null);
+  const [outlook, setOutlook] = useState(null);
 
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
       // Without the file this says nothing; the Living standards view
       // reports the error.
-      if (live && r.data?.meta) setMeta(r.data.meta);
+      if (live && r.data?.meta) {
+        setMeta(r.data.meta);
+        setOutlook(r.data);
+      }
     });
     return () => {
       live = false;
@@ -124,6 +154,8 @@ export default function LivingStandardsMethod() {
           ].filter(Boolean)}
         />
       </div>
+
+      <ChartNotes outlook={outlook} meta={meta} />
 
       {caveats.length > 0 && (
         <div className="card method-card">

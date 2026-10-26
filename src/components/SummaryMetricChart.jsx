@@ -42,6 +42,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { shortNameOf } from "../utils/policyDetails";
 import MeasureEffectsView, { EFFECT_VIEWS, yearEffects } from "./MeasureEffectsView";
 
@@ -586,23 +587,21 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </ResponsiveContainer>
         )}
       </div>
-      {/* What the chart measures, in More info */}
-      {(
-        <div className="chart-footer">
-          <ChartMoreInfo>
-            <p>{metric.description}</p>
-            {population && !byMeasure && (
-              <p>People are the change in the rate times the population in that year, from the current-law projection.</p>
-            )}
-            {byMeasure && (
-              <p>
-                Each bar is one measure simulated on its own. These changes can&apos;t be added up across measures, and no
-                published run covers this selection together.
-              </p>
-            )}
-          </ChartMoreInfo>
-        </div>
-      )}
+      {/* What the chart measures, in About this chart */}
+      <div className="chart-footer">
+        <ChartMoreInfo
+          info={{
+            shows: metric.description,
+            how: byMeasure
+              ? [
+                  "No published run covers this selection together, so each bar is one measure simulated on its own.",
+                  "These changes can't be added up across measures.",
+                ]
+              : [],
+            method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },
+          }}
+        />
+      </div>
     </div>
   );
 }

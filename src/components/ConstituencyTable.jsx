@@ -44,8 +44,8 @@ const COLUMNS = [
 ];
 
 /**
- * The constituency card's Table view: every constituency, searchable by
- * name or region, sortable by name, region or the change (largest gain
+ * The constituency card's Table view: every constituency, filtered by the
+ * card's search box (`query`, a name or region), sortable by name, region or the change (largest gain
  * first by default). Constituencies without a figure keep the foot of the
  * list whichever way the change is sorted, with why there is none.
  *
@@ -56,9 +56,9 @@ const COLUMNS = [
  * @param {Object} props
  * @param {Array<Object>} props.entries - from rankingEntries
  * @param {"gbp"|"pct"} props.metric - Which figure the value column shows
+ * @param {string} [props.query] - The search box's text
  */
-export default function ConstituencyTable({ entries, metric }) {
-  const [query, setQuery] = useState("");
+export default function ConstituencyTable({ entries, metric, query = "" }) {
   const [sort, setSort] = useState({ key: "value", dir: -1 });
   const { field, outcome } = RANK_METRICS[metric];
 
@@ -119,15 +119,6 @@ export default function ConstituencyTable({ entries, metric }) {
   return (
     <div className="ctable">
       <div className="ctable-head">
-        <input
-          type="search"
-          className="constituency-search ctable-search"
-          aria-label="Search by constituency or region"
-          placeholder="Search by constituency or region"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          autoComplete="off"
-        />
         <p className="ctable-count" aria-live="polite">
           {shown.length} of {rows.length} constituencies; {counts.reported} reported
           {counts.approximate > 0 && `, ${counts.approximate} approximate`}

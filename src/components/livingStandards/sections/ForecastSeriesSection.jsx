@@ -19,7 +19,8 @@ import { pctLabel, percentAxis, toRows } from "../../../utils/livingStandards/fo
 import { FORECAST_GROUPS, SERIES_NAMES, cardSentence, seriesName } from "../../../utils/livingStandards/forecastWords";
 import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
-import { CSV_SOURCES, ForecastSource, forecastSourceText } from "../sources";
+import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
@@ -118,6 +119,17 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
           `; ${seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName).join(" and ")}: ${CSV_SOURCES.peDerived}`}
       </>
     ),
+    info: {
+      caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
+      sources: [
+        ...forecastSources(forecast),
+        seriesList.some((s) => NOT_OBR[s.key]) && {
+          label: CSV_SOURCES.peDerived,
+          note: seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName).join(" and "),
+        },
+      ],
+      method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the forecast feeds the baseline" },
+    },
     // Chart or table: one choice for every card, as icons in its header
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
     // One chip per line, in its colour: the card's key, so no legend repeats

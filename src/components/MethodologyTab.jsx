@@ -385,14 +385,24 @@ function MethodologyTab({ onShowTab }) {
                 items={[
                   [
                     "Poverty rate",
-                    <>
-                      The share of people in households below the{" "}
-                      <Term id="absolutePoverty">absolute poverty</Term> line before housing costs (60%
-                      of the 2024-25 <Term id="median">median</Term>, held in real terms), with and
-                      without the policies. The poverty line is measured on{" "}
-                      <SourceLink id="dwp_hbai">HBAI</SourceLink> income, which is before indirect
-                      taxes, so the VAT and fuel duty measures do not change it.
-                    </>,
+                    {
+                      value: (
+                        <>
+                          The share of people in households below the{" "}
+                          <Term id="absolutePoverty">absolute poverty</Term> line before housing costs
+                          (60% of the 2024-25 <Term id="median">median</Term>, held in real terms), with
+                          and without the policies.
+                        </>
+                      ),
+                      more: [
+                        <>
+                          The poverty line is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
+                          income, which is before indirect taxes, so the VAT and fuel duty measures do
+                          not change it.
+                        </>,
+                        "People lifted out or pushed in are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                      ],
+                    },
                   ],
                   [
                     "Inequality",
@@ -518,6 +528,18 @@ function MethodologyTab({ onShowTab }) {
                   },
                 ],
                 ["Single year of age", `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`],
+                [
+                  "Change by year",
+                  {
+                    lead: "The Young people and Pensioners charts by year:",
+                    points: [
+                      "Each point is a whole fiscal year, the sum of each selected measure's own effect; the curve between points never goes past them.",
+                      "A label names the measure behind each of the largest year-on-year steps.",
+                      "Breakdown by measure stacks each measure's own change, with the net change as the line; the running total adds each year's change from the first year.",
+                      "No share of income is shown: the results by age carry no income to divide by.",
+                    ],
+                  },
+                ],
                 [
                   "Who counts",
                   {

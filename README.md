@@ -179,4 +179,4 @@ Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions
 
 This project is for policy analysis. Data and analysis powered by PolicyEngine UK.
 
-The constituency hex map's layout (`src/utils/geography/constituencyHexes.json`) is the Open Innovations HexJSON of the 2024 Westminster constituencies (open-innovations/constituencies, `src/_data/hexjson/uk-constituencies-2024.hexjson`), © Open Innovations, CC BY 4.0. Its drawing follows PolicyEngine's uk-mansion-tax hex map.
+The constituency hex map's layout (`data_inputs/constituency_hexes.json`) is the Open Innovations HexJSON of the 2024 Westminster constituencies (open-innovations/constituencies, `src/_data/hexjson/uk-constituencies-2024.hexjson`), © Open Innovations, CC BY 4.0. Its drawing follows PolicyEngine's uk-mansion-tax hex map.
