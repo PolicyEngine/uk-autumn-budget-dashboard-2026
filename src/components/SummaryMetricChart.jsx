@@ -133,8 +133,18 @@ const POVERTY_LINES = {
 
 const HOUSING = { bhc: "before housing costs", ahc: "after housing costs" };
 
-/** "0.008 percentage points" or "0.1%": a change's size in words, unsigned. */
-const plainAmount = (value) => formatPp(Math.abs(value)).replace(/^[+−-]/, "").replace(/pp$/, " percentage points");
+/**
+ * A change's size for a reader, unsigned and to one decimal: "0.2
+ * percentage points", or "less than 0.1 percentage points" for a smaller
+ * one (the chart and its download keep the exact figure).
+ */
+const plainAmount = (value) => {
+  const text = formatPp(Math.abs(value)).replace(/^[+−-]/, "");
+  const unit = text.endsWith("pp") ? " percentage points" : text.endsWith("%") ? "%" : "";
+  const size = Math.abs(value);
+  if (size < 0.05) return `less than 0.1${unit}`;
+  return `${size.toFixed(1)}${unit}`;
+};
 
 /** The poverty chart's metric for one choice of line, housing costs and people. */
 export function povertyMetric({ basis, housing, group }) {

@@ -46,9 +46,11 @@ const ppOne = (v) => (Math.round(v * 100) === 0 ? "nil" : pp(v));
 
 // Each grouping: its pill label, the noun and the share in the sentence
 export const GROUPINGS = {
-  quintile: { label: "Quintiles", noun: "quintile", share: "fifth" },
-  decile: { label: "Deciles", noun: "decile", share: "tenth" },
-  vigintile: { label: "Vigintiles", noun: "vigintile", share: "twentieth" },
+  // Worded plainly on the page (fifths, tenths, twentieths); the technical
+  // names (quintile, decile, vigintile) only in About this chart
+  quintile: { label: "Fifths", noun: "quintile", share: "fifth" },
+  decile: { label: "Tenths", noun: "decile", share: "tenth" },
+  vigintile: { label: "Twentieths", noun: "vigintile", share: "twentieth" },
 };
 const POPULATIONS = { all: "All people", non_pensioners: "Non-pensioners" };
 
@@ -178,15 +180,19 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // The ramp's ends stay on the lowest and highest group shown
   const colours = incomeGroupColours(shown.length);
   const colourOf = (i) => colours[i - skip];
+  const ordinal = (k) => `${k}${k % 100 >= 11 && k % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][k % 10] ?? "th"}`;
   const groupName = (i) =>
-    `${g.noun[0].toUpperCase()}${g.noun.slice(1)} ${i + 1}${
+    `${ordinal(i + 1)} ${g.share}${
       i === skip ? (skip ? " (lowest shown, 5th–10th percentile)" : " (lowest income)") : i === n - 1 ? " (highest income)" : ""
     }`;
+  // "15th of 20 (70th–75th percentile)", for one bar's tooltip
+  const step = 100 / n;
+  const groupSpan = (i) => `${ordinal(i + 1)} of ${n} (${ordinal(Math.round(i * step)).replace(/^0th$/, "0")}–${ordinal(Math.round((i + 1) * step))} percentile)`;
   const lowest = skip ? `second-lowest-income ${g.share} (5th–10th percentile)` : `lowest-income ${g.share}`;
   const basisShort = basis.toUpperCase();
   const who = population === "all" ? "" : " among non-pensioners";
   const say = (v) => changeVerb(v, "%") || "stays flat";
-  const axisLabel = `Income ${g.noun} (1 = lowest)`;
+  const axisLabel = `Income ${g.share} (1 = lowest)`;
 
   // Whole period: one bar per group, the change from the first to the end year
   const periodRows = shown.map((i) => ({
@@ -207,6 +213,18 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // The ramp's ends name it; year by year with five groups, every group
   // (whole period, the axis numbers the groups)
   const legendItems = (annual && groupSeries.length <= 5 ? groupSeries : [groupSeries[0], groupSeries.at(-1)]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
+  // More than five groups: one light-to-dark key, so every bar is explained
+  const ramp = groupSeries.length > 5 ? { colours: groupSeries.map((s) => s.colour), from: "Lowest income", to: "Highest income" } : null;
+  // Year by year: a tooltip for the one bar hovered
+  const describeBar = (key, row) => {
+    const i = Number(key.slice(1)) - 1;
+    const value = row[key];
+    return {
+      label: `${fyLabel(row.year)} · ${groupSpan(i)}`,
+      value: `${diff ? pp(value) : pct(value)}${diff ? "" : ` on ${fyLabel(row.year - 1)}`}`.replace(/^(?=\d)/, value > 0 ? "+" : ""),
+      colour: colourOf(i),
+    };
+  };
 
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
   const axis = divergingAxis(values, { pad: 0.1 });
@@ -367,6 +385,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         maxBarSize={n > 5 ? 14 : 24}
         barCategoryGap={n > 10 ? "8%" : "20%"}
         legendNote={legendNote}
+        ramp={ramp}
+        describeBar={describeBar}
       />
     ) : (
       <LsBarChart
@@ -378,6 +398,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         cellColours={colours}
         legendNote={legendNote}
         legendItems={legendItems}
+        ramp={ramp}
         yFormat={diff ? ppTick : pctTick}
         tooltipFormat={diff ? pp : pct}
         tooltipLabelFormat={(i) => groupName(i - 1)}

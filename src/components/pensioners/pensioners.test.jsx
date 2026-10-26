@@ -192,7 +192,7 @@ describe("PensionersSection", () => {
     expect(screen.getByRole("heading", { name: /Change by age, 2027-28/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Effect of each policy, 2027-28/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Better and worse off, 2027-28/ })).toBeInTheDocument();
-    expect(document.body.textContent.match(/at or over State Pension age/g)).toHaveLength(1);
+    expect(document.body.textContent.match(/at State Pension age or over/g)).toHaveLength(1);
     // The dumbbell's rows: pensioners' figure for each policy
     expect(
       screen.getByRole("row", { name: /State Pension income tax protection: Pensioners £100, all ages £20/ }),

@@ -292,7 +292,12 @@ function TrendCard({ catalogue, rows, policies, selectedPolicies, selectedYear, 
         {unpublished.length > 0 && (
           <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
         )}
-        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`} />
+        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`}>
+          <p>
+            Pensioners are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28.
+            Each person counts their household&apos;s change in net income.
+          </p>
+        </ChartMoreInfo>
       </div>
     </div>
   );
@@ -1009,7 +1014,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         id={PENSIONERS_ANCHOR}
         icon="armchair"
         title="Change for pensioners"
-        subtitle="Pensioners here are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28, as State Pension age rises to 67. Each person counts their household's change in net income."
+        subtitle="Pensioners are people at State Pension age or over (67 from 2027-28)."
       />
       {/* Both cards colour by measure: one key above the pair, not a long
           legend in each */}
