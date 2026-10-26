@@ -59,14 +59,18 @@ export default function useDepthView(data) {
     period: periodLabel(rows[0].fy, rows[rows.length - 1].fy),
     summary: (
       <>
-        In {fyDash(end.fy)}, {formatPct(end.below40)} of people are in very deep poverty (below 40% of median income,
-        AHC), of {formatPct(end.total)} below 60%; very deep poverty <strong>{verb || "stays flat"}</strong> from{" "}
-        {fyDash(first.fy)}.
+        Very deep poverty: {formatPct(end.below40)} of people, <strong>{verb || "flat"}</strong>.
       </>
     ),
     about:
       "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is JRF's very deep poverty; the three bands add up to the relative poverty rate.",
-    notes: (data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n)),
+    notes: [
+      <>
+        In {fyDash(end.fy)}, {formatPct(end.below40)} of people are in very deep poverty (below 40% of median income,
+        AHC), of {formatPct(end.total)} below 60%; very deep poverty {verb || "stays flat"} from {fyDash(first.fy)}.
+      </>,
+      ...(data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n)),
+    ],
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
     download: {

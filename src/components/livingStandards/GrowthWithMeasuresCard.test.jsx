@@ -48,6 +48,7 @@ describe("Growth across the distribution, with the selected measures", () => {
   it("stands two measures for the package, with a note", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32", "plan_2_threshold_unfreeze"]} twinLink={null} />);
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(screen.getByText(/this is the whole package/)).toBeTruthy();
   });
 });

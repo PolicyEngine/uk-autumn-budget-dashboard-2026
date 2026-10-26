@@ -223,16 +223,14 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   // The card's one visible line: the lowest and highest group shown
   const unit = diff ? "pp" : "%";
-  const ends = `${skip ? "Second-lowest" : "Lowest"} vs highest ${g.share}`;
+  // Bottom is the lowest group shown (vigintile 2 for vigintiles)
   const summary = annual ? (
     <>
-      {ends}: <strong>{signedRange(lowAnnual, unit)}</strong> vs <strong>{signedRange(highAnnual, unit)}</strong> a year
-      {diff ? " from the measures" : ""}.
+      Bottom: <strong>{signedRange(lowAnnual, unit)}</strong> a year; top: <strong>{signedRange(highAnnual, unit)}</strong>.
     </>
   ) : (
     <>
-      {ends}: <strong>{signed(periodRows[0].growth, unit)}</strong> vs <strong>{signed(periodRows.at(-1).growth, unit)}</strong>
-      {diff ? " from the measures" : ""}.
+      Bottom: <strong>{signed(periodRows[0].growth, unit)}</strong>; top: <strong>{signed(periodRows.at(-1).growth, unit)}</strong>.
     </>
   );
   // The full sentence, in About this chart
