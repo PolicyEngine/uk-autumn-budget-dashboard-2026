@@ -29,8 +29,8 @@ export const ALL_POLICY_NAMES = [
   // Cost revenue
   "Employer NI relief for under-25s", // £5.46bn
   "Fuel duty rises deferred", // £0.57bn
-  "Zero VAT on domestic electricity", // £0.36bn
   "Plan 2 student loan threshold unfrozen", // £0.35bn
+  "Zero VAT on domestic electricity", // £0.34bn (Great Britain only, #187)
   "State Pension income tax protection", // £0.16bn
   "VAT cut on road fuel", // £0.13bn
   "Warm Home Discount top-up", // £0.09bn
