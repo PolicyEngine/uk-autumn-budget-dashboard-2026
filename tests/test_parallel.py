@@ -17,7 +17,7 @@ from pathlib import Path
 import hypothesis.strategies as st
 import pandas as pd
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, example, given, settings
 
 from tests import parallel_helpers
 from uk_budget_data import parallel
@@ -709,7 +709,7 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
 
 
 @settings(
-    max_examples=8,
+    max_examples=25,
     deadline=None,
     suppress_health_check=[HealthCheck.function_scoped_fixture],
 )
@@ -720,6 +720,10 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
     own_baseline=st.booleans(),
     structural=st.booleans(),
 )
+# A combined run whose members mix an own baseline and the configured one,
+# and one with a module-level modifier, always.
+@example(rates=[0.1, 0.3], own_baseline=True, structural=False)
+@example(rates=[0.1, 0.3], own_baseline=False, structural=True)
 def test_any_measure_s_runs_survive_pickling_unchanged(
     world, tmp_path_factory, rates, own_baseline, structural
 ):
