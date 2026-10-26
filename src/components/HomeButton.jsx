@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Tip from "./Tip";
-import tealMark from "@/assets/policyengine-teal-square.svg";
+import { PanelLeftOpen } from "lucide-react";
 import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
 
@@ -34,12 +34,12 @@ function AboutTip({ hint }) {
 const CUE_KEY = "ab2026-about-cue";
 
 /**
- * The "About" pill at the start of the view tabs row (App.jsx passes it
- * to ViewTabs as `leading`; it is not on the landing page): the card on
- * hover or focus, and a click that opens the overview drawer
- * (OverviewDrawer.jsx); hidden while the drawer is open. It pulses softly
- * once per session (not under reduced motion); on a phone it is a circle
- * with the mark alone.
+ * "About", at the start of the view tabs row and styled as its tabs are
+ * (App.jsx passes it to ViewTabs as `leading`; it is not on the landing
+ * page), but a button, never a chosen tab: the card on hover or focus, and
+ * a click that opens the overview drawer (OverviewDrawer.jsx); hidden
+ * while the drawer is open. It pulses softly once per session (not under
+ * reduced motion).
  *
  * @param {Object} props
  * @param {boolean} props.open - Whether the overview drawer is open
@@ -64,17 +64,14 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       <button
         ref={buttonRef}
         type="button"
-        className={`edge-about${cue ? " is-cue" : ""}`}
+        className={`view-tab edge-about${cue ? " is-cue" : ""}`}
         aria-label="About this dashboard: open the overview"
         aria-expanded={open}
         aria-controls="overview-drawer"
         onClick={onToggle}
       >
-        <span className="edge-about-pill">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={tealMark.src ?? tealMark} alt="" className="edge-about-mark" />
-          <span className="edge-about-label" aria-hidden="true">About</span>
-        </span>
+        <PanelLeftOpen className="view-tab-icon" size={18} strokeWidth={1.8} aria-hidden="true" />
+        <span className="view-tab-label" aria-hidden="true">About</span>
       </button>
     </Tip>
   );

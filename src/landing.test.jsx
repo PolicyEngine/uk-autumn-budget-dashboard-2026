@@ -202,7 +202,12 @@ describe("the About pill in the tab row, and its overview drawer", () => {
   it("says what the dashboard is on hover or focus", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    expect(edge().querySelector("img")).toHaveAttribute("alt", "");
+    // Styled as the tabs are, with no logo; a button, never a chosen tab
+    expect(edge()).toHaveClass("view-tab");
+    expect(edge()).toHaveTextContent(/^About$/);
+    expect(edge().querySelector("img")).toBeNull();
+    expect(edge()).not.toHaveAttribute("role");
+    expect(edge()).not.toHaveAttribute("aria-selected");
     // At the start of the view tabs row, before the tabs, outside them
     const bar = edge().closest(".view-tabs-bar");
     expect(bar).not.toBeNull();

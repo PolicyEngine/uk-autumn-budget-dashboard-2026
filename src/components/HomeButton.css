@@ -58,12 +58,12 @@
   }
 }
 
-/* The "About" pill (EdgeAboutTab), at the start of the view tabs row,
-   centred in it, before the first tab; sticky with the bar */
+/* "About" (EdgeAboutTab), at the start of the view tabs row: a .view-tab
+   like the rest (globals.css), the row's height, then a subtle divider
+   before the first tab; sticky with the bar */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 .view-tabs-bar.has-leading > .view-tabs {
@@ -71,53 +71,20 @@
   min-width: 0;
 }
 
-.edge-about {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  padding: 0;
-  color: var(--pe-teal-700);
-  background: none;
-  border: 0;
-  cursor: pointer;
+.view-tabs-bar.has-leading .edge-about {
+  height: var(--view-tabs-height);
+  margin-right: 9px;
 }
 
-.edge-about-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px 5px 7px;
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-200);
-  border-radius: 999px;
-  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
-}
-
-.edge-about:hover .edge-about-pill {
-  background: var(--pe-teal-100);
-  border-color: var(--pe-teal-500);
-}
-
-.edge-about:focus {
-  outline: none;
-}
-
-.edge-about:focus-visible .edge-about-pill {
-  box-shadow: 0 0 0 3px var(--focus-ring);
-  border-color: var(--pe-teal-500);
-}
-
-.edge-about-mark {
-  display: block;
-  width: 15px;
-  height: 15px;
-}
-
-.edge-about-label {
-  font-family: var(--pe-font-family);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1;
+.view-tabs-bar.has-leading .edge-about::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 1px;
+  height: 22px;
+  background: var(--card-border);
+  transform: translateY(-50%);
 }
 
 /* Hidden while the overview drawer is open: the drawer's own close
@@ -126,45 +93,23 @@
   visibility: hidden;
 }
 
-/* Once a session: two soft pulses of the pill, so it is seen */
-.edge-about.is-cue .edge-about-pill {
+/* Once a session: two soft pulses of tint, so it is seen */
+.edge-about.is-cue {
   animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
 }
 
 @keyframes edge-about-cue {
   0%,
   100% {
-    box-shadow: 0 0 0 0 var(--focus-ring);
+    background: transparent;
   }
   50% {
-    box-shadow: 0 0 0 6px var(--focus-ring);
-  }
-}
-
-/* On a phone: a 32px circle with the mark */
-@media (max-width: 768px) {
-  .view-tabs-bar.has-leading {
-    gap: 8px;
-  }
-
-  .edge-about-pill {
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-  }
-
-  .edge-about-label {
-    display: none;
+    background: var(--pe-teal-50);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edge-about-pill {
-    transition: none;
-  }
-
-  .edge-about.is-cue .edge-about-pill {
+  .edge-about.is-cue {
     animation: none;
   }
 }
