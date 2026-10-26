@@ -113,7 +113,9 @@ describe("Household impact's results", () => {
           !url.endsWith("/household_presets.json") &&
           !url.endsWith("/income_curve.csv") &&
           !url.endsWith("/household_scatter_binned.csv") &&
-          !url.endsWith("/income_distribution.csv"),
+          !url.endsWith("/income_distribution.csv") &&
+          !url.endsWith("/winners_losers.csv") &&
+          !url.endsWith("/distributional_impact.csv"),
       );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);

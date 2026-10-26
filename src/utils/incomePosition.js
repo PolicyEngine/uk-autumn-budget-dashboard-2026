@@ -169,3 +169,102 @@ export function householdPosition({ net, household, before, after }) {
     unchanged: sameLabel,
   };
 }
+
+/**
+ * The share of people (0 to 1) with an income in each band [edges[i],
+ * edges[i+1]), from a curve: the difference of the percentiles at the two
+ * edges, linear between published points. Edges must lie within the
+ * curve's range.
+ */
+export function bandShares(curve, edges) {
+  const at = (income) => percentileOn(curve, income).percentile;
+  const shares = [];
+  for (let i = 0; i < edges.length - 1; i += 1) {
+    const lo = at(edges[i]);
+    const hi = at(edges[i + 1]);
+    shares.push(lo === null || hi === null ? 0 : Math.max(0, hi - lo) / 100);
+  }
+  return shares;
+}
+
+/** Band edges of a round width inside a curve's published range. */
+export function bandEdges(curve, width) {
+  const first = Math.ceil(curve[0].income / width) * width;
+  const last = Math.floor(curve[curve.length - 1].income / width) * width;
+  const edges = [];
+  for (let edge = first; edge <= last; edge += width) edges.push(edge);
+  return edges;
+}
+
+/** Decile (1 to 10) of a position: from its percentile, or the end it is off. */
+export function decileOf(position) {
+  if (position.below) return 1;
+  if (position.above) return 10;
+  if (position.percentile === null) return null;
+  return Math.min(10, Math.floor(position.percentile / 10) + 1);
+}
+
+/**
+ * Average change per household by decile for the selected measures, from
+ * winners_losers.csv rows ({ reform_id, year, decile, avg_change }), added
+ * up across the measures as the decile charts add them: { 1: £, ... 10: £ },
+ * or null when a selected measure has no rows for the year.
+ */
+export function decileAverages(rows, selected, year) {
+  const ids = [...new Set(selected ?? [])];
+  if (!ids.length) return null;
+  const totals = {};
+  for (const id of ids) {
+    const own = rows.filter((row) => row.reform_id === id && Number(row.year) === year && row.decile !== "all");
+    if (own.length < 10) return null;
+    for (const row of own) {
+      const decile = Number(row.decile);
+      totals[decile] = (totals[decile] ?? 0) + Number(row.avg_change);
+    }
+  }
+  return totals;
+}
+
+const DECILE_NAMES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+
+/**
+ * Change in net income as a % of net income by decile for the selected
+ * measures, from distributional_impact.csv rows ({ reform_id, year, decile:
+ * "1st".."10th", value }), added up across the measures as the decile
+ * charts add them: { 1: %, ... 10: % }, or null when a selected measure has
+ * no rows for the year.
+ */
+export function decilePercents(rows, selected, year) {
+  const ids = [...new Set(selected ?? [])];
+  if (!ids.length) return null;
+  const totals = {};
+  for (const id of ids) {
+    const own = rows.filter((row) => row.reform_id === id && Number(row.year) === year && DECILE_NAMES.includes(row.decile));
+    if (own.length < 10) return null;
+    for (const row of own) {
+      const decile = DECILE_NAMES.indexOf(row.decile) + 1;
+      totals[decile] = (totals[decile] ?? 0) + Number(row.value);
+    }
+  }
+  return totals;
+}
+
+/** The UK-wide average change per household (winners_losers.csv "all"), added up across the measures. */
+export function overallAverage(rows, selected, year) {
+  const ids = [...new Set(selected ?? [])];
+  if (!ids.length) return null;
+  let total = 0;
+  for (const id of ids) {
+    const row = rows.find((r) => r.reform_id === id && Number(r.year) === year && r.decile === "all");
+    if (!row) return null;
+    total += Number(row.avg_change);
+  }
+  return total;
+}
+
+/** n edges spaced evenly on a log scale from `lo` to `hi`. */
+export function logEdges(lo, hi, bands) {
+  const a = Math.log(lo);
+  const b = Math.log(hi);
+  return Array.from({ length: bands + 1 }, (_, i) => Math.exp(a + ((b - a) * i) / bands));
+}

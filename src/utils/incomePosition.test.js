@@ -123,3 +123,64 @@ describe("ordinal", () => {
     ]);
   });
 });
+
+import { bandEdges, bandShares, decileAverages, decileOf } from "./incomePosition";
+
+describe("bandShares", () => {
+  const curve = [
+    { percentile: 5, income: 10000 },
+    { percentile: 50, income: 30000 },
+    { percentile: 95, income: 90000 },
+  ];
+  it("splits people into round bands inside the published range", () => {
+    expect(bandEdges(curve, 20000)).toEqual([20000, 40000, 60000, 80000]);
+    // 20k is the 27.5th, 40k the 57.5th, 60k the 72.5th, 80k the 87.5th
+    const shares = bandShares(curve, [20000, 40000, 60000, 80000]);
+    expect(shares.map((s) => Math.round(s * 1000) / 10)).toEqual([30, 15, 15]);
+  });
+});
+
+describe("decileOf", () => {
+  it("reads a decile from a percentile or the end it is off", () => {
+    expect(decileOf({ percentile: 9.9, below: false, above: false })).toBe(1);
+    expect(decileOf({ percentile: 29.6, below: false, above: false })).toBe(3);
+    expect(decileOf({ percentile: null, below: true, above: false })).toBe(1);
+    expect(decileOf({ percentile: null, below: false, above: true })).toBe(10);
+  });
+});
+
+describe("decileAverages", () => {
+  const rows = ["a", "b"].flatMap((id, k) =>
+    [...Array.from({ length: 10 }, (_, i) => String(i + 1)), "all"].map((decile) => ({
+      reform_id: id,
+      year: "2027",
+      decile,
+      avg_change: String((k + 1) * 10),
+    })),
+  );
+  it("adds up the selected measures, as the decile charts do", () => {
+    expect(decileAverages(rows, ["a", "b"], 2027)[3]).toBe(30);
+    expect(decileAverages(rows, ["a"], 2027)[10]).toBe(10);
+    expect(decileAverages(rows, ["a"], 2028)).toBeNull();
+  });
+});
+
+import { decilePercents, logEdges, overallAverage } from "./incomePosition";
+
+describe("decilePercents and overallAverage", () => {
+  const names = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+  const pct = ["a", "b"].flatMap((id, k) => names.map((decile) => ({ reform_id: id, year: "2027", decile, value: String((k + 1) * 0.1) })));
+  const wl = ["a", "b"].map((id, k) => ({ reform_id: id, year: "2027", decile: "all", avg_change: String((k + 1) * 50) }));
+  it("adds up the selected measures", () => {
+    expect(decilePercents(pct, ["a", "b"], 2027)[10]).toBeCloseTo(0.3);
+    expect(decilePercents(pct, ["a"], 2028)).toBeNull();
+    expect(overallAverage(wl, ["a", "b"], 2027)).toBe(150);
+    expect(overallAverage(wl, ["c"], 2027)).toBeNull();
+  });
+});
+
+describe("logEdges", () => {
+  it("spaces edges evenly on a log scale", () => {
+    expect(logEdges(1000, 100000, 2).map(Math.round)).toEqual([1000, 10000, 100000]);
+  });
+});
