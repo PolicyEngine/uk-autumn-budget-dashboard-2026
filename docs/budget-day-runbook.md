@@ -16,7 +16,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
 ## Before the day: the deployed-route rehearsal, by Friday 23 October
 
-- [ ] **Production route live.** The dashboard serves at `https://policyengine.org/uk/autumn-budget-2026` (policyengine-app-v2#1249, still a draft) from the production Vercel project, which tracks `main`.
+- [ ] **Production route live.** The dashboard serves at `https://policyengine.org/uk/budgets/autumn-2026` (policyengine-app-v2#1249, still a draft) from the production Vercel project, which tracks `main`.
   - Project: `uk-autumn-budget-2026`, team `policy-engine`, ID `prj_SelxVbakBqqSLdsoS74Qw36wp2E8` (created 12 October).
   - Domain: `uk-autumn-budget-2026.vercel.app`.
   - Last production deployment ID, the rollback target: record before every merge on the day.
@@ -688,13 +688,13 @@ Then run the area run (`uk-budget-data geography`, below), and finish with `publ
 - **Verify on the live route:**
 
   ```sh
-  curl -s https://policyengine.org/uk/autumn-budget-2026/data/manifest.json | head -5
+  curl -s https://policyengine.org/uk/budgets/autumn-2026/data/manifest.json | head -5
   ```
 
   Until policyengine-app-v2#1249 is live, and at the rehearsal, read the Vercel deployment instead:
 
   ```sh
-  curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5
+  curl -s https://uk-autumn-budget-2026.vercel.app/uk/budgets/autumn-2026/data/manifest.json | head -5
   ```
 
   Either way, then run the household check:

@@ -189,7 +189,7 @@ src/
 ```
 
 ### Routing
-- One Next.js page under the base path `/uk/autumn-budget-2026`; no client router
+- One Next.js page under the base path `/uk/budgets/autumn-2026`; no client router
 - Tabs and sub-tabs are query parameters (`?tab=`, `?sub=`), so links are shareable
 
 ## Performance Considerations

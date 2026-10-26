@@ -7,12 +7,12 @@
 # path, as `next start` (or a deployment) does.
 #
 # Usage: scripts/smoke-built-site.sh [site URL]
-#   default http://127.0.0.1:3000/uk/autumn-budget-2026
+#   default http://127.0.0.1:3000/uk/budgets/autumn-2026
 # Extra curl arguments (for example a Vercel protection-bypass header) can
 # be passed in SMOKE_CURL_ARGS.
 set -euo pipefail
 
-SITE="${1:-http://127.0.0.1:3000/uk/autumn-budget-2026}"
+SITE="${1:-http://127.0.0.1:3000/uk/budgets/autumn-2026}"
 SITE="${SITE%/}"
 read -r -a EXTRA <<<"${SMOKE_CURL_ARGS:-}"
 

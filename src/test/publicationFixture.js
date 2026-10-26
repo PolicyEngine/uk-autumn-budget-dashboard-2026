@@ -27,7 +27,7 @@ export function fixtureJson(relativePath) {
   return JSON.parse(fixtureText(relativePath));
 }
 
-export const BASE_PATH = "/uk/autumn-budget-2026";
+export const BASE_PATH = "/uk/budgets/autumn-2026";
 
 /**
  * The fixture's two years, read from its manifest rather than written into
