@@ -8,9 +8,11 @@ members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
 still written. One that leaves out a scored year of an uprated amount
-(``uk_budget_data.scored_years``), or changes one of the engine's
-wealth-tax scales in its ``parameter_changes``, is refused the same way,
-before any simulation is built; one whose two built simulations differ in a
+(``uk_budget_data.scored_years``), changes one of the engine's wealth-tax
+scales in its ``parameter_changes``, or changes a parameter the engine
+charges in step with another without that other
+(``uk_budget_data.parameter_companions``), is refused the same way, before
+any simulation is built; one whose two built simulations differ in a
 wealth-tax scale (a modifier that edits it) is refused once they are built,
 before any figure is made. A measure or combined run the certified data
 cannot cost (its run records a data limit) is still processed, since the
@@ -35,6 +37,10 @@ from uk_budget_data.measure_templates import (
     wealth_tax_refusal,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
+from uk_budget_data.parameter_companions import (
+    companion_gaps,
+    companion_refusal,
+)
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
@@ -411,6 +417,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     _refuse_unscored_years(
         key, baseline_scenario, reform_scenario, config.years
     )
+    _refuse_companion_gaps(key, baseline_scenario, reform_scenario)
     # Built under data_limits.building: a modifier that reads a limited
     # input while its simulation is built carries it past the watch, so
     # the build is watched too.
@@ -506,6 +513,17 @@ def _refuse_wealth_tax_base(
     paths = wealth_tax_paths(baseline_scenario, reform_scenario)
     if paths:
         raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
+def _refuse_companion_gaps(
+    subject: str, baseline_scenario, reform_scenario
+) -> None:
+    """Refuse a run whose either side changes a parameter the engine
+    charges in step with another, in a year the other is not changed
+    (``parameter_companions``): it would change less than it says."""
+    gaps = companion_gaps(baseline_scenario, reform_scenario)
+    if gaps:
+        raise ReceiptUnavailable(subject, companion_refusal(gaps))
 
 
 def _refuse_wealth_tax_built(subject: str, baseline, reformed) -> None:
@@ -710,6 +728,11 @@ def generate_artifacts(
                 combined.baseline_scenario_for(config, uses_config),
                 combined.to_scenario(),
                 config.years,
+            )
+            _refuse_companion_gaps(
+                key,
+                combined.baseline_scenario_for(config, uses_config),
+                combined.to_scenario(),
             )
             combine.check_consistency(
                 combined, ordered, config, list(config.years)

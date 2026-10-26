@@ -37,6 +37,7 @@ from uk_budget_data.measure_templates import (
     wealth_tax_refusal,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
+from uk_budget_data.parameter_companions import companion_gaps
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 from uk_budget_data.scored_years import missing_scored_years
@@ -607,9 +608,10 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
 
     wealth_tax = None
     if flat:
-        # Generation refuses a measure that changes a wealth-tax scale or
-        # leaves out a scored year of an uprated amount; this flat path has
-        # no gate, so it says so loudly, in the same order, and runs it.
+        # Generation refuses a measure that changes a wealth-tax scale,
+        # leaves out a scored year of an uprated amount or changes a
+        # parameter without its companion; this flat path has no gate, so it
+        # says so loudly, in the same order, and runs it.
         wealth_tax = wealth_tax_paths(baseline_scenario, reform_scenario)
         if wealth_tax:
             warn(wealth_tax_refusal(*wealth_tax))
@@ -619,6 +621,8 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
             config.years,
             system,
         ):
+            warn(gap.reason)
+        for gap in companion_gaps(baseline_scenario, reform_scenario):
             warn(gap.reason)
 
     # Built under data_limits.building, so a modifier that reads a limited
