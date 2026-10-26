@@ -137,6 +137,22 @@ describe("the view tabs", () => {
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
   });
 
+  it("open Population impact with only one measure from its card's \"See its effect\"", () => {
+    window.history.replaceState({}, "", "/?tab=policies");
+    render(<App />);
+    const panel = screen.getByRole("tabpanel", { name: "Policies" });
+    fireEvent.click(
+      within(panel).getByRole("button", { name: /effect of Warm Home Discount top-up/ }),
+    );
+    expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    const params = new URLSearchParams(window.location.search);
+    expect(params.has("tab")).toBe(false);
+    expect(params.get("policies")).toBe("warm_home_discount_top_up");
+  });
+
   it("move with the arrow keys, Home and End", () => {
     render(<App />);
     const list = viewList();
