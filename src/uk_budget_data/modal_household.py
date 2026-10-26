@@ -56,9 +56,12 @@ CPU = float(os.environ.get("HOUSEHOLD_MODAL_CPU", "1.0"))
 MEMORY_MB = 1024
 # Cloud Run's request limit; a household run takes seconds.
 TIMEOUT_SECONDS = 300
-# Eleven simulations at most per request; a twelfth container lets two
-# requests overlap a little. A ceiling on what a burst can cost.
-MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "12"))
+# A page load needs 9 to about 15 simulations, so this is roughly how many
+# visitors are served at once: a ceiling on what a burst can cost, not a
+# price while idle. 40, approved by Vahid for the 26-28 October 2026 Budget
+# window (the live app was raised to 40 at runtime on 26 October; a deploy
+# applies this value, so it must match). Back to 12 after 4 November.
+MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "40"))
 # 0: nothing runs, and nothing is paid, while no one asks. Raise only for a
 # set window (the webinar), knowing the price.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
