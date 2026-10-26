@@ -21,6 +21,7 @@ from uk_budget_data.pipeline import (
     generate_household_scatter,
     generate_income_curve,
     generate_income_distribution,
+    generate_income_growth,
 )
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
@@ -134,7 +135,12 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     generate_parser.add_argument(
         "--only",
-        choices=["age_impact", "household_scatter", "income_distribution"],
+        choices=[
+            "age_impact",
+            "household_scatter",
+            "income_distribution",
+            "income_growth",
+        ],
         default=None,
         help=(
             "Write only this file to --output-dir, leaving the others as "
@@ -143,7 +149,9 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
             "change band, binned (household_scatter_binned.csv). "
             "income_distribution: percentiles of equivalised household net "
             "income before and after each measure "
-            "(income_distribution.csv)."
+            "(income_distribution.csv). income_growth: real growth of "
+            "each income group's median HBAI income with each measure and "
+            "under its baseline (income_growth_with_measures.csv)."
         ),
     )
 
@@ -307,6 +315,10 @@ def run_generate(parsed: argparse.Namespace) -> int:
             )
         elif parsed.only == "income_distribution":
             generate_income_distribution(
+                reforms=reforms, config=config, runner=runner
+            )
+        elif parsed.only == "income_growth":
+            generate_income_growth(
                 reforms=reforms, config=config, runner=runner
             )
         else:
