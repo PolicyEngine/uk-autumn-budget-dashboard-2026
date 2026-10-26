@@ -1,7 +1,8 @@
-"""FastAPI backend for personal impact calculations.
+"""FastAPI backend for the Personal impact tab.
 
-This module provides a REST API endpoint for calculating how Autumn Budget
-policies affect individual households.
+``POST /api/household-impact`` answers one household's net income in one
+year before and after the selected Autumn Budget measures. ``/api/health``
+and ``/api/version`` report the service's state and build.
 """
 
 import copy
@@ -17,14 +18,12 @@ import anyio
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from uk_budget_data import definitions, household_impact
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.personal_impact import (
     HouseholdInput,
-    PersonalImpactCalculator,
     household_workers,
     stop_workers,
 )
@@ -57,7 +56,13 @@ app.add_middleware(
 
 
 class APIHouseholdInput(BaseModel):
-    """API request model for household inputs."""
+    """The request body of the removed ``/api/personal-impact`` route.
+
+    No route reads it. ``tests/test_household_fixtures.py`` still builds the
+    household fixtures' requests with it (with ``convert_api_input_to_household``
+    and ``convert_to_native``), until the household fixture check
+    (``household_route``) is moved to ``/api/household-impact`` or removed.
+    """
 
     employment_income: float = Field(
         ..., ge=0, description="Annual employment income in 2025 (GBP)"
@@ -149,27 +154,6 @@ def convert_to_native(obj):
     return obj
 
 
-# Lazy-load calculator to avoid startup delay
-_calculator: PersonalImpactCalculator | None = None
-
-
-def get_calculator() -> PersonalImpactCalculator:
-    """Get or create the PersonalImpactCalculator (lazy singleton)."""
-    global _calculator
-    if _calculator is None:
-        _calculator = PersonalImpactCalculator()
-    return _calculator
-
-
-# One household calculation at a time per instance, in arrival order. A
-# calculation takes minutes of CPU: several at once share it and all finish
-# together, later than any would alone (three at a time on Cloud Run's 300 s
-# limit all time out where two of three would have finished), and each
-# holds its own memory. How many visitors an instance takes is Cloud Run's
-# --concurrency.
-CALCULATIONS = anyio.CapacityLimiter(1)
-
-
 def household_request_limit() -> int:
     """How many household-impact requests an instance works on at once.
 
@@ -235,64 +219,6 @@ def timed(calculate, household):
     started = time.perf_counter()
     results = calculate(household)
     return results, time.perf_counter() - started
-
-
-@app.post("/api/personal-impact")
-async def calculate_personal_impact(
-    data: APIHouseholdInput, response: Response
-):
-    """Calculate personal impact for a household.
-
-    Returns year-by-year impact breakdown per policy.
-
-    The calculation runs in a worker thread, one at a time
-    (``CALCULATIONS``), so the event loop keeps answering other requests
-    (``/api/version``, ``/api/health``) meanwhile. Run on the event loop
-    itself, it blocked every request to the instance until it finished.
-    """
-    try:
-        household_input = convert_api_input_to_household(data)
-        calculator = get_calculator()
-        received = time.perf_counter()
-        results, calculating = await anyio.to_thread.run_sync(
-            timed, calculator.calculate, household_input, limiter=CALCULATIONS
-        )
-        response.headers["Server-Timing"] = server_timing(
-            calculating,
-            time.perf_counter() - received - calculating,
-            memory_peak_bytes(),
-        )
-        return convert_to_native(results)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
-
-
-@app.post("/api/personal-impact/stream")
-async def calculate_personal_impact_stream(data: APIHouseholdInput):
-    """Stream personal impact results year-by-year using SSE."""
-    try:
-        household_input = convert_api_input_to_household(data)
-        calculator = get_calculator()
-
-        async def generate():
-            for event in calculator.calculate_streaming(household_input):
-                event_data = convert_to_native(event)
-                yield f"data: {json.dumps(event_data)}\n\n"
-
-        return StreamingResponse(
-            generate(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-            },
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
 
 
 # --- One household, one year: POST /api/household-impact -------------------
@@ -612,7 +538,7 @@ def main():
     import uvicorn
 
     port = int(os.environ.get("PORT", 5001))
-    print(f"Starting UK Budget Personal Impact API on port {port}...")
+    print(f"Starting UK Budget household API on port {port}...")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 

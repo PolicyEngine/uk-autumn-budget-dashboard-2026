@@ -8,13 +8,11 @@ that:
 - ``/api/health`` answers;
 - ``/api/version`` names the commit being deployed and the same package
   versions as the revision's image, so the tagged URL really serves it;
-- ``/api/personal-impact`` answers a plain household with finite numbers
-  for every year and policy the image's calculator covers;
-- ``/api/household-impact``, the route the Personal impact tab calls,
-  answers one household's headline with finite numbers and a change equal
-  to reform minus baseline. Checked only on an image that has the route
-  (``expected_household_impact``), so a rollback to a revision older than
-  it is not refused for lacking it;
+- ``/api/household-impact``, the only route the Personal impact tab calls,
+  answers one household's headline with finite numbers, a change equal to
+  reform minus baseline, and the policyengine-uk version it ran on. An
+  image without the route (``expected_household_impact``) is refused: a
+  revision that cannot answer the page must not take traffic;
 - the same answer reports, for every measure the image registers, the
   definition the image itself computes at the commit being deployed
   (``expected_definitions``), so a definition the served code binds
@@ -23,14 +21,14 @@ that:
   show measures as unavailable. Checked only on an image that declares
   them.
 
-It does not check that the answers are right; the household fixtures do
-that (``household_route``), once the team has written them.
+It does not check that the answers are right; that is for the tests.
 
 The pipelines run main's current copy of this checker, never the
 revision's own (an older image would bring an older, weaker checker), on a
 plain Python with no third-party package. What only the revision knows (its
-package versions and the years and policies it covers) is read from its
-image as data, into an expectations file (``print_expectations``).
+package versions, whether it has the household route, and the definitions
+it computes) is read from its image as data, into an expectations file
+(``print_expectations``).
 
 Usage::
 
@@ -51,8 +49,6 @@ import urllib.request
 from typing import Any, Optional
 
 from uk_budget_data.runtime_identity import runtime_identity
-
-SMOKE_HOUSEHOLD = {"employment_income": 30_000}
 
 
 def numbers(value: Any):
@@ -92,94 +88,12 @@ def error_markers(value: Any, path: str = "") -> list[str]:
     return found
 
 
-def _has_finite_number(value: Any) -> bool:
-    found = list(numbers(value))
-    return bool(found) and all(math.isfinite(n) for n in found)
-
-
 def _finite(value: Any) -> bool:
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
         and math.isfinite(value)
     )
-
-
-def expected_coverage() -> tuple[list[str], list[str]]:
-    """The years and policies this build's household route must answer.
-
-    Read from the image's own calculator, so the expectation is this
-    build's, whichever version of it is deployed.
-    """
-    from uk_budget_data import personal_impact
-
-    return (
-        [str(year) for year in personal_impact.YEARS],
-        list(personal_impact.POLICY_IDS),
-    )
-
-
-def impact_problems(
-    body: Any,
-    years: Optional[list[str]] = None,
-    policies: Optional[list[str]] = None,
-) -> list[str]:
-    """Ways a household answer is not a complete calculation.
-
-    A 200 is not enough. The answer must be an object reporting no failure
-    anywhere (see ``ERROR_KEYS``), with
-    ``household_net_income`` for every expected year, and with every
-    expected policy giving a finite ``net_income_change`` in every one of
-    those years. Zero effects are allowed: a measure can leave a household
-    unchanged. Whether the numbers are right is for the household
-    fixtures, not this check.
-
-    Args:
-        body: The parsed response.
-        years: Expected years (as JSON keys); default the calculator's.
-        policies: Expected policy ids; default the calculator's.
-    """
-    if years is None or policies is None:
-        default_years, default_policies = expected_coverage()
-        years = default_years if years is None else years
-        policies = default_policies if policies is None else policies
-    route = "/api/personal-impact"
-    if not isinstance(body, dict):
-        return [f"{route} did not return an object"]
-    markers = error_markers(body)
-    if markers:
-        return [f"{route} reported a failure at {', '.join(markers)}"]
-    if not all(math.isfinite(n) for n in numbers(body)):
-        return [f"{route} returned a non-finite number"]
-    problems = []
-    answered_years = body.get("years")
-    if not isinstance(answered_years, dict):
-        answered_years = {}
-    for year in years:
-        entry = answered_years.get(year)
-        baseline = entry.get("baseline") if isinstance(entry, dict) else None
-        if not isinstance(baseline, dict) or not _finite(
-            baseline.get("household_net_income")
-        ):
-            problems.append(f"{route} has no baseline income for {year}")
-    answered = body.get("policies")
-    if not isinstance(answered, dict):
-        answered = {}
-    for name in policies:
-        policy = answered.get(name)
-        policy_years = (
-            policy.get("years") if isinstance(policy, dict) else None
-        )
-        if not isinstance(policy_years, dict):
-            problems.append(f"{route} has no result for {name}")
-            continue
-        for year in years:
-            entry = policy_years.get(year)
-            if not isinstance(entry, dict) or not _finite(
-                entry.get("net_income_change")
-            ):
-                problems.append(f"{route}: {name} has no change for {year}")
-    return problems
 
 
 HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
@@ -350,18 +264,17 @@ def run_smoke(
     client,
     expected_git_sha: str,
     expected: Optional[dict] = None,
-    years: Optional[list[str]] = None,
-    policies: Optional[list[str]] = None,
     household_impact: Optional[dict] = None,
     definitions: Optional[dict] = None,
 ) -> dict:
     """Run every check. Returns ``{"pass": bool, "problems": [...]}``.
 
-    ``expected`` is the image's identity, ``years``/``policies`` its
-    calculator's coverage, ``household_impact`` whether it has the
-    single-year route (``expected_household_impact``) and
+    ``expected`` is the image's identity, ``household_impact`` whether it
+    has the single-year route (``expected_household_impact``) and
     ``definitions`` the definitions it computes
-    (``expected_definitions``); each defaults to this process's own.
+    (``expected_definitions``); each defaults to this process's own. An
+    image that does not declare the single-year route fails: it is the
+    only route the page calls.
     """
     expected = expected or runtime_identity()
     problems: list[str] = []
@@ -374,17 +287,16 @@ def run_smoke(
         reported = version.json()
         problems += identity_problems(reported, expected_git_sha, expected)
 
-    impact = _request(
-        client, "POST", "/api/personal-impact", problems, json=SMOKE_HOUSEHOLD
-    )
-    if impact is not None:
-        problems += impact_problems(impact.json(), years, policies)
-
     if household_impact is None:
         household_impact = expected_household_impact()
     if definitions is None:
         definitions = expected_definitions()
-    if household_impact.get("declared"):
+    if not household_impact.get("declared"):
+        problems.append(
+            f"the image has no {HOUSEHOLD_IMPACT_ROUTE} route, the only "
+            "route the page calls"
+        )
+    else:
         route = HOUSEHOLD_IMPACT_ROUTE
         if definitions.get("declared"):
             route += "?" + definitions_query(definitions)
@@ -433,24 +345,20 @@ class StdlibClient:
 
 
 def print_expectations() -> dict:
-    """What a revision's image says it is: its identity, the years and
-    policies its calculator covers, and whether it has the single-year
-    route. The pipelines run the same thing inside the image, written out
-    (so an image older than this function answers too); the checker reads
-    the result as data."""
-    years, policies = expected_coverage()
+    """What a revision's image says it is: its identity, whether it has the
+    single-year route, and the definitions it computes. The pipelines run
+    the same thing inside the image, written out (so an image older than
+    this function answers too); the checker reads the result as data."""
     return {
         "identity": runtime_identity(),
-        "years": years,
-        "policies": policies,
         "household_impact": expected_household_impact(),
         "definitions": expected_definitions(),
     }
 
 
 def read_expectations(path: str, expected_git_sha: str) -> dict:
-    """An expectations file, refused unless it names this commit and some
-    years and policies (an empty list would make the checks vacuous)."""
+    """An expectations file, refused unless it names this commit, its
+    packages and whether the image has the single-year route."""
     with open(path, encoding="utf-8") as handle:
         data = json.load(handle)
     problems = []
@@ -464,23 +372,15 @@ def read_expectations(path: str, expected_git_sha: str) -> dict:
             f"is for commit {identity.get('git_sha')!r}, not "
             f"{expected_git_sha!r}"
         )
-    for key in ("years", "policies"):
-        values = data.get(key) if isinstance(data, dict) else None
-        if (
-            not isinstance(values, list)
-            or not values
-            or not all(isinstance(v, str) and v for v in values)
-        ):
-            problems.append(f"names no {key}")
-    # An older image's file may also name a "lifecycle" entry, for a route
-    # this checker no longer calls; it is ignored.
-    # Optional: a file written before the single-year route names none,
-    # and the route is then not checked.
+    # A file written by an older pipeline may also name "years" and
+    # "policies" (the coverage of the removed /api/personal-impact route)
+    # or a "lifecycle" entry, for routes this checker no longer calls; they
+    # are ignored.
     single = data.get("household_impact") if isinstance(data, dict) else None
-    if single is not None and not (
+    if not (
         isinstance(single, dict) and isinstance(single.get("declared"), bool)
     ):
-        problems.append("names a household_impact entry that is not declared")
+        problems.append("names no declared household_impact entry")
     # Optional, as the single-year route is: a file written before the
     # definitions names none, and they are then not checked.
     defined = data.get("definitions") if isinstance(data, dict) else None
@@ -549,9 +449,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             StdlibClient(args.base_url, args.timeout),
             sha,
             data["identity"],
-            data["years"],
-            data["policies"],
-            data.get("household_impact") or {},
+            data["household_impact"],
             data.get("definitions") or {"declared": False},
         )
     else:

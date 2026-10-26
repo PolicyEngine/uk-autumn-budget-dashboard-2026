@@ -17,7 +17,7 @@ describe("householdApiUrlProblem", () => {
   it("refuses any other form in every build", () => {
     for (const url of [
       "https://uk-budget-api-2026-qevs5bboca-ew.a.run.app",
-      "https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/personal-impact",
+      "https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/version",
       `${HOUSEHOLD}/`,
       `${HOUSEHOLD}?x=1`,
       "uk-budget-api-2026/api/household-impact",

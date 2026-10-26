@@ -1,5 +1,6 @@
 """Tests for the pre-traffic smoke test of a household API revision."""
 
+import copy
 import json
 import math
 import urllib.parse
@@ -25,53 +26,20 @@ BUILD = {
     "git_sha": SHA,
     "packages": {"policyengine-uk": "2.125.1", "policyengine-core": "3.33.0"},
 }
-
-
-YEARS = ["2026", "2027"]
-POLICIES = ["x", "y"]
-
-
-def answer(change=-12.5, years=YEARS, policies=POLICIES):
-    return {
-        "household_input": {"employment_income": 30000},
-        "years": {
-            year: {"baseline": {"household_net_income": 25000.0}}
-            for year in years
-        },
-        "policies": {
-            name: {
-                "name": name.upper(),
-                "years": {
-                    year: {"net_income_change": change} for year in years
-                },
-            }
-            for name in policies
-        },
-        "totals": {"cumulative": change},
-    }
-
-
-GOOD_ANSWER = answer()
+HAS_ROUTE = {"declared": True}
+NO_DEFINITIONS = {"declared": False}
 
 
 @pytest.fixture(autouse=True)
-def coverage(monkeypatch):
-    """Tests use their own expected years and policies."""
-    from uk_budget_data import deploy_smoke
-
-    monkeypatch.setattr(
-        deploy_smoke, "expected_coverage", lambda: (YEARS, POLICIES)
-    )
-    # Definitions are declared only for a build with a commit; tests name
-    # theirs explicitly.
+def no_commit(monkeypatch):
+    """Definitions are declared only for a build with a commit; tests name
+    theirs explicitly."""
     monkeypatch.delenv("GIT_SHA", raising=False)
 
 
 def fake_api(
     version=None,
-    impact=None,
     health_status=200,
-    impact_status=200,
     household_impact=None,
     household_impact_status=200,
 ) -> TestClient:
@@ -94,12 +62,6 @@ def fake_api(
     @app.get("/api/version")
     def version_route():
         return BUILD if version is None else version
-
-    @app.post("/api/personal-impact")
-    def impact_route(body: dict):
-        if impact_status != 200:
-            raise HTTPException(status_code=impact_status)
-        return GOOD_ANSWER if impact is None else impact
 
     return TestClient(app)
 
@@ -125,7 +87,32 @@ def test_a_different_model_version_fails():
 
 def test_failing_routes_fail():
     assert not run_smoke(fake_api(health_status=503), SHA, BUILD)["pass"]
-    assert not run_smoke(fake_api(impact_status=500), SHA, BUILD)["pass"]
+    assert not run_smoke(fake_api(household_impact_status=500), SHA, BUILD)[
+        "pass"
+    ]
+
+
+def test_the_removed_personal_impact_route_is_not_called():
+    """The page calls only /api/household-impact, so the smoke test sends
+    nothing to the removed /api/personal-impact route (fake_api has none,
+    and would answer it with a 404)."""
+    sent = []
+
+    class Recording:
+        def __init__(self, inner):
+            self.inner = inner
+
+        def request(self, method, route, **kwargs):
+            sent.append((method, route.partition("?")[0]))
+            return self.inner.request(method, route, **kwargs)
+
+    result = run_smoke(Recording(fake_api()), SHA, BUILD)
+    assert result["pass"], result["problems"]
+    assert sent == [
+        ("GET", "/api/health"),
+        ("GET", "/api/version"),
+        ("POST", deploy_smoke.HOUSEHOLD_IMPACT_ROUTE),
+    ]
 
 
 class _TimesOut:
@@ -135,7 +122,7 @@ class _TimesOut:
         self.inner = inner
 
     def request(self, method, route, **kwargs):
-        if route == "/api/personal-impact":
+        if route.startswith(deploy_smoke.HOUSEHOLD_IMPACT_ROUTE):
             import httpx
 
             raise httpx.ReadTimeout("timed out")
@@ -146,72 +133,9 @@ def test_a_route_that_never_answers_is_a_problem_not_a_crash():
     result = run_smoke(_TimesOut(fake_api()), SHA, BUILD)
     assert not result["pass"]
     assert result["problems"][0].startswith(
-        "/api/personal-impact did not answer"
+        "/api/household-impact did not answer"
     )
     assert "ReadTimeout" in result["problems"][0]
-
-
-def _without(body, *path):
-    import copy
-
-    body = copy.deepcopy(body)
-    target = body
-    for step in path[:-1]:
-        target = target[step]
-    del target[path[-1]]
-    return body
-
-
-@pytest.mark.parametrize(
-    "body",
-    [
-        {},
-        {"policies": {}},
-        {"error": "failed", "code": 500},
-        0,
-        [1, 2],
-        {**GOOD_ANSWER, "detail": "Calculation error"},
-        {**GOOD_ANSWER, "policies": {}},
-        # Review round 2: nested errors, scalars, metadata and gaps.
-        {
-            "years": {"2026": {"baseline": {"error": "failed", "code": 500}}},
-            "policies": {"x": {"years": {"2026": {"code": 500}}}},
-        },
-        {
-            "years": {"2026": {"baseline": 0}},
-            "policies": {"x": {"years": {"2026": 0}}},
-        },
-        {
-            "years": {"2026": {"baseline": {"employment_income": 30000}}},
-            "policies": {
-                "x": {"years": {"2026": {"employment_income": 30000}}}
-            },
-        },
-        _without(GOOD_ANSWER, "policies", "y"),
-        _without(GOOD_ANSWER, "years", "2027"),
-        _without(GOOD_ANSWER, "policies", "x", "years", "2027"),
-        _without(
-            GOOD_ANSWER, "policies", "x", "years", "2026", "net_income_change"
-        ),
-    ],
-)
-def test_answers_that_are_not_a_complete_calculation_fail(body):
-    """Review findings: any finite number in a 200 used to pass."""
-    result = run_smoke(fake_api(impact=body), SHA, BUILD)
-    assert not result["pass"], body
-
-
-def test_zero_effects_are_a_valid_answer():
-    assert run_smoke(fake_api(impact=answer(change=0.0)), SHA, BUILD)["pass"]
-
-
-def test_the_expectation_comes_from_the_image_calculator(monkeypatch):
-    from uk_budget_data import deploy_smoke, personal_impact
-
-    monkeypatch.undo()
-    years, policies = deploy_smoke.expected_coverage()
-    assert years == [str(y) for y in personal_impact.YEARS]
-    assert policies == list(personal_impact.POLICY_IDS)
 
 
 @given(
@@ -250,126 +174,109 @@ def test_identity_problems_needs_an_object():
 
 @pytest.mark.slow
 def test_the_real_api_passes_its_own_smoke_test(monkeypatch):
-    """Differential: the real API answers everything its calculator says."""
-    monkeypatch.undo()  # the real years and policies, not the test ones
+    """Differential: the real API answers the smoke request, with the
+    definitions this build computes at its commit."""
     monkeypatch.setenv("GIT_SHA", SHA)
     result = run_smoke(TestClient(real_app), SHA)
     assert result["pass"], result["problems"]
     assert all(math.isfinite(n) for n in numbers(result["version"]))
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        ("policies", "x", "years", "2026"),
-        ("years", "2027", "baseline"),
-        ("policies", "y"),
-    ],
-)
+@pytest.mark.parametrize("path", [(), ("net_income",), ("engine",)])
 @pytest.mark.parametrize("key", sorted(deploy_smoke.ERROR_KEYS))
 def test_a_failure_reported_beside_a_number_fails(path, key):
     """Review round 3: an error beside a numeric fallback passed, because
     only the top level was searched for failure markers."""
-    import copy
-
-    body = copy.deepcopy(GOOD_ANSWER)
+    body = copy.deepcopy(household_impact_answer())
     target = body
     for step in path:
         target = target[step]
     target[key] = "calculation failed"
-    problems = deploy_smoke.impact_problems(
-        body, years=YEARS, policies=POLICIES
-    )
+    problems = deploy_smoke.household_impact_problems(body)
     assert problems and "reported a failure" in problems[0], problems
 
 
 def test_a_null_error_field_is_not_a_failure():
-    body = {**GOOD_ANSWER, "error": None}
-    assert (
-        deploy_smoke.impact_problems(body, years=YEARS, policies=POLICIES)
-        == []
-    )
+    body = {**household_impact_answer(), "error": None}
+    assert deploy_smoke.household_impact_problems(body) == []
 
 
 # --- review round 2 of #28: main's checker, on plain Python ---------------
 
 
 def _expectations(tmp_path, **changes):
-    data = {"identity": BUILD, "years": YEARS, "policies": POLICIES}
+    data = {"identity": BUILD, "household_impact": HAS_ROUTE}
     data.update(changes)
     path = tmp_path / "expectations.json"
     path.write_text(json.dumps(data))
     return str(path)
 
 
+def _main(url, expectations):
+    return deploy_smoke.main(
+        [
+            "--base-url",
+            url,
+            "--expect-git-sha",
+            SHA,
+            "--expectations",
+            expectations,
+        ]
+    )
+
+
 def test_the_standard_library_client_checks_a_real_server(tmp_path):
-    with serving(BUILD, GOOD_ANSWER) as (url, server):
-        code = deploy_smoke.main(
-            [
-                "--base-url",
-                url,
-                "--expect-git-sha",
-                SHA,
-                "--expectations",
-                _expectations(tmp_path),
-            ]
-        )
+    with serving(BUILD) as (url, server):
+        code = _main(url, _expectations(tmp_path))
     assert code == 0
-    assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD]
+    assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD_IMPACT]
 
 
 def test_the_checker_judges_with_its_own_logic_not_the_images(tmp_path):
     """Review A: an older image's checker passed an answer with a nested
     error that today's rejects. The expectations file carries data only, so
     today's logic decides."""
-    body = answer()
-    body["policies"]["x"]["years"]["2026"]["error"] = "calculation failed"
-    with serving(BUILD, body) as (url, _):
-        code = deploy_smoke.main(
-            [
-                "--base-url",
-                url,
-                "--expect-git-sha",
-                SHA,
-                "--expectations",
-                _expectations(tmp_path),
-            ]
-        )
+    body = household_impact_answer()
+    body["net_income"]["error"] = "calculation failed"
+    with serving(BUILD, household_impact=body) as (url, _):
+        code = _main(url, _expectations(tmp_path))
     assert code == 1
 
 
 @pytest.mark.parametrize(
     "changes, message",
     [
-        ({"policies": []}, "names no policies"),
-        ({"years": []}, "names no years"),
-        ({"years": [2026]}, "names no years"),
         ({"identity": {**BUILD, "git_sha": "b" * 40}}, "is for commit"),
         ({"identity": None}, "names no identity"),
+        ({"household_impact": None}, "names no declared household_impact"),
     ],
 )
 def test_expectations_that_would_make_the_checks_vacuous_are_refused(
     tmp_path, capsys, changes, message
 ):
-    with serving(BUILD, GOOD_ANSWER) as (url, _):
-        code = deploy_smoke.main(
-            [
-                "--base-url",
-                url,
-                "--expect-git-sha",
-                SHA,
-                "--expectations",
-                _expectations(tmp_path, **changes),
-            ]
-        )
+    with serving(BUILD) as (url, _):
+        code = _main(url, _expectations(tmp_path, **changes))
     assert code == 1
     assert message in capsys.readouterr().err
 
 
+def test_expectations_with_no_household_impact_entry_are_refused(tmp_path):
+    path = tmp_path / "expectations.json"
+    path.write_text(json.dumps({"identity": BUILD}))
+    with pytest.raises(ValueError, match="household_impact"):
+        deploy_smoke.read_expectations(str(path), SHA)
+
+
 def test_a_server_error_is_a_problem_not_a_crash(tmp_path):
-    with serving(BUILD, GOOD_ANSWER, health_status=503) as (url, _):
+    with serving(BUILD, health_status=503) as (url, _):
         client = deploy_smoke.StdlibClient(url, 5)
-        result = deploy_smoke.run_smoke(client, SHA, BUILD, YEARS, POLICIES)
+        result = deploy_smoke.run_smoke(
+            client,
+            SHA,
+            BUILD,
+            household_impact=HAS_ROUTE,
+            definitions=NO_DEFINITIONS,
+        )
     assert not result["pass"]
     assert "/api/health returned HTTP 503" in result["problems"]
 
@@ -377,28 +284,33 @@ def test_a_server_error_is_a_problem_not_a_crash(tmp_path):
 # --- an older image's expectations -------------------------------------------
 
 
-def test_an_older_images_lifecycle_entry_is_ignored(tmp_path):
-    """A rollback to an image from before the hand-typed lifecycle model
-    was removed writes a "lifecycle" entry. The checker no longer calls
-    that route, so the entry neither refuses nor strengthens the check."""
-    for lifecycle in ({"input_year": 2026}, {"input_year": None}, [2026]):
-        with serving(BUILD, GOOD_ANSWER) as (url, server):
-            code = deploy_smoke.main(
-                [
-                    "--base-url",
-                    url,
-                    "--expect-git-sha",
-                    SHA,
-                    "--expectations",
-                    _expectations(tmp_path, lifecycle=lifecycle),
-                ]
-            )
-        assert code == 0
-        assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD]
+@pytest.mark.parametrize(
+    "older",
+    [
+        {"lifecycle": {"input_year": 2026}},
+        {"lifecycle": {"input_year": None}},
+        {"lifecycle": [2026]},
+        {"years": ["2026", "2027"], "policies": ["x", "y"]},
+        {"years": [], "policies": []},
+    ],
+)
+def test_an_older_images_entries_for_removed_routes_are_ignored(
+    tmp_path, older
+):
+    """A rollback to an image from before the hand-typed lifecycle model,
+    or before /api/personal-impact was removed, may write a "lifecycle"
+    entry or the "years" and "policies" that route covered. The checker no
+    longer calls those routes, so the entries neither refuse nor strengthen
+    the check."""
+    with serving(BUILD) as (url, server):
+        code = _main(url, _expectations(tmp_path, **older))
+    assert code == 0
+    assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD_IMPACT]
 
 
-def test_the_expectations_name_no_lifecycle_entry():
-    assert "lifecycle" not in deploy_smoke.print_expectations()
+def test_the_expectations_name_no_entry_for_a_removed_route():
+    expectations = deploy_smoke.print_expectations()
+    assert not {"lifecycle", "years", "policies"} & set(expectations)
 
 
 # --- the single-year route ----------------------------------------------------
@@ -447,14 +359,21 @@ def test_the_single_year_route_is_checked_when_the_image_has_it():
     assert "/api/household-impact returned HTTP 404" in result["problems"]
 
 
-def test_an_image_without_the_single_year_route_is_not_refused_for_it():
+def test_an_image_without_the_single_year_route_is_refused():
+    """With /api/personal-impact removed, the single-year route is the only
+    calculation the smoke test makes: an image without it would be checked
+    for its health and version alone, and could not answer the page."""
     result = run_smoke(
         fake_api(household_impact_status=404),
         SHA,
         BUILD,
         household_impact={"declared": False},
     )
-    assert result["pass"], result["problems"]
+    assert not result["pass"]
+    assert result["problems"] == [
+        "the image has no /api/household-impact route, the only route the "
+        "page calls"
+    ]
 
 
 def test_this_build_declares_the_single_year_route():
@@ -488,19 +407,9 @@ def test_the_real_single_year_route_passes_the_check(monkeypatch):
 
 @pytest.mark.parametrize("entry", [{"declared": "yes"}, [True], {}])
 def test_a_malformed_single_year_expectation_is_refused(tmp_path, entry):
-    path = tmp_path / "expectations.json"
-    path.write_text(
-        json.dumps(
-            {
-                "identity": BUILD,
-                "years": YEARS,
-                "policies": POLICIES,
-                "household_impact": entry,
-            }
-        )
-    )
+    path = _expectations(tmp_path, household_impact=entry)
     with pytest.raises(ValueError, match="household_impact"):
-        deploy_smoke.read_expectations(str(path), SHA)
+        deploy_smoke.read_expectations(path, SHA)
 
 
 # --- the definitions -----------------------------------------------------------
@@ -535,10 +444,6 @@ def _definitions_api(body, seen):
     @app.get("/api/version")
     def version_route():
         return BUILD
-
-    @app.post("/api/personal-impact")
-    def impact_route(payload: dict):
-        return GOOD_ANSWER
 
     return TestClient(app)
 
@@ -670,9 +575,7 @@ def test_the_real_route_serves_the_definitions_the_image_computes(monkeypatch):
 def test_the_standard_library_client_checks_definitions(tmp_path):
     # An expectations file names definitions at the commit being deployed.
     expected = deploy_smoke.expected_definitions(SHA)
-    path = _expectations(
-        tmp_path, household_impact={"declared": True}, definitions=expected
-    )
+    path = _expectations(tmp_path, definitions=expected)
     for body, code in (
         (_served(expected), 0),
         (
@@ -683,20 +586,8 @@ def test_the_standard_library_client_checks_definitions(tmp_path):
             1,
         ),
     ):
-        with serving(BUILD, GOOD_ANSWER, household_impact=body) as (
-            url,
-            server,
-        ):
-            result = deploy_smoke.main(
-                [
-                    "--base-url",
-                    url,
-                    "--expect-git-sha",
-                    SHA,
-                    "--expectations",
-                    path,
-                ]
-            )
+        with serving(BUILD, household_impact=body) as (url, server):
+            result = _main(url, path)
         assert result == code
         named = [q for q in server.queries if q]
         assert len(named) == 1

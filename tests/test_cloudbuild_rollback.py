@@ -442,8 +442,8 @@ def test_the_checker_is_mains_own_copy(tmp_path, workspace):
 
 
 def test_the_images_expectations_are_only_data(workspace):
-    """The image supplies what it is (identity and coverage) and nothing
-    else; nothing of its own decides pass or fail."""
+    """The image supplies what it is (identity, routes and definitions) and
+    nothing else; nothing of its own decides pass or fail."""
     script = step_script("expectations", workspace)
     assert f'docker run --rm "$(cat {workspace}/image_ref)"' in script
     assert script.rstrip().endswith(f"> {workspace}/expectations.json")
@@ -476,8 +476,8 @@ def test_the_written_out_expectations_match_print_expectations(
 def _smoke(tmp_path, workspace, impact=None):
     """Run the rollback's real smoke step against a local API, with main's
     checker extracted as on-main extracts it."""
-    from tests.smoke_server import serving
-    from tests.test_deploy_smoke import BUILD, POLICIES, YEARS, answer
+    from tests.smoke_server import household_impact_answer, serving
+    from tests.test_deploy_smoke import BUILD
 
     identity = {**BUILD, "git_sha": COMMIT}
     (workspace / "commit").write_text(COMMIT)
@@ -485,10 +485,12 @@ def _smoke(tmp_path, workspace, impact=None):
     assert extracted.returncode == 0, extracted.stderr
     (workspace / "expectations.json").write_text(
         json.dumps(
-            {"identity": identity, "years": YEARS, "policies": POLICIES}
+            {"identity": identity, "household_impact": {"declared": True}}
         )
     )
-    with serving(identity, impact or answer()) as (url, _):
+    with serving(
+        identity, household_impact=impact or household_impact_answer()
+    ) as (url, _):
         (workspace / "tagged_url").write_text(url)
         result, _ = run(
             step_script("smoke", workspace), tmp_path / "smoke", {}
@@ -508,10 +510,10 @@ def test_the_smoke_step_refuses_what_todays_checker_refuses(
     tmp_path, workspace
 ):
     """Review A's reproducer: a nested error that an older checker passed."""
-    from tests.test_deploy_smoke import answer
+    from tests.smoke_server import household_impact_answer
 
-    body = answer()
-    body["policies"]["x"]["years"]["2026"]["error"] = "calculation failed"
+    body = household_impact_answer()
+    body["net_income"]["error"] = "calculation failed"
     result = _smoke(tmp_path, workspace, body)
     assert result.returncode != 0
 

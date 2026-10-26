@@ -103,7 +103,7 @@ What else was in the project, read on 12 October: the 2025 services `uk-autumn-b
 
 ### Household route: `POST /api/household-impact`
 
-The Personal impact tab asks this route about one household, one policy year and a list of measures. It is on the same Cloud Run service as `/api/personal-impact`, and it is computed by `src/uk_budget_data/household_impact.py` through policyengine.py's `pe.uk.calculate_household`, with no dataset, from the same measure definitions and merge as the national figures (`reforms.py`, `publication.combine.merged_changes`).
+The Personal impact tab asks this route about one household, one policy year and a list of measures. It is served by the Cloud Run service `uk-budget-api-2026`, and it is computed by `src/uk_budget_data/household_impact.py` through policyengine.py's `pe.uk.calculate_household`, with no dataset, from the same measure definitions and merge as the national figures (`reforms.py`, `publication.combine.merged_changes`).
 
 **How the page reaches it.** The page POSTs to `${NEXT_PUBLIC_HOUSEHOLD_API_URL}` itself. The variable is the service URL followed by the route's path, `/api/household-impact`, with no trailing slash, baked in at build time (so setting it takes a new build), set for Production and Preview:
 

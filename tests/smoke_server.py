@@ -30,12 +30,11 @@ def household_impact_answer(baseline=25_000.0, reform=24_895.2) -> dict:
 @contextmanager
 def serving(
     version: dict,
-    impact: dict,
     health_status: int = 200,
     household_impact: Optional[dict] = None,
 ):
-    """Serve /api/health, /api/version, /api/personal-impact and
-    /api/household-impact; yield the base URL.
+    """Serve /api/health, /api/version and /api/household-impact; yield the
+    base URL. Any other route is a 404.
     Each POST body is recorded on ``server.posted``, and each POST's
     query string on ``server.queries``."""
     posted = []
@@ -68,9 +67,7 @@ def serving(
             posted.append(json.loads(self.rfile.read(length) or b"null"))
             path, _, query = self.path.partition("?")
             queries.append(query)
-            if path == "/api/personal-impact":
-                self._send(200, impact)
-            elif path == "/api/household-impact":
+            if path == "/api/household-impact":
                 self._send(200, household_impact)
             else:
                 self._send(404, {"detail": "not found"})
