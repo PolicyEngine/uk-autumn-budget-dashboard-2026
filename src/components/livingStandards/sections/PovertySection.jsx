@@ -2,15 +2,12 @@
 // PolicyEngine/uk-living-standards-outlook (PovertySection).
 
 import { useMemo, useState } from "react";
-import PillSelect from "../../PillSelect";
-import PovertyMeasurePills from "../PovertyMeasurePills";
-import YearRangeSelect from "../YearRangeSelect";
-import { rangeYears } from "../../../utils/livingStandards/yearRange";
+import { povertyMeasureOptions } from "../PovertyMeasurePills";
+import { periodOption } from "../controlOptions";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
-  VIEW_OPTIONS,
   chartEndYear,
   shortLabel,
   lineSeries,
@@ -127,26 +124,20 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
               series,
             }),
         },
-    controls: (
-      <>
-        {range && setRange && rangeYears(data).length > 2 && (
-          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
-        )}
-        <PovertyMeasurePills measure={measure} available={measureIds} onChange={setMeasure} />
-        <PillSelect
-          variant="light"
-          prefix="People"
-          name="People"
-          value={group}
-          onChange={setGroup}
-          options={groupIds.map((id) => ({
-            value: id,
-            label: poverty.groups[id],
-          }))}
-        />
-        <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
-      </>
-    ),
+    // The years compared are the section's (CurrentLawSection); every
+    // choice sits under the card's Options (ControlBar)
+    controls: {
+      options: [
+        ...povertyMeasureOptions(measure, measureIds, setMeasure),
+        {
+          label: "People",
+          value: group,
+          onChange: setGroup,
+          options: groupIds.map((id) => ({ value: id, label: poverty.groups[id] })),
+        },
+        periodOption(viewMode, setViewMode),
+      ],
+    },
     chart: visibleEmpty ? (
       <div className="chart-plot">
         <div className="plot-empty">

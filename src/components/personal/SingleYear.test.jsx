@@ -353,21 +353,14 @@ describe("the household calculation, from the fixture", () => {
       .reduce((a, b) => a + b, 0);
     expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
-    // The measures that leave the household where it was: one expander
-    // under the chart, closed at first, each on its own row with its colour
-    const chart = container.querySelector(".result-card-notes");
-    const noEffect = within(chart).getByRole("button", { name: "More info" });
-    expect(noEffect).toHaveAttribute("aria-expanded", "false");
+    // The measures that leave the household where it was: one muted line
+    // under the steps, not a row each, with each full name on hover
+    const noEffect = container.querySelector(".net-income-waterfall .waterfall-no-effect");
+    expect(noEffect).toHaveTextContent(/^No effect on you: /);
+    const names = [...noEffect.querySelectorAll("span")].map((span) => span.title);
+    expect(names).toContain("Dividend tax increase (+2pp)");
+    expect(names).not.toContain("Interaction between policies");
     expect(container.querySelector(".no-effect-item")).toBeNull();
-    fireEvent.click(noEffect);
-    expect(noEffect).toHaveAttribute("aria-expanded", "true");
-    const items = [...container.querySelectorAll(".no-effect-item")];
-    expect(chart.querySelector(".no-effect-title")).toHaveTextContent(`No effect on your household (${items.length})`);
-    expect(items.map((item) => item.querySelector(".no-effect-name").textContent)).toContain(
-      "Dividend tax increase (+2pp)",
-    );
-    expect(items.every((item) => item.querySelector(".no-effect-dot").style.background)).toBe(true);
-    expect(container.querySelector('[data-policy="interaction"]')).toBeNull();
   });
 
   it("breaks net income down as Spring Statement does: market income, taxes, benefits", async () => {

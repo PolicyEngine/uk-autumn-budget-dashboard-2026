@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { CHART_COLOURS, GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, BEFORE_DASH, REFERENCE_DASH, useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, BEFORE_DASH, REFERENCE_DASH, UNSELECTED_OPACITY, useNarrowViewport } from "../../utils/chartTheme";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import {
   DISTRIBUTION_FILE,
@@ -33,6 +33,7 @@ import PillSelect from "../PillSelect";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import GroupedLegend from "../GroupedLegend";
+import HouseholdScatter from "../HouseholdScatter";
 import { WholePanel, CloseUpPanel, closeUpWindow } from "./RankPanels";
 import "./IncomePosition.css";
 
@@ -49,6 +50,7 @@ export const POSITION_VIEWS = [
   { value: "compare", label: "You vs others" },
   { value: "moves", label: "Who moves" },
   { value: "ranks", label: "Ranks" },
+  { value: "among", label: "Among all households" },
 ];
 const MOVE_UNITS = [
   { value: "percentile", label: "A percentile" },
@@ -318,7 +320,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         return (
           <g key={i}>
             {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
-            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine ? 1 : 0.5} />
+            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine ? 1 : UNSELECTED_OPACITY} />
             {grow > 0.98 && (!narrow || mine) && (
               <text x={cx} y={v >= 0 ? y0 - 6 : y0 + h + 13} textAnchor="middle" fontSize={narrow ? 9.5 : 11} fontWeight={mine ? 700 : 500} fill={TEXT}>
                 {fmt(v)}
@@ -449,10 +451,10 @@ function MovesView({ width, narrow, mobility, moveUnit, decile, cuts, grow }) {
               <g key={i}>
                 {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
                 {r.up !== null && (
-                  <rect x={cx - barW / 2} y={zeroY - y(r.up * grow)} width={barW} height={Math.max(y(r.up * grow), 0.5)} fill={GAIN} fillOpacity={mine ? 1 : 0.55} />
+                  <rect x={cx - barW / 2} y={zeroY - y(r.up * grow)} width={barW} height={Math.max(y(r.up * grow), 0.5)} fill={GAIN} fillOpacity={mine ? 1 : UNSELECTED_OPACITY} />
                 )}
                 {r.down !== null && (
-                  <rect x={cx - barW / 2} y={zeroY} width={barW} height={Math.max(y(r.down * grow), 0.5)} fill={LOSS} fillOpacity={mine ? 1 : 0.55} />
+                  <rect x={cx - barW / 2} y={zeroY} width={barW} height={Math.max(y(r.down * grow), 0.5)} fill={LOSS} fillOpacity={mine ? 1 : UNSELECTED_OPACITY} />
                 )}
                 {r.up === null && (
                   <text x={cx} y={zeroY - 6} textAnchor="middle" fontSize={9.5} fill={CHART_COLOURS.tick}>
@@ -529,8 +531,10 @@ function MovesView({ width, narrow, mobility, moveUnit, decile, cuts, grow }) {
  * @param {number} props.year - The figures' year
  * @param {string[]} props.policies - The selected measures' ids
  * @param {string} props.yearLabel - "2027-28"
+ * @param {Object|null} [props.you] - The household on the Population
+ *   impact scatter (HouseholdScatter's `you`), for "Among all households"
  */
-export default function IncomePositionChart({ net, household, year, policies, yearLabel }) {
+export default function IncomePositionChart({ net, household, year, policies, yearLabel, you = null }) {
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
@@ -538,6 +542,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [side, setSide] = useState("after");
   const [unit, setUnit] = useState("pct");
   const [moveUnit, setMoveUnit] = useState("percentile");
+  // "Among all households" is the scatter's own chart: its download comes
+  // up from it, so the card's menu follows the view
+  const [amongDownload, setAmongDownload] = useState(null);
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const winners = useFile("winners_losers.csv", parseRecords);
   const relative = useFile("distributional_impact.csv", parseRecords);
@@ -620,6 +627,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     gains: `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => `${i + 1}: ${unit === "pct" ? (percents ? signedPct(percents[i + 1], 2) : "n/a") : averages ? signedPounds(averages[i + 1]) : "n/a"}`).join(", ")}. You, in the ${ordinal(decile)} tenth: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`,
     compare: compareRows.map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`).join("; "),
     ranks: `Your rank: ${describePosition(position.before)} before the selected policies, ${describePosition(position.after)} after.`,
+    among: "UK households by baseline household net income in 2027-28 and the change in it from the selected policies, with your household marked.",
     moves: `${everyone ? `${everyone.up !== null ? `${everyone.up.toFixed(1)}%` : "Not published"} of people move up ${moveUnit === "percentile" ? "a percentile" : "a tenth"} and ${everyone.down !== null ? `${everyone.down.toFixed(1)}%` : "not published"} move down. ` : ""}${cuts.map((c) => `${c.label}: ${formatPounds(c.before)} before, ${formatPounds(c.after)} after`).join("; ")}.`,
   }[view];
 
@@ -695,7 +703,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         rows: curves.before.map((point) => ({ percentile: point.percentile, before: point.income, after: incomeAt(curves.after, point.percentile) })),
       }),
   };
-  const download = {
+  const download = view === "among" ? amongDownload : {
     chartRef,
     name: `income-position-${view}-${yearLabel}`,
     exportOptions: {
@@ -724,7 +732,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             <span className="title-text">{title}</span>
           </h3>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={title} />
+        <ChartDownloadMenu
+          download={download}
+          chartTitle={title}
+          disabledReason={download ? undefined : "Available when results are published"}
+        />
       </div>
       <p className="position-headline">{text.headline}</p>
       <dl className="position-chips">
@@ -754,7 +766,20 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           <ViewSwitch compact label="Units" value={unit} onChange={setUnit} options={UNIT_OPTIONS} />
         )}
       </div>
-      <div ref={wrapperRef} className="chart-plot position-plot">
+      {view === "among" && (
+        <div className="position-among">
+          <HouseholdScatter
+            selectedPolicies={policies}
+            policies={POLICIES}
+            selectedYear={year}
+            you={you}
+            title="Your household among all UK households"
+            embedded
+            onDownload={setAmongDownload}
+          />
+        </div>
+      )}
+      <div ref={wrapperRef} className="chart-plot position-plot" hidden={view === "among" || undefined}>
         <div ref={chartRef} role="img" aria-label={alt}>
           {view === "where" && <WhereView width={width} narrow={narrow} curves={curves} position={position} side={side} decile={decile} />}
           {view === "gains" &&
@@ -813,6 +838,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           </p>
           <p>
             {"Who moves ranks everyone before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after than before. A share drawn from fewer than 10 survey households is not published."}
+          </p>
+          <p>
+            {"Among all households is the Population impact scatter: there each household sits by its household net income before the selected policies in 2027-28, not adjusted for household size, in every year, and you by yours. Each dot is a group of households, never one survey household."}
           </p>
           {!run.exact && (
             <p>

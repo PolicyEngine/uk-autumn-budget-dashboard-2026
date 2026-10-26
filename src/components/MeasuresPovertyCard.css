@@ -1,0 +1,194 @@
+/* Which measures move poverty: a horizontal waterfall. Each row is the
+   short name (with its colour key), the track and a right-aligned value
+   column (people, with the pp under it); steps join end to start with a
+   dashed line; the package bar runs from 0. A fall in poverty steps right. */
+.ls-card .chart-plot:has(> .wf) {
+  container-type: inline-size;
+}
+
+.wf {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(120px, 32%) minmax(0, 1fr) 112px;
+  column-gap: 12px;
+  font-size: var(--fs-caption);
+}
+
+.wf-row {
+  display: contents;
+}
+
+.wf-row > * {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.wf-label {
+  gap: 8px;
+  color: var(--pe-gray-700);
+  line-height: 1.25;
+}
+
+.wf-key {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.wf-track {
+  position: relative;
+  min-width: 0;
+}
+
+.wf-track:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.wf-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--pe-gray-100);
+}
+
+.wf-grid.wf-zero {
+  border-left-color: var(--c-zero-line);
+}
+
+.wf-join {
+  position: absolute;
+  top: -50%;
+  height: 100%;
+  border-left: 1px dashed var(--c-reference);
+}
+
+.wf-bar {
+  position: absolute;
+  top: 50%;
+  height: 20px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+}
+
+.wf-row > .wf-value {
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.wf-main {
+  color: var(--pe-gray-800);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wf-pp {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
+.wf-interaction .wf-label,
+.wf-interaction .wf-main {
+  color: var(--pe-gray-500);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.wf-total > * {
+  border-top: 1px solid var(--pe-gray-200);
+  min-height: 42px;
+}
+
+.wf-total .wf-label {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.wf-total .wf-bar {
+  height: 24px;
+}
+
+.wf-axis > *,
+.wf-caption > * {
+  min-height: 20px;
+}
+
+.wf-tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.wf-caption .wf-track {
+  justify-content: flex-end;
+  white-space: nowrap;
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
+/* The measures that move no one: one muted line under the chart */
+.wf-none {
+  margin: 8px 0 0;
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+
+.wf-info {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+@container (max-width: 520px) {
+  .wf {
+    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr) 96px;
+    column-gap: 8px;
+  }
+
+  .wf-key {
+    display: none;
+  }
+
+  /* A narrow track: the axis's ends only, and the caption across the
+     label column */
+  .wf-tick:not(:first-child):not(:last-child) {
+    display: none;
+  }
+
+  .wf-caption > .wf-label {
+    display: none;
+  }
+
+  .wf-caption > .wf-track {
+    grid-column: 1 / 3;
+  }
+}
+
+/* Beside a taller card the plot starts level with its neighbour's (the
+   top of its first row on the neighbour's top gridline, which Recharts
+   draws 16px into its plot), and the logo keeps its size at the foot */
+@media (min-width: 1025px) {
+  .charts-grid > .mp-card:not(:only-child) > .ls-chart-rows > .chart-plot {
+    align-self: start;
+    padding-top: 16px;
+  }
+
+  /* With the poverty choice above the pair, the card has no controls: the
+     plot takes that row too, as the neighbour's does */
+  .charts-grid > .mp-card:not(:only-child):has(> .ls-controls:empty) > .ls-chart-rows > .chart-plot {
+    grid-row: 3 / span 2;
+  }
+}
+
+.mp-card .chart-logo {
+  align-items: flex-end;
+}

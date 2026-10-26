@@ -121,7 +121,7 @@ describe("the examples' precomputed results (public/data/household_presets.json)
   });
 });
 
-describe("the examples' precomputed results under another engine (#104)", () => {
+describe("the examples' precomputed results under another engine (PR 104)", () => {
   const packages = Object.keys(file.engine);
 
   it("are never used when no engine is known: with no measure selected the page has none to check them against", () => {

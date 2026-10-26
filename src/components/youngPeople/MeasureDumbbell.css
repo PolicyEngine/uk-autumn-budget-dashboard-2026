@@ -191,7 +191,7 @@
 
 .measure-dumbbell-axis .measure-dumbbell-plot {
   min-height: 22px;
-  border-top: 1px solid #d1d5db;
+  border-top: 1px solid var(--c-axis);
 }
 
 .measure-dumbbell-tick {
@@ -200,7 +200,7 @@
   transform: translateX(-50%);
   font-size: 12px;
   line-height: 1;
-  color: #6b7280;
+  color: var(--c-tick);
   white-space: nowrap;
 }
 
@@ -215,7 +215,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
-  color: #4b5563;
+  color: var(--c-axis-title);
 }
 
 .measure-dumbbell-tip {
@@ -230,7 +230,7 @@
   border: 1px solid var(--pe-gray-200);
   border-radius: 6px;
   background: var(--c-surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--shadow-soft);
   font-size: 0.75rem;
   color: var(--pe-gray-700);
   pointer-events: none;
@@ -317,5 +317,15 @@
 
   .measure-dumbbell-tip {
     left: 6px;
+  }
+}
+
+/* A dumbbell card with no controls of its own (Pensioners' Effect of each
+   policy) beside one that has them: the plot takes the controls row too,
+   so no empty row opens above it; it grows to the neighbour's plot bottom,
+   so the axes still line up. */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) > div:not(:has(> .chart-controls)) > .chart-plot:has(> .measure-dumbbell) {
+    grid-row: 3 / span 2;
   }
 }
