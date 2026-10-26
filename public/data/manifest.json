@@ -1,0 +1,277 @@
+{
+  "basis": {
+    "calibration": {
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+      "status": "pre_budget",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "forecast": {
+      "source": "policyengine-uk default economic assumptions",
+      "status": "pre_budget",
+      "vintage": "as shipped in the installed policyengine-uk"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
+  "combined": {
+    "combined--352e45790725cc85": {
+      "artifact": "artifacts/combined--352e45790725cc85/42a2108772d7723a",
+      "artifact_sha256": "42a2108772d7723aeec110dd43747cfb6fd1ad347f86cff50655d20621590a3a",
+      "data_limits": [],
+      "description": "One simulation of: badr_lifetime_limit_cut, domestic_electricity_zero_vat, fuel_duty_rise_deferral, road_fuel_vat_cut, state_pension_income_tax_protection, threshold_freeze_2031_32, warm_home_discount_top_up",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "measures": [
+        "badr_lifetime_limit_cut",
+        "domestic_electricity_zero_vat",
+        "fuel_duty_rise_deferral",
+        "road_fuel_vat_cut",
+        "state_pension_income_tax_protection",
+        "threshold_freeze_2031_32",
+        "warm_home_discount_top_up"
+      ],
+      "member_outputs_sha256": {
+        "badr_lifetime_limit_cut": "5572d10c2a22a06de8d82bc9f4600d7b217caa73d8356c4929bd67a18a97592c",
+        "domestic_electricity_zero_vat": "2c2941af64f0bd821aca96e1c444eb648454a8dcac1310cf0737119e025aa5d4",
+        "fuel_duty_rise_deferral": "b9fbf5e7841e73138a85496ece930d9e11b6f98e18e63dcc00627542f5532191",
+        "road_fuel_vat_cut": "c98441009b7d0c5f85f7ac7fbcd6c72d7ae7e9f0f2550a4c7e62426d8137cfb4",
+        "state_pension_income_tax_protection": "9af558b2c418c7787fdedb371a5c6ffb8f196dbef7b30d98a2dc1deecbd44de1",
+        "threshold_freeze_2031_32": "bc0564afe73baf247db506c2b4a2ac60278461273b752b276d33ac33d05351e4",
+        "warm_home_discount_top_up": "0bf76a30f8ae526223fe16f5d036a0ab56f59ecfffd1ccb4ddcc237f98153d33"
+      },
+      "name": "Combined: Business Asset Disposal Relief restricted, Zero VAT on domestic electricity, Fuel duty rises deferred, VAT cut on road fuel, State Pension income tax protection, Threshold freeze to 2031-32, Warm Home Discount top-up",
+      "outputs_sha256": "5efdf847d8617b4e45b982529cfbb47d7aa17a742de70bbebb1045c8c65c2aa0",
+      "receipt_sha256": "a9b8ab00cb7df58f1d288ba1a752f4ac10ba52fee270071a53630a22a4aaaeaf",
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    }
+  },
+  "execution": {
+    "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+    "identity": {
+      "certificate": {
+        "bundle_version": "6.10.2",
+        "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "certified_for_core_version": "3.33.3",
+        "certified_for_model_version": "2.132.6",
+        "compatibility_basis": "built_with_model_package",
+        "country_id": "uk"
+      },
+      "certification_status": "certified",
+      "core": {
+        "name": "policyengine-core",
+        "version": "3.33.3"
+      },
+      "country_id": "uk",
+      "data": {
+        "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "build_model_version": "2.132.6",
+        "data_package": "microcosm-data",
+        "dataset": "microcosm_uk_2024_25",
+        "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_version": "0.1.0"
+      },
+      "model": {
+        "name": "policyengine-uk",
+        "version": "2.132.6"
+      },
+      "schema_version": 1,
+      "wrapper": {
+        "name": "policyengine",
+        "version": "6.10.2"
+      }
+    }
+  },
+  "flat_aliases": {},
+  "flat_files": {},
+  "measures": {
+    "badr_lifetime_limit_cut": {
+      "artifact": "artifacts/badr_lifetime_limit_cut/d21a1830bf883a51",
+      "artifact_sha256": "d21a1830bf883a511cc7b7c15e847ab29eac6ce876e49d74f1c520da5b401e9f",
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from \u00a31 million to \u00a3500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Business Asset Disposal Relief restricted",
+      "outputs_sha256": "5572d10c2a22a06de8d82bc9f4600d7b217caa73d8356c4929bd67a18a97592c",
+      "receipt_sha256": "8e7bf278b9f477049405708ecd330f864989e14387e399e8a6896a755e74c1da",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "domestic_electricity_zero_vat": {
+      "artifact": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d",
+      "artifact_sha256": "55ed8eb44ff8f18d13269477d52fc8fcb5117291ce3f4909572e0beb531496e8",
+      "data_limits": [],
+      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Zero VAT on domestic electricity",
+      "outputs_sha256": "2c2941af64f0bd821aca96e1c444eb648454a8dcac1310cf0737119e025aa5d4",
+      "receipt_sha256": "d223fe32d89d2fbab8dac9a02fdc848ace1632110bb4ae8e8d8722004f85950b",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "fuel_duty_rise_deferral": {
+      "artifact": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424",
+      "artifact_sha256": "d38147e5151f4424c84987fc3e12312a199079069afbacb7ab52615281f29768",
+      "data_limits": [],
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Fuel duty rises deferred",
+      "outputs_sha256": "b9fbf5e7841e73138a85496ece930d9e11b6f98e18e63dcc00627542f5532191",
+      "receipt_sha256": "36e84452e4369a7bc84828f6026b67b231b5047c2d884e11de28cc39e6de36b8",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "road_fuel_vat_cut": {
+      "artifact": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638",
+      "artifact_sha256": "9c1f812b8c5de638575fba83a6444e2de01366548cd2d7393d02cd87a4d1063f",
+      "data_limits": [],
+      "description": "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "VAT cut on road fuel",
+      "outputs_sha256": "c98441009b7d0c5f85f7ac7fbcd6c72d7ae7e9f0f2550a4c7e62426d8137cfb4",
+      "receipt_sha256": "c115c28915ff704535e4d5524c86cc2f4ab633f472e783e1e3c1d49f91364b17",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "state_pension_income_tax_protection": {
+      "artifact": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a",
+      "artifact_sha256": "d4df42a20f05cb9a8dbda655f6d17e61d014670cbaf794ec7ddf7c95d79aa947",
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to \u00a310: \u00a313,040 in 2027-28), withdrawn \u00a31 for \u00a31 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "State Pension income tax protection",
+      "outputs_sha256": "9af558b2c418c7787fdedb371a5c6ffb8f196dbef7b30d98a2dc1deecbd44de1",
+      "receipt_sha256": "ba0a75a6a596e78c0864a39716617f3a8f6ee7163e9531705797fad31b437aaa",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "threshold_freeze_2031_32": {
+      "artifact": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6",
+      "artifact_sha256": "ab46d0e4c20a5fb685ce66f0e2daa0751205f8f4e8f4d1af0a5bd7cc01bfdde8",
+      "data_limits": [],
+      "description": "Candidate measure. The income tax personal allowance stays at \u00a312,570 and the basic rate band at \u00a337,700 (a higher rate threshold of \u00a350,270) for one more year, 2031-32, instead of rising with inflation to \u00a312,830 and \u00a338,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at \u00a312,570 and \u00a350,270 too; the employer secondary threshold is not held.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Threshold freeze to 2031-32",
+      "outputs_sha256": "bc0564afe73baf247db506c2b4a2ac60278461273b752b276d33ac33d05351e4",
+      "receipt_sha256": "592a02ca704b09159281c75cf6c9bec00c901fa3176942539a1082275de127b2",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    },
+    "warm_home_discount_top_up": {
+      "artifact": "artifacts/warm_home_discount_top_up/71662c9073c5e984",
+      "artifact_sha256": "71662c9073c5e98416cfc2ed466d503578dade828377b958bc29b0d1130fd0f0",
+      "data_limits": [],
+      "description": "Candidate measure. The Warm Home Discount rises from \u00a3150 to \u00a3250 for winter 2026-27 only: \u00a3100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Warm Home Discount top-up",
+      "outputs_sha256": "0bf76a30f8ae526223fe16f5d036a0ab56f59ecfffd1ccb4ddcc237f98153d33",
+      "receipt_sha256": "f2aaa12a5509ba2bdba5a4fa5a850f6852aeb372fd96c3cd0300da55b7477556",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    }
+  },
+  "release": "uk-autumn-budget-2026",
+  "revision": 2,
+  "schema": "uk-budget-dashboard/publication-manifest/v1",
+  "superseded": [],
+  "updated_at": "2026-10-26T22:11:34.907945+00:00"
+}
