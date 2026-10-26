@@ -779,10 +779,17 @@ body {
   grid-row: 1;
   min-width: 0;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   column-gap: 10px;
-  row-gap: 4px;
+}
+
+/* A long title wraps; the "#" stays at its end, never on a line of its own */
+.section-heading-title h2 {
+  min-width: 0;
+}
+
+.section-anchor {
+  flex: none;
 }
 
 .section-heading > .section-heading-text > p {
