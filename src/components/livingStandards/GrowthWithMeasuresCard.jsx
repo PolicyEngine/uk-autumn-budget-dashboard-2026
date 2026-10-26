@@ -14,6 +14,7 @@ import ViewCard from "./ViewCard";
 import useQuintileGrowthView from "./sections/DecileGrowthSection";
 import { useOutlook } from "./useOutlook";
 import { COMBINED_REFORM_ID, distributionRunFor } from "../../utils/incomePosition";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { GROWTH_WITH_MEASURES_FILE, changesNothing, parseGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
 import { rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
 import { headlineStartYear, headlineYear } from "../../utils/livingStandards/outlook";
@@ -64,29 +65,38 @@ export function clearGrowthWithMeasuresCache() {
 /**
  * @param {Object} props
  * @param {string[]} props.selectedPolicies - The selected measures' ids
- * @param {(close: boolean) => object} props.runFor - The run for the selection: { reformId, exact } (distributionRunFor's)
  * @param {React.ReactNode} props.twinLink - The link to the chart without the measures
  */
-export default function GrowthWithMeasuresCard({ selectedPolicies, runFor, twinLink }) {
+export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink }) {
   const { data } = useOutlook();
   const file = useGrowthFile();
+  // Every measure the catalogue publishes: the package's run is exact only
+  // when all of them are selected and it was run with exactly those
+  const catalogue = useMeasureCatalogue();
+  const run = distributionRunFor(
+    selectedPolicies,
+    (catalogue?.displayable ?? []).map((measure) => measure.id),
+    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
+  );
+  // The pills read their choices once, so the card waits for both files
+  if (!data || file.status !== "ready") return null;
+  return <LoadedCard data={data} rows={file.rows} run={run} twinLink={twinLink} />;
+}
+
+function LoadedCard({ data, rows, run, twinLink }) {
   // The difference reads best: a measure moves growth by hundredths of a
   // point, too little to see beside growth of a percent or two
   const [show, setShow] = useState("difference");
-  const run = runFor ? runFor(selectedPolicies) : distributionRunFor(selectedPolicies, []);
-  const rows = file.rows || [];
-  const [range, setRange] = useYearRange(data ? rangeYears(data) : [], data ? [headlineStartYear(data), headlineYear(data)] : [null, null]);
-  const measures = { rows, reformId: run.reformId, mode: show };
-  const view = useQuintileGrowthView(data || EMPTY, range, setRange, measures);
-  if (!data || file.status !== "ready") return null;
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show });
   const noEffect = changesNothing(rows, run.reformId);
   const packageNote =
     !run.exact && run.reformId === COMBINED_REFORM_ID
-      ? "With part of the package selected, this shows the whole package: runs for part of it are not published."
+      ? "With part of the package selected, this is the whole package (runs for part of it are not published)."
       : null;
   const subtitle = (
     <>
-      With the measures: real growth of each group&apos;s median income. {twinLink}
+      With the measures: real growth of each group&apos;s median income.{packageNote ? ` ${packageNote}` : ""} {twinLink}
     </>
   );
   if (noEffect || !view) {
@@ -117,10 +127,8 @@ export default function GrowthWithMeasuresCard({ selectedPolicies, runFor, twinL
         name="Growth with measures view"
         value={show}
         onChange={setShow}
-        views={SHOWS.map((s) => ({ ...s, view: { ...view, notes: [packageNote, ...(view.notes || [])] } }))}
+        views={SHOWS.map((s) => ({ ...s, view }))}
       />
     </div>
   );
 }
-
-const EMPTY = { meta: {}, income_by_decile: {} };

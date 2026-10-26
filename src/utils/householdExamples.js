@@ -132,6 +132,39 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     },
     note: "Aged 45, earns £110,000 and owns with a mortgage.",
   },
+  {
+    id: "lone-parent",
+    label: "A lone parent working part time",
+    // On its chip once the cards fold into a strip
+    short: "Lone parent",
+    description: "One child aged 4, £14,000 part time, renting",
+    icon: "baby",
+    measure: "domestic_electricity_zero_vat",
+    tag: "Zero VAT on electricity",
+    inputs: {
+      ...RESET,
+      // The average age at a first birth (29.4 in 2024: ONS, Births in
+      // England and Wales) plus the child's four years
+      current_age: 33,
+      // About 21 hours a week at the National Living Wage from April 2026
+      // (£12.71 an hour, GOV.UK), a little below the median for part-time
+      // employees (£280 a week in April 2025, £14,560 a year: ONS ASHE 2025)
+      current_salary: 14000,
+      has_partner: false,
+      children_ages: "4",
+      tenure: "RENT_PRIVATELY",
+      // Fixed: the North West's average private rent (ONS, September 2026)
+      monthly_rent: 975,
+      claims_universal_credit: true,
+      // In a reception class, so childcare in the school holidays: about 13
+      // weeks a year at England's average holiday club price, £190 a week
+      // (Coram Family and Childcare, Holiday Childcare Survey 2026), £2,470
+      // a year, about £205 a month. Universal Credit pays back up to 85% of
+      // it (DWP)
+      monthly_childcare: 205,
+    },
+    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs.",
+  },
 ];
 
 /** Every example, in the cards' order. */
