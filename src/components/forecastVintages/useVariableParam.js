@@ -46,9 +46,13 @@ export function useVariableParam(values, active = true) {
     }
   }
 
+  // After every render, not only when the measure or `active` changes: a
+  // link followed while the view is hidden can bring ?variable= with
+  // another of the holding view's sub-tabs, and it goes as soon as that
+  // view renders (writeParam leaves an address already right alone)
   useEffect(() => {
     writeParam(active && value !== fallback ? value : null);
-  }, [value, fallback, active]);
+  });
 
   return [value, setValue];
 }
