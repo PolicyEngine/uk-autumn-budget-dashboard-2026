@@ -846,8 +846,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         {/* The same foot as the card beside it, so the pair ends level */}
         <ChartMoreInfo year={Number(selectedYear)}>
           <p>
-            A person is better or worse off when their household&apos;s net income changes by more than 0.01%. The
-            shares come from one simulation of the selected policies together, so they are shown for a single
+            The shares come from one simulation of the selected policies together, so they are shown for a single
             policy or for all policies.
           </p>
         </ChartMoreInfo>

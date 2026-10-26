@@ -192,7 +192,7 @@
     position: fixed;
     inset: 0;
     z-index: 999;
-    background: var(--shadow-strong);
+    background: color-mix(in srgb, var(--c-ink) 35%, transparent);
   }
 
   .control-bar-dialog {

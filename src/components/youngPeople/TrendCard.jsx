@@ -260,9 +260,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       <div className="chart-footer">
         <ChartMoreInfo year={Number(selectedYear)}>
           <p>
-            Each line is an age group&apos;s average change per person, the sum of each selected policy&apos;s own
-            effect; each person counts their household&apos;s change in net income (not equivalised). 16 to 24 is
-            drawn thicker and all ages dashed; the shaded year is the one chosen in the bar above.
+            Each point is the sum of each selected policy&apos;s own effect; each person counts their
+            household&apos;s change in net income (not equivalised). The shaded year is the one chosen in the bar
+            above.
           </p>
           {unpublished.length > 0 && (
             <p>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</p>
