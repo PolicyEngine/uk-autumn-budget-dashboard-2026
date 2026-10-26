@@ -155,7 +155,7 @@ describe("the examples' precomputed results under another engine (PR 104)", () =
 
 // #136: the household API's answers are shown only when it reports each
 // selected measure's approved definition; the file's are held to the same.
-describe("the examples' precomputed results and the receipts' definitions (#136)", () => {
+describe("the examples' precomputed results and the receipts' definitions (PR 136)", () => {
   const ids = [...file.policies].sort();
   const options = (expectedDefinitions) => ({ expectedEngine: file.engine, expectedDefinitions });
   const unused = (candidate, expectedDefinitions) => {

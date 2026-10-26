@@ -96,7 +96,7 @@ it("asks the main API for the parts when the detail URL computes a measure from 
   await answered(calls);
 });
 
-it("asks the main API for the parts when the detail URL's report no definitions (a deploy before #125)", async () => {
+it("asks the main API for the parts when the detail URL's report no definitions (a deploy before PR 125)", async () => {
   const calls = [];
   serve(calls, (service, part, url) => (service === "detail" ? {} : good(url)));
   await answered(calls);

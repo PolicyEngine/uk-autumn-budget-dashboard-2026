@@ -128,7 +128,7 @@ describe("the examples' precomputed answers and the receipts' engine", () => {
   });
 });
 
-describe("the examples' precomputed answers and the receipts' definitions (#136)", () => {
+describe("the examples' precomputed answers and the receipts' definitions (PR 136)", () => {
   it.each([
     ["records none (written before them)", null],
     ["records another for a measure", OTHER_DEFINITIONS],
