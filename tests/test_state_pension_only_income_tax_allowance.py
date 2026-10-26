@@ -163,3 +163,29 @@ def test_the_measure_uses_the_sole_income_design_and_can_switch():
     tapered = reforms._create_state_pension_income_tax_protection("tapered")
     assert tapered.id == reforms.STATE_PENSION_ALLOWANCE_ID
     assert tapered.simulation_modifier is state_pension_income_tax_allowance
+
+
+def test_a_gift_aid_donor_on_the_state_pension_alone_pays_no_tax():
+    # Gift Aid is not income: £100 of donations leaves the bill at £93.28
+    # today and £0 under the measure.
+    situation = _person(75, FULL_NEW_STATE_PENSION, gift_aid=100)
+    before, after = _income_tax(situation)
+    assert before == pytest.approx(93.28, abs=0.01)
+    assert after == pytest.approx(0, abs=0.01)
+
+
+def test_gift_aid_is_deducted_once_in_the_taper():
+    # All-pensioners alternative, £100,000 private pension, £8,000 Gift Aid
+    # (£10,000 grossed up). Adjusted net income £113,036.40 - £10,000 =
+    # £103,036.40, so the taper takes £1,518.20: allowance £13,037 -
+    # £1,518.20 = £11,518.80, rounded up to £11,519. Deducting Gift Aid
+    # twice would leave income under £100,000 and the allowance whole.
+    situation = _person(
+        75,
+        FULL_NEW_STATE_PENSION,
+        private_pension_income=100_000,
+        gift_aid=8_000,
+    )
+    reformed = Simulation(situation=situation)
+    state_pension_only_income_tax_allowance(reformed, other_income_limit=1e12)
+    assert reformed.calculate("personal_allowance", YEAR)[0] == 11_519

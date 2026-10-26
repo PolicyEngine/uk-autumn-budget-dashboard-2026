@@ -298,6 +298,35 @@ def test_the_tapered_design_withdraws_the_allowance_against_other_income():
     assert reformed == pytest.approx(396.08, abs=PENNY)
 
 
+def test_the_tapered_design_deducts_gift_aid_once():
+    """2027-28, State Pension £13,036.97, £1,000 private pension and £400
+    of Gift Aid (£500 grossed up). Adjusted net income £14,036.97 - £500 =
+    £13,536.97 is £496.97 over £13,040, which leaves £12,543.03, below the
+    standard £12,570, so the allowance is £12,570 and the tax 20% of
+    £1,466.97, £293.39, as now. Deducting Gift Aid twice gave £13,040 and
+    £199.39."""
+    year = 2027
+    sit = situation(
+        {
+            "pensioner": {
+                "age": {year: 70},
+                "state_pension": {year: nsp(year)},
+                "private_pension_income": {year: 1_000},
+                "gift_aid": {year: 400},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection("tapered"),
+    )
+    assert baseline == pytest.approx(293.39, abs=PENNY)
+    assert reformed == pytest.approx(293.39, abs=PENNY)
+
+
 def test_the_sole_income_design_takes_the_allowance_away_for_other_income():
     """The default design. 2031-32, State Pension £14,390.39 and £1,000
     private pension: no allowance, so 20% of £2,560.39, £512.08, as now."""
