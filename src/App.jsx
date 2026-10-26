@@ -26,7 +26,7 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
@@ -282,6 +282,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setLanding(opensLanding(window.location));
     setActiveTab(view);
+    // A shared link's ?year= opens that year; one not offered (an old
+    // 2026) opens the default
+    const askedYear = new URLSearchParams(window.location.search).get("year");
+    if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
     setLocationReady(true);
   }, []);
 
@@ -302,8 +306,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       if (selectionChosen && !landing) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
+    // The year chosen in the header, so a shared link opens on it; the
+    // default stays out of the address, as the selection's does
+    if (!landing && distributionalYear !== DEFAULT_DISPLAY_YEAR) params.set("year", String(distributionalYear));
+    else params.delete("year");
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable]);
+  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
