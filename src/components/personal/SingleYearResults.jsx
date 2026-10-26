@@ -63,11 +63,17 @@ export function SingleYearError({ error, onRetry, title = "Results are not avail
   );
 }
 
-/** The whole-pound totals the tiles show; the policy rows add up to `change`. */
+/**
+ * The whole-pound totals the tiles show; the policy rows add up to
+ * `change`. The change is the rounded change itself (as the example cards
+ * and the strip show it), never the difference of two rounded totals,
+ * which can be £1 out (£108.38 is +£108, not 70,159 − 70,050 = +£109);
+ * after is before plus it, so the waterfall adds up.
+ */
 export function headlineTotals(net) {
   const before = Math.round(net.before);
-  const after = Math.round(net.after);
-  return { before, after, change: after - before };
+  const change = Math.round(Number.isFinite(net.change) ? net.change : net.after - net.before);
+  return { before, after: before + change, change };
 }
 
 /**
