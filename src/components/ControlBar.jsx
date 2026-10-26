@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import PillChevron from "./PillChevron";
 import "./ControlBar.css";
 
@@ -57,6 +58,7 @@ function chosenText(group) {
 
 function OptionsButton({ groups, name }) {
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const dialogRef = useRef(null);
@@ -134,13 +136,14 @@ function OptionsButton({ groups, name }) {
         <span className="control-bar-summary">{summary}</span>
         <PillChevron />
       </button>
-      {open && (
+      {presence.mounted && (
         <>
-          <div className="control-bar-backdrop" aria-hidden="true" />
+          {open && <div className="control-bar-backdrop" aria-hidden="true" />}
           <div
             ref={dialogRef}
             id={dialogId}
-            className="control-bar-dialog"
+            {...leavingProps(presence.shown)}
+            className={`control-bar-dialog ${popoverClass(presence.shown)}`}
             role="dialog"
             aria-modal="false"
             aria-labelledby={titleId}
