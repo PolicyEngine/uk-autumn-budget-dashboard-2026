@@ -53,7 +53,11 @@ def test_it_never_writes_the_branch_or_signs_a_review_row():
             assert line.startswith(("if grep -q", 'echo "')), line
             assert "> data_inputs" not in line and "tee" not in line
     assert '--output-dir "$OUT"' in scripts
-    assert JOB["env"]["OUT"].startswith("${{ runner.temp }}")
+    # Outside the checkout. Set in a step: a job's env has no runner context.
+    assert "runner." not in str(JOB["env"])
+    assert step("Output directory")["run"] == (
+        'echo "OUT=$RUNNER_TEMP/modal-results" >> "$GITHUB_ENV"'
+    )
 
 
 def test_its_guards():

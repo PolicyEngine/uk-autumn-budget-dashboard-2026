@@ -64,8 +64,12 @@ jobs:
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       # The dispatch input reaches the shell only through this variable.
       REFORMS: ${{ inputs.reforms }}
-      OUT: ${{ runner.temp }}/modal-results
     steps:
+      # The runner context is not available in a job's env, so the output
+      # directory (outside the checkout) is set here.
+      - name: Output directory
+        run: echo "OUT=$RUNNER_TEMP/modal-results" >> "$GITHUB_ENV"
+
       - name: Modal credentials present
         run: |
           missing=""
