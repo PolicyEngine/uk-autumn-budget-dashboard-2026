@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
+import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
 
 beforeEach(() => {
   const original = fixtureJson("manifest.json");
@@ -62,7 +63,12 @@ describe("the view tabs", () => {
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
       expect(container.querySelector(".candidate-banner")).toBeNull();
-      expect(screen.queryByText(/not announced policy/)).toBeNull();
+      // Only the pre-Budget provisional label may say so
+      expect(
+        screen
+          .queryAllByText(/not announced policy/)
+          .filter((node) => node.textContent !== CANDIDATE_PROVISIONAL_LABEL),
+      ).toEqual([]);
     });
   });
 

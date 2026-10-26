@@ -89,19 +89,19 @@ function GeographyMethodology() {
           [
             "Constituencies and regions",
             <>
-              Constituency figures do not add up exactly to the regional ones,
-              and may come from a different dataset.
+              Constituency figures come from Microcosm&apos;s local-area
+              dataset, in which each household belongs to one constituency.
+              They do not add up exactly to the regional ones, which may come
+              from a different dataset.
             </>,
             Layers,
           ],
           [
             "Later years",
-            {
-              points: [
-                "Constituency figures from the national dataset use its constituency weights, which are estimated for 2025.",
-                "Later years keep each household's 2025 split across constituencies, scaled to that year's household weights.",
-              ],
-            },
+            <>
+              Each household keeps its constituency in every year; later years
+              use that year&apos;s household weights.
+            </>,
             CalendarClock,
           ],
         ]}
