@@ -18,10 +18,11 @@ decision with a price (see the runbook), not a default.
     uv run --with modal modal app stop uk-budget-household   # when done
 
 Deploy from a clean checkout of the commit Cloud Run serves. The image
-reports the checkout's commit (``GIT_SHA``) only when the files it copies
-are exactly that commit's, and the page uses this service's sweep and split
-by policy only under a headline that reports the same commit; otherwise it
-asks Cloud Run for them.
+reports the checkout's commit (``GIT_SHA``) only when every file it copies
+has exactly that commit's bytes and it copies nothing else (compared with
+HEAD's tree, not git's status), and the page uses this service's sweep and
+split by policy only under a headline that reports the same commit;
+otherwise it asks Cloud Run for them.
 
 Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
 ``warm_schedule`` runs every 10 minutes and sets how many ``Household``
@@ -55,7 +56,10 @@ MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
 
 from uk_budget_data.household_warm import warm_target  # noqa: E402
-from uk_budget_data.runtime_identity import checkout_commit  # noqa: E402
+from uk_budget_data.runtime_identity import (  # noqa: E402
+    checkout_commit,
+    checkout_differences,
+)
 
 
 def build_image() -> modal.Image:
@@ -66,9 +70,11 @@ def build_image() -> modal.Image:
     root = Path(__file__).resolve().parents[2]
     commit = checkout_commit(root)
     if commit is None:
+        differ = checkout_differences(root)
         print(
-            "No build commit: the files this deploy copies differ from the "
-            "checkout's HEAD, so the page will not use its breakdowns."
+            "No build commit: the files this deploy copies are not exactly "
+            "the checkout's HEAD, so the page will not use its breakdowns."
+            + (f" They differ in: {', '.join(differ[:10])}" if differ else "")
         )
     return (
         modal.Image.debian_slim(
@@ -95,6 +101,7 @@ def build_image() -> modal.Image:
         .add_local_dir(
             str(root / "src" / "uk_budget_data"),
             "/root/uk_budget_data",
+            # runtime_identity.IMAGE_LEAVES_OUT must name the same folders
             ignore=["**/__pycache__/**"],
         )
     )

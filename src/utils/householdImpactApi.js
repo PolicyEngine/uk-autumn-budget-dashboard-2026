@@ -468,9 +468,30 @@ export function normaliseHouseholdImpact(raw) {
     engine: raw.engine ?? {},
     // The build's commit, or null when the build reports none (a local run,
     // a Modal deploy from an edited checkout, or a build older than this)
-    build: typeof raw.git_sha === "string" && raw.git_sha !== "" ? raw.git_sha : null,
+    build: buildOf(raw.git_sha),
+    // Every commit this result's stages reported (mergeStages adds each
+    // part's); `build` stays the headline's own
+    builds: buildOf(raw.git_sha) === null ? [] : [buildOf(raw.git_sha)],
   };
 }
+
+const FULL_COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+
+/**
+ * An answer's build commit: the commit, null when the answer reports none,
+ * or for anything else an object that stands for it and equals no build,
+ * not even another copy of itself.
+ */
+function buildOf(value) {
+  if (value === undefined || value === null || value === "") return null;
+  return typeof value === "string" && FULL_COMMIT.test(value) ? value : { malformed: String(value) };
+}
+
+/** Two reported builds are one only as the same well-formed commit. */
+const sameCommit = (a, b) => typeof a === "string" && a === b;
+
+/** Every commit a result's stages have reported so far. */
+const buildsSeen = (result) => result.builds ?? (result.build == null ? [] : [result.build]);
 
 /**
  * The household API's answer came from other package versions than the
@@ -533,11 +554,17 @@ export class StageMismatchError extends EngineMismatchError {
  *
  * Net income alone can't show two answers came from one build: two builds
  * can agree on this household's net income and still differ elsewhere on
- * its earnings sweep. Only the build commit can. Answers that both report
- * one must report the same; `sameBuild` (the detail service's answers)
- * also refuses one where either reports none.
+ * its earnings sweep. Only the build commit can.
  *
- * @param {Object} first - The headline
+ * - A part that reports a commit must report the one every stage so far
+ *   has reported (`first.builds`: the headline's and each merged part's),
+ *   so two parts from different builds never meet, even under a headline
+ *   that reports none (review of e78fbf4, finding 2).
+ * - `sameBuild` (the detail service's answers) also needs the headline
+ *   itself to report that commit. A merged part's commit never stands in
+ *   for it.
+ *
+ * @param {Object} first - The headline, with any parts merged so far
  * @param {Object} detail - A later part
  * @param {{ sameBuild?: boolean }} [options]
  * @returns {StageMismatchError|null}
@@ -547,8 +574,11 @@ export function stageMismatch(first, detail, { sameBuild = false } = {}) {
   const b = detail.engine ?? {};
   const packages = STAGE_ENGINE_PACKAGES.filter((name) => typeof a[name] !== "string" || a[name] !== b[name]);
   if (packages.length) return new StageMismatchError(packages);
-  const bothBuilt = first.build != null && detail.build != null;
-  if (bothBuilt ? first.build !== detail.build : sameBuild) return new StageMismatchError(["build"]);
+  const theirs = detail.build ?? null;
+  const otherBuild =
+    (sameBuild && !sameCommit(first.build, theirs)) ||
+    (theirs !== null && buildsSeen(first).some((build) => !sameCommit(build, theirs)));
+  if (otherBuild) return new StageMismatchError(["build"]);
   const sameNet = ["before", "after"].every(
     (side) =>
       Number.isFinite(first.net?.[side]) &&
@@ -569,11 +599,14 @@ export function stageMismatch(first, detail, { sameBuild = false } = {}) {
 export function mergeStages(first, detail) {
   const mismatch = stageMismatch(first, detail);
   if (mismatch) throw mismatch;
+  const seen = buildsSeen(first);
   return {
     ...first,
     byPolicy: detail.byPolicy ?? first.byPolicy,
     sweep: detail.sweep ?? first.sweep,
     programmes: first.programmes ?? detail.programmes,
+    // The check above leaves every seen commit equal to the part's
+    builds: detail.build == null || seen.length ? seen : [detail.build],
   };
 }
 
