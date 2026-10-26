@@ -543,16 +543,20 @@ describe("axes and formats", () => {
     expect(stepDecimals(2.5e-10)).toBe(11);
   });
 
-  it("write every tick of an axis apart, and none but 0 as 0, at any scale", () => {
-    const write = formatterFor(variable("cpi"), "index", variable("cpi").level);
+  // Found by the tenth review, too: whole pounds took no decimals from
+  // the axis, so ticks 0.1 apart read £296,673 four times
+  it("write every tick of an axis apart, and none but 0 as 0, at any scale, in every unit the page shows", () => {
+    const writers = DATA.variables.flatMap((v) =>
+      UNIT_ORDER.filter((unit) => v.units[unit]).map((unit) => ({ where: `${v.id} ${unit}`, write: formatterFor(v, unit, v[v.units[unit].from]) })),
+    );
     fc.assert(
-      fc.property(scaled, fc.oneof(scaled, fc.constant(0)), fc.boolean(), (lo, size, zero) => {
+      fc.property(fc.constantFrom(...writers), scaled, fc.oneof(scaled, fc.constant(0)), fc.boolean(), ({ where, write }, lo, size, zero) => {
         const { ticks, step } = niceAxis(lo, lo + Math.abs(size), { zero });
         const labels = ticks.map((t) => write(t, stepDecimals(step)));
-        expect(new Set(labels).size).toBe(labels.length);
-        ticks.forEach((t, i) => expect(/^-?0(\.0*)?$/.test(labels[i])).toBe(t === 0));
+        expect(new Set(labels).size, `${where}: ${labels}`).toBe(labels.length);
+        ticks.forEach((t, i) => expect(/^-?£?0(\.0*)?(bn|m|%)?$/.test(labels[i]), `${where}: ${labels[i]}`).toBe(t === 0));
       }),
-      { numRuns: 500 },
+      { numRuns: 1000 },
     );
   });
 

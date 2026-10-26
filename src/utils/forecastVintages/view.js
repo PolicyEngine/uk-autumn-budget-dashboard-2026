@@ -101,7 +101,11 @@ export function inUnit(variable, unit, levels, { annual = false, start } = {}) {
   });
 }
 
-/** Formats a value in the unit shown: (value, digits?) -> text. */
+/**
+ * Formats a value in the unit shown: (value, digits?) -> text. Each unit
+ * has its own decimals; an axis passes the decimals its step needs
+ * (stepDecimals), which every unit takes.
+ */
 export function formatterFor(variable, unit, measure) {
   const spec = variable.units[unit];
   const n = (v, d) => gb(d).format(v);
@@ -113,7 +117,7 @@ export function formatterFor(variable, unit, measure) {
     const text = n(v, d);
     return text.startsWith("-") ? `-£${text.slice(1)}${suffix}` : `£${text}${suffix}`;
   };
-  if (spec.annualise || u.startsWith("£ a") || u.startsWith("£ av") || u.startsWith("£ per")) return (v) => pounds(v, 0);
+  if (spec.annualise || u.startsWith("£ a") || u.startsWith("£ av") || u.startsWith("£ per")) return (v, d = 0) => pounds(v, d);
   if (u.startsWith("£ billion")) return (v, d = measure.decimals) => pounds(v, d, "bn");
   if (u === "million people") return (v, d = measure.decimals) => `${n(v, d)}m`;
   if (u.startsWith("%")) return (v, d = 1) => `${n(v, d)}%`;

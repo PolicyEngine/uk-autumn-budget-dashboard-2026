@@ -311,6 +311,22 @@ describe("the chart's layout", () => {
     axis.ticks.forEach((t, i) => expect(/^-?0(\.0*)?$/.test(labels[i])).toBe(t === 0));
   });
 
+  // Found by the tenth review: house prices' newest forecast for 2030 at
+  // 0.0001 (growth), brushed to 2029-30 in £: ticks 0.1 apart, all
+  // written £296,673
+  it("writes every y tick apart in whole pounds too", () => {
+    const data = JSON.parse(JSON.stringify(DATA));
+    const v = data.variables.find((x) => x.id === "house_prices");
+    v.level.vintages.at(-1).values["2030"] = 0.0001;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    const view = buildView(data, v, { unit: "level", showPast: false });
+    const rows = view.rows.filter((r) => r.x >= 2029 && r.x <= 2030);
+    const { axis } = chartLayout(view, rows, { canvasWidth: 926 });
+    expect(axis.step).toBeLessThan(1);
+    const labels = axis.ticks.map((t) => view.format(t, stepDecimals(axis.step)));
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
   it("keeps CPI's latest and end labels apart in % with the whole history on a phone", () => {
     // Found by the review: the latest value and the end caption 5px apart
     const view = buildView(DATA, variable("cpi"), { unit: "pct", showPast: true });

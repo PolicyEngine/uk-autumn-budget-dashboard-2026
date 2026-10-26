@@ -836,6 +836,7 @@ describe("a forecasts file the loader accepts", () => {
       [...document.querySelectorAll(`.recharts-${axis} .recharts-cartesian-axis-tick-value`)].map((t) => ({ pixel: Number(t.getAttribute(attribute)), label: t.textContent }));
     const yTicks = tickAt("yAxis", "y");
     if (yTicks.length < 2) throw new Error(`${where}: ${yTicks.length} y ticks`);
+    if (new Set(yTicks.map((t) => t.label)).size !== yTicks.length) throw new Error(`${where}: two y ticks written alike`);
     // Read back to a millionth of a step (and -0 as 0), past float noise
     const raw = yTicks.map((t) => ys.at(t.pixel));
     const step = Number(Math.abs(raw[1] - raw[0]).toPrecision(10));
