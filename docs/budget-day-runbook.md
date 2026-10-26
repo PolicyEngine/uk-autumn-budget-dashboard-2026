@@ -906,9 +906,49 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   - **Guards:** no retries, at most 16 containers, 32 GB and 2 CPUs each, 45 minutes per container.
   - **Measured on 26 October** (`main` at 9305d80 with this change; scratch `--output-dir`): 10 units in **8.1 min** end to end, **$0.41**; the laptop's process peaked at 3.1 GB. `household_scatter_binned.csv` and `income_curve.csv` were byte-identical to `public/data`. Every other file differed only in 2026 rows of the VAT measures, the Warm Home Discount top-up and the package, by at most 7.4e-10 relative (last-digit float differences; main's rows were made on a Mac). A second Modal run gave bit-identical rows.
   - **On pull requests:** `.github/workflows/results-on-modal.yml` runs this when a PR changes a measure, and uploads the files as a workflow artifact with a table of which differ. It never commits or signs: copy in the files you accept and sign their review rows yourself, in the same commit.
-  - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
-  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. The memory snapshot it asks for is never taken on this ephemeral app (see "The full run on Modal" below).
+  - **`--artifacts` and `--combined` now run on Modal too (#206), and so does the area run (`constituencies --backend modal`).** Measured timings, the order to run them in and what to do when a container fails: "The full run on Modal: order, timings and failures" below. Make every artifact of a release in one place, or staging needs `--adopt-execution`.
   - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
+
+## The full run on Modal: order, timings and failures (27 October)
+
+The measured version of G2 to G4 on Modal, from Monday's full regeneration (26 October, `main` at 0fc752f, policyengine-uk 2.132.6, $1.13 in all) and the Modal app history. The timing table in "Faster generation on Budget day" above is older and partly estimated; where they differ, this one is measured.
+
+**Before the day (Tuesday evening, after the final lock):** build both images, or the first run of the day waits about 12 minutes for one. Neither needs the secret or data.
+
+```sh
+uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke badr_lifetime_limit_cut
+uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py
+```
+
+**Run the independent commands side by side, each in its own shell.** Each starts its own ephemeral app, so they don't wait for each other:
+- the template and `parameter_changes` measures in one `generate --artifacts --backend modal --reforms <ids>`;
+- each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own, started at the same time;
+- any flat file a re-cut needs (`generate --only income_distribution --backend modal`), at the same time too: it doesn't depend on the artifacts.
+
+Only the combined run must wait, because its receipt records each member's output digest: `generate --combined <ids> --backend modal` once its members are written (and, at G4, approved).
+
+| Step | Wall time, measured | Per container | Cost |
+|---|---|---|---|
+| Nine measures, one call (`--artifacts --backend modal`) | 8:11 for the Modal app, about 8:45 for the command | 293–354 s | $0.36 |
+| One hand-written modifier, its own call | 6:43 for the command | 354 s | $0.04 |
+| Two combined runs (`--combined`, after the measures) | 6:13 for the app, about 7:10 for the command (57 s planning here) | 339–348 s | $0.07 |
+| `--only income_distribution`, ten units | 4:13 | | $0.23 |
+| Area run, six measures then the release (`constituencies --backend modal`) | 13:53 and 14:32 | 3:40–6:32 per measure, 7:32–8:07 release | $0.51 |
+| Area run, ten measures then the release (drill 5) | 21:18 | 3:36–5:22 per measure, 15:25 release | |
+
+On Monday the four national commands took 20:09 end to end because `income_distribution` started only after the artifact run; side by side they take about 16 minutes, the length of the measures-then-combined command.
+
+**Where a container's time goes.** Each artifact's progress now ends with a line splitting its container's time into the two builds, the tables, and the checks and receipt. The first build in a fresh container also downloads and checks the dataset, so the difference between the two builds is roughly the download. Measured on 27 October (one parameter-only measure, `badr_lifetime_limit_cut`, 2026 only): `176 s in its Modal container (builds 33 + 49 s, tables 82 s, checks and receipt 12 s)`, 3:27 for the command, $0.02. The first build includes the download, so the download is well under 33 s. Against the six-year containers (293–354 s), the tables take about 260 s, about 82 s for the first year and 35 s for each later one: about 70% of a container is the tables, and under 10% the download.
+
+**The memory snapshot does nothing.** `enable_memory_snapshot=True` is ignored on an ephemeral app (every run logs "Memory snapshots are disabled for ephemeral apps"), so each container imports the engine cold. It costs seconds, not minutes.
+
+**If a container fails** (an error in the run, the 45-minute timeout, out of memory):
+- every other artifact still comes back and is written; the failed ones are printed as they arrive and listed at the end, with the artifacts that were written, and the command exits non-zero (`ModalRunsFailed`). Before 27 October one failure stopped the app and every artifact not yet written here was lost;
+- stage the written ones as they are, and rerun only the failed ids. Rerunning the whole set is safe too: at the same commit a template or `parameter_changes` measure comes back "unchanged" (write-once), but a hand-written modifier gets a new directory and needs a fresh two-person attestation, so don't rerun those without need;
+- a refusal is not a failure: a measure the gates refuse (a data limit, a scored year left out, from #208 a decile cell under 10 survey households) comes back refused, with its reason, and no rerun changes it;
+- Modal restarts a preempted container with the same input even with `retries=0`; that is safe under write-once, and costs at most one container's time;
+- nothing reaches the manifest until `publish stage`, so a failed or partial run publishes nothing. Never run `publish review-rows` while a `generate` is writing in the same checkout: it deletes unstaged artifact directories.
 
 ## Fast full run
 
