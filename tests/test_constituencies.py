@@ -7,7 +7,6 @@ the step in this process, with a stand-in /usr/bin/time report.
 """
 
 import json
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,11 +14,11 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
-from policyengine.disclosure import validate_public
 
 from tests.test_geography import (
     BASE,
     FakeSimulation,
+    assert_public_area_output,
     publication_manifest,
     synthetic_inputs,
 )
@@ -34,6 +33,7 @@ TAG = "microcosm-uk-2024-25-dense-20260201T000000Z-0000000b"
 NEWER = "microcosm-uk-2024-25-dense-20260301T000000Z-0000000c"
 PKG = "pkg_combined"
 MEASURES = ("alpha", "beta", "zero")
+YEARS = (2026, 2027)
 SURCHARGE_RATE = (
     "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
 )
@@ -304,8 +304,9 @@ class World:
         monkeypatch.setattr(g, "get_reform", self.reforms.get)
         monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
         monkeypatch.setattr(g, "simulate_reform", self.simulate)
+        # Approved for every year a test runs: the area run checks that
         self.manifest = publication_manifest(
-            tmp_path, self.reforms, packages={PKG: MEASURES}
+            tmp_path, self.reforms, packages={PKG: MEASURES}, years=YEARS
         )
         self.cut = local_file(tmp_path / "local.h5")
         self.hub = FakeHub({TAG: self.cut})
@@ -412,8 +413,11 @@ def test_one_release_over_every_measure_each_in_its_own_process(world, capsys):
     assert world.steps == [*MEASURES, PKG, "release"]
     assert world.simulated == [*MEASURES, PKG]
     table = world.out / "constituency.csv"
-    assert [p.name for p in world.out.iterdir()] == ["constituency.csv"]
-    assert validate_public(table) == []
+    assert sorted(p.name for p in world.out.iterdir()) == [
+        "area_provenance.json",
+        "constituency.csv",
+    ]
+    assert_public_area_output(world.out)
     frame = pd.read_csv(table)
     assert set(frame["reform"]) == {*MEASURES, PKG}
     assert set(frame["level"]) == {"constituency"}
@@ -438,6 +442,7 @@ def test_one_release_over_every_measure_each_in_its_own_process(world, capsys):
         assert path.stat().st_mode & 0o077 == 0, path
     out = printed(capsys)
     assert "validate_public, 0 problems" in out
+    assert "records constituency.csv for publish index" in out
     assert out.count(g.MICROCOSM_UNCERTIFIED) == 2
 
 
@@ -535,6 +540,11 @@ def test_the_dry_run_checks_everything_and_simulates_nothing(world, capsys):
     assert (
         "As: uk-budget-data geography --dataset "
         f"{world.cut} --dataset-kind microcosm --levels constituency"
+    ) in out
+    assert (
+        f"Area provenance: {world.out / 'area_provenance.json'}, for "
+        "constituency.csv; every reform's baseline and reform match its "
+        "approved receipt"
     ) in out
     assert "Dry run: nothing simulated." in out
 
@@ -678,14 +688,186 @@ def test_build_release_times_each_reform_and_year():
     assert all(seconds >= 0 for seconds in timings.values())
 
 
-# -- the page ---------------------------------------------------------------
+# -- what publish index binds ----------------------------------------------
 
 
-def test_the_page_finds_each_package_by_its_suffix():
-    """The page shows the full package as the one reform whose id ends in
-    PACKAGE_SUFFIX (src/utils/geography/selection.js)."""
-    selection = (REPO / "src/utils/geography/selection.js").read_text()
-    (suffix,) = re.findall(r'PACKAGE_SUFFIX = "([^"]+)"', selection)
-    for package, members in g.PACKAGES.items():
-        assert package.endswith(suffix)
-        assert not any(member.endswith(suffix) for member in members)
+def published(world, *extra):
+    """The run, into the directory of the manifest it was approved under,
+    where publish index reads the approved receipts."""
+    return world.run("--out-dir", str(world.tmp), *extra)
+
+
+def index_reads(world):
+    """What publish index finds of the area tables beside the manifest: its
+    problems, and the manifest key it gives the page for each alias."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.release_index import (
+        AREA_FILES,
+        area_problems,
+    )
+
+    files = {
+        name: (world.tmp / name).read_bytes()
+        for name in AREA_FILES
+        if (world.tmp / name).is_file()
+    }
+    manifest = m.parse_manifest(world.manifest.read_bytes(), "manifest")
+    return area_problems(manifest, files, world.tmp)
+
+
+def regional_run(world, monkeypatch):
+    """geography's regional pass on the route that publishes regions (the
+    enhanced FRS), over the same changes and approvals: regional.csv and
+    the area_provenance.json that records it, beside the manifest."""
+    from tests.test_geography import FLAGS, REGIONS_CSV, enhanced_frs_bundle
+    from uk_budget_data import cli
+
+    frs_regions = list(pd.read_csv(REGIONS_CSV, dtype=str)["frs_region"])
+    n = len(world.household)
+    household = world.household.drop(
+        columns=["region_code_oa", "constituency_code_oa"]
+    ).assign(
+        region=[frs_regions[i % len(frs_regions)] for i in range(n)],
+        tenure_type="OWNED_OUTRIGHT",
+        accommodation_type="HOUSE_DETACHED",
+        **{flag: False for flag in FLAGS},
+    )
+    person = pd.DataFrame(
+        {
+            "person_household_id": household["household_id"],
+            "age": 40,
+            "gender": "FEMALE",
+        }
+    )
+
+    def simulate(reform, dataset, years):
+        baseline = np.full(n, BASE)
+        changed = baseline + world.changes[reform.id]
+        return (
+            FakeSimulation(household, person, dict.fromkeys(years, baseline)),
+            FakeSimulation(household, person, dict.fromkeys(years, changed)),
+        )
+
+    with monkeypatch.context() as patch:
+        patch.setattr(g, "simulate_reform", simulate)
+        enhanced_frs_bundle(patch)
+        argv = [
+            "geography",
+            "--levels",
+            g.REGION,
+            "--years",
+            "2026",
+            "--manifest",
+            str(world.manifest),
+            "--out-dir",
+            str(world.tmp),
+            "--data-inputs-dir",
+            str(world.inputs),
+        ]
+        assert cli.main(argv) == 0
+    return world.tmp / "regional.csv"
+
+
+def test_publish_index_binds_the_table_and_names_the_package(world, capsys):
+    """The page shows the package as the catalogue's combined run of
+    exactly the displayable measures (combinedId). The table names it by its
+    alias in geography.PACKAGES, and area_provenance.json records the
+    manifest key each reform stands for, so publish index binds the table
+    and gives the page that combined run for the alias."""
+    from uk_budget_data.publication.combine import combined_key
+
+    assert published(world) == 0, printed(capsys)
+    assert index_reads(world) == ([], {PKG: combined_key(sorted(MEASURES))})
+
+
+def test_a_regional_table_beside_the_seats_keeps_its_record(
+    world, monkeypatch, capsys
+):
+    """publish index needs one record of every area table present, so the
+    run records regional.csv too, as its own run recorded it."""
+    from uk_budget_data.publication.combine import combined_key
+
+    regional = regional_run(world, monkeypatch)
+    before = regional.read_bytes()
+    code = published(world, "--prior-regional", str(regional))
+    assert code == 0, printed(capsys)
+    assert regional.read_bytes() == before
+    # Both tables' SHA-256, and a record of every reform in either
+    assert_public_area_output(world.tmp)
+    assert index_reads(world) == ([], {PKG: combined_key(sorted(MEASURES))})
+    out = printed(capsys)
+    assert (
+        "for constituency.csv and regional.csv (its record carried from its "
+        "own run)"
+    ) in out
+    assert "records constituency.csv and regional.csv for publish index" in out
+
+
+@pytest.mark.parametrize(
+    ("broken", "message"),
+    [
+        ("no record", "regional.csv is in {} with no readable"),
+        ("other bytes", "does not record regional.csv as it is"),
+        (
+            "another approval",
+            "regional.csv was made for an approval of alpha other than the "
+            "one this run binds",
+        ),
+    ],
+)
+def test_a_regional_table_not_on_record_is_refused_before_simulating(
+    broken, message, world, monkeypatch, capsys
+):
+    regional = regional_run(world, monkeypatch)
+    record = world.tmp / "area_provenance.json"
+    if broken == "no record":
+        record.unlink()
+    elif broken == "other bytes":
+        regional.write_bytes(regional.read_bytes() + b"\n")
+    else:
+        # As if made under an earlier approval of alpha
+        document = json.loads(record.read_text())
+        document["reforms"]["alpha"]["outputs_sha256"] = "f" * 64
+        record.write_text(json.dumps(document))
+    assert published(world) == 1
+    assert world.steps == [] and world.simulated == []
+    assert not (world.tmp / "constituency.csv").exists()
+    out = printed(capsys)
+    assert message.format(world.tmp) in out
+    assert "run its area run again first" in out
+
+
+def test_a_regional_table_replaced_during_the_run_stops_the_release(
+    world, monkeypatch, capsys
+):
+    regional = regional_run(world, monkeypatch)
+    run_process = world.run_process
+
+    def replacing(command, env):
+        if "release" in command:
+            regional.write_bytes(regional.read_bytes() + b"\n")
+        return run_process(command, env)
+
+    monkeypatch.setattr(c, "run_process", replacing)
+    assert published(world) == 1
+    assert world.steps == [*MEASURES, PKG, "release"]
+    assert not (world.tmp / "constituency.csv").exists()
+    assert "does not record regional.csv as it is" in printed(capsys)
+
+
+def test_a_reform_unlike_its_approved_receipt_is_refused_before_simulating(
+    world, capsys
+):
+    from uk_budget_data.models import Reform
+
+    # alpha, changed since it was approved
+    world.reforms["alpha"] = Reform(
+        id="alpha",
+        name="alpha",
+        parameter_changes={SURCHARGE_RATE: {"2026": 0.07}},
+    )
+    assert world.run() == 1
+    assert world.steps == [] and world.simulated == []
+    assert (
+        "alpha: current reform identity differs from the approved receipt"
+    ) in printed(capsys)

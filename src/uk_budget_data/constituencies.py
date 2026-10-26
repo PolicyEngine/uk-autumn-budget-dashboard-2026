@@ -19,7 +19,10 @@ fits a 64 GB laptop and can be timed:
    before anything is simulated: approved ids only, from the publication
    manifest; a Microcosm export; the seat lookup; a published regional
    table, if there is one, as a prior. The package runs when the manifest
-   approves it.
+   approves it. Each reform's baseline and reform identities must be its
+   approved receipt's (``geography.area_provenance``), as for a
+   ``geography`` run, and a regional table already in ``--out-dir`` must
+   be the one its own run recorded (``carried_provenance``).
 3. **A fresh process for each measure**, and for the package: its two
    simulations, each year's household net income and weights read under
    the data-limit watch, then the data-limit and model-limit checks, as
@@ -30,7 +33,11 @@ fits a 64 GB laptop and can be timed:
    once each has passed: estimated, resolved and written as ``geography``
    writes it, ``constituency.csv`` through ``policyengine.disclosure``
    (``validate_public``), the layer's audit to
-   ``$UK_BUDGET_DISCLOSURE_AUDIT_DIR``.
+   ``$UK_BUDGET_DISCLOSURE_AUDIT_DIR``. Then ``area_provenance.json``,
+   which ``publish index`` needs before it binds the table: what each
+   reform in it was made from, and the SHA-256 of ``constituency.csv`` and
+   of a regional table beside it, whose reforms are recorded as its own
+   run recorded them.
 5. **A table of time and memory**: seconds by measure, year and step, each
    process's peak memory footprint and maximum resident size
    (``/usr/bin/time -l``), and swap before and after.
@@ -77,6 +84,8 @@ from uk_budget_data.private_outputs import (
     private_directory,
 )
 from uk_budget_data.publication import manifest as publication_manifest
+from uk_budget_data.publication import receipt as publication_receipt
+from uk_budget_data.publication import release_index
 from uk_budget_data.reforms import DEFAULT_YEARS
 from uk_budget_data.runtime_identity import PACKAGES, installed_version
 
@@ -388,6 +397,10 @@ class RunPlan:
     data_inputs_dir: Path
     allow_demotions: bool
     argv: list[str]
+    # geography.area_provenance's, for area_provenance.json
+    provenance: dict
+    # The other area tables in out_dir, whose records it carries
+    carried: list[str]
 
 
 def default_reforms(manifest: Path) -> list[str]:
@@ -528,6 +541,18 @@ def plan_run(
             dict.fromkeys(runs),
             areas=False,
         )
+    # As a geography run does before simulating: each reform's identities
+    # are its approved receipt's.
+    provenance = geography.area_provenance(
+        plan.manifest,
+        plan.manifest_bytes,
+        chosen,
+        data_root=Path(parsed.manifest).parent,
+        years=plan.years,
+    )
+    # The release checks this again before it writes; here it stops a run
+    # whose table publish index would refuse, before hours of simulation.
+    _, carried = carried_provenance(Path(parsed.out_dir), provenance)
     run_id = parsed.run_id or f"constituencies-{cut.short}"
     if not RUN_ID.fullmatch(run_id):
         raise ConstituencyRunError(
@@ -547,7 +572,78 @@ def plan_run(
         data_inputs_dir=Path(parsed.data_inputs_dir),
         allow_demotions=parsed.allow_demotions,
         argv=argv,
+        provenance=provenance,
+        carried=[path.name for path in carried],
     )
+
+
+def carried_provenance(
+    out_dir: Path, provenance: dict
+) -> tuple[dict, list[Path]]:
+    """What ``area_provenance.json`` records once this run's table is in
+    ``out_dir``, and the other area tables there that it records too.
+
+    ``publish index`` binds the area tables only when that file records the
+    SHA-256 of every one present and every reform they carry, and refuses
+    them otherwise ("rerun the area run"). ``geography`` records only the
+    tables it writes, so a seats run beside a published ``regional.csv``
+    records both: this run's reforms, and the regional table's as its own
+    run recorded them. That record is taken only while the file records
+    the table's bytes as they are, and only where this run binds each
+    reform in both tables to the same approved entry. Otherwise the
+    regional table was made for something else, and its run comes first.
+    Raises ConstituencyRunError, with labels only.
+    """
+    out_dir = Path(out_dir)
+    others = [
+        out_dir / name
+        for name in release_index.AREA_FILES
+        if name != TABLE and (out_dir / name).is_file()
+    ]
+    if not others:
+        return provenance, []
+    again = "run its area run again first, or pass an --out-dir without it"
+    record_file = release_index.AREA_PROVENANCE_FILE
+    try:
+        document = json.loads((out_dir / record_file).read_bytes())
+    except (OSError, ValueError):
+        document = None
+    if release_index.area_provenance_document_problems(document):
+        raise ConstituencyRunError(
+            f"{others[0].name} is in {out_dir} with no readable "
+            f"{record_file}: {again}"
+        )
+    reforms = dict(provenance["reforms"])
+    for path in others:
+        content = path.read_bytes()
+        if (
+            document["files"].get(path.name)
+            != hashlib.sha256(content).hexdigest()
+        ):
+            raise ConstituencyRunError(
+                f"{record_file} in {out_dir} does not record {path.name} "
+                f"as it is: {again}"
+            )
+        try:
+            used = release_index._reform_ids(content)
+        except (UnicodeError, ValueError, csv.Error) as error:
+            raise ConstituencyRunError(
+                f"{path.name} in {out_dir} is not a readable CSV with a "
+                "reform column"
+            ) from error
+        for reform_id in sorted(used):
+            record = document["reforms"].get(reform_id)
+            if record is None:
+                raise ConstituencyRunError(
+                    f"{path.name}: {reform_id} is not recorded by its area "
+                    f"run: {again}"
+                )
+            if reforms.setdefault(reform_id, record) != record:
+                raise ConstituencyRunError(
+                    f"{path.name} was made for an approval of {reform_id} "
+                    f"other than the one this run binds: {again}"
+                )
+    return {**provenance, "reforms": reforms}, others
 
 
 # -- what each measure's process keeps ---------------------------------------
@@ -814,7 +910,8 @@ def build_tables(spec: dict, *, settings=None) -> dict:
     estimated, resolved and written as ``geography`` writes a run, the
     layer's audit to the private directory and ``constituency.csv``
     through ``geography.write_public_tables``, which replaces it only once
-    ``validate_public`` passes it."""
+    ``validate_public`` passes it; then ``area_provenance.json`` beside it
+    (``carried_provenance``)."""
     inputs = Path(spec["data_inputs_dir"])
     regions = geography.load_regions(inputs / geography.REGIONS_FILE)
     seats = geography.load_seats(inputs / geography.SEATS_FILE)
@@ -888,14 +985,23 @@ def build_tables(spec: dict, *, settings=None) -> dict:
             "rest.[/red]"
         )
     else:
+        out_dir = Path(spec["out_dir"])
+        # Checked again here, against the regional table as it is now
+        provenance, carried = carried_provenance(out_dir, spec["provenance"])
         written = geography.write_public_tables(
             geo.release,
-            Path(spec["out_dir"]),
+            out_dir,
             geography.area_names(regions, seats),
             levels=geo.published_levels,
         )
+        result["provenance"] = str(
+            release_index.write_area_provenance(
+                out_dir, provenance, [*written.values(), *carried]
+            )
+        )
         result["status"] = "written"
         result["written"] = [str(path) for path in written.values()]
+        result["carried"] = [path.name for path in carried]
     _write_json(Path(spec["result"]), result)
     return result
 
@@ -1312,6 +1418,7 @@ def run_constituencies(parsed: argparse.Namespace, *, api=None) -> int:
         KeyError,
         OSError,
         ValueError,
+        publication_receipt.ReceiptUnavailable,
     ) as error:
         console.print(f"[red]Error: {escape(str(error))}[/red]")
         return 1
@@ -1361,6 +1468,16 @@ def _print_plan(run: RunPlan, units: list[Unit], directory: Path) -> None:
     )
     console.print(f"Private run directory: {escape(str(directory))}")
     console.print(f"Table: {escape(str(run.out_dir / TABLE))}")
+    console.print(
+        "Area provenance: "
+        + escape(str(run.out_dir / release_index.AREA_PROVENANCE_FILE))
+        + f", for {TABLE}"
+        + "".join(
+            f" and {name} (its record carried from its own run)"
+            for name in run.carried
+        )
+        + "; every reform's baseline and reform match its approved receipt"
+    )
     console.print(
         "As: uk-budget-data " + escape(" ".join(run.argv)) + ", with each "
         "measure simulated in a process of its own"
@@ -1557,6 +1674,7 @@ def _execute(
             "data_inputs_dir": str(run.data_inputs_dir.resolve()),
             "out_dir": str(run.out_dir.resolve()),
             "allow_demotions": run.allow_demotions,
+            "provenance": run.provenance,
             "simulate_s": sum(
                 step.timings.get("simulate_s") or 0.0 for step in steps
             ),
@@ -1611,6 +1729,11 @@ def _execute(
                 "place of <reviewer>):"
             )
             sys.stdout.write(row + "\n")
+    recorded = [TABLE, *result.get("carried", [])]
+    console.print(
+        f"[green]Wrote {escape(result['provenance'])}: records "
+        f"{' and '.join(recorded)} for publish index[/green]"
+    )
     return 0
 
 
