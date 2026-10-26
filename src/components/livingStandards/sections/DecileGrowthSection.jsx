@@ -243,16 +243,24 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const legendItems = (annual && groupSeries.length <= 5 ? groupSeries : [groupSeries[0], groupSeries.at(-1)]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
   // More than five groups: one light-to-dark key, so every bar is explained
   const ramp = groupSeries.length > 5 ? { colours: groupSeries.map((s) => s.colour), from: "Lowest income", to: "Highest income" } : null;
-  // Year by year: a tooltip for the one bar hovered
-  const describeBar = (key, row) => {
-    const i = Number(key.slice(1)) - 1;
-    const value = row[key];
-    return {
-      label: `${fyLabel(row.year)} · ${groupSpan(i)}`,
-      value: `${diff ? pp(value) : pct(value)}${diff ? "" : ` on ${fyLabel(row.year - 1)}`}`.replace(/^(?=\d)/, value > 0 ? "+" : ""),
-      colour: colourOf(i),
-    };
+
+  // Year by year: on hovering a year, every group's value, compact
+  const shortValue = (v) => {
+    if (v == null || !Number.isFinite(v)) return "–";
+    const text = Math.abs(v).toFixed(diff ? 2 : 1);
+    const sign = Number(text) === 0 ? "" : v > 0 ? "+" : "−";
+    return `${sign}${text}${diff ? "" : "%"}`;
   };
+  const describeYear = (row) => ({
+    title: `${fyLabel(row.year)}, ${diff ? "effect on real growth (pp)" : `real change on ${fyLabel(row.year - 1)}`}`,
+    items: groupSeries.map((s) => ({
+      key: s.key,
+      label: s.key.slice(1),
+      value: row[s.key],
+      text: shortValue(row[s.key]),
+      colour: s.colour,
+    })),
+  });
 
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
   const axis = tightAxis(values);
@@ -440,7 +448,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         selectedX={selectedYear == null ? null : Number(selectedYear)}
         legendNote={legendNote}
         ramp={ramp}
-        describeBar={describeBar}
+        describeYear={describeYear}
       />
     ) : (
       <LsBarChart

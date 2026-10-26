@@ -118,6 +118,40 @@ function BarTooltip({ active, payload, describe }) {
   );
 }
 
+// The year panel's width, for placing it beside the hovered year's band
+const YEAR_PANEL_WIDTH = 236;
+
+/**
+ * Every group's value for the hovered year, compact: a title, then the
+ * groups in short columns (a dot from the ramp, the group number, the
+ * value), the largest gain and loss bold, the hovered bar's row marked.
+ */
+function YearPanel({ active, payload, describe, hoveredKey }) {
+  if (!active || !payload?.length) return null;
+  const { title, items } = describe(payload[0].payload);
+  const values = items.map((item) => item.value).filter(Number.isFinite);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  return (
+    <div className="chart-tooltip ls-year-panel" style={{ width: YEAR_PANEL_WIDTH }}>
+      <p className="chart-tooltip-label">{title}</p>
+      <ul className="ls-year-panel-grid">
+        {items.map((item) => (
+          <li
+            key={item.key}
+            className={item.key === hoveredKey ? "is-hovered" : undefined}
+            style={{ fontWeight: (item.value === max && max > 0) || (item.value === min && min < 0) || item.key === hoveredKey ? 700 : 400 }}
+          >
+            <span className="ls-year-panel-dot" style={{ background: item.colour }} />
+            <span className="ls-year-panel-group">{item.label}</span>
+            <span className="ls-year-panel-value">{item.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true }) {
   return (
     <>
@@ -327,20 +361,44 @@ export function LsBarChart({
   // (seriesKey, row) => { label, value, colour? }: a tooltip for the one
   // bar hovered (its series dimmed others), in place of the year's list
   describeBar = null,
+  // (row) => { title, items: [{ key, label, value, text, colour }] }: on
+  // hovering a year, every group's value in a compact panel beside the
+  // year's band (below the plot on a phone); in place of describeBar
+  describeYear = null,
   // The x value of the header-selected year's category, shaded (SelectedYearShade)
   selectedX = null,
 }) {
   const narrow = useNarrowViewport();
   const [hovered, setHovered] = useState(null);
+  // The hovered year's index, to place the year panel beside its band
+  const [activeIndex, setActiveIndex] = useState(null);
   const [ref, width] = useElementWidth();
   const yWidth = tickWidth(yTicks, yFormat);
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
+  // The year panel's place: right of the hovered year's band, or left of it
+  // when the right has no room, at the top of the plot
+  const yearPanelPosition = (index) => {
+    if (index == null || !width || !data.length) return undefined;
+    const left = yWidth + MARGIN.left;
+    const band = Math.max(0, width - left - MARGIN.right) / data.length;
+    const start = left + Number(index) * band;
+    const right = start + band + 8;
+    const x = right + YEAR_PANEL_WIDTH <= width ? right : Math.max(0, start - YEAR_PANEL_WIDTH - 8);
+    return { x, y: 0 };
+  };
 
   return (
     <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote} ramp={ramp}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
+        <BarChart
+          data={data}
+          margin={MARGIN}
+          barCategoryGap={barCategoryGap}
+          barGap={barGap}
+          onMouseMove={describeYear ? (state) => setActiveIndex(state?.activeTooltipIndex ?? null) : undefined}
+          onMouseLeave={describeYear ? () => setActiveIndex(null) : undefined}
+        >
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -364,7 +422,18 @@ export function LsBarChart({
           {/* The header-selected year, shaded; nothing when it is not a category here */}
           {selectedX != null && <Customized component={<SelectedYearShade value={selectedX} />} />}
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-          {describeBar ? (
+          {describeYear ? (
+            // Beside the hovered year's band, on whichever side has room;
+            // under the plot on a phone
+            <Tooltip
+              {...TOOLTIP_PROPS}
+              cursor={false}
+              {...(narrow
+                ? { position: { x: 0, y: plotHeight(narrow) - 8 }, allowEscapeViewBox: { x: false, y: true } }
+                : { position: yearPanelPosition(activeIndex) })}
+              content={<YearPanel describe={describeYear} hoveredKey={hovered?.key} />}
+            />
+          ) : describeBar ? (
             // Beside the bar, never over the year's other bars
             <Tooltip
               {...TOOLTIP_PROPS}
@@ -388,8 +457,8 @@ export function LsBarChart({
               dataKey={s.key}
               name={s.name}
               fill={s.colour}
-              onMouseEnter={describeBar ? (_, index) => setHovered({ key: s.key, index }) : undefined}
-              onMouseLeave={describeBar ? () => setHovered(null) : undefined}
+              onMouseEnter={describeBar || describeYear ? (_, index) => setHovered({ key: s.key, index }) : undefined}
+              onMouseLeave={describeBar || describeYear ? () => setHovered(null) : undefined}
               stackId={stacked ? "stack" : undefined}
               shape={barShape(stacked ? series.map((item) => item.key) : [s.key])}
               maxBarSize={maxBarSize}
@@ -397,7 +466,7 @@ export function LsBarChart({
             >
               {cellColours && data.map((d, i) => <Cell key={i} fill={cellColours[i]} />)}
               {/* The hovered bar stays full, every other bar dims */}
-              {describeBar &&
+              {(describeBar || describeYear) &&
                 !cellColours &&
                 data.map((d, i) => (
                   <Cell key={i} fill={s.colour} fillOpacity={hovered && (hovered.key !== s.key || hovered.index !== i) ? 0.3 : 1} />

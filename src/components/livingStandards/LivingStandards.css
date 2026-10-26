@@ -1039,3 +1039,43 @@
   height: 10px;
   border-radius: 2px;
 }
+
+/* The growth chart's year panel: every group's value for the hovered
+   year, in short columns */
+.ls-year-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-micro);
+}
+
+.ls-year-panel-grid li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  border-radius: 3px;
+}
+
+.ls-year-panel-grid li.is-hovered {
+  background: var(--pe-gray-100);
+}
+
+.ls-year-panel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ls-year-panel-group {
+  color: var(--pe-gray-500);
+  min-width: 1.4em;
+}
+
+.ls-year-panel-value {
+  margin-left: auto;
+}
