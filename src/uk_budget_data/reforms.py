@@ -653,8 +653,8 @@ def _create_domestic_gas_zero_vat() -> Reform:
         id=GAS_VAT_ID,
         name="Zero VAT on domestic gas",
         description=(
-            "Drill 5 mock measure. No VAT on household gas bills, instead "
-            "of 5%, from 1 April 2027 to 31 March 2028."
+            "Drill 5 mock measure. No VAT on household gas bills in Great "
+            "Britain, instead of 5%, from 1 April 2027 to 31 March 2028."
         ),
         simulation_modifier=zero_vat_on_domestic_gas,
     )

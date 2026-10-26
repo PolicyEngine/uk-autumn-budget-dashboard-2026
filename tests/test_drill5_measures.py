@@ -183,3 +183,23 @@ def test_gas_vat_cut_lowers_vat_in_2027_only():
     assert after.calculate("household_net_income", 2028)[0] == pytest.approx(
         before.calculate("household_net_income", 2028)[0], abs=0.01
     )
+
+
+def test_gas_vat_cut_is_great_britain_only():
+    situation = {
+        "people": {"p": {"age": {2027: 40}}},
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {
+            "h": {
+                "members": ["p"],
+                "region": {2027: "NORTHERN_IRELAND"},
+                "gas_consumption": {2027: 1_050},
+            }
+        },
+    }
+    before = Simulation(situation=situation)
+    after = Simulation(situation=situation)
+    zero_vat_on_domestic_gas(after)
+    assert after.calculate("household_net_income", 2027)[0] == pytest.approx(
+        before.calculate("household_net_income", 2027)[0], abs=0.01
+    )
