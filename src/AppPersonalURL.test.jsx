@@ -96,10 +96,15 @@ describe("a later snapshot keeps the reader's selection", () => {
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
+    // Before the withdrawal the example cards may ask the household API in
+    // the background (useExampleFigures); once beta is withdrawn nothing more
+    // is asked for the selection
     await publish(await serve({ beta: "withdrawn" }, 1), calls);
     expect(await screen.findByText(REASON)).toBeInTheDocument();
     expect(policies()).toBe("alpha,beta");
-    expect(householdCalls(calls)).toEqual([]);
+    const asked = householdCalls(calls).length;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(householdCalls(calls)).toHaveLength(asked);
   });
 
   it("keeps a selection narrowed by removal when a later snapshot adds nothing", async () => {
