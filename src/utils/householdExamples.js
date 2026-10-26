@@ -18,6 +18,7 @@
  * shows (#104).
  */
 import { EXAMPLE_ANSWERS } from "./exampleAnswers";
+import { decileSpending, spendingInputs } from "./exampleSpending";
 import { YOUNG_PERSON_PRESETS } from "./youngPersonPresets";
 
 // Every example starts from every answer fixed (exampleAnswers.js): no
@@ -45,10 +46,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       tenure: "OWNED_OUTRIGHT",
       // null: the full new State Pension for the year
       state_pension_per_year: null,
-      petrol_spending_per_year: 300,
-      diesel_spending_per_year: 0,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£255 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(1),
     },
-    note: "Aged 70 with the full new State Pension and no other income; owns their home outright. Drives a little (£300 of petrol a year).",
+    note: "Aged 70 with the full new State Pension and no other income; owns their home outright. Spends £760 a year on electricity and £320 on petrol and diesel, the average for households in the lowest tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(1).source,
   },
   {
     id: "family-uc",
@@ -70,9 +75,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       tenure: "RENT_PRIVATELY",
       // Fixed: the North West's average private rent (ONS, September 2026)
       monthly_rent: 975,
-      electricity_spending_per_year: 1300,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£814 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(5),
     },
-    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household.",
+    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(5).source,
   },
   {
     id: "graduate-35k",
@@ -91,8 +101,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       tenure: "RENT_PRIVATELY",
       // Fixed: the North West's average private rent (ONS, September 2026)
       monthly_rent: 975,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£689 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(4),
     },
-    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents privately at £975 a month, the North West's average.",
+    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents privately at £975 a month, the North West's average. Spends £1,010 a year on electricity and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(4).source,
   },
   {
     id: "driver",
@@ -112,8 +128,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       tenure: "OWNED_WITH_MORTGAGE",
       petrol_spending_per_year: 2600,
       diesel_spending_per_year: 0,
+      // Electricity: the average for its tenth by gross income (748
+      // a week in 2027-28), ONS Family Spending FYE 2025, Table A6
+      // (exampleSpending.js); its petrol is its own, above
+      electricity_spending_per_year: decileSpending(4).electricity,
     },
-    note: "Aged 40, earns £38,000 and spends £2,600 a year on petrol, about four times the average household; owns with a mortgage.",
+    note: "Aged 40, earns £38,000 and spends £2,600 a year on petrol, about four times the average household; owns with a mortgage. Spends £1,010 a year on electricity, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: `Petrol: its own, about four times the average household. Electricity: ${decileSpending(4).source.charAt(0).toLowerCase()}${decileSpending(4).source.slice(1)}`,
   },
   {
     id: "higher-earner",
@@ -129,8 +151,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       current_age: 45,
       current_salary: 110000,
       tenure: "OWNED_WITH_MORTGAGE",
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£2,166 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(9),
     },
-    note: "Aged 45, earns £110,000 and owns with a mortgage.",
+    note: "Aged 45, earns £110,000 and owns with a mortgage. Spends £1,170 a year on electricity and £1,320 on petrol and diesel, the average for households in the ninth tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(9).source,
   },
   {
     id: "lone-parent",
@@ -162,8 +190,14 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       // a year, about £205 a month. Universal Credit pays back up to 85% of
       // it (DWP)
       monthly_childcare: 205,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£627 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(4),
     },
-    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs.",
+    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Spends £1,010 a year on electricity and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(4).source,
   },
 ];
 

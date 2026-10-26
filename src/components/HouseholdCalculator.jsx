@@ -955,6 +955,7 @@ function HouseholdCalculator({
               policyCount={submitted?.policies.length ?? householdPolicies.length}
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
+              spendingSource={activePreset?.spendingSource ?? null}
             />
           )}
         </div>
