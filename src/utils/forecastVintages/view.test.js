@@ -193,6 +193,27 @@ describe("the committed file", () => {
       },
       /only one value/,
     ],
+    // Found by the seventh review: figures far finer than the build writes
+    // underflow, carrying an index on to 0 or passing incompatible bases
+    [
+      "figures no finer than four decimals",
+      (d) => {
+        const m = byId(d, "rhdi_per_person").level;
+        for (const series of [m.outturn, ...m.vintages.map((v) => v.values)]) for (const k of Object.keys(series)) series[k] = 1e-200;
+        m.check.largest_gap = 0;
+      },
+      /no outturn/,
+    ],
+    [
+      "forecasts no finer than four decimals",
+      (d) => {
+        byId(d, "rhdi_per_person").level.vintages.forEach((v, i) => {
+          for (const k of Object.keys(v.values)) v.values[k] = (i % 2 ? 1000 : 1) * Number.MIN_VALUE;
+        });
+      },
+      /has no values/,
+    ],
+    ["a figure of 0.00005", (d) => (byId(d, "unemployment").level.outturn["2000"] = 0.00005), /no outturn/],
     // Found by the sixth review: launch figures that meet no outturn set
     // no kind, so levels drawn from growth rates passed
     [
@@ -384,13 +405,16 @@ describe("a forecast that cannot be drawn", () => {
   // Found by the third review: values the file may hold whose index or %
   // change no axis can step over (an index of a tiny base) are not drawn
   it("leaves a view whose values are too large to draw unavailable, never on a 0 to 1 axis", () => {
-    // The outturn at the parliament's start, where no forecast but the
-    // November 2024 one is launched: without it, nothing sets the outturn
-    // there against an estimate, so the loader takes the file
+    // The smallest figure the file holds (0.0001) at the parliament's
+    // start, the index's base, where no forecast but the October 2024 one
+    // is launched: without it, nothing sets the outturn there against an
+    // estimate, so the loader takes the file. A year in 1960-61 then
+    // rises from 0.0001 to 2 million, which as an index on that base, or
+    // as a % change, is past what can be drawn
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
     v.level.vintages = v.level.vintages.filter((x) => x.launch !== "2024Q2");
-    v.level.outturn["2024Q2"] = 1e-9;
+    Object.assign(v.level.outturn, { "2024Q2": 0.0001, "1960Q1": 0.0001, "1961Q1": 2e6 });
     expect(forecastVintagesProblem(data)).toBeNull();
     for (const unit of ["index", "pct"]) {
       expect(buildView(data, v, { unit }).unavailable).toMatch(/^The (March 2026 forecast|outturn) of this measure cannot be drawn in this unit\.$/);

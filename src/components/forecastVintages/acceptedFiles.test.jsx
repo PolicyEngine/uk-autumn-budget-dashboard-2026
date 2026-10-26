@@ -29,8 +29,10 @@
  * - It mounts on its default unit, showing what the builder makes of that
  *   view and nothing else: its reason it cannot be drawn, or a chart with
  *   a line for each forecast and the outturn, each through its own
- *   series' points on one axis, and the view's labelled points with their
- *   values, in the window it opens on (C).
+ *   series' points on the axes as drawn (each y tick at the value its
+ *   label gives, each x tick at its period, every point within the y
+ *   ticks), and the view's labelled points with their values, in the
+ *   window it opens on (C).
  *
  * WHAT_IT_HOLDS names every field the file has. A field it does not name
  * fails the test, so a field added to the file must be added there.
@@ -117,12 +119,14 @@ function launchOf(frequency, year, month) {
 }
 
 /** {period: number}, with no period missing between its ends, as a Map; null if not. */
+// The build writes every figure to four decimals (_ordered): 0, or no
+// finer than 1e-4
 function seriesOf(values, frequency) {
   if (!plain(values)) return null;
   const out = new Map();
   for (const [k, v] of Object.entries(values)) {
     const t = periodNo(k, frequency);
-    if (t === null || !num(v)) return null;
+    if (t === null || !num(v) || (v !== 0 && Math.abs(v) < 1e-4)) return null;
     out.set(t, v);
   }
   const ts = [...out.keys()].sort((a, b) => a - b);
@@ -451,6 +455,9 @@ const VALUES = [
   "2024-25",
   -1,
   0,
+  1e-200,
+  0.00005,
+  0.0001,
   0.02,
   0.5,
   1.5,
@@ -808,14 +815,41 @@ describe("a forecasts file the loader accepts", () => {
       if (drawn.length !== want.length) throw new Error(`${where}: line ${i} (${key}) has ${drawn.length} points, its series ${want.length}`);
       want.forEach(([x, y], j) => pairs.push({ x, y, px: drawn[j][0], py: drawn[j][1], key }));
     });
-    const affine = (get, put) => {
-      const [lo, hi] = [pairs.reduce((a, b) => (get(b) < get(a) ? b : a)), pairs.reduce((a, b) => (get(b) > get(a) ? b : a))];
-      if (get(hi) === get(lo)) return pairs.every((q) => Math.abs(put(q) - put(lo)) < 0.01);
-      const slope = (put(hi) - put(lo)) / (get(hi) - get(lo));
-      return pairs.every((q) => Math.abs(put(lo) + slope * (get(q) - get(lo)) - put(q)) < 0.01);
+    // Each pixel an affine function of period and value, fitted on the
+    // points: every point on it, later to the right and more upwards
+    const fitOf = (get, put) => {
+      const lo = pairs.reduce((a, b) => (get(b) < get(a) ? b : a));
+      const hi = pairs.reduce((a, b) => (get(b) > get(a) ? b : a));
+      const slope = get(hi) === get(lo) ? 0 : (put(hi) - put(lo)) / (get(hi) - get(lo));
+      const fits = pairs.every((q) => Math.abs(put(lo) + slope * (get(q) - get(lo)) - put(q)) < 0.01);
+      return { fits, slope, at: (pixel) => get(lo) + (pixel - put(lo)) / slope };
     };
-    if (!affine((q) => q.x, (q) => q.px)) throw new Error(`${where}: a line's points are not at their periods`);
-    if (!affine((q) => q.y, (q) => q.py)) throw new Error(`${where}: a line's points are not at its series' values`);
+    const xs = fitOf((q) => q.x, (q) => q.px);
+    const ys = fitOf((q) => q.y, (q) => q.py);
+    if (!xs.fits || !(xs.slope > 0)) throw new Error(`${where}: a line's points are not at their periods`);
+    if (!ys.fits || !(ys.slope < 0)) throw new Error(`${where}: a line's points are not at its series' values`);
+    // Tied to the axes as drawn: each y tick sits at the value its label
+    // gives, every point within the ticks' range, and each x tick at the
+    // period its label names
+    const tickAt = (axis, attribute) =>
+      [...document.querySelectorAll(`.recharts-${axis} .recharts-cartesian-axis-tick-value`)].map((t) => ({ pixel: Number(t.getAttribute(attribute)), label: t.textContent }));
+    const yTicks = tickAt("yAxis", "y");
+    if (yTicks.length < 2) throw new Error(`${where}: ${yTicks.length} y ticks`);
+    // Read back to a millionth of a step (and -0 as 0), past float noise
+    const raw = yTicks.map((t) => ys.at(t.pixel));
+    const step = Number(Math.abs(raw[1] - raw[0]).toPrecision(10));
+    const tickValues = raw.map((v) => Number((Math.round(v / (step / 1e6)) * (step / 1e6)).toPrecision(10)) || 0);
+    const decimals = stepDecimals(step);
+    yTicks.forEach((t, i) => {
+      if (expected.format(tickValues[i], decimals) !== t.label) throw new Error(`${where}: the y tick "${t.label}" sits at ${tickValues[i]}`);
+    });
+    const [top, bottom] = [Math.min(...yTicks.map((t) => t.pixel)), Math.max(...yTicks.map((t) => t.pixel))];
+    if (pairs.some((q) => q.py < top - 0.5 || q.py > bottom + 0.5)) throw new Error(`${where}: a point off the y axis`);
+    for (const t of tickAt("xAxis", "x")) {
+      const period = xs.at(t.pixel);
+      const named = expected.frequency === "quarterly" ? String(Math.floor(Math.round(period) / 4)) : expected.label(Math.round(period));
+      if (Math.abs(period - Math.round(period)) > 1e-6 || named !== t.label) throw new Error(`${where}: the x tick "${t.label}" sits at period ${period}`);
+    }
     const want = pointsIn(expected.points, opened).map((p) => `${p.role} ${expected.format(p.y)}`);
     const got = [...document.querySelectorAll(".fv-point-label")].map((g) => `${g.dataset.role} ${g.querySelector("text").textContent}`);
     if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${where}: labels ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);

@@ -45,8 +45,10 @@ const MAX_DECIMALS = 6;
 export const MAX_VALUE = 1e9;
 // The years a period can fall in
 const YEARS = [1900, 2100];
-// largest_gap is written to four decimals, so it is 0 or at least this;
-// and no tolerance is finer
+// Every figure and largest_gap is written to four decimals, so each is 0
+// or at least this in size; and no tolerance is finer. A figure finer
+// than that is none the build wrote, and one far finer (1e-200) would
+// underflow when a forecast is carried on or set against the outturn
 const ROUNDING = 1e-4;
 // How far a forecast's figure for its launch period may sit from the
 // outturn and still read as its kind (kindProblem). The launch period was
@@ -89,13 +91,15 @@ function isPeriod(key, frequency) {
   }
 }
 
-// {period: value}: at least one period, every value a number in range,
-// and no period missing between the first and the last (a value with no
+// {period: value}: at least one period, every value a number in range and
+// 0 or no finer than four decimals, as the build writes them, and no
+// period missing between the first and the last (a value with no
 // neighbour would be drawn as nothing)
+const isFigure = (v) => isNumber(v) && (v === 0 || Math.abs(v) >= ROUNDING);
 function isSeries(values, frequency) {
   if (!isObject(values)) return false;
   const entries = Object.entries(values);
-  if (!entries.length || !entries.every(([k, v]) => isPeriod(k, frequency) && isNumber(v))) return false;
+  if (!entries.length || !entries.every(([k, v]) => isPeriod(k, frequency) && isFigure(v))) return false;
   const periods = entries.map(([k]) => periodIndex(k, frequency)).sort((a, b) => a - b);
   return periods.every((t, i) => i === 0 || t === periods[i - 1] + 1);
 }

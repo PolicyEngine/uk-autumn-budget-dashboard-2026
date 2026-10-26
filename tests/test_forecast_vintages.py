@@ -887,6 +887,28 @@ def test_a_quarterly_measures_pounds_and_only_those_are_at_an_annual_rate(
         B.check_units(variable)
 
 
+def test_every_committed_figure_is_written_to_four_decimals(committed):
+    # The page refuses a figure that is not 0 and finer than 1e-4: one far
+    # finer would underflow when a forecast is carried on (load.js, isFigure)
+    for variable in committed["variables"]:
+        for name in ("level", "share"):
+            measure = variable.get(name)
+            if not measure:
+                continue
+            for series in [measure["outturn"]] + [
+                v["values"] for v in measure["vintages"]
+            ]:
+                for value in series.values():
+                    assert value == round(value, B.DECIMALS)
+                    assert value == 0 or abs(value) >= 10**-B.DECIMALS
+
+
+@given(st.dictionaries(st.integers(1900, 2100), st.floats(-1e9, 1e9)))
+def test_the_build_writes_no_figure_finer_than_four_decimals(values):
+    for value in B._ordered(values).values():
+        assert value == 0 or abs(value) >= 10**-B.DECIMALS
+
+
 # --- An outturn check reads as true -------------------------------------------
 
 CHECK_CASES = json.loads(
