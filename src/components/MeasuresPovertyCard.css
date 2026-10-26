@@ -160,8 +160,10 @@
 
 /* Beside a taller card the plot sits in the middle of its row and the
    logo keeps its size at the foot */
-.mp-card .chart-plot {
-  align-self: center;
+@media (min-width: 1025px) {
+  .charts-grid > .mp-card:not(:only-child) > .ls-chart-rows > .chart-plot {
+    align-self: center;
+  }
 }
 
 .mp-card .chart-logo {
