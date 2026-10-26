@@ -30,6 +30,8 @@ export default function YearRangeFields({ years, from, to, onChange }) {
       <Segmented
         group={{
           label: "From",
+          // Choosing From keeps the popover open for the To year
+          keepOpen: true,
           value: from,
           onChange: (value) => onChange(value, to),
           options: years.slice(0, -1).map((fy) => option(fy, fy >= to, "Choose a year before the end year")),
