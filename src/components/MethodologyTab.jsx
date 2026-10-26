@@ -427,7 +427,7 @@ function MethodologyTab({ onShowTab }) {
                 items={[
                   [
                     "Poverty rate",
-                    "The share of people in households below the absolute poverty line before housing costs (60% of the 2024-25 median, held in real terms), with and without the policies.",
+                    "The share of people in households below the absolute poverty line before housing costs (60% of the 2024-25 median, held in real terms), with and without the policies. The poverty line is measured on HBAI income, which is before indirect taxes, so the VAT and fuel duty measures do not change it.",
                   ],
                   [
                     "Inequality",

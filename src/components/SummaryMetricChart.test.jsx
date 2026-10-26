@@ -49,4 +49,17 @@ describe("SummaryMetricChart", () => {
     );
     expect(screen.getByRole("status")).toHaveTextContent("Not yet published for this selection");
   });
+
+  it("says a selection changes nothing rather than drawing a plot of zeros", () => {
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={[{ reform_id: "fuel_duty_rise_deferral", year: "2027", gini_change: "-0.0004", poverty_change_pp: "0" }]}
+        policies={POLICIES}
+        selectedPolicies={["fuel_duty_rise_deferral"]}
+        selectedYear={2027}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("do not change the poverty rate");
+  });
 });

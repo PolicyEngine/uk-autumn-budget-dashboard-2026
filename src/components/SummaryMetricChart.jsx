@@ -53,6 +53,7 @@ export const SUMMARY_METRICS = {
     format: (value) => `${Math.abs(value).toFixed(2)}pp`,
     csvUnits: "percentage points; people in households below the absolute poverty line, before housing costs",
     file: "poverty-rate-change",
+    noChange: "The selected policies do not change the poverty rate in any year shown.",
   },
   inequality: {
     key: "gini_change",
@@ -67,6 +68,7 @@ export const SUMMARY_METRICS = {
     format: (value) => `${Math.abs(value).toFixed(2)}%`,
     csvUnits: "% change in the Gini coefficient (equivalised household net income)",
     file: "gini-change",
+    noChange: "The selected policies do not change income inequality in any year shown.",
   },
 };
 
@@ -101,6 +103,10 @@ function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selected
   const run = wholeSelectionRun(policies, selectedPolicies);
   const data = metricByYear(rows, run, metric);
   const shown = data.filter((point) => point.value !== null);
+  // Every shown value reads as zero at the tooltip's precision (a measure
+  // that moves no one across the poverty line): a note, not a plot of zeros
+  const allZero =
+    shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
   const { domain, ticks } = zeroBasedAxis(shown.map((point) => point.value));
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
@@ -147,6 +153,10 @@ function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selected
           // before its rows are published: say so, never draw zeros
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>Not yet published for this selection</p>
+          </div>
+        ) : allZero ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{metric.noChange}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
