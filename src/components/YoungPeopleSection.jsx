@@ -196,9 +196,9 @@ const SINGLE_AGE_LEGEND = [
 ];
 
 /** The 16 to 24 tick in bold, the others as usual. */
-function AgeTick({ x, y, payload, narrow }) {
+function AgeTick({ x, y, payload, narrow, group = YOUNG_BAND }) {
   const band = AGE_BANDS.find((candidate) => candidate.label === payload.value);
-  const young = band?.key === YOUNG_BAND;
+  const young = band?.key === group;
   return (
     <text
       x={x}
@@ -310,7 +310,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
   );
 }
 
-function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age" }) {
   const catalogue = useMeasureCatalogue();
   const {
     allPolicyNames: ALL_POLICY_NAMES,
@@ -318,7 +318,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     bySeriesKey,
   } = catalogue;
   const chartRef = useRef(null);
-  const [view, setView] = useState("band");
+  // By age shows single years of age in a card of their own (SingleAgeCard)
+  const [chosenView, setView] = useState("band");
+  const view = bandsOnly ? "band" : chosenView;
   const single = view === "single";
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
@@ -363,13 +365,15 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   const activeNames = drawnNames(members);
   const netLabel = activeNames.length > 1 ? "Net change" : undefined;
   const key = useMeasureKey(members, netLabel);
-  const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
+  // The chosen group's band, highlighted (none for pensioners or all ages,
+  // which are not one band)
+  const youngLabel = AGE_BANDS.find((band) => band.key === group)?.label ?? null;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
   const description = single ? SINGLE_AGE_DESCRIPTION : MEAN_DESCRIPTION;
   const incomplete = data.some((point) => point.incomplete);
 
-  const title = `Average change by age, ${yearLabel}`;
+  const title = `${titleBase}, ${yearLabel}`;
   const exportName = single
     ? `young-people-change-by-single-age-${selectedYear}`
     : `young-people-change-by-age-${selectedYear}`;
@@ -445,7 +449,13 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        {/* By age's choices (the age group, the view) first */}
+        {(!bandsOnly || extraOptions.length > 0) && (
+          <ControlBar
+            name={title}
+            options={[...extraOptions, ...(bandsOnly ? [] : [{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }])]}
+          />
+        )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
@@ -504,10 +514,10 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
-              <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />
+              {youngLabel && <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />}
               <XAxis
                 dataKey="label"
-                tick={<AgeTick narrow={narrow} />}
+                tick={<AgeTick narrow={narrow} group={group} />}
                 axisLine={AXIS_LINE}
                 tickLine={false}
                 interval={0}
@@ -613,13 +623,17 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
 /** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
 
 
-function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId }) {
+export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND, extraOptions = [] }) {
   const chartRef = useRef(null);
   // By age group or by single year of age, as "Average change by age"
   const [view, setView] = useState("band");
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
-  const [groupKey, setGroupKey] = useState(YOUNG_BAND);
+  const [groupKey, setGroupKey] = useState(group);
+  // By age's Age group drives it; the card's own choice holds until that changes
+  useEffect(() => {
+    setGroupKey(group);
+  }, [group]);
   const [hide, setHide] = useState("hide");
   const [order, setOrder] = useState("size");
   const [direction, setDirection] = useState("both");
@@ -710,7 +724,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           <ControlBar
             name={title}
             options={[
-              {
+              ...extraOptions,
+              // By age's group control stands in for the card's own
+              !extraOptions.length && {
                 label: "Age group",
                 value: groupKey,
                 onChange: setGroupKey,
@@ -722,7 +738,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">

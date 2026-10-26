@@ -1,16 +1,19 @@
 import TitleIcon from "../TitleIcon";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
-import { InfoTip } from "../Tip";
-import { CircleSlash, ListChecks } from "lucide-react";
+import Tip, { InfoTip } from "../Tip";
+import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
+import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
 import NetIncomeWaterfall from "./NetIncomeWaterfall";
+import { layerRows, layersInUse } from "./netIncomeParts";
+import { partsInUse } from "./marginalRateParts";
+import { componentsInUse } from "./sweepComponents";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
 import IncomePositionChart from "./IncomePositionChart";
@@ -280,6 +283,7 @@ function AboutResult({ items, caution, bars }) {
   const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   const parts = [
+    caution && "Caveats",
     items.length > 0 && "Based on",
     noEffect.length > 0 && "No effect on you",
     (notes.length > 0 || under.length > 0) && "Notes",
@@ -297,9 +301,17 @@ function AboutResult({ items, caution, bars }) {
     <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
       <div className="info-sections result-about">
         {caution && (
-          <ul className="info-list result-about-caution">
-            <li>Most of the change comes from assumed fuel and electricity spending.</li>
-          </ul>
+          <section className="info-section info-section-caveat">
+            <h4 className="info-heading">
+              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+              Caveats
+            </h4>
+            <div className="info-body">
+              <ul className="info-list info-caveats result-about-caution">
+                <li>Most of the change comes from assumed fuel and electricity spending.</li>
+              </ul>
+            </div>
+          </section>
         )}
         <div className="result-about-columns">
           {items.length > 0 && (
@@ -353,40 +365,108 @@ function AboutResult({ items, caution, bars }) {
 }
 
 const TENURE_WORDS = {
-  RENT_PRIVATELY: "renting",
-  RENT_FROM_COUNCIL: "renting from the council",
-  RENT_FROM_HA: "renting from a housing association",
-  OWNED_WITH_MORTGAGE: "owns with a mortgage",
-  OWNED_OUTRIGHT: "owns outright",
+  RENT_PRIVATELY: "Renting",
+  RENT_FROM_COUNCIL: "Renting from the council",
+  RENT_FROM_HA: "Renting from a housing association",
+  OWNED_WITH_MORTGAGE: "Owns with a mortgage",
+  OWNED_OUTRIGHT: "Owns outright",
 };
 
 /**
- * One short line on whose result it is, from the answers and the API's
- * answer: "£24,166 salary · renting in Central Greater Manchester · band D",
- * with the family when it is not one adult ("couple, 2 children"). The
- * details stay in "About this result".
+ * Whose result it is, as a few short facts in plain words, each a chip
+ * under the figure: salary, home and place, Council Tax band, family, and
+ * whether the energy and fuel spending is assumed. The details stay in
+ * "About this result".
  *
  * @param {Object} data - normaliseHouseholdImpact's answer
  * @param {{tenure?: string, regionLabel?: string, partner?: boolean, children?: number}} household
+ * @param {{petrol?: number, diesel?: number, electricity?: number, assumed?: string|null}|null} [spending]
+ * @returns {Array<{key: string, icon: string, text: string, tip?: string}>}
  */
-export function householdSummary(data, { tenure = null, regionLabel = null, partner = false, children = 0 } = {}) {
-  const parts = [];
+export function householdFacts(data, { tenure = null, regionLabel = null, partner = false, children = 0 } = {}, spending = null) {
+  const facts = [];
   const own = data.salaryUsed ?? 0;
   const theirs = data.partnerSalaryUsed ?? 0;
-  if (own > 0 && theirs > 0) parts.push(`${money(own)} and ${money(theirs)} salaries`);
-  else if (own + theirs > 0) parts.push(`${money(own + theirs)} salary`);
-  const family = [partner ? "couple" : null, children > 0 ? `${children} ${children === 1 ? "child" : "children"}` : null]
-    .filter(Boolean)
-    .join(", ");
-  if (family) parts.push(family);
+  if (own > 0 && theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own)} and ${money(theirs)} salaries` });
+  else if (own + theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own + theirs)} salary` });
+  else facts.push({ key: "salary", icon: "salary", text: "No earnings" });
   const words = TENURE_WORDS[tenure] ?? null;
-  // A renter's place is their rent area ("renting in …"); anyone else's,
-  // their region on its own
-  const rentArea = tenure && tenure.startsWith("RENT") && data.area?.brma ? areaName(data.area.brma) : null;
-  if (words) parts.push(rentArea ? `${words} in ${rentArea}` : words);
-  if (!rentArea && regionLabel) parts.push(regionLabel);
-  if (data.councilTax?.band) parts.push(`band ${data.councilTax.band}`);
-  return parts.join(" · ");
+  // A renter's place is their rent area; anyone else's, their region
+  const place = tenure && tenure.startsWith("RENT") && data.area?.brma ? areaName(data.area.brma) : regionLabel;
+  if (words || place) facts.push({ key: "home", icon: "home", text: [words, place].filter(Boolean).join(", ") });
+  if (data.councilTax?.band) facts.push({ key: "council-tax", icon: "receipt", text: `Council Tax band ${data.councilTax.band}` });
+  const family = partner ? "Couple" : "Single adult";
+  facts.push({
+    key: "family",
+    icon: "family",
+    text: children > 0 ? `${family}, ${children} ${children === 1 ? "child" : "children"}` : family,
+  });
+  if (spending?.assumed) {
+    const fuel = (spending.petrol ?? 0) + (spending.diesel ?? 0);
+    facts.push({
+      key: "spending",
+      icon: "energy",
+      text: "Assumed energy and fuel spending",
+      tip: `${money(spending.electricity ?? 0)} a year on electricity and ${money(fuel)} on petrol and diesel, ${spending.assumed === "average" ? "the average household's (ONS)" : "this example's"}. Change them in the form to match your household.`,
+    });
+  }
+  return facts;
+}
+
+const FACT_ICONS = { salary: BriefcaseBusiness, home: House, receipt: ReceiptText, family: UsersRound, energy: Zap };
+
+/** The facts as small chips that wrap whole, then "Edit" to change them. */
+function HouseholdFacts({ facts, onEdit }) {
+  return (
+    <ul className="result-facts" aria-label="Your household">
+      {facts.map((fact) => {
+        const Icon = FACT_ICONS[fact.icon] ?? House;
+        const chip = (
+          <span className="result-fact" tabIndex={fact.tip ? 0 : undefined}>
+            <Icon size={13} strokeWidth={2} aria-hidden="true" />
+            {fact.text}
+          </span>
+        );
+        return <li key={fact.key}>{fact.tip ? <Tip content={fact.tip}>{chip}</Tip> : chip}</li>;
+      })}
+      {onEdit && (
+        <li>
+          <button type="button" className="result-facts-edit" onClick={onEdit}>
+            Edit
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/**
+ * The two "Across earnings" cards, in step: one Before | After | Change
+ * choice, one set of components shown (a chip toggled on one is toggled on
+ * the other), and the salary hovered on one marked on the other.
+ */
+export function AcrossEarnings({ sweep, salary, yearLabel }) {
+  const [view, setView] = useState("after");
+  const [hidden, setHidden] = useState([]);
+  const [hover, setHover] = useState(null);
+  // The "+N with no effect for you" chip, open on both or neither
+  const [expanded, setExpanded] = useState(false);
+  // The components that apply on either card: both keys show these alike
+  const union = useMemo(() => {
+    const points = sweepPoints(sweep);
+    const net = sweep.netParts
+      ? new Set(layersInUse([...layerRows(points, sweep.netParts, "before"), ...layerRows(points, sweep.netParts, "after")]).map((layer) => layer.key))
+      : new Set();
+    const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
+    return componentsInUse(net, rate);
+  }, [sweep]);
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union };
+  return (
+    <div className="charts-grid single-year-chart-pair">
+      <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+      <MarginalRateChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+    </div>
+  );
 }
 
 /**
@@ -398,7 +478,7 @@ export function householdSummary(data, { tenure = null, regionLabel = null, part
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, summary = "" }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, facts = [], onEdit = null }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
@@ -437,8 +517,8 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
                 {share.replace(/^[+−]/, "")} of net income
               </p>
             )}
-            {/* Whose result it is, in one muted line */}
-            {summary && <p className="result-summary">{summary}</p>}
+            {/* Whose result it is, as chips that wrap whole */}
+            {facts.length > 0 && <HouseholdFacts facts={facts} onEdit={onEdit} />}
           </div>
         </div>
         <NetIncomeWaterfall
@@ -474,6 +554,7 @@ export function SingleYearHeadline({
   salarySource = null,
   spendingSource = null,
   household = null,
+  onEdit = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -519,7 +600,8 @@ export function SingleYearHeadline({
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
-            summary={household ? householdSummary(data, household) : ""}
+            facts={household ? householdFacts(data, household, spending) : []}
+            onEdit={onEdit}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
@@ -640,10 +722,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
         {data.sweep ? (
           // Net income (with its Net income / Change switch) beside the
           // marginal rate, a pair of cards whose rows line up; stacked on a phone
-          <div className="charts-grid single-year-chart-pair">
-            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-          </div>
+          <AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />

@@ -10,7 +10,7 @@
 import { cachedFile, cachedReceipt, forgetReceipt, rememberFile, rememberReceipt } from "./cache";
 import { parseTable, tableForFile, TABLES, withPovertyInequality } from "./csv";
 import { receiptProblems, sha256Hex, verifyReceiptFiles } from "./digest";
-import { manifestUrl, takeEarlyManifest } from "./early";
+import { manifestUrl, takeEarlyManifest, takeEarlyResponse } from "./early";
 import { assertCurrentRelease } from "./release";
 import {
   isDisplayable,
@@ -120,6 +120,16 @@ async function fetchBytes(fetchImpl, url, signal) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+// The head script may already have requested this receipt or file
+// (early.js); only the page's own fetch adopts it, a failed early request is
+// retried, and the bytes are checked as any others
+async function fetchEarly(fetchImpl, url, signal) {
+  const early = fetchImpl === globalThis.fetch ? takeEarlyResponse(url) : null;
+  const response = early ? await early.catch(() => null) : null;
+  if (response?.ok) return new Uint8Array(await response.arrayBuffer());
+  return fetchBytes(fetchImpl, url, signal);
+}
+
 /**
  * Fetch one entry's artifact and return its verified, typed tables, with
  * the package versions its receipt records as `engine`.
@@ -141,7 +151,7 @@ export async function loadArtifact(
   }
   const base = `${basePath}/data/${entry.artifact}`;
   const keptReceipt = await cachedReceipt(entry.artifact_sha256, fetchImpl);
-  const receiptBytes = keptReceipt ?? await fetchBytes(fetchImpl, `${base}/${RECEIPT_FILE}`, signal);
+  const receiptBytes = keptReceipt ?? await fetchEarly(fetchImpl, `${base}/${RECEIPT_FILE}`, signal);
   let receipt;
   try {
     receipt = JSON.parse(decode(receiptBytes));
@@ -179,7 +189,9 @@ export async function loadArtifact(
       const digest = files[fileName];
       let bytes = await cachedFile(digest, fetchImpl);
       if (!bytes) {
-        bytes = await fetchBytes(fetchImpl, `${base}/${fileName}`, signal);
+        // The head script may have requested it while the page loaded
+        // (early.js); it is used only if it hashes to the receipt's digest
+        bytes = await fetchEarly(fetchImpl, `${base}/${fileName}`, signal);
         if ((await sha256Hex(bytes)) !== digest) {
           throw new Error(`${fileName} does not match its receipt`);
         }

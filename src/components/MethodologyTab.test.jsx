@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { HOUSEHOLD_ABOUT_ID } from "./methodology/anchors";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -83,9 +86,11 @@ describe("MethodologyTab", () => {
     const { container } = renderTab(onShowTab);
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
-    const pointer = model.querySelector(".method-pointer");
-    expect(pointer).toHaveTextContent("What each measure does and how it is modelled is on Policies");
-    const link = within(pointer).getByRole("link", { name: "Policies" });
+    const summary = model.querySelector(".method-summary");
+    expect(summary.querySelectorAll("p")).toHaveLength(1);
+    expect(summary).toHaveTextContent("What each measure does and how it is modelled is on Policies");
+    const link = summary.querySelector("a.method-pointer");
+    expect(link).toHaveAccessibleName("Policies");
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
@@ -131,11 +136,15 @@ describe("MethodologyTab", () => {
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Household calculation",
     );
-    // The calculation is said once, in Household impact's "About these
-    // figures"; this slot points there.
-    expect(slot).toHaveTextContent("About these figures");
+    // The calculation is said once, in this section's technical details;
+    // the slot points there and to the tab
+    expect(slot).toHaveTextContent("Technical details");
     expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
     expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
+    const calc = document.getElementById(METHOD_ANCHORS.householdCalc);
+    expect(calc).toHaveTextContent("How the household calculation works");
+    const terms = [...calc.parentElement.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    expect(terms).toEqual(expect.arrayContaining(["Engine and measures", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
   });
 
   it("switches views from its links, in place", () => {
@@ -161,14 +170,15 @@ describe("MethodologyTab", () => {
     // Household impact is the "household" view (it was linked as "personal",
     // a view that does not exist)
     const household = document.getElementById(METHOD_SECTIONS.singleYear);
-    const about = within(household).getByRole("link", { name: "“About these figures”" });
-    expect(about).toHaveAttribute("href", `?tab=household#${HOUSEHOLD_ABOUT_ID}`);
-    fireEvent.click(about);
+    const tabLink = within(household).getByRole("link", { name: "Household impact tab" });
+    expect(tabLink).toHaveAttribute("href", "?tab=household");
+    fireEvent.click(tabLink);
     expect(onShowTab).toHaveBeenLastCalledWith("household");
-    const young = screen.getByRole("link", { name: "Young people results" });
-    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    // By age, with 16 to 24 chosen (the Young people sub-tab was merged into it)
+    const young = screen.getByRole("link", { name: "results by age" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=age&age=16-24#young-people");
     fireEvent.click(young);
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "age", { age: "16-24" });
   });
 
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {
@@ -193,6 +203,34 @@ describe("MethodologyTab", () => {
     for (const link of container.querySelectorAll('a[href^="#method-"]')) {
       expect(container.querySelector(link.getAttribute("href")), link.getAttribute("href")).not.toBeNull();
     }
+  });
+
+  it("keeps the space after every link: no JSX text after a tag that loses it in the build", () => {
+    // Next's compiler (SWC) drops the leading space of JSX text that runs on
+    // to another line after a closing tag ("net income</Term> under ...",
+    // shown as "net incomeunder"); jsdom's transform keeps it, so a render
+    // test cannot see it. Such text needs an explicit {" "}.
+    const root = join(fileURLToPath(import.meta.url), "..");
+    const files = [
+      "MethodologyTab.jsx",
+      "GeographyMethodology.jsx",
+      ...readdirSync(join(root, "methodology")).filter((f) => f.endsWith(".jsx")).map((f) => `methodology/${f}`),
+      "personal/singleYearMethodNotes.jsx",
+    ];
+    const tag = /(<\/[A-Za-z][\w.]*>|\/>) +(?=[^\s{<])/g;
+    const glued = [];
+    for (const file of files) {
+      const lines = readFileSync(join(root, file), "utf8").split("\n");
+      lines.forEach((line, index) => {
+        for (const match of line.matchAll(tag)) {
+          const rest = line.slice(match.index + match[0].length);
+          const next = (lines[index + 1] ?? "").trim();
+          if (/[<{]/.test(rest) || /^\s*(\/\/|\*)/.test(line) || !next || /^[<{)}/]/.test(next)) continue;
+          glued.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+    expect(glued).toEqual([]);
   });
 
   it("renders every section with its icon, so a missing icon import fails", () => {

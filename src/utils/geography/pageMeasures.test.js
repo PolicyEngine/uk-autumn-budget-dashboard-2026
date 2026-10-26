@@ -17,7 +17,7 @@ import { createElement } from "react";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useConstituencyView } from "../../hooks/useConstituencyView";
-import { resetGeographyCache } from "../../hooks/useGeographyData";
+import { BOUNDARIES_FILE, resetGeographyCache } from "../../hooks/useGeographyData";
 import { areaRouting, geographyFixture } from "../../test/geographyFixture";
 import {
   BETA,
@@ -73,7 +73,9 @@ async function publish(table, routing = areaRouting("available")) {
   const files = {
     ...bound,
     "area-routing.json": routing,
-    "uk_constituencies_2024.geojson": geographyFixture("constituencies.geojson"),
+    // The boundaries under the page's own file name (TopoJSON on the page;
+    // the loader reads a feature collection too)
+    [BOUNDARIES_FILE]: geographyFixture("constituencies.geojson"),
   };
   vi.stubGlobal(
     "fetch",

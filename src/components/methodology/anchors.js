@@ -12,6 +12,7 @@ export const METHOD_ANCHORS = {
   young: "method-young",
   personal: "method-personal",
   incomePosition: "method-income-position",
+  householdCalc: "method-household-calc",
   living: "method-living",
   forecastFeed: "method-forecast-feed",
   lsNotes: "method-ls-notes",
@@ -22,7 +23,7 @@ export const METHOD_ANCHORS = {
 // Every age card's About this chart ends here: who counts and the age bands
 export const AGE_METHOD = { anchor: METHOD_ANCHORS.young, label: "How we split results by age" };
 
-// Household impact's "About these figures", under its results, which the
+// Household impact's Breakdown card's About this chart, under its results, which the
 // Methodology view's Household calculation links to
 export const HOUSEHOLD_ABOUT_ID = "household-about-figures";
 

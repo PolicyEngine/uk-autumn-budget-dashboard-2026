@@ -895,11 +895,7 @@
 }
 
 /* The pointer to Policies, where each measure's description and modelling live */
-.method-summary .method-pointer {
-  margin-top: 8px;
-}
-
-.method-pointer a {
+.method-pointer {
   display: inline-flex;
   align-items: center;
   gap: 4px;

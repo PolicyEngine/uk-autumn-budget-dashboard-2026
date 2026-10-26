@@ -77,8 +77,7 @@ const LOADED = {
   // render once age_impact.csv is read.
   // Young people and Pensioners read the age table from verified artifacts;
   // the fixture's carry none, so both say so (#104)
-  young: (panel) => within(panel).findAllByText(/Results by age are not available/),
-  pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
+  age: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Pre-measures forecast's sub-tabs (?tab=outlook&sub=): each heading
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
@@ -168,8 +167,7 @@ afterEach(() => {
 const CASES = [
   // Population impact opens on Public finances; All households is ?sub=all
   ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
-  ["Population impact: Young people", "young", "/?sub=young", "Young people"],
-  ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
+  ["Population impact: By age", "age", "/?sub=age", "By age"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
   // The bare address is the landing page, over this view (landing.test.jsx)

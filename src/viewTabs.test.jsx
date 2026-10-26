@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { VIEWS, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
+import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
 
@@ -29,7 +29,10 @@ const tabs = () => within(viewList()).getAllByRole("tab");
 const subList = () => screen.getByRole("tablist", { name: "Population impact sections" });
 const subTabs = () => within(subList()).getAllByRole("tab");
 const band = (container) => container.querySelector(".title-row");
-const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
+// A pill is always in the band (never hidden or inert); "shown" is whether
+// it applies to the view: not faded, its button not aria-disabled
+const visible = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert") && !pill.hasAttribute("aria-hidden");
+const shown = (pill) => visible(pill) && !pill.classList.contains("is-inactive") && !pill.querySelector('.band-control[aria-disabled="true"]');
 
 describe("the view tabs", () => {
   it("are five tabs under the band, in order, with no view pill in the band", async () => {
@@ -83,8 +86,34 @@ describe("the view tabs", () => {
       fireEvent.click(tabs()[index]);
       const year = band(container).querySelector(".band-year");
       const policy = band(container).querySelector(".band-policy");
-      // Both stay in the band, so a hidden one keeps its place
+      // Both stay in the band, visible, so the band never moves; one that
+      // does not apply is faded and says why
+      expect([visible(year), visible(policy)]).toEqual([true, true]);
       expect([shown(year), shown(policy)]).toEqual(expected[view.value]);
+      expect(container.querySelector(".app")).not.toHaveAttribute("data-band");
+      if (!expected[view.value][0]) {
+        expect(year.querySelector(".band-control")).toHaveAttribute("aria-label", expect.stringContaining(YEAR_INACTIVE));
+        fireEvent.click(year.querySelector(".band-control"));
+        expect(year.querySelector('[role="listbox"]')).toBeNull();
+        // No visible tip: the reason is in the name only
+        fireEvent.mouseEnter(year.querySelector(".band-control"));
+        fireEvent.pointerEnter(year.querySelector(".band-control"));
+        fireEvent.focus(year.querySelector(".band-control"));
+        fireEvent.mouseOver(year.querySelector(".band-control"));
+        fireEvent.focusIn(year.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
+      }
+      if (!expected[view.value][1]) {
+        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", `Select policies: ${POLICIES_INACTIVE}`);
+        fireEvent.click(policy.querySelector(".band-control"));
+        expect(policy.querySelector(".policy-selector-dropdown")).toBeNull();
+        fireEvent.mouseEnter(policy.querySelector(".band-control"));
+        fireEvent.pointerEnter(policy.querySelector(".band-control"));
+        fireEvent.focus(policy.querySelector(".band-control"));
+        fireEvent.mouseOver(policy.querySelector(".band-control"));
+        fireEvent.focusIn(policy.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
+      }
     });
   });
 
@@ -213,7 +242,7 @@ describe("the view tabs", () => {
     expect(bar).toHaveClass("has-notch");
   });
 
-  it("split Population impact into six sub-tabs, Public finances first", async () => {
+  it("split Population impact into five sub-tabs, Public finances first", async () => {
     window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
@@ -227,8 +256,7 @@ describe("the view tabs", () => {
     expect(subTabs().map((tab) => tab.textContent)).toEqual([
       "Public finances",
       "All households",
-      "Young people",
-      "Pensioners",
+      "By age",
       "Living standards",
       "Poverty",
     ]);
@@ -239,8 +267,8 @@ describe("the view tabs", () => {
 
     fireEvent.click(subTabs()[2]);
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    expect(await screen.findByRole("tabpanel", { name: "By age" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("age");
     // The year and policy pills drive both sub-tabs
     expect(shown(band(document.body).querySelector(".band-year"))).toBe(true);
     expect(shown(band(document.body).querySelector(".band-policy"))).toBe(true);
@@ -253,25 +281,19 @@ describe("the view tabs", () => {
     expect(window.location.search).not.toContain("sub=");
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("age");
   });
 
-  it("open the Pensioners sub-tab from ?sub=pensioners, and write it on choosing it", async () => {
+  it("open By age with pensioners chosen from an old ?sub=pensioners link", async () => {
     window.history.replaceState({}, "", "/?sub=pensioners");
-    const { unmount } = await renderApp();
-    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("tabpanel", { name: "Pensioners" })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
-    unmount();
-
-    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
-    fireEvent.click(screen.getByRole("tab", { name: "Pensioners" }));
-    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tabpanel", { name: "By age" })).toBeInTheDocument();
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get("sub"), params.get("age")]).toEqual(["age", "pensioners"]);
   });
 
-  it("open the Young people sub-tab from the old links, keeping the hash", async () => {
+  it("open By age with 16 to 24 chosen from the old Young people links, keeping the hash", async () => {
     for (const [url, hash] of [
       ["/?tab=young", ""],
       ["/#young-people", "#young-people"],
@@ -283,21 +305,22 @@ describe("the view tabs", () => {
         "aria-selected",
         "true",
       );
-      expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+      expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
         "aria-selected",
         "true",
       );
       const params = new URLSearchParams(window.location.search);
-      expect([params.get("tab"), params.get("sub"), window.location.hash]).toEqual([
+      expect([params.get("tab"), params.get("sub"), params.get("age"), window.location.hash]).toEqual([
         "dashboard",
-        "young",
+        "age",
+        "16-24",
         hash,
       ]);
       unmount();
     }
   });
 
-  it("open Young people from a #young-people link on another view, and drop the hash on leaving", async () => {
+  it("open By age from a #young-people link on another view, and drop the hash on leaving", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
     window.history.replaceState({}, "", "/?tab=methodology#young-people");
@@ -306,7 +329,7 @@ describe("the view tabs", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -316,15 +339,16 @@ describe("the view tabs", () => {
     expect(window.location.search).not.toContain("sub=");
   });
 
-  it("open Young people from Methodology's link", async () => {
+  it("open By age, 16 to 24 chosen, from Methodology's link", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    fireEvent.click(screen.getByRole("link", { name: "Young people results" }));
-    expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+    fireEvent.click(screen.getByRole("link", { name: "results by age" }));
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get("sub"), params.get("age")]).toEqual(["age", "16-24"]);
   });
 
   it("gather the method notes on Methodology, each said once", async () => {

@@ -261,8 +261,8 @@ describe("the personal impact form", () => {
     // No catalogue here: no example features a measure it does not publish
     // (#185 on #104), so no tag
     expect(examples.every((item) => card(item).querySelector(".household-card-tag") === null)).toBe(true);
-    // Your household: what the form asks first, and the call to action
-    expect(yoursCard()).toHaveTextContent("Salary");
+    // Your household: its title, one line and the call to action, no hints
+    expect(yoursCard()).not.toHaveTextContent("Salary");
     expect(yoursCard()).toHaveTextContent("Enter your household");
     // Every card is chosen the same way (aria-pressed); your household
     // also opens the form it controls
@@ -355,7 +355,7 @@ describe("the personal impact form", () => {
       "Renter, 22",
       "Apprentice",
       "Pensioner",
-      "UC family",
+      "Universal Credit family",
       "Graduate",
       "Commuter",
       "High earner",

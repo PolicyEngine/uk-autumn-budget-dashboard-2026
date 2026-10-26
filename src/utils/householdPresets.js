@@ -8,6 +8,7 @@
  * own requests byte for byte. Any other request (an edited answer, another set
  * of measures) goes to the live API.
  */
+import { takeEarlyResponse } from "./publication/early";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { WIZARD_DEFAULTS } from "./householdDefaults";
@@ -130,8 +131,10 @@ let loading = null;
 function loadPresetFile(fetchImpl) {
   if (!loading) {
     const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/${PRESETS_FILE}`;
+    // The head script may have requested it already (publication/early.js)
+    const early = fetchImpl === globalThis.fetch ? takeEarlyResponse(url) : null;
     loading = Promise.resolve()
-      .then(() => fetchImpl(url))
+      .then(() => (early ? early.catch(() => fetchImpl(url)) : fetchImpl(url)))
       .then((response) => (response?.ok ? response.json() : null))
       .catch(() => null);
   }
