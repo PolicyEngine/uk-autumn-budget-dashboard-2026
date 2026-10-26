@@ -23,6 +23,7 @@ import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopl
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
 import PolicyCards from "./components/PolicyCards";
@@ -173,6 +174,9 @@ function App() {
 
   // Valid policy IDs from POLICIES
   const validPolicyIds = POLICIES.map((p) => p.id);
+
+  // Every "i" tooltip stays inside the screen (a phone's edge columns)
+  useEffect(() => installInfoTooltipClamp(), []);
 
   // Initialize from URL
   useEffect(() => {

@@ -1402,6 +1402,10 @@
   left: 50%;
   z-index: 100;
   width: 260px;
+  /* Never wider than the screen less a 16px margin each side; shifted
+     inside it by --tip-shift (utils/infoTooltip.js) near an edge */
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   padding: 12px 14px;
   font-size: 0.8rem;
   font-weight: 400;
@@ -1414,15 +1418,16 @@
   box-shadow: var(--pe-shadow-lg);
   opacity: 0;
   visibility: hidden;
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
   transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
+/* The arrow stays over the icon when the box is shifted */
 .info-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: clamp(12px, calc(50% - var(--tip-shift, 0px)), calc(100% - 12px));
   border: 6px solid transparent;
   border-top-color: var(--pe-gray-800);
   transform: translateX(-50%);
