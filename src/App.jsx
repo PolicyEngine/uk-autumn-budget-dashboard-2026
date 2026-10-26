@@ -17,8 +17,7 @@ import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
-import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
-import ViewLink from "./components/ViewLink";
+import LivingStandardsTab, { CurrentLawSection } from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -559,16 +558,7 @@ function App() {
         <div className="results-container">
           <SectionHeading
             title="How the measures change incomes"
-            subtitle={
-              <>
-                How the selected measures change net income across the income distribution in the selected year.
-                Incomes before any measure are on{" "}
-                <ViewLink tab="outlook" hash="living-incomes" onShowTab={handleTabChange}>
-                  Pre-measures forecast, Incomes under current law
-                </ViewLink>
-                .
-              </>
-            }
+            subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures are below."
           />
           <section id="deciles" className="report-section distributional-section">
             <div className="charts-grid">
@@ -594,6 +584,8 @@ function App() {
               selectedYear={distributionalYear}
             />
           </section>
+          {/* The Pre-measures forecast's incomes cards, as there */}
+          <CurrentLawSection id="incomes" />
         </div>
       );
     }
@@ -602,15 +594,7 @@ function App() {
         <div className="results-container">
           <SectionHeading
             title="How the measures change poverty"
-            subtitle={
-              <>
-                Poverty rates before any measure are on{" "}
-                <ViewLink tab="outlook" hash="living-poverty" onShowTab={handleTabChange}>
-                  Pre-measures forecast, Poverty under current law
-                </ViewLink>
-                .
-              </>
-            }
+            subtitle="With the selected measures: how they change poverty rates in the selected year. Poverty without the measures is below."
           />
           <section id="poverty" className="report-section hero-chart">
             <SummaryMetricChart
@@ -621,6 +605,8 @@ function App() {
               selectedYear={distributionalYear}
             />
           </section>
+          {/* The Pre-measures forecast's poverty cards, as there */}
+          <CurrentLawSection id="poverty" />
         </div>
       );
     }

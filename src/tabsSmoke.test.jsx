@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
+import { clearOutlookCache } from "./utils/livingStandards/outlook";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
 
@@ -107,6 +108,8 @@ beforeEach(() => {
   consoleErrors = [];
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   clearHouseholdImpactCache();
+  // Each test reads the outlook afresh, so its requests can be counted
+  clearOutlookCache();
   // Each tab opens as a new visit would: the form at its first step
   resetSavedWizard();
   vi.stubGlobal("fetch", vi.fn(async (input, init) => serve(input, init)));
@@ -192,6 +195,67 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
     },
     15000,
   );
+
+  // Living standards and Poverty also show the Pre-measures forecast's
+  // cards for the same thing, below the measures' effect, opened by
+  // address (?sub=living, ?sub=poverty) with the outlook read once
+  it.each([
+    ["living", "Living standards", "How the measures change incomes", "Incomes under current law", ["Incomes over time", "Growth across the distribution"]],
+    ["poverty", "Poverty", "How the measures change poverty", "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
+  ])("?sub=%s shows the current-law cards below the measures' effect", async (sub, label, measures, currentLaw, cards) => {
+    window.history.replaceState({}, "", `/?sub=${sub}`);
+    render(<App />);
+    const panel = await screen.findByRole("tabpanel", { name: label });
+    const [baseline] = await within(panel).findAllByRole("heading", { name: currentLaw }, { timeout: 5000 });
+    for (const name of cards) {
+      expect(within(panel).getByRole("heading", { level: 3, name: new RegExp(`^${name}$`) })).toBeInTheDocument();
+    }
+    // Below the measures' effect, each subtitle saying with or without them
+    const [effect] = within(panel).getAllByRole("heading", { name: measures });
+    expect(effect.compareDocumentPosition(baseline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.textContent).toMatch(/With the selected measures:/);
+    expect(panel.textContent).toMatch(/Without the measures:/);
+    // No link to the sub-tab itself, nor away to the same cards
+    expect(within(panel).queryByRole("link", { name: label })).toBeNull();
+    expect(within(panel).queryByRole("link", { name: /Pre-measures forecast/ })).toBeNull();
+    expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
+    expect(consoleErrors).toEqual([]);
+  }, 15000);
+
+  it("keeps the sub-tab's current-law cards apart from the Pre-measures forecast's", async () => {
+    window.history.replaceState({}, "", "/?sub=living");
+    render(<App />);
+    const living = await screen.findByRole("tabpanel", { name: "Living standards" });
+    const card = async (panel, name) =>
+      (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".ls-card");
+    const subTabCard = await card(living, /^Incomes over time$/);
+    // A range chosen here goes in its own parameters (?pop_ls_from)
+    fireEvent.click(within(subTabCard).getByRole("button", { name: /^Compare from:/ }));
+    fireEvent.click(within(subTabCard).getByRole("option", { name: "2029-30" }));
+    let params = new URLSearchParams(window.location.search);
+    expect(params.get("pop_ls_from")).toBe("2029");
+    expect(params.has("ls_from")).toBe(false);
+
+    // The Pre-measures forecast: same cards, its own default range, and
+    // the outlook not fetched again
+    fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
+    const outlook = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
+    const outlookCard = await card(outlook, /^Incomes over time$/);
+    expect(within(outlookCard).getByRole("button", { name: /^Compare from:/ })).not.toHaveTextContent("2029-30");
+    expect(within(subTabCard).getByRole("button", { name: /^Compare from:/, hidden: true })).toHaveTextContent("2029-30");
+    expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
+    // Both mounted, no id twice
+    for (const id of ["living-incomes", "current-law-incomes"]) {
+      expect(document.querySelectorAll(`#${id}`)).toHaveLength(1);
+    }
+    // Its own range leaves the sub-tab's alone
+    fireEvent.click(within(outlookCard).getByRole("button", { name: /^Compare to:/ }));
+    fireEvent.click(within(outlookCard).getByRole("option", { name: "2030-31" }));
+    params = new URLSearchParams(window.location.search);
+    expect(params.get("ls_to")).toBe("2030");
+    expect(params.get("pop_ls_from")).toBe("2029");
+    expect(params.get("pop_ls_to")).toBe("2031");
+  }, 15000);
 
   it("fails the Household impact tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the

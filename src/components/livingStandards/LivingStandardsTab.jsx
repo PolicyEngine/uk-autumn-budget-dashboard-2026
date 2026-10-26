@@ -18,6 +18,7 @@ import ViewLink from "../ViewLink";
 import { ForecastSource } from "./sources";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
+import { UrlScope } from "../../utils/livingStandards/urlScope";
 import { GrowthCard, IncomesOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
@@ -28,14 +29,22 @@ import "./LivingStandards.css";
 // The baseline sections, in order: each one row of two cards that line up
 // (a card alone takes the full width). A card shows one view at a time, with
 // a Show pill; notes and sources sit in its "About this chart".
-// Each section's title says it is the outlook before any measure; its
-// subtitle links once to the Population impact sub-tab with the measures'
-// effect on the same thing, which states no number shown here.
+// Each section's title says it is the outlook before any measure. On this
+// view its subtitle links once to the Population impact sub-tab with the
+// measures' effect on the same thing, which states no number shown here;
+// that sub-tab shows the section too (CurrentLawSection), under the
+// measures' effect, with a subtitle that says so and no link to itself.
 const BASELINE_ROWS = [
   {
     id: "incomes",
     title: "Incomes under current law",
-    subtitle: (onShowTab) => (
+    subtitle: (onShowTab, onPopulation) =>
+      onPopulation ? (
+        <>
+          Without the measures: incomes before any Budget measure, on the{" "}
+          <SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink> forecast.
+        </>
+      ) : (
       <>
         Incomes before any Budget measure (<SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink>). With
         the measures:{" "}
@@ -50,7 +59,10 @@ const BASELINE_ROWS = [
   {
     id: "poverty",
     title: "Poverty under current law",
-    subtitle: (onShowTab) => (
+    subtitle: (onShowTab, onPopulation) =>
+      onPopulation ? (
+        "Without the measures: poverty before any Budget measure."
+      ) : (
       <>
         Poverty before any Budget measure. With the measures:{" "}
         <ViewLink tab="dashboard" sub="poverty" hash="poverty" onShowTab={onShowTab}>
@@ -63,7 +75,7 @@ const BASELINE_ROWS = [
   },
 ];
 
-function Row({ row, data, onShowTab }) {
+function Row({ row, data, onShowTab, idPrefix = "living", onPopulation = false }) {
   if (row.requires && !data[row.requires]) return null;
   // Cards whose data block is missing are skipped; a pair with one card
   // left renders it full width.
@@ -73,8 +85,8 @@ function Row({ row, data, onShowTab }) {
   if (!blocks.length) return null;
   return (
     <>
-      <SectionHeading title={row.title} subtitle={row.subtitle(onShowTab)} />
-      <section id={`living-${row.id}`} className="report-section ls-section">
+      <SectionHeading title={row.title} subtitle={row.subtitle(onShowTab, onPopulation)} />
+      <section id={`${idPrefix}-${row.id}`} className="report-section ls-section">
         {blocks.map((block, i) => (
           <div className="charts-grid" key={i}>
             {block.map((S, j) => (
@@ -142,15 +154,14 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
   );
 }
 
-export default function LivingStandardsTab({ active = true, onShowTab }) {
+/**
+ * The outlook data (public/data/living_standards_outlook.json) as
+ * { loading, data, error }. loadOutlook fetches it once per page, so this
+ * view and the Population impact sub-tabs share one request, whichever
+ * opens first.
+ */
+function useOutlook() {
   const [state, setState] = useState({ loading: true, data: null, error: null });
-  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
-  // Sub-tabs opened so far stay mounted, hidden while the other is shown
-  const [visited, setVisited] = useState([sub]);
-  if (!visited.includes(sub)) setVisited([...visited, sub]);
-  // Charts or tables: kept here so it survives a sub-tab switch
-  const [forecastView, setForecastView] = useState("chart");
-
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
@@ -160,9 +171,10 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
       live = false;
     };
   }, []);
+  return state;
+}
 
-  const { loading, data, error } = state;
-
+function OutlookStatus({ loading, error }) {
   return (
     <>
       {loading && (
@@ -175,6 +187,39 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
           Could not load outlook data: {error}
         </p>
       )}
+    </>
+  );
+}
+
+/**
+ * One baseline section ("incomes" or "poverty") on Population impact's
+ * Living standards or Poverty sub-tab, below the measures' effect: the same
+ * cards as on this view, with their own pill choices (?pop_ls_from, …).
+ */
+export function CurrentLawSection({ id }) {
+  const { loading, data, error } = useOutlook();
+  const row = BASELINE_ROWS.find((r) => r.id === id);
+  return (
+    <UrlScope.Provider value="pop_">
+      <OutlookStatus loading={loading} error={error} />
+      {data && <Row row={row} data={data} idPrefix="current-law" onPopulation />}
+    </UrlScope.Provider>
+  );
+}
+
+export default function LivingStandardsTab({ active = true, onShowTab }) {
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
+  // Sub-tabs opened so far stay mounted, hidden while the other is shown
+  const [visited, setVisited] = useState([sub]);
+  if (!visited.includes(sub)) setVisited([...visited, sub]);
+  // Charts or tables: kept here so it survives a sub-tab switch
+  const [forecastView, setForecastView] = useState("chart");
+
+  const { loading, data, error } = useOutlook();
+
+  return (
+    <>
+      <OutlookStatus loading={loading} error={error} />
 
       {data && (
         <div className="results-container">
