@@ -17,7 +17,7 @@
     {"name": "parliament years as text", "ops": [{"op": "set", "path": ["meta", "parliament", "start", "calendar"], "to": "2024"}, {"op": "set", "path": ["meta", "parliament", "end", "calendar"], "to": "2029"}], "accepted": true},
     {"name": "parliament as a list", "ops": [{"op": "set", "path": ["meta", "parliament"], "to": []}], "accepted": false},
     {"name": "parliament's start as a list", "ops": [{"op": "set", "path": ["meta", "parliament", "start"], "to": ["2024Q2"]}], "accepted": false},
-    {"name": "something left out twice", "ops": [{"op": "append", "path": ["meta", "left_out"], "to": {"what": "HM Treasury forecasts (before June 2010)", "why": "Not the OBR's: the tab shows the OBR's own forecasts."}}], "accepted": false},
+    {"name": "something left out twice", "ops": [{"op": "append", "path": ["meta", "left_out"], "to": {"what": "HM Treasury forecasts (before June 2010)", "why": "Not the OBR's: this view shows the OBR's own forecasts."}}], "accepted": false},
     {"name": "something left out for no reason", "ops": [{"op": "set", "path": ["meta", "left_out", 0, "why"], "to": ""}], "accepted": false},
     {"name": "something left out, unnamed", "ops": [{"op": "delete", "path": ["meta", "left_out", 0, "what"]}], "accepted": false},
     {"name": "what is left out as an object", "ops": [{"op": "set", "path": ["meta", "left_out"], "to": {}}], "accepted": false},

@@ -1,6 +1,6 @@
 # Forecast vintages inputs
 
-The Forecast vintages tab reads `public/data/obr_forecast_vintages.json`. `uk-budget-data forecast-vintages` writes it from the files here (`src/uk_budget_data/forecast_vintages/`), and sets its row in `data_inputs/public_data_review.csv` to pending. It holds no PolicyEngine figures: every value is the OBR's or the ONS's.
+The Forecast vintages view (Pre-measures forecast, `?tab=outlook&sub=vintages`) reads `public/data/obr_forecast_vintages.json`. `uk-budget-data forecast-vintages` writes it from the files here (`src/uk_budget_data/forecast_vintages/`), and sets its row in `data_inputs/public_data_review.csv` to pending. It holds no PolicyEngine figures: every value is the OBR's or the ONS's.
 
 ```bash
 uv run uk-budget-data forecast-vintages --fetch   # refresh ONS and house prices, then build
@@ -68,7 +68,7 @@ Each forecast's values must run from its launch period (or, but for the index, t
 
 `public/data/obr_forecast_vintages.json`:
 
-- `meta`: `newest_vintage` (March 2026); `parliament`, the start and end periods the page labels, by frequency; `launch_rules`; `left_out`, the database's variables the tab does not show and why; `gaps`; `sources`, every OBR file (address, Internet Archive capture, SHA-256), ONS series (page, release date, time of download, SHA-256) and the House Price Index.
+- `meta`: `newest_vintage` (March 2026); `parliament`, the start and end periods the page labels, by frequency; `launch_rules`; `left_out`, the database's variables the view does not show and why; `gaps`; `sources`, every OBR file (address, Internet Archive capture, SHA-256), ONS series (page, release date, time of download, SHA-256) and the House Price Index.
 - `variables`: one per variable, in the order of `variables.py`, each with `id`, `label`, `group`, `frequency` (`calendar`, `fiscal` or `quarterly`), `units` (the unit pills it offers: `level`, `index`, `pct`, each saying which measure it reads; a quarterly measure's `level` is always `annualise`d, a quarter's figure ×4 under an axis that names a year, and no other unit is), `default_unit`, `notes`, and the measures `level` and `share` (`null` where there is no share of GDP). A measure has:
   - `unit`, `kind` (`growth`: the forecasts are percentage changes on a year earlier; `index`: the forecasts are an index whose ratios carry the outturn on; `level`: the forecasts are in the outturn's units), `decimals`;
   - `outturn`: `{period: value}`, in `unit`;

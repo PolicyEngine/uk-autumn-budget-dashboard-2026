@@ -364,7 +364,10 @@ function RelatedLink({ related }) {
       <a
         href={related.href}
         onClick={(event) => {
-          if (!related.onShow) return;
+          // A click with a modifier key, or not with the main button, opens
+          // a new tab or window: the browser's to do
+          const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+          if (!related.onShow || modified || event.button !== 0) return;
           event.preventDefault();
           related.onShow();
         }}

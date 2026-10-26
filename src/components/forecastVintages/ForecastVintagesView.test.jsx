@@ -623,4 +623,27 @@ describe("as another view's sub-tab", () => {
     document.removeEventListener("click", follow);
     expect(prevented).toBe(false);
   });
+
+  it("leaves a click that opens a new tab or window to the browser", async () => {
+    const onShow = vi.fn();
+    await renderView({ related: { ...SIBLING, onShow } });
+    const link = screen.getByRole("link", { name: "Forecast changes" });
+    let prevented = null;
+    const follow = (event) => {
+      prevented = event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener("click", follow);
+    for (const init of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+      prevented = null;
+      fireEvent.click(link, init);
+      expect(prevented, JSON.stringify(init)).toBe(false);
+    }
+    expect(onShow).not.toHaveBeenCalled();
+    // A plain click still shows the sibling in place
+    fireEvent.click(link);
+    expect(prevented).toBe(true);
+    document.removeEventListener("click", follow);
+    expect(onShow).toHaveBeenCalledTimes(1);
+  });
 });

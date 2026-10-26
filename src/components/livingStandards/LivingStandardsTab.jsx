@@ -12,7 +12,7 @@
 // (forecastVintages/ForecastVintagesView): it reads its own file, so it
 // shows whether or not the outlook can be read.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import UnavailableNotice from "../publication/UnavailableNotice";
@@ -231,12 +231,15 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
   const [forecastView, setForecastView] = useState("chart");
 
   const { loading, data, error } = useOutlook();
+  // Forecast vintages' link to Forecast changes opens it through the bar
+  const subTabs = useRef(null);
 
   // The sub-tabs show from the first render: Forecast vintages reads its own
   // file, and the outlook's two show its state until it is read
   return (
     <div className="results-container">
       <SubTabs
+        ref={subTabs}
         tabs={SUB_TABS}
         value={sub}
         onChange={setSub}
@@ -248,7 +251,11 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
           {value === "vintages" ? (
             <ForecastVintagesView
               active={active && value === sub}
-              related={{ href: "?tab=outlook&sub=forecast", label: "Forecast changes", onShow: () => setSub("forecast") }}
+              related={{
+                href: "?tab=outlook&sub=forecast",
+                label: "Forecast changes",
+                onShow: () => subTabs.current?.show("forecast"),
+              }}
             />
           ) : !data ? (
             <OutlookStatus loading={loading} error={error} />

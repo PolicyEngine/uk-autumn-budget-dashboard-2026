@@ -12,13 +12,13 @@ PolicyEngine's dashboard for the UK Autumn Budget 2026 (Wednesday 28 October 202
 
 ## Tabs
 
-The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures and the household answers are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`), so a link reopens the same view.
+The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures, the household answers and the forecast vintages measure are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`, `?variable=`), so a link reopens the same view.
 
 | Tab | What it shows |
 |---|---|
 | Population impact | The selected measures' effects, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** (results by constituency, the household scatter, example households), **Young people** (results by age), **Pensioners** (people at or over State Pension age, from the same results by age), **Living standards** (change by income decile, and inequality), **Poverty** (change in the poverty rate) and **Public finances** (revenue impact, and the OBR comparison once published). |
 | Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Pre-measures forecast | The outlook before the Budget's measures (`?tab=outlook`; old `?tab=living` links still open it). Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Pre-measures forecast | The outlook before the Budget's measures (`?tab=outlook`; old `?tab=living` links still open it). Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series), Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance) and Forecast vintages (`?sub=vintages`: the OBR's forecasts since June 2010 beside the ONS outturn, for 16 economy and public finance measures, with the measure in `?variable=`; no PolicyEngine figures). Sub-tabs: **Baseline outlook**, **Forecast changes** and **Forecast vintages**. |
 | Policies | Every published measure in one place: its published name and description, and, where [`src/utils/policyDetails.js`](src/utils/policyDetails.js) has an entry for its id, when it starts and is in force, its type, and its main modelling assumption and source behind "Details". Population impact links here rather than repeating it. |
 | Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 

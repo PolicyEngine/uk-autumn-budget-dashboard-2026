@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import SubTabs, { SubTabPanel, subPanelId, subTabId, useSubTabParam } from "./SubTabs";
@@ -113,6 +114,44 @@ describe("SubTabs", () => {
     scrollTo.mockClear();
     fireEvent.click(tab("Third"));
     expect(scrollTo).not.toHaveBeenCalled();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    vi.unstubAllGlobals();
+  });
+
+  it("opens a sub-tab for a link in a panel as choosing it does, and focuses the tab", () => {
+    // The link sits in the panel it leaves, as Forecast vintages' link to
+    // Forecast changes does
+    function LinkHarness() {
+      const [value, setValue] = useSubTabParam(TABS.map((t) => t.value));
+      const bar = useRef(null);
+      return (
+        <>
+          <SubTabs ref={bar} tabs={TABS} value={value} onChange={setValue} ariaLabel="Effects" idPrefix="pi" />
+          <SubTabPanel idPrefix="pi" value={value}>
+            <button type="button" onClick={() => bar.current.show("third")}>
+              To the third
+            </button>
+          </SubTabPanel>
+        </>
+      );
+    }
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    render(<LinkHarness />);
+    const list = screen.getByRole("tablist");
+    vi.spyOn(list, "getBoundingClientRect").mockReturnValue({ top: -300 });
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) =>
+      el === list ? { scrollMarginTop: "124px" } : computed(el, pseudo),
+    );
+    Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
+    const link = screen.getByRole("button", { name: "To the third" });
+    link.focus();
+    fireEvent.click(link);
+    expect(tab("Third")).toHaveAttribute("aria-selected", "true");
+    expect(sub()).toBe("third");
+    expect(tab("Third")).toHaveFocus();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124 });
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     vi.unstubAllGlobals();
   });

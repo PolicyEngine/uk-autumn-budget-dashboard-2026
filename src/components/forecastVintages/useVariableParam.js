@@ -21,8 +21,8 @@ function writeParam(value) {
  * The measure the forecast vintages view shows, kept in the address as
  * ?variable= while the view is shown, so a link opens it. The first value
  * is the default and is never written; a value the view does not have
- * opens the default. The view may be a view of its own or a sub-tab of
- * another, so it never touches ?sub=, and it takes ?variable= out of the
+ * opens the default. The view is a sub-tab of Pre-measures forecast, so it
+ * never touches ?sub=, and once mounted it takes ?variable= out of the
  * address itself while it is hidden (App.jsx drops only ?sub=).
  *
  * @param {string[]} values - The measures' ids; the first is the default
@@ -48,8 +48,10 @@ export function useVariableParam(values, active = true) {
 
   // After every render, not only when the measure or `active` changes: a
   // link followed while the view is hidden can bring ?variable= with
-  // another of the holding view's sub-tabs, and it goes as soon as that
-  // view renders (writeParam leaves an address already right alone)
+  // another of the holding view's sub-tabs, and it goes when this view next
+  // renders (writeParam leaves an address already right alone). A sub-tab
+  // is mounted only once it has been opened, so until then such a
+  // ?variable= stays, and opening the sub-tab opens that measure.
   useEffect(() => {
     writeParam(active && value !== fallback ? value : null);
   });

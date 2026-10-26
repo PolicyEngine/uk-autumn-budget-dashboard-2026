@@ -1,4 +1,4 @@
-"""The Forecast vintages tab's data: every OBR forecast beside the outturn.
+"""The Forecast vintages view's data: every OBR forecast beside the outturn.
 
 ``uk-budget-data forecast-vintages`` writes
 ``public/data/obr_forecast_vintages.json`` from the OBR's own files and ONS
@@ -10,7 +10,7 @@ outturn, with no PolicyEngine model figures:
 - :mod:`.fetch` downloads the ONS series and House Price Index (and any
   missing OBR file, from its capture) into ``data_inputs/forecast_vintages``;
 - :mod:`.hofd`, :mod:`.efo` and :mod:`.ons` read them;
-- :mod:`.variables` says what the tab shows and where each comes from;
+- :mod:`.variables` says what the view shows and where each comes from;
 - :mod:`.periods` sets each forecast's launch period;
 - :mod:`.build` checks the inputs and assembles the JSON.
 """

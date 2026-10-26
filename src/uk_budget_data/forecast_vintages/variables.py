@@ -1,4 +1,4 @@
-"""The variables the Forecast vintages tab shows, and where each comes from.
+"""The variables the Forecast vintages view shows, and where each comes from.
 
 Each variable has a ``level`` measure (and, for the public finances, a
 ``share`` of GDP): the outturn, built from ONS series (or the UK House Price
@@ -498,11 +498,11 @@ VARIABLES = (
     ),
 )
 
-# What the database holds that the tab leaves out, and why.
+# What the database holds that the view leaves out, and why.
 LEFT_OUT = (
     (
         "HM Treasury forecasts (before June 2010)",
-        "Not the OBR's: the tab shows the OBR's own forecasts.",
+        "Not the OBR's: this view shows the OBR's own forecasts.",
     ),
     (
         "Restated March 2019 and supplementary March 2020 forecasts (memo rows)",

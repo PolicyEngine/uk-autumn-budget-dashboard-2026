@@ -2,7 +2,8 @@
  * The Pre-measures forecast view's Forecast vintages sub-tab
  * (?tab=outlook&sub=vintages). It reads its own file, so it shows even when
  * the outlook cannot be read; its measure is in ?variable=, beside the
- * view's ?sub=; and its link opens the Forecast changes sub-tab in place.
+ * view's ?sub=; and its link opens the Forecast changes sub-tab in place,
+ * with focus on that tab.
  * A file of its own, so the outlook loader starts with nothing cached.
  */
 import { readFileSync } from "node:fs";
@@ -18,7 +19,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("shows the forecast vintages when the outlook cannot be read, and links to Forecast changes in place", async () => {
+// The vintages file as committed; the outlook and the manifest missing
+function stubFetch() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) => {
@@ -29,6 +31,10 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
       return new Response("reform_id,year,value\n", { status: 200 });
     }),
   );
+}
+
+it("shows the forecast vintages when the outlook cannot be read, and links to Forecast changes in place", async () => {
+  stubFetch();
   window.history.replaceState({}, "", "/?tab=outlook&sub=vintages");
   render(<App />);
   expect(
@@ -40,8 +46,12 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
   fireEvent.click(screen.getByRole("option", { name: "Public sector net borrowing" }));
   expect(address()).toEqual({ tab: "outlook", sub: "vintages", variable: "psnb" });
 
-  fireEvent.click(screen.getByRole("link", { name: "Forecast changes" }));
+  const link = screen.getByRole("link", { name: "Forecast changes" });
+  link.focus();
+  fireEvent.click(link);
   expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
+  // The link's panel is hidden now, so focus moves to the tab it opened
+  expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveFocus();
   expect(await screen.findByRole("alert")).toHaveTextContent(/Could not load outlook data/);
   expect(address()).toEqual({ tab: "outlook", sub: "forecast" });
 
@@ -53,4 +63,21 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
   // Another view takes both out of the address
   fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
   expect(address()).toEqual({ tab: "methodology" });
+});
+
+it("keeps a ?variable= a link brought until Forecast vintages is first opened, which opens that measure", async () => {
+  stubFetch();
+  // Forecast vintages is not mounted until it is opened, so nothing reads
+  // or clears ?variable= on Baseline outlook
+  window.history.replaceState({}, "", "/?tab=outlook&variable=psnb");
+  render(<App />);
+  expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Could not load outlook data/);
+  expect(address()).toEqual({ tab: "outlook", variable: "psnb" });
+
+  fireEvent.click(screen.getByRole("tab", { name: "Forecast vintages" }));
+  expect(
+    await screen.findByRole("heading", { level: 3, name: "Public sector net borrowing" }),
+  ).toBeInTheDocument();
+  expect(address()).toEqual({ tab: "outlook", sub: "vintages", variable: "psnb" });
 });

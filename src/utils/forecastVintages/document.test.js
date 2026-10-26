@@ -32,7 +32,7 @@ describe("a file the page takes as a whole", () => {
   });
 
   // Found by the thirteenth review: the build checked each variable's id on
-  // its own, and could write two of one id, which turns the tab off
+  // its own, and could write two of one id, which turns the view off
   it("refuses a variable twice, by name", () => {
     const data = structuredClone(DATA);
     data.variables.find((v) => v.id === "receipts").id = "spending";

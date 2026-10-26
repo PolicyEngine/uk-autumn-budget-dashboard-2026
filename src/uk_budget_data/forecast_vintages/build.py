@@ -21,7 +21,7 @@ Before anything is written:
 - each forecast's values must run on from its launch with no gaps, and
   read as its measure's kind where they can say otherwise (see
   :func:`check_kind`);
-- no forecast after March 2026 is taken: the tab shows forecasts made
+- no forecast after March 2026 is taken: the view shows forecasts made
   before the Budget's measures, and later ones wait for the post-Budget
   rules (docs/budget-day-runbook.md).
 
@@ -507,7 +507,7 @@ def _check_newest(name: str, vintages) -> None:
     for vintage in vintages:
         if (vintage.year, vintage.month) > NEWEST_VINTAGE:
             raise BuildError(
-                f"{name}: holds the {vintage.label} forecast; this tab shows "
+                f"{name}: holds the {vintage.label} forecast; the view shows "
                 "forecasts to March 2026 until the post-Budget rules are set"
             )
     if (
