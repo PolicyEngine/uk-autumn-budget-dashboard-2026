@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import PolicyCards, { TIMELINE_START_YEAR, TIMELINE_YEARS, timelineSpan } from "./PolicyCards";
+import PolicyCards, {
+  BUDGET_DAY_MONTH,
+  TIMELINE_START_YEAR,
+  TIMELINE_YEARS,
+  durationLabel,
+  timelineDescription,
+  timelineSpan,
+} from "./PolicyCards";
 import { POLICIES } from "../utils/policies";
 import {
   ALL_POLICY_NAMES,
@@ -58,6 +65,7 @@ describe("PolicyCards", () => {
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
     expect(card).toHaveTextContent("Temporary");
+    expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const details = card.querySelector("details");
     expect(details.open).toBe(false);
     fireEvent.click(within(card).getByText("How it is modelled"));
@@ -67,11 +75,25 @@ describe("PolicyCards", () => {
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("marks a lasting measure as having no end date", () => {
+  it("marks a lasting measure as continuing, with no end date", () => {
     render(<PolicyCards policies={POLICIES} selectedPolicies={["badr_lifetime_limit_cut"]} />);
     const card = screen.getByRole("listitem");
-    expect(card).toHaveTextContent("EndsNo end date");
+    expect(card).not.toHaveTextContent("Ends");
     expect(card).not.toHaveTextContent("Temporary");
+    const timeline = within(card).getByRole("img", {
+      name: "In force from April 2027; no end date.",
+    });
+    expect(timeline).toHaveTextContent("Continues");
+    expect(timeline).toHaveTextContent("Budget");
+  });
+
+  it("shows fuel duty's two-step restore as diamonds", () => {
+    render(<PolicyCards policies={POLICIES} selectedPolicies={["fuel_duty_rise_deferral"]} />);
+    const timeline = screen.getByRole("img", { name: /^In force from January 2027;/ });
+    expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
+    expect(timeline.getAttribute("aria-label")).toBe(
+      "In force from January 2027; 3p of the 5p restored in September 2027, the other 2p restored in December 2027; no end date.",
+    );
   });
 
   it("counts each group's measures", () => {
@@ -109,6 +131,21 @@ describe("the in-force timeline", () => {
     const freeze = timelineSpan({ from: `${TIMELINE_START_YEAR + TIMELINE_YEARS - 1}-04` });
     expect(freeze.left).toBeCloseTo(5 / 6);
     expect(freeze.left + freeze.width).toBeCloseTo(1);
+  });
+
+  it("counts a temporary measure's months", () => {
+    const byId = Object.fromEntries(POLICIES.map((p) => [p.id, p]));
+    expect(durationLabel(byId.road_fuel_vat_cut)).toBe("6 months");
+    expect(durationLabel(byId.domestic_electricity_zero_vat)).toBe("18 months");
+    expect(durationLabel(byId.warm_home_discount_top_up)).toBe("One winter");
+    expect(timelineDescription(byId.road_fuel_vat_cut)).toBe(
+      "In force from December 2026 to May 2027 (6 months).",
+    );
+  });
+
+  it("puts Budget day in late October 2026", () => {
+    expect(BUDGET_DAY_MONTH).toBeGreaterThan(6.8);
+    expect(BUDGET_DAY_MONTH).toBeLessThan(7);
   });
 
   it("keeps every measure's span on the timeline", () => {

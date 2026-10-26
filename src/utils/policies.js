@@ -11,6 +11,10 @@
  * - inForce: the months it is in force, as "YYYY-MM" (`to` is the last
  *   month; a lasting measure has none), for the card's timeline;
  * - ends: when a temporary measure ends, in words (only with `to`);
+ * - duration: a temporary measure's length in words, where a count of
+ *   months would mislead (a one-off winter payment);
+ * - steps / stepsLabel: dated stages within a measure, drawn as diamonds,
+ *   with one short label for them all;
  * - details: the main assumption or caveat (collapsed by default);
  * - source: a public page on the policy, where one exists.
  * Revenue figures stay in the charts and are not repeated here.
@@ -25,6 +29,11 @@ export const POLICIES = [
     starts: "January 2027",
     type: "Fuel duty",
     inForce: { from: "2027-01" },
+    steps: [
+      { month: "2027-09", label: "3p of the 5p restored" },
+      { month: "2027-12", label: "the other 2p restored" },
+    ],
+    stepsLabel: "5p restored",
     details:
       "Assumes no RPI rise in April 2027, 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. Includes the VAT on the lower pump price; fuel spending is held fixed.",
     source: {
@@ -56,6 +65,7 @@ export const POLICIES = [
     type: "Benefit",
     inForce: { from: "2026-10", to: "2027-03" },
     ends: "After one winter",
+    duration: "One winter",
     details:
       "Paid to households in Great Britain on Universal Credit, Pension Credit, Housing Benefit or income-related ESA, the 2026-27 core group in England and Wales. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. Scotland's scheme has its own core group, so eligibility there is approximate.",
     source: {
