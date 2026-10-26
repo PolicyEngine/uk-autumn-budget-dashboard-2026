@@ -19,21 +19,18 @@
  * figures, not sourced averages, and each note says so.
  */
 
-// Inputs every example sets the same way: no other income, no salary
-// sacrifice, no children. Everything else (region, spending, council tax
-// band) stays at the form's sourced defaults (utils/householdDefaults.js).
+import { EXAMPLE_ANSWERS } from "./exampleAnswers";
+
+// Inputs every example sets the same way: every answer fixed
+// (exampleAnswers.js: region, spending and council tax band at fixed
+// values, never the form's defaults, so the precomputed results keep
+// matching), no other income, no salary sacrifice, no children; single,
+// claiming any Universal Credit due, renting privately, no childcare
 const COMMON = {
-  salary_sacrifice_per_year: 0,
-  dividends_per_year: 0,
-  savings_interest_per_year: 0,
-  property_income_per_year: 0,
-  children_ages: "",
-  // Single, claiming any Universal Credit due, renting privately, no
-  // childcare
+  ...EXAMPLE_ANSWERS,
   has_partner: false,
   claims_universal_credit: true,
   tenure: "RENT_PRIVATELY",
-  monthly_childcare: 0,
 };
 
 export const YOUNG_PERSON_PRESETS = [

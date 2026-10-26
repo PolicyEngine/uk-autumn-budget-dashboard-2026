@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { SELECTABLE_YEARS } from "./displayYears";
-import { buildHouseholdRequest, requestKey } from "./householdImpactApi";
+import { buildHouseholdRequest, isRenting, requestKey } from "./householdImpactApi";
 import { cardFigures } from "../components/personal/HouseholdCards";
 import { PRESET_POLICIES, presetCacheEntries, presetChanges, presetInputs, presetRequests } from "./householdPresets";
 
@@ -29,6 +29,32 @@ describe("the examples' precomputed results (public/data/household_presets.json)
       expect(requestKey(entry.request), entry.preset_id).toBe(requestKey(asked));
     }
     expect(presetCacheEntries(file)).toHaveLength(file.entries.length);
+  });
+
+  it("hold every example card's own request, in every year: a stale file fails here, not as 'Calculated when chosen'", () => {
+    const keys = new Set(file.entries.map((entry) => requestKey(entry.request)));
+    for (const example of HOUSEHOLD_EXAMPLES) {
+      for (const year of SELECTABLE_YEARS) {
+        const asked = buildHouseholdRequest(presetInputs(example), { year, policies: PRESET_POLICIES });
+        expect(keys.has(requestKey(asked)), `${example.id} ${year}: re-run the precompute`).toBe(true);
+      }
+    }
+  });
+
+  it("are for examples that fix every answer: the form's defaults and prefills change no example's request", () => {
+    for (const example of HOUSEHOLD_EXAMPLES) {
+      for (const year of SELECTABLE_YEARS) {
+        const options = { year, policies: PRESET_POLICIES };
+        // The example's answers alone, and over the form's defaults: the same
+        expect(requestKey(buildHouseholdRequest(example.inputs, options)), `${example.id} ${year}`).toBe(
+          requestKey(buildHouseholdRequest(presetInputs(example), options)),
+        );
+      }
+      // A renter's rent is a fixed figure, never the area's prefilled rate
+      if (isRenting(example.inputs.tenure)) {
+        expect(Number.isFinite(example.inputs.monthly_rent), example.id).toBe(true);
+      }
+    }
   });
 
   it("come from the engine the live API runs: re-run the precompute after a bundle upgrade", () => {
