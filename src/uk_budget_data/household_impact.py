@@ -395,8 +395,10 @@ PROGRAMMES = (
         "council_tax_benefit",
         "benunit",
         note=(
-            "Only where policyengine-uk simulates the local scheme; "
-            "elsewhere none is counted."
+            "Where policyengine-uk simulates the scheme that applies: "
+            "England's pension-age scheme, the Scottish and Welsh schemes, "
+            "and the working-age schemes of Kingston upon Thames, Merton, "
+            "Newham, Oxford and Westminster. Elsewhere none is counted."
         ),
     ),
     Programme(
@@ -425,8 +427,8 @@ PROGRAMMES = (
         note=(
             "The candidate £100 more Warm Home Discount in 2026-27, paid "
             "through policyengine-uk's cost-of-living payment, for a "
-            "household in Great Britain on Universal Credit or Pension "
-            "Credit, if received."
+            "household in Great Britain on Universal Credit, Pension "
+            "Credit, Housing Benefit or income-related ESA, if received."
         ),
     ),
     Programme(
