@@ -1744,19 +1744,24 @@ body {
   text-underline-offset: 2px;
 }
 
+/* The arrow takes no room until shown, so the comma and full stop sit
+   against the link's words */
 .replication-link-arrow {
   flex: none;
+  width: 0;
+  margin-left: -4px;
   opacity: 0;
-  transform: translate(-2px, 2px);
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease;
+    width 0.15s ease,
+    margin 0.15s ease;
 }
 
 .replication-link:hover .replication-link-arrow,
 .replication-link:focus-visible .replication-link-arrow {
+  width: 12px;
+  margin-left: 0;
   opacity: 1;
-  transform: none;
 }
 
 .replication-link:focus-visible {
