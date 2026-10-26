@@ -408,6 +408,15 @@ class HouseholdAnswersRequest(BaseModel):
             "March 2025, Table A1, 4.4.1)."
         ),
     )
+    gas_spending: float = Field(
+        default=0,
+        ge=0,
+        le=100_000,
+        description=(
+            "Domestic mains gas, £ a year including VAT, for a measure that "
+            "changes the VAT on domestic gas. Left out: none."
+        ),
+    )
     salary_sacrifice_pension_contributions: float = Field(
         default=0,
         ge=0,

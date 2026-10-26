@@ -692,6 +692,10 @@ class HouseholdAnswers:
     diesel_spending: float = 0
     # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
     electricity_spending: float = ELECTRICITY_SPENDING
+    # Domestic mains gas, £ a year including VAT, none unless given.
+    # policyengine-uk reads it (``gas_consumption``) only for a measure that
+    # changes the VAT on domestic gas; the form does not ask for it yet.
+    gas_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -998,6 +1002,7 @@ def household_entities(
         "petrol_spending": answers.petrol_spending,
         "diesel_spending": answers.diesel_spending,
         "electricity_consumption": answers.electricity_spending,
+        "gas_consumption": answers.gas_spending,
     }
     if answers.brma is not None:
         household["brma"] = answers.brma
