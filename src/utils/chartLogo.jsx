@@ -9,6 +9,9 @@ export const CHART_LOGO = {
   width: 80,
   height: 17, // Maintains aspect ratio (996:207 ≈ 4.8:1)
   padding: 8,
+  // Clear space between a legend's last row and the logo, on every chart
+  // (in-chart legends, HTML legend rows, exports)
+  gap: 16,
 };
 
 /**

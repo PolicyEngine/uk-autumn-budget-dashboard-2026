@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import ControlBar from "./ControlBar";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import ControlBar, { optionsSummary } from "./ControlBar";
+import { yearsOption } from "./livingStandards/controlOptions";
+import { expectCompletePills } from "../test/optionsPills";
 
 function Harness() {
   const [prices, setPrices] = useState("real");
@@ -59,7 +61,7 @@ describe("ControlBar", () => {
     expect(screen.getByRole("radio", { name: "After housing costs" })).toHaveAttribute("aria-checked", "true");
     // Shift+Tab from the first stop wraps to the last
     const dialog = screen.getByRole("dialog");
-    screen.getByRole("button", { name: "Done" }).focus();
+    screen.getByRole("radio", { name: "After housing costs" }).focus();
     fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
     expect(screen.getByRole("radio", { name: "Real" })).toHaveFocus();
     fireEvent.keyDown(dialog, { key: "Escape" });
@@ -71,4 +73,56 @@ describe("ControlBar", () => {
     render(<ControlBar><button type="button">Primary</button></ControlBar>);
     expect(screen.queryByRole("button", { name: /^Options/ })).toBeNull();
   });
+
+  it("labels the pill with every choice, in the dialog's order, a show/hide only when not at its default", () => {
+    const group = (label, value, extra = {}) => ({ label, value, onChange: () => {}, options: [{ value: "a", label: "A" }, { value: "b", label: "B" }], ...extra });
+    expect(optionsSummary([group("One", "a"), group("Two", "b")])).toBe("A · B");
+    expect(optionsSummary([group("One", "a"), group("Hide", "a", { omitAtDefault: "a" })])).toBe("A");
+    expect(optionsSummary([group("One", "a"), group("Hide", "b", { omitAtDefault: "a" })])).toBe("A · B");
+    const { container } = render(<Harness />);
+    expect(expectCompletePills(container)).toBe(1);
+  });
+
+  it("applies a clicked choice and closes, handing focus back to the pill; no Done for single choices", async () => {
+    render(<Harness />);
+    const pill = screen.getByRole("button", { name: /^Options:/ });
+    fireEvent.click(pill);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: "Done" })).toBeNull();
+    fireEvent.click(within(dialog).getByRole("radio", { name: "After housing costs" }));
+    expect(pill).toHaveAccessibleName(/After housing costs/);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(pill).toHaveFocus();
+  });
+
+  it("keeps a multi-select popover open, with Done", () => {
+    render(
+      <ControlBar
+        name="Lines"
+        options={[{ label: "Lines", multi: true, value: "a", onChange: () => {}, options: [{ value: "a", label: "A" }, { value: "b", label: "B" }] }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "B" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+  });
+
+  it("keeps the years open after From and closes after To", async () => {
+    function Years() {
+      const [range, setRange] = useState(["2027-28", "2031-32"]);
+      return <ControlBar name="Years" options={[yearsOption(["2027-28", "2028-29", "2029-30", "2030-31", "2031-32"], range, (a, b) => setRange([a, b]))]} />;
+    }
+    render(<Years />);
+    const pill = screen.getByRole("button", { name: /^Options:/ });
+    fireEvent.click(pill);
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "From" })).getByRole("radio", { name: "2028-29" }));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "To" })).getByRole("radio", { name: "2030-31" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(pill).toHaveAccessibleName(/2028-29 → 2030-31/);
+    expect(pill).toHaveFocus();
+  });
 });
+

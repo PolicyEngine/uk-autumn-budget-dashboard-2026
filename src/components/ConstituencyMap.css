@@ -23,18 +23,29 @@
   text-decoration: underline;
 }
 
-/* One row: the view switch, the outcome toggle and the search box */
+/* One row: the view switch, the measure, the Options pill and the search
+   box; the search drops to its own line when the row is full */
 .map-top-bar {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 /* Search: fills the rest of the row */
 .map-search-section {
-  flex: 1;
-  min-width: 140px;
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+/* The view switch, the measure and the Options pill wrap on a narrow card */
+.map-top-bar .control-bar {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.map-top-bar .control-bar > * {
+  max-width: 100%;
 }
 
 .map-search-label {
@@ -130,28 +141,226 @@
   color: var(--pe-gray-500);
 }
 
-/* Map content container */
+/* The map, then its key under it at every width, never over it. The SVG
+   keeps the whole of Great Britain and Northern Ireland, Shetland
+   included, in view at its full fit. */
 .map-content {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-content > .map-key {
+  order: 1;
 }
 
 .map-canvas {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-/* The SVG fills the width; past 600px tall it shows more on either side
-   of the map, and the legend and logo keep to its corners. */
+/* The SVG's viewBox is the box round every seat, so the map fills its
+   column at its own shape, whole. Its own legend is for the exported file
+   only: on screen the key sits beside or under the map. */
 .map-canvas svg {
   background: var(--c-surface);
   border-radius: 4px;
   width: 100%;
   height: auto;
-  max-height: 600px;
+  max-height: min(600px, 70vh);
   display: block;
 }
+
+.map-canvas svg g.map-legend {
+  display: none;
+}
+
+/* The key: a diverging ramp from loss to gain with the breaks under its
+   joins, too uncertain beside it, and the status textures in a row */
+.map-key {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-700);
+}
+
+.map-key-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+
+.map-key-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.map-key-count {
+  margin-left: auto;
+  color: var(--pe-teal-700);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-key-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 24px;
+}
+
+.map-key-scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 6px;
+}
+
+.map-key-end {
+  line-height: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+/* Too uncertain sits after the ramp, or under it when the row is full */
+.map-key-scale > .map-key-item {
+  margin-left: 6px;
+}
+
+.map-key-end:first-child::after {
+  content: "\00a0\2190";
+}
+
+.map-key-ramp + .map-key-end::before {
+  content: "\2192\00a0";
+}
+
+/* Five joined segments; the ticks sit under the joins */
+.map-key-ramp {
+  position: relative;
+  display: flex;
+  width: 200px;
+  flex: 0 1 auto;
+  min-width: 150px;
+  padding-bottom: 16px;
+}
+
+.map-key-segment {
+  flex: 1;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) ease;
+}
+
+.map-key-segment:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.map-key-segment:nth-child(5) {
+  border-radius: 0 3px 3px 0;
+}
+
+.map-key-tick {
+  position: absolute;
+  top: 13px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-key-tick::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  height: 3px;
+  border-left: 1px solid var(--pe-gray-400);
+}
+
+.map-key-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.map-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: 14px;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-key-swatch {
+  flex: none;
+}
+
+/* While an entry is hovered the others fade, as do the seats it leaves out */
+.map-key.is-highlighting :is(.map-key-segment, .map-key-item):not(.is-active) {
+  opacity: 0.35;
+}
+
+.map-key-segment:focus-visible,
+.map-key-item:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.map-canvas svg path.constituency-path {
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-canvas svg path.constituency-path[data-dim="true"] {
+  opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-key-segment,
+  .map-key-item,
+  .map-canvas svg path.constituency-path {
+    transition: none;
+  }
+}
+
+/* The view switch: the shared segmented control on the row, its name
+   for screen readers only */
+.map-view-switch .control-bar-group {
+  display: block;
+}
+
+.map-view-switch .control-bar-group-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.map-view-switch .control-bar-segments {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
 
 /* Map controls container */
 .map-controls-container {
@@ -349,6 +558,11 @@
     align-items: stretch;
     gap: 8px;
   }
+
+  /* Stacked, the search box keeps its own height */
+  .map-search-section {
+    flex: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -447,6 +661,7 @@
    switching views never moves the card or the scatter beside it. */
 .constituency-body {
   padding-top: 16px;
+  container: constituency-body / inline-size;
 }
 
 .constituency-body .map-search-section {
@@ -460,12 +675,39 @@
 @media (min-width: 1025px) {
   .constituency-body {
     height: 440px;
+    box-sizing: border-box;
     /* Never clip: a narrow card's longer names scroll within it */
     overflow-y: auto;
+  }
+
+  /* The map fits the body's height whole: the SVG takes the height left
+     and scales the drawing area into it, so nothing is cut off */
+  .constituency-body > .swap-transition-inner,
+  .constituency-body .map-content:not([hidden]) {
+    height: 100%;
+  }
+
+  .constituency-body .map-canvas {
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .constituency-body .map-canvas svg {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .constituency-body .rankings-panel {
+    height: 100%;
   }
 }
 
 /* On a phone the controls stack; the switch keeps its own width */
 .map-top-bar .obr-view-switch {
   align-self: flex-start;
+}
+
+/* The Table view, with the notice over it before results are published */
+.rankings-panel {
+  position: relative;
 }

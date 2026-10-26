@@ -97,7 +97,7 @@
 .obr-dumbbell-logo {
   align-self: flex-end;
   display: block;
-  margin-top: 4px;
+  margin-top: 16px;
 }
 
 @media (max-width: 768px) {

@@ -5,20 +5,20 @@
 // PolicyEngine/uk-living-standards-outlook.
 
 import { useMemo, useState } from "react";
-import YearRangeSelect from "../YearRangeSelect";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
-import { housingOption, periodOption } from "../controlOptions";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { housingOption, periodOption, yearsOption } from "../controlOptions";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import {
   EMPTY,
   lineSeries,
   mergeSeries,
-  rangeAxis,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource } from "../sources";
+import { CSV_SOURCES, HBAI_SOURCE, HbaiSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 // Named as on the measures' inequality chart; the data's own name otherwise
 const LABELS = { gini: "Gini", p90_p10: "90/10 ratio" };
@@ -43,29 +43,28 @@ export default function useInequalityView(data, range = null, setRange = null) {
     () => visibleRows(mergeSeries(outturn, projection, (d) => d.value), viewMode),
     [outturn, projection, viewMode],
   );
-  const axis = rangeAxis(rows.flatMap((r) => [r.historical, r.projection]), { pad: 0.2 });
   const noOutturn = outturn.length === 0;
   const series = lineSeries(viewMode, !noOutturn);
 
   const span = headlineSpan(projection, data, range);
+  // One plain sentence on the card; what each measure means is in About
+  // this chart
   let summary = null;
   if (span) {
     const [a, b] = span;
     const same = fmt(a.value) === fmt(b.value);
-    summary = (
+    const what =
+      measure === "gini"
+        ? "income inequality, measured by the Gini coefficient,"
+        : "the gap between top and bottom incomes (90:10 ratio)";
+    summary = same ? (
       <>
-        The {label(measure)} ({basis.toUpperCase()}){" "}
-        {same ? (
-          <>
-            <strong>stays flat</strong> at {fmt(a.value)} from {fyDash(a.year)} to {fyDash(b.year)}
-          </>
-        ) : (
-          <>
-            <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in {fyDash(a.year)} to{" "}
-            {fmt(b.value)} by {fyDash(b.year)}
-          </>
-        )}
-        .
+        Under current law, {what} <strong>stays at {fmt(a.value)}</strong> from {fyDash(a.year)} to {fyDash(b.year)}.
+      </>
+    ) : (
+      <>
+        Under current law, {what} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in{" "}
+        {fyDash(a.year)} to {fmt(b.value)} in {fyDash(b.year)}.
       </>
     );
   }
@@ -78,6 +77,16 @@ export default function useInequalityView(data, range = null, setRange = null) {
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
+    info: {
+      definitions: [
+        measure === "gini"
+          ? { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." }
+          : { term: "90:10 ratio", meaning: "Income at the 90th percentile over income at the 10th." },
+      ],
+      caveats: ["Our 2024-25 inequality sits below official figures, so read the projection as a change, not a level."],
+      sources: [{ ...HBAI_SOURCE, note: "Table 1.2b" }],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the inequality data" },
+    },
     download: rows.length
       ? {
           filename: `inequality-${measure}-${basis}`,
@@ -92,13 +101,10 @@ export default function useInequalityView(data, range = null, setRange = null) {
             }),
         }
       : null,
-    // The years compared as the pill (the only card in its section that
-    // compares two years); the rest under the card's Options (ControlBar)
+    // One Options pill: the years compared first, then the rest (ControlBar)
     controls: {
-      primary: range && setRange && rangeYears(data).length > 2 && (
-        <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
-      ),
       options: [
+        yearsOption(rangeYears(data), range, setRange),
         {
           label: "Inequality measure",
           value: measure,
@@ -110,15 +116,13 @@ export default function useInequalityView(data, range = null, setRange = null) {
       ],
     },
     chart: (
-      <LsLineChart
-          highlight={range}
+      <OverTimeChart
+        compare={range}
         data={rows}
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}
         tooltipFormat={fmt}
         yLabel={label(measure)}
-        yDomain={axis.domain}
-        yTicks={axis.ticks}
       />
     ),
   };
