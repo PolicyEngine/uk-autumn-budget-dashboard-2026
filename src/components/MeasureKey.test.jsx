@@ -84,6 +84,76 @@ describe("the chips' names", () => {
   });
 });
 
+describe("MeasureKey: more than one measure", () => {
+  const RAISE = { id: "road_fuel_vat_cut", name: "VAT cut on road fuel", muted: false };
+
+  it("pins several measures, unpins one on a second click, and clears them all", () => {
+    render(<Card members={[FUEL, RAISE, { ...NI, muted: false }]} label="multi" />);
+    const card = screen.getByTestId("multi");
+    const fuel = screen.getByRole("button", { name: FUEL.name });
+    const raise = screen.getByRole("button", { name: RAISE.name });
+    expect(screen.queryByRole("button", { name: /^Clear/ })).toBeNull();
+    fireEvent.click(fuel);
+    fireEvent.click(raise);
+    expect(fuel).toHaveAttribute("aria-pressed", "true");
+    expect(raise).toHaveAttribute("aria-pressed", "true");
+    expect(card.dataset.highlight.split(",").sort()).toEqual([keyOf(FUEL), keyOf(RAISE)].sort());
+    // A second click takes one out
+    fireEvent.click(fuel);
+    expect(fuel).toHaveAttribute("aria-pressed", "false");
+    expect(card.dataset.highlight).toBe(keyOf(RAISE));
+    // Clear unpins the rest and goes
+    fireEvent.click(fuel);
+    fireEvent.click(screen.getByRole("button", { name: "Clear the 2 highlighted measures" }));
+    expect(card.dataset.highlight).toBe("");
+    expect(screen.queryByRole("button", { name: /^Clear/ })).toBeNull();
+  });
+
+  it("previews a hovered measure on top of the pinned set", () => {
+    render(<Card members={[FUEL, RAISE, { ...NI, muted: false }]} label="hover" />);
+    const card = screen.getByTestId("hover");
+    fireEvent.click(screen.getByRole("button", { name: FUEL.name }));
+    const ni = screen.getByRole("button", { name: NI.name });
+    fireEvent.mouseEnter(ni);
+    expect(card.dataset.highlight).toBe(`${keyOf(FUEL)},${keyOf(NI)}`);
+    fireEvent.mouseLeave(ni);
+    expect(card.dataset.highlight).toBe(keyOf(FUEL));
+  });
+
+  it("toggles from the keyboard: each chip is a button", () => {
+    render(<Card members={[FUEL, RAISE]} label="keys" />);
+    const raise = screen.getByRole("button", { name: RAISE.name });
+    raise.focus();
+    // Enter and Space activate a native button (a click)
+    fireEvent.click(raise);
+    expect(raise).toHaveAttribute("aria-pressed", "true");
+    expect(raise.tagName).toBe("BUTTON");
+  });
+
+  it("shares the pinned set across a section's cards", () => {
+    render(
+      <MeasureKeyProvider>
+        <SectionMeasureKey />
+        <Card members={[FUEL, RAISE]} label="a" />
+        <Card members={[RAISE]} label="b" />
+      </MeasureKeyProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: FUEL.name }));
+    fireEvent.click(screen.getByRole("button", { name: RAISE.name }));
+    for (const id of ["a", "b"]) {
+      expect(screen.getByTestId(id).dataset.highlight.split(",").sort()).toEqual([keyOf(FUEL), keyOf(RAISE)].sort());
+    }
+  });
+
+  it("keeps every highlighted measure full colour and fades the rest", () => {
+    const set = [keyOf(FUEL), keyOf(RAISE)];
+    expect(measureOpacity(set, keyOf(FUEL))).toBe(1);
+    expect(measureOpacity(set, keyOf(RAISE))).toBe(1);
+    expect(measureOpacity(set, keyOf(NI))).toBe(FADED_OPACITY);
+    expect(measureOpacity([], keyOf(NI))).toBe(1);
+  });
+});
+
 describe("mergeMembers and measureOpacity", () => {
   it("mutes a measure only when every card mutes it", () => {
     const merged = mergeMembers([[FUEL, NI], [{ ...NI, muted: false }, FREEZE]]);
