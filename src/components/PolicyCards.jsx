@@ -319,49 +319,54 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
         )}
       </div>
 
-      {/* The footer, one line: the source, how it is modelled, its effect */}
+      {/* The footer: how it is modelled across the card, then the source on
+          the left and its effect on the right */}
       <div className="policy-card-foot">
-        {policy.source && (
-          <Tip content={policy.source.label}>
-          <a
-            className="policy-card-source"
-            href={policy.source.href}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Source
-            <span className="policy-sr-only">: {policy.source.label}</span>
-            <ExternalLink size={14} aria-hidden="true" />
-            <span className="policy-sr-only"> (opens in a new tab)</span>
-          </a>
-          </Tip>
-        )}
-        {hasInfo(modelling) && (
-          <Disclosure
-            compact
-            title={
-              <>
-                <FlaskConical size={14} aria-hidden="true" className="policy-card-icon-inline" />
-                {HOW_IT_IS_MODELLED}
-              </>
-            }
-            className="policy-card-details"
-            preview={infoPreview(modelling)}
-          >
-            <InfoSections info={modelling} />
-          </Disclosure>
-        )}
-        {onShowEffect && (
-          <button
-            type="button"
-            className="policy-card-effect"
-            onClick={() => onShowEffect(policy.id)}
-            aria-label={`See the effect of ${policy.label ?? policy.name} on Population impact`}
-          >
-            <ChartColumn size={16} aria-hidden="true" />
-            See its effect
-          </button>
-        )}
+        <div className="policy-card-modelling">
+          {hasInfo(modelling) && (
+            <Disclosure
+              compact
+              title={
+                <>
+                  <FlaskConical size={14} aria-hidden="true" className="policy-card-icon-inline" />
+                  {HOW_IT_IS_MODELLED}
+                </>
+              }
+              className="policy-card-details"
+              preview={infoPreview(modelling)}
+            >
+              <InfoSections info={modelling} />
+            </Disclosure>
+          )}
+        </div>
+        <div className="policy-card-actions">
+          {policy.source && (
+            <Tip content={policy.source.label}>
+            <a
+              className="policy-card-source"
+              href={policy.source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Source
+              <span className="policy-sr-only">: {policy.source.label}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
+          {onShowEffect && (
+            <button
+              type="button"
+              className="policy-card-effect"
+              onClick={() => onShowEffect(policy.id)}
+              aria-label={`See the effect of ${policy.label ?? policy.name} on Population impact`}
+            >
+              <ChartColumn size={16} aria-hidden="true" />
+              See its effect
+            </button>
+          )}
+        </div>
       </div>
     </li>
   );

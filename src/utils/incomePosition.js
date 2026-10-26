@@ -320,7 +320,7 @@ export function lowerCount(pos) {
 }
 
 /** What the number measures, said once and the same everywhere. */
-export const PLACE_MEANING = "live in households with a lower income than yours, once incomes are adjusted for household size";
+export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
 
 /**
  * The card's text: a one-sentence headline and three labelled chips (your
@@ -336,7 +336,7 @@ export function positionSummary(position, change, netBefore, side = "after") {
   const count = lowerCount(shown);
   const capital = count ? count.charAt(0).toUpperCase() + count.slice(1) : null;
   const headline = count
-    ? `${capital} in every 100 people in the UK ${PLACE_MEANING}${differs ? `, ${side === "before" ? "before" : "after"} the selected policies` : ""}.`
+    ? `${capital} in 100 people in the UK ${PLACE_MEANING}${differs ? `, ${side === "before" ? "before" : "after"} the selected policies` : ""}.`
     : "Your place in the UK income distribution is not available.";
   const after = position.after;
   const before = placeLabel(position.before);
