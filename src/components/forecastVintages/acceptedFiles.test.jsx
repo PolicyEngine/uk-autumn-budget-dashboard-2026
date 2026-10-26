@@ -1,19 +1,29 @@
 /**
  * Whatever one field of the forecasts file holds, the loader
  * (utils/forecastVintages/load.js) refuses the file or the page draws it
- * truly. Every field of the committed file, in every measure, is changed
- * in turn: to nothing, to the wrong type, to text the page reads as a
- * name (a unit, a frequency, "__proto__"), to a neighbour's value, and to
- * nearby numbers.
+ * truly. The fields changed: every key of every object, at every depth,
+ * of all sixteen variables and both measures; of other lists, the first
+ * and last items (and any item, sampled, in A); of a series, its first,
+ * a middle and its last periods, the period after its last, one two
+ * after (a gap) and a key that is no period. Each is changed in turn: to
+ * nothing, to the wrong type, to text the page reads as a name (a unit, a
+ * frequency, "__proto__"), to a neighbour's value, and to nearby numbers.
  *
- * - The loader accepts exactly the changes FILE_OK, written here apart
- *   from the loader, accepts (A). Two readings of one contract: where
- *   they differ, one of them is wrong.
- * - A file it accepts draws every view on an axis that holds every point
- *   (or says the view is unavailable, never with a zero), and a change to
- *   a field that holds no figure leaves every figure as it was; a field
- *   the page does not read leaves every word as it was too (B).
- * - It mounts, with nothing that "cannot be drawn" (C).
+ * - The loader accepts exactly the changes FILE_OK accepts (A). FILE_OK
+ *   is written here, apart from the loader, from what the build can write
+ *   (src/uk_budget_data/forecast_vintages/build.py) and what the page
+ *   needs of each field. Its kind rule is the one the build and the
+ *   loader share; utils/forecastVintages/kind.test.js holds both to the
+ *   same cases, and shows a forecast's figures after its launch never
+ *   change whether a file is taken.
+ * - A file it accepts draws every view on an axis that holds every point,
+ *   or says in the builder's words why the view cannot be drawn (a %
+ *   change on a series that falls below zero, say), never with a zero or
+ *   an empty chart. A change to a field that holds no figure leaves every
+ *   figure, and every view drawn, as it was; a field the page does not
+ *   read leaves every word as it was too (B).
+ * - It mounts on its default unit, showing what the builder makes of that
+ *   view, its chart or the reason it cannot be drawn, and nothing else (C).
  *
  * WHAT_IT_HOLDS names every field the file has. A field it does not name
  * fails the test, so a field added to the file must be added there.
@@ -22,7 +32,7 @@ import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import ForecastVintagesView, { cardNotes, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
 import { chartLayout, legendItems, xTicks } from "./VintageChart";
 import { forecastVintagesProblem, resetForecastVintages } from "../../utils/forecastVintages/load";
@@ -47,8 +57,8 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------
-// What the file may hold, from the brief and the file's own words
-// (meta.launch_rules), not from load.js
+// What the file may hold, from what the build writes (build.py), the
+// brief and the file's own words (meta.launch_rules), not from load.js
 // ---------------------------------------------------------------------
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -122,40 +132,63 @@ function vintageOk(v, frequency, kind) {
   if (periodNo(v.launch, frequency) !== launch) return false;
   const values = seriesOf(v.values, frequency);
   if (!values) return false;
+  // From its launch period on, or (not an index) the period after, and
+  // two periods or more (the build's vintage_record)
   const first = firstOf(values);
+  if (values.size < 2) return false;
   return kind === "index" ? first === launch : first === launch || first === launch + 1;
 }
 
-// What its kind says of a forecast's figures: an index is above zero; a
-// growth rate is under 100% and starts within 10 points of the outturn's
-// own; a level starts within half the outturn's largest size of it
-function readsAsKind(v, kind, outturn, frequency) {
-  const values = seriesOf(v.values, frequency);
-  const first = firstOf(values);
-  const all = [...values.values()];
-  if (kind === "index") return all.every((x) => x > 0);
-  if (kind === "growth") {
-    const [now, before] = [outturn.get(first), outturn.get(first - (frequency === "quarterly" ? 4 : 1))];
-    const near = !(before > 0 && now !== undefined) || Math.abs(values.get(first) - 100 * (now / before - 1)) <= 10;
-    return all.every((x) => Math.abs(x) < 100) && near;
-  }
+// The kind rule the build and the loader share (check_kind in build.py):
+// every growth rate under 100% either way and every index above zero;
+// each forecast's figure for its launch period, an estimate of a period
+// already over, near the outturn as its kind reads it (a level within
+// half the outturn's largest size, a growth rate within 10 points of the
+// outturn's rate, an index's ratio to the outturn within 1.5 times of
+// every other forecast's); one forecast at least with that figure. The
+// figures after the launch are forecasts and are never set against it
+function kindReads(m, outturn, frequency) {
+  const lag = frequency === "quarterly" ? 4 : 1;
   const size = Math.max(...[...outturn.values()].map(Math.abs));
-  return !outturn.has(first) || Math.abs(values.get(first) - outturn.get(first)) <= 0.5 * size;
+  const ratios = [];
+  let estimates = 0;
+  for (const v of m.vintages) {
+    const values = seriesOf(v.values, frequency);
+    const all = [...values.values()];
+    if (m.kind === "index" && all.some((x) => x <= 0)) return false;
+    if (m.kind === "growth" && all.some((x) => Math.abs(x) >= 100)) return false;
+    const launch = periodNo(v.launch, frequency);
+    if (!values.has(launch)) continue;
+    estimates += 1;
+    const [estimate, now, before] = [values.get(launch), outturn.get(launch), outturn.get(launch - lag)];
+    if (m.kind === "level" && now !== undefined && Math.abs(estimate - now) > 0.5 * size) return false;
+    if (m.kind === "growth" && now !== undefined && before > 0 && Math.abs(estimate - 100 * (now / before - 1)) > 10) return false;
+    if (m.kind === "index" && now > 0) ratios.push(estimate / now);
+  }
+  return estimates > 0 && !(ratios.length && Math.max(...ratios) > 1.5 * Math.min(...ratios));
 }
 
+// The build's outturn check (check_outturn, check_index): its gaps in the
+// measure's own units for a forecast of levels, else in growth rates; a
+// share of the value only where the gaps are in the value's units; a
+// tolerance no finer than the four decimals a gap is written to, and a
+// gap that is 0 or no finer
 function checkOk(c, m, outturn, frequency) {
-  if (!plain(c) || !str(c.against) || !str(c.in) || typeof c.tolerance_is_share !== "boolean") return false;
+  const terms = m.kind === "level" ? m.unit : "% change on a year earlier";
+  if (!plain(c) || !str(c.against) || c.in !== terms || typeof c.tolerance_is_share !== "boolean") return false;
   if (!Array.isArray(c.periods) || !c.periods.length) return false;
   const ts = c.periods.map((p) => periodNo(p, frequency));
   if (ts.some((t, i) => t === null || !outturn.has(t) || (i > 0 && t <= ts[i - 1]))) return false;
-  if (!num(c.tolerance) || !(c.tolerance > 0) || (c.tolerance_is_share && !(c.tolerance < 1))) return false;
+  if (!num(c.tolerance) || !(c.tolerance >= 1e-4)) return false;
+  if (c.tolerance_is_share && !(c.tolerance < 1 && m.kind === "level")) return false;
   const at = periodNo(c.largest_gap_period, frequency);
   if (!num(c.largest_gap) || at === null || !c.periods.includes(c.largest_gap_period)) return false;
   const gap = Math.abs(c.largest_gap);
-  // Written to four decimals; a share's gap is of the OBR's figure, the
-  // outturn less the gap, and a growth measure's is of rates not in the file
+  if (gap !== 0 && gap < 1e-4) return false;
+  // A share's gap is of the OBR's figure: the build's gap is the outturn
+  // less the OBR's, so the OBR's is the outturn less the gap
   if (!c.tolerance_is_share) return gap <= c.tolerance + 1e-4;
-  return m.kind === "growth" || gap <= c.tolerance * Math.abs(outturn.get(at) - c.largest_gap) + 1e-4;
+  return gap <= c.tolerance * Math.abs(outturn.get(at) - c.largest_gap) + 1e-4;
 }
 
 function measureOk(m, frequency) {
@@ -166,7 +199,7 @@ function measureOk(m, frequency) {
   if (!Array.isArray(m.vintages) || !m.vintages.length || !m.vintages.every((v) => vintageOk(v, frequency, m.kind))) return false;
   const dates = m.vintages.map((v) => v.year * 12 + v.month);
   if (!distinct(m.vintages.map((v) => v.id)) || dates.some((d, i) => i > 0 && d <= dates[i - 1])) return false;
-  return dates[dates.length - 1] === NEWEST && m.vintages.every((v) => readsAsKind(v, m.kind, outturn, frequency));
+  return dates[dates.length - 1] === NEWEST && kindReads(m, outturn, frequency);
 }
 
 function unitsOk(variable) {
@@ -230,9 +263,11 @@ function FILE_OK(data) {
 // Every field, and what a change to it may change on the page
 // ---------------------------------------------------------------------
 
-// figures: may change what is drawn; words: may change only text;
-// unread: changes nothing the page shows
+// figures: may change what is drawn; opens: chooses which view opens,
+// each drawn as before (C checks the view it opens on); words: may change
+// only text; unread: changes nothing the page shows
 const FIGURES = "figures";
+const OPENS = "opens";
 const WORDS = "words";
 const UNREAD = "unread";
 const M = "variables.[].{measure}";
@@ -246,8 +281,7 @@ const WHAT_IT_HOLDS = {
   "variables.[].label": WORDS,
   "variables.[].group": UNREAD,
   "variables.[].frequency": FIGURES,
-  // Which unit opens first; each unit is drawn as before
-  "variables.[].default_unit": WORDS,
+  "variables.[].default_unit": OPENS,
   "variables.[].notes": WORDS,
   "variables.[].notes.[]": WORDS,
   "variables.[].units": FIGURES,
@@ -406,6 +440,8 @@ const VALUES = [
   "2024-25",
   -1,
   0,
+  0.02,
+  0.5,
   1.5,
   7,
   13,
@@ -613,7 +649,7 @@ function checkDrawn({ path, value }) {
   const what = WHAT_IT_HOLDS[patternOf(path)];
   for (const [v, original] of reached(data, path)) {
     const now = drawEverything(data, [v]);
-    if (what === FIGURES) continue;
+    if (what === FIGURES || !original) continue;
     const before = originalOf(original);
     if (!same(strip(now), strip(before))) throw new Error(`${show(path, value)}: changed the figures of ${v.id}`);
     if (what === UNREAD && !same(now, before)) throw new Error(`${show(path, value)}: changed the words of ${v.id}`);
@@ -656,18 +692,105 @@ describe("a forecasts file the loader accepts", () => {
     );
   }, 300000);
 
-  it("mounts with nothing that cannot be drawn (C)", async () => {
+  it("agrees with FILE_OK on any item of any list, not only the first and last (A, sampled)", () => {
+    // A walk from the top, taking at each step the key or item its number
+    // picks, to a field anywhere in the file
+    const walk = (steps) => {
+      const path = [];
+      let at = DATA;
+      for (const n of steps) {
+        if (Array.isArray(at) && at.length) path.push(n % at.length);
+        else if (plain(at) && Object.keys(at).length) path.push(Object.keys(at)[n % Object.keys(at).length]);
+        else break;
+        at = at[path[path.length - 1]];
+      }
+      return path;
+    };
+    fc.assert(
+      fc.property(fc.array(fc.nat(), { minLength: 1, maxLength: 9 }), fc.nat(), (steps, pick) => {
+        const path = walk(steps);
+        const values = [...VALUES, ...nearby(path)].filter((v) => !noChange(path, v));
+        if (!values.length) return;
+        const value = values[pick % values.length];
+        const small = smaller(path);
+        const data = changed(small.data, small.path, value);
+        expect(forecastVintagesProblem(data) === null, show(path, value)).toBe(FILE_OK(data));
+      }),
+      { numRuns: 3000 },
+    );
+  }, 300000);
+
+  it("agrees with FILE_OK on every combination of a measure's kind and its check's terms, share, tolerance and gap (A, together)", () => {
+    // Fields that say what each other mean: one at a time each may pass
+    // and only together say something false (a share of a growth rate)
+    const disagree = [];
+    let accepted = 0;
+    DATA.variables.forEach((v, i) => {
+      for (const name of ["level", "share"].filter((m) => v[m]?.check)) {
+        const m = v[name];
+        for (const kind of ["growth", "index", "level"]) {
+          for (const terms of [m.unit, "% change on a year earlier", "£ billion"]) {
+            for (const share of [true, false]) {
+              for (const tolerance of [0.00001, 0.02, 0.5, 1.5]) {
+                for (const gap of [0, 1e-300, 0.0001, m.check.largest_gap, 2]) {
+                  const small = smaller(["variables", i, name]);
+                  const check = { ...m.check, in: terms, tolerance_is_share: share, tolerance, largest_gap: gap };
+                  const data = changed(small.data, small.path, { ...m, kind, check });
+                  const loader = forecastVintagesProblem(data) === null;
+                  if (loader !== FILE_OK(data)) disagree.push(`${v.id} ${name} ${JSON.stringify({ kind, terms, share, tolerance, gap })}: the loader ${loader ? "accepts" : "refuses"} it`);
+                  else if (loader) accepted += 1;
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    expect(disagree).toEqual([]);
+    expect(accepted).toBeGreaterThan(100);
+  }, 300000);
+
+  /** Mounts the page on `data`, on `variable`, as a reader opens it. */
+  async function mount(data, variable) {
+    resetForecastVintages();
+    window.history.replaceState({}, "", `/?tab=forecasts&variable=${encodeURIComponent(variable.id)}`);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(data))));
+    render(<ForecastVintagesView />);
+    await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
+  }
+
+  /** Throws unless the page opens on the default unit and shows what the builder makes of that view, and nothing else. */
+  function opensTruly(data, variable, where) {
+    const units = UNIT_ORDER.filter((u) => Object.hasOwn(variable.units, u));
+    if (units.length > 1) {
+      const pressed = within(screen.getByRole("group", { name: "Unit" })).getByRole("button", { pressed: true });
+      if (pressed.textContent !== variable.units[variable.default_unit].label) throw new Error(`${where}: opened on ${pressed.textContent}`);
+    }
+    const expected = buildView(data, variable, { unit: variable.default_unit, annual: false, showPast: true });
+    const notice = document.querySelector(".publication-unavailable")?.textContent ?? null;
+    const chart = document.querySelector(".recharts-surface");
+    if (notice !== expected.unavailable) throw new Error(`${where}: shows ${JSON.stringify(notice)}, not ${JSON.stringify(expected.unavailable)}`);
+    if (Boolean(chart) === Boolean(expected.unavailable)) throw new Error(`${where}: ${chart ? "a chart" : "no chart"} beside ${JSON.stringify(notice)}`);
+  }
+
+  it("mounts on its default unit, showing the builder's chart or its reason, and nothing else (C)", async () => {
+    // Every accepted change to which unit opens, and a sample of the rest
+    const opens = RESULT().accepted.filter(({ path }) => WHAT_IT_HOLDS[patternOf(path)] === OPENS);
+    expect(opens.length).toBeGreaterThan(10);
+    for (const change of opens) {
+      const data = acceptedWhole(change);
+      const [shown] = reached(data, change.path)[0];
+      await mount(data, shown);
+      opensTruly(data, shown, show(change.path, change.value));
+      cleanup();
+      vi.unstubAllGlobals();
+    }
     await fc.assert(
-      fc.asyncProperty(fc.constantFrom(...RESULT().accepted), async ({ path, value }) => {
-        const data = acceptedWhole({ path, value });
-        const [shown] = reached(data, path)[0];
-        resetForecastVintages();
-        window.history.replaceState({}, "", `/?tab=forecasts&variable=${encodeURIComponent(shown.id)}`);
-        vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(data))));
-        render(<ForecastVintagesView />);
-        await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
-        expect(screen.queryByText(/cannot be drawn: /)).toBeNull();
-        expect(screen.queryByText("This range of the chart cannot be drawn.")).toBeNull();
+      fc.asyncProperty(fc.constantFrom(...RESULT().accepted), async (change) => {
+        const data = acceptedWhole(change);
+        const [shown] = reached(data, change.path)[0];
+        await mount(data, shown);
+        opensTruly(data, shown, show(change.path, change.value));
         cleanup();
         vi.unstubAllGlobals();
       }),
