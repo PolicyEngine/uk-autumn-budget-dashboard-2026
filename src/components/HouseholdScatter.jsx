@@ -33,6 +33,8 @@ import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
+import PillSelect from "./PillSelect";
+import { shortNameOf } from "../utils/policyDetails";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -412,6 +414,8 @@ function HouseholdScatter({
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
+  // Several measures and no single published reform: the measure shown
+  const [focusId, setFocusId] = useState(null);
   const data = useHouseholdScatterData();
   const { combinedId } = useMeasureCatalogue();
   const view = useMemo(
@@ -421,11 +425,15 @@ function HouseholdScatter({
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
       packageId: combinedId,
+      focusId,
     }),
-    [data, selectedPolicies, policies, selectedYear, combinedId],
+    [data, selectedPolicies, policies, selectedYear, combinedId, focusId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
-  const chartTitle = `${title}, ${yearLabel}`;
+  const focus = view.kind === "points" ? view.focus : null;
+  const focusName = (id) => shortNameOf((policies ?? []).find((policy) => policy.id === id) ?? { id });
+  // The title names the one measure shown when several are selected
+  const chartTitle = focus ? `${title}, ${yearLabel}: ${focusName(view.reform)}` : `${title}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
@@ -589,6 +597,18 @@ function HouseholdScatter({
         </div>
       )}
 
+      {focus && (
+        <div className="chart-controls household-scatter-controls">
+          <PillSelect
+            variant="light"
+            name="Measure shown"
+            prefix="Measure"
+            value={view.reform}
+            onChange={setFocusId}
+            options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
+          />
+        </div>
+      )}
       {/* The plot takes the rows the map beside it uses for its controls,
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">

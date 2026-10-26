@@ -18,6 +18,7 @@ import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
+import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
@@ -407,7 +408,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="inequality-heading"
             icon="scale"
             title="Inequality"
-            subtitle={<>With the selected measures: the change in inequality each year. {twin("living")}</>}
+            subtitle={<>With the selected measures. {twin("living")}</>}
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
@@ -430,7 +431,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <SectionHeading
             icon="lifebuoy"
             title="How the measures change poverty"
-            subtitle={<>With the selected measures: the change in the poverty rate each year, and each measure&apos;s part in the selected year. {twin("poverty")}</>}
+            subtitle={<>With the selected measures. {twin("poverty")}</>}
           />
           {/* The change by year beside which measures move it */}
           <section id="poverty" className="report-section">
@@ -672,8 +673,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
+              subtitle="What each measure changes, when, and how it is modelled."
             />
+            <Disclosure title="More info" className="policies-more-info">
+              <p>
+                Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end
+                date. “See its effect” shows that measure alone on Population impact.
+              </p>
+            </Disclosure>
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
                 policies={POLICIES}

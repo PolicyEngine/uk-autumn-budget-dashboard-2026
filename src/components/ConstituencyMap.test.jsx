@@ -370,28 +370,24 @@ describe("ConstituencyMap", () => {
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums: several measures but not all draws no map and no figures", async () => {
-    const { container } = render(
+  it("never sums: several measures but not all show one measure at a time, chosen in a picker", async () => {
+    render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
         selectedYear={2029}
         policies={POLICIES}
       />,
     );
-    expect(
-      await screen.findByText(
-        "Results by constituency are shown for one measure at a time, or for all measures together.",
-      ),
-    ).toBeInTheDocument();
-    // No results map: at most the unpublished template, every seat grey.
-    const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .pill-select, .title-icon"),
-    );
-    expect(drawn).toEqual([]);
-    container
-      .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
-    expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
+    // No blocking message: a Measure picker offering the selected measures,
+    // and the title names the one shown
+    const picker = await screen.findByRole("button", { name: /^Measure shown:/ });
+    expect(screen.queryByText(/shown for one measure at a time/)).toBeNull();
+    const shown = picker.getAttribute("aria-label").replace(/^Measure shown: /, "");
+    expect(document.querySelector(".map-title-focus")).toHaveTextContent(shown);
+    fireEvent.click(picker);
+    const options = screen.getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""));
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.length).toBeLessThanOrEqual(2);
   });
 
   it("points to the region view for a measure published by region only", async () => {

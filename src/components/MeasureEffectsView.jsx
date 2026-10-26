@@ -39,7 +39,7 @@ export function yearsEffects(byMeasure, year, decimals) {
   return { rows: shown, hidden: byMeasure.length - shown.length };
 }
 
-export default function MeasureEffectsView({ byMeasure, metric, selectedYear, view, narrow }) {
+export default function MeasureEffectsView({ byMeasure, metric, selectedYear, view, narrow, years = DISPLAY_YEARS }) {
   const signed = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${metric.format(v)}`;
   const { rows, hidden } =
     view === "years" ? yearsEffects(byMeasure, selectedYear, metric.decimals) : yearEffects(byMeasure, selectedYear, metric.decimals);
@@ -67,7 +67,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
             <thead>
               <tr>
                 <th scope="col">Measure</th>
-                {DISPLAY_YEARS.map((year) => (
+                {years.map((year) => (
                   <th scope="col" key={year} className={year === selectedYear ? "is-selected" : undefined}>
                     {narrow ? shortFiscalYearTick(year) : fiscalYearTick(year)}
                   </th>
@@ -80,7 +80,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                   <th scope="row" title={m.fullName ?? m.name}>
                     {m.name}
                   </th>
-                  {DISPLAY_YEARS.map((year) => {
+                  {years.map((year) => {
                     const v = m.points.find((p) => p.year === year)?.value ?? null;
                     const on = reads(v, metric.decimals);
                     const strength = on ? Math.round(15 + 70 * Math.min(1, Math.abs(v) / max)) : 0;

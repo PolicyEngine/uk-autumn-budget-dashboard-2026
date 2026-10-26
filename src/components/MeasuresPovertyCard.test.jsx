@@ -102,7 +102,7 @@ describe("measurePovertyRows and povertyWaterfall", () => {
 });
 
 describe("the Poverty sub-tab's measures pair", () => {
-  it("is two cards in a row under one poverty choice: the change, then which measures move it", async () => {
+  it("is two cards stacked full width under one poverty choice: which measures move it, then the change", async () => {
     render(
       <MeasureCatalogueProvider catalogue={catalogue}>
         <PovertyMeasuresRow rows={metrics} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
@@ -110,10 +110,12 @@ describe("the Poverty sub-tab's measures pair", () => {
     );
     const panel = document.body;
     const card = async (name) =>
-      (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".charts-grid > div");
+      (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".charts-stack > div");
     const change = await card(/^Change in the poverty rate$/);
     const measures = await card(/^Which measures move poverty/);
     expect(change.parentElement).toBe(measures.parentElement);
+    // Which measures first, on top
+    expect(measures.compareDocumentPosition(change) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     // No bar above the pair: each card's own Options pill holds the
     // poverty measure, the same in both
@@ -122,7 +124,7 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lower the poverty rate by 0\.008 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures reduce the poverty rate by less than 0\.1 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
@@ -131,7 +133,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(rows).not.toContain("Employer NI relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
-    expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
+    // A plain sentence, no "≈" or "pp"
+    const headline = measures.querySelector(".chart-description");
+    expect(headline).toHaveTextContent(/^Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
+    expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
     fireEvent.click(within(change).getByRole("button", { name: /^Options:/ }));

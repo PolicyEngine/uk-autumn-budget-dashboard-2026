@@ -292,7 +292,12 @@ function TrendCard({ catalogue, rows, policies, selectedPolicies, selectedYear, 
         {unpublished.length > 0 && (
           <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
         )}
-        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`} />
+        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`}>
+          <p>
+            Pensioners are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28.
+            Each person counts their household&apos;s change in net income.
+          </p>
+        </ChartMoreInfo>
       </div>
     </div>
   );
@@ -659,28 +664,6 @@ function SplitTick({ x, y, payload, data, narrow }) {
   );
 }
 
-/** A group's name down the side, wrapped to two lines where long. */
-function GroupTick({ x, y, payload, narrow }) {
-  const words = narrow && payload.value === "Under State Pension age" ? ["Under State", "Pension age"] : [payload.value];
-  const bold = payload.value === "Pensioners";
-  return (
-    <text
-      x={x - 6}
-      y={y}
-      textAnchor="end"
-      dominantBaseline="middle"
-      fontSize={13}
-      fill={bold ? CHART_COLOURS.highlight : TICK_STYLE.fill}
-      fontWeight={bold ? 600 : 400}
-    >
-      {words.map((word, index) => (
-        <tspan key={word} x={x - 6} dy={index === 0 ? (words.length - 1) * -7 : 14}>
-          {word}
-        </tspan>
-      ))}
-    </text>
-  );
-}
 
 /** "Aged 67", "Aged 90 and over"; a group's name as it is. */
 const ageLabel = (label) =>
@@ -890,46 +873,15 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
         ) : perMeasure && data.length ? (
           <MeasureSharesChart rows={filtered.rows} groupLabel={groupLabel} yearLabel={yearLabel} />
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap="38%">
-              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                ticks={[0, 25, 50, 75, 100]}
-                tickFormatter={(value) => `${value}%`}
-                tick={TICK_STYLE}
-                axisLine={AXIS_LINE}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                label={{ value: "Share of people in the group", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
-              />
-              <YAxis
-                type="category"
-                dataKey="group"
-                tick={<GroupTick narrow={narrow} />}
-                width={narrow ? 92 : 168}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <YAxis
-                yAxisId="split"
-                orientation="right"
-                type="category"
-                dataKey="group"
-                tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<SharesTooltip yearLabel={yearLabel} />} />
-              {OUTCOMES.map((outcome) => (
-                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" shape={SHARE_BAR_SHAPE} {...chartMotion()} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+          // The one run's groups, as the per-measure view: names, a 100% bar
+          // and the ▲/▼ shares in two fixed columns
+          <MeasureSharesChart
+            rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
+            groupLabel=""
+            yearLabel={yearLabel}
+            emphasis={null}
+            labelFor={({ name }) => `${name}, ${yearLabel}`}
+          />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>No shares are published for this selection in {yearLabel}.</p>
@@ -1009,7 +961,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         id={PENSIONERS_ANCHOR}
         icon="armchair"
         title="Change for pensioners"
-        subtitle="Pensioners here are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28, as State Pension age rises to 67. Each person counts their household's change in net income."
+        subtitle="Pensioners are people at State Pension age or over (67 from 2027-28)."
       />
       {/* Both cards colour by measure: one key above the pair, not a long
           legend in each */}

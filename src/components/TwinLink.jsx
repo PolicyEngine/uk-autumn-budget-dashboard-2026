@@ -9,11 +9,11 @@
  * @param {string} props.tab - The view to open ("dashboard" or "outlook")
  * @param {string} props.sub - Its sub-tab, which has the same name in both views
  * @param {(tab: string, sub: string) => void} [props.onShow] - Switch to that view at that sub-tab
- * @param {string} [props.label] - The link's words, in place of "See this with(out) the measures"
+ * @param {string} [props.label] - The link's words, in place of "See with(out) the measures"
  * @param {string} [props.anchor] - An element id in the twin to bring into view (one card's twin)
  */
 export default function TwinLink({ tab, sub, onShow, label: text, anchor }) {
-  const label = text ?? (tab === "outlook" ? "See this without the measures" : "See this with the measures");
+  const label = text ?? (tab === "outlook" ? "See without them" : "See with the measures");
   return (
     <a
       className="twin-link"
