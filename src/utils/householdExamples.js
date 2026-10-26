@@ -11,7 +11,7 @@
  *
  * Each "Other households" example was chosen, and checked against the live
  * household API on 25 October 2026, so that a measure then published
- * changes its net income in a year the page offers (ea665c3 lists which).
+ * changes its net income in a year the page offers (9105ef7 lists which).
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
