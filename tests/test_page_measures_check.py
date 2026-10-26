@@ -6,6 +6,9 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from uk_budget_data import page_measures_check as check
+from uk_budget_data.publication import manifest as m
+
+DIGEST = "0" * 64
 
 PACKAGES = {
     "policyengine": "6.10.2",
@@ -75,15 +78,24 @@ def api(known: set, packages: dict = PACKAGES):
         server.shutdown()
 
 
-def write_policies(tmp_path, ids):
-    path = tmp_path / "policies.js"
-    entries = "".join(
-        f'  {{\n    id: "{i}",\n    name: "{i}",\n  }},\n' for i in ids
-    )
-    path.write_text(
-        f"/** doc */\nexport const POLICIES = [\n{entries}];\n\nexport const X = 1;\n"
-    )
-    return path
+def write_manifest(tmp_path, ids, statuses=None):
+    """A manifest whose measures are `ids`, approved unless `statuses` says."""
+    statuses = statuses or {}
+    manifest = m.Manifest()
+    for key in ids:
+        manifest.measures[key] = m.Entry(
+            name=key,
+            status=statuses.get(key, m.APPROVED),
+            artifact=f"artifacts/{key}/{DIGEST[:16]}",
+            outputs_sha256=DIGEST,
+            receipt_sha256=DIGEST,
+            execution_identity_sha256=DIGEST,
+            artifact_sha256=DIGEST,
+            years=[2027],
+        )
+    data_root = tmp_path / "data"
+    m.save_manifest(manifest, data_root)
+    return data_root
 
 
 def write_presets(tmp_path, ids, packages=PACKAGES):
@@ -94,16 +106,16 @@ def write_presets(tmp_path, ids, packages=PACKAGES):
     return path
 
 
-def test_reads_the_page_measures_in_order(tmp_path):
-    assert check.page_measure_ids(write_policies(tmp_path, ["b", "a"])) == [
-        "b",
-        "a",
-    ]
+def test_reads_the_displayable_measures(tmp_path):
+    data_root = write_manifest(
+        tmp_path, ["b", "a", "held"], {"a": m.PROVISIONAL, "held": m.STAGED}
+    )
+    assert check.page_measure_ids(data_root) == ["a", "b"]
 
 
-def test_the_real_page_lists_measures():
-    ids = check.page_measure_ids()
-    assert ids and len(ids) == len(set(ids))
+def test_no_manifest_is_a_problem(tmp_path):
+    problems = check.check(["http://127.0.0.1:9"], tmp_path / "none")
+    assert len(problems) == 1 and "publish index" in problems[0]
 
 
 def test_an_api_that_knows_every_measure_passes(tmp_path):
@@ -111,7 +123,7 @@ def test_an_api_that_knows_every_measure_passes(tmp_path):
     with api({"fuel", "vat"}) as url:
         problems = check.check(
             [url],
-            write_policies(tmp_path, ids),
+            write_manifest(tmp_path, ids),
             write_presets(tmp_path, ids),
             timeout=10,
         )
@@ -123,12 +135,12 @@ def test_an_api_missing_a_measure_fails_and_names_it(tmp_path):
     with api({"fuel"}) as url:
         problems = check.check(
             [url + "/api/household-impact"],
-            write_policies(tmp_path, ids),
+            write_manifest(tmp_path, ids),
             write_presets(tmp_path, ids),
             timeout=10,
         )
     assert len(problems) == 1
-    assert "vat, gas" in problems[0] and "deploy it" in problems[0]
+    assert "gas, vat" in problems[0] and "deploy it" in problems[0]
 
 
 def test_every_api_is_checked(tmp_path):
@@ -136,7 +148,7 @@ def test_every_api_is_checked(tmp_path):
     with api({"fuel", "vat"}) as good, api({"fuel"}) as stale:
         problems = check.check(
             [good, stale],
-            write_policies(tmp_path, ids),
+            write_manifest(tmp_path, ids),
             write_presets(tmp_path, ids),
             timeout=10,
         )
@@ -148,7 +160,7 @@ def test_presets_for_other_measures_fail(tmp_path):
     with api({"fuel", "vat"}) as url:
         problems = check.check(
             [url],
-            write_policies(tmp_path, ids),
+            write_manifest(tmp_path, ids),
             write_presets(tmp_path, ["fuel", "old"]),
             timeout=10,
         )
@@ -164,7 +176,7 @@ def test_presets_on_another_engine_fail(tmp_path):
     with api({"fuel"}) as url:
         problems = check.check(
             [url],
-            write_policies(tmp_path, ids),
+            write_manifest(tmp_path, ids),
             write_presets(tmp_path, ids, old),
             timeout=10,
         )
@@ -175,7 +187,7 @@ def test_an_api_that_does_not_answer_is_a_problem_not_a_crash(tmp_path):
     ids = ["fuel"]
     problems = check.check(
         ["http://127.0.0.1:9"],
-        write_policies(tmp_path, ids),
+        write_manifest(tmp_path, ids),
         write_presets(tmp_path, ids),
         timeout=2,
     )
@@ -189,8 +201,8 @@ def test_main_exits_1_on_a_problem(tmp_path, capsys):
             [
                 "--base-url",
                 url,
-                "--policies",
-                str(write_policies(tmp_path, ids)),
+                "--data-root",
+                str(write_manifest(tmp_path, ids)),
                 "--presets",
                 str(write_presets(tmp_path, ids)),
             ]

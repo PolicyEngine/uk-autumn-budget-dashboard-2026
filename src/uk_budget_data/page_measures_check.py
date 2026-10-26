@@ -1,15 +1,17 @@
 """Check that the household APIs and the precomputed examples cover the
 measures the page lists, before the page is published.
 
-The page lists its measures in ``src/utils/policies.js`` and sends every
-one to the household API it calls. An API deployed from an older commit
+The page shows the manifest's displayable measures (approved or
+provisional, ``public/data/manifest.json``) and sends them to the household
+API it calls. An API deployed from an older commit
 refuses a measure it doesn't register ("Unknown measures: …"), so the
 Household impact tab shows an error. The example cards read
 ``public/data/household_presets.json`` instead, so stale presets show the
 previous measures' answers without any error. Drill 5 hit both (#144).
 
 Run it against every household API the build will call, Cloud Run's and
-Modal's, after they are deployed and before the page is published:
+Modal's, after they are deployed and ``publish index`` has written the
+manifest, before the page is published:
 
     uv run python -m uk_budget_data.page_measures_check \\
         --base-url "$HOUSEHOLD_API" --base-url "$HOUSEHOLD_DETAIL_API"
@@ -28,7 +30,8 @@ import urllib.request
 from pathlib import Path
 from typing import Optional
 
-POLICIES_FILE = Path("src/utils/policies.js")
+from uk_budget_data.publication import manifest as m
+
 PRESETS_FILE = Path("public/data/household_presets.json")
 HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 VERSION_ROUTE = "/api/version"
@@ -37,12 +40,12 @@ ENGINE_PACKAGES = ("policyengine", "policyengine-uk", "policyengine-core")
 TIMEOUT_S = 120
 
 
-def page_measure_ids(policies_file: Path = POLICIES_FILE) -> list[str]:
-    """The measure ids in the page's POLICIES list, in its order."""
-    text = Path(policies_file).read_text()
-    start = text.index("export const POLICIES")
-    end = text.index("\n];", start)
-    return re.findall(r'^\s*id: "([a-z0-9_]+)"', text[start:end], re.M)
+def page_measure_ids(data_root: Path = m.DATA_ROOT) -> list[str]:
+    """The manifest's displayable measure ids, sorted: what the page shows."""
+    measures = m.load_manifest(Path(data_root)).measures
+    return sorted(
+        key for key, entry in measures.items() if entry.status in m.DISPLAYABLE
+    )
 
 
 def probe(year: int, ids: list[str]) -> dict:
@@ -127,7 +130,7 @@ def preset_problems(
         return []
     presets = json.loads(presets_file.read_text())
     problems = []
-    if list(presets.get("policies") or []) != list(ids):
+    if set(presets.get("policies") or []) != set(ids):
         missing = sorted(set(ids) - set(presets.get("policies") or []))
         extra = sorted(set(presets.get("policies") or []) - set(ids))
         problems.append(
@@ -150,13 +153,18 @@ def preset_problems(
 
 def check(
     base_urls: list[str],
-    policies_file: Path = POLICIES_FILE,
+    data_root: Path = m.DATA_ROOT,
     presets_file: Path = PRESETS_FILE,
     year: int = 2027,
     timeout: float = TIMEOUT_S,
 ) -> list[str]:
     """Every problem across the APIs and the presets."""
-    ids = page_measure_ids(policies_file)
+    ids = page_measure_ids(data_root)
+    if not ids:
+        return [
+            f"{Path(data_root) / m.MANIFEST_FILE} has no displayable measure; "
+            "run it after publish index"
+        ]
     problems: list[str] = []
     packages = None
     for url in base_urls:
@@ -175,12 +183,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         required=True,
         help="A household API the page calls (repeat for each)",
     )
-    parser.add_argument("--policies", type=Path, default=POLICIES_FILE)
+    parser.add_argument("--data-root", type=Path, default=m.DATA_ROOT)
     parser.add_argument("--presets", type=Path, default=PRESETS_FILE)
     parser.add_argument("--year", type=int, default=2027)
     args = parser.parse_args(argv)
-    problems = check(args.base_url, args.policies, args.presets, args.year)
-    ids = page_measure_ids(args.policies)
+    problems = check(args.base_url, args.data_root, args.presets, args.year)
+    ids = page_measure_ids(args.data_root)
     if problems:
         for problem in problems:
             print(f"FAIL {problem}")
