@@ -668,13 +668,6 @@
   text-decoration: underline;
 }
 
-.forecast-tile-body {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-
 .forecast-tile-value {
   margin: 0;
   font-size: 2rem;
@@ -700,42 +693,121 @@
   color: var(--pe-gray-600);
 }
 
-/* The sparkline: a line of the forecast years, first and last dotted,
-   with those years underneath */
-.forecast-spark {
-  flex: 0 1 132px;
-  min-width: 96px;
-  margin: 0 0 2px;
-  color: var(--c-gain);
+/* A tile's trend (HeadlineTile): faint gridlines, the bottom and top of
+   its range at the left, official years solid grey, the projection or
+   forecast dashed teal; a guide and tip on hover or focus */
+.tile-trend {
+  min-width: 0;
 }
 
-.forecast-spark-plot {
+.tile-trend-plot {
   position: relative;
+  border-radius: 6px;
+  outline: none;
+  cursor: crosshair;
 }
 
-.forecast-spark svg {
+.tile-trend-plot:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.tile-trend-plot svg {
   display: block;
-  width: 100%;
-  height: 32px;
   overflow: visible;
 }
 
-.forecast-spark-dot {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 50%;
-  background: var(--c-gain);
+.tile-trend-grid {
+  stroke: var(--c-grid);
+  stroke-width: 1;
 }
 
-.forecast-spark-years {
+.tile-trend-axis {
+  font-size: 10px;
+  fill: var(--c-tick);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-trend-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tile-trend-line.is-official {
+  stroke: var(--c-before);
+}
+
+.tile-trend-line.is-projection {
+  stroke: var(--c-gain);
+  stroke-dasharray: 5 3;
+}
+
+.tile-trend-dot.is-official,
+.tile-trend-end.is-official,
+.tile-trend-hover.is-official {
+  fill: var(--c-before);
+}
+
+.tile-trend-dot.is-projection,
+.tile-trend-end.is-projection,
+.tile-trend-hover.is-projection {
+  fill: var(--c-gain);
+}
+
+.tile-trend-hover {
+  stroke: var(--c-surface);
+  stroke-width: 1.5;
+}
+
+.tile-trend-guide {
+  stroke: var(--c-axis);
+  stroke-width: 1;
+}
+
+.tile-trend-tip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 2px 8px var(--shadow-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tile-trend-years {
   display: flex;
   justify-content: space-between;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 0.6875rem;
   color: var(--pe-gray-500);
   font-variant-numeric: tabular-nums;
+}
+
+.forecast-tile-info {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--pe-gray-400);
+  cursor: help;
+  border-radius: 50%;
+  outline: none;
+}
+
+.forecast-tile-info:hover,
+.forecast-tile-info:focus-visible {
+  color: var(--c-gain-text);
+}
+
+/* The poverty tiles sit as one more row of the section's cards */
+.poverty-tiles {
+  margin-bottom: 20px;
 }
 
 /* How the forecast feeds the baseline: a quiet card under the tiles */
@@ -777,14 +849,6 @@
 .forecast-feed-params code {
   font-size: 0.75rem;
   overflow-wrap: anywhere;
-}
-
-/* Poverty tiles: the measure they share, said once above them */
-.poverty-tiles-caption {
-  margin: 0 0 8px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-600);
 }
 
 /* A section with one card: the card takes the full width */

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import { periodOption, yearsOption } from "../controlOptions";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
 import { lineLegendItems } from "../LsCharts";
 import OverTimeChart from "../OverTimeChart";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
@@ -33,18 +34,16 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
-  // The default, as on Population impact's Poverty sub-tab: absolute,
-  // before housing costs, all people
-  const [measure, setMeasure] = useState(measureIds.includes("absolute_bhc") ? "absolute_bhc" : measureIds[0]);
+  // Absolute, before housing costs, at first, as on Population impact's
+  // Poverty sub-tab; shared with the sub-tab's tiles and Who is in poverty (usePovertyMeasure)
+  const [chosenMeasure, setMeasure] = usePovertyMeasure();
+  const measure = measureIds.includes(chosenMeasure) ? chosenMeasure : measureIds[0];
   const [group, setGroup] = useState(groupIds[0]);
   const [viewMode, setViewMode] = useState("both");
 
   const startYear = useMemo(() => projectionStartYear(data), [data]);
   const outturn = poverty.outturn?.[measure]?.[group] || EMPTY;
-  const projection = useMemo(
-    () => trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data)),
-    [poverty, measure, group, startYear, data],
-  );
+  const projection = trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data));
 
   const chartData = useMemo(
     () =>
