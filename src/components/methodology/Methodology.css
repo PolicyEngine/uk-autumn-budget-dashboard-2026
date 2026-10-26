@@ -487,30 +487,6 @@
   background: var(--c-loss);
 }
 
-/* Back to top */
-.method-back {
-  margin: 12px 0 0;
-  text-align: right;
-  font-size: var(--fs-caption);
-}
-
-.method-back a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--pe-gray-500);
-  text-decoration: none;
-}
-
-.method-back a:hover {
-  color: var(--pe-teal-700);
-}
-
-.method-back svg {
-  width: 14px;
-  height: 14px;
-}
-
 @media (max-width: 899px) {
   /* The jump menu sticks under the band and tabs */
   .method-contents {
@@ -674,16 +650,6 @@
     margin-top: 32px;
   }
 
-  /* 40px tap areas */
-  .method-back a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-  }
-
-  .method-back {
-    margin-top: 4px;
-  }
 }
 
 /* Flow: the step a section explains, a summary that reads on its own, and
@@ -895,18 +861,6 @@
 }
 
 /* The pointer to Policies, where each measure's description and modelling live */
-.method-pointer {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-}
-
-.method-pointer svg {
-  width: 16px;
-  height: 16px;
-}
-
 /* Unavailable and not modelled: a name and its reason per line */
 .mm-reasons {
   margin: 0;
@@ -946,3 +900,119 @@
   }
 }
 
+
+/* Consolidated layout (26 October): each section is a SectionHeading
+   (icon, title, one-line summary) and one card of folded topics, each a
+   shared Disclosure with a one-line preview of what is inside ---------- */
+
+.methodology-tab .section-heading {
+  margin-bottom: 16px;
+}
+
+.methodology-tab .section-heading p a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.methodology-tab .section-heading p a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-topics.card {
+  padding: 0;
+}
+
+.method-topics > .method-topic {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.method-topics > .method-topic + .method-topic {
+  border-top: 1px solid var(--card-border);
+}
+
+.method-topic > .disclosure-toggle {
+  padding: 14px 0;
+}
+
+.method-topic .disclosure-title {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-topic > .disclosure-toggle:hover .disclosure-title {
+  color: var(--pe-teal-700);
+}
+
+.method-topic .disclosure-content {
+  padding: 0 0 20px;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-topic .disclosure-content > .method-more:first-child,
+.method-topic .disclosure-content > .method-lead:first-child {
+  margin-top: 0;
+}
+
+.method-topic .disclosure-content > .method-more:first-child {
+  margin-bottom: 12px;
+}
+
+.method-topic .disclosure-content a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.method-topic .disclosure-content a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-topic .method-details-title:first-child {
+  margin-top: 0;
+}
+
+/* Terms used on the charts: term and one line, scannable */
+.method-glossary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.method-glossary-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.3fr) minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 7px 0;
+}
+
+.method-glossary-row + .method-glossary-row {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.method-glossary-row dt {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-glossary-row dd {
+  margin: 0;
+}
+
+/* A term linked to from a chart: briefly marked when it is the address's target */
+.method-glossary-row:target {
+  background: var(--pe-teal-50);
+}
+
+@media (max-width: 599px) {
+  .method-glossary-row {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+}
