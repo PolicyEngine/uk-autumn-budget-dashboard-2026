@@ -430,6 +430,16 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
             stroke={TEXT}
             strokeWidth={2.5}
           />
+          {/* Its label beside the line's end, haloed; to its left near the
+              right edge; "You" alone on a phone */}
+          <Label
+            x={decile >= 8 ? left + slot * (decile - 1) + 1 : left + slot * decile - 1}
+            y={y(own * grow) + 4}
+            anchor={decile >= 8 ? "end" : "start"}
+            size={narrow ? 11 : 12}
+          >
+            {narrow ? "You" : `You ${fmt(own)}`}
+          </Label>
         </g>
       )}
     </svg>
