@@ -8,6 +8,7 @@ import {
   CHANGE_BY_POLICY_NOTE,
   COUNCIL_TAX_NOTE,
   EVERY_POLICY_NOTE,
+  RENT_NOTE,
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
@@ -471,6 +472,10 @@ export const SINGLE_YEAR_METHOD = [
   [
     "Who counts as a child",
     WHO_IS_A_CHILD_NOTE,
+  ],
+  [
+    "Rent",
+    RENT_NOTE,
   ],
   [
     "Council Tax",

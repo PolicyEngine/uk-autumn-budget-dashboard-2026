@@ -8,6 +8,13 @@
   "D",
   "E"
  ],
+ "market_source": "ONS, Price Index of Private Rents, UK: monthly price statistics (21 October 2026), average private rents a month",
+ "market_bedrooms": [
+  1,
+  2,
+  3,
+  4
+ ],
  "region_defaults": {
   "NORTH_EAST": "TYNESIDE",
   "NORTH_WEST": "CENTRAL_GREATER_MANCHESTER",
@@ -34,7 +41,14 @@
     650.0,
     860.0,
     1250.0
-   ]
+   ],
+   "market": [
+    602,
+    777,
+    965,
+    1577
+   ],
+   "market_month": "2026-09"
   },
   "ARGYLL_AND_BUTE": {
    "name": "Argyll and Bute",
@@ -47,7 +61,14 @@
     600.0,
     695.0,
     1200.0
-   ]
+   ],
+   "market": [
+    551,
+    739,
+    960,
+    1625
+   ],
+   "market_month": "2026-09"
   },
   "ASHFORD": {
    "name": "Ashford",
@@ -60,7 +81,14 @@
     850.0,
     1097.8,
     1440.0
-   ]
+   ],
+   "market": [
+    889,
+    1137,
+    1402,
+    2016
+   ],
+   "market_month": "2026-09"
   },
   "AYLESBURY": {
    "name": "Aylesbury",
@@ -74,7 +102,14 @@
     995.0,
     1330.0,
     1650.0
-   ]
+   ],
+   "market": [
+    1049,
+    1325,
+    1622,
+    2369
+   ],
+   "market_month": "2026-09"
   },
   "AYRSHIRES": {
    "name": "Ayrshires",
@@ -87,7 +122,14 @@
     475.0,
     564.88,
     800.0
-   ]
+   ],
+   "market": [
+    459,
+    594,
+    775,
+    1282
+   ],
+   "market_month": "2026-09"
   },
   "BARNSLEY": {
    "name": "Barnsley",
@@ -100,7 +142,14 @@
     450.0,
     550.0,
     775.0
-   ]
+   ],
+   "market": [
+    507,
+    631,
+    754,
+    1088
+   ],
+   "market_month": "2026-09"
   },
   "BARROW_IN_FURNESS": {
    "name": "Barrow-in-Furness",
@@ -113,7 +162,14 @@
     500.0,
     635.0,
     807.5
-   ]
+   ],
+   "market": [
+    598,
+    765,
+    933,
+    1307
+   ],
+   "market_month": "2026-09"
   },
   "BASINGSTOKE": {
    "name": "Basingstoke",
@@ -126,7 +182,14 @@
     950.0,
     1150.0,
     1400.0
-   ]
+   ],
+   "market": [
+    930,
+    1205,
+    1467,
+    2076
+   ],
+   "market_month": "2026-09"
   },
   "BATH": {
    "name": "Bath",
@@ -139,7 +202,14 @@
     980.0,
     1200.0,
     1945.0
-   ]
+   ],
+   "market": [
+    1164,
+    1472,
+    1758,
+    2462
+   ],
+   "market_month": "2026-09"
   },
   "BEDFORD": {
    "name": "Bedford",
@@ -152,7 +222,14 @@
     825.0,
     1000.0,
     1300.0
-   ]
+   ],
+   "market": [
+    823,
+    1054,
+    1302,
+    1887
+   ],
+   "market_month": "2026-09"
   },
   "BELFAST": {
    "name": "Belfast",
@@ -165,7 +242,14 @@
     676.86,
     752.07,
     954.91
-   ]
+   ],
+   "market": [
+    839,
+    967,
+    1106,
+    1589
+   ],
+   "market_month": "2026-07"
   },
   "BIRMINGHAM": {
    "name": "Birmingham",
@@ -178,7 +262,14 @@
     750.0,
     825.0,
     1100.0
-   ]
+   ],
+   "market": [
+    822,
+    997,
+    1134,
+    1582
+   ],
+   "market_month": "2026-09"
   },
   "BLACKWATER_VALLEY": {
    "name": "Blackwater Valley",
@@ -191,7 +282,14 @@
     1000.0,
     1295.0,
     1700.0
-   ]
+   ],
+   "market": [
+    1014,
+    1307,
+    1589,
+    2271
+   ],
+   "market_month": "2026-09"
   },
   "BLACK_COUNTRY": {
    "name": "Black Country",
@@ -204,7 +302,14 @@
     625.0,
     750.0,
     925.0
-   ]
+   ],
+   "market": [
+    656,
+    822,
+    985,
+    1368
+   ],
+   "market_month": "2026-09"
   },
   "BLAENAU_GWENT": {
    "name": "Blaenau Gwent",
@@ -217,7 +322,14 @@
     430.0,
     490.0,
     650.0
-   ]
+   ],
+   "market": [
+    504,
+    605,
+    689,
+    902
+   ],
+   "market_month": "2026-09"
   },
   "BOLTON_AND_BURY": {
    "name": "Bolton and Bury",
@@ -230,7 +342,14 @@
     575.0,
     700.0,
     950.0
-   ]
+   ],
+   "market": [
+    664,
+    841,
+    1016,
+    1484
+   ],
+   "market_month": "2026-09"
   },
   "BOURNEMOUTH": {
    "name": "Bournemouth",
@@ -244,7 +363,14 @@
     875.0,
     1150.0,
     1550.0
-   ]
+   ],
+   "market": [
+    890,
+    1141,
+    1419,
+    2025
+   ],
+   "market_month": "2026-09"
   },
   "BRADFORD_SOUTH_DALES": {
    "name": "Bradford & South Dales",
@@ -257,7 +383,14 @@
     525.0,
     635.0,
     750.0
-   ]
+   ],
+   "market": [
+    550,
+    679,
+    816,
+    1122
+   ],
+   "market_month": "2026-09"
   },
   "BRECON_AND_RADNOR": {
    "name": "Brecon and Radnor",
@@ -271,7 +404,14 @@
     440.0,
     550.0,
     650.0
-   ]
+   ],
+   "market": [
+    467,
+    585,
+    709,
+    962
+   ],
+   "market_month": "2026-09"
   },
   "BRIDGEND": {
    "name": "Bridgend",
@@ -284,7 +424,14 @@
     525.0,
     575.0,
     775.0
-   ]
+   ],
+   "market": [
+    564,
+    703,
+    818,
+    1144
+   ],
+   "market_month": "2026-09"
   },
   "BRIGHTON_AND_HOVE": {
    "name": "Brighton and Hove",
@@ -297,7 +444,14 @@
     1200.0,
     1450.0,
     2000.0
-   ]
+   ],
+   "market": [
+    1155,
+    1480,
+    1764,
+    2436
+   ],
+   "market_month": "2026-09"
   },
   "BRISTOL": {
    "name": "Bristol",
@@ -310,7 +464,14 @@
     1095.0,
     1300.0,
     1850.0
-   ]
+   ],
+   "market": [
+    1146,
+    1452,
+    1690,
+    2430
+   ],
+   "market_month": "2026-09"
   },
   "BURY_ST_EDMUNDS": {
    "name": "Bury St Edmunds",
@@ -323,7 +484,14 @@
     775.0,
     955.0,
     1300.0
-   ]
+   ],
+   "market": [
+    776,
+    1002,
+    1241,
+    1758
+   ],
+   "market_month": "2026-09"
   },
   "CAERPHILLY": {
    "name": "Caerphilly",
@@ -336,7 +504,14 @@
     495.0,
     550.0,
     750.0
-   ]
+   ],
+   "market": [
+    554,
+    693,
+    781,
+    1101
+   ],
+   "market_month": "2026-09"
   },
   "CAMBRIDGE": {
    "name": "Cambridge",
@@ -349,7 +524,14 @@
     950.0,
     1125.0,
     1450.0
-   ]
+   ],
+   "market": [
+    1042,
+    1338,
+    1606,
+    2249
+   ],
+   "market_month": "2026-09"
   },
   "CANTERBURY": {
    "name": "Canterbury",
@@ -362,7 +544,14 @@
     895.0,
     1100.0,
     1315.0
-   ]
+   ],
+   "market": [
+    864,
+    1120,
+    1356,
+    1899
+   ],
+   "market_month": "2026-09"
   },
   "CARDIFF": {
    "name": "Cardiff",
@@ -375,7 +564,14 @@
     825.0,
     925.0,
     1300.0
-   ]
+   ],
+   "market": [
+    910,
+    1086,
+    1212,
+    1705
+   ],
+   "market_month": "2026-09"
   },
   "CARMARTHENSHIRE": {
    "name": "Carmarthenshire",
@@ -388,7 +584,14 @@
     488.84,
     535.0,
     650.0
-   ]
+   ],
+   "market": [
+    503,
+    650,
+    744,
+    1002
+   ],
+   "market_month": "2026-09"
   },
   "CENTRAL_GREATER_MANCHESTER": {
    "name": "Central Greater Manchester",
@@ -401,7 +604,14 @@
     875.0,
     950.0,
     1350.0
-   ]
+   ],
+   "market": [
+    940,
+    1160,
+    1365,
+    1907
+   ],
+   "market_month": "2026-09"
   },
   "CENTRAL_LANCS": {
    "name": "Central Lancs",
@@ -414,7 +624,14 @@
     575.0,
     650.0,
     925.0
-   ]
+   ],
+   "market": [
+    581,
+    743,
+    882,
+    1281
+   ],
+   "market_month": "2026-09"
   },
   "CENTRAL_LONDON": {
    "name": "Central London",
@@ -427,7 +644,14 @@
     1793.98,
     2160.02,
     3060.0
-   ]
+   ],
+   "market": [
+    2540,
+    3288,
+    3874,
+    5368
+   ],
+   "market_month": "2026-09"
   },
   "CENTRAL_NORFOLK_NORWICH": {
    "name": "Central Norfolk & Norwich",
@@ -440,7 +664,14 @@
     695.0,
     800.0,
     1150.0
-   ]
+   ],
+   "market": [
+    715,
+    908,
+    1097,
+    1540
+   ],
+   "market_month": "2026-09"
   },
   "CEREDIGION": {
    "name": "Ceredigion",
@@ -453,7 +684,14 @@
     500.0,
     550.0,
     650.0
-   ]
+   ],
+   "market": [
+    559,
+    661,
+    768,
+    1082
+   ],
+   "market_month": "2026-09"
   },
   "CHELMSFORD": {
    "name": "Chelmsford",
@@ -466,7 +704,14 @@
     950.0,
     1200.0,
     1450.0
-   ]
+   ],
+   "market": [
+    957,
+    1198,
+    1447,
+    2103
+   ],
+   "market_month": "2026-09"
   },
   "CHELTENHAM": {
    "name": "Cheltenham",
@@ -481,7 +726,14 @@
     800.0,
     1000.0,
     1470.0
-   ]
+   ],
+   "market": [
+    853,
+    1085,
+    1341,
+    1931
+   ],
+   "market_month": "2026-09"
   },
   "CHERWELL_VALLEY": {
    "name": "Cherwell Valley",
@@ -496,7 +748,14 @@
     950.0,
     1185.0,
     1450.0
-   ]
+   ],
+   "market": [
+    943,
+    1182,
+    1434,
+    2125
+   ],
+   "market_month": "2026-09"
   },
   "CHESTERFIELD": {
    "name": "Chesterfield",
@@ -509,7 +768,14 @@
     525.0,
     600.0,
     850.0
-   ]
+   ],
+   "market": [
+    541,
+    695,
+    831,
+    1172
+   ],
+   "market_month": "2026-09"
   },
   "CHICHESTER": {
    "name": "Chichester",
@@ -522,7 +788,14 @@
     950.0,
     1225.0,
     1600.0
-   ]
+   ],
+   "market": [
+    948,
+    1226,
+    1515,
+    2130
+   ],
+   "market_month": "2026-09"
   },
   "CHILTERNS": {
    "name": "Chilterns",
@@ -535,7 +808,14 @@
     1100.0,
     1450.0,
     2000.0
-   ]
+   ],
+   "market": [
+    1043,
+    1321,
+    1616,
+    2376
+   ],
+   "market_month": "2026-09"
   },
   "COLCHESTER": {
    "name": "Colchester",
@@ -548,7 +828,14 @@
     795.0,
     975.0,
     1250.0
-   ]
+   ],
+   "market": [
+    798,
+    1033,
+    1262,
+    1730
+   ],
+   "market_month": "2026-09"
   },
   "COVENTRY": {
    "name": "Coventry",
@@ -562,7 +849,14 @@
     675.0,
     775.0,
     1000.0
-   ]
+   ],
+   "market": [
+    735,
+    896,
+    1057,
+    1464
+   ],
+   "market_month": "2026-09"
   },
   "CRAWLEY_REIGATE": {
    "name": "Crawley & Reigate",
@@ -575,7 +869,14 @@
     1100.0,
     1365.0,
     1750.0
-   ]
+   ],
+   "market": [
+    1073,
+    1390,
+    1717,
+    2406
+   ],
+   "market_month": "2026-09"
   },
   "DARLINGTON": {
    "name": "Darlington",
@@ -589,7 +890,14 @@
     450.0,
     530.0,
     695.0
-   ]
+   ],
+   "market": [
+    491,
+    623,
+    757,
+    1081
+   ],
+   "market_month": "2026-09"
   },
   "DERBY": {
    "name": "Derby",
@@ -602,7 +910,14 @@
     595.0,
     700.0,
     935.0
-   ]
+   ],
+   "market": [
+    608,
+    780,
+    946,
+    1318
+   ],
+   "market_month": "2026-09"
   },
   "DONCASTER": {
    "name": "Doncaster",
@@ -616,7 +931,14 @@
     500.0,
     550.0,
     725.0
-   ]
+   ],
+   "market": [
+    497,
+    642,
+    769,
+    1095
+   ],
+   "market_month": "2026-09"
   },
   "DOVER_SHEPWAY": {
    "name": "Dover-Shepway",
@@ -629,7 +951,14 @@
     695.0,
     865.0,
     1200.0
-   ]
+   ],
+   "market": [
+    777,
+    1005,
+    1243,
+    1714
+   ],
+   "market_month": "2026-09"
   },
   "DUMFRIES_AND_GALLOWAY": {
    "name": "Dumfries and Galloway",
@@ -642,7 +971,14 @@
     450.0,
     500.0,
     690.0
-   ]
+   ],
+   "market": [
+    426,
+    562,
+    756,
+    1073
+   ],
+   "market_month": "2026-09"
   },
   "DUNDEE_AND_ANGUS": {
    "name": "Dundee and Angus",
@@ -655,7 +991,14 @@
     615.0,
     795.0,
     1100.0
-   ]
+   ],
+   "market": [
+    573,
+    752,
+    986,
+    1745
+   ],
+   "market_month": "2026-09"
   },
   "DURHAM": {
    "name": "Durham",
@@ -668,7 +1011,14 @@
     400.0,
     475.0,
     659.87
-   ]
+   ],
+   "market": [
+    459,
+    582,
+    697,
+    1005
+   ],
+   "market_month": "2026-09"
   },
   "EASTBOURNE": {
    "name": "Eastbourne",
@@ -681,7 +1031,14 @@
     900.0,
     1083.0,
     1400.0
-   ]
+   ],
+   "market": [
+    852,
+    1112,
+    1362,
+    1912
+   ],
+   "market_month": "2026-09"
   },
   "EASTERN_STAFFORDSHIRE": {
    "name": "Eastern Staffordshire",
@@ -695,7 +1052,14 @@
     600.0,
     725.0,
     985.8
-   ]
+   ],
+   "market": [
+    616,
+    789,
+    970,
+    1422
+   ],
+   "market_month": "2026-09"
   },
   "EAST_CHESHIRE": {
    "name": "East Cheshire",
@@ -708,7 +1072,14 @@
     725.0,
     995.0,
     1750.0
-   ]
+   ],
+   "market": [
+    701,
+    905,
+    1115,
+    1622
+   ],
+   "market_month": "2026-09"
   },
   "EAST_DUNBARTONSHIRE": {
    "name": "East Dunbartonshire",
@@ -721,7 +1092,14 @@
     750.0,
     1000.0,
     1400.0
-   ]
+   ],
+   "market": [
+    734,
+    956,
+    1296,
+    2163
+   ],
+   "market_month": "2026-09"
   },
   "EAST_LANCS": {
    "name": "East Lancs",
@@ -734,7 +1112,14 @@
     475.0,
     595.0,
     795.0
-   ]
+   ],
+   "market": [
+    539,
+    679,
+    806,
+    1115
+   ],
+   "market_month": "2026-09"
   },
   "EAST_THAMES_VALLEY": {
    "name": "East Thames Valley",
@@ -747,7 +1132,14 @@
     1200.0,
     1450.0,
     1900.0
-   ]
+   ],
+   "market": [
+    1174,
+    1473,
+    1787,
+    2536
+   ],
+   "market_month": "2026-09"
   },
   "EXETER": {
    "name": "Exeter",
@@ -760,7 +1152,14 @@
     795.0,
     950.0,
     1300.0
-   ]
+   ],
+   "market": [
+    798,
+    1004,
+    1226,
+    1740
+   ],
+   "market_month": "2026-09"
   },
   "FIFE": {
    "name": "Fife",
@@ -773,7 +1172,14 @@
     590.0,
     715.0,
     1250.0
-   ]
+   ],
+   "market": [
+    568,
+    751,
+    984,
+    1599
+   ],
+   "market_month": "2026-09"
   },
   "FLINTSHIRE": {
    "name": "Flintshire",
@@ -786,7 +1192,14 @@
     595.0,
     695.0,
     925.0
-   ]
+   ],
+   "market": [
+    599,
+    763,
+    899,
+    1335
+   ],
+   "market_month": "2026-09"
   },
   "FORTH_VALLEY": {
    "name": "Forth Valley",
@@ -799,7 +1212,14 @@
     650.0,
     800.0,
     1300.0
-   ]
+   ],
+   "market": [
+    596,
+    811,
+    1061,
+    1750
+   ],
+   "market_month": "2026-09"
   },
   "FYLDE_COAST": {
    "name": "Fylde Coast",
@@ -812,7 +1232,14 @@
     542.0,
     625.0,
     742.5
-   ]
+   ],
+   "market": [
+    531,
+    698,
+    843,
+    1171
+   ],
+   "market_month": "2026-09"
   },
   "GLOUCESTER": {
    "name": "Gloucester",
@@ -825,7 +1252,14 @@
     725.0,
     850.0,
     1200.0
-   ]
+   ],
+   "market": [
+    726,
+    950,
+    1174,
+    1650
+   ],
+   "market_month": "2026-09"
   },
   "GRANTHAM_NEWARK": {
    "name": "Grantham & Newark",
@@ -838,7 +1272,14 @@
     575.0,
     655.0,
     875.01
-   ]
+   ],
+   "market": [
+    576,
+    753,
+    912,
+    1328
+   ],
+   "market_month": "2026-09"
   },
   "GREATER_GLASGOW": {
    "name": "Greater Glasgow",
@@ -851,7 +1292,14 @@
     850.0,
     970.0,
     1800.0
-   ]
+   ],
+   "market": [
+    845,
+    1091,
+    1340,
+    2284
+   ],
+   "market_month": "2026-09"
   },
   "GREATER_LIVERPOOL": {
    "name": "Greater Liverpool",
@@ -864,7 +1312,14 @@
     595.0,
     650.0,
     875.0
-   ]
+   ],
+   "market": [
+    669,
+    829,
+    968,
+    1319
+   ],
+   "market_month": "2026-09"
   },
   "GRIMSBY": {
    "name": "Grimsby",
@@ -878,7 +1333,14 @@
     480.0,
     521.43,
     720.0
-   ]
+   ],
+   "market": [
+    465,
+    595,
+    699,
+    978
+   ],
+   "market_month": "2026-09"
   },
   "GUILDFORD": {
    "name": "Guildford",
@@ -891,7 +1353,14 @@
     1225.0,
     1480.0,
     1978.0
-   ]
+   ],
+   "market": [
+    1136,
+    1463,
+    1778,
+    2541
+   ],
+   "market_month": "2026-09"
   },
   "HALIFAX": {
    "name": "Halifax",
@@ -904,7 +1373,14 @@
     525.0,
     625.0,
     750.0
-   ]
+   ],
+   "market": [
+    551,
+    688,
+    821,
+    1130
+   ],
+   "market_month": "2026-09"
   },
   "HARLOW_STORTFORD": {
    "name": "Harlow & Stortford",
@@ -917,7 +1393,14 @@
     1025.0,
     1210.0,
     1375.0
-   ]
+   ],
+   "market": [
+    1057,
+    1355,
+    1647,
+    2361
+   ],
+   "market_month": "2026-09"
   },
   "HARROGATE": {
    "name": "Harrogate",
@@ -930,7 +1413,14 @@
     735.86,
     875.0,
     1275.0
-   ]
+   ],
+   "market": [
+    595,
+    771,
+    945,
+    1361
+   ],
+   "market_month": "2026-09"
   },
   "HEREFORDSHIRE": {
    "name": "Herefordshire",
@@ -943,7 +1433,14 @@
     600.0,
     750.0,
     975.0
-   ]
+   ],
+   "market": [
+    603,
+    782,
+    967,
+    1360
+   ],
+   "market_month": "2026-09"
   },
   "HIGHLAND_AND_ISLANDS": {
    "name": "Highland and Islands",
@@ -956,7 +1453,14 @@
     595.0,
     695.0,
     850.0
-   ]
+   ],
+   "market": [
+    536,
+    710,
+    934,
+    1461
+   ],
+   "market_month": "2026-09"
   },
   "HIGH_WEALD": {
    "name": "High Weald",
@@ -969,7 +1473,14 @@
     1075.0,
     1323.0,
     1825.0
-   ]
+   ],
+   "market": [
+    1070,
+    1386,
+    1693,
+    2509
+   ],
+   "market_month": "2026-09"
   },
   "HULL_EAST_RIDING": {
    "name": "Hull & East Riding",
@@ -982,7 +1493,14 @@
     475.0,
     550.0,
     700.0
-   ]
+   ],
+   "market": [
+    501,
+    634,
+    768,
+    1060
+   ],
+   "market_month": "2026-09"
   },
   "HUNTINGDON": {
    "name": "Huntingdon",
@@ -995,7 +1513,14 @@
     795.0,
     950.0,
     1250.0
-   ]
+   ],
+   "market": [
+    756,
+    981,
+    1187,
+    1719
+   ],
+   "market_month": "2026-09"
   },
   "INNER_EAST_LONDON": {
    "name": "Inner East London",
@@ -1008,7 +1533,14 @@
     1750.0,
     2160.02,
     3000.0
-   ]
+   ],
+   "market": [
+    2005,
+    2459,
+    2802,
+    3519
+   ],
+   "market_month": "2026-09"
   },
   "INNER_NORTH_LONDON": {
    "name": "Inner North London",
@@ -1021,7 +1553,14 @@
     1793.98,
     2160.02,
     3060.0
-   ]
+   ],
+   "market": [
+    1937,
+    2426,
+    2804,
+    3795
+   ],
+   "market_month": "2026-09"
   },
   "INNER_SOUTH_EAST_LONDON": {
    "name": "Inner South East London",
@@ -1034,7 +1573,14 @@
     1550.0,
     1950.0,
     2625.0
-   ]
+   ],
+   "market": [
+    1748,
+    2174,
+    2511,
+    3381
+   ],
+   "market_month": "2026-09"
   },
   "INNER_SOUTH_WEST_LONDON": {
    "name": "Inner South West London",
@@ -1047,7 +1593,14 @@
     1700.0,
     2160.02,
     2900.0
-   ]
+   ],
+   "market": [
+    1926,
+    2446,
+    2803,
+    3828
+   ],
+   "market_month": "2026-09"
   },
   "INNER_WEST_LONDON": {
    "name": "Inner West London",
@@ -1060,7 +1613,14 @@
     1625.0,
     2050.0,
     2550.0
-   ]
+   ],
+   "market": [
+    1804,
+    2304,
+    2671,
+    3691
+   ],
+   "market_month": "2026-09"
   },
   "IPSWICH": {
    "name": "Ipswich",
@@ -1073,7 +1633,14 @@
     717.0,
     800.0,
     1100.0
-   ]
+   ],
+   "market": [
+    699,
+    884,
+    1038,
+    1468
+   ],
+   "market_month": "2026-09"
   },
   "ISLE_OF_WIGHT": {
    "name": "Isle of Wight",
@@ -1086,7 +1653,14 @@
     650.0,
     815.0,
     995.0
-   ]
+   ],
+   "market": [
+    664,
+    874,
+    1092,
+    1519
+   ],
+   "market_month": "2026-09"
   },
   "KENDAL": {
    "name": "Kendal",
@@ -1099,7 +1673,14 @@
     650.0,
     775.0,
     995.0
-   ]
+   ],
+   "market": [
+    606,
+    776,
+    946,
+    1325
+   ],
+   "market_month": "2026-09"
   },
   "KERNOW_WEST": {
    "name": "Kernow West",
@@ -1112,7 +1693,14 @@
     695.0,
     815.0,
     1100.0
-   ]
+   ],
+   "market": [
+    685,
+    877,
+    1073,
+    1496
+   ],
+   "market_month": "2026-09"
   },
   "KINGS_LYNN": {
    "name": "Kings Lynn",
@@ -1126,7 +1714,14 @@
     650.0,
     775.0,
     1050.0
-   ]
+   ],
+   "market": [
+    644,
+    837,
+    1034,
+    1472
+   ],
+   "market_month": "2026-09"
   },
   "KIRKLEES": {
    "name": "Kirklees",
@@ -1139,7 +1734,14 @@
     525.0,
     650.0,
     825.0
-   ]
+   ],
+   "market": [
+    585,
+    714,
+    869,
+    1234
+   ],
+   "market_month": "2026-09"
   },
   "LANCASTER": {
    "name": "Lancaster",
@@ -1153,7 +1755,14 @@
     575.0,
     650.0,
     725.0
-   ]
+   ],
+   "market": [
+    605,
+    758,
+    932,
+    1240
+   ],
+   "market_month": "2026-09"
   },
   "LEEDS": {
    "name": "Leeds",
@@ -1166,7 +1775,14 @@
     775.0,
     850.0,
     1200.0
-   ]
+   ],
+   "market": [
+    776,
+    968,
+    1132,
+    1677
+   ],
+   "market_month": "2026-09"
   },
   "LEICESTER": {
    "name": "Leicester",
@@ -1179,7 +1795,14 @@
     650.0,
     775.0,
     1050.0
-   ]
+   ],
+   "market": [
+    691,
+    871,
+    1042,
+    1471
+   ],
+   "market_month": "2026-09"
   },
   "LINCOLN": {
    "name": "Lincoln",
@@ -1192,7 +1815,14 @@
     600.0,
     675.0,
     925.0
-   ]
+   ],
+   "market": [
+    606,
+    770,
+    931,
+    1294
+   ],
+   "market_month": "2026-09"
   },
   "LINCOLNSHIRE_FENS": {
    "name": "Lincolnshire Fens",
@@ -1205,7 +1835,14 @@
     625.0,
     735.0,
     865.03
-   ]
+   ],
+   "market": [
+    598,
+    752,
+    913,
+    1240
+   ],
+   "market_month": "2026-09"
   },
   "LOTHIAN": {
    "name": "Lothian",
@@ -1218,7 +1855,14 @@
     970.0,
     1375.0,
     2180.0
-   ]
+   ],
+   "market": [
+    1036,
+    1324,
+    1700,
+    2769
+   ],
+   "market_month": "2026-09"
   },
   "LOUGH_NEAGH_LOWER": {
    "name": "Lough Neagh Lower",
@@ -1231,7 +1875,14 @@
     526.43,
     596.64,
     652.87
-   ]
+   ],
+   "market": [
+    525,
+    668,
+    784,
+    1043
+   ],
+   "market_month": "2026-07"
   },
   "LOUGH_NEAGH_UPPER": {
    "name": "Lough Neagh Upper",
@@ -1244,7 +1895,14 @@
     515.17,
     581.22,
     615.37
-   ]
+   ],
+   "market": [
+    564,
+    707,
+    800,
+    1079
+   ],
+   "market_month": "2026-07"
   },
   "LOWESTOFT_GREAT_YARMOUTH": {
    "name": "Lowestoft & Great Yarmouth",
@@ -1257,7 +1915,14 @@
     575.0,
     630.0,
     825.0
-   ]
+   ],
+   "market": [
+    601,
+    787,
+    944,
+    1342
+   ],
+   "market_month": "2026-09"
   },
   "LUTON": {
    "name": "Luton",
@@ -1271,7 +1936,14 @@
     875.0,
     1100.0,
     1350.0
-   ]
+   ],
+   "market": [
+    906,
+    1120,
+    1357,
+    1875
+   ],
+   "market_month": "2026-09"
   },
   "MAIDSTONE": {
    "name": "Maidstone",
@@ -1284,7 +1956,14 @@
     905.0,
     1200.0,
     1550.0
-   ]
+   ],
+   "market": [
+    945,
+    1227,
+    1502,
+    2084
+   ],
+   "market_month": "2026-09"
   },
   "MEDWAY_SWALE": {
    "name": "Medway & Swale",
@@ -1297,7 +1976,14 @@
     850.0,
     940.0,
     1300.0
-   ]
+   ],
+   "market": [
+    866,
+    1113,
+    1319,
+    1845
+   ],
+   "market_month": "2026-09"
   },
   "MENDIP": {
    "name": "Mendip",
@@ -1310,7 +1996,14 @@
     775.0,
     975.0,
     1350.0
-   ]
+   ],
+   "market": [
+    695,
+    918,
+    1142,
+    1628
+   ],
+   "market_month": "2026-09"
   },
   "MERTHYR_CYNON": {
    "name": "Merthyr Cynon",
@@ -1323,7 +2016,14 @@
     500.0,
     550.0,
     725.0
-   ]
+   ],
+   "market": [
+    537,
+    656,
+    737,
+    1031
+   ],
+   "market_month": "2026-09"
   },
   "MID_EAST_DEVON": {
    "name": "Mid & East Devon",
@@ -1336,7 +2036,14 @@
     685.0,
     825.0,
     1100.0
-   ]
+   ],
+   "market": [
+    669,
+    862,
+    1072,
+    1549
+   ],
+   "market_month": "2026-09"
   },
   "MID_STAFFS": {
    "name": "Mid Staffs",
@@ -1349,7 +2056,14 @@
     625.0,
     740.0,
     995.0
-   ]
+   ],
+   "market": [
+    656,
+    838,
+    1022,
+    1455
+   ],
+   "market_month": "2026-09"
   },
   "MID_WEST_DORSET": {
    "name": "Mid & West Dorset",
@@ -1362,7 +2076,14 @@
     750.0,
     900.0,
     1250.0
-   ]
+   ],
+   "market": [
+    733,
+    968,
+    1193,
+    1687
+   ],
+   "market_month": "2026-09"
   },
   "MILTON_KEYNES": {
    "name": "Milton Keynes",
@@ -1377,7 +2098,14 @@
     925.0,
     1195.0,
     1495.0
-   ]
+   ],
+   "market": [
+    967,
+    1209,
+    1455,
+    2106
+   ],
+   "market_month": "2026-09"
   },
   "MONMOUTHSHIRE": {
    "name": "Monmouthshire",
@@ -1391,7 +2119,14 @@
     700.0,
     795.0,
     1100.0
-   ]
+   ],
+   "market": [
+    722,
+    914,
+    1060,
+    1492
+   ],
+   "market_month": "2026-09"
   },
   "NEATH_PORT_TALBOT": {
    "name": "Neath Port Talbot",
@@ -1404,7 +2139,14 @@
     450.0,
     500.0,
     575.0
-   ]
+   ],
+   "market": [
+    499,
+    633,
+    727,
+    977
+   ],
+   "market_month": "2026-09"
   },
   "NEWBURY": {
    "name": "Newbury",
@@ -1418,7 +2160,14 @@
     895.0,
     1200.0,
     1605.0
-   ]
+   ],
+   "market": [
+    941,
+    1222,
+    1518,
+    2200
+   ],
+   "market_month": "2026-09"
   },
   "NEWPORT": {
    "name": "Newport",
@@ -1431,7 +2180,14 @@
     600.0,
     650.0,
     880.0
-   ]
+   ],
+   "market": [
+    700,
+    865,
+    967,
+    1365
+   ],
+   "market_month": "2026-09"
   },
   "NORTHAMPTON": {
    "name": "Northampton",
@@ -1444,7 +2200,14 @@
     750.0,
     900.0,
     1160.0
-   ]
+   ],
+   "market": [
+    753,
+    957,
+    1169,
+    1683
+   ],
+   "market_month": "2026-09"
   },
   "NORTHANTS_CENTRAL": {
    "name": "Northants Central",
@@ -1458,7 +2221,14 @@
     695.0,
     795.0,
     995.0
-   ]
+   ],
+   "market": [
+    687,
+    886,
+    1073,
+    1535
+   ],
+   "market_month": "2026-09"
   },
   "NORTHUMBERLAND": {
    "name": "Northumberland",
@@ -1471,7 +2241,14 @@
     425.0,
     530.0,
     760.0
-   ]
+   ],
+   "market": [
+    496,
+    631,
+    768,
+    1134
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_CHESHIRE": {
    "name": "North Cheshire",
@@ -1484,7 +2261,14 @@
     590.0,
     695.0,
     1000.0
-   ]
+   ],
+   "market": [
+    627,
+    781,
+    949,
+    1351
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_CLWYD": {
    "name": "North Clwyd",
@@ -1497,7 +2281,14 @@
     550.0,
     650.0,
     855.0
-   ]
+   ],
+   "market": [
+    575,
+    728,
+    847,
+    1194
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_CORNWALL_DEVON_BORDERS": {
    "name": "North Cornwall & Devon Borders",
@@ -1510,7 +2301,14 @@
     609.0,
     725.0,
     950.0
-   ]
+   ],
+   "market": [
+    667,
+    856,
+    1049,
+    1463
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_CUMBRIA": {
    "name": "North Cumbria",
@@ -1524,7 +2322,14 @@
     475.0,
     590.0,
     740.0
-   ]
+   ],
+   "market": [
+    540,
+    687,
+    838,
+    1171
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_DEVON": {
    "name": "North Devon",
@@ -1537,7 +2342,14 @@
     645.0,
     775.0,
     995.0
-   ]
+   ],
+   "market": [
+    582,
+    767,
+    948,
+    1313
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_LANARKSHIRE": {
    "name": "North Lanarkshire",
@@ -1550,7 +2362,14 @@
     550.0,
     675.0,
     895.0
-   ]
+   ],
+   "market": [
+    504,
+    665,
+    863,
+    1441
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_NI": {
    "name": "North (NI)",
@@ -1563,7 +2382,14 @@
     535.85,
     580.0,
     641.44
-   ]
+   ],
+   "market": [
+    564,
+    709,
+    831,
+    1095
+   ],
+   "market_month": "2026-07"
   },
   "NORTH_NOTTINGHAM": {
    "name": "North Nottingham",
@@ -1576,7 +2402,14 @@
     550.0,
     585.0,
     810.0
-   ]
+   ],
+   "market": [
+    537,
+    697,
+    831,
+    1176
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_POWYS": {
    "name": "North Powys",
@@ -1589,7 +2422,14 @@
     400.0,
     550.0,
     675.0
-   ]
+   ],
+   "market": [
+    464,
+    581,
+    703,
+    953
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_WEST_KENT": {
    "name": "North West Kent",
@@ -1602,7 +2442,14 @@
     995.0,
     1200.0,
     1450.0
-   ]
+   ],
+   "market": [
+    1036,
+    1349,
+    1637,
+    2320
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_WEST_LONDON": {
    "name": "North West London",
@@ -1616,7 +2463,14 @@
     1350.0,
     1680.0,
     2100.0
-   ]
+   ],
+   "market": [
+    1466,
+    1812,
+    2167,
+    2952
+   ],
+   "market_month": "2026-09"
   },
   "NORTH_WEST_NI": {
    "name": "North West (NI)",
@@ -1629,7 +2483,14 @@
     513.61,
     579.39,
     667.86
-   ]
+   ],
+   "market": [
+    549,
+    700,
+    794,
+    1092
+   ],
+   "market_month": "2026-07"
   },
   "NORTH_WEST_WALES": {
    "name": "North West Wales",
@@ -1642,7 +2503,14 @@
     550.0,
     625.0,
     750.0
-   ]
+   ],
+   "market": [
+    559,
+    687,
+    805,
+    1072
+   ],
+   "market_month": "2026-09"
   },
   "NOTTINGHAM": {
    "name": "Nottingham",
@@ -1655,7 +2523,14 @@
     650.0,
     750.0,
     970.0
-   ]
+   ],
+   "market": [
+    690,
+    870,
+    1027,
+    1428
+   ],
+   "market_month": "2026-09"
   },
   "OLDHAM_ROCHDALE": {
    "name": "Oldham & Rochdale",
@@ -1668,7 +2543,14 @@
     577.5,
     695.0,
     950.0
-   ]
+   ],
+   "market": [
+    671,
+    850,
+    1028,
+    1426
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_EAST_LONDON": {
    "name": "Outer East London",
@@ -1681,7 +2563,14 @@
     1400.0,
     1675.0,
     1950.0
-   ]
+   ],
+   "market": [
+    1551,
+    1901,
+    2151,
+    2643
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_NORTH_EAST_LONDON": {
    "name": "Outer North East London",
@@ -1695,7 +2584,14 @@
     1250.0,
     1500.0,
     1800.0
-   ]
+   ],
+   "market": [
+    1334,
+    1662,
+    1939,
+    2627
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_NORTH_LONDON": {
    "name": "Outer North London",
@@ -1709,7 +2605,14 @@
     1400.0,
     1695.0,
     2200.0
-   ]
+   ],
+   "market": [
+    1519,
+    1886,
+    2236,
+    3057
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_SOUTH_EAST_LONDON": {
    "name": "Outer South East London",
@@ -1723,7 +2626,14 @@
     1300.0,
     1550.0,
     1800.0
-   ]
+   ],
+   "market": [
+    1387,
+    1724,
+    2056,
+    2830
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_SOUTH_LONDON": {
    "name": "Outer South London",
@@ -1737,7 +2647,14 @@
     1200.0,
     1500.0,
     1950.0
-   ]
+   ],
+   "market": [
+    1315,
+    1640,
+    1968,
+    2741
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_SOUTH_WEST_LONDON": {
    "name": "Outer South West London",
@@ -1751,7 +2668,14 @@
     1495.0,
     1800.0,
     2550.0
-   ]
+   ],
+   "market": [
+    1573,
+    1991,
+    2404,
+    3318
+   ],
+   "market_month": "2026-09"
   },
   "OUTER_WEST_LONDON": {
    "name": "Outer West London",
@@ -1764,7 +2688,14 @@
     1300.0,
     1475.0,
     1800.0
-   ]
+   ],
+   "market": [
+    1486,
+    1854,
+    2185,
+    3002
+   ],
+   "market_month": "2026-09"
   },
   "OXFORD": {
    "name": "Oxford",
@@ -1777,7 +2708,14 @@
     1125.0,
     1325.0,
     1750.0
-   ]
+   ],
+   "market": [
+    1154,
+    1434,
+    1764,
+    2506
+   ],
+   "market_month": "2026-09"
   },
   "PEAKS_DALES": {
    "name": "Peaks & Dales",
@@ -1791,7 +2729,14 @@
     595.0,
     695.0,
     900.0
-   ]
+   ],
+   "market": [
+    606,
+    779,
+    941,
+    1378
+   ],
+   "market_month": "2026-09"
   },
   "PEMBROKESHIRE": {
    "name": "Pembrokeshire",
@@ -1804,7 +2749,14 @@
     460.0,
     575.0,
     700.0
-   ]
+   ],
+   "market": [
+    516,
+    643,
+    762,
+    1039
+   ],
+   "market_month": "2026-09"
   },
   "PERTH_AND_KINROSS": {
    "name": "Perth and Kinross",
@@ -1817,7 +2769,14 @@
     560.0,
     750.0,
     1250.0
-   ]
+   ],
+   "market": [
+    519,
+    689,
+    911,
+    1455
+   ],
+   "market_month": "2026-09"
   },
   "PETERBOROUGH": {
    "name": "Peterborough",
@@ -1831,7 +2790,14 @@
     700.0,
     810.0,
     1050.0
-   ]
+   ],
+   "market": [
+    681,
+    866,
+    1047,
+    1505
+   ],
+   "market_month": "2026-09"
   },
   "PLYMOUTH": {
    "name": "Plymouth",
@@ -1844,7 +2810,14 @@
     675.0,
     800.0,
     975.0
-   ]
+   ],
+   "market": [
+    700,
+    883,
+    1069,
+    1500
+   ],
+   "market_month": "2026-09"
   },
   "PORTSMOUTH": {
    "name": "Portsmouth",
@@ -1857,7 +2830,14 @@
     845.0,
     1000.0,
     1300.0
-   ]
+   ],
+   "market": [
+    882,
+    1121,
+    1364,
+    1931
+   ],
+   "market_month": "2026-09"
   },
   "READING": {
    "name": "Reading",
@@ -1870,7 +2850,14 @@
     1095.0,
     1300.0,
     1654.0
-   ]
+   ],
+   "market": [
+    1083,
+    1365,
+    1658,
+    2346
+   ],
+   "market_month": "2026-09"
   },
   "RENFREWSHIRE_AND_INVERCLYDE": {
    "name": "Renfrewshire and Inverclyde",
@@ -1883,7 +2870,14 @@
     525.0,
     600.0,
     1100.0
-   ]
+   ],
+   "market": [
+    515,
+    677,
+    871,
+    1537
+   ],
+   "market_month": "2026-09"
   },
   "RICHMOND_HAMBLETON": {
    "name": "Richmond & Hambleton",
@@ -1896,7 +2890,14 @@
     550.0,
     650.0,
     830.0
-   ]
+   ],
+   "market": [
+    595,
+    771,
+    945,
+    1361
+   ],
+   "market_month": "2026-09"
   },
   "ROTHERHAM": {
    "name": "Rotherham",
@@ -1909,7 +2910,14 @@
     500.0,
     550.0,
     817.5
-   ]
+   ],
+   "market": [
+    490,
+    618,
+    747,
+    1079
+   ],
+   "market_month": "2026-09"
   },
   "RUGBY_EAST": {
    "name": "Rugby & East",
@@ -1923,7 +2931,14 @@
     725.0,
     850.0,
     1200.0
-   ]
+   ],
+   "market": [
+    752,
+    939,
+    1138,
+    1660
+   ],
+   "market_month": "2026-09"
   },
   "SALISBURY": {
    "name": "Salisbury",
@@ -1937,7 +2952,14 @@
     780.0,
     915.0,
     1250.0
-   ]
+   ],
+   "market": [
+    762,
+    993,
+    1240,
+    1765
+   ],
+   "market_month": "2026-09"
   },
   "SCARBOROUGH": {
    "name": "Scarborough",
@@ -1950,7 +2972,14 @@
     550.0,
     650.0,
     725.0
-   ]
+   ],
+   "market": [
+    595,
+    771,
+    945,
+    1361
+   ],
+   "market_month": "2026-09"
   },
   "SCOTTISH_BORDERS": {
    "name": "Scottish Borders",
@@ -1963,7 +2992,14 @@
     500.0,
     615.0,
     985.0
-   ]
+   ],
+   "market": [
+    479,
+    635,
+    829,
+    1373
+   ],
+   "market_month": "2026-09"
   },
   "SCUNTHORPE": {
    "name": "Scunthorpe",
@@ -1977,7 +3013,14 @@
     495.0,
     575.0,
     725.0
-   ]
+   ],
+   "market": [
+    474,
+    619,
+    754,
+    1062
+   ],
+   "market_month": "2026-09"
   },
   "SHEFFIELD": {
    "name": "Sheffield",
@@ -1991,7 +3034,14 @@
     620.0,
     680.0,
     950.0
-   ]
+   ],
+   "market": [
+    685,
+    836,
+    965,
+    1335
+   ],
+   "market_month": "2026-09"
   },
   "SHROPSHIRE": {
    "name": "Shropshire",
@@ -2004,7 +3054,14 @@
     595.0,
     725.0,
     975.0
-   ]
+   ],
+   "market": [
+    606,
+    772,
+    957,
+    1385
+   ],
+   "market_month": "2026-09"
   },
   "SOLIHULL": {
    "name": "Solihull",
@@ -2017,7 +3074,14 @@
     825.0,
     1000.0,
     1375.0
-   ]
+   ],
+   "market": [
+    855,
+    1062,
+    1264,
+    1874
+   ],
+   "market_month": "2026-09"
   },
   "SOUTHAMPTON": {
    "name": "Southampton",
@@ -2030,7 +3094,14 @@
     875.0,
     1075.0,
     1450.0
-   ]
+   ],
+   "market": [
+    878,
+    1122,
+    1373,
+    1919
+   ],
+   "market_month": "2026-09"
   },
   "SOUTHEND": {
    "name": "Southend",
@@ -2043,7 +3114,14 @@
     875.0,
     1100.0,
     1350.0
-   ]
+   ],
+   "market": [
+    896,
+    1138,
+    1389,
+    1908
+   ],
+   "market_month": "2026-09"
   },
   "SOUTHERN_GREATER_MANCHESTER": {
    "name": "Southern Greater Manchester",
@@ -2057,7 +3135,14 @@
     750.0,
     900.0,
     1400.0
-   ]
+   ],
+   "market": [
+    864,
+    1096,
+    1333,
+    1861
+   ],
+   "market_month": "2026-09"
   },
   "SOUTHPORT": {
    "name": "Southport",
@@ -2070,7 +3155,14 @@
     600.0,
     775.0,
     925.0
-   ]
+   ],
+   "market": [
+    615,
+    797,
+    962,
+    1374
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_CHESHIRE": {
    "name": "South Cheshire",
@@ -2083,7 +3175,14 @@
     575.0,
     680.0,
     995.0
-   ]
+   ],
+   "market": [
+    705,
+    907,
+    1117,
+    1623
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_DEVON": {
    "name": "South Devon",
@@ -2096,7 +3195,14 @@
     675.0,
     840.0,
     1100.0
-   ]
+   ],
+   "market": [
+    647,
+    849,
+    1047,
+    1425
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_EAST_HERTS": {
    "name": "South East Herts",
@@ -2109,7 +3215,14 @@
     1050.0,
     1370.0,
     1700.0
-   ]
+   ],
+   "market": [
+    1104,
+    1418,
+    1720,
+    2457
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_EAST_NI": {
    "name": "South East (NI)",
@@ -2122,7 +3235,14 @@
     626.71,
     706.01,
     865.22
-   ]
+   ],
+   "market": [
+    659,
+    845,
+    967,
+    1343
+   ],
+   "market_month": "2026-07"
   },
   "SOUTH_GWYNEDD": {
    "name": "South Gwynedd",
@@ -2135,7 +3255,14 @@
     434.52,
     543.15,
     675.0
-   ]
+   ],
+   "market": [
+    563,
+    679,
+    808,
+    1059
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_LANARKSHIRE": {
    "name": "South Lanarkshire",
@@ -2148,7 +3275,14 @@
     575.0,
     715.84,
     1107.0
-   ]
+   ],
+   "market": [
+    555,
+    742,
+    976,
+    1707
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_NI": {
    "name": "South (NI)",
@@ -2161,7 +3295,14 @@
     541.46,
     601.64,
     716.14
-   ]
+   ],
+   "market": [
+    571,
+    710,
+    809,
+    1109
+   ],
+   "market_month": "2026-07"
   },
   "SOUTH_WEST_ESSEX": {
    "name": "South West Essex",
@@ -2174,7 +3315,14 @@
     950.0,
     1200.0,
     1500.0
-   ]
+   ],
+   "market": [
+    988,
+    1271,
+    1534,
+    2210
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_WEST_HERTS": {
    "name": "South West Herts",
@@ -2187,7 +3335,14 @@
     1250.0,
     1500.0,
     2000.0
-   ]
+   ],
+   "market": [
+    1236,
+    1566,
+    1880,
+    2684
+   ],
+   "market_month": "2026-09"
   },
   "SOUTH_WEST_NI": {
    "name": "South West (NI)",
@@ -2200,7 +3355,14 @@
     456.95,
     492.92,
     579.09
-   ]
+   ],
+   "market": [
+    482,
+    603,
+    688,
+    924
+   ],
+   "market_month": "2026-07"
   },
   "STAFFORDSHIRE_NORTH": {
    "name": "Staffordshire North",
@@ -2214,7 +3376,14 @@
     480.0,
     595.0,
     800.0
-   ]
+   ],
+   "market": [
+    536,
+    688,
+    834,
+    1153
+   ],
+   "market_month": "2026-09"
   },
   "STEVENAGE_NORTH_HERTS": {
    "name": "Stevenage & North Herts",
@@ -2227,7 +3396,14 @@
     975.0,
     1250.0,
     1600.0
-   ]
+   ],
+   "market": [
+    1023,
+    1296,
+    1568,
+    2207
+   ],
+   "market_month": "2026-09"
   },
   "ST_HELENS": {
    "name": "St Helens",
@@ -2240,7 +3416,14 @@
     525.0,
     625.0,
     800.0
-   ]
+   ],
+   "market": [
+    597,
+    746,
+    911,
+    1310
+   ],
+   "market_month": "2026-09"
   },
   "SUNDERLAND": {
    "name": "Sunderland",
@@ -2253,7 +3436,14 @@
     475.0,
     550.0,
     700.0
-   ]
+   ],
+   "market": [
+    508,
+    632,
+    755,
+    1061
+   ],
+   "market_month": "2026-09"
   },
   "SUSSEX_EAST": {
    "name": "Sussex East",
@@ -2266,7 +3456,14 @@
     750.0,
     950.0,
     1150.0
-   ]
+   ],
+   "market": [
+    735,
+    946,
+    1172,
+    1657
+   ],
+   "market_month": "2026-09"
   },
   "SWANSEA": {
    "name": "Swansea",
@@ -2279,7 +3476,14 @@
     550.0,
     600.0,
     820.0
-   ]
+   ],
+   "market": [
+    689,
+    798,
+    898,
+    1276
+   ],
+   "market_month": "2026-09"
   },
   "SWINDON": {
    "name": "Swindon",
@@ -2293,7 +3497,14 @@
     785.0,
     950.0,
     1300.0
-   ]
+   ],
+   "market": [
+    826,
+    1008,
+    1246,
+    1718
+   ],
+   "market_month": "2026-09"
   },
   "TAFF_RHONDDA": {
    "name": "Taff Rhondda",
@@ -2306,7 +3517,14 @@
     450.0,
     495.0,
     650.0
-   ]
+   ],
+   "market": [
+    524,
+    669,
+    750,
+    985
+   ],
+   "market_month": "2026-09"
   },
   "TAMESIDE_GLOSSOP": {
    "name": "Tameside & Glossop",
@@ -2320,7 +3538,14 @@
     600.0,
     750.0,
     1150.0
-   ]
+   ],
+   "market": [
+    679,
+    879,
+    1058,
+    1411
+   ],
+   "market_month": "2026-09"
   },
   "TAUNTON_WEST_SOMERSET": {
    "name": "Taunton & West Somerset",
@@ -2333,7 +3558,14 @@
     725.0,
     850.0,
     1000.0
-   ]
+   ],
+   "market": [
+    695,
+    917,
+    1141,
+    1627
+   ],
+   "market_month": "2026-09"
   },
   "TEESSIDE": {
    "name": "Teesside",
@@ -2347,7 +3579,14 @@
     475.0,
     550.0,
     750.0
-   ]
+   ],
+   "market": [
+    488,
+    623,
+    742,
+    1039
+   ],
+   "market_month": "2026-09"
   },
   "THANET": {
    "name": "Thanet",
@@ -2360,7 +3599,14 @@
     750.0,
     900.0,
     1150.0
-   ]
+   ],
+   "market": [
+    777,
+    1010,
+    1237,
+    1691
+   ],
+   "market_month": "2026-09"
   },
   "TORFAEN": {
    "name": "Torfaen",
@@ -2373,7 +3619,14 @@
     564.88,
     650.0,
     750.0
-   ]
+   ],
+   "market": [
+    619,
+    769,
+    900,
+    1385
+   ],
+   "market_month": "2026-09"
   },
   "TYNESIDE": {
    "name": "Tyneside",
@@ -2386,7 +3639,14 @@
     550.0,
     650.0,
     925.0
-   ]
+   ],
+   "market": [
+    667,
+    826,
+    987,
+    1438
+   ],
+   "market_month": "2026-09"
   },
   "VALE_OF_GLAMORGAN": {
    "name": "Vale of Glamorgan",
@@ -2399,7 +3659,14 @@
     666.0,
     725.0,
     1025.0
-   ]
+   ],
+   "market": [
+    723,
+    884,
+    991,
+    1471
+   ],
+   "market_month": "2026-09"
   },
   "WAKEFIELD": {
    "name": "Wakefield",
@@ -2412,7 +3679,14 @@
     595.0,
     725.0,
     885.0
-   ]
+   ],
+   "market": [
+    579,
+    730,
+    875,
+    1225
+   ],
+   "market_month": "2026-09"
   },
   "WALTON": {
    "name": "Walton",
@@ -2425,7 +3699,14 @@
     1212.0,
     1450.0,
     1975.0
-   ]
+   ],
+   "market": [
+    1200,
+    1530,
+    1842,
+    2634
+   ],
+   "market_month": "2026-09"
   },
   "WARWICKSHIRE_SOUTH": {
    "name": "Warwickshire South",
@@ -2439,7 +3720,14 @@
     850.0,
     1045.0,
     1350.0
-   ]
+   ],
+   "market": [
+    860,
+    1076,
+    1310,
+    1876
+   ],
+   "market_month": "2026-09"
   },
   "WESTON_S_MARE": {
    "name": "Weston-S-Mare",
@@ -2452,7 +3740,14 @@
     750.0,
     925.0,
     1250.0
-   ]
+   ],
+   "market": [
+    800,
+    1054,
+    1314,
+    1813
+   ],
+   "market_month": "2026-09"
   },
   "WEST_CHESHIRE": {
    "name": "West Cheshire",
@@ -2466,7 +3761,14 @@
     675.0,
     795.0,
     1224.0
-   ]
+   ],
+   "market": [
+    724,
+    914,
+    1120,
+    1612
+   ],
+   "market_month": "2026-09"
   },
   "WEST_CUMBRIA": {
    "name": "West Cumbria",
@@ -2479,7 +3781,14 @@
     475.0,
     550.0,
     700.0
-   ]
+   ],
+   "market": [
+    512,
+    649,
+    792,
+    1103
+   ],
+   "market_month": "2026-09"
   },
   "WEST_DUNBARTONSHIRE": {
    "name": "West Dunbartonshire",
@@ -2492,7 +3801,14 @@
     595.0,
     675.0,
     950.0
-   ]
+   ],
+   "market": [
+    563,
+    749,
+    939,
+    1370
+   ],
+   "market_month": "2026-09"
   },
   "WEST_LOTHIAN": {
    "name": "West Lothian",
@@ -2505,7 +3821,14 @@
     625.0,
     750.0,
     1112.5
-   ]
+   ],
+   "market": [
+    621,
+    839,
+    1105,
+    1836
+   ],
+   "market_month": "2026-09"
   },
   "WEST_PENNINE": {
    "name": "West Pennine",
@@ -2518,7 +3841,14 @@
     450.0,
     505.0,
     762.5
-   ]
+   ],
+   "market": [
+    483,
+    613,
+    721,
+    1026
+   ],
+   "market_month": "2026-09"
   },
   "WEST_WILTSHIRE": {
    "name": "West Wiltshire",
@@ -2531,7 +3861,14 @@
     725.0,
     900.0,
     1200.0
-   ]
+   ],
+   "market": [
+    756,
+    982,
+    1231,
+    1756
+   ],
+   "market_month": "2026-09"
   },
   "WIGAN": {
    "name": "Wigan",
@@ -2544,7 +3881,14 @@
     500.0,
     595.0,
     775.0
-   ]
+   ],
+   "market": [
+    550,
+    707,
+    842,
+    1158
+   ],
+   "market_month": "2026-09"
   },
   "WINCHESTER": {
    "name": "Winchester",
@@ -2557,7 +3901,14 @@
     1050.0,
     1275.0,
     1700.0
-   ]
+   ],
+   "market": [
+    1004,
+    1303,
+    1608,
+    2224
+   ],
+   "market_month": "2026-09"
   },
   "WIRRAL": {
    "name": "Wirral",
@@ -2570,7 +3921,14 @@
     525.0,
     650.0,
     825.0
-   ]
+   ],
+   "market": [
+    579,
+    749,
+    917,
+    1268
+   ],
+   "market_month": "2026-09"
   },
   "WOLDS_AND_COAST": {
    "name": "Wolds and Coast",
@@ -2583,7 +3941,14 @@
     495.0,
     600.0,
     675.0
-   ]
+   ],
+   "market": [
+    525,
+    670,
+    823,
+    1151
+   ],
+   "market_month": "2026-09"
   },
   "WORCESTER_NORTH": {
    "name": "Worcester North",
@@ -2596,7 +3961,14 @@
     650.0,
     750.0,
     995.0
-   ]
+   ],
+   "market": [
+    660,
+    841,
+    1018,
+    1428
+   ],
+   "market_month": "2026-09"
   },
   "WORCESTER_SOUTH": {
    "name": "Worcester South",
@@ -2609,7 +3981,14 @@
     700.0,
     825.0,
     1150.0
-   ]
+   ],
+   "market": [
+    700,
+    897,
+    1091,
+    1549
+   ],
+   "market_month": "2026-09"
   },
   "WORTHING": {
    "name": "Worthing",
@@ -2622,7 +4001,14 @@
     950.0,
     1180.0,
     1465.0
-   ]
+   ],
+   "market": [
+    887,
+    1182,
+    1443,
+    1995
+   ],
+   "market_month": "2026-09"
   },
   "WREXHAM": {
    "name": "Wrexham",
@@ -2635,7 +4021,14 @@
     525.0,
     600.0,
     750.0
-   ]
+   ],
+   "market": [
+    593,
+    713,
+    839,
+    1214
+   ],
+   "market_month": "2026-09"
   },
   "YEOVIL": {
    "name": "Yeovil",
@@ -2648,7 +4041,14 @@
     695.0,
     850.0,
     1250.0
-   ]
+   ],
+   "market": [
+    702,
+    927,
+    1151,
+    1639
+   ],
+   "market_month": "2026-09"
   },
   "YORK": {
    "name": "York",
@@ -2661,7 +4061,14 @@
     775.0,
     825.0,
     1200.0
-   ]
+   ],
+   "market": [
+    769,
+    964,
+    1151,
+    1598
+   ],
+   "market_month": "2026-09"
   }
  }
 }

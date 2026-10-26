@@ -77,7 +77,7 @@ describe("the personal impact form", () => {
     expect(chosen("Region")).toBe("North West");
     expect(chosen("Partner")).toBe("No");
     expect(chosen("Housing")).toBe("Rent privately");
-    expect(box("Rent")).toHaveValue(775);
+    expect(box("Rent")).toHaveValue(940);
     expect(chosen("Council tax band")).toBe("D");
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "false");
@@ -90,15 +90,26 @@ describe("the personal impact form", () => {
     choose("Region", "London");
     expect(chosen("Region")).toBe("London");
     // The rental area and the rent follow the region until changed
+    // The rent starts at the area's average private rent (ONS)
     expect(chosen("Rental area")).toBe("Inner South East London");
-    expect(box("Rent")).toHaveValue(1296);
+    expect(box("Rent")).toHaveValue(1748);
+    expect(screen.queryByRole("button", { name: "Use the local average" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Rent: £25 more" }));
-    expect(box("Rent")).toHaveValue(1300);
+    expect(box("Rent")).toHaveValue(1750);
+    fireEvent.click(screen.getByRole("button", { name: "Use the local average" }));
+    expect(box("Rent")).toHaveValue(1748);
+    // "Use the local rate": the area's Local Housing Allowance rate, said so
     fireEvent.click(screen.getByRole("button", { name: "Use the local rate" }));
     expect(box("Rent")).toHaveValue(1296);
-    // Another area: its own rate; the areas offered are London's only
+    expect(screen.queryByRole("button", { name: "Use the local rate" })).toBeNull();
+    expect(box("Rent")).toHaveAccessibleDescription(
+      /Local Housing Allowance rate for a one-bedroom home in Inner South East London \(DWP, 2026-27\)/,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Use the local average" }));
+    expect(box("Rent")).toHaveValue(1748);
+    // Another area: its own average; the areas offered are London's only
     choose("Rental area", "Outer North London");
-    expect(box("Rent")).not.toHaveValue(1296);
+    expect(box("Rent")).not.toHaveValue(1748);
     expect(within(select("Rental area")).getAllByRole("option").length).toBeGreaterThan(5);
     choose("Region", "Wales");
     expect(chosen("Rental area")).toBe("Cardiff");
@@ -111,14 +122,14 @@ describe("the personal impact form", () => {
     render(<HouseholdCalculator />);
     expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
     expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
-    expect(box("Rent")).toHaveValue(775);
+    expect(box("Rent")).toHaveValue(940);
     expect(
       screen.getByText(
-        /Local Housing Allowance rate for a one-bedroom home in Central Greater Manchester \(DWP, 2026-27\)/,
+        /average private rent for a one-bedroom home in Central Greater Manchester \(ONS, September 2026\)/,
       ),
     ).toBeInTheDocument();
     // A long note is the box's description, behind an "i" by its label
-    expect(box("Rent")).toHaveAccessibleDescription(/Local Housing Allowance rate/);
+    expect(box("Rent")).toHaveAccessibleDescription(/average private rent/);
     expect(screen.getByRole("button", { name: "About Rent" })).toBeInTheDocument();
     openMore();
     expect(chosen("Student loan plan")).toBe("No loan");

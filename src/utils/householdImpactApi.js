@@ -23,7 +23,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
-import { householdArea, localRent } from "./localRents";
+import { householdArea, marketRent } from "./localRents";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -200,7 +200,7 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       region: inputs.region,
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
-      // Left as prefilled (null), the area's Local Housing Allowance rate
+      // Left as prefilled (null), the area's average private rent
       monthly_rent: renting ? monthlyRent(inputs) : 0,
       // The rental area, when chosen (else the API takes the region's default)
       ...(renting && inputs.brma ? { brma: householdArea(inputs) } : {}),
@@ -236,14 +236,13 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
 }
 
 /**
- * The rent a month: as entered, else the Local Housing Allowance rate for
- * the household's area and size (localRents.js), else the region's average
- * private rent.
+ * The rent a month: as entered, else the average private rent (ONS) for
+ * the household's area and size (localRents.js), else the region's.
  */
 export const monthlyRent = (inputs) =>
   typeof inputs.monthly_rent === "number" && Number.isFinite(inputs.monthly_rent)
     ? inputs.monthly_rent
-    : (localRent(inputs, parseChildrenAges(inputs.children_ages).length) ?? regionalRent(inputs.region));
+    : (marketRent(inputs, parseChildrenAges(inputs.children_ages).length) ?? regionalRent(inputs.region));
 
 const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 

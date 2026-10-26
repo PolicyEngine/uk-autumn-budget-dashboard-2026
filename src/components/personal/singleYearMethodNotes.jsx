@@ -77,3 +77,20 @@ export const COUNCIL_TAX_NOTE = (
     ]}
   />
 );
+
+export const RENT_NOTE = (
+  <Note
+    icon="house"
+    lead="A renter's rent starts at the average private rent in their rental area, for the bedrooms their household points to; “Use the local rate” sets it to the area's Local Housing Allowance rate."
+    points={[
+      <>
+        Average rents: <SourceLink source="ons_private_rents">ONS Price Index of Private Rents</SourceLink>, the
+        latest month (September 2026; July for Northern Ireland, which ONS publishes two months later).
+      </>,
+      "Scotland and Northern Ireland: ONS publishes rents by Broad Rental Market Area, used as they are.",
+      "England and Wales: ONS publishes rents by local authority. An area's rent is its local authorities' rents, weighted by the Census 2021 private-rented households in the part of the area each one holds.",
+      "Bedrooms: one with no children, two with one or two, three with three or four, four with five or more.",
+      "The Local Housing Allowance rate (DWP, 2026-27) was set in April 2024 at the 30th percentile of local rents and is frozen, so it is below the average almost everywhere. It caps Universal Credit's housing element whatever rent is entered.",
+    ]}
+  />
+);

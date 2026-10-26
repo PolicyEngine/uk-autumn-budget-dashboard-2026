@@ -107,7 +107,7 @@ describe("the household calculation, from the fixture", () => {
       employment_income: 34200,
       region: "NORTH_WEST",
       tenure: "RENT_PRIVATELY",
-      monthly_rent: 775,
+      monthly_rent: 940,
       student_loan_plan: "NONE",
       has_partner: false,
       claims_universal_credit: true,
@@ -262,6 +262,9 @@ describe("the household calculation, from the fixture", () => {
     const terms = [...panel.querySelectorAll("dt")].map((term) => term.textContent);
     expect(terms).toContain("Universal Credit");
     expect(terms).toContain("Change by policy");
+    // Where the starting rent comes from
+    expect(terms).toContain("Rent");
+    expect(within(panel).getByText(/starts at the average private rent in their rental area/)).toBeInTheDocument();
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
   });

@@ -1,15 +1,35 @@
 /**
- * Local rents for the Household impact form: the Local Housing Allowance
- * (LHA) rate for the household's Broad Rental Market Area (BRMA) and the
- * bedrooms the LHA size rules allow it, for 2026-27. LHA rates were set in
- * April 2024 at the 30th percentile of private rents in each area and have
- * been frozen since (DWP, Universal Credit monthly rates). The table is localRents.json, written from policyengine-uk's own
- * tables by scripts/build_local_rents.py; its BRMA names are the ones the
- * household API takes as `brma`.
+ * Local rents for the Household impact form, for the household's Broad
+ * Rental Market Area (BRMA) and the bedrooms its answers point to:
+ *
+ * - the average private rent (ONS, Price Index of Private Rents), the
+ *   form's starting rent: by BRMA in Scotland and Northern Ireland, and in
+ *   England and Wales the mean of the BRMA's local authorities' rents,
+ *   weighted by their private renters in it;
+ * - the Local Housing Allowance (LHA) rate for 2026-27, the "Use the local
+ *   rate" button's rent: set in April 2024 at the 30th percentile of private
+ *   rents in each area and frozen since (DWP, Universal Credit monthly
+ *   rates).
+ *
+ * The table is localRents.json, written by scripts/build_local_rents.py
+ * from policyengine-uk's own LHA tables and data_inputs/local_rents/; its
+ * BRMA names are the ones the household API takes as `brma`.
  */
 import table from "./localRents.json";
 
 export const LOCAL_RENT_YEAR = table.year;
+
+/** "September 2026": the month of the area's ONS average rent. */
+export function marketMonth(inputs) {
+  const month = table.areas[householdArea(inputs)]?.market_month;
+  if (!month) return null;
+  const [year, index] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, index - 1, 1)).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 /** The API's area when none is sent: the region's BRMA with most renters. */
 export const defaultArea = (region) => table.region_defaults[region] ?? null;
@@ -56,6 +76,16 @@ export function localRent(inputs, childrenCount) {
   const area = table.areas[householdArea(inputs)];
   if (!area) return null;
   return Math.round(area.rates[lhaCategory(inputs, childrenCount)]);
+}
+
+/**
+ * The average private rent a month (ONS), in whole pounds, for the
+ * household's area and the same number of bedrooms; null outside the table.
+ */
+export function marketRent(inputs, childrenCount) {
+  const area = table.areas[householdArea(inputs)];
+  if (!area?.market) return null;
+  return area.market[lhaCategory(inputs, childrenCount) - 1];
 }
 
 /** "a two-bedroom home", for the form's note. */

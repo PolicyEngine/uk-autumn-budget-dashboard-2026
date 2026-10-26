@@ -65,14 +65,14 @@ describe("buildHouseholdRequest", () => {
       { ...WIZARD_DEFAULTS, children_ages: "4, 7", monthly_childcare: 400, has_partner: true },
       { year: 2029, policies: ["two_child_limit"], include: ["by_policy"] },
     );
-    // Rent left as prefilled: the Local Housing Allowance rate for a
+    // Rent left as prefilled: the average private rent (ONS) for a
     // two-bedroom home in the region's default area (Central Greater
-    // Manchester, 2026-27), with no area sent
+    // Manchester), with no area sent
     expect(family.household).toMatchObject({
       children: [{ age: 4 }, { age: 7 }],
       monthly_childcare: 400,
       region: "NORTH_WEST",
-      monthly_rent: 875,
+      monthly_rent: 1160,
       partner_employment_income: DEFAULT_SALARY,
     });
     const entered = buildHouseholdRequest(
@@ -84,8 +84,9 @@ describe("buildHouseholdRequest", () => {
       { ...WIZARD_DEFAULTS, region: "LONDON" },
       { year: 2029, policies: ["two_child_limit"] },
     );
-    // One bedroom in Inner South East London: £1,295.50, to the pound
-    expect(london.household.monthly_rent).toBe(1296);
+    // One bedroom in Inner South East London: its local authorities'
+    // rents, weighted by their private renters in the area
+    expect(london.household.monthly_rent).toBe(1748);
     expect(london.household).not.toHaveProperty("brma");
     // A chosen area is sent, and sets the rent; one from another region is not
     const camden = buildHouseholdRequest(
@@ -93,7 +94,7 @@ describe("buildHouseholdRequest", () => {
       { year: 2029, policies: ["two_child_limit"] },
     );
     expect(camden.household.brma).toBe("INNER_NORTH_LONDON");
-    expect(camden.household.monthly_rent).not.toBe(1296);
+    expect(camden.household.monthly_rent).not.toBe(1748);
     const stale = buildHouseholdRequest(
       { ...WIZARD_DEFAULTS, region: "WALES", brma: "INNER_NORTH_LONDON" },
       { year: 2029, policies: ["two_child_limit"] },

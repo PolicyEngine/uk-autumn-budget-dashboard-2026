@@ -20,7 +20,7 @@ import {
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE } from "../utils/householdDefaults";
-import { LOCAL_RENT_YEAR, areaLabel, areasIn, homeSize, householdArea } from "../utils/localRents";
+import { LOCAL_RENT_YEAR, areaLabel, areasIn, homeSize, householdArea, localRent, marketMonth } from "../utils/localRents";
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
@@ -35,7 +35,7 @@ export const WIZARD_DEFAULTS = {
   tenure: "RENT_PRIVATELY",
   // null: the region's default rental area (the API's), until chosen
   brma: null,
-  // null: the area's Local Housing Allowance rate, until changed
+  // null: the area's average private rent (ONS), until changed
   monthly_rent: null,
   // policyengine-uk's repayment depends on the plan and income alone: the
   // balance only caps a year's repayment, and is not asked for
@@ -321,11 +321,18 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the Local Housing Allowance rate for ${homeSize(
+    `Prefilled with the average private rent for ${homeSize(
       inputs,
       parseChildrenAges(inputs.children_ages).length,
-    )} in ${areaLabel(householdArea(inputs))} (DWP, ${fiscalYearTick(LOCAL_RENT_YEAR)}), set in April 2024 at the 30th percentile of local rents and frozen since; change it if yours differs.`,
+    )} in ${areaLabel(householdArea(inputs))} (ONS, ${marketMonth(inputs)}); change it if yours differs.`,
 };
+
+// The rent's note when it is the area's Local Housing Allowance rate ("Use the local rate")
+const lhaRentHint = (inputs) =>
+  `The Local Housing Allowance rate for ${homeSize(
+    inputs,
+    parseChildrenAges(inputs.children_ages).length,
+  )} in ${areaLabel(householdArea(inputs))} (DWP, ${fiscalYearTick(LOCAL_RENT_YEAR)}), set in April 2024 at the 30th percentile of local rents and frozen since.`;
 
 // The form's last state, kept for the session so switching tabs keeps it
 const savedWizard = { inputs: null, presetId: null, moreOpen: false, submitted: null };
@@ -516,7 +523,16 @@ function HouseholdCalculator({
       const config = NUMBER_CONFIGS[id];
       const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
       const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
+      // The rent: the area's average to start with; its Local Housing
+      // Allowance rate a button away
+      const lhaRent = id === "monthly_rent" ? localRent(inputs, childrenCount) : null;
+      const atLhaRent = lhaRent !== null && !prefilled && value === lhaRent;
+      const hint =
+        PREFILL_HINTS[id] && prefilled
+          ? PREFILL_HINTS[id](year, inputs)
+          : atLhaRent
+            ? lhaRentHint(inputs)
+            : config.hint;
       field = (
         <div className="number-field-wrap">
           <NumberField
@@ -529,7 +545,12 @@ function HouseholdCalculator({
           />
           {PREFILLED[id] && !prefilled && (
             <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
-              {id === "monthly_rent" ? "Use the local rate" : "Use the full new State Pension"}
+              {id === "monthly_rent" ? "Use the local average" : "Use the full new State Pension"}
+            </button>
+          )}
+          {lhaRent !== null && value !== lhaRent && (
+            <button type="button" className="text-button" onClick={() => handleInputChange(id, lhaRent)}>
+              Use the local rate
             </button>
           )}
         </div>
