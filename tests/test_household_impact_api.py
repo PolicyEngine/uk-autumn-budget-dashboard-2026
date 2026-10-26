@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from uk_budget_data import api, household_impact
+from uk_budget_data.runtime_identity import runtime_identity
 
 client = TestClient(api.app)
 ROUTE = "/api/household-impact"
@@ -190,6 +191,7 @@ def test_a_household_answered_in_stages():
     assert body["council_tax_used"]["source"] == "estimated"
     assert body["engine"]["policyengine"]
     assert body["engine"]["policyengine-uk"]
+    assert body["git_sha"] == runtime_identity()["git_sha"]
 
     rest = client.post(ROUTE, json=_with({"include": ["by_policy", "sweep"]}))
     assert rest.status_code == 200, rest.text

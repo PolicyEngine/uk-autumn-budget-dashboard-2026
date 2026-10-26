@@ -8,6 +8,7 @@ import {
   HEADLINE_INCLUDE,
   SWEEP_INCLUDE,
   UNREGISTERED,
+  normaliseHouseholdImpact,
 } from "../utils/householdImpactApi";
 import { APPROVED_COMMIT, approvedDefinition, reportedDefinitions, requestedDefinitions } from "../test/definitionsFixture";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
@@ -112,8 +113,11 @@ describe("Personal impact's live answers", () => {
   describe("with a detail service", () => {
     const MAIN = "https://main.test/api/household-impact";
     const DETAIL = "https://detail.test/api/household-impact";
+    // Both services deployed from one commit
+    const BUILD = "c".repeat(40);
     const partOf = (body) => (body.include.length === 0 ? "headline" : body.include[0]);
-    const twoServices = (calls, detailAnswer, mainAnswer = (body) => ({ ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine })) => {
+    const fromMain = (body) => ({ ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine, git_sha: BUILD });
+    const twoServices = (calls, detailAnswer, mainAnswer = fromMain) => {
       vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
       vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
       vi.stubGlobal("fetch", async (url, init) => {
@@ -125,10 +129,17 @@ describe("Personal impact's live answers", () => {
         return Response.json({ definitions: reportedDefinitions(url), ...(detail ? detailAnswer(body) : mainAnswer(body)) });
       });
     };
-    const fromDetail = (change = {}) => (body) => {
-      const answer = structuredClone(householdAnswerFor(body));
+    const fromDetail = (change = () => ({})) => (body) => {
+      const answer = { ...structuredClone(householdAnswerFor(body)), git_sha: BUILD };
       return { ...answer, ...change(answer) };
     };
+    // The sweep's top point as another definition would give it, the
+    // household's own net income unchanged
+    const otherSweep = (sweep) => sweep && {
+      ...sweep,
+      points: sweep.points.map((point, i) => (i === sweep.points.length - 1 ? { ...point, reform: point.reform - 250, change: point.change - 250 } : point)),
+    };
+    const mainSweep = normaliseHouseholdImpact(householdAnswerFor({ include: ["sweep"] })).sweep;
 
     it("uses a detail build that reports no project version (finding 1)", async () => {
       const calls = [];
@@ -143,6 +154,9 @@ describe("Personal impact's live answers", () => {
     for (const [why, change] of [
       ["other model versions", () => ({ engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } })],
       ["another net income (older measure definitions)", (answer) => ({ engine: HOUSEHOLD_FIXTURE.engine, net_income: { ...answer.net_income, reform: answer.net_income.reform + 5, change: answer.net_income.change + 5 } })],
+      // Review of d2ec6f2, finding 1
+      ["another commit, though the same packages and net income (another sweep)", (answer) => ({ git_sha: "d".repeat(40), sweep: otherSweep(answer.sweep) })],
+      ["no commit (a deploy from an edited checkout, or an older build)", (answer) => ({ git_sha: null, sweep: otherSweep(answer.sweep) })],
     ]) {
       it(`asks the main API when the detail build answers with ${why}`, async () => {
         const calls = [];
@@ -151,8 +165,32 @@ describe("Personal impact's live answers", () => {
         await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
         expect(hook.result.current.status).toBe("ready");
         expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+        // The sweep shown, and cached, is the main API's
+        expect(hook.result.current.data.sweep).toEqual(mainSweep);
+        hook.unmount();
+        const again = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+        expect(again.result.current.data.sweep).toEqual(mainSweep);
+        expect(calls).toHaveLength(5);
       });
     }
+
+    it("never uses the detail service under a headline that reports no commit", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: null }));
+      const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+    });
+
+    it("takes the whole answer away when the main API's breakdown reports another commit than its headline", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail(() => ({ git_sha: null })), (body) => ({ ...fromMain(body), git_sha: partOf(body) === "headline" ? BUILD : "e".repeat(40) }));
+      const hook = renderHook(() => useHouseholdImpact(params));
+      await waitFor(() => expect(hook.result.current.status).toBe("error"));
+      expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
+      expect(hook.result.current.error.packages).toEqual(["build"]);
+      expect(hook.result.current.data).toBeNull();
+    });
 
     it("takes the whole answer away when the main API's breakdown is from another build too", async () => {
       const calls = [];
@@ -165,8 +203,10 @@ describe("Personal impact's live answers", () => {
     });
   });
 
-  // Review of e9d7c76, finding 6: a refused calculation leaves nothing in
-  // the cache, so asking again starts from the headline
+  // A refused calculation leaves nothing in the cache, so asking again
+  // starts from the headline. (The review of e9d7c76 asked for this; that
+  // commit already did it, so this guards it rather than a change.) Without
+  // refuse()'s cache.delete, the retry would reuse the refused headline.
   it("asks again from the headline after a refusal", async () => {
     const requests = [];
     serve(requests, (n) => (n === 1 || n >= 4 ? HOUSEHOLD_FIXTURE.engine : { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" }));
@@ -203,10 +243,12 @@ describe("Personal impact's live answers", () => {
       it(`takes the whole answer away when only the ${bad} part comes from another deployment (${badFirst ? "it arrives first" : "it arrives last"})`, async () => {
         vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
         const requests = [];
+        const signals = {};
         vi.stubGlobal("fetch", async (url, init) => {
           const body = JSON.parse(init.body);
           requests.push(body);
           const part = body.include.length === 0 ? "headline" : body.include[0];
+          signals[part] = init.signal;
           const isBad = part === bad;
           if (part !== "headline") await new Promise((resolve) => setTimeout(resolve, isBad === badFirst ? 0 : 60));
           const engine = isBad ? { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } : HOUSEHOLD_FIXTURE.engine;
@@ -215,6 +257,9 @@ describe("Personal impact's live answers", () => {
         const hook = renderHook(() => useHouseholdImpact(params));
         await waitFor(() => expect(hook.result.current.status).toBe("error"));
         await waitFor(() => expect(requests).toHaveLength(3));
+        // Review of d2ec6f2: the refusal cancels the other part's request
+        // while it is still out
+        if (badFirst) expect(signals[bad === "sweep" ? "by_policy" : "sweep"].aborted).toBe(true);
         // Past the slower part's answer
         await new Promise((resolve) => setTimeout(resolve, 120));
         expect(hook.result.current.status).toBe("error");

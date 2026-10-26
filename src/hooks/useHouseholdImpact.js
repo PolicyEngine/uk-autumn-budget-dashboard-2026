@@ -44,10 +44,12 @@ const DEBOUNCE_MS = 400;
  *   is refused, and is an error
  * @param {Object<string, Object>} [params.expectedDefinitions] - Each
  *   selected measure's approved definition (`publishedDefinitions`). Both
- *   stages name their commits, and an answer whose reported definitions
- *   differ, or that reports none, is refused: a DefinitionMismatchError
- *   naming the measures. A measure asked about with none here is refused
- *   before any request, so leaving it out never shows an unchecked answer.
+ *   stages name their commits, and a main API answer whose reported
+ *   definitions differ, or that reports none, is refused: a
+ *   DefinitionMismatchError naming the measures (a detail service answer
+ *   like that is asked again of the main API). A measure asked about with
+ *   none here is refused before any request, so leaving it out never shows
+ *   an unchecked answer.
  *   Only those of `policies` are used and sent, and the request is checked
  *   again when one of them comes or goes
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
@@ -202,13 +204,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const parts = DETAIL_PARTS.filter((include) =>
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
-      // The detail service's answer is used only if it matches the headline
-      // and computes every measure from its approved definition (a stale or
-      // pre-#125 deploy doesn't); otherwise the part is asked of the main API
-      const accept = (raw) => {
+      // The detail service's answer is used only if it has the part asked
+      // for, reports the headline's build commit, matches it, and computes
+      // every measure from its approved definition (a stale or pre-#125
+      // deploy doesn't); otherwise the part is asked of the main API
+      const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
-          return stageMismatch(first, detail) === null && mismatch(detail) === null;
+          return (
+            include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null) &&
+            stageMismatch(first, detail, { sameBuild: true }) === null &&
+            mismatch(detail) === null
+          );
         } catch {
           return false;
         }
@@ -218,7 +225,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions, accept },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions, accept: acceptFor(include) },
             );
             if (signal.aborted || refused) return;
             const detail = normaliseHouseholdImpact(raw);
@@ -227,7 +234,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
             // measure from another definition
             const mismatched = mismatch(detail);
             if (mismatched) throw mismatched;
-            // Refused unless from the headline's own package versions
+            // Refused unless from the headline's own package versions and,
+            // where both report one, its build commit
             merged = mergeStages(merged, detail);
             const complete = merged.byPolicy !== null && merged.sweep !== null;
             cache.set(key, { data: merged, complete });

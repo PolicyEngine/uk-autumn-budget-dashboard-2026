@@ -11,9 +11,12 @@ import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture"
 // from the headline's build and the approved definitions (a stale or
 // pre-#125 deploy, or one that doesn't register a measure) is asked again
 // of the main API (coordinator, 25 October, on m13's fallback). Only the
-// main API's own mismatch refuses the whole result.
+// main API's own mismatch refuses the whole result. Both services report
+// one build commit here (#104's m16 checks it first), so each case turns
+// on the definitions alone.
 const MAIN = "https://main.test/api/household-impact";
 const DETAIL = "https://detail.test/api/household-impact";
+const BUILD = "c".repeat(40);
 const DEFINITIONS = Object.fromEntries(HOUSEHOLD_FIXTURE.included.map((id) => [id, approvedDefinition()]));
 const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "s", expectedDefinitions: DEFINITIONS };
 const route = (url) => String(url).split("?")[0];
@@ -36,7 +39,7 @@ const serve = (calls, answer) => {
     calls.push(`${service}:${partOf(body)}`);
     const given = answer(service, partOf(body), url, body);
     if (given instanceof Response) return given;
-    return Response.json({ ...structuredClone(householdAnswerFor(body)), ...given });
+    return Response.json({ ...structuredClone(householdAnswerFor(body)), git_sha: BUILD, ...given });
   });
 };
 const good = (url) => ({ definitions: reportedDefinitions(url) });
@@ -103,6 +106,18 @@ it("asks the main API when the detail URL's code doesn't register a measure (422
   const calls = [];
   serve(calls, (service, part, url) => (service === "detail" ? UNREGISTERED_422() : good(url)));
   await answered(calls);
+});
+
+// Review of 61df4725, finding 2: a detail answer without the part it was
+// asked for doesn't answer that part
+it("asks the main API for a part the detail URL's answer leaves out", async () => {
+  const calls = [];
+  serve(calls, (service, part, url) => (service === "detail" && part === "sweep" ? { ...good(url), sweep: null } : good(url)));
+  const hook = renderHook(() => useHouseholdImpact(params));
+  await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+  expect(hook.result.current.error).toBeNull();
+  expect(hook.result.current.data.sweep).not.toBeNull();
+  expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:headline", "main:sweep"]);
 });
 
 it("takes the whole answer away when the main API computes a part from another definition", async () => {

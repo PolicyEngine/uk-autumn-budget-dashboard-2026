@@ -329,6 +329,9 @@ export async function postHouseholdImpact(
   }, timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener("abort", onAbort);
+  // A signal aborted already never fires its listener: a fallback asked
+  // for after the caller gave up is not sent
+  if (signal?.aborted) controller.abort();
   let response;
   try {
     response = await doFetch(url, {
@@ -519,6 +522,9 @@ export function normaliseHouseholdImpact(raw) {
       raw.definitions && typeof raw.definitions === "object" && !Array.isArray(raw.definitions)
         ? raw.definitions
         : null,
+    // The build's commit, or null when the build reports none (a local run,
+    // a Modal deploy from an edited checkout, or a build older than this)
+    build: typeof raw.git_sha === "string" && raw.git_sha !== "" ? raw.git_sha : null,
   };
 }
 
@@ -580,13 +586,15 @@ export class DefinitionMismatchError extends Error {
  */
 export const STAGE_ENGINE_PACKAGES = ["policyengine", "policyengine-core", "policyengine-uk"];
 
-/** A detail answer's net income may differ from the headline's by this much. */
-const NET_TOLERANCE = 0.01;
+/** A detail answer's net income may differ from the headline's by this many pennies. */
+const NET_TOLERANCE_PENNIES = 1;
+
+const pennies = (pounds) => Math.round(pounds * 100);
 
 /**
- * The breakdown came from another deployment than its headline. Either its
- * model packages differ, or it recomputed another net income for the same
- * household, so it ran other measure definitions (an older build).
+ * The breakdown came from another deployment than its headline: its model
+ * packages differ, it reports another build commit, or it recomputed another
+ * net income for the same household.
  */
 export class StageMismatchError extends EngineMismatchError {
   constructor(packages) {
@@ -623,15 +631,29 @@ export function definitionRefusals(expected, reported, ids = Object.keys(expecte
 /**
  * Why a detail answer can't sit under this headline, or null if it can.
  *
+ * Net income alone can't show two answers came from one build: two builds
+ * can agree on this household's net income and still differ elsewhere on
+ * its earnings sweep. Only the build commit can. Answers that both report
+ * one must report the same; `sameBuild` (the detail service's answers)
+ * also refuses one where either reports none.
+ *
+ * @param {Object} first - The headline
+ * @param {Object} detail - A later part
+ * @param {{ sameBuild?: boolean }} [options]
  * @returns {StageMismatchError|null}
  */
-export function stageMismatch(first, detail) {
+export function stageMismatch(first, detail, { sameBuild = false } = {}) {
   const a = first.engine ?? {};
   const b = detail.engine ?? {};
   const packages = STAGE_ENGINE_PACKAGES.filter((name) => typeof a[name] !== "string" || a[name] !== b[name]);
   if (packages.length) return new StageMismatchError(packages);
+  const bothBuilt = first.build != null && detail.build != null;
+  if (bothBuilt ? first.build !== detail.build : sameBuild) return new StageMismatchError(["build"]);
   const sameNet = ["before", "after"].every(
-    (side) => Number.isFinite(first.net?.[side]) && Number.isFinite(detail.net?.[side]) && Math.abs(first.net[side] - detail.net[side]) <= NET_TOLERANCE,
+    (side) =>
+      Number.isFinite(first.net?.[side]) &&
+      Number.isFinite(detail.net?.[side]) &&
+      Math.abs(pennies(first.net[side]) - pennies(detail.net[side])) <= NET_TOLERANCE_PENNIES,
   );
   return sameNet ? null : new StageMismatchError(["net_income"]);
 }
@@ -641,8 +663,8 @@ export function stageMismatch(first, detail) {
  * come from the same build: a breakdown from another deployment never sits
  * under a headline from this one.
  *
- * @throws {StageMismatchError} when the stages' model packages or net income
- *   differ
+ * @throws {StageMismatchError} when the stages' model packages, build
+ *   commits or net income differ
  */
 export function mergeStages(first, detail) {
   const mismatch = stageMismatch(first, detail);
@@ -686,9 +708,9 @@ export function consistentRound(values, total) {
  * build has one, falling back to the main API if that service cannot be
  * reached, errs, times out, refuses the request (an older build may not know
  * a measure, or register it: a DefinitionMismatchError) or answers with
- * something `accept` refuses (another build than the headline's, or other
- * measure definitions). The main API's answer, or its refusal, is returned
- * as it is: the caller checks it again.
+ * something `accept` refuses (not the headline's build, or other measure
+ * definitions). The main API's answer, or its refusal, is returned as it
+ * is: the caller checks it again.
  *
  * @param {Object} body
  * @param {Object} [options] - postHouseholdImpact's options, plus
