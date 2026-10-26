@@ -27,7 +27,7 @@ import Note from "./Note";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { NoEffectList } from "./personal/PolicyBars";
-import { MeasureDumbbell } from "./youngPeople/MeasuresCard";
+import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { useAgeImpactRows } from "./YoungPeopleSection";
@@ -455,7 +455,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, height }
   const published = isPublished(rows, year);
   const { shown, noEffect, suppressed } = pensionerMeasures(rows, policies, selectedPolicies, year);
   const values = shown.flatMap((point) => [point.group, point.all]);
-  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
+  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values), {
+    maxSteps: DUMBBELL_MAX_STEPS,
+  });
   const title = `Effect of each policy, ${yearLabel}`;
   const description = "Each policy's average change per person: pensioners vs all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
@@ -499,7 +501,14 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, height }
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : shown.length ? (
-          <MeasureDumbbell rows={shown} domain={domain} ticks={ticks} groupName="Pensioners" yearLabel={yearLabel} />
+          <MeasureDumbbell
+            rows={shown}
+            domain={domain}
+            ticks={ticks}
+            groupName="Pensioners"
+            yearLabel={yearLabel}
+            height={height}
+          />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>None of the selected policies changes household incomes in {yearLabel}.</p>
@@ -519,24 +528,37 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, height }
         )}
       </div>
       <Logo />
-      {published && notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-      {published && noEffectItems.length > 0 && (
-        <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />
+      {/* Notes and More info in the card's footer row, level across a pair */}
+      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+        <div className="chart-footer">
+          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
+          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+        </div>
       )}
     </div>
   );
 }
 
+/** The split column's width, as the dumbbell's value column, and each half's. */
+const SPLIT_WIDTH = 112;
+const SPLIT_WIDTH_NARROW = 108;
+const SPLIT_COLUMN = 58;
+
 /** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
 function SplitTick({ x, y, payload, data, narrow }) {
   const row = data.find((point) => point.group === payload.value);
   if (!row) return null;
+  // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
+  // (Recharts puts x 8px into the axis), as the dumbbell's value column
+  const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
   return (
-    <text x={x + 4} y={y} dominantBaseline="middle" fontSize={narrow ? 10 : 11} fill={CHART_COLOURS.tick}>
-      <tspan fill={CHART_COLOURS.gain}>▲</tspan>
-      {` ${formatShare(row.real.pct_better_off)}  `}
-      <tspan fill={CHART_COLOURS.loss}>▼</tspan>
-      {` ${formatShare(row.real.pct_worse_off)}`}
+    <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
+      <tspan x={end - SPLIT_COLUMN} textAnchor="end">
+        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
+      </tspan>
+      <tspan x={end} textAnchor="end">
+        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
+      </tspan>
     </text>
   );
 }
@@ -551,12 +573,12 @@ function GroupTick({ x, y, payload, narrow }) {
       y={y}
       textAnchor="end"
       dominantBaseline="middle"
-      fontSize={TICK_STYLE.fontSize}
+      fontSize={13}
       fill={bold ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={bold ? 600 : 400}
     >
       {words.map((word, index) => (
-        <tspan key={word} x={x - 6} dy={index === 0 ? (words.length - 1) * -6 : 12}>
+        <tspan key={word} x={x - 6} dy={index === 0 ? (words.length - 1) * -7 : 14}>
           {word}
         </tspan>
       ))}
@@ -669,7 +691,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 type="category"
                 dataKey="group"
                 tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? 108 : 112}
+                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
                 axisLine={false}
                 tickLine={false}
                 interval={0}

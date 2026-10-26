@@ -1,9 +1,39 @@
 /* Effect of each policy: one row per policy, a ring (all ages) and a dot
-   (the chosen group) on one £ axis, the group's value and gap at the right */
+   (the chosen group) on one £ axis, the group's value and gap at the right.
+   One type scale with its pair (Better and worse off): row labels and
+   values at the caption size, the gap line and axis ticks at 12px, as
+   every Recharts axis (TICK_STYLE). The value column is as wide as the
+   pair's split column (112px), so both cards' numbers end on one edge. */
 .measure-dumbbell {
-  --md-cols: minmax(120px, 34%) minmax(0, 1fr) 118px;
+  --md-label: 172px;
+  --md-values: 112px;
+  --md-gap: 12px;
+  --md-cols: var(--md-label) minmax(0, 1fr) var(--md-values);
   position: relative;
-  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-caption);
+}
+
+/* In a pair of cards, the plot is as tall as its neighbour's Recharts plot
+   (the card's height): the same room above the first row (PLOT_TOP) and
+   an axis as tall as X_AXIS_HEIGHT, the rows sharing the rest evenly, so
+   the axis titles line up and no gap opens above the legend. */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) .measure-dumbbell {
+    box-sizing: border-box;
+    min-height: var(--md-height, 0);
+    padding: 16px 0 6px;
+  }
+
+  .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
+    flex: 1 1 auto;
+    max-height: 76px;
+  }
+
+  .charts-grid:has(> div + div) .measure-dumbbell-axis {
+    margin-top: auto;
+  }
 }
 
 .measure-dumbbell-row {
@@ -11,9 +41,9 @@
   display: grid;
   grid-template-columns: var(--md-cols);
   align-items: center;
-  column-gap: 14px;
-  min-height: 44px;
-  padding: 4px 6px;
+  column-gap: var(--md-gap);
+  min-height: 46px;
+  padding: 0 6px;
   border-radius: 6px;
   outline: none;
 }
@@ -36,6 +66,16 @@
   line-height: 1.3;
 }
 
+/* Two lines at most; the full name is in the row's title and tooltip */
+.measure-dumbbell-label {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .measure-dumbbell-swatch {
   flex: none;
   width: 9px;
@@ -43,9 +83,12 @@
   border-radius: 50%;
 }
 
+/* The plot fills its row's height, so the gridlines run unbroken from
+   row to row */
 .measure-dumbbell-plot {
   position: relative;
-  height: 28px;
+  align-self: stretch;
+  min-height: 28px;
 }
 
 .measure-dumbbell-grid {
@@ -113,7 +156,7 @@
 }
 
 .measure-dumbbell-gap {
-  font-size: 0.75rem;
+  font-size: var(--fs-micro);
   color: var(--pe-gray-500);
 }
 
@@ -125,30 +168,53 @@
   color: var(--c-loss-text);
 }
 
+/* The x axis: ticks on an axis line, then the unit centred under the
+   plot, 44px in all (X_AXIS_HEIGHT), as a Recharts x axis */
 .measure-dumbbell-axis {
-  min-height: 28px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 44px;
+}
+
+.measure-dumbbell-axis .measure-dumbbell-row {
+  min-height: 22px;
+}
+
+.measure-dumbbell-axis .measure-dumbbell-plot {
+  min-height: 22px;
+  border-top: 1px solid #d1d5db;
 }
 
 .measure-dumbbell-tick {
   position: absolute;
-  top: 4px;
+  top: 5px;
   transform: translateX(-50%);
-  font-size: 0.75rem;
-  color: var(--pe-gray-500);
+  font-size: 12px;
+  line-height: 1;
+  color: #6b7280;
   white-space: nowrap;
 }
 
 .measure-dumbbell-unit {
-  margin: 4px 0 0;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  white-space: nowrap;
+  padding-left: calc(6px + var(--md-label) + var(--md-gap));
+  padding-right: calc(6px + var(--md-values) + var(--md-gap));
   text-align: center;
-  font-size: 0.75rem;
-  color: var(--pe-gray-500);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #4b5563;
 }
 
 .measure-dumbbell-tip {
   position: absolute;
   z-index: 5;
-  left: 34%;
+  left: calc(6px + var(--md-label));
   bottom: calc(100% - 4px);
   display: flex;
   flex-direction: column;
@@ -169,7 +235,8 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 4px 20px;
-  font-size: 0.8rem;
+  /* As the pair's GroupedLegend */
+  font-size: 12.5px;
   color: var(--pe-gray-700);
 }
 
@@ -219,13 +286,26 @@
     grid-area: plot;
   }
 
-  .measure-dumbbell-axis {
+  .measure-dumbbell-plot {
+    min-height: 26px;
+  }
+
+  /* The name has the row's width less the value: no clamp needed */
+  .measure-dumbbell-label {
+    display: block;
+  }
+
+  .measure-dumbbell-axis .measure-dumbbell-row {
     grid-template-areas: "plot plot";
   }
 
   .measure-dumbbell-axis .measure-dumbbell-name,
   .measure-dumbbell-axis .measure-dumbbell-values {
     display: none;
+  }
+
+  .measure-dumbbell-unit {
+    padding: 0;
   }
 
   .measure-dumbbell-tip {
