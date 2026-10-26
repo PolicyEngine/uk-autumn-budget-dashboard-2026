@@ -255,3 +255,22 @@ button.measure-key-chip:focus-visible,
     transition: none;
   }
 }
+
+/* The same titled key inside a card (Revenue impact, under its plot): no
+   box of its own, as the card is the box; the chips sit under the plot
+   with the logo below. Only a key above several cards is boxed. */
+.revenue-key > .measure-key.is-section,
+.chart-legend > .measure-key.is-section {
+  margin: 0;
+  padding: 12px 0 4px;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+@media (max-width: 640px) {
+  .revenue-key > .measure-key.is-section,
+  .chart-legend > .measure-key.is-section {
+    padding: 12px 0 4px;
+  }
+}
