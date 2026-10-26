@@ -265,7 +265,7 @@ function PolicyNotes({ bars }) {
  * policy's change is said there only); the foot says what it is based on, each note behind an "i". The
  * figure is one element, so it reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, bars }) {
+function ResultCard({ totals, yearLabel, policyCount, items, bars, splitFailed = false }) {
   const shown = Math.round(useCountUp(totals.change));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
@@ -301,7 +301,12 @@ function ResultCard({ totals, yearLabel, policyCount, items, bars }) {
             </p>
           )}
         </div>
-        <NetIncomeWaterfall totals={totals} steps={bars ? bars.rows : null} yearLabel={yearLabel} />
+        <NetIncomeWaterfall
+          totals={totals}
+          steps={bars ? bars.rows : null}
+          yearLabel={yearLabel}
+          splitFailed={splitFailed}
+        />
       </div>
       {bars && <PolicyNotes bars={bars} />}
       {items.length > 0 && (
@@ -412,6 +417,7 @@ export function SingleYearHeadline({
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies })}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
       )}

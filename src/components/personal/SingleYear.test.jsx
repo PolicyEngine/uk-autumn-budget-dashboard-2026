@@ -545,6 +545,9 @@ describe("the household calculation's errors", () => {
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
     expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
+    // The waterfall keeps one step for every policy, and stops saying it is splitting
+    expect(document.querySelector('.net-income-waterfall[data-split="unavailable"]')).not.toBeNull();
+    expect(screen.queryByText(/Splitting the change by policy/)).toBeNull();
   });
 
   it("keeps the headline when only the breakdown fails", async () => {

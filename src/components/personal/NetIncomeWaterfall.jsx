@@ -4,8 +4,8 @@ import { money, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 
 const TEXT = CHART_COLOURS.text;
-const BEFORE_COLOUR = "#9CA3AF";
-const AFTER_COLOUR = "#319795";
+const BEFORE_COLOUR = CHART_COLOURS.before;
+const AFTER_COLOUR = CHART_COLOURS.after;
 
 /**
  * Net income from before to after: the starting net income, each policy's
@@ -20,8 +20,10 @@ const AFTER_COLOUR = "#319795";
  * @param {Array<{id, name, color, rounded}>|null} props.steps - policyRows(...).rows,
  *   or null while the split by policy is calculated (one step for all of them)
  * @param {string} props.yearLabel - "2029-30"
+ * @param {boolean} [props.splitFailed] - The split by policy failed: one step
+ *   for all of them, with no "Splitting…" line (the error is shown below)
  */
-export default function NetIncomeWaterfall({ totals, steps, yearLabel }) {
+export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false }) {
   const [wrapperRef, measured] = useElementWidth();
   const width = measured > 0 ? measured : 520;
   const pending = steps === null;
@@ -62,7 +64,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel }) {
   const barY = (index) => top + index * rowHeight + 20;
 
   return (
-    <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? "pending" : "ready"} data-year={yearLabel}>
+    <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? (splitFailed ? "unavailable" : "pending") : "ready"} data-year={yearLabel}>
       <div ref={wrapperRef} style={{ position: "relative" }}>
         <svg
           width={width}
@@ -108,7 +110,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel }) {
                   // The scale does not start at zero: a break at the bar's left
                   <path
                     d={`M${plotLeft - 5} ${y + barHeight + 2} l4 -${barHeight + 4} M${plotLeft - 1} ${y + barHeight + 2} l4 -${barHeight + 4}`}
-                    stroke="var(--pe-surface, #fff)"
+                    stroke={CHART_COLOURS.surface}
                     strokeWidth={2}
                     transform={`translate(${12} 0)`}
                   />
@@ -143,7 +145,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel }) {
         </svg>
         <FloatingTooltip tip={tip} />
       </div>
-      {pending && (
+      {pending && !splitFailed && (
         <p className="single-year-quiet waterfall-pending" role="status">
           Splitting the change by policy…
         </p>
