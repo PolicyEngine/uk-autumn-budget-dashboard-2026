@@ -17,7 +17,7 @@ export const COLLAPSED_LINES = 3;
 
 const UNIT_NAMES = {
   percent: "rate",
-  gbp: "£ a year",
+  gbp: "pounds",
   pence_per_litre: "pence a litre",
 };
 

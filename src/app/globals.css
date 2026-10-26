@@ -2238,6 +2238,10 @@ body {
   color: var(--pe-gray-600);
 }
 
+.pspec-word {
+  white-space: nowrap;
+}
+
 .pspec-before {
   text-align: right;
   color: var(--pe-gray-500);
@@ -2341,9 +2345,39 @@ body {
     padding: 10px 10px 8px;
   }
 
+  /* On a phone each line stacks: when it applies, then the two values and
+     the change beneath, so nothing scrolls */
+  .pspec-table,
+  .pspec-table tbody,
+  .pspec-row-head,
+  .pspec-row-head th {
+    display: block;
+  }
+
+  .pspec-line {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    column-gap: 6px;
+    border-top: 1px solid var(--pe-gray-100);
+  }
+
+  .pspec-line > * {
+    border-top: 0;
+  }
+
   .pspec-when {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
     white-space: normal;
-    min-width: 72px;
+  }
+
+  .pspec-before {
+    padding-left: 4px;
+  }
+
+  .pspec-after {
+    padding-left: 0;
   }
 
   .pspec-chip {

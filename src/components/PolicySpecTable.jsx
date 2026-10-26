@@ -118,7 +118,12 @@ export default function PolicySpecTable({ rows, direction, highlight, onHighligh
                     onBlur={clear}
                     tabIndex={0}
                   >
-                    <th scope="row" className="pspec-when">{line.label}</th>
+                    <th scope="row" className="pspec-when">
+                      {/* Wraps between words only, never inside "2026-27" */}
+                      {line.label.split(" ").map((word, i) => (
+                        <span key={i} className="pspec-word">{i ? ` ${word}` : word}</span>
+                      ))}
+                    </th>
                     <td className="pspec-before">{formatValue(line.before, row.unit)}</td>
                     <td className="pspec-after">
                       <ArrowRight className="pspec-arrow" size={12} aria-hidden="true" />
