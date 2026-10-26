@@ -170,9 +170,10 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   const area = `${outline}L${last.toFixed(1)},${y(0)}L${first.toFixed(1)},${y(0)}Z`;
 
   const anchors = [
-    { value: median / 2, label: narrow ? "Half" : "Half the middle income" },
-    { value: median, label: narrow ? "Middle" : "Middle income" },
-    { value: median * 2, label: narrow ? "Twice" : "Twice the middle income" },
+    // Short names where the card is narrow (a half-width card too)
+    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income" },
+    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income" },
+    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income" },
   ];
   const bounds = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((p) =>
     p === 0 ? lo : p === 100 ? hi : incomeAt(side === "after" ? curves.after : curves.before, p),
@@ -409,9 +410,10 @@ function RankView({ width, narrow, curves, position, side }) {
   const onRight = youX > left + plotW * 0.6;
   const colour = side === "after" ? AFTER : BEFORE;
   const anchors = [
-    { value: median / 2, label: narrow ? "Half" : "Half the middle income" },
-    { value: median, label: narrow ? "Middle" : "Middle income" },
-    { value: median * 2, label: narrow ? "Twice" : "Twice the middle income" },
+    // Short names where the card is narrow (a half-width card too)
+    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income" },
+    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income" },
+    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income" },
   ];
   return (
     <svg className="position-rank" width={width} height={height} aria-hidden="true">
