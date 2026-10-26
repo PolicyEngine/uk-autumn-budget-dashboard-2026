@@ -1,0 +1,8 @@
+{
+  "measure_id": "employer_ni_relief_under_25s",
+  "receipt_sha256": "ce375b463f4abcba926df55a18fefd05776fcac89d2c7274b6a841b5c3c54c18",
+  "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch receipt only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+  "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+  "second": "REHEARSAL MOCK second (Budget coordinator)",
+  "released_at": "2026-10-26T09:47:00Z"
+}
