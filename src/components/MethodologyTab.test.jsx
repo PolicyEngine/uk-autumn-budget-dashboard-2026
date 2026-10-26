@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { measureModelling, measureSummary, modellingFacts, MODELLING_NOTE, NOT_MODELLED, sentences, unavailableMeasures, usualFirstYear } from "./methodology/measures";
+import { measureModelling, measureSummary, modellingFacts, MODELLING_NOTE, NOT_MODELLED, remainingPoints, sentences, unavailableMeasures, usualFirstYear } from "./methodology/measures";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -99,7 +99,7 @@ describe("MethodologyTab", () => {
     expect(headings).toEqual(expect.arrayContaining(["Raises revenue", "Costs revenue"]));
   });
 
-  it("opens a row to its full published description, as bullets, with links to its card and effect", () => {
+  it("opens a row to the rest of its published description, with links to its card and effect", () => {
     const onShowTab = vi.fn();
     const onShowEffect = vi.fn();
     render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} onShowEffect={onShowEffect} /></MeasureCatalogueProvider>);
@@ -110,7 +110,8 @@ describe("MethodologyTab", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(body).toBeVisible();
-    expect(body).toHaveTextContent(measure.description);
+    // Each sentence once: the summary line is not repeated inside
+    expect(body).not.toHaveTextContent(measure.summary);
     const link = within(body).getByRole("link", { name: "What it does" });
     expect(link).toHaveAttribute("href", `?tab=policies#policy-card-${measure.id}`);
     fireEvent.click(link);
@@ -198,6 +199,19 @@ describe("MethodologyTab", () => {
     expect(limits[2].sentence).toBe("Gains are imputed, so the base is likely 1.5 to 1.7 times too high.");
     expect(modellingFacts("Wages are held fixed.").facts).toEqual(["Wages held fixed"]);
     expect(modellingFacts("A plain measure.")).toEqual({ facts: [], limits: [] });
+  });
+
+  it("says each published sentence once: an opened row leaves out the label, the summary and chip sentences", () => {
+    const text = "Candidate measure. Employers pay no NI for under-25s. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes them. Costs follow the Treasury's 2027-28 rates and are rounded to the nearest £10 million for every year shown here.";
+    const summary = measureSummary(text);
+    const { limits } = modellingFacts(text);
+    expect(remainingPoints(text, summary, limits)).toEqual([
+      "Costs follow the Treasury's 2027-28 rates and are rounded to the nearest £10 million for every year shown here.",
+    ]);
+    // A longer sentence a fact chip comes from says more than the chip, so it stays
+    const long = "Day-weighted to fiscal years, with each rate applied from the day it takes effect to the day the next one does.";
+    expect(remainingPoints(`A label here. First sentence of it. ${long}`, "First sentence of it.", [])).toEqual([long]);
+    expect(remainingPoints("Only one sentence here.", "Only one sentence here.", [])).toEqual([]);
   });
 
   it("keeps a stated limitation in view: its chip opens to the sentence without opening the row", () => {
