@@ -960,6 +960,86 @@ Saturday's data cut (a133f37a, as the UK hub names it, with policyengine-uk 2.14
 - **The region view is not labelled.** The area run publishes regions only from an enhanced FRS run (`--dataset-kind efrs`), never from a local-area release, and that run does not read the bundle's routing, so dropping the routing does not affect it. No region file is published yet, so the view says "Results by region are not yet published."
 - **Nothing else needs the label.** The page has no local-authority view, the household calculator has no area selector, and the page calls no area route.
 
+## Results by constituency on the local-area cut (#115)
+
+`uk-budget-data constituencies` is `geography`'s seats pass (`--dataset-kind microcosm --levels constituency`) on Microcosm's published local-area cut, with each measure simulated in a fresh process, so memory goes back to the machine between measures. By default it runs the nine measures of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS`, and their package when the manifest approves it, over the policy years, and publishes every one of them by constituency. Regions stay a separate pass, from the national file.
+
+**Before you start**
+- **A quiet machine with 64 GB.** Nothing else heavy runs beside it: no other simulation, no `next build`. Note swap before you start. On the national file, #112 measured 22.5 GB of peak footprint for one measure over six years; this run measures the local file.
+- **This branch, with its own environment:** `uv sync --extra dev --frozen` and `bun install`, from the repository root.
+- **`HUGGING_FACE_TOKEN`**, which must read `policyengine/populace-uk-private`.
+- **`UK_BUDGET_DISCLOSURE_AUDIT_DIR`**, a directory outside any git repository. The private audit and each measure's household arrays go there, readable by you alone. The arrays are record-level data derived from the survey: keep the directory on this machine, out of any synced or shared folder. Once the table is merged, delete the arrays (the run directory's `units/` and `dataset.npz`) and keep the audit.
+- **Approvals.** Like `geography`, the command takes approved ids only, from `public/data/manifest.json`. If the manifest is missing, or doesn't approve a measure, it stops before it downloads or simulates anything, and names each refusal. A manifest given with `--manifest` that isn't the publication manifest can't write into any repository: pass an `--out-dir` outside one.
+- **Disk:** about 0.7 GB for the cut, in the Hugging Face cache, and a few hundred MB in the private directory.
+
+**The command**
+
+```sh
+uv run uk-budget-data constituencies --dry-run   # resolve and check the cut, check the gates, print the plan
+uv run uk-budget-data constituencies --fresh     # the run; --fresh simulates every measure again, for the timing table
+```
+
+What it does, in order:
+1. **Resolves the cut:** the latest tag of `policyengine/populace-uk-private` named `microcosm-uk-2024-25-dense-<YYYYMMDDTHHMMSSZ>-<8 hex digits>` (the local-area release is published as tags only), or `--cut <tag>`.
+   - The cut's release manifest names its file and the file's SHA-256. The Hugging Face metadata and the downloaded bytes must match it, and the cut must be built for the installed policyengine-uk.
+   - The latest cut must be the one the installed bundle routes constituencies to. If it isn't, the command stops and says which `--cut` to pass.
+   - `--dataset <path>` uses a copy you already have, checked against the same SHA-256.
+   - The dry run fetches the file too, so the real run starts with it in place.
+2. **Plans the run** with `geography`'s own checks (`geography._plan`), and checks a published `public/data/regional.csv`, if there is one, against it: that table is the release's prior.
+3. **Simulates each measure, then the package, in a fresh process** under `/usr/bin/time -l`, with `HDF5_USE_FILE_LOCKING=FALSE`. Each builds its two simulations, reads each year's household net income and weights under the data-limit watch, then runs the data-limit and model-limit checks, as `geography` does for each measure. The arrays go to the private run directory, `$UK_BUDGET_DISCLOSURE_AUDIT_DIR/geography/constituencies-<the cut's 8 hex digits>/`.
+4. **Stops on a limit.** If any measure touches a data or model limit, the command prints the reasons and writes no table, as `geography` does. It then prints the `--reforms` to run again with: the measures left, without the package. On policyengine-uk 2.132.6, expect the three VAT measures (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat` and `road_fuel_vat_cut`), and so the package, to be held by the VAT model limit (policyengine-uk #2187; see "The area view is held too" above). Run again with those `--reforms`: the measures already simulated are reused, so only the release runs.
+5. **Builds one disclosure release over every measure**, in a fresh process too: the estimates, the layer's checks, resolution and the private audit (`microcosm-<time>/` in the run directory), then `public/data/constituency.csv` through `geography.write_public_tables`, which replaces the file only once `validate_public` finds 0 problems. A demoted run stops it unless you pass `--allow-demotions`.
+6. **Prints** the table's SHA-256, the review row to add, and the timing table.
+
+**Resuming.** A run that stops (Ctrl-C, a crash, a measure killed for memory) resumes with the same command. It reuses every measure already simulated for the same cut, years and code (the package's code, `uv.lock` and the two lookups). `--fresh` simulates everything again, and `--run-id` picks another private run directory.
+
+**What to expect:**
+- `employer_ni_relief_under_25s` moves no household income, so each seat it publishes shows no change.
+- Like every Microcosm area run, it prints the uncertified label at the start and the end, and records `certified: false` in the private audit (see "Results by area" under G4).
+
+**After the run**
+1. Review the table and the private summary: `summary.json` in the private audit directory, with tiers, withholdings and demotions. Never copy a figure from either into a pull request, commit message or comment.
+2. Add the review row the command printed to `data_inputs/public_data_review.csv`: kind `disclosure_table`, the table's SHA-256 (check it with `shasum -a 256 public/data/constituency.csv`), your name as reviewer, today's date and the basis.
+3. Run both checks. Each must report 0 problems:
+
+   ```sh
+   uv run python scripts/check_public_data.py
+   bun scripts/check-public-files.mjs
+   ```
+
+4. Commit `public/data/constituency.csv` and `data_inputs/public_data_review.csv` to this branch, and nothing else from the run: the private directory stays outside the repository. Name the cut and the measures in the commit message, never a figure.
+5. Paste the timing table into a comment on the pull request. It is printed at the end, and kept as `timings-<time>.md` in the private run directory. It holds times and memory only. Posting it on #115 waits for María's go.
+
+**If a regional table is published after this one,** run the command again: it takes `public/data/regional.csv` as its prior when the file is there, and reuses every measure, so only the release runs. The release then keeps that table's withheld cells withheld, and checks the seats against its published cells.
+
+**What the page shows.** Each measure on its own, by constituency, and the package when every measure is selected (`src/utils/geography/selection.js`).
+- A measure the run left out reads "Results by constituency are not yet published for this measure."
+- With the package left out, all measures together read "Results by constituency are not yet published for the full package."
+- While `public/data/constituency.csv` is absent, the view reads "Results by constituency are not yet published." On a release that routes no results by area, it reads "Results by constituency are not available on this release.", and the command refuses to run.
+
+### Results by constituency on Modal
+
+The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here.
+
+Uses the workspace's existing Modal secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`; created by Anthony). It was checked on Modal on 25 October: it reads the local-area cut. Decisions to run the data on Modal and to use this secret: issue #119.
+
+```
+UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
+  uv run --with modal==1.6.2 uk-budget-data constituencies --backend modal
+```
+
+- **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 11 at once, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends.
+- **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, every unit hitting its timeout, about $11. Check with `uvx --from modal modal billing report --for today` before and after.
+- **No reuse:** every Modal run simulates every measure again. The refusal message's "run again … the measures already simulated are reused" holds for a local run only: on Modal the units' records stay on the Volume, so the rerun simulates them again (about 5 min).
+- **Smoke test (no secret, no data):** `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. On 25 October: ten units fanned out in 23 s end to end (1–2 s in each container), the release read them all back in 8 s, 53 s in all including the image build.
+- **Measured on the real cut, 25 October** (`main` at 63c61a1 with #138 merged in; cut `…-ee5c2dbe`; a timing-only scratch manifest and a scratch `--out-dir`, nothing published):
+  - **All ten units at once (`--fresh`): 7:05 end to end**, 3:28–6:35 per container, peak resident 33.5–42.2 GB. Four were refused by the model-limit gate (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat`, `road_fuel_vat_cut` and the package), so no table was written. That is the gate working, not Modal.
+  - **The six admissible measures, then the release: 13:53 end to end**, 3:40–5:16 per measure, then 8:07 for the release in one container (7.5 min of it estimating). `validate_public` found 0 problems in `constituency.csv`.
+  - **Before:** 2–3.5 h on the 64 GB laptop (#138, #115).
+  - **Cost** (Modal's billing report): $0.70 for the ten-unit run, $0.51 for the six-plus-release run.
+  - **Peaks are under 43 GB,** so 48 GiB containers would do. That would cut the memory part of the cost by a quarter; not changed here.
+  - **Main publishes no `constituency.csv`,** so there is no published table to compare with.
+
 ## Data and model limitations: say these wherever a measure depends on them
 
 The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`), and a third, on capital gains tax, on uk-data 1.59.1 (below). The data line has since changed (see "The data line changed" above): once they are re-measured on the adopted Microcosm build, state the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.

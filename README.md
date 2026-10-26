@@ -99,6 +99,7 @@ The web app's population figures are files in `public/data/`, written by the `uk
 |---|---|
 | `generate` | The national results for every measure and year (`--reforms`, `--years` narrow it; `--artifacts` writes one receipted artifact per measure for the publication manifest) |
 | `geography` | Disclosure-controlled results by region and constituency |
+| `constituencies` | `constituency.csv` from Microcosm's published local-area cut: `geography`'s seats pass with each measure in a fresh process, resumable, with a timing and memory table (`--dry-run` checks the cut and the gates only; see the runbook's "Results by constituency on the local-area cut") |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
 | `living-standards` | `living_standards_outlook.json`, the Living standards tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
 | `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Living standards Forecast changes series |
@@ -129,7 +130,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 ### Running it
 
 - **Locally.** `uv run uk-budget-data generate --artifacts …` runs one measure at a time. A receipted measure peaks at about 14–17 GB, so run in parallel (`--jobs`, in #112) only with more than about 40 GB free. Results by area need up to about 64 GB (#115, #138).
-- **On Modal** (in #139 for generation, #142 for results by area; both wait on the `uk-budget-2026-hf-token` secret in the `policyengine` workspace). One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
+- **On Modal** (in #139 for generation, #142 for results by area; both read the certified data with the `policyengine` workspace's existing `pe-uk-private-hf-read-token` secret). One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
 - **Household API.** Deployed by the "Deploy the household API" workflow (below). Budget-week capacity (8 vCPU, 8 GiB, eight workers, one instance kept warm) is in #141; set it back after the Budget.
 
 ## Review and sign-off

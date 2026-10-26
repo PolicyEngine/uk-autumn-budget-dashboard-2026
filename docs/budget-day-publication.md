@@ -44,6 +44,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 | Every public file checked for disclosure; the household scatter withdrawn from public paths | #30 | **Merged** 15 October (María, UK-24) |
 | Results by region and constituency, through the disclosure layer | #48 | **Merged** 16 October (María, UK-24) |
 | Results by area on the Microcosm data pair | #59 | Draft, opened 19 October (María) |
+| Results by constituency on the published local-area cut, one measure per process, with a timing and memory table (#115) | #138 | Draft, opened 25 October (María); Vahid to run it |
 | Measures the certified data cannot cost (the SDLT higher rates, non-residential purchases) published as not computable, never as £0 | #51 | **Merged** 21 October |
 | Production Vercel project | Created 12 October | Deploys `main` at every merge (below) |
 | `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
