@@ -62,7 +62,7 @@ function ChartUnitLabel({ text, yAxisMap, horizontal = false }) {
   const fontSize = yTitleFontSize(text, yAxis.height);
   // Rotated −90°, the glyphs rise to the left of the baseline: a baseline
   // at this x keeps the text inside the gutter.
-  const x = yAxis.x + Y_TITLE_GUTTER - 5;
+  const x = yAxis.x + Y_TITLE_GUTTER - 10;
   const y = yAxis.y + yAxis.height / 2;
   return (
     <text
