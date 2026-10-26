@@ -41,6 +41,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
   exportLegendItems,
@@ -254,8 +255,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <NoBreakYear text={chartTitle} />
             </span>
           </h3>
+          {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {CHART_DESCRIPTION}
+            {decileSentence(data, "relative") ?? CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -389,7 +391,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} />
+          <ChartMoreInfo members={members} year={selectedYear}>
+            <p>{CHART_DESCRIPTION}</p>
+          </ChartMoreInfo>
         </div>
       )}
     </div>

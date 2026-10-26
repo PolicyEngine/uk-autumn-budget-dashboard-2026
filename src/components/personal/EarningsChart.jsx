@@ -16,6 +16,7 @@ import {
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
+import ChartMoreInfo from "../ChartMoreInfo";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -196,6 +197,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     ...(drops.length ? [DROP_ITEM] : []),
   ];
   const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
+  // One plain sentence: your household at your salary
+  const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
+  const youSentence =
+    youValue == null || salary === null
+      ? null
+      : isChange
+        ? youRounded === 0
+          ? `At your ${formatPounds(salary)} salary, the selected policies barely change your household's net income.`
+          : `At your ${formatPounds(salary)} salary, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income.`
+        : `At your ${formatPounds(salary)} salary, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
     ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
     : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, with partner income and everything else held fixed.`;
@@ -257,7 +268,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <TitleIcon name="trend" />
             <span className="title-text">{title}</span>
           </h3>
-          <p className="chart-description">{description}</p>
+          {/* One plain sentence at your salary; what the chart shows is in
+              More info */}
+          <p className="chart-description">{youSentence ?? description}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={viewTitle} />
       </div>
@@ -436,9 +449,14 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {isChange && smallChange && (
-        <p className="chart-note chart-footer">The change is under 1% of net income at every salary.</p>
-      )}
+      <div className="chart-footer">
+        {isChange && smallChange && <p className="chart-note">The change is under 1% of net income at every salary.</p>}
+        {youSentence && (
+          <ChartMoreInfo>
+            <p>{description}</p>
+          </ChartMoreInfo>
+        )}
+      </div>
     </div>
   );
 }

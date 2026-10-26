@@ -72,12 +72,10 @@ describe("MarginalRateChart", () => {
     expect(screen.queryByText("Student loan")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "About PA taper" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "About Income tax" })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(
-        // One sentence: the rate, its parts, then the rate as money
-        /^At £110,000 your marginal tax rate is 62% \(income tax 40%, PA taper 20%, National Insurance 2%\), so of your next/,
-      ),
-    ).toBeInTheDocument();
+    // One sentence: the rate, then the rate as money; its parts in More info
+    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    expect(screen.getByText(/made up of income tax 40%, PA taper 20%, National Insurance 2%/)).toBeInTheDocument();
   });
 
   it("switches between before, after and the change, each with its own legend", () => {
