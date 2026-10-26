@@ -23,6 +23,11 @@ second to its current value, so the choice is written down. Generation
 refuses any other (``publication.generate``), and the flat pipeline says
 so. A pair whose second parameter the installed engine lacks is not
 checked.
+
+``parameter_changes`` are checked before the simulations are built
+(:func:`companion_gaps`), and what the two built simulations run once they
+are (:func:`built_companion_gaps`), so a modifier that edits the first
+parameter alone is refused too, as the wealth-tax scales are.
 """
 
 from dataclasses import dataclass
@@ -106,6 +111,54 @@ def companion_gaps(
             missing = sorted(
                 set(changes[path]) - set(changes.get(companion) or {})
             )
+            if missing:
+                gaps.append(CompanionGap(path, companion, why, tuple(missing)))
+    return gaps
+
+
+def built_companion_gaps(
+    sim_baseline, sim_reform, years, *scenarios
+) -> list[CompanionGap]:
+    """The gaps in what two built simulations run, in COMPANIONS order: the
+    scored ``years`` in which the first parameter of a pair differs between
+    them and its companion does not, unless one of ``scenarios`` names the
+    companion in that year (set to its current value, so the choice is
+    written down). A modifier that edits the first parameter alone shows
+    here; a pair either tree lacks is not checked."""
+    from uk_budget_data import data_limits
+
+    systems = (sim_baseline.tax_benefit_system, sim_reform.tax_benefit_system)
+    named: dict[str, set] = {}
+    for scenario in scenarios:
+        changes = getattr(scenario, "parameter_changes", None) or {}
+        for path, values in changes.items():
+            named.setdefault(path, set()).update(str(y) for y in values or {})
+    gaps = []
+    with (
+        data_limits._caches_left_as_found(systems[0]),
+        data_limits._caches_left_as_found(systems[1]),
+    ):
+        for path, companion, why in COMPANIONS:
+            try:
+                pairs = [
+                    (
+                        system.parameters.get_child(path),
+                        system.parameters.get_child(companion),
+                    )
+                    for system in systems
+                ]
+            except (KeyError, AttributeError, IndexError, ValueError):
+                continue
+            missing = []
+            for year in years:
+                at = f"{year}-01-01"
+                (first, second), (first_after, second_after) = pairs
+                if (
+                    first(at) != first_after(at)
+                    and second(at) == second_after(at)
+                    and str(year) not in named.get(companion, set())
+                ):
+                    missing.append(str(year))
             if missing:
                 gaps.append(CompanionGap(path, companion, why, tuple(missing)))
     return gaps

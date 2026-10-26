@@ -13,8 +13,9 @@ scales in its ``parameter_changes``, or changes a parameter the engine
 charges in step with another without that other
 (``uk_budget_data.parameter_companions``), is refused the same way, before
 any simulation is built; one whose two built simulations differ in a
-wealth-tax scale (a modifier that edits it) is refused once they are built,
-before any figure is made. A measure or combined run the certified data
+wealth-tax scale, or in such a parameter but not its companion (a modifier
+that edits it), is refused once they are built, before any figure is made.
+A measure or combined run the certified data
 cannot cost (its run records a data limit) is still processed, since the
 limits are observed while it runs, but its artifact is receipt-only: it is
 listed as not computable and binds no figure, so no table is written. A run
@@ -41,6 +42,7 @@ from uk_budget_data.measure_templates import (
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.parameter_companions import (
+    built_companion_gaps,
     companion_gaps,
     companion_refusal,
 )
@@ -438,6 +440,14 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
         job.build, job.dataset_path, reform_scenario
     )
     _refuse_wealth_tax_built(key, baseline, reformed)
+    _refuse_companion_built(
+        key,
+        baseline,
+        reformed,
+        config.years,
+        baseline_scenario,
+        reform_scenario,
+    )
     # What the code that differs reads is watched while the run makes the
     # figures; a measure the data cannot cost is then published as not
     # computable.
@@ -642,6 +652,24 @@ def _refuse_wealth_tax_built(subject: str, baseline, reformed) -> None:
     paths = wealth_tax_paths_differing(baseline, reformed)
     if paths:
         raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
+def _refuse_companion_built(
+    subject: str, baseline, reformed, years, *scenarios
+) -> None:
+    """Refuse a run whose two built simulations differ in a parameter the
+    engine charges in step with another, in a scored year the other does
+    not differ in and no scenario names it, as a modifier that edits the
+    first alone leaves them (``parameter_companions.built_companion_gaps``).
+    Only for simulations with parameter trees, as
+    :func:`_refuse_wealth_tax_built` reads them."""
+    if not all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
+    ):
+        return
+    gaps = built_companion_gaps(baseline, reformed, years, *scenarios)
+    if gaps:
+        raise ReceiptUnavailable(subject, companion_refusal(gaps))
 
 
 def generate_artifacts(

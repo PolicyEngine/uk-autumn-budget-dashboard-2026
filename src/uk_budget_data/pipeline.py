@@ -37,7 +37,10 @@ from uk_budget_data.measure_templates import (
     wealth_tax_refusal,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
-from uk_budget_data.parameter_companions import companion_gaps
+from uk_budget_data.parameter_companions import (
+    built_companion_gaps,
+    companion_gaps,
+)
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 from uk_budget_data.scored_years import missing_scored_years
@@ -607,6 +610,7 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
         )
 
     wealth_tax = None
+    companions = []
     if flat:
         # Generation refuses a measure that changes a wealth-tax scale,
         # leaves out a scored year of an uprated amount or changes a
@@ -622,7 +626,8 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
             system,
         ):
             warn(gap.reason)
-        for gap in companion_gaps(baseline_scenario, reform_scenario):
+        companions = companion_gaps(baseline_scenario, reform_scenario)
+        for gap in companions:
             warn(gap.reason)
 
     # Built under data_limits.building, so a modifier that reads a limited
@@ -633,18 +638,24 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     reformed = data_limits.watched_build(
         build_microsimulation, dataset_path, reform_scenario
     )
-    # A modifier that edits a wealth-tax scale, which the built simulations
-    # show and generation refuses.
-    if (
-        flat
-        and not wealth_tax
-        and all(
-            hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
-        )
+    # A modifier that edits a wealth-tax scale, or a parameter without its
+    # companion, which the built simulations show and generation refuses.
+    if flat and all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
     ):
-        built = wealth_tax_paths_differing(baseline, reformed)
-        if built:
-            warn(wealth_tax_refusal(*built))
+        if not wealth_tax:
+            built = wealth_tax_paths_differing(baseline, reformed)
+            if built:
+                warn(wealth_tax_refusal(*built))
+        if not companions:
+            for gap in built_companion_gaps(
+                baseline,
+                reformed,
+                config.years,
+                baseline_scenario,
+                reform_scenario,
+            ):
+                warn(gap.reason)
     survey = None
     if unit.tables & {"household_scatter", "income_distribution"}:
         survey = scatter_survey_households(baseline, dataset_path)

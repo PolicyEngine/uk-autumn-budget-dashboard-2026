@@ -5,12 +5,16 @@ the flat pipeline (``uk_budget_data.parameter_companions``)."""
 from types import SimpleNamespace
 
 import pytest
+from policyengine_core.periods import instant
+from policyengine_uk import Simulation
 from policyengine_uk.system import system
+from policyengine_uk.utils.scenario import Scenario
 
 from tests.publication_support import World, make_household_rows, make_tables
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.parameter_companions import (
     COMPANIONS,
+    built_companion_gaps,
     companion_gaps,
     companion_refusal,
     installed,
@@ -230,3 +234,120 @@ def test_the_flat_pipeline_warns_and_runs_the_measure(monkeypatch, capsys):
     assert f"WARNING bad: {gap.reason} Generation refuses it." in out
     assert "WARNING good" not in out
     assert processed == ["bad", "good"]
+
+
+# --- what the built simulations run -------------------------------------------
+
+HOUSEHOLD = {
+    "people": {"p": {"age": {2027: 40}}},
+    "benunits": {"b": {"members": ["p"]}},
+    "households": {"h": {"members": ["p"]}},
+}
+YEARS = [2027, 2028, 2029]
+
+
+def _raise(sim, *paths):
+    for path in paths:
+        sim.tax_benefit_system.parameters.get_child(path).update(
+            start=instant("2027-01-01"), stop=instant("2028-12-31"), value=0.26
+        )
+
+
+def raise_the_cgt_higher_rate(sim):
+    _raise(sim, CGT_HIGHER)
+
+
+def raise_both_cgt_rates(sim):
+    _raise(sim, CGT_HIGHER, CGT_ADDITIONAL)
+
+
+def _built(modifier=None, changes=None):
+    return Simulation(
+        situation=HOUSEHOLD,
+        scenario=Scenario(
+            parameter_changes=changes, simulation_modifier=modifier
+        ),
+    )
+
+
+def test_a_modifier_raising_a_higher_rate_alone_is_a_built_gap():
+    """#208 review, finding 8: a modifier changes no parameter_changes, so
+    only the built simulations show it."""
+    (gap,) = built_companion_gaps(
+        _built(), _built(raise_the_cgt_higher_rate), YEARS
+    )
+    assert (gap.path, gap.companion, gap.years) == (
+        CGT_HIGHER,
+        CGT_ADDITIONAL,
+        ("2027", "2028"),
+    )
+
+
+def test_a_modifier_raising_both_rates_is_not_a_built_gap():
+    assert (
+        built_companion_gaps(_built(), _built(raise_both_cgt_rates), YEARS)
+        == []
+    )
+
+
+def test_a_companion_named_at_its_current_value_is_not_a_built_gap():
+    """Leaving the companion as it is, written down in parameter_changes."""
+    current = {
+        str(year): system.parameters.get_child(CGT_ADDITIONAL)(f"{year}-01-01")
+        for year in (2027, 2028)
+    }
+    changes = {CGT_ADDITIONAL: current}
+    reformed = _built(raise_the_cgt_higher_rate, changes)
+    gaps = built_companion_gaps(_built(), reformed, YEARS, scenario(changes))
+    assert gaps == []
+
+
+@pytest.mark.parametrize(
+    "reform", get_autumn_budget_2026_reforms(), ids=lambda reform: reform.id
+)
+def test_no_registered_measure_has_a_built_gap(reform):
+    config = DataConfig()
+    baseline_scenario = reform.baseline_scenario_for(config)
+    reform_scenario = reform.to_scenario()
+    assert (
+        built_companion_gaps(
+            Simulation(situation=HOUSEHOLD, scenario=baseline_scenario),
+            Simulation(situation=HOUSEHOLD, scenario=reform_scenario),
+            config.years,
+            baseline_scenario,
+            reform_scenario,
+        )
+        == []
+    )
+
+
+def test_generation_refuses_a_modifier_raising_a_higher_rate_alone(world):
+    processed = []
+
+    def build(dataset, scenario=None):
+        changes = getattr(scenario, "parameter_changes", None) or None
+        reform_side = bool(changes) and BASIC_RATE in changes
+        sim = world.sim()
+        real = _built(
+            raise_the_cgt_higher_rate if reform_side else None, changes
+        )
+        sim.tax_benefit_system = real.tax_benefit_system
+        return sim
+
+    def process(*args):
+        processed.append(args[0].id)
+        return _process(*args)
+
+    report = generation.generate_artifacts(
+        [Reform(id="bad", name="Bad", parameter_changes=GOOD)],
+        DataConfig(years=[2027, 2028]),
+        artifacts_root=world.artifacts,
+        build=build,
+        process=process,
+    )
+    (gap,) = built_companion_gaps(
+        _built(), _built(raise_the_cgt_higher_rate), [2027, 2028]
+    )
+    assert report.refused == {"bad": companion_refusal([gap])}
+    assert report.written == []
+    assert processed == []  # refused before any figure is made
