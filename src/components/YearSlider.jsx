@@ -139,7 +139,7 @@ function YearSlider({ selectedYear, onYearChange }) {
         onClick={handleToggle}
       >
         {/* The band control's parts, as on the measures control: icon,
-            a small label over the value, chevron */}
+            the label and value on one line, chevron */}
         <CalendarDays className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
         <span className="band-control-text">
           <span className="band-control-label">{isPlaying ? "Playing" : "Year"}</span>
