@@ -118,48 +118,64 @@ function BarTooltip({ active, payload, describe }) {
   );
 }
 
-// The year panel's width, for placing it beside the hovered year's band
-const YEAR_PANEL_WIDTH = 236;
+// The year panel's width
+const YEAR_PANEL_WIDTH = 240;
 
 /**
- * Every group's value for the hovered year, compact: a title, then the
- * groups in short columns (a dot from the ramp, the group number, the
- * value), the largest gain and loss bold, the hovered bar's row marked.
+ * Every group's value for the hovered year, as one compact list: a dot
+ * from the ramp, the group's plain name, a small bar for its size and
+ * sign, and the value; the largest gain and loss bold, the hovered bar's
+ * row marked. The years in the title never break.
  */
 function YearPanel({ active, payload, describe, hoveredKey }) {
   if (!active || !payload?.length) return null;
-  const { title, items } = describe(payload[0].payload);
+  const { year, title, items } = describe(payload[0].payload);
   const values = items.map((item) => item.value).filter(Number.isFinite);
   const max = Math.max(...values);
   const min = Math.min(...values);
+  const scale = Math.max(Math.abs(max), Math.abs(min)) || 1;
   return (
     <div className="chart-tooltip ls-year-panel" style={{ width: YEAR_PANEL_WIDTH }}>
-      <p className="chart-tooltip-label">{title}</p>
-      <ul className="ls-year-panel-grid">
-        {items.map((item) => (
-          <li
-            key={item.key}
-            className={item.key === hoveredKey ? "is-hovered" : undefined}
-            style={{ fontWeight: (item.value === max && max > 0) || (item.value === min && min < 0) || item.key === hoveredKey ? 700 : 400 }}
-          >
-            <span className="ls-year-panel-dot" style={{ background: item.colour }} />
-            <span className="ls-year-panel-group">{item.label}</span>
-            <span className="ls-year-panel-value">{item.text}</span>
-          </li>
-        ))}
+      <p className="chart-tooltip-label">
+        <span className="ls-nowrap">{year}</span>, {title}
+      </p>
+      <ul className="ls-year-panel-list">
+        {items.map((item) => {
+          const v = Number.isFinite(item.value) ? item.value : 0;
+          const width = `${(Math.abs(v) / scale) * 50}%`;
+          return (
+            <li
+              key={item.key}
+              className={item.key === hoveredKey ? "is-hovered" : undefined}
+              style={{ fontWeight: (item.value === max && max > 0) || (item.value === min && min < 0) || item.key === hoveredKey ? 700 : 400 }}
+            >
+              <span className="ls-year-panel-dot" style={{ background: item.colour }} />
+              <span className="ls-year-panel-group">{item.label}</span>
+              <span className="ls-year-panel-track" aria-hidden="true">
+                <span
+                  className="ls-year-panel-bar"
+                  style={{ width, background: item.colour, [v < 0 ? "right" : "left"]: "50%" }}
+                />
+              </span>
+              <span className="ls-year-panel-value">{item.text}</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true }) {
+export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true, keyContent = null }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
         <div className="ls-plot-canvas">{children}</div>
       </div>
+      {/* The card's own chips (SeriesToggle) under the plot, as every chart's key */}
+      {keyContent && <div className="chart-legend">{keyContent}</div>}
       {/* A chart whose lines are labelled on the plot has no key */}
-      {legend && (
+      {legend && !keyContent && (
         <div className="chart-legend">
           {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
           {/* A line on what the chart leaves out, under the key */}
@@ -250,6 +266,8 @@ export function LsLineChart({
   legend = true,
   // The key of a line to bring forward (a hovered chip); the others fade
   focusKey = null,
+  // The card's line chips (SeriesToggle), drawn under the plot as its key
+  keyContent = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -264,7 +282,7 @@ export function LsLineChart({
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
-    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend}>
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend} keyContent={keyContent}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={margin}>
           <CartesianGrid {...GRID_PROPS} />
@@ -376,16 +394,15 @@ export function LsBarChart({
   const yWidth = tickWidth(yTicks, yFormat);
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
-  // The year panel's place: right of the hovered year's band, or left of it
-  // when the right has no room, at the top of the plot
+  // The year panel's place: under the plot, so it never covers a bar,
+  // starting at the hovered year's band and kept inside the card
   const yearPanelPosition = (index) => {
-    if (index == null || !width || !data.length) return undefined;
+    const y = plotHeight(narrow) - 8;
+    if (index == null || !width || !data.length) return { x: 0, y };
     const left = yWidth + MARGIN.left;
     const band = Math.max(0, width - left - MARGIN.right) / data.length;
     const start = left + Number(index) * band;
-    const right = start + band + 8;
-    const x = right + YEAR_PANEL_WIDTH <= width ? right : Math.max(0, start - YEAR_PANEL_WIDTH - 8);
-    return { x, y: 0 };
+    return { x: Math.max(0, Math.min(start, width - YEAR_PANEL_WIDTH)), y };
   };
 
   return (
@@ -423,14 +440,12 @@ export function LsBarChart({
           {selectedX != null && <Customized component={<SelectedYearShade value={selectedX} />} />}
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
           {describeYear ? (
-            // Beside the hovered year's band, on whichever side has room;
-            // under the plot on a phone
+            // Under the plot on every width, so it never covers a bar
             <Tooltip
               {...TOOLTIP_PROPS}
               cursor={false}
-              {...(narrow
-                ? { position: { x: 0, y: plotHeight(narrow) - 8 }, allowEscapeViewBox: { x: false, y: true } }
-                : { position: yearPanelPosition(activeIndex) })}
+              position={yearPanelPosition(activeIndex)}
+              allowEscapeViewBox={{ x: false, y: true }}
               content={<YearPanel describe={describeYear} hoveredKey={hovered?.key} />}
             />
           ) : describeBar ? (

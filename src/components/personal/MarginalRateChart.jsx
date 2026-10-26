@@ -39,7 +39,7 @@ import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS, earningsChartHeight } from "
 import { breakdownRows, describeParts, drawnKey, partsInUse } from "./marginalRateParts";
 import { SWEEP_COMPONENTS, hiddenParts, sweepChips } from "./sweepComponents";
 import TitleIcon from "../TitleIcon";
-import ViewSwitch from "../ViewSwitch";
+import ControlBar from "../ControlBar";
 import { CHART_VIEWS } from "./chartViews";
 
 const Y_TICKS = [0, 0.2, 0.4, 0.6, 0.8, 1];
@@ -217,10 +217,12 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
       : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]];
   // The chips: every component both cards share, in one order; those with
   // nothing here disabled, so the two keys line up
-  const rateChips = sweepChips("rate", new Set((parts ?? []).map((part) => part.name)), {
-    label: `Total rate ${SIDE_NAME[view]}`,
-    colour: TOTAL_COLOUR,
-  });
+  const rateChips = sweepChips(
+    "rate",
+    new Set((parts ?? []).map((part) => part.name)),
+    { label: `Total rate ${SIDE_NAME[view]}`, colour: TOTAL_COLOUR },
+    sync?.union ?? null,
+  );
   const lineStroke = isChange ? CHANGE_COLOUR : parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
   // The rate as money, from the API's own rates only: they are over the
   // next £200, which the sentence scales (a sweep step is too coarse)
@@ -281,7 +283,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-view-switch chart-controls">
-        <ViewSwitch options={CHART_VIEWS} value={view} onChange={setView} label="Marginal rate view" compact />
+        {/* The view in the card's Options pill, as on every other page */}
+        <ControlBar name={title} options={[{ label: "View", value: view, onChange: setView, options: CHART_VIEWS }]} />
       </div>
       <div ref={chartRef} className="chart-plot" data-view={view}>
         <ResponsiveContainer width="100%" height={earningsChartHeight(narrow)}>

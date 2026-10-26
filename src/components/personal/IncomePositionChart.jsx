@@ -23,6 +23,7 @@ import {
   overallAverage,
   parseDistribution,
   positionSummary,
+  percentileOn,
   lowerCount,
   PLACE_MEANING,
 } from "../../utils/incomePosition";
@@ -34,7 +35,8 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import TitleIcon from "../TitleIcon";
-import ViewSwitch from "../ViewSwitch";
+import ControlBar from "../ControlBar";
+import Tip from "../Tip";
 import HeadlineTile from "../livingStandards/HeadlineTile";
 import "../livingStandards/LivingStandards.css";
 import { Percent, UsersRound, Wallet } from "lucide-react";
@@ -126,14 +128,96 @@ function niceTicks(min, max) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Hover: a cursor over a chart, by pointer, tap or the arrow keys     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A chart's hover: a cursor `index` from 0 to `count` - 1, set by the
+ * pointer (`indexAt(px)` from its x in the plot), a tap, or the arrow keys
+ * (Home, End) once the chart is focused; cleared on leaving. The chart
+ * draws its own guide and passes the tooltip's text and place to
+ * PositionTip.
+ */
+function useCursor(count, indexAt) {
+  const [index, setIndex] = useState(null);
+  const handlers = {
+    tabIndex: 0,
+    onPointerMove: (event) => {
+      const box = event.currentTarget.getBoundingClientRect();
+      setIndex(indexAt(event.clientX - box.left));
+    },
+    onPointerDown: (event) => {
+      const box = event.currentTarget.getBoundingClientRect();
+      setIndex(indexAt(event.clientX - box.left));
+    },
+    onPointerLeave: (event) => {
+      if (event.pointerType === "mouse") setIndex(null);
+    },
+    onBlur: () => setIndex(null),
+    onKeyDown: (event) => {
+      const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
+      if (step !== undefined) {
+        event.preventDefault();
+        setIndex((i) => Math.min(count - 1, Math.max(0, (i ?? Math.floor(count / 2)) + step)));
+      } else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        setIndex(event.key === "Home" ? 0 : count - 1);
+      } else if (event.key === "Escape") {
+        setIndex(null);
+      }
+    },
+  };
+  return [index, handlers];
+}
+
+/** The tooltip over a chart, at (x, y) in its box, kept inside `width`. */
+function PositionTip({ x, y, width, children }) {
+  const onRight = x > width * 0.55;
+  return (
+    <div
+      className="position-tip"
+      role="status"
+      style={{ top: y, left: onRight ? undefined : x + 12, right: onRight ? width - x + 12 : undefined }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Where you sit: one distribution, on a log income axis              */
 /* ------------------------------------------------------------------ */
+
+/**
+ * What a hover on the distribution says: at you, your income and place; at
+ * a reference line, its £; else the income, how many live in households
+ * with less, and (with `edges` and `mix`, the spread) how many are near it.
+ */
+function spreadTip({ income, x, youIncome, curve, position, side, anchors, edges = null, mix = null }) {
+  const pos = side === "after" ? position.after : position.before;
+  if (Math.abs(x(income) - x(youIncome)) < 8) {
+    return { income: youIncome, text: `You: ${formatPounds(youIncome)}. ${lowerCount(pos) ?? "—"} in 100 people live in households with less.` };
+  }
+  const anchor = anchors.find((a) => Math.abs(x(income) - x(a.value)) < 6);
+  if (anchor) return { income: anchor.value, text: `${anchor.full}: ${formatPounds(Math.round(anchor.value))}` };
+  const at = percentileOn(curve, income);
+  const count = lowerCount(at) ?? "—";
+  let near = "";
+  if (edges && mix) {
+    const i = edges.findIndex((edge) => edge > income) - 1;
+    if (i >= 0 && i < mix.length) {
+      near = `; about ${(mix[i] * 100).toFixed(1)}% of people live in households with ${formatPounds(Math.round(edges[i] / 100) * 100)} to ${formatPounds(Math.round(edges[i + 1] / 100) * 100)}`;
+    }
+  }
+  return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people live in households with less${near}.` };
+}
 
 function WhereView({ width, narrow, curves, position, side, decile }) {
   const left = narrow ? 34 : 44;
   const right = 14;
   const plotW = Math.max(width - left - right, 80);
-  const top = 26;
+  // A row above the plot for the You label, clear of the curve and lines
+  const top = 46;
   const plotH = narrow ? 190 : 230;
   const height = top + plotH + 58;
 
@@ -175,9 +259,9 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
 
   const anchors = [
     // Short names where the card is narrow (a half-width card too)
-    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income" },
-    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income" },
-    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income" },
+    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income", full: "Half the middle income" },
+    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income", full: "Middle income" },
+    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income", full: "Twice the middle income" },
   ];
   const bounds = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((p) =>
     p === 0 ? lo : p === 100 ? hi : incomeAt(side === "after" ? curves.after : curves.before, p),
@@ -187,8 +271,15 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   const youShare = inside ? mix[Math.max(0, Math.min(mix.length - 1, edges.findIndex((e) => e > youIncome) - 1))] ?? 0 : 0;
   const onRight = youX > left + plotW * 0.6;
   const colour = side === "after" ? AFTER : BEFORE;
+  // Hover: an income under the pointer, on the same log axis
+  const STEPS = 80;
+  const incomeOf = (i) => Math.exp(Math.log(lo) + ((Math.log(hi) - Math.log(lo)) * (i + 0.5)) / STEPS);
+  const [cursor, hover] = useCursor(STEPS, (px) => Math.min(STEPS - 1, Math.max(0, Math.floor(((px - left) / plotW) * STEPS))));
+  const curve = side === "after" ? curves.after : curves.before;
+  const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors, edges, mix });
 
   return (
+    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-where" width={width} height={height} aria-hidden="true">
       {decile && (
         <rect
@@ -227,12 +318,20 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
           : `Income adjusted for household size, ${side === "after" ? "after" : "before"} the selected policies (log scale)`}
       </text>
 
-      <line x1={youX} x2={youX} y1={top + 8} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
+      <line x1={youX} x2={youX} y1={36} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
       <circle cx={youX} cy={y(youShare)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
-      <Label x={youX + (onRight ? -8 : 8)} y={top + 34} anchor={onRight ? "end" : "start"} size={13}>
+      {/* In the row above the plot, on the side with room, the line its leader */}
+      <Label x={youX + (onRight ? -6 : 6)} y={32} anchor={onRight ? "end" : "start"} size={13}>
         {`You, ${formatPounds(youIncome)}`}
       </Label>
+      {tip && <line className="position-guide" x1={x(tip.income)} x2={x(tip.income)} y1={top} y2={y(0)} />}
     </svg>
+    {tip && (
+      <PositionTip x={x(tip.income)} y={top + 6} width={width}>
+        {tip.text}
+      </PositionTip>
+    )}
+    </div>
   );
 }
 
@@ -261,8 +360,21 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   const barW = Math.min(slot * 0.66, 56);
   const fmt = (v) => (unit === "pct" ? signedPct(v, 2) : signedPounds(v));
   const gridTicks = niceTicks(min, max).filter((tick) => tick !== 0);
+  // Hover, tap or the arrow keys: a tenth, its figures in the tooltip
+  const [cursor, hover] = useCursor(10, (px) => Math.min(9, Math.max(0, Math.floor((px - left) / slot))));
+  const tenthRange = (i) => (i === 1 ? "lowest 10%" : i === 10 ? "highest 10%" : `${ordinal((i - 1) * 10)}–${ordinal(i * 10)} percentile`);
+  const tipText = (i) => {
+    const pct = percents?.[i];
+    const pounds = averages?.[i];
+    const parts = [
+      pct !== undefined && pct !== null ? `${signedPct(pct, 2)} of net income` : null,
+      pounds !== undefined && pounds !== null ? `${signedPounds(pounds)} a year` : null,
+    ].filter(Boolean);
+    return `Tenth ${i} (${tenthRange(i)}): ${parts.join(", ") || "not published"}`;
+  };
 
   return (
+    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each tenth">
     <svg className="position-gains" width={width} height={height} aria-hidden="true">
       <text x={left} y={12} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight} fill={AXIS_TITLE_STYLE.fill}>
         {unit === "pct" ? "Average change, % of net income" : "Average change per household, £ a year"}
@@ -285,27 +397,13 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         const y0 = Math.min(y(shown), zeroY);
         const h = Math.max(Math.abs(y(shown) - zeroY), 0.5);
         const mine = i + 1 === decile;
-        const pounds = averages?.[i + 1];
-        // Your tenth's figures give way where your marker sits on them (on
-        // hover still, and in Households like you)
-        const crowded = mine && Math.abs(y(own * grow) - (v >= 0 ? y0 : y0 + h)) < 36;
+        const hovered = cursor === i;
         return (
           <g key={i}>
             {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
-            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine ? 1 : UNSELECTED_OPACITY}>
-              {/* On a phone the figures are on hover or tap only */}
-              <title>{`Tenth ${i + 1}: ${fmt(v)}${pounds !== undefined && unit === "pct" ? ` (${signedPounds(pounds)})` : ""}`}</title>
-            </rect>
-            {grow > 0.98 && !narrow && !crowded && (
-              <text x={cx} y={v >= 0 ? y0 - 6 : y0 + h + 13} textAnchor="middle" fontSize={narrow ? 9.5 : 11} fontWeight={mine ? 700 : 500} fill={TEXT}>
-                {fmt(v)}
-              </text>
-            )}
-            {grow > 0.98 && unit === "pct" && !narrow && !crowded && pounds !== undefined && (
-              <text x={cx} y={v >= 0 ? y0 - 20 : y0 + h + 27} textAnchor="middle" fontSize={10.5} fill={CHART_COLOURS.tick}>
-                {signedPounds(pounds)}
-              </text>
-            )}
+            {hovered && !mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.hover} />}
+            {/* The figures are in the tooltip, on hover, tap or the arrow keys */}
+            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine || hovered ? 1 : UNSELECTED_OPACITY} />
             <text x={cx} y={top + plotH + 16} textAnchor="middle" fontSize={11} fontWeight={mine ? 700 : 400} fill={mine ? CHART_COLOURS.highlight : CHART_COLOURS.tick}>
               {i + 1}
             </text>
@@ -353,12 +451,27 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         </g>
       )}
     </svg>
+    {cursor !== null && (
+      <PositionTip x={left + slot * (cursor + 0.5)} y={top + 4} width={width}>
+        {tipText(cursor + 1)}
+      </PositionTip>
+    )}
+    </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
 /* You vs others                                                       */
 /* ------------------------------------------------------------------ */
+
+/** A comparison row's figures in full, for its tooltip. */
+const rowTip = (row) => {
+  const parts = [
+    row.pct !== null && row.pct !== undefined ? `${signedPct(row.pct, 2)} of net income` : null,
+    row.gbp !== null && row.gbp !== undefined ? `${signedPounds(row.gbp)} a year` : null,
+  ].filter(Boolean);
+  return `${row.label}: ${parts.join(", ") || "not published"}`;
+};
 
 function CompareView({ rows, unit, grow }) {
   const values = rows.map((row) => (unit === "pct" ? row.pct : row.gbp)).filter((v) => v !== null && v !== undefined);
@@ -372,7 +485,8 @@ function CompareView({ rows, unit, grow }) {
         const poundsOnly = missing && unit === "pct" && row.gbp !== null && row.gbp !== undefined;
         const share = missing ? 0 : (Math.abs(v) / max) * 100 * grow;
         return (
-          <div key={row.key} className={`position-compare-row ${row.you ? "is-you" : ""}`} role="listitem">
+          <Tip key={row.key} content={rowTip(row)}>
+          <div className={`position-compare-row ${row.you ? "is-you" : ""}`} role="listitem" tabIndex={0}>
             <span className="position-compare-label">{row.label}</span>
             <span className="position-compare-track" aria-hidden="true">
               {!missing && (
@@ -392,6 +506,7 @@ function CompareView({ rows, unit, grow }) {
               )}
             </span>
           </div>
+          </Tip>
         );
       })}
     </div>
@@ -436,11 +551,19 @@ function RankView({ width, narrow, curves, position, side }) {
   const colour = side === "after" ? AFTER : BEFORE;
   const anchors = [
     // Short names where the card is narrow (a half-width card too)
-    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income" },
-    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income" },
-    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income" },
+    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income", full: "Half the middle income" },
+    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income", full: "Middle income" },
+    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income", full: "Twice the middle income" },
   ];
+  // Hover: an income under the pointer, on the same log axis as the spread
+  const STEPS = 80;
+  const incomeOf = (i) => Math.exp(Math.log(lo) + ((Math.log(hi) - Math.log(lo)) * (i + 0.5)) / STEPS);
+  const [cursor, hover] = useCursor(STEPS, (px) => Math.min(STEPS - 1, Math.max(0, Math.floor(((px - left) / plotW) * STEPS))));
+  const curve = side === "after" ? curves.after : curves.before;
+  const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors });
+
   return (
+    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-rank" width={width} height={height} aria-hidden="true">
       <text x={left} y={12} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight} fill={AXIS_TITLE_STYLE.fill}>
         {narrow ? "People with less income" : "Share of people with less income, by income adjusted for household size"}
@@ -479,7 +602,14 @@ function RankView({ width, narrow, curves, position, side }) {
       <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={11.5} weight={500}>
         live in households with less
       </Label>
+      {tip && <line className="position-guide" x1={x(tip.income)} x2={x(tip.income)} y1={top} y2={y(0)} />}
     </svg>
+    {tip && (
+      <PositionTip x={x(tip.income)} y={top + 6} width={width}>
+        {tip.text}
+      </PositionTip>
+    )}
+    </div>
   );
 }
 
@@ -724,17 +854,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
 
   return (
     <div className="position-block">
-      {/* The headline and tiles; each card below has the shared Before | After */}
-      <div className="card single-year-card position-card position-summary">
-        <div className="chart-header">
-          <div>
-            <h3>
-              <TitleIcon name="users" />
-              <span className="title-text">{title}</span>
-            </h3>
-          </div>
-        </div>
-        {/* The three tiles, in the dashboard's headline tile style */}
+      {/* The three tiles, straight under the section heading, as on the other tabs */}
         <div className="forecast-tiles position-tiles">
           <HeadlineTile icon={Wallet} name="Your change" value={signedPounds(ownChange)} caption="a year" trend={{ rows: [] }} />
           <HeadlineTile
@@ -756,7 +876,6 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             meaningKind="small"
           />
         </div>
-      </div>
 
       <div className="charts-grid position-pair">
         <div className="card single-year-card position-card" data-view={showAs}>
@@ -783,10 +902,15 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
-            {/* Before | After: one state for both cards, a switch on each */}
-            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
-            <span className="position-segment-lead">Show as</span>
-            <ViewSwitch options={SHOW_AS} value={showAs} onChange={setShowAs} label="Show the distribution as" compact />
+            {/* Every choice in the Options pill; Before | After is one state
+                for both cards */}
+            <ControlBar
+              name={whereTitle}
+              options={[
+                { label: "Before or after the selected policies", value: side, onChange: setSide, options: SIDES },
+                { label: "Show as", value: showAs, onChange: setShowAs, options: SHOW_AS },
+              ]}
+            />
           </div>
           <Measured narrow={narrow}>
             {(width) => (
@@ -828,7 +952,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {compareBy === "tenths"
-                  ? `The average change in each tenth of people by income, with yours marked: you are in the ${tenthName(decile).toLowerCase()}.`
+                  ? `Average change by income tenth; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)}.`
                   : "Your change beside your tenth's average, the average UK household and the middle income."}
               </p>
             </div>
@@ -844,9 +968,14 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
-            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
-            <ViewSwitch options={COMPARE_BY} value={compareBy} onChange={setCompareBy} label="Compare by" compact />
-            <ViewSwitch options={UNIT_OPTIONS.map((o) => ({ ...o, label: o.value === "pct" ? "%" : "£" }))} value={unit} onChange={setUnit} label="Units" compact />
+            <ControlBar
+              name={compareTitle}
+              options={[
+                { label: "Before or after the selected policies", value: side, onChange: setSide, options: SIDES },
+                { label: "Compare", value: compareBy, onChange: setCompareBy, options: COMPARE_BY },
+                { label: "Units", value: unit, onChange: setUnit, options: UNIT_OPTIONS.map((o) => ({ ...o, label: o.value === "pct" ? "%" : "£" })) },
+              ]}
+            />
           </div>
           <Measured narrow={narrow}>
             {(width) => (

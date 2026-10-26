@@ -252,10 +252,11 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     return `${sign}${text}${diff ? "" : "%"}`;
   };
   const describeYear = (row) => ({
-    title: `${fyLabel(row.year)}, ${diff ? "effect on real growth (pp)" : `real change on ${fyLabel(row.year - 1)}`}`,
+    year: fyLabel(row.year),
+    title: diff ? "effect on real growth (pp)" : `real change on ${fyLabel(row.year - 1)}`,
     items: groupSeries.map((s) => ({
       key: s.key,
-      label: s.key.slice(1),
+      label: `${ordinal(Number(s.key.slice(1)))} ${g.share}`,
       value: row[s.key],
       text: shortValue(row[s.key]),
       colour: s.colour,

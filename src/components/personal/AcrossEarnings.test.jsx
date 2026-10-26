@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,30 +13,34 @@ const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
 
 const cards = (container) => container.querySelectorAll(".single-year-chart-pair > .single-year-card");
-const chipLabels = (card) => [...card.querySelectorAll(".series-toggle-chip")].map((chip) => chip.textContent).slice(0, -1);
+// Each card's chips but its own total line (Net income after, Total rate after)
+const chipLabels = (card) =>
+  [...card.querySelectorAll(".series-toggle-chip")].map((chip) => chip.textContent).filter((label) => !/^(Net income|Total rate|Change in)/.test(label));
 
 describe("the two Across earnings cards", () => {
   it("list the same components in the same order, and a chip toggled on one toggles the other", () => {
     const data = answer("higher-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
-    // Each key: the components that apply, in the shared order
-    const order = (labels) => labels.filter((label) => !/with no effect/.test(label));
-    expect(order(chipLabels(net))).toContain("Income tax");
-    expect(order(chipLabels(rate))).toContain("Personal allowance taper");
+    // Both keys alike, chip for chip: what applies on either card, then the
+    // same "+N with no effect for you"
+    expect(chipLabels(net)).toEqual(chipLabels(rate));
+    expect(chipLabels(net)).toContain("Personal allowance taper");
+    expect(chipLabels(net)).toContain("Council Tax");
+    // Where a shown component has nothing on this card: disabled, with why
+    expect(within(rate).getByRole("button", { name: "Council Tax" })).toHaveAttribute("aria-disabled", "true");
     const netTax = within(net).getByRole("button", { name: "Income tax" });
     expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(netTax);
     expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
-    // Those with nothing here fold into one chip, opened on both cards at once
-    expect(within(net).queryByRole("button", { name: "Personal allowance taper" })).toBeNull();
+    // Those that apply on neither fold into one chip, opened on both at once
     fireEvent.click(within(net).getByRole("button", { name: /^\+\d+ with no effect for you$/ }));
     expect(within(rate).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
     // The personal allowance taper is inside income tax on the net income card
     expect(within(net).getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-disabled", "true");
     // One view for both
-    fireEvent.click(within(rate).getByRole("button", { name: "Change" }));
-    expect(within(net).getByRole("button", { name: "Change" })).toHaveAttribute("aria-pressed", "true");
+    chooseOption(rate, "Change");
+    expect(optionsLabel(net)).toBe("Change");
   });
 
   it("say 'With no earnings' for the pensioner, with the You marker at £0 and the allowance caveat", () => {

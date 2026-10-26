@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarCheck, CalendarX, ChartColumn, Clock, ExternalLink, Flag, FlaskConical } from "lucide-react";
+import { categoryIcon } from "./MeasureRowLabel";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
@@ -38,6 +39,7 @@ export function modellingInfo(policy) {
   };
 }
 import Tip from "./Tip";
+import TitleIcon from "./TitleIcon";
 import ViewSwitch from "./ViewSwitch";
 
 // The directions the catalogue gives a measure's budgetary effect, in the
@@ -45,8 +47,8 @@ import ViewSwitch from "./ViewSwitch";
 // on its cards. Cards carry no icon per measure: a map by measure id would
 // be a measure list of the page's own.
 export const GROUPS = [
-  { heading: "Raises revenue", direction: "revenue", filter: "raises" },
-  { heading: "Costs revenue", direction: "cost", filter: "costs" },
+  { heading: "Raises revenue", direction: "revenue", filter: "raises", arrow: "arrowUp", summary: "raise revenue" },
+  { heading: "Costs revenue", direction: "cost", filter: "costs", arrow: "arrowDown", summary: "cost revenue" },
   { heading: "Other measures", direction: "neutral", filter: null },
 ];
 const TAGS = Object.fromEntries(GROUPS.filter((group) => group.filter).map((group) => [group.direction, group.heading]));
@@ -136,6 +138,7 @@ function PolicyTimeline({ policy, highlight }) {
       <div className="ptl-plot">
         <div className="ptl-notes">
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
+            <Flag className="ptl-budget-icon" size={11} aria-hidden="true" />
             Budget
           </span>{" "}
           {!to && <span className="ptl-continues">Continues</span>}
@@ -253,12 +256,23 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             page's own (#104) */}
         <div className="policy-card-titles">
           <div className="policy-card-topline">
-            <p className="policy-card-type">{policy.type}</p>
+            <p className="policy-card-type">
+              {policy.type && <TitleIcon name={categoryIcon(policy.type)} bare size={14} className="policy-card-icon-inline" />}
+              {policy.type}
+            </p>
             <span className="policy-card-tags">
               {TAGS[policy.direction] && (
-                <span className={`policy-card-direction is-${policy.direction}`}>{TAGS[policy.direction]}</span>
+                <span className={`policy-card-direction is-${policy.direction}`}>
+                  {policy.direction === "revenue" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />}
+                  {TAGS[policy.direction]}
+                </span>
               )}
-              {temporary && <span className="policy-card-badge">Temporary</span>}
+              {temporary && (
+                <span className="policy-card-badge">
+                  <Clock size={12} aria-hidden="true" />
+                  Temporary
+                </span>
+              )}
             </span>
           </div>
           <h4 className="policy-card-name">{policy.label ?? policy.name}</h4>
@@ -280,7 +294,10 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       <div className="policy-card-when">
         <dl className="policy-card-dates">
           <div>
-            <dt>Starts</dt>
+            <dt>
+              <CalendarCheck size={13} aria-hidden="true" />
+              Starts
+            </dt>
             <dd className="policy-card-start">{policy.starts}</dd>
           </div>
           {/* The Ends slot stays, empty for a lasting measure, so the
@@ -288,7 +305,10 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
           <div className="policy-card-ends" aria-hidden={temporary ? undefined : "true"}>
             {temporary && (
               <>
-                <dt>Ends</dt>
+                <dt>
+                  <CalendarX size={13} aria-hidden="true" />
+                  Ends
+                </dt>
                 <dd className="policy-card-end">{policy.ends}</dd>
               </>
             )}
@@ -319,7 +339,12 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
         {hasInfo(modelling) && (
           <Disclosure
             compact
-            title={HOW_IT_IS_MODELLED}
+            title={
+              <>
+                <FlaskConical size={14} aria-hidden="true" className="policy-card-icon-inline" />
+                {HOW_IT_IS_MODELLED}
+              </>
+            }
             className="policy-card-details"
             preview={infoPreview(modelling)}
           >
@@ -333,8 +358,8 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             onClick={() => onShowEffect(policy.id)}
             aria-label={`See the effect of ${policy.label ?? policy.name} on Population impact`}
           >
+            <ChartColumn size={16} aria-hidden="true" />
             See its effect
-            <ArrowRight size={16} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -375,14 +400,27 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
     .map(withPolicyDetails);
   if (!shown.length) return null;
   const count = (direction) => shown.filter((policy) => policy.direction === direction).length;
+  const segment = (text, n) => (
+    <>
+      {text}{" "}
+      <span className="policy-filter-count">{n}</span>
+    </>
+  );
+  const directions = GROUPS.filter((group) => group.filter && count(group.direction));
   const options = [
-    { value: "all", label: `All (${shown.length})` },
-    ...GROUPS.filter((group) => group.filter && count(group.direction)).map((group) => ({
+    { value: "all", label: segment("All", shown.length) },
+    ...directions.map((group) => ({
       value: group.filter,
-      label: `${group.heading} (${count(group.direction)})`,
-      icon: <span className={`policy-filter-dot is-${group.direction}`} aria-hidden="true" />,
+      label: segment(group.heading, count(group.direction)),
+      icon: group.arrow && (
+        <TitleIcon name={group.arrow} bare size={14} className={`policy-filter-arrow is-${group.direction}`} />
+      ),
     })),
   ];
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  const summary = `${n(shown.length, "measure", "measures")}: ${directions
+    .map((group) => `${count(group.direction)} ${group.summary}`)
+    .join(", ")}`;
   const choose = (value) => {
     setFilter(value);
     if (typeof window === "undefined") return;
@@ -394,7 +432,9 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
   return (
     <>
       <div className="policy-filter">
+        <span className="policy-filter-label" aria-hidden="true">Show</span>
         <ViewSwitch options={options} value={filter} onChange={choose} label="Show measures" />
+        <p className="policy-filter-summary">{summary}</p>
       </div>
       <ul className="policy-cards">
         {items.map((policy) => (
