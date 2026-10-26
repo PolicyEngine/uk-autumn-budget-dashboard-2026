@@ -479,7 +479,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                   content={<ChartTooltip format={metric.format} labelFormat={fiscalYearTick} showPlus showZero grouped={false} />}
                 />
                 {byMeasure.map((m) => (
-                  <Bar key={m.id} dataKey={m.id} name={m.name} fill={m.colour} {...chartMotion()}>
+                  <Bar key={m.id} dataKey={m.id} name={m.name} fill={m.colour} shape={barShape([m.id])} {...chartMotion()}>
                     {measureData.map((point) => (
                       <Cell key={point.year} fillOpacity={point.year === selectedYear ? 1 : UNSELECTED_OPACITY} />
                     ))}

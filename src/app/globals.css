@@ -1162,6 +1162,12 @@ body {
   margin: 0;
 }
 
+/* Sections in a row under one heading (All households: the map, the
+   decile pair, the scatter) keep the cards' own gap between them */
+.report-section + .report-section {
+  margin-top: 20px;
+}
+
 /* Few rules: cards and whitespace separate things. Tables keep only the
    underline beneath their header row. */
 .main-content .region-table th,

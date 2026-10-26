@@ -460,7 +460,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
                 tickLine={false}
               />
               <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip />} />
-              <Bar dataKey="netChange" name="Change" isAnimationActive={false} legendType="none">
+              <Bar dataKey="netChange" name="Change" isAnimationActive={false} legendType="none" shape={barShape(["netChange"])}>
                 {data.map((point) => (
                   <Cell
                     key={point.label}

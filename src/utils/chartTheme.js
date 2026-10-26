@@ -335,14 +335,15 @@ export function barShape(keys, { layout = "horizontal", roundBase = false, radiu
     let y0 = Math.min(y, y + height);
     let w = Math.abs(width);
     let h = Math.abs(height);
-    // Cut a segment short at its outer side when another follows it
+    // Cut a segment short at its outer side when another follows it (at
+    // most a third of it, so a thin segment still shows)
     if (!outer) {
       if (across) {
-        const cut = Math.min(BAR_GAP, w / 2);
+        const cut = Math.min(BAR_GAP, w / 3);
         w -= cut;
         if (sign < 0) x0 += cut;
       } else {
-        const cut = Math.min(BAR_GAP, h / 2);
+        const cut = Math.min(BAR_GAP, h / 3);
         h -= cut;
         if (sign > 0) y0 += cut;
       }
