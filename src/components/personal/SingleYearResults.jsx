@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
 import Tip, { InfoTip } from "../Tip";
-import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap } from "lucide-react";
+import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
@@ -280,6 +280,7 @@ function AboutResult({ items, caution, bars }) {
   const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   const parts = [
+    caution && "Caveats",
     items.length > 0 && "Based on",
     noEffect.length > 0 && "No effect on you",
     (notes.length > 0 || under.length > 0) && "Notes",
@@ -297,9 +298,17 @@ function AboutResult({ items, caution, bars }) {
     <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
       <div className="info-sections result-about">
         {caution && (
-          <ul className="info-list result-about-caution">
-            <li>Most of the change comes from assumed fuel and electricity spending.</li>
-          </ul>
+          <section className="info-section info-section-caveat">
+            <h4 className="info-heading">
+              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+              Caveats
+            </h4>
+            <div className="info-body">
+              <ul className="info-list info-caveats result-about-caution">
+                <li>Most of the change comes from assumed fuel and electricity spending.</li>
+              </ul>
+            </div>
+          </section>
         )}
         <div className="result-about-columns">
           {items.length > 0 && (

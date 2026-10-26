@@ -1,3 +1,4 @@
+import { HOUSEHOLD_ABOUT_ID } from "../methodology/anchors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
@@ -416,23 +417,26 @@ describe("the household calculation, from the fixture", () => {
     const sums = [0, 1, 2].map((col) => top.reduce((acc, row) => acc + row[col], 0));
     expect(sums).toEqual([65371, 69136, 3765]);
 
-    // About these figures: closed under the table, then the rows' notes
-    // and the method as definition lists
-    const about = screen.getByRole("button", { name: "About these figures" });
+    // About this chart: closed under the table, then only how this table's
+    // rows are estimated; the calculation's method is in Methodology
+    const about = within(table.closest(".single-year-breakdown") ?? document.body)
+      .getAllByRole("button", { name: "About this chart" })
+      .find((button) => button.closest(`#${HOUSEHOLD_ABOUT_ID}`));
     expect(about).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/Elements are before the earnings taper/)).not.toBeInTheDocument();
     fireEvent.click(about);
     expect(about).toHaveAttribute("aria-expanded", "true");
     const panel = about.closest(".disclosure");
     expect(panel).toHaveClass("disclosure-in-card");
-    const terms = [...panel.querySelectorAll("dt")].map((term) => term.textContent);
-    expect(terms).toContain("Universal Credit");
-    expect(terms).toContain("Change by policy");
-    expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
-    expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
-    // The marginal rate's known limits
-    expect(within(panel).getByText(/^Known limits: Council Tax Reduction/)).toBeInTheDocument();
-    expect(within(panel).getByText(/policyengine-uk 2\.134\.3 fixes this/)).toBeInTheDocument();
+    expect(within(panel).getByText("Universal Credit")).toBeInTheDocument();
+    expect(within(panel).getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
+    // No internal names, and the general method is not repeated here
+    expect(panel.textContent).not.toMatch(/[A-Z]+_[A-Z_]+/);
+    expect(panel).not.toHaveTextContent("Each bar is one policy on its own");
+    expect(within(panel).getByRole("link", { name: /How the household calculation works/ })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-household-calc",
+    );
   });
 
   it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
