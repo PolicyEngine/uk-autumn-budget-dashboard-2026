@@ -1,0 +1,7 @@
+/* Inter, served with the page by next/font (layout.tsx) rather than from
+   Google Fonts. :root:root outranks the tokens' own :root, so the families
+   name the self-hosted face first, with the tokens' fallbacks after it. */
+:root:root {
+  --pe-font-family-primary: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --pe-font-family-secondary: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}

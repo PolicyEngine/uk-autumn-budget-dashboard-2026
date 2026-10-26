@@ -58,14 +58,14 @@ const findRow = (rows, id, year, band) =>
  * @param {number} year
  * @param {string} [band] - The age group's key (default 16 to 24)
  */
-export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND) {
+export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND, compareBand = ALL_BAND) {
   const shown = [];
   const noEffect = [];
   const suppressed = [];
   for (const policy of policies) {
     if (!selected.includes(policy.id) || policy.displayable === false) continue;
     const group = findRow(rows, policy.id, year, band);
-    const all = findRow(rows, policy.id, year, ALL_BAND);
+    const all = findRow(rows, policy.id, year, compareBand);
     if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) continue;
     if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);

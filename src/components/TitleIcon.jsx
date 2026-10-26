@@ -246,6 +246,14 @@ const ICONS = {
       <path d="M2 21h20M7 8v3M12 8v3M17 8v3M7 4h.01M12 4h.01M17 4h.01" />
     </>
   ),
+  // By age: lucide "users-round" (All households has "users")
+  usersRound: (
+    <>
+      <path d="M18 21a8 8 0 0 0-16 0" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3" />
+    </>
+  ),
   // Who gains: a person with a plus
   userPlus: (
     <>

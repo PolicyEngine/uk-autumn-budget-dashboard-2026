@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LoadingSkeleton from "../publication/LoadingSkeleton";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
 
 /**
@@ -26,9 +27,7 @@ export function OutlookStatus({ loading, error }) {
   return (
     <>
       {loading && (
-        <p className="view-status" role="status">
-          Loading outlook data…
-        </p>
+        <LoadingSkeleton label="Loading outlook data…" />
       )}
       {error && (
         <p className="view-status" role="alert">

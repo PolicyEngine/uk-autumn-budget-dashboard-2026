@@ -59,7 +59,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "family-uc",
     label: "A family on Universal Credit",
     // On its chip once the cards fold into a strip
-    short: "UC family",
+    short: "Universal Credit family",
     description: "A couple with two children, renting",
     icon: "family",
     measure: "domestic_electricity_zero_vat",
@@ -92,7 +92,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     description: "Aged 27, Plan 2 student loan, renting",
     icon: "graduate",
     measure: "plan_2_threshold_unfreeze",
-    tag: "Plan 2 threshold unfrozen",
+    tag: "Student loan threshold",
     inputs: {
       ...RESET,
       current_age: 27,

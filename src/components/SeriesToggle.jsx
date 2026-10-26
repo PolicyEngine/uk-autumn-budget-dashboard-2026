@@ -37,26 +37,53 @@ function markHintSeen() {
  *   <SeriesToggle series={series} shown={shown} onChange={setShown} onHover={setHovered} />
  *
  * @param {Object} props
- * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block"}>} props.series
- *   (`shape: "block"` for a filled layer: a square swatch)
+ * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block", disabled?: boolean, tip?: string}>} props.series
+ *   (`shape: "block"` for a filled layer: a square swatch; `disabled` for one
+ *   with nothing to draw, kept so two keys line up, with `tip` saying why)
  * @param {string[]} props.shown - The keys of the lines drawn
  * @param {(keys: string[]) => void} props.onChange - The next keys drawn, in `series` order
  * @param {(key: string|null) => void} [props.onHover]
  * @param {string} [props.label] - What the chips are, for screen readers ("Lines")
  * @param {boolean} [props.narrow] - Short labels (`short`) where given
  * @param {string} [props.lead] - The lead-in before the chips ("Show lines:"; "Show:" for layers)
+ * @param {boolean} [props.collapseDisabled] - Fold the disabled chips into one
+ *   "+N with no effect for you" chip that opens them in place
+ * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
+ * @param {(open: boolean) => void} [props.onExpandedChange]
  * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
  *   items that are not lines (the selected year's shading), after the chips,
  *   as a swatch and a label, not a button
  */
-export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false, extras = [], lead = "Show lines:" }) {
+export default function SeriesToggle({
+  series,
+  shown,
+  onChange,
+  onHover,
+  label = "Lines",
+  narrow = false,
+  extras = [],
+  lead = "Show lines:",
+  collapseDisabled = false,
+  expanded: expandedProp,
+  onExpandedChange,
+}) {
+  // The disabled chips folded into one "+N with no effect for you" chip
+  // (`collapseDisabled`), opened in place; open or not can be shared
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const expanded = expandedProp ?? ownExpanded;
+  const setExpanded = onExpandedChange ?? setOwnExpanded;
   // Read after mount, so the server and first render agree
   const [hint, setHint] = useState(false);
   useEffect(() => {
     setHint(!hintSeen());
   }, []);
-  const on = new Set(shown);
+  const off = new Set(series.filter((s) => s.disabled).map((s) => s.key));
+  // Folded into "+N": those marked `folded`, else every disabled one
+  const isFolded = (s) => (s.folded !== undefined ? s.folded : Boolean(s.disabled));
+  const foldedCount = series.filter(isFolded).length;
+  const on = new Set(shown.filter((key) => !off.has(key)));
   const toggle = (key) => {
+    if (off.has(key)) return;
     if (hint) {
       markHintSeen();
       setHint(false);
@@ -76,17 +103,17 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
         <span className="series-toggle-lead" aria-hidden="true">
           {lead}
         </span>
-        {series.map((s) => {
+        {(collapseDisabled ? series.filter((s) => !isFolded(s) || expanded) : series).map((s) => {
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
-            <Tip key={s.key} content={last ? `${s.label}: at least one line stays on` : null}>
+            <Tip key={s.key} content={s.disabled ? s.tip ?? null : last ? `${s.label}: at least one line stays on` : null}>
             <button
               type="button"
-              className={`series-toggle-chip${active ? " is-on" : ""}`}
+              className={`series-toggle-chip${active ? " is-on" : ""}${s.disabled ? " is-disabled" : ""}`}
               style={{ "--chip-colour": s.colour }}
               aria-pressed={active}
-              aria-disabled={last || undefined}
+              aria-disabled={last || s.disabled || undefined}
               onClick={() => toggle(s.key)}
               onMouseEnter={() => onHover?.(active ? s.key : null)}
               onMouseLeave={() => onHover?.(null)}
@@ -120,6 +147,16 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
             </Tip>
           );
         })}
+        {collapseDisabled && foldedCount > 0 && (
+          <button
+            type="button"
+            className="series-toggle-chip series-toggle-more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Show fewer" : `+${foldedCount} with no effect for you`}
+          </button>
+        )}
         {extras.map((item) => (
           <span key={item.key} className="series-toggle-extra">
             <span className="series-toggle-band" style={{ background: item.fill }} aria-hidden="true" />

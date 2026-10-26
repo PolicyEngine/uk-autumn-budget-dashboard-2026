@@ -54,11 +54,11 @@ InequalityOverTimeCard.requires = "inequality";
 // The id of this card, which its twin with the measures links to
 export const GROWTH_CURRENT_LAW_ANCHOR = "growth-current-law";
 
-export function GrowthCard({ data, onShowTab }) {
+export function GrowthCard({ data, onShowTab, selectedYear = null }) {
   // One year range for the card (and every card comparing two years)
   const years = (data.income_by_decile?.bhc?.quintile_by_year || []).map((row) => row.year);
   const [range, setRange] = useYearRange(years, defaultRange(years));
-  const quintile = useQuintileGrowthView(data, range, setRange);
+  const quintile = useQuintileGrowthView(data, range, setRange, null, selectedYear);
   // A single view: ViewCard shows no Show pill. Its twin with the measures
   // is on Population impact's Living standards (GrowthWithMeasuresCard).
   return (

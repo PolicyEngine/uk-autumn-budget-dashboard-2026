@@ -467,13 +467,15 @@ export function keepSentence(before, after) {
  * marginal rate in one sentence: "of your next £1,000 of earnings, you
  * keep £720". Null without both rates.
  */
-export function keepClause(before, after) {
+export function keepClause(before, after, { first = false } = {}) {
   if (before === null || before === undefined || after === null || after === undefined) return null;
-  const unit = before > 2 || after > 2 ? 200 : 1000;
+  // With no earnings yet, the API's rate is over the first £200 only: say
+  // that, not a wider sum it may not hold for
+  const unit = first || before > 2 || after > 2 ? 200 : 1000;
   const kept = (rate) => Math.round(unit * (1 - rate));
   const say = (amount) =>
     amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
-  const lead = `of your next ${money(unit)} of earnings, you`;
+  const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
   if (was === now) return `${lead} ${say(was)}`;
   return `${lead} ${say(was)} before and ${say(now)} after`;
@@ -505,9 +507,9 @@ export function areaName(brma) {
 }
 
 /**
- * How the single-year calculation works, in one place: Personal impact's
- * "About these figures" shows these, as [term, text]; the Methodology tab
- * links there.
+ * How the single-year calculation works, in one place: the Methodology
+ * view's Household impact section shows these, as [term, text]; the
+ * Household impact cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
