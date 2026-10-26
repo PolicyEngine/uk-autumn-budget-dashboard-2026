@@ -73,7 +73,10 @@ describe("catalogue gates on additional population files", () => {
     expect(new Set(result.current.scatter.rows.map((row) => row.reform_id))).toEqual(new Set([ALPHA, BETA]));
     expect(result.current.scatter.rows.every((row) => row.reform_id !== COMBINED && row.year === YEAR)).toBe(true);
     expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: [ALPHA, BETA], packageId: catalogue.combinedId }).kind).toBe("no-package");
-    expect(scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId }).kind).toBe("notice");
+    // No package: one measure at a time from its own rows, never the held package
+    const shown = scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId });
+    expect(shown.kind).toBe("points");
+    expect([ALPHA, BETA]).toContain(shown.reform);
   });
 
   it("keeps approved individual area figures when a withdrawn package has no rows in the verified files", async () => {

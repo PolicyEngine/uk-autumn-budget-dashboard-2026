@@ -1,0 +1,143 @@
+/* Each measure's own figure for a by-year statistic: bars for the selected
+   year, or a shaded table by year. Names wrap and are never clipped; values
+   sit in a fixed right-aligned column. */
+.mev-wrap {
+  container-type: inline-size;
+}
+
+.mev-bars {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) minmax(0, 1fr) 76px;
+  column-gap: 12px;
+  row-gap: 2px;
+  font-size: var(--fs-caption);
+}
+
+.mev-row {
+  display: contents;
+}
+
+.mev-row > * {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.mev-label {
+  color: var(--pe-gray-700);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.mev-track {
+  position: relative;
+}
+
+.mev-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--c-zero-line);
+}
+
+.mev-bar {
+  position: absolute;
+  top: 50%;
+  height: 20px;
+  transform: translateY(-50%);
+  border-radius: 5px;
+}
+
+.mev-row > .mev-value {
+  justify-content: flex-end;
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mev-table-wrap {
+  overflow-x: auto;
+}
+
+.mev-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.mev-table th {
+  font-weight: 500;
+  color: var(--pe-gray-600);
+  text-align: right;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.mev-table th[scope="row"] {
+  text-align: left;
+  color: var(--pe-gray-700);
+  white-space: normal;
+  min-width: 120px;
+}
+
+.mev-table thead th:first-child {
+  text-align: left;
+}
+
+.mev-table td {
+  text-align: right;
+  padding: 6px;
+  border-radius: 4px;
+  color: var(--pe-gray-900);
+}
+
+.mev-table td.is-fall {
+  background: color-mix(in srgb, var(--c-gain) var(--mev-strength), transparent);
+}
+
+.mev-table td.is-rise {
+  background: color-mix(in srgb, var(--c-loss) var(--mev-strength), transparent);
+}
+
+.mev-table td.is-none {
+  color: var(--pe-gray-400);
+}
+
+.mev-table .is-selected {
+  font-weight: 700;
+}
+
+.mev-hidden,
+.mev-empty {
+  margin: 8px 0 0;
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
+/* The logo below everything, with clear space */
+.mev-logo {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-top: 16px;
+}
+
+.mev-logo img {
+  display: block;
+  width: 80px;
+  height: auto;
+}
+
+@container (max-width: 520px) {
+  .mev-row > .mev-label {
+    grid-column: 1 / -1;
+    min-height: 0;
+    padding-top: 6px;
+  }
+
+  .mev-bars {
+    grid-template-columns: minmax(0, 1fr) 76px;
+  }
+}

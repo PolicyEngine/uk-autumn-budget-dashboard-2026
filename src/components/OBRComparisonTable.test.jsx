@@ -8,12 +8,9 @@ import {
 } from "@testing-library/react";
 import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonFoot } from "./OBRComparisonTable";
 
-// The chart/table choice: a "Show" dropdown pill
-const showPill = () => screen.getByRole("button", { name: /^Show as:/ });
-const show = (label) => {
-  fireEvent.click(showPill());
-  fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${label}`) }));
-};
+// The chart/table choice: two icon buttons (ViewToggle)
+const viewRadio = (label) => screen.getByRole("radio", { name: `Show as ${label.toLowerCase()}` });
+const show = (label) => fireEvent.click(viewRadio(label));
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -63,7 +60,7 @@ describe("the OBR comparison table", () => {
       }),
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    await screen.findByRole("button", { name: /^Show as:/ });
+    await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
 
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
@@ -128,14 +125,12 @@ describe("the OBR comparison's chart and table switch", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    expect(await screen.findByRole("button", { name: /^Show as:/ })).toHaveAccessibleName(
-      "Show as: Chart",
-    );
+    expect(await screen.findByRole("radio", { name: "Show as chart" })).toHaveAttribute("aria-checked", "true");
     expect(container.querySelector(".obr-dumbbell")).not.toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
 
     show("Table");
-    expect(showPill()).toHaveAccessibleName("Show as: Table");
+    expect(viewRadio("Table")).toHaveAttribute("aria-checked", "true");
     expect(container.querySelector(".obr-dumbbell")).toBeNull();
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
@@ -215,7 +210,7 @@ it("orders OBR rows from the catalogue rather than CSV insertion order", async (
   const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-1,-2`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
   vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
   const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
-  await screen.findByRole("button", { name: /^Show as:/ });
+  await screen.findByRole("radio", { name: "Show as chart" });
   show("Table");
   expect([...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent)).toEqual(catalogue.displayable.map((measure) => measure.label));
   expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA, ALPHA]);

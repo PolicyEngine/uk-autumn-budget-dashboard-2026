@@ -29,10 +29,7 @@
  *   the new description here (or delete the entry).
  * - shortName: a short name for the measure keys' chips, the household
  *   waterfall and other tight labels (the full published name stays in
- *   their tooltips and accessible names);
- * - povertyNoEffect: why the measure moves no one across the poverty line
- *   by construction ("prices": poverty is measured on household income,
- *   which counts no prices; "gains": nor capital gains).
+ *   their tooltips and accessible names).
  * Revenue figures stay in the charts and are not repeated here.
  *
  * TRIAL ONLY (review-edits-on-104): this belongs in the published manifest
@@ -42,7 +39,6 @@ export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
     shortName: "Fuel duty deferral",
-    povertyNoEffect: "prices",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
     writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
@@ -102,7 +98,6 @@ export const POLICY_DETAILS = [
   {
     id: "domestic_electricity_zero_vat",
     shortName: "Zero VAT on electricity",
-    povertyNoEffect: "prices",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
     writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
@@ -145,12 +140,11 @@ export const POLICY_DETAILS = [
     type: "Income tax",
     inForce: { from: "2031-04" },
     details:
-      "The personal allowance stays at £12,570 and the higher rate threshold at £50,270, instead of rising with inflation to £12,830 and £51,330. The National Insurance primary threshold and upper earnings limit, which the model ties to them from 2031-32, stay at the same levels; the employer threshold is not held.",
+      "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
   },
   {
     id: "badr_lifetime_limit_cut",
     shortName: "BADR restricted",
-    povertyNoEffect: "gains",
     name: "Business Asset Disposal Relief restricted",
     description: "Halve the Business Asset Disposal Relief lifetime limit",
     writtenFor: "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
@@ -169,7 +163,6 @@ export const POLICY_DETAILS = [
   {
     id: "road_fuel_vat_cut",
     shortName: "Road fuel VAT cut",
-    povertyNoEffect: "prices",
     name: "VAT cut on road fuel",
     description: "Cut VAT on petrol and diesel to 15% for six months",
     writtenFor: "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",

@@ -1,122 +1,171 @@
-// Forecast series by section, as charts or tables. Before the Budget
-// forecast is published only the pre-Budget line is drawn (teal, solid);
-// afterwards the pre-Budget line is grey and dashed and the Budget forecast
-// teal and solid, with a legend. Labels and sources come from the outlook
-// data (forecast.pre_label, post_label, pre_source, post_source).
+// The forecast series by group (prices, pay and other income, housing),
+// as comparable charts or tables: one card per group of series on a shared
+// axis (forecastWords.FORECAST_GROUPS), each line named at its end, with
+// one plain sentence leading with the finding. The Budget-day forecast is
+// held (ForecastPanel), so the cards draw the one published forecast. The
+// source is said once, in the panel's intro, and in each card's "About
+// this chart" and downloads.
 
 import LsCard from "../LsCard";
+import { useState } from "react";
+import ViewToggle from "../../ViewToggle";
+import SeriesToggle from "../../SeriesToggle";
+import { useNarrowViewport } from "../../../utils/chartTheme";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
-import { DASH, OUTTURN_COLOUR, PROJECTION_COLOUR } from "../../../utils/livingStandards/baseline";
-import {
-  changeClass,
-  forecastSeriesLabel,
-  pctLabel,
-  percentAxis,
-  ppLabel,
-  toRows,
-} from "../../../utils/livingStandards/forecast";
-import { formatOneDp, rowsPeriod } from "../../../utils/livingStandards/outlook";
+import { DASH } from "../../../utils/livingStandards/baseline";
+import { CHART_COLOURS } from "../../../utils/chartTheme";
+import { pctLabel, percentAxis, toRows } from "../../../utils/livingStandards/forecast";
+import { FORECAST_GROUPS, SERIES_NAMES, cardSentence, seriesName } from "../../../utils/livingStandards/forecastWords";
+import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
-import { ForecastSource, forecastSourceText } from "../sources";
+import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
-// CPI after housing costs and social rent are PolicyEngine derivations, not OBR series.
-const DERIVED = new Set(["cpi_ahc", "social_rent"]);
+// CPI after housing costs and social rent are not OBR series
+const NOT_OBR = {
+  cpi_ahc: "CPI after housing costs is a PolicyEngine derivation from the OBR's CPI and rents forecast, not an OBR series.",
+  social_rent: "The social rent cap is England's rent policy for social housing (CPI plus 1%), not an OBR forecast.",
+};
+
+// Notes on a series' years, said once in its card's "About this chart"
+const SERIES_NOTES = {
+  mortgage_interest:
+    "The OBR stops forecasting mortgage interest after early 2030, so 2030 carries over policyengine-uk's November 2025 assumption.",
+};
+
+// Each line's colour and pattern: on one chart they differ in both
+const LINE_STYLE = {
+  cpi: { colour: CHART_COLOURS.gain },
+  cpih: { colour: CHART_COLOURS.highlight, dash: DASH.long },
+  cpi_ahc: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
+  rpi: { colour: CHART_COLOURS.reference, dash: DASH.dashDot },
+  earnings: { colour: CHART_COLOURS.gain },
+  non_labour_income: { colour: CHART_COLOURS.marketIncome, dash: DASH.long },
+  house_prices: { colour: CHART_COLOURS.highlight },
+  rent: { colour: CHART_COLOURS.gain, dash: DASH.long },
+  social_rent: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
+  mortgage_interest: { colour: CHART_COLOURS.gain },
+};
+const FALLBACK_STYLES = [CHART_COLOURS.gain, CHART_COLOURS.highlight, CHART_COLOURS.marketIncome, CHART_COLOURS.reference];
+
+// Chip labels on a phone, for the long names
+const SHORT_NAMES = { cpi_ahc: "CPI AHC", non_labour_income: "Non-labour", social_rent: "Social rent" };
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
 
-/** Line and column names: the forecasts' labels, or for a derived series what it is derived from. */
-export function forecastNames(forecast, derived) {
-  const pre = forecastSeriesLabel(forecast.pre_label) || "OBR forecast";
-  const post = forecastSeriesLabel(forecast.post_label) || "Latest OBR forecast";
-  if (!derived) return { pre, post };
-  return {
-    pre: `PolicyEngine, from ${pre}`,
-    post: `PolicyEngine, from ${post}`,
-  };
+/** One row per year with each series' growth in percent, keyed by series key. */
+function joinRows(seriesList) {
+  const years = [...new Set(seriesList.flatMap((s) => (s.pre || []).map((p) => p.year)))].sort();
+  const byKey = Object.fromEntries(
+    seriesList.map((s) => [s.key, Object.fromEntries(toRows(s, false).map((r) => [r.year, r.previous]))]),
+  );
+  return years.map((year) => ({
+    year,
+    ...Object.fromEntries(seriesList.map((s) => [s.key, byKey[s.key][year] ?? null])),
+  }));
 }
 
-function seriesFor(published, names) {
-  // While unpublished only the pre line is drawn: teal, so it does not read
-  // as a greyed-out comparison line.
-  if (!published) return [{ key: "previous", name: names.pre, colour: PROJECTION_COLOUR }];
-  return [
-    { key: "previous", name: names.pre, colour: OUTTURN_COLOUR, dash: DASH.long },
-    { key: "updated", name: names.post, colour: PROJECTION_COLOUR, dash: DASH.solid },
-  ];
+/** The card's source, as plain text for the downloads. */
+function cardSourceText(forecast, seriesList) {
+  const obr = forecastSourceText(forecast);
+  const other = seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName);
+  return other.length ? `${obr}; ${other.join(" and ")}: ${CSV_SOURCES.peDerived}` : obr;
 }
 
-/** The series' CSV: calendar years, pre and post (blank until published), change. */
-function forecastCsv(series, rows, published, names, source) {
-  return buildChartCsv({
-    title: series.label,
-    units: "Annual growth (%); calendar years",
-    source,
-    columns: [
-      { key: "year", label: "Year" },
-      { key: "previous", label: names.pre, decimals: 4 },
-      { key: "updated", label: names.post, decimals: 4 },
-      { key: "change", label: "Difference (pp)", decimals: 4 },
-    ],
-    rows,
-    notes: published ? [] : [`${names.post}: not yet published`],
-  });
-}
-
-// Each forecast series' title icon, as the headline tiles' are
-const SERIES_ICONS = {
-  cpi: "tag",
-  cpih: "tag",
-  cpi_ahc: "tag",
-  rpi: "receipt",
-  earnings: "briefcase",
-  non_labour_income: "coins",
-  house_prices: "house",
-  rent: "key",
-  social_rent: "key",
-  mortgage_interest: "percent",
-};
-
-function ForecastCard({ series, forecast, published, view }) {
-  const rows = toRows(series, published);
+function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
+  const narrow = useNarrowViewport();
+  // The lines drawn (chips, at least one on) and the one a chip's hover brings forward
+  const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
+  const [hovered, setHovered] = useState(null);
+  const rows = joinRows(seriesList);
   if (!rows.length) return null;
-  const derived = DERIVED.has(series.key);
-  const names = forecastNames(forecast, derived);
-  const lines = seriesFor(published, names);
-  const sourceText = forecastSourceText(forecast, derived);
-  const csv = () => forecastCsv(series, rows, published, names, sourceText);
-  const period = rowsPeriod(rows);
-  // The basis and the source are said once, in the section's intro; a card
-  // says only what is its own: a series PolicyEngine derives
+  const allLines = seriesList.map((s, i) => ({
+    key: s.key,
+    name: seriesName(s),
+    colour: LINE_STYLE[s.key]?.colour ?? FALLBACK_STYLES[i % FALLBACK_STYLES.length],
+    dash: LINE_STYLE[s.key]?.dash,
+  }));
+  const lines = allLines.filter((l) => shown.includes(l.key));
+  const sourceText = cardSourceText(forecast, seriesList);
+  const period = `${rows[0].year} to ${rows[rows.length - 1].year}`;
+  const sentence = cardSentence(
+    card.id,
+    Object.fromEntries(seriesList.map((s) => [s.key, rows.map((r) => ({ year: r.year, value: r[s.key] }))])),
+  );
+  const csv = () =>
+    buildChartCsv({
+      title: card.title,
+      units: "Annual growth (%); calendar years",
+      source: sourceText,
+      columns: [{ key: "year", label: "Year" }, ...allLines.map((l) => ({ key: l.key, label: l.name, decimals: 4 }))],
+      rows,
+      notes: [],
+    });
   const common = {
-    title: series.label,
-    icon: SERIES_ICONS[series.key],
+    id: `forecast-${card.id}`,
+    title: card.title,
+    icon: card.icon,
     period,
-    summary: derived ? "A PolicyEngine derivation from the OBR forecast, not an OBR series." : null,
+    summary: sentence,
+    about: forecast.basis ? `${forecast.basis}, in percent.` : undefined,
+    notes: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
     sourceText,
+    source: (
+      <>
+        <ForecastSource forecast={forecast} />
+        {seriesList.some((s) => NOT_OBR[s.key]) &&
+          `; ${seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName).join(" and ")}: ${CSV_SOURCES.peDerived}`}
+      </>
+    ),
+    info: {
+      caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
+      sources: [
+        ...forecastSources(forecast),
+        seriesList.some((s) => NOT_OBR[s.key]) && {
+          label: CSV_SOURCES.peDerived,
+          note: seriesList.filter((s) => NOT_OBR[s.key]).map(seriesName).join(" and "),
+        },
+      ],
+      method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the forecast feeds the baseline" },
+    },
+    // Chart or table: one choice for every card, as icons in its header
+    viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
+    // One chip per line, in its colour: the card's key, so no legend repeats
+    // the names. A card of one line needs none: its title names it.
+    controls: allLines.length > 1 && (
+      <SeriesToggle
+        series={allLines.map((l) => ({ key: l.key, label: l.name, short: SHORT_NAMES[l.key], colour: l.colour, dash: l.dash }))}
+        shown={shown}
+        onChange={setShown}
+        onHover={setHovered}
+        label="Lines"
+        narrow={narrow}
+      />
+    ),
   };
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: `forecast-${series.key}`, image: false, csv }}>
+      <LsCard {...common} download={{ filename: `forecast-${card.id}`, image: false, csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
               <tr>
                 <th>Year</th>
-                <th>{names.pre}</th>
-                <th>{names.post}</th>
-                <th>Difference</th>
+                {lines.map((l) => (
+                  <th key={l.key}>{l.name}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.year}>
                   <td>{row.year}</td>
-                  <td>{pctLabel(row.previous)}</td>
-                  {published ? <td>{pctLabel(row.updated)}</td> : <td className="pending">Not yet published</td>}
-                  <td className={changeClass(row.shownChange)}>{ppLabel(row.shownChange)}</td>
+                  {lines.map((l) => (
+                    <td key={l.key}>{pctLabel(row[l.key])}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -126,10 +175,10 @@ function ForecastCard({ series, forecast, published, view }) {
     );
   }
 
-  const values = rows.flatMap((d) => [d.previous, published ? d.updated : null]).filter((v) => v != null);
+  const values = rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null);
   const axis = percentAxis(values);
   return (
-    <LsCard {...common} download={{ filename: `forecast-${series.key}`, legendItems: lineLegendItems(lines), csv }}>
+    <LsCard {...common} download={{ filename: `forecast-${card.id}`, legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart
         data={rows}
         series={lines}
@@ -139,30 +188,54 @@ function ForecastCard({ series, forecast, published, view }) {
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
+        endLabels={allLines.length > 1}
+        legend={false}
+        focusKey={hovered}
       />
     </LsCard>
   );
 }
 
-const pairs = (items) =>
-  items.reduce((rows, item, i) => (i % 2 ? rows[rows.length - 1].push(item) : rows.push([item]), rows), []);
+/** The cards a data section is drawn in: the configured ones, then one per series the config does not name. */
+function cardsFor(section) {
+  const group = FORECAST_GROUPS.find((g) => g.section === section.title);
+  const byKey = Object.fromEntries(section.series.map((s) => [s.key, s]));
+  const cards = (group?.cards ?? [])
+    .map((card) => ({ card, seriesList: card.keys.map((k) => byKey[k]).filter(Boolean) }))
+    .filter((c) => c.seriesList.length);
+  const named = new Set((group?.cards ?? []).flatMap((c) => c.keys));
+  section.series
+    .filter((s) => !named.has(s.key))
+    .forEach((s) => cards.push({ card: { id: s.key, title: SERIES_NAMES[s.key] ?? s.label, icon: group?.icon ?? "trend" }, seriesList: [s] }));
+  return { group, cards };
+}
 
-/** One section per forecast group (inflation, incomes, housing), with its title on the page. */
-export default function ForecastSeriesSection({ data, view, subtitles = {} }) {
+/** One section per forecast group, under its heading: one card a row, or two side by side. */
+export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
-  const published = Boolean(forecast.post_published);
-
-  return forecast.sections.map((section) => [
-    <SectionHeading key={`${section.title}-heading`} title={section.title} subtitle={subtitles[section.title]} />,
-    <section key={section.title} className="report-section ls-section">
-      {/* Two cards a row, so each pair lines up */}
-      {pairs(section.series).map((pair) => (
-        <div className="charts-grid" key={pair[0].key}>
-          {pair.map((series) => (
-            <ForecastCard key={series.key} series={series} forecast={forecast} published={published} view={view} />
+  return forecast.sections.map((section) => {
+    const { group, cards } = cardsFor(section);
+    return [
+      <SectionHeading
+        key={`${section.title}-heading`}
+        icon={group?.icon ?? "trend"}
+        title={group?.title ?? section.title}
+        subtitle={group?.subtitle}
+      />,
+      <section key={section.title} className="report-section ls-section">
+        <div className={cards.length > 1 ? "charts-grid" : "charts-grid forecast-single"}>
+          {cards.map(({ card, seriesList }) => (
+            <ForecastGroupCard
+              key={card.id}
+              card={card}
+              seriesList={seriesList}
+              forecast={forecast}
+              view={view}
+              onViewChange={onViewChange}
+            />
           ))}
         </div>
-      ))}
-    </section>,
-  ]);
+      </section>,
+    ];
+  });
 }
