@@ -67,7 +67,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       monthly_rent: null,
       electricity_spending_per_year: 1300,
     },
-    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is paid for winter 2026-27 only, before the years offered here, so it shows as paid in 2026-27 only.",
+    note: "A couple renting privately with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is for winter 2026-27 only, before the years offered here.",
   },
   {
     id: "graduate-35k",
