@@ -404,6 +404,18 @@ describe("the programme table's whole pounds", () => {
     }
   });
 
+  it("rounds an exact 50p of Council Tax as the Based on does, up to the next pound", () => {
+    // money(2628.5) is £2,629; Math.round(-2628.5) alone would give −£2,628
+    const programmes = [
+      { id: "employment_income", group: "income", before: 30000.2, after: 30000.2, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.5, after: 2628.5, children: [] },
+    ];
+    const totals = headlineTotals({ before: 27371.7, after: 27371.7 });
+    const rows = roundProgrammeGroups(programmeGroups(programmes), totals).flatMap((group) => group.rows);
+    expect(rows.find((row) => row.id === "council_tax").shown.before).toBe(-2629);
+    expect(rows.reduce((sum, row) => sum + row.shown.before, 0)).toBe(totals.before);
+  });
+
   it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
     const bars = [{ id: "a", change: 3.5, rounded: 3 }];
     expect(pinnedRound([3.5, 3.5], 7, bars)).toEqual([3, 4]);

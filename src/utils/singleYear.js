@@ -323,7 +323,11 @@ export const STATED_ELSEWHERE = new Set(["council_tax"]);
  */
 export function pinnedBefore(rows, total) {
   const values = rows.map((row) => row.before);
-  const pinned = rows.map((row) => (STATED_ELSEWHERE.has(row.id) ? Math.round(row.before) : null));
+  // Rounded as money() rounds the headline's positive amount: half away from
+  // zero, so a negated row at an exact 50p (−£2,628.50) is −£2,629, not −£2,628
+  const pinned = rows.map((row) =>
+    STATED_ELSEWHERE.has(row.id) ? Math.sign(row.before) * Math.round(Math.abs(row.before)) || 0 : null,
+  );
   const free = values.map((_, index) => index).filter((index) => pinned[index] === null);
   if (free.length === values.length || free.length === 0) return consistentRound(values, total);
   const pinnedSum = pinned.reduce((sum, pin) => sum + (pin ?? 0), 0);
