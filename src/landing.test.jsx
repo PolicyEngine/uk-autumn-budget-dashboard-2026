@@ -207,6 +207,31 @@ describe("the band's home button", () => {
   });
 });
 
+describe("the About tab on the window's edge", () => {
+  const edge = () => screen.queryByRole("button", { name: "About this dashboard: back to the start" });
+
+  it("is not on the landing page", async () => {
+    await renderApp();
+    expect(landing()).not.toBeNull();
+    expect(edge()).toBeNull();
+  });
+
+  it("is on every view, says what the dashboard is, and goes back to the start", async () => {
+    window.history.replaceState({}, "", "/?tab=methodology");
+    await renderApp();
+    expect(edge()).toHaveTextContent("About");
+    expect(edge()).toHaveClass("edge-about");
+    fireEvent.focus(edge());
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveTextContent(/^About this dashboard/);
+    expect(edge()).toHaveAttribute("aria-describedby", tip.id);
+    fireEvent.click(edge());
+    expect(landing()).not.toBeNull();
+    expect(window.location.search).toBe("");
+    expect(edge()).toBeNull();
+  });
+});
+
 describe("the landing page's rules", () => {
   it("opens only at an address with no view, selection or section in it", () => {
     expect(opensLanding({ search: "", hash: "" })).toBe(true);
