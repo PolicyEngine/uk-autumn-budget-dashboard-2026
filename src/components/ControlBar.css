@@ -17,7 +17,8 @@
 .control-bar-options {
   position: relative;
   flex: 0 1 auto;
-  min-width: 0;
+  /* Never so narrow that the summary disappears */
+  min-width: 120px;
 }
 
 .control-bar-button {

@@ -20,7 +20,7 @@ import { buildChartCsv } from "../utils/chartCsv";
 import { parseTable } from "../utils/publication/csv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -919,12 +919,17 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             title="Change by age"
             subtitle="How household net income changes for each age group, in the selected year and over time."
           />
-          <section className="report-section young-people-section" aria-label="Change by age">
-            <div className="charts-grid">
-              <MeanChangeCard {...props} height={narrow ? 360 : 400} />
-              <TrendCard {...props} height={narrow ? 340 : 400} />
-            </div>
-          </section>
+          {/* The measures' key above the pair (MeasureKey), not a long
+              legend squeezing one card beside the other's short one */}
+          <MeasureKeyProvider>
+            <section className="report-section young-people-section" aria-label="Change by age">
+              <SectionMeasureKey />
+              <div className="charts-grid">
+                <MeanChangeCard {...props} height={narrow ? 360 : 400} />
+                <TrendCard {...props} height={narrow ? 340 : 400} />
+              </div>
+            </section>
+          </MeasureKeyProvider>
           <SectionHeading
             title="Who gains and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."

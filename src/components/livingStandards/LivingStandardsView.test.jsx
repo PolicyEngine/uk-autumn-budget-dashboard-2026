@@ -108,8 +108,10 @@ describe("the Pre-measures forecast view", () => {
       within(living).getByRole("heading", { level: 3, name: /^Change in income inequality/ }).closest(".charts-grid"),
     );
     // Its measures named as on the measures' chart, in the same order
-    fireEvent.click(within(inequality).getByRole("button", { name: /^Inequality measure:/ }));
-    expect(within(inequality).getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""))).toEqual(["Gini", "90/10 ratio"]);
+    fireEvent.click(within(inequality).getByRole("button", { name: /^Options:/ }));
+    const measureGroup = within(inequality).getByRole("radiogroup", { name: "Inequality measure" });
+    expect(within(measureGroup).getAllByRole("radio").map((o) => o.textContent)).toEqual(["Gini", "90/10 ratio"]);
+    fireEvent.keyDown(within(inequality).getByRole("dialog"), { key: "Escape" });
     expect(within(inequality).getByText(/^The Gini \(BHC\)/)).toBeInTheDocument();
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
 
