@@ -28,6 +28,11 @@ export function loadOutlook() {
   return cached;
 }
 
+/** Forget the loaded outlook, so the next loadOutlook fetches it (tests). */
+export function clearOutlookCache() {
+  cached = null;
+}
+
 /** "2024-25" -> 2024 (numeric x value for the line chart). */
 export const fyStart = (fy) => parseInt(String(fy).slice(0, 4), 10);
 

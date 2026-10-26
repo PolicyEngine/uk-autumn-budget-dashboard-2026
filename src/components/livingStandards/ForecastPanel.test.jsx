@@ -129,8 +129,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
   it("keeps navigation back to the independent baseline available", async () => {
     await renderForecast(publishedOutlook());
     fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
-    expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
     // The forecast view stays mounted, hidden, since #128; the open one
     // holds nothing back
     expect(within(screen.getByRole("tabpanel")).queryByText("Budget-day forecast is unavailable until verified")).toBeNull();

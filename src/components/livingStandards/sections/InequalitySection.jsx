@@ -95,7 +95,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
         )}
         <PillSelect
           variant="light"
-          prefix="Measure"
+          prefix="Inequality measure"
           name="Inequality measure"
           value={measure}
           onChange={setMeasure}
@@ -107,11 +107,11 @@ export default function useInequalityView(data, range = null, setRange = null) {
         />
         <PillSelect
           variant="light"
-          prefix="Housing"
+          prefix="Housing costs"
           name="Housing costs"
           value={basis}
           onChange={setBasis}
-          options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
+          options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before housing costs" : "After housing costs", badge: id === "bhc" ? "Before" : "After" }))}
         />
         <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
       </>

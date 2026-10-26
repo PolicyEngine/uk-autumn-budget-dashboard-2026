@@ -20,9 +20,42 @@ import {
 // the policies back shows them at once
 const cache = new Map();
 
+/**
+ * A cache entry's result when it was answered by `expectedEngine` (or no
+ * engine is expected), else null. Every reader checks this, whoever wrote
+ * the entry: a fetched answer was checked when it arrived, but a seeded one
+ * was checked against whatever engine its writer had (#104).
+ */
+function underEngine(entry, expectedEngine) {
+  if (!entry) return null;
+  if (expectedEngine && engineDifferences(expectedEngine, entry.data?.engine).length) return null;
+  return entry;
+}
+
+/**
+ * A result already in the session cache for a request key (fetched, or a
+ * precomputed example), or null; null too when `expectedEngine` is given and
+ * the result's package versions differ. Its headline may be all it has.
+ */
+export function peekHouseholdImpact(key, expectedEngine = null) {
+  return underEngine(cache.get(key), expectedEngine)?.data ?? null;
+}
+
 /** Empty the session cache (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();
+}
+
+/**
+ * Add complete answers to the session cache, as [key, result] pairs (the
+ * key as this hook builds it: publication snapshot, then request)
+ * : the precomputed examples (utils/householdPresets.js), shown at
+ * once when asked for. An answer already fetched is kept.
+ */
+export function seedHouseholdImpactCache(entries) {
+  for (const [key, data] of entries) {
+    if (!cache.get(key)?.complete) cache.set(key, { data, complete: true });
+  }
 }
 
 // Wait this long after the last change before asking
@@ -51,15 +84,23 @@ const DEBOUNCE_MS = 400;
  *   none here is refused before any request, so leaving it out never shows
  *   an unchecked answer.
  *   Only those of `policies` are used and sent, and the request is checked
- *   again when one of them comes or goes
+ *   again when one of them comes or goes. An answer in the session cache is
+ *   shown only when it reports them too: a precomputed example's has the
+ *   ones its file recorded (utils/householdPresets.js), and one with none
+ *   or others is asked of the API instead
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
+ * @param {number} [params.seeded] - Bumped when answers are added to the
+ *   cache, so a request still waiting picks up a precomputed answer
+ * @param {string|null} [params.household] - Which household the answers
+ *   are (an example's id, or "yours"): a result is never shown for another
+ *   household, even while the new one loads
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, expectedDefinitions = null, confirmPublication = null }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, expectedDefinitions = null, confirmPublication = null, seeded = 0, household = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
@@ -78,10 +119,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
-  // stale, however many renders that takes.
+  // stale, however many renders that takes. `dataHousehold` is whose
+  // answers `data` is: another household's is never returned.
   const [state, setState] = useState({
     key: null,
     dataKey: null,
+    dataHousehold: null,
     status: "idle",
     data: null,
     error: null,
@@ -95,7 +138,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     const { signal } = controller;
     const refuse = (error) => {
       cache.delete(key);
-      setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
       // Nothing else this request asked for can be shown now
       controller.abort();
     };
@@ -106,11 +149,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       refuse(new DefinitionMismatchError(definitionRefusals(approved, null, unapproved)));
       return undefined;
     }
-    const cached = cache.get(key);
+    // An entry from other package versions, or one that doesn't report
+    // every selected measure's approved definition, is a miss: the live
+    // answer replaces it. A fetched answer was checked when it arrived; a
+    // precomputed example's has the definitions its file recorded, or none.
+    const entry = underEngine(cache.get(key), expectedEngine);
+    const cached =
+      entry && definitionRefusals(approved, entry.data?.definitions ?? null, policies).length === 0 ? entry : null;
     if (cached?.complete) {
       setState({
         key,
         dataKey: key,
+        dataHousehold: household,
         status: "ready",
         data: cached.data,
         error: null,
@@ -119,12 +169,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       });
       return undefined;
     }
-    // Keep the last result on screen while the next one loads; it stays
-    // marked stale (dataKey) until this request's answer arrives
+    // The same household asked again (another year or set of policies):
+    // keep its last result on screen while the next one loads, marked stale
+    // (dataKey) until this request's answer arrives, as the guide's "don't
+    // clear results before new data arrives" asks. Another household (a
+    // different card) never keeps it: `shown` below hides it at once, and
+    // a late answer for the earlier request is dropped (its signal is
+    // aborted below, and every update checks it)
     setState((prev) => ({
       ...prev,
       key,
       dataKey: cached ? key : prev.dataKey,
+      dataHousehold: cached ? household : prev.dataHousehold,
       status: cached ? "ready" : "loading",
       data: cached ? cached.data : prev.data,
       error: null,
@@ -157,6 +213,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           setState({
             key,
             dataKey: null,
+            dataHousehold: null,
             status: "error",
             data: null,
             error,
@@ -183,6 +240,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         setState({
           key,
           dataKey: key,
+          dataHousehold: household,
           status: "ready",
           data: first,
           error: null,
@@ -240,6 +298,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               ...prev,
               key,
               dataKey: key,
+              dataHousehold: household,
               status: "ready",
               data: merged,
               error: null,
@@ -274,7 +333,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // body is derived from key's inputs, approved and expectedEngine from
     // checksKey's
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, attempt, policies.length, checksKey]);
+  }, [key, household, enabled, attempt, policies.length, checksKey, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -283,10 +342,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   // until the new answer arrives. The page greys it and labels it with its
   // own year, never the new one.
   const asked = state.key === key;
-  const stale = state.data !== null && state.dataKey !== key;
+  // The data is for this household (another card's result is never shown
+  // as this one's, not even greyed while this one loads)
+  const shown = state.data !== null && state.dataHousehold === household ? state.data : null;
+  const stale = shown !== null && state.dataKey !== key;
   return {
     status: asked ? state.status : "loading",
-    data: state.data,
+    data: shown,
     error: asked ? state.error : null,
     detailStatus: asked ? state.detailStatus : "loading",
     detailError: asked ? state.detailError : null,

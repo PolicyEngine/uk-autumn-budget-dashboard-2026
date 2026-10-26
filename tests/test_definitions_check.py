@@ -5,7 +5,9 @@ Run before a deploy, it lists the measures Personal impact would show as
 unavailable once the household API runs this code.
 """
 
+import importlib.util
 import json
+from pathlib import Path
 
 import pytest
 from hypothesis import given, settings
@@ -553,3 +555,85 @@ def test_every_row_with_a_full_commit_is_listed_under_its_commit_once(rows):
     )
     for row in full:
         assert row["key"] in named[row["git_sha"][:12]]
+
+
+# The Household impact examples' file (#136): the page uses its answers only
+# when it records each measure's approved definition, as the API reports one.
+PRECOMPUTE = (
+    Path(__file__).resolve().parents[1]
+    / "scripts"
+    / "precompute_household_presets.py"
+)
+
+
+def _precompute():
+    spec = importlib.util.spec_from_file_location(
+        "precompute_household_presets", PRECOMPUTE
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_approved_definitions_are_the_displayed_receipts_with_a_full_commit(
+    tmp_path,
+):
+    receipts = {
+        MEASURES[0]: _receipt(MEASURES[0]),
+        MEASURES[1]: _receipt(MEASURES[1]),
+        MEASURES[2]: {"dashboard": {"git_sha": "abc"}},
+        MEASURES[3]: None,
+        MEASURES[4]: _receipt(MEASURES[4]),
+    }
+    _publish(
+        tmp_path,
+        receipts,
+        statuses={MEASURES[1]: m.WITHDRAWN, MEASURES[4]: m.PROVISIONAL},
+    )
+    approved = definitions.approved_definitions(
+        tmp_path, [*MEASURES[:5], "not_published"]
+    )
+    assert approved == {
+        key: definitions.receipt_definition(receipts[key])
+        for key in (MEASURES[0], MEASURES[4])
+    }
+
+
+def test_the_examples_file_records_what_the_api_would_report(tmp_path):
+    _publish(tmp_path, {key: _receipt(key) for key in MEASURES})
+    recorded = _precompute()._definitions(tmp_path, list(MEASURES))
+    assert recorded == definitions.definitions_for(
+        {key: COMMIT for key in MEASURES}, MEASURES
+    )
+    for key in MEASURES:
+        assert (
+            definitions.differences(
+                definitions.receipt_definition(_receipt(key)), recorded[key]
+            )
+            == []
+        )
+
+
+@pytest.mark.parametrize(
+    "receipt, problem",
+    [
+        (None, "no published receipt"),
+        ({"dashboard": {"git_sha": "abc"}}, "no published receipt"),
+        ("changed", "its reform reform_sha256 differs"),
+    ],
+)
+def test_no_examples_are_computed_for_a_file_the_page_would_not_use(
+    tmp_path, capsys, receipt, problem
+):
+    if receipt == "changed":
+        receipt = _receipt(MEASURES[0])
+        receipt["execution_receipt"]["reform"]["reform_sha256"] = "1" * 64
+    _publish(
+        tmp_path, {MEASURES[0]: receipt, MEASURES[1]: _receipt(MEASURES[1])}
+    )
+    with pytest.raises(SystemExit) as exited:
+        _precompute()._definitions(tmp_path, [MEASURES[0], MEASURES[1]])
+    assert "would not use these answers" in str(exited.value.code)
+    err = capsys.readouterr().err
+    assert f"{MEASURES[0]}:" in err and problem in err
+    assert f"{MEASURES[1]}:" not in err

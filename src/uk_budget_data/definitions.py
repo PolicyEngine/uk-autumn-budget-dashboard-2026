@@ -438,6 +438,36 @@ def manifest_report(
     return sorted(rows, key=lambda row: row["key"])
 
 
+def approved_definitions(data_root: Path, ids: Iterable[str]) -> dict:
+    """``{id: receipt_definition(receipt)}`` for each of ``ids`` the page
+    displays (approved or provisional): what the page checks the household
+    API's answers for it against (``publishedDefinitions``).
+
+    One with no displayable entry, no readable receipt or no full commit
+    (the only kind the API takes) is left out: the page has nothing to
+    check it against, and answers nothing for it.
+    """
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import read_receipt
+    from uk_budget_data.publication.publish import artifact_dir
+
+    manifest = m.load_manifest(data_root)
+    approved = {}
+    for key in ids:
+        entry = manifest.measures.get(key)
+        if entry is None or entry.status not in m.DISPLAYABLE:
+            continue
+        try:
+            document = read_receipt(artifact_dir(entry, data_root))
+        except (OSError, ValueError):
+            continue
+        definition = receipt_definition(document)
+        git_sha = definition["git_sha"]
+        if isinstance(git_sha, str) and FULL_COMMIT.fullmatch(git_sha):
+            approved[key] = definition
+    return approved
+
+
 def _changes_in_checkout(
     git_sha: str, repo_root: Path = Path(".")
 ) -> list[str]:

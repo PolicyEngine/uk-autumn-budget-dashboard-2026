@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
+import PovertyMeasurePills from "../PovertyMeasurePills";
 import YearRangeSelect from "../YearRangeSelect";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
@@ -34,7 +35,9 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
-  const [measure, setMeasure] = useState(measureIds[0]);
+  // The default, as on Population impact's Poverty sub-tab: absolute,
+  // before housing costs, all people
+  const [measure, setMeasure] = useState(measureIds.includes("absolute_bhc") ? "absolute_bhc" : measureIds[0]);
   const [group, setGroup] = useState(groupIds[0]);
   const [viewMode, setViewMode] = useState("both");
 
@@ -129,28 +132,16 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         {range && setRange && rangeYears(data).length > 2 && (
           <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
         )}
+        <PovertyMeasurePills measure={measure} available={measureIds} onChange={setMeasure} />
         <PillSelect
           variant="light"
-          prefix="Measure"
-          name="Poverty measure"
-          value={measure}
-          onChange={setMeasure}
-          options={measureIds.map((id) => ({
-            value: id,
-            label: poverty.measures[id],
-            badge: shortLabel(poverty.measures[id]),
-          }))}
-        />
-        <PillSelect
-          variant="light"
-          prefix="Group"
-          name="Population group"
+          prefix="People"
+          name="People"
           value={group}
           onChange={setGroup}
           options={groupIds.map((id) => ({
             value: id,
             label: poverty.groups[id],
-            badge: shortLabel(poverty.groups[id]),
           }))}
         />
         <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />

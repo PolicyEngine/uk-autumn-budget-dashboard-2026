@@ -1,6 +1,6 @@
 /**
- * Smoke test of the four tabs, and Population impact's Young people
- * sub-tab, on the real data.
+ * Smoke test of the five tabs, and Population impact's other sub-tabs,
+ * on the real data.
  *
  * Each tab is opened by its address (?tab=, ?sub=), as a shared link opens it, and
  * rendered with every data file served from public/ as the deployed page
@@ -23,6 +23,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
+import { clearBasisIncomeCache } from "./hooks/useBasisIncome";
+import { clearOutlookCache } from "./utils/livingStandards/outlook";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
@@ -61,16 +63,25 @@ const FAILURE_TEXT = [
 // What each tab shows only once its data has loaded. (jsdom lays nothing
 // out, so charts draw no values; these are the data-driven text around them.)
 const LOADED = {
-  // App.jsx renders the Public finances section only once the CSVs are read.
-  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The form's card: its More details section; the results are checked
+  // App.jsx renders All households' sections only once the CSVs are read.
+  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
+  // Population impact's other sub-tabs, by ?sub=
+  living: (panel) => within(panel).findAllByRole("heading", { name: "How the measures change incomes" }),
+  poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
+  finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
+  // The cards, "Your household" first; the form and results are checked
   // below.
-  household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
+  household: (panel) => within(panel).findAllByRole("heading", { name: "Choose a household" }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
+  // Young people and Pensioners read the age table from verified artifacts;
+  // the fixture's carry none, so both say so (#104)
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
-  // The Incomes heading shows once the outlook is read.
-  living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
+  // The Incomes under current law heading shows once the outlook is read.
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
+  // Every published measure's card, whatever the band's selection
+  policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -131,6 +142,9 @@ beforeEach(() => {
   consoleErrors = [];
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   clearHouseholdImpactCache();
+  clearBasisIncomeCache();
+  // Each test reads the outlook afresh, so its requests can be counted
+  clearOutlookCache();
   // Each tab opens as a new visit would: the form at its first step
   resetSavedWizard();
   vi.stubGlobal("fetch", vi.fn(async (input, init) => serve(input, init)));
@@ -152,14 +166,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Each tab by its address, and Population impact's Young people sub-tab:
+// Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
-  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/" : `/?tab=${v.value}`, v.label]),
+  // Population impact opens on Public finances; All households is ?sub=all
+  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+  ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
+  ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
+  ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
+  ["Population impact: Public finances", "finances", "/", "Public finances"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on a verified publication and real baseline data", () => {
+describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -184,7 +203,9 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
       );
       expect(missing).toEqual([]);
       if (value === "household") {
-        // The form's first box is the head's age, with its default
+        // "Your household" opens the form; its first box is the head's
+        // age, with its default
+        fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
         // Nothing is asked before Calculate
         expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toEqual([]);
@@ -215,12 +236,74 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     15000,
   );
 
+  // Living standards and Poverty also show the Pre-measures forecast's
+  // cards for the same thing, below the measures' effect, opened by
+  // address (?sub=living, ?sub=poverty) with the outlook read once
+  it.each([
+    ["living", "Living standards", "How the measures change incomes", "Incomes under current law", ["Incomes over time", "Growth across the distribution"]],
+    ["poverty", "Poverty", "How the measures change poverty", "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
+  ])("?sub=%s shows the current-law cards below the measures' effect", async (sub, label, measures, currentLaw, cards) => {
+    window.history.replaceState({}, "", `/?sub=${sub}`);
+    render(<App />);
+    const panel = await screen.findByRole("tabpanel", { name: label });
+    const [baseline] = await within(panel).findAllByRole("heading", { name: currentLaw }, { timeout: 5000 });
+    for (const name of cards) {
+      expect(within(panel).getByRole("heading", { level: 3, name: new RegExp(`^${name}$`) })).toBeInTheDocument();
+    }
+    // Below the measures' effect, each subtitle saying with or without them
+    const [effect] = within(panel).getAllByRole("heading", { name: measures });
+    expect(effect.compareDocumentPosition(baseline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.textContent).toMatch(/With the selected measures:/);
+    expect(panel.textContent).toMatch(/Without the measures:/);
+    // No link to the sub-tab itself, nor away to the same cards
+    expect(within(panel).queryByRole("link", { name: label })).toBeNull();
+    expect(within(panel).queryByRole("link", { name: /Pre-measures forecast/ })).toBeNull();
+    expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
+    expect(consoleErrors).toEqual([]);
+  }, 15000);
+
+  it("keeps the sub-tab's current-law cards apart from the Pre-measures forecast's", async () => {
+    window.history.replaceState({}, "", "/?sub=living");
+    render(<App />);
+    const living = await screen.findByRole("tabpanel", { name: "Living standards" });
+    const card = async (panel, name) =>
+      (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".ls-card");
+    const subTabCard = await card(living, /^Incomes over time$/);
+    // A range chosen here goes in its own parameters (?pop_ls_from)
+    fireEvent.click(within(subTabCard).getByRole("button", { name: /^Compare from:/ }));
+    fireEvent.click(within(subTabCard).getByRole("option", { name: "2029-30" }));
+    let params = new URLSearchParams(window.location.search);
+    expect(params.get("pop_ls_from")).toBe("2029");
+    expect(params.has("ls_from")).toBe(false);
+
+    // The Pre-measures forecast: same cards, its own default range, and
+    // the outlook not fetched again
+    fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
+    const outlook = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
+    const outlookCard = await card(outlook, /^Incomes over time$/);
+    expect(within(outlookCard).getByRole("button", { name: /^Compare from:/ })).not.toHaveTextContent("2029-30");
+    expect(within(subTabCard).getByRole("button", { name: /^Compare from:/, hidden: true })).toHaveTextContent("2029-30");
+    expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
+    // Both mounted, no id twice
+    for (const id of ["living-incomes", "current-law-incomes"]) {
+      expect(document.querySelectorAll(`#${id}`)).toHaveLength(1);
+    }
+    // Its own range leaves the sub-tab's alone
+    fireEvent.click(within(outlookCard).getByRole("button", { name: /^Compare to:/ }));
+    fireEvent.click(within(outlookCard).getByRole("option", { name: "2030-31" }));
+    params = new URLSearchParams(window.location.search);
+    expect(params.get("ls_to")).toBe("2030");
+    expect(params.get("pop_ls_from")).toBe("2029");
+    expect(params.get("pop_ls_to")).toBe("2031");
+  }, 15000);
+
   it("fails the Household impact tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the
     // results would be: the check above would catch it.
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
@@ -249,6 +332,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     // The views are rebuilt once the publication verifies
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
 
@@ -273,7 +357,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
   });
 
   it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
@@ -282,10 +366,10 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
   });
 
   it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -311,6 +395,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(household).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));

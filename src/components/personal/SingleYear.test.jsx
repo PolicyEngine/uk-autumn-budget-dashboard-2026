@@ -3,11 +3,15 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import PersonalImpactTab from "../PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
-import { resetSavedWizard } from "../HouseholdCalculator";
+import { mostlyFromSpending } from "./SingleYearResults";
+import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
+import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route, withReportedDefinitions } from "../../test/definitionsFixture";
+import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -44,6 +48,8 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  clearBasisIncomeCache();
+  resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   // Figures at once, not counted up: the count-up is presentation only
@@ -87,10 +93,22 @@ function renderTab(props = {}) {
   );
 }
 
+/** A household's card in the grid, or its chip once the cards fold into a strip. */
+function householdItem(name) {
+  const region = screen.getByRole("region", { name: "Choose a household" });
+  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name });
+}
+
 // Nothing is asked until Calculate: every answer has a default, so one
 // press gives the results
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
+/** Open the form below the cards ("Your household"), unless it is open. */
+function openForm() {
+  const yours = householdItem(/^Your household/);
+  if (document.getElementById(yours.getAttribute("aria-controls"))?.dataset.open !== "true") fireEvent.click(yours);
+}
 function toResults() {
+  openForm();
   fireEvent.click(calculateButton());
 }
 
@@ -114,7 +132,22 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
-    const urls = fetch.mock.calls.map(([url]) => url);
+    // Besides the examples' precomputed file, the example households'
+    // income charts below the calculator, the published household scatter
+    // (the result among all households) and the UK files "Where you sit"
+    // reads, only the household route
+    const urls = fetch.mock.calls
+      .map(([url]) => url)
+      .filter(
+        (url) =>
+          !url.endsWith("/household_presets.json") &&
+          !url.endsWith("/income_curve.csv") &&
+          !url.endsWith("/household_scatter_binned.csv") &&
+          !url.endsWith("/income_distribution.csv") &&
+          !url.endsWith("/winners_losers.csv") &&
+          !url.endsWith("/distributional_impact.csv") &&
+          !url.endsWith("/income_mobility.csv"),
+      );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => route(url) === HOUSEHOLD_API)).toBe(true);
     // Each names every selected measure's approved commit, in id order
@@ -150,6 +183,74 @@ describe("the household calculation, from the fixture", () => {
       children: [],
     });
     expect(first.household).not.toHaveProperty("children_ages");
+  });
+
+  // #170 asked for all three parts at once and raced the headline across
+  // both services. Merged with #104, the headline stays Cloud Run's: it is
+  // what the detail service's parts are checked against (same build), and
+  // a Modal headline would have nothing to be checked against.
+  it("with a detail URL, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    const BUILD = "b".repeat(40);
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (route(url) !== HOUSEHOLD_API && route(url) !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        asked.push([route(url), body.include]);
+        // The headline waits: nothing else is asked until it answers
+        if (body.include.length === 0) await gate;
+        return withReportedDefinitions(json({ ...householdAnswerFor(body), git_sha: BUILD }), url);
+      }),
+    );
+    renderTab();
+    toResults();
+    await waitFor(() => expect(asked).toHaveLength(1));
+    expect(asked).toEqual([[HOUSEHOLD_API, []]]);
+    release();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    expect(asked).toHaveLength(3);
+    expect(asked.slice(1)).toEqual(
+      expect.arrayContaining([
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
+  });
+
+  it("with a detail URL, shows no headline from the detail service when Cloud Run's fails", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (route(url) !== HOUSEHOLD_API && route(url) !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        asked.push([route(url), body.include]);
+        return route(url) === HOUSEHOLD_API && body.include.length === 0
+          ? json({ detail: "boom" }, 503)
+          : withReportedDefinitions(json(householdAnswerFor(body)), url);
+      }),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
+    // Cloud Run was asked (the request reached it), and the detail service never
+    expect(asked).toEqual([[HOUSEHOLD_API, []]]);
   });
 
   it("shows the result card and breakdown once only the headline has resolved", async () => {
@@ -210,6 +311,14 @@ describe("the household calculation, from the fixture", () => {
     expect(assumptions).not.toHaveTextContent("not modelled");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
+    // The spending the fuel and electricity measures act on (the form's
+    // prefilled averages: petrol £620 and diesel £340, electricity £1,040)
+    expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
+    // Not entered by the reader: marked as assumed, with what it does
+    expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
+    expect(within(box("Spending a year")).getByRole("tooltip")).toHaveTextContent(
+      "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
+    );
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -299,35 +408,61 @@ describe("the household calculation, from the fixture", () => {
     expect(terms).toContain("Change by policy");
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
+    // The marginal rate's known limits
+    expect(within(panel).getByText(/^Known limits: Council Tax Reduction/)).toBeInTheDocument();
+    expect(within(panel).getByText(/policyengine-uk 2\.134\.3 fixes this/)).toBeInTheDocument();
   });
 
-  it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
+  it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Net income across earnings/ });
-    expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
+    await screen.findByRole("heading", { name: "Household net income, 2029-30" });
     // Always shown, not in an expander
     expect(screen.queryByRole("button", { name: "Marginal tax rate across earnings" })).not.toBeInTheDocument();
-    const pair = container.querySelector(".single-year-chart-pair");
-    expect(within(pair).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    // One pair in the charts grid: net income first, the marginal rate beside it
+    const pairs = container.querySelectorAll(".single-year-chart-pair");
+    expect(pairs).toHaveLength(1);
+    const [pair] = pairs;
+    expect(pair).toHaveClass("charts-grid");
     expect(pair.children).toHaveLength(2);
-    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
+    const [earnings, rate] = pair.children;
+    expect(within(earnings).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
+    expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Net income change, 2029-30" })).not.toBeInTheDocument();
+    // Each card's switch sits in the controls row, so the pair's rows line up
+    expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    // Net income first: before and after, marking you
+    const net = within(earnings).getByRole("button", { name: "Net income" });
+    expect(net).toHaveAttribute("aria-pressed", "true");
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
+    expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
+    // Change: the gain and loss key, still marking you
+    fireEvent.click(within(earnings).getByRole("button", { name: "Change" }));
+    expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
+    expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
+    // One sentence: the rate, said once when before and after round the
+    // same, then the rate as money
+    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68%/);
+    expect(sentence).toHaveTextContent(/68%, so of your next £1,000 of earnings, you keep £324\.$/);
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
+  it("asks nothing before Calculate; a year change before it shows nothing either", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
-    // Before Calculate: the empty cards and a prompt, and no request
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    // Before Calculate: no results box (the cards say what to do), and no
+    // request
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     rerender(
       <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -336,27 +471,248 @@ describe("the household calculation, from the fixture", () => {
 });
 
 describe("Calculate", () => {
-  it("asks only on Calculate or Enter, never on an example or an edit", async () => {
+  it("asks at once for an example card, with no Calculate; an edit waits for Calculate or Enter", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
-    // An example fills the form only
-    fireEvent.click(screen.getByRole("button", { name: "Examples" }));
-    fireEvent.click(screen.getAllByRole("menuitemradio")[0]);
+    // An example card shows its result without Calculate, and hides it
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(household[0].household.age).toBe(22);
+    // Your household opens the form with its answers, and Calculate, to
+    // change one and calculate again; the example's result goes
+    fireEvent.click(householdItem(/^Your household/));
+    expect(headlineCard()).toBeNull();
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(calculateButton()).toBeEnabled();
+    // An edit brings Calculate back, and asks nothing on its own
+    const before = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    expect(calculateButton()).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household).toEqual([]);
+    expect(household).toHaveLength(before);
     // Enter in a box sends the form
     fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    expect(household[0].household.age).toBe(40);
-    // An edit after a result: the result goes, the prompt comes back, and
-    // nothing is asked
+    expect(household[before].household.age).toBe(40);
+    // An edit after a result: the result goes, with no box in its place,
+    // and nothing is asked
     const asked = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("an example card", () => {
+  // The file's default is reduced motion: these tests choose
+  const motion = (reduce) =>
+    vi.stubGlobal("matchMedia", (query) => ({
+      matches: reduce && query.includes("reduce"),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    }));
+  it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    motion(false);
+    // jsdom has no scrolling
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    // The result appears below the screen's foot
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    renderTab();
+    openForm();
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
+    expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    // Every card: another one scrolls again
+    scrollIntoView.mockClear();
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+  });
+
+  it("asks the scroll again while the page grows under the result, so it is not cut short", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    motion(false);
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    // The page's height grows after the first scroll is asked
+    let height = 2000;
+    const scrollHeight = vi
+      .spyOn(document.documentElement, "scrollHeight", "get")
+      .mockImplementation(() => height);
+    renderTab();
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    height = 3200;
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+    expect(scrollIntoView.mock.calls[1][0]).toEqual({ behavior: "smooth", block: "start" });
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+    scrollHeight.mockRestore();
+  });
+
+  it("does not scroll when the result already starts in the top third of the screen, and is instant with reduced motion", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 140, bottom: 540, height: 400 });
+    renderTab();
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" })));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    // Lower down, with reduced motion: an instant scroll
+    rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    motion(true);
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+  });
+});
+
+describe("switching from one household's card to another", () => {
+  /** The fixture's answer, with a change in net income of `change`. */
+  const answerWith = (body, change) => {
+    const answer = householdAnswerFor(body);
+    const before = answer.net_income.baseline;
+    return { ...answer, net_income: { ...answer.net_income, reform: before + change, change } };
+  };
+  /** Requests held until released by hand: [{ body, release }]. */
+  function serveHeld() {
+    const held = [];
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url, init = {}) => {
+        if (route(url) !== HOUSEHOLD_API) return Promise.resolve(new Response("{}", { status: 404 }));
+        const body = JSON.parse(init.body);
+        household.push(body);
+        return new Promise((resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+          held.push({ body, release: (change) => resolve(withReportedDefinitions(json(answerWith(body, change)), url)) });
+        });
+      }),
+    );
+    return held;
+  }
+  const card = (name) => householdItem(new RegExp(`^${name}`));
+
+  it("clears the previous card's result at once, shows the new one when it arrives, and ignores a late answer for the previous card", async () => {
+    const held = serveHeld();
+    renderTab();
+    // Example A: its headline arrives; its split by policy and sweep are
+    // still out when the reader moves on
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(held).toHaveLength(1));
+    held[0].release(1111);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    await waitFor(() => expect(held).toHaveLength(3));
+    // Example B: A's result goes at once; a loading state, not A's figures
+    fireEvent.click(card("A pensioner on the State Pension"));
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByText("+£1,111")).toBeNull();
+    // A's late answers (its split by policy and sweep) change nothing
+    held[1].release(1111);
+    held[2].release(1111);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(headlineCard()).toBeNull();
+    // B's answer arrives: B's figure
+    await waitFor(() => expect(held.some(({ body }) => body.household.age === 70)).toBe(true));
+    held.find(({ body }) => body.household.age === 70 && body.include.length === 0).release(2222);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£2,222"));
+    expect(screen.queryByText("+£1,111")).toBeNull();
+  });
+
+  it("from an example to Your household: the form opens with the example's answers, the example's result goes, Calculate gives Your household's own", async () => {
+    serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
+    renderTab();
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    fireEvent.click(card("Your household"));
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByText("+£1,111", { selector: ".result-value" })).toBeNull();
+    // A changed answer and Calculate: the new result
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
+    fireEvent.click(calculateButton());
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
+    // Your household's own figure, on its chip, chosen with its tick
+    const yours = card("Your household");
+    expect(yours).toHaveAttribute("aria-selected", "true");
+    expect(yours).toHaveTextContent("+£3,333");
+  });
+});
+
+describe("the examples' precomputed results", () => {
+  /** Choose an example with the file recording `fileDefinitions`, and wait for its whole result. */
+  async function chooseExample(fileDefinitions) {
+    // The file as the precompute writes it: the API's answer for each
+    // example's own request (here the fixture's answer)
+    // #185 on #104: the file names its own measures; here every measure
+    // the page is given, so the cards' figures and answers apply
+    // the household API models (an unmodelled one makes the selection
+    // unavailable, #104)
+    const PRESET_POLICIES = SUPPORTED_POLICY_IDS;
+    const presetMeasures = POLICIES_FOR_TEST.filter((policy) => PRESET_POLICIES.includes(policy.id));
+    const entries = presetRequests(PRESET_POLICIES).map(({ preset_id, year, request }) => ({
+      preset_id,
+      year,
+      request,
+      response: householdAnswerFor(request),
+    }));
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url.endsWith("/data/household_presets.json")) return json({ policies: PRESET_POLICIES, engine: PUBLISHED_ENGINE, definitions: fileDefinitions, entries });
+        household.push(JSON.parse(init.body));
+        return withReportedDefinitions(json(householdAnswerFor(JSON.parse(init.body))), url);
+      }),
+    );
+    render(
+      <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={presetMeasures} year={2029} />,
+      { wrapper: PublishedMeasures },
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    fireEvent.click(householdItem(/^A graduate on £35,000/));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+  }
+
+  it("show an example's result from the published file, with no request to the API", async () => {
+    // The file records each measure's approved definition, as the
+    // precompute does (#136)
+    await chooseExample(Object.fromEntries(SUPPORTED_POLICY_IDS.map((id) => [id, approvedDefinition(id)])));
+    expect(household).toEqual([]);
+  });
+
+  // #136: the file's answers are checked as a live answer is. One that
+  // reports no definitions (written before them), or another for any
+  // measure, is never shown: the API answers instead, checked.
+  it.each([
+    ["records none", undefined],
+    ["records another for a measure", Object.fromEntries(SUPPORTED_POLICY_IDS.map((id, i) => [id, i ? approvedDefinition(id) : { ...approvedDefinition(id), git_sha: "e".repeat(40) }]))],
+  ])("ask the API for an example's result when the file %s", async (_, definitions) => {
+    await chooseExample(definitions);
+    expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
   });
 });
 
@@ -551,7 +907,7 @@ describe("the household calculation's errors", () => {
     );
     renderTab();
     toResults();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
     finishByPolicy();
     expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
@@ -564,7 +920,7 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
   });
 
@@ -725,8 +1081,15 @@ describe("a household calculation from other definitions", () => {
   // one as having no approved definition when it is only no longer selected
   const NOTICE = "Household impact is unavailable for the selected measures";
   const UNCHECKED = "Household impact can't be checked right now";
-  const PROMPT = "Choose your answers and press Calculate.";
   const SELECT = /Select at least one policy/;
+  // An edit after a result or a refusal: the box goes, with nothing in its
+  // place until Calculate (#185's cards say what to do), so no refusal
+  // outlives the answers it was made for
+  const noResults = () => {
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
+    expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(screen.queryByText(UNCHECKED)).toBeNull();
+  };
   const settle = () => new Promise((resolve) => setTimeout(resolve, 600));
   const tab = (selectedPolicies) => (
     <PersonalImpactTab selectedPolicies={selectedPolicies} policies={POLICIES_FOR_TEST} year={2029} />
@@ -765,20 +1128,17 @@ describe("a household calculation from other definitions", () => {
     expect(household.at(-1).policies).toEqual(rest);
   });
 
-  it("an edit after a refusal brings back the prompt, and so does removing the measure then", async () => {
+  it("an edit after a refusal takes it away, and removing the measure then brings nothing back", async () => {
     serve((body) => json(householdAnswerFor(body)), otherDefinition);
     const { rerender } = renderTab();
     toResults();
     expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
     editAnswers();
-    expect(within(await results()).queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(within(await results()).getByText(PROMPT)).toBeInTheDocument();
+    noResults();
     const asked = household.length;
     rerender(tab(SUPPORTED_POLICY_IDS.filter((id) => id !== changedId)));
     await settle();
-    const region = await results();
-    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    noResults();
     // The edited answers wait for Calculate
     expect(household.length).toBe(asked);
   });
@@ -794,7 +1154,7 @@ describe("a household calculation from other definitions", () => {
     expect(within(region).getByText(SELECT)).toBeInTheDocument();
   });
 
-  it("can't-be-checked gives way to the prompt after an edit and a measure taken out", async () => {
+  it("can't-be-checked gives way after an edit and a measure taken out", async () => {
     uncheckedApi();
     const { rerender } = renderTab();
     toResults();
@@ -804,14 +1164,12 @@ describe("a household calculation from other definitions", () => {
     const asked = household.length;
     rerender(tab(rest));
     await settle();
-    const region = await results();
-    expect(within(region).queryByRole("button", { name: "Try again" })).toBeNull();
-    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    noResults();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(household.length).toBe(asked);
   });
 
-  it("a submission restored on coming back that names a removed measure shows the prompt, not a refusal", async () => {
+  it("a submission restored on coming back that names a removed measure shows no refusal", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const first = renderTab();
     toResults();
@@ -824,9 +1182,7 @@ describe("a household calculation from other definitions", () => {
     const asked = household.length;
     render(tab(rest), { wrapper: PublishedMeasures });
     await settle();
-    const region = await results();
-    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(within(region).getByText(PROMPT)).toBeInTheDocument();
+    noResults();
     expect(household.length).toBe(asked);
   });
 
@@ -843,7 +1199,7 @@ describe("a household calculation from other definitions", () => {
     const [, ...rest] = SUPPORTED_POLICY_IDS;
     const { rerender } = render(tab(rest), { wrapper: PublishedMeasures });
     await settle();
-    expect(within(await results()).getByText(PROMPT)).toBeInTheDocument();
+    noResults();
     // The measure comes back and the edit is undone: the restored
     // submission is the request on the page again
     rerender(tab(SUPPORTED_POLICY_IDS));
@@ -875,7 +1231,10 @@ describe("a household calculation from other definitions", () => {
     render(tab([...SUPPORTED_POLICY_IDS, extra]), { wrapper: PublishedMeasures });
     await waitFor(() => expect(urls.length).toBeGreaterThan(before));
     expect(household.at(-1).policies).toEqual(SUPPORTED_POLICY_IDS);
-    for (const url of urls) {
+    // The household API's requests (the page also loads its files)
+    const asked = urls.filter((url) => route(url) === HOUSEHOLD_API);
+    expect(asked.length).toBeGreaterThan(0);
+    for (const url of asked) {
       expect(requestedDefinitions(url).map(([id]) => id).sort()).toEqual([...SUPPORTED_POLICY_IDS].sort());
     }
   });
@@ -896,5 +1255,50 @@ describe("a household calculation from other definitions", () => {
     ]);
     fireEvent.click(within(region).getByRole("button", { name: /^Remove .* from the selection$/ }));
     expect(remove).toHaveBeenCalledWith([changedId]);
+  });
+});
+
+describe("keepSentence: the marginal rate as money", () => {
+  it("keeps of the next £1,000, before and after, once when they round the same", () => {
+    expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 before and keep £350 after.");
+  });
+
+  it("says a loss as a loss", () => {
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
+  });
+
+  it("turns to the next £200 at a cliff, where £1,000 would overstate it", () => {
+    // Net income falls £2,140 over the next £200 before, £32 kept after
+    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 of earnings, you would lose £2,140.");
+  });
+
+  it("is null without both rates", () => {
+    expect(keepSentence(null, 0.4)).toBeNull();
+    expect(keepSentence(0.4, undefined)).toBeNull();
+  });
+});
+
+describe("the assumed-spending caution", () => {
+  const byPolicy = (rows) => ({ measures: rows.map(([id, change]) => ({ id, change })) });
+
+  it("says most of a change is from spending only when those measures are more than half of it", () => {
+    const fuel = byPolicy([["fuel_duty_rise_deferral", 60], ["domestic_electricity_zero_vat", 30], ["state_pension_income_tax_protection", 10]]);
+    expect(mostlyFromSpending(fuel, 100)).toBe(true);
+    const pension = byPolicy([["fuel_duty_rise_deferral", 20], ["state_pension_income_tax_protection", 80]]);
+    expect(mostlyFromSpending(pension, 100)).toBe(false);
+    // A loss mostly from elsewhere, a gain from spending: not "most of this"
+    expect(mostlyFromSpending(byPolicy([["road_fuel_vat_cut", 10]]), -50)).toBe(false);
+    expect(mostlyFromSpending(null, 100)).toBe(false);
+    expect(mostlyFromSpending(fuel, 0)).toBe(false);
+  });
+
+  it("calls spending assumed at the prefilled averages or an example's figure, not once the reader enters their own", () => {
+    expect(spendingAssumed(WIZARD_DEFAULTS, null)).toBe("average");
+    expect(spendingAssumed(WIZARD_DEFAULTS, "driver")).toBe("average");
+    const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
+    expect(spendingAssumed(own, "driver")).toBe("example");
+    expect(spendingAssumed(own, null)).toBeNull();
   });
 });

@@ -47,6 +47,15 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
       />
     );
   }
+  // The examples' precomputed answers are for every published measure, so
+  // they are checked against those measures' receipts, whatever is selected
+  // now (with none selected there is no expectedEngine at all): their
+  // engine, and each one's definition, none unless every one has one to
+  // check (#136: a file's answers are never shown unchecked either)
+  const presetIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
+  const presetEngine = publishedEngine(catalogue, presetIds);
+  const presetChecks = publishedDefinitions(catalogue, presetIds);
+  const presetDefinitions = presetChecks.missing.length ? null : presetChecks.definitions;
   const publicationKey = catalogue.manifest.snapshotSha256 ?? String(catalogue.manifest.revision);
   return (
     <div className="personal-impact-tab">
@@ -58,6 +67,8 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
         year={year}
         expectedEngine={expectedEngine}
         expectedDefinitions={expectedDefinitions}
+        presetEngine={presetEngine}
+        presetDefinitions={presetDefinitions}
         confirmPublication={confirmPublication}
         onRemoveUnavailable={onRemoveUnavailable}
         active={active}

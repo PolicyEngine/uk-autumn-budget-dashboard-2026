@@ -114,6 +114,14 @@ const ICONS = {
       <path d="M6 12v5c3 2 9 2 12 0v-5" />
     </>
   ),
+  // Pensioners: an armchair, as the pensioner example household's card
+  armchair: (
+    <>
+      <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3" />
+      <path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0Z" />
+      <path d="M5 18v2M19 18v2" />
+    </>
+  ),
   // Forecast changes: two arrows round
   refresh: (
     <>

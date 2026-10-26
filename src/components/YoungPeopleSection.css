@@ -21,11 +21,3 @@
   margin: 12px 0 24px;
 }
 
-
-/* A muted line under a chart, about how to read it */
-.chart-footnote {
-  margin: 8px 0 0;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}

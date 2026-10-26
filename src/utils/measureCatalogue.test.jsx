@@ -176,13 +176,54 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     const contract = JSON.parse(text);
     return JSON.stringify({ ...contract, income_curve_households: contract.income_curve_households.map(({ definition, ...rest }) => rest) });
   };
+  // This Budget's measures, as the registry names them (reforms.py): the
+  // pattern above lists only earlier Budgets' names
+  const registry = readFileSync(join(root, "uk_budget_data", "reforms.py"), "utf8");
+  const ids = [...registry.matchAll(/^(?!AUTUMN_BUDGET_2026_COMBINED)[A-Z0-9_]+_ID = "([a-z0-9_]+)"$/gm)].map((match) => match[1]);
+  const names = [...registry.matchAll(/^\s+name="([^"]+)",$/gm)].map((match) => match[1]).filter((name) => !/\(combined\)/.test(name));
+  expect(ids.length).toBeGreaterThan(0);
+  expect(names.length).toBe(ids.length);
+  const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const registered = new RegExp([...ids, ...names].map(escaped).join("|"), "i");
+  // #185 on #104, until the publication carries their text (reforms.py),
+  // these blocks alone may name a registered measure. None decides which
+  // measures exist or how they are named, ordered or coloured, and each
+  // steps aside for the published measure when its words may not fit it:
+  // - POLICY_DETAILS: card text, used only for a measure described exactly
+  //   as its entry was written for (policyDetails.test.js, PolicyCards.test.jsx);
+  // - an example's measure, measures and tag: shown only while every one is
+  //   published (HouseholdCards.test.jsx);
+  // - SOURCE_NAMES: a short name for a card's "+£50 from" line, where the
+  //   published name is used for any other id;
+  // - SPENDING_MEASURES: those whose gain scales with fuel and electricity
+  //   spending, for one line of text; one not published has no part, so the
+  //   line can only show less often.
+  // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
+  // registered measure, and singleYear.js's labels for the household API's
+  // own programme line of the same name as the Warm Home Discount top-up.
+  // Comments are not scanned: they show nothing. Anything else in these
+  // files, and every other file, still fails.
+  const allowed = {
+    "utils/policyDetails.js": [/export const POLICY_DETAILS = \[[\s\S]*?\n\];/],
+    "utils/householdExamples.js": [/^\s*(?:measure|measures|tag): .*$/gm],
+    "utils/youngPersonPresets.js": [/^\s*(?:measure|measures|tag): .*$/gm],
+    "components/personal/HouseholdCards.jsx": [/const SOURCE_NAMES = \{[\s\S]*?\n\};/],
+    "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
+    "components/methodology/measures.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
+    "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
+  };
+  const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);
   const matches = [];
   function walk(directory) {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       if (entry.isDirectory()) {
         if (!["test", "__pycache__", "uk_budget_data"].includes(entry.name) && !entry.name.endsWith(".egg-info")) walk(path);
-      } else if (!/\.(test|spec)\./.test(entry.name) && forbidden.test(scanned(path))) matches.push(relative(root, path));
+      } else if (!/\.(test|spec)\./.test(entry.name)) {
+        const shown = uncommented(outsideAllowed(path, scanned(path)));
+        if (forbidden.test(shown) || registered.test(shown)) matches.push(relative(root, path));
+      }
     }
   }
   walk(root);
