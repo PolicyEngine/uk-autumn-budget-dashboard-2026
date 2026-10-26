@@ -68,23 +68,30 @@
   top: var(--title-row-height);
   z-index: 1095;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   width: 48px;
   height: var(--view-tabs-height);
   padding: 0;
-  color: var(--pe-gray-500);
-  background: var(--c-surface);
+  /* A light teal block, apart from the white rows; teal-700 on teal-100
+     is 4.9:1, and the icon stays over 3:1 on the hover tint */
+  color: var(--pe-teal-700);
+  background: var(--pe-teal-100);
   border: 0;
-  border-right: 1px solid var(--card-border);
+  border-right: 1px solid var(--pe-teal-200);
   cursor: pointer;
   transition: background-color var(--landing-motion) ease, color var(--landing-motion) ease;
 }
 
 .edge-about:hover {
-  color: var(--c-gain-text);
-  background: var(--pe-teal-50);
+  background: color-mix(in srgb, var(--pe-teal-200) 70%, var(--pe-teal-100));
+}
+
+/* Too short for both (a view with no sub-tabs, stuck): the mark alone */
+.edge-about[data-short="true"] .edge-about-icon {
+  display: none;
 }
 
 .edge-about:focus-visible {
@@ -122,21 +129,17 @@
 @keyframes edge-about-cue {
   0%,
   100% {
-    background: var(--c-surface);
+    background: var(--pe-teal-100);
   }
   50% {
-    background: var(--pe-teal-100);
+    background: var(--pe-teal-200);
   }
 }
 
-/* On a narrow screen: the mark alone */
+/* On a narrow screen: narrower */
 @media (max-width: 768px) {
   .edge-about {
     width: 40px;
-  }
-
-  .edge-about-icon {
-    display: none;
   }
 
   .app:has(.edge-about) .view-tabs-bar,

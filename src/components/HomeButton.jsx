@@ -66,7 +66,10 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       const bottom = band ? Math.max(box.bottom, band.getBoundingClientRect().bottom) : box.bottom;
       // Inside the bar's top border and the last row's bottom border
       own.current.style.top = `${Math.round(box.top) + 1}px`;
-      own.current.style.height = `${Math.round(bottom - box.top) - 2}px`;
+      const height = Math.round(bottom - box.top) - 2;
+      own.current.style.height = `${height}px`;
+      // The mark over the icon where they fit, else the mark alone
+      own.current.dataset.short = String(height < 52);
     };
     const later = () => {
       if (!frame) frame = requestAnimationFrame(place);
