@@ -10,6 +10,7 @@ serial against ``--jobs auto`` on the certified data, is in the PR.
 import dataclasses
 import functools
 import hashlib
+import json
 import multiprocessing
 import pickle
 from pathlib import Path
@@ -855,17 +856,34 @@ def test_area_tables_are_the_same_whatever_order_measures_run_in(
 ):
     from tests.test_geography import run_cli
     from uk_budget_data import geography as g
+    from uk_budget_data.publication.release_index import AREA_PROVENANCE_FILE
 
     outputs = []
+    provenances = []
     for name, runner in (("serial", None), ("parallel", ReversingRunner())):
         directory = tmp_path / name
         directory.mkdir()
         monkeypatch.setattr(g, "_geography_runner", lambda parsed: runner)
         code, out, _ = run_cli(monkeypatch, directory)
         assert code == 0
-        outputs.append(snapshot(out))
+        tables = snapshot(out)
+        # Each run makes its own fixture manifest, stamped with the time it
+        # was approved, so the manifest digest the provenance records is
+        # that run's own; everything else in it must match.
+        provenance = json.loads((out / AREA_PROVENANCE_FILE).read_bytes())
+        manifest = next(directory.glob("publication.json")).read_bytes()
+        assert provenance.pop("manifest_sha256") == (
+            hashlib.sha256(manifest).hexdigest()
+        )
+        del tables[AREA_PROVENANCE_FILE]
+        outputs.append(tables)
+        provenances.append(provenance)
     assert outputs[0] == outputs[1]
     assert outputs[0]
+    assert provenances[0] == provenances[1]
+    assert provenances[0]["files"] == {
+        name: digest for name, digest in outputs[0].items()
+    }
 
 
 # --- Modal ----------------------------------------------------------------
@@ -973,6 +991,64 @@ def test_the_modal_app_exposes_no_web_endpoint_and_one_secret():
     assert source.count("modal.Secret.from_name(") == 1
     assert 'required_keys=["HUGGING_FACE_TOKEN"]' in source
     assert ".uv_sync(" in source and "frozen=True" in source
+    # The workspace's existing read token (#119), and the cost guards.
+    assert 'HF_SECRET = "pe-uk-private-hf-read-token"' in source
+    assert "RETRIES = 0" in source and "retries=RETRIES" in source
+    assert "MAX_CONTAINERS = 16" in source
+    assert "max_containers=MAX_CONTAINERS" in source
+    # DataConfig's relative ./data_inputs is found in the container.
+    assert ".workdir(WORKDIR)" in source
+    assert 'f"{WORKDIR}/data_inputs"' in source
+
+
+def test_a_missing_modal_secret_is_named_with_its_owner(monkeypatch):
+    """A NotFoundError from Modal (the workspace has no such secret)
+    becomes ModalUnavailable naming the secret and its owner."""
+    import sys
+    import types
+
+    from uk_budget_data.modal_runner import (
+        SECRET_MISSING,
+        ModalUnavailable,
+        _modal_remote,
+    )
+
+    class NotFoundError(Exception):
+        pass
+
+    class App:
+        def run(self):
+            raise NotFoundError(
+                "Secret 'pe-uk-private-hf-read-token' not found"
+            )
+
+    class Output:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    fake_modal = types.SimpleNamespace(
+        enable_output=Output,
+        exception=types.SimpleNamespace(NotFoundError=NotFoundError),
+    )
+    fake_generate = types.ModuleType("uk_budget_data.modal_generate")
+    fake_generate.app = App()
+    monkeypatch.setitem(sys.modules, "modal", fake_modal)
+    monkeypatch.setitem(
+        sys.modules, "uk_budget_data.modal_generate", fake_generate
+    )
+    import uk_budget_data
+
+    monkeypatch.setattr(
+        uk_budget_data, "modal_generate", fake_generate, raising=False
+    )
+    with pytest.raises(ModalUnavailable) as raised:
+        list(_modal_remote([_flat_unit()]))
+    assert str(raised.value).startswith(SECRET_MISSING)
+    assert "pe-uk-private-hf-read-token" in str(raised.value)
+    assert "Owner: Anthony" in str(raised.value)
 
 
 def test_artifacts_refuse_the_modal_backend(capsys):

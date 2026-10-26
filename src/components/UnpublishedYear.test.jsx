@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import WaterfallChart from "./WaterfallChart";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
+import { MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { budgetChartData, loadDashboard } from "../utils/loadDashboard";
+import { BASE_PATH, BEYOND_DATA, fixtureFetch, IN_DATA } from "../test/publicationFixture";
 
 vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
@@ -41,12 +44,22 @@ describe("a year not yet published", () => {
     expect(container.textContent).not.toMatch(/£0/);
   });
 
-  it("tags the revenue chart's empty year as not yet published", () => {
-    const data = [
-      { year: 2030, "2 child limit repeal": -3, "Rail fares freeze": -1, netImpact: -4 },
-      { year: 2031, unpublished: true, netImpact: null },
-    ];
-    const { container } = render(<BudgetaryImpactChart data={data} selectedYear={2029} />);
+  it("tags the revenue chart's empty year as not yet published", async () => {
+    // The real synthetic artifacts verify through the production receipt
+    // loader; chart points use the catalogue's namespaced measure keys.
+    const published = await loadDashboard(BASE_PATH, { fetchImpl: fixtureFetch() });
+    const data = budgetChartData(
+      published.budgetary,
+      published.catalogue.displayable,
+      published.catalogue.displayable.map((measure) => measure.id),
+      [IN_DATA, BEYOND_DATA],
+    );
+    const { container } = render(
+      <MeasureCatalogueProvider catalogue={published.catalogue}>
+        <BudgetaryImpactChart data={data} selectedYear={BEYOND_DATA} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(container.querySelector(".recharts-wrapper")).not.toBeNull();
     expect(container.textContent).toContain("Not yet published");
     expect(container.textContent).not.toContain("£0.0bn");
   });

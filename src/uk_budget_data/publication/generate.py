@@ -38,6 +38,7 @@ from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
+    ArtifactError,
     ArtifactRef,
     write_artifact,
 )
@@ -47,19 +48,22 @@ from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptInputs,
     ReceiptUnavailable,
+    approved_revision,
     build_receipt_document,
     code_revision,
     combined_identities,
+    entry_receipt,
     is_code_defect,
     load_basis,
     measure_identities,
     scenario_identity,
 )
-from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.tables import TABLES, bin_scatter
 from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
     measure_templates_proof,
 )
+from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES
 from uk_budget_data.scored_years import missing_scored_years
 
 
@@ -85,7 +89,13 @@ def result_tables(
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
-        "metrics": result.metrics,
+        # The flat metrics.csv also carries the poverty and inequality
+        # measures the charts choose between; a receipted artifact keeps its
+        # contracted columns (TABLES["metrics"]) until the contract adds them.
+        "metrics": [
+            {column: row[column] for column in TABLES["metrics"].column_names}
+            for row in result.metrics
+        ],
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,
@@ -236,11 +246,17 @@ def _identity_data(identities) -> tuple:
 
 
 def _combined_run_identities(
-    combined: Reform, ordered: list, config: DataConfig, revision, uses_config
+    combined: Reform,
+    ordered: list,
+    config: DataConfig,
+    revision,
+    uses_config,
+    member_revisions: Optional[dict] = None,
 ):
     """A combined run's (baseline, reform) identities, member records and
     composition (``receipt.combined_identities``), each side bound with the
-    phase its combined Scenario runs in."""
+    phase its combined Scenario runs in and each member read from the
+    manifest at the revision in ``member_revisions``."""
     baseline = combined.baseline_scenario_for(config, uses_config)
     return combined_identities(
         ordered,
@@ -254,6 +270,7 @@ def _combined_run_identities(
             if baseline is not None
             else False
         ),
+        member_revisions=member_revisions,
     )
 
 
@@ -285,6 +302,9 @@ class ArtifactRun:
     uses_config_baseline: bool = False
     modifier_templates: object = None
     combine_members: Optional[list] = None
+    # A combined run's members read from the manifest, by id, with the
+    # revision each is bound at (``receipt.approved_revision``).
+    member_revisions: Optional[dict] = None
 
 
 @dataclass
@@ -337,6 +357,7 @@ def _run_identities(
                 job.config,
                 job.revision,
                 job.uses_config_baseline,
+                member_revisions=job.member_revisions,
             ),
         )[:2]
     differing = [
@@ -451,6 +472,8 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
             data_limits=limits,
             model_limits=held,
             name=reform.name,
+            description=reform.description,
+            personal=PUBLIC_PERSONAL_SERIES.get(reform.id),
             modifier_templates=(
                 job.modifier_templates
                 if job.modifier_templates is not None
@@ -555,6 +578,34 @@ def generate_artifacts(
         build=build,
         process=process,
     )
+    checked_commits: dict = {}
+
+    def member_revisions(key: str, ids: list[str]) -> dict[str, CodeRevision]:
+        """Each member read from the manifest, bound at the commit its own
+        receipt was made at, so the combined run records the identity that
+        receipt holds and staging (which compares them exactly) accepts it.
+        A member written in this run was made at HEAD."""
+        revisions = {}
+        for member in ids:
+            if member in written_outputs or member not in manifest.measures:
+                continue
+            try:
+                document = entry_receipt(
+                    "its manifest entry's receipt",
+                    member,
+                    manifest.measures[member],
+                    artifacts_root.parent,
+                )
+                revisions[member] = approved_revision(
+                    document, revision, checked_commits, repo_root
+                )
+            except (ArtifactError, OSError, ValueError, KeyError) as error:
+                raise ReceiptUnavailable(
+                    key,
+                    f"member {member}: {error}; regenerate {member} and stage "
+                    "it before its combined runs",
+                ) from error
+        return revisions
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
@@ -646,6 +697,7 @@ def generate_artifacts(
         )
 
         def prepare():
+            revisions = member_revisions(key, ids)
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
@@ -662,16 +714,29 @@ def generate_artifacts(
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
             )
-            return combined, _combined_run_identities(
-                combined, ordered, config, revision, uses_config
+            return (
+                combined,
+                revisions,
+                _combined_run_identities(
+                    combined,
+                    ordered,
+                    config,
+                    revision,
+                    uses_config,
+                    member_revisions=revisions,
+                ),
             )
 
         try:
-            combined, (
-                baseline_identity,
-                reform_identity,
-                records,
-                composition,
+            (
+                combined,
+                revisions,
+                (
+                    baseline_identity,
+                    reform_identity,
+                    records,
+                    composition,
+                ),
             ) = _scenarios(key, prepare)
             snapshot = {
                 member: written_outputs.get(member)
@@ -697,6 +762,7 @@ def generate_artifacts(
                     ),
                     composition=composition,
                     uses_config_baseline=uses_config,
+                    member_revisions=revisions,
                     modifier_templates=combined_templates_proof(
                         ordered, config, revision
                     ),

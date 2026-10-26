@@ -1080,7 +1080,9 @@ def test_area_runs_refuse_the_held_vat_measure(area_manifest, arguments):
     "fields",
     [
         {"parameter_changes": {STANDARD_RATE: {"2027": 0.21}}},
-        {"simulation_modifier": ENERGY_VAT},
+        # Unwrapped: an approved measure has a receipt, and a receipt binds
+        # only a modifier that closes over no values, so not quietly's.
+        {"simulation_modifier": template_measures.vat_modifier},
     ],
     ids=["a rate", "the energy VAT template"],
 )
