@@ -64,7 +64,9 @@ def test_baseline_growth_matches_the_outlooks_growth_by_group():
     for row in rows:
         series = block["series"][row["population"]][row["basis"]]
         by_year = series[row["grouping"]]["by_year"]
-        published = next(r for r in by_year if r["year"].startswith(str(row["year"])))
+        published = next(
+            r for r in by_year if r["year"].startswith(str(row["year"]))
+        )
         k = row["group"] - 1
         assert row["baseline_annual_growth"] == published["annual_growth"][k]
         assert row["baseline_real_median"] == published["real_median"][k]
@@ -111,7 +113,9 @@ def test_a_grouping_under_the_floor_is_withheld_whole():
     # 400 households: vigintile cells hold about 20 households among
     # non-pensioners, deciles about 40, quintiles about 80; all under 100
     small = cells(households=400)
-    assert measures_growth.growth_rows("m", "M", small, small, YEARS, real) == []
+    assert (
+        measures_growth.growth_rows("m", "M", small, small, YEARS, real) == []
+    )
     # 1,200: quintiles clear the floor, vigintiles do not
     mid = cells(households=1200)
     rows = measures_growth.growth_rows("m", "M", mid, mid, YEARS, real)
@@ -121,13 +125,19 @@ def test_a_grouping_under_the_floor_is_withheld_whole():
 def test_the_floor_counts_the_reform_side_too():
     base = cells(households=3000)
     reform = cells(households=400)
-    assert measures_growth.growth_rows("m", "M", base, reform, YEARS, real) == []
+    assert (
+        measures_growth.growth_rows("m", "M", base, reform, YEARS, real) == []
+    )
 
 
 def test_deflator_rebases_to_2027_28():
     real_ = measures_growth.deflator()
-    assert real_(100.0, measures_growth.PRICE_BASE_YEAR, "bhc") == pytest.approx(100.0)
-    assert real_(100.0, measures_growth.PRICE_BASE_YEAR, "ahc") == pytest.approx(100.0)
+    assert real_(
+        100.0, measures_growth.PRICE_BASE_YEAR, "bhc"
+    ) == pytest.approx(100.0)
+    assert real_(
+        100.0, measures_growth.PRICE_BASE_YEAR, "ahc"
+    ) == pytest.approx(100.0)
     # Later years' prices are higher, so the same cash is worth less
     assert real_(100.0, 2030, "bhc") < 100.0
 
@@ -151,9 +161,9 @@ def test_generate_writes_the_rows_the_units_return(tmp_path):
         def map(self, function, units, on_result=lambda i, r: None):
             assert function is pipeline.run_flat_unit
             assert all(u.tables == pipeline.GROWTH for u in units)
-            return [
-                pipeline.FlatOutcome(reform_id="m", growth_rows=rows)
-            ] + [pipeline.FlatOutcome(reform_id=str(i)) for i in units[1:]]
+            return [pipeline.FlatOutcome(reform_id="m", growth_rows=rows)] + [
+                pipeline.FlatOutcome(reform_id=str(i)) for i in units[1:]
+            ]
 
     reforms = get_autumn_budget_2026_reforms()[:2]
     frame = pipeline.generate_income_growth(

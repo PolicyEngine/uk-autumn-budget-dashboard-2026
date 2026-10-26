@@ -28,6 +28,7 @@ import {
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
+import ChartMoreInfo from "../ChartMoreInfo";
 import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -223,7 +224,6 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               {pct(yours.before) === pct(yours.after)
                 ? pct(yours.after)
                 : `${pct(yours.before)} before and ${pct(yours.after)} after`}
-              {yourParts ? ` (${yourParts})` : ""}
               {keep ? `, so ${keep}.` : "."}
             </p>
           )}
@@ -328,6 +328,14 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
+      {/* What makes up your rate, out of the one-line sentence */}
+      {yourParts && (
+        <div className="chart-footer">
+          <ChartMoreInfo>
+            <p>At {formatPounds(salary)}, your marginal rate is made up of {yourParts}.</p>
+          </ChartMoreInfo>
+        </div>
+      )}
     </div>
   );
 }

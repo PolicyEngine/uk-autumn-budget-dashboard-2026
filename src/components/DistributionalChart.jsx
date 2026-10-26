@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -16,7 +16,7 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
 import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
@@ -35,12 +35,12 @@ import {
   axisWidth,
   CHART_COLOURS,
   divergingAxis,
-  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
   exportLegendItems,
@@ -72,6 +72,8 @@ const decileOrder = [
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable: POLICIES,
@@ -254,8 +256,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <NoBreakYear text={chartTitle} />
             </span>
           </h3>
+          {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {CHART_DESCRIPTION}
+            {decileSentence(data, "relative") ?? CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -299,29 +302,19 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 
+              {/* One segment at a time, beside the cursor; the other measures dim */}
+
               <Tooltip
 
                 {...TOOLTIP_PROPS}
 
-                cursor={HOVER_CURSOR}
+                shared={false}
 
-                content={
+                cursor={false}
 
-                  <ChartTooltip
+                offset={16}
 
-                    format={(value) => `${value.toFixed(2)}%`}
-
-                    labelFormat={(label) =>
-                      `Income decile ${String(label).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`
-                    }
-
-                    netKey="netChange"
-
-                    netLabel="Net change"
-
-                  />
-
-                }
+                content={<SegmentTooltip labelOf={(row) => `Income decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`} format={(value) => `${value.toFixed(2)}%`} netKey="netChange" netLabel="Net change" />}
 
               />
               {!key.shared && (
@@ -342,7 +335,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
-                  fillOpacity={measureOpacity(key.highlight, policyName)}
+                  fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(key.highlight, policyName)}
+                  onMouseEnter={() => setHoveredMeasure(policyName)}
+                  onMouseLeave={() => setHoveredMeasure(null)}
                   name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
                   shape={barShape(ALL_POLICY_NAMES)}
@@ -389,7 +384,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} />
+          <ChartMoreInfo members={members} year={selectedYear}>
+            <p>{CHART_DESCRIPTION}</p>
+          </ChartMoreInfo>
         </div>
       )}
     </div>

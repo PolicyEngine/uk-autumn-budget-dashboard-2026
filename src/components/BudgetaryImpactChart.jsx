@@ -14,7 +14,7 @@ import {
 import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
 import MeasureKey, { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -31,7 +31,6 @@ import {
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
-  HOVER_CURSOR,
   divergingAxis,
 } from "../utils/chartTheme";
 import {
@@ -39,6 +38,8 @@ import {
 } from "../utils/displayYears";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import { revenueSentence } from "../utils/plainSentences";
+import ChartMoreInfo from "./ChartMoreInfo";
 
 // Net impact labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
@@ -208,6 +209,8 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
   const [highlight, setHighlight] = useState(null);
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable,
@@ -293,7 +296,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <TitleIcon name="landmark" />
             <span className="title-text">Revenue impact</span>
           </h3>
-          <p className="chart-description">{CHART_DESCRIPTION}</p>
+          {/* One plain sentence for the selected year; what the chart
+              measures is in More info */}
+          <p className="chart-description">
+            {revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear)) ?? CHART_DESCRIPTION}
+          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
@@ -329,25 +336,19 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               ticks={yAxisTicks}
             />
 
+            {/* One segment at a time, beside the cursor; the other measures dim */}
+
             <Tooltip
 
               {...TOOLTIP_PROPS}
 
-              cursor={HOVER_CURSOR}
+              shared={false}
 
-              content={
+              cursor={false}
 
-                <ChartTooltip
+              offset={16}
 
-                  format={(value) => `£${value.toFixed(1)}bn`}
-
-                  labelFormat={fiscalYearTick}
-
-                  netKey="netImpact"
-
-                />
-
-              }
+              content={<SegmentTooltip labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
 
             />
             {orderedPolicies.map((policyName) => (
@@ -355,7 +356,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                fillOpacity={measureOpacity(highlight, policyName)}
+                fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(highlight, policyName)}
+                onMouseEnter={() => setHoveredMeasure(policyName)}
+                onMouseLeave={() => setHoveredMeasure(null)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 shape={barShape(orderedPolicies)}
@@ -409,6 +412,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+      <div className="chart-footer">
+        <ChartMoreInfo year={selectedYear}>
+          <p>{CHART_DESCRIPTION}</p>
+        </ChartMoreInfo>
       </div>
     </div>
   );
