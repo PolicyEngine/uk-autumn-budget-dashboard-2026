@@ -290,9 +290,11 @@ describe("the household calculation, from the fixture", () => {
     const pair = container.querySelector(".single-year-chart-pair");
     expect(within(pair).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
     expect(pair.children).toHaveLength(2);
-    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
-    // The rate as money, said once when before and after round the same
-    expect(screen.getByText("Of your next £1,000 of earnings, you keep £324.")).toBeInTheDocument();
+    // The rate, then on a line of its own the rate as money, said once
+    // when before and after round the same
+    const rate = screen.getByText(/^At £34,192 your marginal tax rate is 68% before and 68% after\./);
+    expect(rate).toHaveTextContent(/after\.Of your next £1,000 of earnings, you keep £324\.$/);
+    expect(rate.querySelector("br")).not.toBeNull();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 

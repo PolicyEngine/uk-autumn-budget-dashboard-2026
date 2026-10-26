@@ -145,9 +145,14 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
             <p className="chart-description">
               At {formatPounds(salary)} your marginal tax rate is {pct(yours.before)} before and{" "}
               {pct(yours.after)} after.
+              {keep && (
+                <>
+                  <br />
+                  {keep}
+                </>
+              )}
             </p>
           )}
-          {yours && keep && <p className="chart-description single-year-keep">{keep}</p>}
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
