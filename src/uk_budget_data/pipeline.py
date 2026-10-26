@@ -868,19 +868,31 @@ def scatter_survey_households(simulation, dataset_path: Optional[str]):
 
     In the engine's household order. Microcosm builds several records from
     one survey household, so the scatter's floor counts these ids, as the
-    results by area do (``geography.survey_household_ids``). The bundle's
-    own dataset is a Microcosm export when its data package is Microcosm's;
-    a local file is one when its H5 carries the export marker.
+    results by area do (``geography.survey_household_ids``). A dataset the
+    bundle resolves, its default (None) or one given by name, is a
+    Microcosm export when its data package is Microcosm's; a local file is
+    one when its H5 carries the export marker.
     """
-    from policyengine.provenance.manifest import get_release_manifest
+    from policyengine.provenance.manifest import (
+        dataset_logical_name,
+        get_release_manifest,
+    )
 
     from uk_budget_data import geography
 
     tables = geography.dataset_tables(simulation)
-    if dataset_path is None:
-        microcosm = (
-            get_release_manifest("uk").data_package.name == "microcosm-data"
+    if dataset_path is None or not Path(dataset_path).is_file():
+        manifest = get_release_manifest("uk")
+        name = (
+            manifest.default_dataset
+            if dataset_path is None
+            else dataset_logical_name(dataset_path)
         )
+        # The bundle's own datasets name no package of their own.
+        package = getattr(
+            manifest.datasets.get(name), "data_package_name", None
+        )
+        microcosm = (package or manifest.data_package.name) == "microcosm-data"
     else:
         microcosm = geography.is_microcosm_export(dataset_path)
     return geography.survey_household_ids(

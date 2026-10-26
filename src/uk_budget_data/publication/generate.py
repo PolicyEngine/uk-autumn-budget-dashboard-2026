@@ -519,6 +519,26 @@ def _built_from_a_dataset(simulation) -> bool:
     return hasattr(dataset, "years") and hasattr(dataset, "__getitem__")
 
 
+def _certifiable(dataset_path: Optional[str]) -> bool:
+    """Whether a run on ``dataset_path`` could be certified, and so
+    approved: the bundle's default dataset (None), or the dataset the
+    bundle's certificate or default names, given by name or as a local copy
+    under that name. A run on any other dataset is uncertified, which the
+    gate never approves (``receipt.certificate_problems``)."""
+    if dataset_path is None:
+        return True
+    from policyengine.provenance.manifest import (
+        dataset_logical_name,
+        get_release_manifest,
+    )
+
+    manifest = get_release_manifest("uk")
+    names = {manifest.default_dataset}
+    if manifest.certified_data_artifact is not None:
+        names.add(manifest.certified_data_artifact.dataset)
+    return dataset_logical_name(str(dataset_path)) in names
+
+
 def _apply_disclosure_floor(
     subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
 ) -> list[str]:
@@ -528,7 +548,13 @@ def _apply_disclosure_floor(
     return a warning naming them), and make the binned scatter count survey
     households rather than records. Only for simulations built from a
     dataset, whose household and person tables name the survey households
-    (a household situation, or a stand-in in tests, has none)."""
+    (a household situation, or a stand-in in tests, has none).
+
+    A run whose survey households cannot be told apart is refused when its
+    data could be certified (:func:`_certifiable`). On any other data, such
+    as the tests' small enhanced FRS or the Modal smoke test's synthetic
+    file, it is written without the floor, with a warning: uncertified data
+    is never approved, so nothing made from it is shown."""
     if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
         return []
     from uk_budget_data.pipeline import scatter_survey_households
@@ -536,6 +562,12 @@ def _apply_disclosure_floor(
     try:
         survey = scatter_survey_households(baseline, job.dataset_path)
     except ValueError as error:
+        if not _certifiable(job.dataset_path):
+            return [
+                "not held to the floor of survey households, which cannot "
+                f"be told apart ({error}); the data is not certified, so "
+                "the artifact can never be approved"
+            ]
         raise ReceiptUnavailable(
             subject,
             "the survey households behind the records cannot be told "

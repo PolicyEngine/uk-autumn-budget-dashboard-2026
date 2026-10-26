@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import bin_scatter
@@ -221,6 +222,103 @@ def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
     assert "winners_losers 2027 (5, all)" in warning
     # "all" is thin in the age table too, so no age row is left.
     assert result.age_impact == []
+
+
+@pytest.mark.parametrize(
+    "dataset_path, kind",
+    [
+        (None, "microcosm"),
+        (DATASET_NAME, "microcosm"),
+        (SMALL_DATASET_NAME, "efrs"),
+    ],
+)
+def test_a_bundle_dataset_is_known_by_its_package_not_opened_as_a_file(
+    monkeypatch, dataset_path, kind
+):
+    """#208 review, finding 1: a dataset given by name (the certified-data
+    test's small enhanced FRS) was opened as a local H5 file."""
+    from uk_budget_data import geography, pipeline
+
+    monkeypatch.setattr(
+        geography,
+        "dataset_tables",
+        lambda sim: SimpleNamespace(household=None, person=None),
+    )
+
+    def is_export(path):
+        raise AssertionError(f"{path} opened as a file")
+
+    monkeypatch.setattr(geography, "is_microcosm_export", is_export)
+    seen = []
+
+    def survey_ids(household, person, kind, *, microcosm_export):
+        seen.append((kind, microcosm_export))
+        return np.arange(3)
+
+    monkeypatch.setattr(geography, "survey_household_ids", survey_ids)
+    pipeline.scatter_survey_households(object(), dataset_path)
+    assert seen == [(kind, kind == "microcosm")]
+
+
+def _cannot_tell_apart(monkeypatch):
+    from uk_budget_data import pipeline
+
+    def survey(sim, path):
+        raise ValueError("The tables lack the copy flags")
+
+    monkeypatch.setattr(pipeline, "scatter_survey_households", survey)
+
+
+@pytest.mark.parametrize(
+    "dataset_path", [SMALL_DATASET_NAME, "/scratch/synthetic.h5"]
+)
+def test_uncertified_data_without_survey_households_is_written_unchecked(
+    monkeypatch, dataset_path
+):
+    """#208 review, findings 1 and 2: uncertified data is never approved, so
+    a run whose survey households cannot be told apart is written without
+    the floor and says so; the certified-data test and the Modal smoke test
+    reach their receipts."""
+    from uk_budget_data.publication import generate
+
+    _cannot_tell_apart(monkeypatch)
+    baseline, reformed, _ = _population({80, 81})
+    baseline.dataset = reformed.dataset = _Dataset()
+    job = SimpleNamespace(
+        dataset_path=dataset_path, config=SimpleNamespace(years=[YEAR])
+    )
+    rows = [_age_row(YEAR, "35-49"), _age_row(YEAR, "all")]
+    result = SimpleNamespace(
+        household_scatter=[{"household_id": 1_000}], age_impact=list(rows)
+    )
+    (warning,) = generate._apply_disclosure_floor(
+        "a", job, baseline, reformed, result
+    )
+    assert "not held to the floor" in warning
+    assert "can never be approved" in warning
+    assert result.age_impact == rows
+    assert result.household_scatter == [{"household_id": 1_000}]
+
+
+@pytest.mark.parametrize(
+    "dataset_path",
+    [None, DATASET_NAME, f"/copies/{DATASET_NAME}.h5"],
+    ids=["default", "by name", "local copy"],
+)
+def test_certifiable_data_without_survey_households_is_refused(
+    monkeypatch, dataset_path
+):
+    from uk_budget_data.publication import generate
+
+    _cannot_tell_apart(monkeypatch)
+    baseline, reformed, _ = _population({80, 81})
+    baseline.dataset = reformed.dataset = _Dataset()
+    job = SimpleNamespace(
+        dataset_path=dataset_path, config=SimpleNamespace(years=[YEAR])
+    )
+    result = SimpleNamespace(household_scatter=[], age_impact=[])
+    with pytest.raises(ReceiptUnavailable, match="cannot be told apart"):
+        generate._apply_disclosure_floor("a", job, baseline, reformed, result)
 
 
 def test_stand_in_simulations_are_not_checked():
