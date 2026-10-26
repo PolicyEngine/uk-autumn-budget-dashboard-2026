@@ -636,6 +636,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           onChange={handleTabChange}
           tabId={tabId}
           panelId={panelId}
+          // The views with sub-tabs open into their band (SubTabs); not
+          // while Population impact shows its unavailable notice instead
+          notch={activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard"))}
         />
 
         {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (

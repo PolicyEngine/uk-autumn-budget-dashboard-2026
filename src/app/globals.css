@@ -382,6 +382,7 @@ body {
 }
 
 .view-tabs {
+  position: relative;
   display: flex;
   gap: 4px;
   height: var(--view-tabs-height);
@@ -416,6 +417,7 @@ body {
 
 .view-tab {
   position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -451,11 +453,25 @@ body {
 
 .view-tab[aria-selected="true"] {
   color: var(--band-teal);
-  background: var(--pe-teal-50);
 }
 
-/* The underline sits on the bar's rule */
-.view-tab[aria-selected="true"]::after {
+.view-tab[aria-selected="true"]:hover {
+  background: transparent;
+}
+
+/* The chosen tab's tint and underline: one element that slides from tab
+   to tab (ViewTabs.jsx). The underline sits on the bar's rule. */
+.view-tabs-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  background: var(--pe-teal-50);
+  pointer-events: none;
+}
+
+.view-tabs-indicator::after {
   content: "";
   position: absolute;
   left: 8px;
@@ -464,6 +480,30 @@ body {
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
+}
+
+.view-tabs-indicator.is-ready {
+  transition:
+    transform 220ms cubic-bezier(0.33, 1, 0.68, 1),
+    width 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
+   same tint, no rule and no underline between them, so the band reads as
+   that tab's own */
+.view-tabs-bar.has-notch {
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+
+.view-tabs-bar.has-notch .view-tabs-indicator::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-tabs-indicator.is-ready {
+    transition: none;
+  }
 }
 
 /* On a phone all five views show at once, two by two, and the bar
@@ -498,9 +538,11 @@ body {
 
   .view-tab[aria-selected="true"] {
     border-color: var(--band-teal);
+    background: var(--pe-teal-50);
   }
 
-  .view-tab[aria-selected="true"]::after {
+  /* Pills two by two: each chosen pill is its own tint */
+  .view-tabs-indicator {
     display: none;
   }
 }

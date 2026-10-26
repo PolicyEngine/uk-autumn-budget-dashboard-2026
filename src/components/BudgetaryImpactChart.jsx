@@ -397,7 +397,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         </ResponsiveContainer>
       </div>
 
-      {/* The measures' key, boxed, under the plot (MeasureKey): click
+      {/* The measures' key under the plot (MeasureKey), unboxed in the card: click
           chips to highlight several together. The logo below it. */}
       <div className="revenue-key">
         <MeasureKey
