@@ -106,9 +106,10 @@ describe("the Pre-measures forecast view", () => {
     render(<App />);
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
     const card = (panel, name) => within(panel).getByRole("heading", { level: 3, name }).closest(".ls-card");
-    // How the measures change incomes, then incomes under current law, then
-    // inequality: the measures' effect beside its level under current law
-    const order = ["How the measures change incomes", "Incomes under current law", "Inequality"];
+    // Incomes under current law, then inequality: the measures' effect
+    // beside its level under current law (the decile pair is on All
+    // households)
+    const order = ["Incomes under current law", "Inequality"];
     const headings = await Promise.all(order.map((name) => within(living).findByRole("heading", { level: 2, name }, { timeout: 5000 })));
     for (let i = 1; i < headings.length; i += 1) {
       expect(headings[i - 1].compareDocumentPosition(headings[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -162,7 +163,7 @@ describe("the Pre-measures forecast view", () => {
   });
 
   it.each([
-    ["living", "Living standards", "How the measures change incomes", ["Incomes under current law", "Inequality"], [/^Incomes over time$/, /^Growth across the distribution$/, /^Inequality over time/]],
+    ["living", "Living standards", /impact by income decile/, ["Incomes under current law", "Inequality"], [/^Incomes over time$/, /^Growth across the distribution$/, /^Inequality over time/]],
     ["poverty", "Poverty", "How the measures change poverty", ["Poverty under current law"], [/^Poverty over time$/, /^Who is in poverty$/]],
   ])("?sub=%s shows the current-law cards with no policy selected", async (sub, label, measures, headings, cards) => {
     // A link whose policies are all unknown selects none

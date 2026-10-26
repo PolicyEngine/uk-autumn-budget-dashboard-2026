@@ -65,7 +65,7 @@ const LOADED = {
   // App.jsx renders All households' sections only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
   // Population impact's other sub-tabs, by ?sub=
-  living: (panel) => within(panel).findAllByRole("heading", { name: "How the measures change incomes" }),
+  living: (panel) => within(panel).findAllByRole("heading", { name: /Change in income inequality/ }),
   poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
   finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The cards, "Your household" first; the form and results are checked
@@ -227,12 +227,14 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   );
 
   // Living standards and Poverty also show incomes and poverty under
-  // current law, below the measures' effect, opened by
-  // address (?sub=living, ?sub=poverty) with the outlook read once
+  // current law, opened by address (?sub=living, ?sub=poverty) with the
+  // outlook read once: Poverty below the measures' effect; Living
+  // standards opens on incomes under current law, then inequality (the
+  // measures' effect by decile is on All households)
   it.each([
-    ["living", "Living standards", "How the measures change incomes", "Incomes under current law", ["Incomes over time", "Growth across the distribution"]],
-    ["poverty", "Poverty", "How the measures change poverty", "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
-  ])("?sub=%s shows the current-law cards below the measures' effect", async (sub, label, measures, currentLaw, cards) => {
+    ["living", "Living standards", "Inequality", "Incomes under current law", ["Incomes over time", "Growth across the distribution"], false],
+    ["poverty", "Poverty", "How the measures change poverty", "Poverty under current law", ["Poverty over time", "Who is in poverty"], true],
+  ])("?sub=%s shows the current-law cards beside the measures' effect", async (sub, label, measures, currentLaw, cards, effectFirst) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
     const panel = await screen.findByRole("tabpanel", { name: label });
@@ -242,7 +244,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     }
     // Below the measures' effect, each section's pill saying with or without them
     const [effect] = within(panel).getAllByRole("heading", { name: measures });
-    expect(effect.compareDocumentPosition(baseline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const [first, second] = effectFirst ? [effect, baseline] : [baseline, effect];
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(panel.textContent).toMatch(/With the selected measures/);
     expect(panel.textContent).toMatch(/Without the measures/);
     // No link to the sub-tab itself, nor away to the same cards
@@ -377,4 +380,36 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(methodology).toBeVisible();
     expect(methodology.textContent).not.toMatch(/Calculating your household/);
   });
+});
+
+describe("the income decile pair", () => {
+  it("is on All households, after the map and before the household scatter, and not on Living standards", async () => {
+    window.history.replaceState({}, "", "/?sub=all");
+    render(<App />);
+    const panel = await screen.findByRole("tabpanel", { name: "All households" });
+    const absolute = await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 });
+    const relative = within(panel).getByRole("heading", { level: 3, name: /^Relative impact by income decile/ });
+    // Side by side under one measure key
+    const section = absolute.closest("#deciles");
+    expect(section).not.toBeNull();
+    expect(relative.closest("#deciles")).toBe(section);
+    await waitFor(() => expect(section.querySelectorAll(".measure-key")).toHaveLength(1));
+    const map = panel.querySelector("#constituencies");
+    const scatter = panel.querySelector("#scatter");
+    expect(map.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section.compareDocumentPosition(scatter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    const living = screen.getByRole("tabpanel", { name: "Living standards" });
+    await within(living).findByRole("heading", { name: "Incomes under current law" }, { timeout: 5000 });
+    expect(within(living).queryByRole("heading", { name: /impact by income decile/ })).toBeNull();
+    expect(within(living).queryByRole("heading", { name: "How the measures change incomes" })).toBeNull();
+  }, 15000);
+
+  it("opens All households from an old #deciles link", async () => {
+    window.history.replaceState({}, "", "/?sub=living#deciles");
+    render(<App />);
+    const panel = await screen.findByRole("tabpanel", { name: "All households" });
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("all");
+    expect(await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 })).toBeInTheDocument();
+  }, 15000);
 });
