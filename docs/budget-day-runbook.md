@@ -848,10 +848,11 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   uv run --with modal==1.6.2 uk-budget-data generate --backend modal
   ```
 
-  - **Who sets it up:** whoever owns the Modal workspace (Anthony):
-    1. create the secret with `modal secret create uk-budget-2026-hf-token HUGGING_FACE_TOKEN=<read-only token>`;
-    2. give the runner a Modal token (`modal token new`), as the person running the command.
-  - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
+  - **Secret:** the `policyengine` workspace's existing `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a read-only token for `populace-uk-private`, created by Anthony; decision on #119). If it is missing, the command stops with "Modal secret missing" and names the owner. The person running the command needs a Modal token for the workspace (`modal token new`).
+  - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential. The image carries the working tree's package and `data_inputs/`.
+  - **Guards:** no retries, at most 16 containers, 32 GB and 2 CPUs each, 45 minutes per container.
+  - **Measured on 26 October** (`main` at 9305d80 with this change; scratch `--output-dir`): 10 units in **8.1 min** end to end, **$0.41**; the laptop's process peaked at 3.1 GB. `household_scatter_binned.csv` and `income_curve.csv` were byte-identical to `public/data`. Every other file differed only in 2026 rows of the VAT measures, the Warm Home Discount top-up and the package, by at most 7.4e-10 relative (last-digit float differences; main's rows were made on a Mac). A second Modal run gave bit-identical rows.
+  - **On pull requests:** `.github/workflows/results-on-modal.yml` runs this when a PR changes a measure, and uploads the files as a workflow artifact with a table of which differ. It never commits or signs: copy in the files you accept and sign their review rows yourself, in the same commit.
   - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
   - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
   - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
@@ -887,7 +888,7 @@ git status --short public/data                                  # review the dif
 - **Fallbacks, in order:**
   1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
   2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
-  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+  3. Modal (`--backend modal`): about 8 min and $0.41 for every measure (see above).
 - **Not covered here:**
   - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
   - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
