@@ -37,7 +37,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "pensioner-70",
     label: "A pensioner on the State Pension",
     // On its chip once the cards fold into a strip
-    short: "Pensioner, 70",
+    short: "Pensioner",
     description: "Aged 70, State Pension only, owns their home",
     icon: "armchair",
     measure: "state_pension_income_tax_protection",
@@ -58,7 +58,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "family-uc",
     label: "A family on Universal Credit",
     // On its chip once the cards fold into a strip
-    short: "Family on UC",
+    short: "UC family",
     description: "A couple with two children, renting",
     icon: "family",
     measure: "domestic_electricity_zero_vat",
@@ -82,7 +82,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "graduate-35k",
     label: "A graduate on £35,000",
     // On its chip once the cards fold into a strip
-    short: "Graduate, £35k",
+    short: "Graduate",
     description: "Aged 27, Plan 2 student loan, renting",
     icon: "graduate",
     measure: "plan_2_threshold_unfreeze",
@@ -102,7 +102,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "driver",
     label: "A driver with a long commute",
     // On its chip once the cards fold into a strip
-    short: "Long commute",
+    short: "Commuter",
     description: "£38,000, spends £2,600 a year on petrol",
     icon: "car",
     measure: "fuel_duty_rise_deferral",
@@ -123,7 +123,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     id: "higher-earner",
     label: "A higher earner on £110,000",
     // On its chip once the cards fold into a strip
-    short: "Earner, £110k",
+    short: "High earner",
     description: "Aged 45, owns their home with a mortgage",
     icon: "briefcase",
     measure: "threshold_freeze_2031_32",

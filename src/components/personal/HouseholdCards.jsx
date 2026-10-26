@@ -284,8 +284,8 @@ export default function HouseholdCards({
 }
 
 /**
- * The cards folded: one row of chips, each its icon, a short name and its
- * change, the chosen one in its measure's colour with a tick. "Your
+ * The cards folded: a chip for each card, in the cards' order and grid,
+ * each its icon, a short name and its change, the chosen one in its measure's colour with a tick. "Your
  * household" comes first, a button that opens or closes the form as its
  * card does; the examples are a listbox: the arrow keys (and Home, End)
  * move between them, Enter or Space chooses one, a click chooses it at
@@ -350,6 +350,8 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
             className={`household-chip is-yours ${yoursSelected ? "is-selected" : ""}`.trim()}
             aria-expanded={formOpen}
             aria-controls={formId}
+            title="Your household"
+            style={{ "--i": 0 }}
             onClick={onYours}
           >
             <span className="household-chip-icon" aria-hidden="true">
@@ -373,7 +375,8 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                   aria-label={figure ? `${item.label}, ${figure}${figure === "No change" ? "" : " a year"}` : item.label}
                   tabIndex={index === focus ? 0 : -1}
                   className="household-chip"
-                  style={{ "--card-accent": item.accent }}
+                  title={item.label}
+                  style={{ "--card-accent": item.accent, "--i": index + 1 }}
                   onClick={() => {
                     setFocus(index);
                     onChoose(item.id);

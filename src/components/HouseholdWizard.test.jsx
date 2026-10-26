@@ -305,13 +305,15 @@ describe("the personal impact form", () => {
     expect(chips).toHaveLength(7);
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Renter, 22",
-      "Apprentice, 19",
-      "Pensioner, 70",
-      "Family on UC",
-      "Graduate, £35k",
-      "Long commute",
-      "Earner, £110k",
+      "Apprentice",
+      "Pensioner",
+      "UC family",
+      "Graduate",
+      "Commuter",
+      "High earner",
     ]);
+    // The full name on hover, the short one cut if it runs out of room
+    expect(chips[0]).toHaveAttribute("title", "A 22-year-old renting");
     expect(chips[0]).toHaveAttribute("aria-selected", "true");
     expect(chips[0]).toHaveAttribute("tabindex", "0");
     expect(within(cards()).queryByRole("button", { name: /^A 19-year-old apprentice/ })).not.toBeInTheDocument();

@@ -533,7 +533,7 @@
 
 .household-cards-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
@@ -615,53 +615,45 @@
   margin-bottom: 16px;
 }
 
-/* The chips: one row; on a narrow screen it scrolls sideways, a chip at a
-   time, never the page */
+/* The chips: the eight cards in the same order and grid they fold from,
+   each the same width and height (four across, two rows; two across on a
+   tablet or phone, four rows). The examples' listbox lays its chips straight into the
+   grid (display: contents), after Your household */
 .household-strip {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 3px 3px 6px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding: 0 3px;
-  scrollbar-width: thin;
-  overscroll-behavior-x: contain;
+  padding: 3px;
 }
 
-/* A wide screen has room for every chip: they wrap rather than hide any
-   behind a sideways scroll */
 .household-strip-list {
-  display: flex;
-  flex: none;
-  gap: 8px;
+  display: contents;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-@media (min-width: 1024px) {
+@media (max-width: 1023px) {
   .household-strip {
-    overflow-x: visible;
-  }
-
-  .household-strip-list {
-    flex: 1 1 0;
-    flex-wrap: wrap;
-    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+/* A chip: icon, short name (cut with an ellipsis if long; the full name
+   on hover), its figure at the right */
 .household-chip {
   --card-accent: var(--pe-teal-600);
   --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
-  display: inline-flex;
-  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
-  padding: 6px 12px 6px 6px;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px 0 7px;
   font-size: var(--fs-caption);
   line-height: 1.2;
+  text-align: left;
   white-space: nowrap;
   color: var(--pe-gray-700);
   background: var(--pe-surface);
@@ -669,20 +661,35 @@
   border-radius: 999px;
   box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
-  scroll-snap-align: start;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
     box-shadow 0.18s ease;
 }
 
+/* In one after another as the strip opens */
+.household-strip-fold.is-open .household-chip {
+  animation: household-chip-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+
+@keyframes household-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
 .household-chip:hover {
   border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
 }
 
+/* Your household keeps its card's tint: the place to start */
 .household-chip.is-yours {
   font: inherit;
   font-size: var(--fs-caption);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
 }
 
 .household-chip:focus-visible {
@@ -718,6 +725,9 @@
 }
 
 .household-chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 600;
 }
 
@@ -736,6 +746,25 @@
 
 .household-chip-figure.is-none {
   color: var(--pe-gray-500);
+}
+
+/* A phone: still two across, a little tighter, so every chip shows at
+   once */
+@media (max-width: 599px) {
+  .household-strip {
+    gap: 6px;
+  }
+
+  .household-chip {
+    gap: 6px;
+    height: 36px;
+    padding: 0 10px 0 5px;
+  }
+
+  .household-chip-icon {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 .household-cards-title {
@@ -1725,6 +1754,10 @@
   .household-strip-fold.is-open,
   .household-chip {
     transition: none;
+  }
+
+  .household-strip-fold.is-open .household-chip {
+    animation: none;
   }
 }
 

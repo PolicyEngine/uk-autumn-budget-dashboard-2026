@@ -63,7 +63,7 @@ export const YOUNG_PERSON_PRESETS = [
     id: "apprentice-19",
     label: "A 19-year-old apprentice",
     // On its chip once the cards fold into a strip
-    short: "Apprentice, 19",
+    short: "Apprentice",
     description: "£23,600, renting a room at £600 a month",
     icon: "hardHat",
     measure: "employer_ni_relief_under_25s",
