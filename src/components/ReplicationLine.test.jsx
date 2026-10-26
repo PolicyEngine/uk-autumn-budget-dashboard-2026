@@ -20,7 +20,7 @@ describe("Reproduce these results", () => {
     render(<ReplicationLine />);
     const section = screen.getByRole("region", { name: "Reproduce these results" });
     expect(section.textContent.replace(/ \(opens in a new tab\)/g, "")).toBe(
-      "Reproduce these results with our replication code, built on policyengine.py 6.10.2.",
+      "Built with our replication code on policyengine.py 6.10.2.",
     );
     const links = screen.getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
