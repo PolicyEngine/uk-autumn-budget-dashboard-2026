@@ -466,6 +466,12 @@ function App() {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = tab !== activeTab;
   };
+  // A Policies card's "See its effect": Population impact with only that
+  // measure selected (the address then carries ?policies=<id>)
+  const handleShowEffect = (policyId) => {
+    setSelectedPolicies([policyId]);
+    handleTabChange("dashboard");
+  };
   useLayoutEffect(() => {
     if (!tabScrollPending.current) return;
     tabScrollPending.current = false;
@@ -597,10 +603,19 @@ function App() {
           <div className="results-container">
             <SectionHeading
               title="Policies"
-              subtitle="What each measure does, when it starts and how it is modelled."
+              subtitle="What each measure does, when it is in force and how it is modelled."
             />
             <section id="policy-details" className="report-section policy-details-content">
-              <PolicyCards policies={POLICIES} selectedPolicies={ALL_POLICY_IDS} />
+              <p className="policy-timeline-key">
+                Each card&apos;s bar shows when the measure is in force over the years the
+                charts cover, 2026-27 to 2031-32. &ldquo;See its effect&rdquo; opens Population
+                impact with only that measure selected.
+              </p>
+              <PolicyCards
+                policies={POLICIES}
+                selectedPolicies={ALL_POLICY_IDS}
+                onShowEffect={handleShowEffect}
+              />
             </section>
           </div>
         ) : value === "methodology" ? (
