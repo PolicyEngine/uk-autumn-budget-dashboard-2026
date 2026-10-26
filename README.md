@@ -32,7 +32,7 @@ The list on `main` today:
 | Id | Measure |
 |---|---|
 | `fuel_duty_rise_deferral` | Fuel duty rises deferred: 52.95p held through winter 2026-27, the 5p restored in 2027-28 |
-| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension over State Pension age, from April 2027 |
+| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose only income is the State Pension, from April 2027 |
 | `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
 | `employer_ni_relief_under_25s` | Employer NI relief for employees aged 21 to 24 (extending the under-21 relief): none up to the upper earnings limit, from April 2027 |

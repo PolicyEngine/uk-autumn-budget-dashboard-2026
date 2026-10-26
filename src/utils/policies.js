@@ -38,7 +38,7 @@ export const POLICIES = [
     starts: "April 2027",
     type: "Income tax",
     details:
-      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is not yet published.",
+      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose only income is the State Pension, savings interest aside. Any other income, such as a private pension, takes the allowance away. Based on reporting on 26 October 2026; the mechanism is not yet published.",
   },
   {
     id: "warm_home_discount_top_up",
