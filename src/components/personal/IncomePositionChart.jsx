@@ -196,7 +196,7 @@ function PositionTip({ x, y, width, children }) {
 function spreadTip({ income, x, youIncome, curve, position, side, anchors, edges = null, mix = null }) {
   const pos = side === "after" ? position.after : position.before;
   if (Math.abs(x(income) - x(youIncome)) < 8) {
-    return { income: youIncome, text: `You: ${formatPounds(youIncome)}. ${lowerCount(pos) ?? "—"} in 100 people live in households with less.` };
+    return { income: youIncome, text: `You: ${formatPounds(youIncome)}. ${lowerCount(pos) ?? "—"} in 100 people ${PLACE_MEANING}.` };
   }
   const anchor = anchors.find((a) => Math.abs(x(income) - x(a.value)) < 6);
   if (anchor) return { income: anchor.value, text: `${anchor.full}: ${formatPounds(Math.round(anchor.value))}` };
@@ -206,10 +206,10 @@ function spreadTip({ income, x, youIncome, curve, position, side, anchors, edges
   if (edges && mix) {
     const i = edges.findIndex((edge) => edge > income) - 1;
     if (i >= 0 && i < mix.length) {
-      near = `; about ${(mix[i] * 100).toFixed(1)}% of people live in households with ${formatPounds(Math.round(edges[i] / 100) * 100)} to ${formatPounds(Math.round(edges[i + 1] / 100) * 100)}`;
+      near = `; about ${(mix[i] * 100).toFixed(1)}% have between ${formatPounds(Math.round(edges[i] / 100) * 100)} and ${formatPounds(Math.round(edges[i + 1] / 100) * 100)}`;
     }
   }
-  return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people live in households with less${near}.` };
+  return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people have a lower household income, adjusted for household size${near}.` };
 }
 
 function WhereView({ width, narrow, curves, position, side, decile }) {
@@ -343,8 +343,9 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   const left = narrow ? 44 : 56;
   const right = 12;
   const plotW = Math.max(width - left - right, 80);
-  // A row above the plot for the You label, clear of the bars' labels
-  const top = 48;
+  // The axis title, then 18px clear above the plot (your figure is in the
+  // card's sentence; the chart keeps only your marker)
+  const top = 32;
   const plotH = narrow ? 200 : 240;
   const height = top + plotH + 52;
   const values = Array.from({ length: 10 }, (_, i) => (unit === "pct" ? percents?.[i + 1] : averages?.[i + 1]) ?? 0);
@@ -429,25 +430,6 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
             stroke={TEXT}
             strokeWidth={2.5}
           />
-          {/* The label in its own row above the plot, a leader down to the
-              marker, so it never sits on a neighbouring bar's figures */}
-          <line
-            x1={left + slot * (decile - 0.5)}
-            x2={left + slot * (decile - 0.5)}
-            y1={36}
-            y2={y(own * grow) - 3}
-            stroke={TEXT}
-            strokeWidth={1}
-            strokeDasharray={REFERENCE_DASH}
-          />
-          <Label
-            x={Math.min(Math.max(left + slot * (decile - 0.5), left + 40), left + plotW - 40)}
-            y={31}
-            anchor="middle"
-            size={12}
-          >
-            {`You: ${fmt(own)}`}
-          </Label>
         </g>
       )}
     </svg>
@@ -600,7 +582,7 @@ function RankView({ width, narrow, curves, position, side }) {
         {`You: ${Math.round(youP)} in 100`}
       </Label>
       <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={11.5} weight={500}>
-        live in households with less
+        have a lower household income
       </Label>
       {tip && <line className="position-guide" x1={x(tip.income)} x2={x(tip.income)} y1={top} y2={y(0)} />}
     </svg>
@@ -747,7 +729,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         ? "You stay in the same percentile."
         : `You move ${position.pointChange > 0 ? "up" : "down"} ${Math.abs(position.pointChange)} ${Math.abs(position.pointChange) === 1 ? "percentile" : "percentiles"}.`;
   const placeTip = [
-    `Your place is how many in every 100 people in the UK ${PLACE_MEANING}: ${lowerCount(position.before)} before the selected policies and ${lowerCount(position.after)} after.`,
+    `Your place is how many in 100 people in the UK ${PLACE_MEANING}: ${lowerCount(position.before)} before the selected policies and ${lowerCount(position.after)} after.`,
     moveWords,
     everyone && everyone.up !== null && everyone.down !== null
       ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
@@ -763,7 +745,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const placeMoved = text.moved;
   // The tile follows Before | After; its small line says if it moved
   const shownPlace = side === "before" ? position.before : position.after;
-  const placeValue = `${shortPlace(shownPlace)}${offRange(shownPlace) ? "" : " percentile"}`;
+  const placeValue = shortPlace(shownPlace);
   const upwards = (position.pointChange ?? 0) > 0;
   const placeMove = !placeMoved
     ? "Unchanged by the selected policies"
@@ -856,18 +838,28 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     <div className="position-block">
       {/* The three tiles, straight under the section heading, as on the other tabs */}
         <div className="forecast-tiles position-tiles">
-          <HeadlineTile icon={Wallet} name="Your change" value={signedPounds(ownChange)} caption="a year" trend={{ rows: [] }} />
+          {/* Three tiles alike: name, value, one short line, then a footnote */}
+          <HeadlineTile
+            icon={Wallet}
+            name="Your change"
+            value={signedPounds(ownChange)}
+            caption="a year, after the selected policies"
+            trend={{ rows: [] }}
+            meaning={`Net income ${formatPounds(Math.round(netBefore))} before → ${formatPounds(Math.round(Number(net?.after)))} after`}
+            meaningKind="small"
+          />
           <HeadlineTile
             icon={Percent}
             name="Share of your income"
             value={netBefore > 0 ? signedPct(ownPct, 2) : "Not available"}
-            caption="of net income"
+            caption="of your household's net income"
             trend={{ rows: [] }}
+            meaning={percents?.[decile] !== undefined && percents?.[decile] !== null ? `Average for your income tenth: ${signedPct(percents[decile], 2)}` : "Your tenth's average is not published"}
+            meaningKind="small"
           />
-          {/* What the number is, in full, under it; whether it moved below */}
           <HeadlineTile
             icon={UsersRound}
-            name="Your place"
+            name="Your place (percentile)"
             info={placeTip}
             value={placeValue}
             caption={text.headline}
@@ -887,7 +879,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {showAs === "rank"
-                  ? "Read up from you: how many in every 100 people live in households with a lower income than yours."
+                  ? "Read up from you: how many in 100 people have a lower household income than you."
                   : "How many people live at each household income, with yours on it."}
               </p>
             </div>
@@ -928,9 +920,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               year={year}
               info={{
                 how: [
-                  `Your place is how many in every 100 people in the UK ${PLACE_MEANING}, in ${yearLabel}, before or after the selected policies as chosen above.`,
+                  `Your place is how many in 100 people in the UK ${PLACE_MEANING}, in ${yearLabel}, before or after the selected policies as chosen above.`,
                   `Household income is net income after all taxes; yours is divided by ${position.factor.toFixed(2)} for your household's size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
-                  "Spread shows how many people live at each household income; Rank shows how many live in households with a lower income than each. Both are the same distribution, on the same axis.",
+                  "Spread shows how many people have each household income; Rank shows how many have a lower one than each. Both are the same distribution, on the same axis.",
                   "Your place before ranks among everyone's income before the policies; after, among everyone's after.",
                 ],
                 caveats: [
@@ -952,7 +944,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {compareBy === "tenths"
-                  ? `Average change by income tenth; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)}.`
+                  ? `Average change by income tenth; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)}, at ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)} (the dark line).`
                   : "Your change beside your tenth's average, the average UK household and the middle income."}
               </p>
             </div>
