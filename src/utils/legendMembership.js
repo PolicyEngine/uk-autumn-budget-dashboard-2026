@@ -4,9 +4,9 @@
  * Every selected measure is in the legend, in the legends' order
  * (ALL_POLICY_NAMES), in every year, so no measure silently disappears and
  * the legend holds still when the year changes. A measure that moves no
- * household in the year shown is greyed out (`muted`), and one line under
- * the chart (ZeroMeasuresNote) says why. Tooltips leave out £0 rows; the
- * same line covers them.
+ * household in the year shown is greyed out (`muted`), and the card's
+ * "More info" (ChartMoreInfo) says why. Tooltips leave out £0 rows; the
+ * same panel covers them.
  */
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "./policyConfig";
 import { POLICIES } from "./policies";

@@ -25,7 +25,7 @@ import NoBreakYear from "./NoBreakYear";
 import SectionHeading from "./SectionHeading";
 import Note from "./Note";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import { NoEffectList } from "./personal/PolicyBars";
 import { MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
@@ -262,10 +262,12 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />
       </div>
       <Logo />
-      <ZeroMeasuresNote members={members} year={Number(selectedYear)} />
-      {unpublished.length > 0 && (
-        <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
-      )}
+      <div className="chart-footer">
+        {unpublished.length > 0 && (
+          <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
+        )}
+        <ChartMoreInfo members={members} year={Number(selectedYear)} />
+      </div>
     </div>
   );
 }
@@ -430,9 +432,13 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
         )}
       </div>
       <Logo />
-      {published && <ZeroMeasuresNote members={members} year={year} />}
-      {published && missing.length > 0 && (
-        <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
+      {published && (
+        <div className="chart-footer">
+          {missing.length > 0 && (
+            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
+          )}
+          <ChartMoreInfo members={members} year={year} />
+        </div>
       )}
     </div>
   );

@@ -40,7 +40,7 @@ import {
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import {
   decileMembership,
   legendItems as membershipItems,
@@ -64,7 +64,7 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
 const FLIP_SIGN_POLICIES = [];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, showZeroNote = true }) {
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -355,7 +355,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           />
         )}
       </div>
-      {published && showZeroNote && <ZeroMeasuresNote members={members} year={selectedYear} />}
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} />
+        </div>
+      )}
     </div>
   );
 }

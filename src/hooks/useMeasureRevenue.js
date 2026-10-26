@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // One fetch of budgetary_impact.csv for every note that quotes a measure's
-// revenue (ZeroMeasuresNote); the page's charts read the same file
+// revenue (ChartMoreInfo); the page's charts read the same file
 let revenueRows = null;
 
 function loadRevenue() {

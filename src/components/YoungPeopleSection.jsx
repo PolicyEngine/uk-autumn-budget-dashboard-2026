@@ -59,8 +59,7 @@ import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
-import CollapsibleNote from "./CollapsibleNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import {
   legendMembership,
   legendItems as membershipItems,
@@ -584,15 +583,18 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && <ZeroMeasuresNote members={members} year={selectedYear} />}
-      {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-      {published && single && (
-        <CollapsibleNote lead="Single years of age rest on fewer households.">
-          <p>
-            A few large changes, such as capital gains under Business Asset Disposal Relief, can move one
-            age&apos;s average.
-          </p>
-        </CollapsibleNote>
+      {published && (
+        <div className="chart-footer">
+          {notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
+          <ChartMoreInfo members={members} year={selectedYear}>
+            {single && (
+              <p>
+                Single years of age rest on fewer households; a few large changes, such as capital gains under
+                Business Asset Disposal Relief, can move one age&apos;s average.
+              </p>
+            )}
+          </ChartMoreInfo>
+        </div>
       )}
     </div>
   );

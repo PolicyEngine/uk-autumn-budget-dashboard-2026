@@ -1,4 +1,5 @@
-import CollapsibleNote from "./CollapsibleNote";
+import Disclosure from "./Disclosure";
+import "./ChartMoreInfo.css";
 import useMeasureRevenue from "../hooks/useMeasureRevenue";
 import { zeroReason } from "../utils/legendMembership";
 import { openPopulationSub, populationSubHref } from "../utils/populationSub";
@@ -34,20 +35,17 @@ function EmployerReason({ id, year, text }) {
 }
 
 /**
- * One short line under a household chart: how many selected measures are
- * £0 for households in the year shown (greyed out in the key, left out of
- * the tooltip), with each one and why behind "More info"
- * (legendMembership). Nothing when every selected measure has an effect.
- *
- * @param {{members: Array<{id: string, name: string, muted: boolean}>, year: number}} props
+ * The selected measures that are £0 for households in the year shown, for a
+ * card's "More info": a lead line, then one measure per line with why.
  */
-function ZeroMeasuresNote({ members, year }) {
-  const zero = members.filter((member) => member.muted);
-  if (!zero.length) return null;
+export function ZeroMeasuresDetail({ zero, year }) {
   const count = zero.length === 1 ? "1 measure is" : `${zero.length} measures are`;
   return (
-    <CollapsibleNote className="zero-measures-note" lead={`${count} £0 for households in ${fiscalYear(year)}.`}>
-      <ul>
+    <div className="zero-measures">
+      <p className="zero-measures-lead">
+        {count} £0 for households in {fiscalYear(year)}:
+      </p>
+      <ul className="zero-measures-list">
         {zero.map((member) => {
           const reason = zeroReason(member.id, year);
           return (
@@ -62,9 +60,31 @@ function ZeroMeasuresNote({ members, year }) {
           );
         })}
       </ul>
-      <p>Greyed out in the key and left out of the tooltip.</p>
-    </CollapsibleNote>
+      <p>They are greyed out in the key and left out of the tooltip.</p>
+    </div>
   );
 }
 
-export default ZeroMeasuresNote;
+/**
+ * A chart card's "More info", at the foot of the card: the page's one
+ * disclosure (Disclosure, as "About this chart" and the household cards'
+ * "More info"), closed by default. It holds the £0 measures (legendMembership)
+ * and any other notes on reading the chart (`children`); nothing when it
+ * would be empty.
+ *
+ * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, children?: React.ReactNode}} props
+ */
+function ChartMoreInfo({ members = [], year, children }) {
+  const zero = members.filter((member) => member.muted);
+  const extra = Array.isArray(children) ? children.filter(Boolean) : children;
+  const hasExtra = Array.isArray(extra) ? extra.length > 0 : Boolean(extra);
+  if (!zero.length && !hasExtra) return null;
+  return (
+    <Disclosure inCard title="More info" className="chart-more-info" contentClassName="chart-more-info-content">
+      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} />}
+      {extra}
+    </Disclosure>
+  );
+}
+
+export default ChartMoreInfo;
