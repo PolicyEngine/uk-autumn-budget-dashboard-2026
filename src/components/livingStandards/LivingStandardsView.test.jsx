@@ -126,7 +126,7 @@ describe("the OBR forecast view", () => {
     const card = (panel, name) => within(panel).getByRole("heading", { level: 3, name }).closest(".ls-card");
     // One heading, without the measures, linking to its twin with them
     const heading = await within(living).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 });
-    const intro = heading.parentElement;
+    const intro = heading.closest(".section-heading");
     expect(intro).toHaveTextContent(/^Living standards under current lawWithout the measures \(current law\):/);
     expect(within(intro).getByRole("link", { name: "See this with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
     await within(living).findByRole("heading", { level: 3, name: /^Incomes over time$/ });
@@ -179,7 +179,7 @@ describe("the OBR forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook&sub=poverty");
     const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
     const povertyHeading = await within(poverty).findByRole("heading", { name: "Poverty under current law" });
-    expect(povertyHeading.parentElement).toHaveTextContent(/Without the measures \(current law\):/);
+    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Without the measures \(current law\):/);
     expect(within(poverty).getByRole("link", { name: "See this with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ });
     expect(card(poverty, /^Poverty over time$/).closest(".charts-grid")).toBe(card(poverty, /^Who is in poverty$/).closest(".charts-grid"));
@@ -212,7 +212,7 @@ describe("the OBR forecast view", () => {
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: label });
     const heading = await within(panel).findByRole("heading", { level: 2, name: measures }, { timeout: 5000 });
-    expect(heading.parentElement).toHaveTextContent(/With the selected measures:/);
+    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures:/);
     const link = within(panel).getByRole("link", { name: "See this without the measures →" });
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here

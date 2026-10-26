@@ -56,6 +56,16 @@ export function seedHouseholdImpactCache(entries) {
   }
 }
 
+/**
+ * Add one headline (no sweep or split by policy) to the session cache, as
+ * the example cards' background fill gets it (useExampleFigures.js): a
+ * request for it then shows the headline at once and asks only for the
+ * details. An entry already there is kept.
+ */
+export function rememberHouseholdHeadline(key, data) {
+  if (!cache.has(key)) cache.set(key, { data, complete: false });
+}
+
 // Wait this long after the last change before asking
 const DEBOUNCE_MS = 400;
 

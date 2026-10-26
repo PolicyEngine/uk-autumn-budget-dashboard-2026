@@ -24,6 +24,7 @@ import "./LivingStandards.css";
 const SECTIONS = {
   living: {
     title: "Living standards under current law",
+    icon: "wallet",
     subtitle: (
       <>
         Without the measures (current law): incomes and inequality before any Budget measure, on
@@ -34,6 +35,7 @@ const SECTIONS = {
   },
   poverty: {
     title: "Poverty under current law",
+    icon: "lifebuoy",
     subtitle: "Without the measures (current law): poverty before any Budget measure.",
     rows: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
@@ -66,6 +68,7 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
       {rows.length > 0 && (
         <>
           <SectionHeading
+            icon={section.icon}
             title={section.title}
             subtitle={
               <>
