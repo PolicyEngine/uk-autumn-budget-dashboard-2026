@@ -230,7 +230,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Pension paid by salary sacrifice. From April 2029 the National Insurance relief is capped at £2,000 a year.",
+    hint: "Pension paid by salary sacrifice. Enter your salary above after the sacrifice, as your payslip shows it. Before April 2029 the sacrifice changes no figure here; from then, its National Insurance relief is capped at £2,000 a year.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
