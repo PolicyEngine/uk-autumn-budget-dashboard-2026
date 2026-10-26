@@ -239,7 +239,12 @@ describe("the personal impact form", () => {
     const buttons = within(cards()).getAllByRole("button");
     // Each example card is a box with one button (its name) over it
     const card = (button) => button.closest(".household-card") ?? button;
-    expect(within(cards()).getByRole("heading", { name: "Example households" })).toBeInTheDocument();
+    // One section heading, the page's own (as on every tab), and no other
+    expect(within(cards()).getByRole("heading", { level: 2, name: "Choose a household" }).closest(".section-heading")).toHaveTextContent(
+      "Enter your own household, or start from an example below.",
+    );
+    expect(within(cards()).getAllByRole("heading")).toHaveLength(1);
+    expect(within(cards()).getByRole("group", { name: "Example households" })).toBeInTheDocument();
     expect(buttons.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([
       "Your household",
       "A 22-year-old renting",
