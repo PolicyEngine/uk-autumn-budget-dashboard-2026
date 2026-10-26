@@ -11,7 +11,7 @@
 
 import { useRef } from "react";
 import LsCard from "./livingStandards/LsCard";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
@@ -194,17 +194,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           }),
       }}
       // With the choice above the pair (PovertyMeasuresRow), none in the card
-      controls={!choiceAbove && controls.map((control) => (
-        <PillSelect
-          key={control.label}
-          variant="light"
-          prefix={control.label}
-          name={control.label}
-          options={control.options}
-          value={control.value}
-          onChange={control.onChange}
-        />
-      ))}
+      controls={!choiceAbove && <ControlBar name={metric.title} options={controls} />}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
           <p>
@@ -334,17 +324,7 @@ export function PovertyChoiceBar() {
   const { controls } = usePovertyChoice();
   return (
     <div className="section-controls" role="group" aria-label="Poverty measure">
-      {controls.map((control) => (
-        <PillSelect
-          key={control.label}
-          variant="light"
-          prefix={control.label}
-          name={control.label}
-          options={control.options}
-          value={control.value}
-          onChange={control.onChange}
-        />
-      ))}
+      <ControlBar name="Poverty measure" options={controls} />
     </div>
   );
 }

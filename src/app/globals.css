@@ -507,7 +507,7 @@ body {
     gap: 4px;
     padding: 0 4px;
     font-size: 0.875rem;
-    /* "Pre-measures forecast" wraps rather than overflow on a small phone */
+    /* "OBR forecast" wraps rather than overflow on a small phone */
     white-space: normal;
     text-align: center;
     line-height: 1.2;

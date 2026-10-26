@@ -3,7 +3,6 @@
 // The summary runs from 2027-28 (headlineSpan).
 
 import { useMemo, useState } from "react";
-import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   changeVerb,
@@ -157,23 +156,19 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     download: chartData.length
       ? { filename: `living-standards-${metric}-${adjustment}`, legendItems: lineLegendItems(series), csv }
       : null,
-    // The years compared are the section's (CurrentLawSection); the card
-    // keeps the average as its pill and the rest under Options (ControlBar)
+    // The years compared are the section's (CurrentLawSection); the card's
+    // one Options pill holds the average first, then the rest (ControlBar)
     controls: {
-      primary: (
-        <PillSelect
-          variant="light"
-          prefix="Average"
-          name="Average"
-          value={metric.startsWith("mean") ? "mean" : "median"}
-          onChange={(avg) => setMetric(metricId(avg, metric.endsWith("_ahc") ? "ahc" : "bhc"))}
-          options={[
+      options: [
+        {
+          label: "Average",
+          value: metric.startsWith("mean") ? "mean" : "median",
+          onChange: (avg) => setMetric(metricId(avg, metric.endsWith("_ahc") ? "ahc" : "bhc")),
+          options: [
             { value: "median", label: "Median" },
             { value: "mean", label: "Mean" },
-          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(o.value, metric.endsWith("_ahc") ? "ahc" : "bhc")) }))}
-        />
-      ),
-      options: [
+          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(o.value, metric.endsWith("_ahc") ? "ahc" : "bhc")) })),
+        },
         {
           // Worded as every housing-costs choice on the dashboard
           label: "Housing costs",

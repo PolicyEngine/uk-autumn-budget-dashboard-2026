@@ -54,7 +54,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.geography, title: "Figures by area", icon: MapPinned },
   { id: METHOD_SECTIONS.young, title: "Young people", icon: Users },
   { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
-  { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp },
+  { id: METHOD_SECTIONS.living, title: "OBR forecast", icon: TrendingUp },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
 ];
 
@@ -138,7 +138,7 @@ function SectionLink({ id, children }) {
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay on Policies, and
  * the household calculation with Household impact's "About these
- * figures". Pre-measures forecast states the engine, data, notes and gaps
+ * figures". OBR forecast states the engine, data, notes and gaps
  * of that view's projections.
  *
  * @param {Object} props
@@ -583,7 +583,7 @@ function MethodologyTab({ onShowTab }) {
 
           <MethodSection
             id={METHOD_SECTIONS.living}
-            title="Pre-measures forecast"
+            title="OBR forecast"
             summary={
               <p>
                 Incomes and poverty under current law, with no measures applied, are projected on
@@ -595,9 +595,9 @@ function MethodologyTab({ onShowTab }) {
                 <ViewLink tab="outlook" sub="poverty" onShowTab={onShowTab}>
                   Poverty
                 </ViewLink>{" "}
-                tabs of the Pre-measures forecast, whose{" "}
+                tabs of the OBR forecast, whose{" "}
                 <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
-                  OBR forecast
+                  Forecast changes
                 </ViewLink>{" "}
                 tab shows the forecast they are built on. Population impact&apos;s tabs of the same
                 names show the selected measures&apos; effect.

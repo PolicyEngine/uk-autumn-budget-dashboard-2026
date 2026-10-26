@@ -6,7 +6,7 @@ import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
 import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
-import PillSelect from "../PillSelect";
+import ControlBar from "../ControlBar";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
@@ -225,15 +225,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Compare"
-          name="Age group compared with all ages"
-          value={band}
-          onChange={setBand}
-          options={BAND_OPTIONS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Compare", value: band, onChange: setBand, options: BAND_OPTIONS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
