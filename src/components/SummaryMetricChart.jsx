@@ -290,13 +290,25 @@ export function hasColumn(rows, key) {
   return (rows ?? []).some((row) => row[key] !== undefined && row[key] !== "");
 }
 
+// The columns that tell a run carries the poverty and inequality measures
+// (useMeasureChoice's)
+const CHOICE_COLUMNS = ["child_poverty_rel_ahc_change_pp", "p90_p10_change"];
+
 /**
  * The rows that decide whether a chart offers its choices: the shown run's,
  * so a verified artifact written before the poverty and inequality measures
- * shows its headline only, even when another run carries them; every run's
- * while no run is shown or the run has no rows.
+ * shows its headline only, even when another run carries them. With no run
+ * for the selection but its `measures` shown each on its own, theirs, and
+ * none unless every one carries the measures, since each is read under the
+ * choice and a run without them would read as no effect. Every run's while
+ * nothing is shown or the run has no rows.
  */
-export function choiceRows(rows, run) {
+export function choiceRows(rows, run, measures = null) {
+  if (!run && measures?.length) {
+    const own = (rows ?? []).filter((row) => measures.includes(row.reform_id));
+    const carries = (id) => CHOICE_COLUMNS.every((key) => hasColumn(own.filter((row) => row.reform_id === id), key));
+    return measures.every(carries) ? own : [];
+  }
   const own = run ? (rows ?? []).filter((row) => row.reform_id === run) : [];
   return own.length ? own : rows;
 }
@@ -381,7 +393,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const catalogue = useMeasureCatalogue();
   const { combinedId } = catalogue;
   const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
-  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run));
+  // No run for the whole selection: each selected measure's own, side by side
+  const ownRuns = !run && selectedPolicies.length > 1
+    ? policies.filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+    : null;
+  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run, ownRuns?.map((policy) => policy.id)));
   // Each measure on its own: the selected year (default) or year by year
   const [effectView, setEffectView] = useState("year");
   // People behind a poverty change (pp × the population), where the
@@ -389,17 +405,14 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const peopleText = (year, value) =>
     metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
-  // No run for the whole selection: each selected measure's own, side by side
-  const byMeasure = !run && selectedPolicies.length > 1
-    ? policies
-        .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
-        .map((policy) => ({
-          id: policy.id,
-          name: shortNameOf(policy),
-          fullName: policy.label ?? policy.name,
-          colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
-          points: metricByYear(rows, policy.id, metric),
-        }))
+  const byMeasure = ownRuns
+    ? ownRuns.map((policy) => ({
+        id: policy.id,
+        name: shortNameOf(policy),
+        fullName: policy.label ?? policy.name,
+        colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
+        points: metricByYear(rows, policy.id, metric),
+      }))
     : null;
   const measureData = byMeasure
     ? DISPLAY_YEARS.map((year, i) => ({

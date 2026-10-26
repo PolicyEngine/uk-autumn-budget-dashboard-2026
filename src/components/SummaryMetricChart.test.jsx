@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import { fireEvent, render as rtlRender, screen, within } from "@testing-library/react";
 import SummaryMetricChart, {
   SUMMARY_METRICS,
+  choiceRows,
+  hasColumn,
   metricByYear,
   metricValue,
   parsePovertyChoice,
@@ -179,5 +182,29 @@ describe("povertyMetric and parsePovertyChoice", () => {
     expect(povertyMetric(parsePovertyChoice("relative-ahc-children")).key).toBe("child_poverty_rel_ahc_change_pp");
     expect(povertyMetric(parsePovertyChoice("absolute-ahc-all")).key).toBe("poverty_abs_ahc_change_pp");
     expect(parsePovertyChoice("nonsense-ahc")).toEqual({ basis: "absolute", housing: "ahc", group: "all" });
+  });
+});
+
+describe("choiceRows, each measure on its own", () => {
+  it("offers the choice only while every measure shown carries the measures", () => {
+    const WIDE = { child_poverty_rel_ahc_change_pp: "-0.001", p90_p10_change: "0.01" };
+    const IDS = ["a", "b", "c"];
+    fc.assert(
+      fc.property(fc.tuple(...IDS.map(() => fc.constantFrom("wide", "headline", "none"))), fc.subarray(IDS, { minLength: 2 }), (kinds, shown) => {
+        const rows = IDS.flatMap((id, i) =>
+          kinds[i] === "none" ? [] : [{ reform_id: id, year: "2027", poverty_change_pp: "-0.001", ...(kinds[i] === "wide" ? WIDE : {}) }],
+        );
+        const decided = choiceRows(rows, null, shown);
+        const offered = hasColumn(decided, "child_poverty_rel_ahc_change_pp") && hasColumn(decided, "p90_p10_change");
+        expect(offered).toBe(shown.every((id) => kinds[IDS.indexOf(id)] === "wide"));
+        // Only the measures shown decide
+        expect(decided.every((row) => shown.includes(row.reform_id))).toBe(true);
+      }),
+      { numRuns: 200 },
+    );
+    // A run shown, or nothing shown, as before
+    const rows = [{ reform_id: "a", year: "2027", p90_p10_change: "0.01" }, { reform_id: "b", year: "2027" }];
+    expect(choiceRows(rows, "b")).toEqual([rows[1]]);
+    expect(choiceRows(rows, null)).toBe(rows);
   });
 });
