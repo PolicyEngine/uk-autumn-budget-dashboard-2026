@@ -15,6 +15,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import SectionHeading from "../SectionHeading";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, money } from "../../utils/singleYear";
@@ -191,7 +192,8 @@ export function YearBars({ series, year }) {
  * The Household impact view's cards: first one wide "Your household"
  * card, which opens the form below the cards; then eight example
  * households under "Example households", all the same size, each of which
- * fills the form and shows its result at once. Each example names who
+ * fills the form and shows its result at once. One section heading over
+ * them, the page's own (SectionHeading), as on every tab. Each example names who
  * it is and, on its tag, the measure it is for, in that measure's colour.
  * Once the precomputed results are in and every measure is selected, it
  * shows its change in net income in the year chosen, a bar for each year,
@@ -241,11 +243,11 @@ export default function HouseholdCards({
     action();
   };
   return (
-    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-labelledby="household-cards-title">
+    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-label="Choose a household">
+      {/* The page's section heading, as on every tab, with "Show all
+          households" beside it once a household is chosen */}
       <div className="household-cards-head">
-        <h2 className="household-cards-title" id="household-cards-title">
-          Choose a household
-        </h2>
+        <SectionHeading title="Choose a household" subtitle="Enter your own household, or start from an example below." />
         {chosen && (
           <button
             type="button"
@@ -274,11 +276,6 @@ export default function HouseholdCards({
       />
       <div className={`household-cards-fold ${folded ? "" : "is-open"}`.trim()} aria-hidden={folded || undefined} inert={folded || undefined}>
       <div className="household-cards-fold-inner">
-      <p className="household-cards-subtitle">
-        Enter your own household, or start from an example below.
-        {anyFigures &&
-          ` Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
-      </p>
       <YourHouseholdCard
         selected={yoursSelected}
         formOpen={formOpen}
@@ -286,10 +283,13 @@ export default function HouseholdCards({
         change={yoursChange}
         onClick={() => choose(onYours)}
       />
-      <h3 className="household-cards-label" id="household-cards-examples">
-        Example households
-      </h3>
-      <div className="household-cards-grid" id="household-cards-grid" role="group" aria-labelledby="household-cards-examples">
+      {/* What the examples' figures are, once they show */}
+      {anyFigures && (
+        <p className="household-cards-note">
+          {`Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
+        </p>
+      )}
+      <div className="household-cards-grid" id="household-cards-grid" role="group" aria-label="Example households">
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;

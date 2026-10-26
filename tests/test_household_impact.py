@@ -1000,7 +1000,7 @@ def test_the_net_income_parts_add_up_to_net_income():
     # £14,200 of tax less the £14,250 listed (income tax with its charge,
     # National Insurance, student loan, Council Tax, fuel duty and VAT)
     assert high["other_taxes"] == 50
-    assert parts[0]["warm_home_discount_top_up"] == 150
+    assert parts[0]["warm_home_discount"] == 150
     assert parts[0]["other_benefits"] == 350
     # A run kept from before the levels were read has no parts
     old = {k: v for k, v in components.items() if k != "council_tax"}
