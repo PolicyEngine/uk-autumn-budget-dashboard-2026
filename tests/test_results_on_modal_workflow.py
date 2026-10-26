@@ -75,6 +75,27 @@ def test_its_guards():
     assert "PE_UK_PRIVATE_HF_READ_TOKEN" not in TEXT
 
 
+def test_modal_tokens_reach_only_the_steps_that_call_modal():
+    assert "MODAL_TOKEN_ID" not in JOB.get("env", {})
+    assert "MODAL_TOKEN_SECRET" not in JOB.get("env", {})
+    with_tokens = {
+        s["name"]
+        for s in JOB["steps"]
+        if "MODAL_TOKEN_ID" in (s.get("env") or {})
+    }
+    assert with_tokens == {
+        "Modal credentials present",
+        "Modal workspace secret present",
+        "Generate the flat CSVs on Modal",
+    }
+    checkout = next(
+        s
+        for s in JOB["steps"]
+        if s.get("uses", "").startswith("actions/checkout")
+    )
+    assert checkout["with"]["persist-credentials"] is False
+
+
 def run_step(name, env):
     return subprocess.run(
         ["bash", "-e", "-c", step(name)["run"]],

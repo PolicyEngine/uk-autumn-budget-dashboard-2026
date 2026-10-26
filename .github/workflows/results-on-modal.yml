@@ -59,9 +59,9 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    # The Modal tokens are given only to the three steps that call Modal,
+    # never to checkout or the dependency install.
     env:
-      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       # The dispatch input reaches the shell only through this variable.
       REFORMS: ${{ inputs.reforms }}
     steps:
@@ -71,6 +71,9 @@ jobs:
         run: echo "OUT=$RUNNER_TEMP/modal-results" >> "$GITHUB_ENV"
 
       - name: Modal credentials present
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           missing=""
           test -n "$MODAL_TOKEN_ID" || missing="$missing MODAL_TOKEN_ID"
@@ -84,6 +87,9 @@ jobs:
         with:
           # The branch head, so the results are those of the code pushed.
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # The job only reads: keep GITHUB_TOKEN out of .git/config while
+          # the branch's code runs.
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -99,6 +105,9 @@ jobs:
 
       # Names only: `modal secret list` never shows a secret's value.
       - name: Modal workspace secret present
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           names=$(uv run --with modal==1.6.2 modal secret list --json \
             | python3 -c 'import json, sys; print("\n".join(s.get("Name", s.get("name", "")) for s in json.load(sys.stdin)))')
@@ -108,6 +117,9 @@ jobs:
           fi
 
       - name: Generate the flat CSVs on Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           set -euo pipefail
           args=()
