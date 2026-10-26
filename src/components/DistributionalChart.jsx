@@ -40,7 +40,6 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { PE_MODEL_SOURCE } from "./InfoSections";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { decileSentence } from "../utils/plainSentences";
 import {
@@ -73,9 +72,9 @@ const decileOrder = [
 
 // The card's "About this chart"
 const RELATIVE_INFO = {
-  shows: "Each decile's total change in household net income, as a percentage of its total net income.",
-  how: ["Totals over all its households, so larger incomes weigh more than in an average of percentages."],
-  sources: [PE_MODEL_SOURCE],
+  how: [
+    "The decile's total change over its total net income, so larger incomes weigh more than in an average of percentages.",
+  ],
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 

@@ -1,32 +1,10 @@
-/* Disclosure.jsx's title, closed-state preview and caveat chip. The
+/* Disclosure.jsx's title and closed-state preview. The
    toggle itself (full width, chevron) is styled in globals.css. */
 .disclosure-label {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-}
-
-.disclosure-title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-}
-
-/* "2 caveats": amber, as the caveats inside */
-.disclosure-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 7px;
-  border: 1px solid var(--c-loss-border);
-  border-radius: 999px;
-  background: var(--c-notice-bg);
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  line-height: 1.6;
-  color: var(--c-notice-text);
-  white-space: nowrap;
 }
 
 /* One line of what is inside, while closed */
@@ -43,16 +21,6 @@
 
 .disclosure.is-open .disclosure-preview {
   opacity: 0.6;
-}
-
-.disclosure-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 .disclosure-toggle:focus-visible {

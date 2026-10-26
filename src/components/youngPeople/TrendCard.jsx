@@ -48,6 +48,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { AGE_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -693,27 +694,24 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
-        <ChartMoreInfo members={members} year={Number(selectedYear)}>
-          <p>
-            Each point is the average change in household net income per person in the age group, the sum of each
-            selected policy&apos;s own effect; each person counts their household&apos;s change (not equivalised).
-            The curve between the annual points never goes past them: the results are for whole fiscal years, with nothing measured in between.
-          </p>
-          <p>
-            {FOCUS_LABEL} is drawn in colour and all ages dashed; the other age groups are the grey lines behind (hover
-            one to bring it forward and see its name), or all in colour with Compare set to all age groups. A label on the
-            line names the measure behind each of the largest year-on-year steps, worked out from each measure&apos;s
-            own rows. The shaded year is the one chosen in the bar above.
-          </p>
-          <p>
-            Breakdown by measure stacks each measure&apos;s own change for {FOCUS_LABEL}-year-olds, with the net
-            change as the line; the running total adds each year&apos;s change from {first}. A share of income is not
-            shown: the results by age carry no income to divide by.
-          </p>
-          {unpublished.length > 0 && (
-            <p>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</p>
-          )}
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          members={members}
+          year={Number(selectedYear)}
+          info={{
+            how: [
+              "Each point is a whole fiscal year: the sum of each selected policy's own effect.",
+              "The curve between points never goes past them; nothing is measured between years.",
+              `Labels name the measure behind the largest year-on-year steps. Breakdown by measure stacks each one's own change.`,
+              `The running total adds each year's change from ${first}.`,
+            ],
+            caveats: [
+              "No share of income is shown: the results by age carry no income to divide by.",
+              unpublished.length > 0 &&
+                `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
+            ],
+            method: AGE_METHOD,
+          }}
+        />
       </div>
     </div>
   );

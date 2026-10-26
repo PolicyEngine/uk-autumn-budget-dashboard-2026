@@ -10,9 +10,16 @@ import ControlBar from "../ControlBar";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
+import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
+
+
+// The card's About this chart (the measures with no effect join its caveats)
+const MEASURES_INFO = {
+  method: AGE_METHOD,
+};
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -182,7 +189,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's More info row, each with its colour. No reason
+  // No effect: in the card's About this chart, each with its colour. No reason
   // per measure: a list of them by id would be a measure list of the page's
   // own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
@@ -263,11 +270,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {/* Notes and More info in the card's footer row, level across a pair */}
-      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+      {/* Notes and About this chart in the card's footer row, level across a pair */}
+      {published && (
         <div className="chart-footer">
           {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={MEASURES_INFO} />
         </div>
       )}
     </div>
