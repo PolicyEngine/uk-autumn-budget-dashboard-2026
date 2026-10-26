@@ -27,3 +27,7 @@ resetBeforeEach(() => {
   resetVerifiedCache();
   resetParsedTables();
 });
+
+// The update toast shows once per page session; each test is a new page
+import { resetUpdateToast } from "../components/publication/UpdateToast";
+resetBeforeEach(() => resetUpdateToast());
