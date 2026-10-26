@@ -140,7 +140,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 | Attest | Hand-written modifiers (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
 | Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
 | Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
-| Results by area | `geography` over the approved ids, locally or on Modal | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
 | Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |

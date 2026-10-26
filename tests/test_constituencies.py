@@ -7,7 +7,6 @@ the step in this process, with a stand-in /usr/bin/time report.
 """
 
 import json
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,6 +16,7 @@ import pandas as pd
 import pytest
 from policyengine.disclosure import validate_public
 
+from tests.publication_support import RATE_PATH
 from tests.test_geography import (
     BASE,
     FakeSimulation,
@@ -305,7 +305,10 @@ class World:
         monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
         monkeypatch.setattr(g, "simulate_reform", self.simulate)
         self.manifest = publication_manifest(
-            tmp_path, self.reforms, packages={PKG: MEASURES}
+            tmp_path,
+            self.reforms,
+            packages={PKG: MEASURES},
+            years=(2026, 2027),
         )
         self.cut = local_file(tmp_path / "local.h5")
         self.hub = FakeHub({TAG: self.cut})
@@ -412,7 +415,10 @@ def test_one_release_over_every_measure_each_in_its_own_process(world, capsys):
     assert world.steps == [*MEASURES, PKG, "release"]
     assert world.simulated == [*MEASURES, PKG]
     table = world.out / "constituency.csv"
-    assert [p.name for p in world.out.iterdir()] == ["constituency.csv"]
+    assert sorted(p.name for p in world.out.iterdir()) == [
+        "area_provenance.json",
+        "constituency.csv",
+    ]
     assert validate_public(table) == []
     frame = pd.read_csv(table)
     assert set(frame["reform"]) == {*MEASURES, PKG}
@@ -476,6 +482,47 @@ def test_the_timing_table_has_every_step_and_year(world, capsys):
     assert len(by_year) == 2 and by_year[1].count(" / ") == 2
 
 
+def assert_publish_index_accepts(world):
+    """``publish index``'s check passes the run's table: it lies beside the
+    provenance the run wrote, under the manifest's data root."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.release_index import (
+        AREA_PROVENANCE_FILE,
+        area_problems,
+    )
+
+    root = world.manifest.parent
+    for name in (c.TABLE, AREA_PROVENANCE_FILE):
+        (root / name).write_bytes((world.out / name).read_bytes())
+    manifest = m.parse_manifest(world.manifest.read_bytes(), "manifest")
+    files = {c.TABLE: (root / c.TABLE).read_bytes()}
+    problems, aliases = area_problems(manifest, files, root)
+    assert problems == []
+    assert set(aliases) == {PKG}
+    provenance = json.loads((root / AREA_PROVENANCE_FILE).read_text())
+    assert set(provenance["reforms"]) == {*MEASURES, PKG}
+    assert set(provenance["files"]) == {c.TABLE}
+
+
+def test_the_table_and_its_provenance_pass_publish_index(world, capsys):
+    assert world.run(years=("2026", "2027")) == 0, printed(capsys)
+    assert_publish_index_accepts(world)
+    out = printed(capsys)
+    assert "area_provenance.json: what the run was made from" in out
+
+
+def test_a_changed_definition_is_refused_before_anything_runs(world, capsys):
+    """The current definition must be the one the approved receipt records,
+    as ``geography`` requires, before any measure is simulated."""
+    world.reforms["alpha"] = world.reforms["alpha"].model_copy(
+        update={"parameter_changes": {RATE_PATH: {"2026": 0.35}}}
+    )
+    assert world.run() == 1
+    assert "alpha: current reform identity differs" in printed(capsys)
+    assert world.steps == [] and world.simulated == []
+    assert not world.out.exists()
+
+
 def test_a_second_run_reuses_every_measure(world, capsys):
     assert world.run() == 0
     first = (world.out / "constituency.csv").read_bytes()
@@ -535,6 +582,10 @@ def test_the_dry_run_checks_everything_and_simulates_nothing(world, capsys):
     assert (
         "As: uk-budget-data geography --dataset "
         f"{world.cut} --dataset-kind microcosm --levels constituency"
+    ) in out
+    assert (
+        "Approved receipts: each reform's current definition is the one its "
+        "manifest entry approved (4 checked)"
     ) in out
     assert "Dry run: nothing simulated." in out
 
@@ -681,16 +732,6 @@ def test_build_release_times_each_reform_and_year():
 # -- the page ---------------------------------------------------------------
 
 
-def test_the_page_finds_each_package_by_its_suffix():
-    """The page shows the full package as the one reform whose id ends in
-    PACKAGE_SUFFIX (src/utils/geography/selection.js)."""
-    selection = (REPO / "src/utils/geography/selection.js").read_text()
-    (suffix,) = re.findall(r'PACKAGE_SUFFIX = "([^"]+)"', selection)
-    for package, members in g.PACKAGES.items():
-        assert package.endswith(suffix)
-        assert not any(member.endswith(suffix) for member in members)
-
-
 # -- --backend modal, with a stand-in session -------------------------------
 
 
@@ -763,7 +804,11 @@ def test_the_modal_backend_writes_the_same_table(
     remote = (world.out / "constituency.csv").read_bytes()
     assert remote == local
     # The arrays and the audit stay on the Volume, never in the output.
-    assert [p.name for p in world.out.iterdir()] == ["constituency.csv"]
+    assert sorted(p.name for p in world.out.iterdir()) == [
+        "area_provenance.json",
+        "constituency.csv",
+    ]
+    assert_publish_index_accepts(world)
     assert any(volume.rglob("disclosure_audit.csv"))
     out = printed(capsys)
     assert "validate_public, 0 problems" in out

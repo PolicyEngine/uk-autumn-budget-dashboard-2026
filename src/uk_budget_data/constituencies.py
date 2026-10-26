@@ -77,6 +77,7 @@ from uk_budget_data.private_outputs import (
     private_directory,
 )
 from uk_budget_data.publication import manifest as publication_manifest
+from uk_budget_data.publication import release_index
 from uk_budget_data.reforms import DEFAULT_YEARS
 from uk_budget_data.runtime_identity import PACKAGES, installed_version
 
@@ -388,6 +389,10 @@ class RunPlan:
     data_inputs_dir: Path
     allow_demotions: bool
     argv: list[str]
+    # geography.area_provenance's record: each reform checked against its
+    # approved receipt before anything is simulated, and written beside the
+    # table as area_provenance.json so that ``publish index`` accepts it.
+    provenance: dict = field(default_factory=dict)
 
 
 def default_reforms(manifest: Path) -> list[str]:
@@ -514,6 +519,15 @@ def plan_run(
     )
     plan = geography._plan(_geography_namespace(argv))
     chosen = [reform.id for reform in plan.reforms]
+    # As geography does, before any simulation: each reform's current
+    # definition must be the one its approved receipt records.
+    provenance = geography.area_provenance(
+        plan.manifest,
+        plan.manifest_bytes,
+        chosen,
+        data_root=Path(parsed.manifest).parent,
+        years=plan.years,
+    )
     if plan.prior_regional is not None:
         # build_release checks this too, but only once every measure is
         # simulated.
@@ -547,6 +561,7 @@ def plan_run(
         data_inputs_dir=Path(parsed.data_inputs_dir),
         allow_demotions=parsed.allow_demotions,
         argv=argv,
+        provenance=provenance,
     )
 
 
@@ -1318,6 +1333,7 @@ def run_constituencies(parsed: argparse.Namespace, *, api=None) -> int:
         ConstituencyRunError,
         PrivateOutputError,
         geography.GeographyError,
+        geography.publication_receipt.ReceiptUnavailable,
         KeyError,
         OSError,
         ValueError,
@@ -1369,6 +1385,11 @@ def _print_plan(run: RunPlan, units: list[Unit], directory: Path) -> None:
         "Already simulated, reused: " + (", ".join(reused) or "none")
     )
     console.print(f"Private run directory: {escape(str(directory))}")
+    console.print(
+        "Approved receipts: each reform's current definition is the one its "
+        f"manifest entry approved ({len(run.provenance.get('reforms', {}))} "
+        "checked)"
+    )
     console.print(f"Table: {escape(str(run.out_dir / TABLE))}")
     console.print(
         "As: uk-budget-data " + escape(" ".join(run.argv)) + ", with each "
@@ -1616,14 +1637,23 @@ def _execute(
 
 
 def report_tables(run: RunPlan, tables: list[Path], release_name: str) -> int:
-    """Check each written table with ``validate_public`` and print its
-    review row, as a local run does after its release."""
+    """Check each written table with ``validate_public``, write the run's
+    ``area_provenance.json`` beside them, as ``geography`` does, and print
+    each table's review row."""
     for table in tables:
         problems = validate_public(table)
         if problems:
             raise ConstituencyRunError(
                 f"{table.name} fails validation: {problems[:5]}"
             )
+    provenance = release_index.write_area_provenance(
+        run.out_dir, run.provenance, tables
+    )
+    console.print(
+        f"[green]Wrote {escape(str(provenance))}: what the run was made "
+        "from, for publish index[/green]"
+    )
+    for table in tables:
         console.print(
             f"[green]Wrote {escape(str(table))}: validate_public, 0 "
             f"problems; SHA-256 {sha256_file(table)}[/green]"
@@ -1636,6 +1666,10 @@ def report_tables(run: RunPlan, tables: list[Path], release_name: str) -> int:
                 "place of <reviewer>):"
             )
             sys.stdout.write(row + "\n")
+    console.print(
+        f"{release_index.AREA_PROVENANCE_FILE} gets its row from `publish "
+        "review-rows`, after `publish index`."
+    )
     return 0
 
 

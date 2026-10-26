@@ -1020,6 +1020,10 @@ Saturday's data cut (a133f37a, as the UK hub names it, with policyengine-uk 2.14
 
 `uk-budget-data constituencies` is `geography`'s seats pass (`--dataset-kind microcosm --levels constituency`) on Microcosm's published local-area cut, with each measure simulated in a fresh process, so memory goes back to the machine between measures. By default it runs the nine measures of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS`, and their package when the manifest approves it, over the policy years, and publishes every one of them by constituency. Regions stay a separate pass, from the national file.
 
+**It writes `area_provenance.json` beside the table, as `geography` does, so `publish index` accepts it.** Before anything is simulated, each reform's current definition is checked against its approved receipt (`geography.area_provenance`); the record is written after `constituency.csv` passes `validate_public`. The record covers only the files this run wrote, so `publish index` refuses a `regional.csv` from another run beside it (see G4, "Bind the results by area last"). Until regions have a route of their own, publish `constituency.csv` alone.
+
+**Order on the day: merge the code before the receipts.** A measure bound to the repository's code (`code_revision` in its receipt) passes the check only while nothing under `src/uk_budget_data/` (or any other calculation path) has been committed since its receipt's commit, and only if that commit is an ancestor of the one you run from. So merge this command's code and #206 before G2 generates the receipts, and merge nothing that touches the package between approval and the area run. A measure refused with "calculation code changed since the approved commit" or "is not an ancestor of HEAD" needs regenerating and approving again, not a workaround.
+
 **Before you start**
 - **A quiet machine with 64 GB.** Nothing else heavy runs beside it: no other simulation, no `next build`. Note swap before you start. On the national file, #112 measured 22.5 GB of peak footprint for one measure over six years; this run measures the local file.
 - **This branch, with its own environment:** `uv sync --extra dev --frozen` and `bun install`, from the repository root.
@@ -1041,11 +1045,12 @@ What it does, in order:
    - The latest cut must be the one the installed bundle routes constituencies to. If it isn't, the command stops and says which `--cut` to pass.
    - `--dataset <path>` uses a copy you already have, checked against the same SHA-256.
    - The dry run fetches the file too, so the real run starts with it in place.
-2. **Plans the run** with `geography`'s own checks (`geography._plan`), and checks a published `public/data/regional.csv`, if there is one, against it: that table is the release's prior.
+2. **Plans the run** with `geography`'s own checks (`geography._plan`), and checks a published `public/data/regional.csv`, if there is one, against it: that table is the release's prior. Then **checks each reform against its approved receipt** (`geography.area_provenance`, as `geography` does): a definition that differs from the approved one stops the run here, before any container or process starts. The dry run does this check too.
 3. **Simulates each measure, then the package, in a fresh process** under `/usr/bin/time -l`, with `HDF5_USE_FILE_LOCKING=FALSE`. Each builds its two simulations, reads each year's household net income and weights under the data-limit watch, then runs the data-limit and model-limit checks, as `geography` does for each measure. The arrays go to the private run directory, `$UK_BUDGET_DISCLOSURE_AUDIT_DIR/geography/constituencies-<the cut's 8 hex digits>/`.
 4. **Stops on a limit.** If any measure touches a data or model limit, the command prints the reasons and writes no table, as `geography` does. It then prints the `--reforms` to run again with: the measures left, without the package. On policyengine-uk 2.132.6, expect the three VAT measures (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat` and `road_fuel_vat_cut`), and so the package, to be held by the VAT model limit (policyengine-uk #2187; see "The area view is held too" above). Run again with those `--reforms`: the measures already simulated are reused, so only the release runs.
 5. **Builds one disclosure release over every measure**, in a fresh process too: the estimates, the layer's checks, resolution and the private audit (`microcosm-<time>/` in the run directory), then `public/data/constituency.csv` through `geography.write_public_tables`, which replaces the file only once `validate_public` finds 0 problems. A demoted run stops it unless you pass `--allow-demotions`.
-6. **Prints** the table's SHA-256, the review row to add, and the timing table.
+6. **Writes `area_provenance.json`** beside the table: the manifest revision and digest it read, each reform's manifest entry and approved identities, and the table's SHA-256. On Modal this is written here, on your machine, not in a container.
+7. **Prints** the table's SHA-256, the review row to add, and the timing table.
 
 **Resuming.** A run that stops (Ctrl-C, a crash, a measure killed for memory) resumes with the same command. It reuses every measure already simulated for the same cut, years and code (the package's code, `uv.lock` and the two lookups). `--fresh` simulates everything again, and `--run-id` picks another private run directory.
 
@@ -1056,15 +1061,16 @@ What it does, in order:
 **After the run**
 1. Review the table and the private summary: `summary.json` in the private audit directory, with tiers, withholdings and demotions. Never copy a figure from either into a pull request, commit message or comment.
 2. Add the review row the command printed to `data_inputs/public_data_review.csv`: kind `disclosure_table`, the table's SHA-256 (check it with `shasum -a 256 public/data/constituency.csv`), your name as reviewer, today's date and the basis.
-3. Run both checks. Each must report 0 problems:
+3. Bind it: `uv run uk-budget-data publish index`, then `publish review-rows` (which adds the row for `area_provenance.json`, kind `publication_provenance`), then `publish check`. Run these after the last approve or withdraw (G4).
+4. Run both checks. Each must report 0 problems:
 
    ```sh
    uv run python scripts/check_public_data.py
    bun scripts/check-public-files.mjs
    ```
 
-4. Commit `public/data/constituency.csv` and `data_inputs/public_data_review.csv` to this branch, and nothing else from the run: the private directory stays outside the repository. Name the cut and the measures in the commit message, never a figure.
-5. Paste the timing table into a comment on the pull request. It is printed at the end, and kept as `timings-<time>.md` in the private run directory. It holds times and memory only. Posting it on #115 waits for María's go.
+5. Commit `public/data/constituency.csv`, `public/data/area_provenance.json`, the manifest and `release-index.json` that `publish index` wrote, and `data_inputs/public_data_review.csv` to this branch, and nothing else from the run: the private directory stays outside the repository. Name the cut and the measures in the commit message, never a figure.
+6. Paste the timing table into a comment on the pull request. It is printed at the end, and kept as `timings-<time>.md` in the private run directory. It holds times and memory only. Posting it on #115 waits for María's go.
 
 **If a regional table is published after this one,** run the command again: it takes `public/data/regional.csv` as its prior when the file is there, and reuses every measure, so only the release runs. The release then keeps that table's withheld cells withheld, and checks the seats against its published cells.
 
@@ -1075,7 +1081,7 @@ What it does, in order:
 
 ### Results by constituency on Modal
 
-The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here.
+The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here. The receipt check runs here before the app starts, and `area_provenance.json` is written here after the table comes back.
 
 Uses the workspace's existing Modal secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`; created by Anthony). It was checked on Modal on 25 October: it reads the local-area cut. Decisions to run the data on Modal and to use this secret: issue #119.
 
