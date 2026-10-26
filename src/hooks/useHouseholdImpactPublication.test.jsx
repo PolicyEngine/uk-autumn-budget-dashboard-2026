@@ -564,15 +564,15 @@ describe("an answer already in the session cache", () => {
     await waitFor(() => expect(result.current.detailStatus).toBe("ready"));
     expect(requests).toBeGreaterThan(0);
     expect(result.current.data.net.change).not.toBe(4242);
-    expect(peekHouseholdImpact(key, ENGINE).net.change).toBe(result.current.data.net.change);
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies).net.change).toBe(result.current.data.net.change);
   });
 
   it("is never returned by a peek under another engine", () => {
     seedHouseholdImpactCache([[key, seeded({ ...HOUSEHOLD_FIXTURE.engine, policyengine: "0.0.0-other" })]]);
-    expect(peekHouseholdImpact(key, ENGINE)).toBeNull();
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies)).toBeNull();
     // A reader that expects no engine sees it (none is shown that way: the
     // page expects one whenever a measure is selected)
-    expect(peekHouseholdImpact(key)).not.toBeNull();
+    expect(peekHouseholdImpact(key, null, DEFINITIONS, params.policies)).not.toBeNull();
   });
 
   const [measure] = [...HOUSEHOLD_FIXTURE.included].sort();
@@ -588,6 +588,6 @@ describe("an answer already in the session cache", () => {
     await waitFor(() => expect(result.current.detailStatus).toBe("ready"));
     expect(requests).toBeGreaterThan(0);
     expect(result.current.data.net.change).not.toBe(4242);
-    expect(peekHouseholdImpact(key, ENGINE).definitions).toEqual(DEFINITIONS);
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies).definitions).toEqual(DEFINITIONS);
   });
 });

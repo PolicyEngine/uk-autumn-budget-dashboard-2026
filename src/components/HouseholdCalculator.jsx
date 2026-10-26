@@ -816,6 +816,8 @@ function HouseholdCalculator({
     presetPolicies,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
+    presetDefinitions,
     basisYear,
     enabled: placed !== null,
   });

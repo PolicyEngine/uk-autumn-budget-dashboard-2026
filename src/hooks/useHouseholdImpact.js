@@ -35,10 +35,16 @@ function underEngine(entry, expectedEngine) {
 /**
  * A result already in the session cache for a request key (fetched, or a
  * precomputed example), or null; null too when `expectedEngine` is given and
- * the result's package versions differ. Its headline may be all it has.
+ * the result's package versions differ, or when the result does not report
+ * the approved definition (`approved`) of every one of `policies`, the
+ * measures the key was asked with: the check this hook makes of its own
+ * cache (#136). With no policies there is nothing to check it against, and
+ * no result. Its headline may be all it has.
  */
-export function peekHouseholdImpact(key, expectedEngine = null) {
-  return underEngine(cache.get(key), expectedEngine)?.data ?? null;
+export function peekHouseholdImpact(key, expectedEngine, approved, policies) {
+  const data = underEngine(cache.get(key), expectedEngine)?.data ?? null;
+  if (!data || !Array.isArray(policies) || policies.length === 0) return null;
+  return definitionRefusals(approved ?? {}, data.definitions ?? null, policies).length === 0 ? data : null;
 }
 
 /** Empty the session cache (for tests). */
