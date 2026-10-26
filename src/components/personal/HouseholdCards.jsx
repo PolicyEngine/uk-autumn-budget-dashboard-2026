@@ -93,9 +93,9 @@ export function cardFigures(example, byYear, year, catalogue = null) {
 const changeText = (change) => (Math.round(change) === 0 ? "No change" : `${signedMoney(change)} a year`);
 
 // The bars' geometry: each bar BAR wide, PITCH apart, in PLOT of height
-const BAR = 10;
-const PITCH = 15;
-const PLOT = 30;
+const BAR = 12;
+const PITCH = 17;
+const PLOT = 34;
 
 /**
  * The change in each year as bars about a zero line, gains above it and
