@@ -15,7 +15,8 @@ describe("the independent outlook and Budget-day forecast", () => {
   it("keeps baseline figures available without a publication manifest", async () => {
     loadOutlook.mockResolvedValue({ data: original, error: null });
     window.history.replaceState({}, "", "/?tab=living");
-    render(<LivingStandardsTab />);
+    // App asks for them here while Population impact is unavailable
+    render(<LivingStandardsTab withCurrentLaw />);
     expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
   });
@@ -32,7 +33,6 @@ describe("the independent outlook and Budget-day forecast", () => {
       render(<LivingStandardsTab />);
       expect(await screen.findByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: "Forecast changes" })).not.toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: "Baseline outlook" })).toBeInTheDocument();
       expect(document.querySelector(".ls-card")).toBeNull();
       cleanup();
     }), { numRuns: 20 });

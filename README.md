@@ -174,7 +174,7 @@ Settings, service limits and fallbacks are under "Production setup" in [`docs/bu
 
 ## Contributing
 
-Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens. Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
+Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens ([`docs/COLOURS.md`](docs/COLOURS.md), enforced by `src/colourGuard.test.js` and ESLint). Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
 
 ## Licence
 

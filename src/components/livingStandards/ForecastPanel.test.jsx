@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -60,7 +60,7 @@ function publishedOutlook(base = REAL) {
   return data;
 }
 
-async function renderForecast(data) {
+async function renderForecast(data, props = {}) {
   vi.resetModules();
   vi.stubGlobal(
     "fetch",
@@ -68,7 +68,7 @@ async function renderForecast(data) {
   );
   window.history.replaceState({}, "", "/?tab=living&sub=forecast");
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
-  render(<LivingStandardsTab />);
+  render(<LivingStandardsTab {...props} />);
   if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
   else await screen.findByRole("heading", { name: "Forecast changes" });
 }
@@ -126,13 +126,12 @@ describe("Forecast changes once the Budget forecast is published", () => {
     expect(screen.queryByRole("button", { name: /Chart or table/ })).toBeNull();
   });
 
-  it("keeps navigation back to the independent baseline available", async () => {
-    await renderForecast(publishedOutlook());
-    fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
+  it("keeps the independent baseline available beside the held forecast", async () => {
+    // As App renders it while Population impact (the baseline's usual home)
+    // is unavailable
+    await renderForecast(publishedOutlook(), { withCurrentLaw: true });
     expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
-    // The forecast view stays mounted, hidden, since #128; the open one
-    // holds nothing back
-    expect(within(screen.getByRole("tabpanel")).queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
+    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
   });
 });
