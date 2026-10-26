@@ -41,6 +41,7 @@ from uk_budget_data.publication.publish import (
 )
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import (
+    POVERTY_INEQUALITY_COLUMNS,
     SCATTER_BINS,
     SCATTER_MIN_HOUSEHOLDS,
     SCATTER_ROUND_TO,
@@ -49,6 +50,7 @@ from uk_budget_data.publication.tables import (
     band,
     bin_scatter,
     canonical_csv,
+    change_band,
     parse_csv,
 )
 from uk_budget_data.publication.validate import table_problems
@@ -212,13 +214,8 @@ def test_binned_scatter_holds_no_household_level_data(rows):
                 SCATTER_BINS["income_max"],
             )
             == cell["income_band"]
-            and band(
-                round(r["income_change"], 2),
-                SCATTER_BINS["change_band_width"],
-                SCATTER_BINS["change_min"],
-                SCATTER_BINS["change_max"],
-            )
-            == cell["change_band"]
+            and change_band(round(r["income_change"], 2))
+            == (cell["change_band"], cell["change_band_upper"])
         ]
         # Every published cell pools at least the minimum of households,
         # and its count is their weight, rounded.
@@ -237,7 +234,7 @@ def test_binned_scatter_ignores_row_order(rows, random):
 
 @given(
     st.floats(-1e7, 1e7),
-    st.sampled_from([(5_000.0, 0.0, 150_000.0), (100.0, -2_000.0, 2_000.0)]),
+    st.sampled_from([(5_000.0, 0.0, 150_000.0)]),
 )
 def test_bands_hold_their_values_and_outer_bands_are_open(value, spec):
     width, low, high = spec
@@ -263,7 +260,7 @@ def test_float_noise_around_zero_is_not_a_loss():
         }
     ] * SCATTER_MIN_HOUSEHOLDS
     (cell,) = bin_scatter(rows)
-    assert cell["change_band"] == 0.0
+    assert (cell["change_band"], cell["change_band_upper"]) == (-1.0, 1.0)
 
 
 def test_small_cells_are_left_out():
@@ -284,8 +281,10 @@ def test_small_cells_are_left_out():
             "reform_name": "A",
             "year": 2027,
             "income_band": 20_000.0,
-            "change_band": -100.0,
+            "change_band": -75.0,
+            "change_band_upper": -50.0,
             "households": 100.0 * SCATTER_MIN_HOUSEHOLDS,
+            "income_basis_year": 2027,
         }
     ]
     canonical_csv("household_scatter_binned", enough)
@@ -347,6 +346,65 @@ def test_tables_read_back_complete(world):
     problems = table_problems(tables, key="alpha", years=YEARS)
     assert "distributional_impact: 2027 has 9 rows, expected 10" in problems
     assert "winners_losers: missing 2028" in problems
+
+
+def _with_poverty_inequality(key, values):
+    """make_tables plus the poverty and inequality measures for each year."""
+    tables = make_tables(key, values)
+    tables["poverty_inequality"] = [
+        {
+            "reform_id": row["reform_id"],
+            "reform_name": row["reform_name"],
+            "year": row["year"],
+            **{
+                column: row["poverty_change_pp"] * (index + 1)
+                for index, (column, _) in enumerate(POVERTY_INEQUALITY_COLUMNS)
+            },
+        }
+        for row in tables["metrics"]
+    ]
+    return tables
+
+
+def test_poverty_inequality_is_receipted_and_verified(world):
+    tables = _with_poverty_inequality("alpha", VALUES)
+    reference = world.write("alpha", VALUES, tables=tables)
+    document = read_receipt(reference.path)
+    assert "poverty_inequality.csv" in document["dashboard"]["files"]
+    assert file_problems(reference.path, document) == []
+    read = read_tables(reference.path)
+    assert read["poverty_inequality"] == tables["poverty_inequality"]
+    assert table_problems(read, key="alpha", years=YEARS) == []
+    # Its metrics.csv is byte for byte the one written without the table
+    plain = world.write("beta", VALUES)
+    assert (
+        "poverty_inequality.csv"
+        not in read_receipt(plain.path)["dashboard"]["files"]
+    )
+    assert (reference.path / "metrics.csv").read_bytes() == (
+        plain.path / "metrics.csv"
+    ).read_bytes().replace(b"beta,Beta", b"alpha,Alpha")
+    target = reference.path / "poverty_inequality.csv"
+    target.write_bytes(target.read_bytes().replace(b"-0.1,", b"-0.9,", 1))
+    assert file_problems(reference.path, document) == [
+        "poverty_inequality.csv does not match its recorded digest"
+    ]
+
+
+def test_poverty_inequality_when_present_covers_every_year(world):
+    tables = read_tables(
+        world.write(
+            "alpha", VALUES, tables=_with_poverty_inequality("alpha", VALUES)
+        ).path
+    )
+    tables["poverty_inequality"] = [
+        row for row in tables["poverty_inequality"] if row["year"] != 2028
+    ]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "poverty_inequality: missing 2028"
+    ]
+    del tables["poverty_inequality"]
+    assert table_problems(tables, key="alpha", years=YEARS) == []
 
 
 def test_an_effect_before_the_start_year_is_a_problem(world):
@@ -961,3 +1019,43 @@ def test_a_measure_cannot_use_a_combined_key(world):
             data_root=world.data_root,
             inputs=world.inputs,
         )
+
+
+@given(st.floats(-1e7, 1e7, allow_nan=False))
+def test_change_bands_hold_their_values_and_mirror_about_zero(value):
+    lower, upper = change_band(value)
+    edges = SCATTER_BINS["change_edges"]
+    assert edges == [-edge for edge in reversed(edges)]
+    if abs(value) < 1:
+        assert (lower, upper) == (-1.0, 1.0)
+    elif lower == upper:
+        # Open-ended beyond the outermost edge
+        assert abs(value) >= edges[-1] and lower == math.copysign(
+            edges[-1], value
+        )
+    elif value > 0:
+        assert lower <= value < upper
+    else:
+        assert lower < value <= upper
+    assert change_band(-value) == (
+        (-upper, -lower) if abs(value) >= 1 else (lower, upper)
+    )
+
+
+def test_change_bands_are_the_validators():
+    from uk_budget_data.publication.validate import SCATTER_CHANGE_BANDS
+
+    # Every band a cell can name is one the validator accepts, and the
+    # validator accepts no other.
+    named = {
+        change_band(value)
+        for value in [0.0]
+        + [
+            sign * (edge + offset)
+            for edge in SCATTER_BINS["change_edges"]
+            if edge > 0
+            for offset in (0.0, 0.5)
+            for sign in (1, -1)
+        ]
+    }
+    assert named == SCATTER_CHANGE_BANDS

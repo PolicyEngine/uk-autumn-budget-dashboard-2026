@@ -1,3 +1,4 @@
+import { CHART_COLOURS } from "./chartTheme";
 /**
  * SVG helper utilities for creating and manipulating SVG elements.
  */
@@ -39,7 +40,7 @@ export function createSvgElement(tagName, attributes = {}) {
  */
 export function createSvgText(
   content,
-  { x, y, fontSize, fontWeight = "400", fill = "#374151" },
+  { x, y, fontSize, fontWeight = "400", fill = CHART_COLOURS.text },
 ) {
   const text = createSvgElement("text", {
     x,
@@ -85,7 +86,7 @@ export function createSvgRect({ x, y, width, height, fill }) {
  * @param {number} options.strokeWidth - Stroke width
  * @returns {SVGLineElement}
  */
-export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2 }) {
+export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2, dash }) {
   return createSvgElement("line", {
     x1,
     y1,
@@ -93,6 +94,24 @@ export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2 }) {
     y2,
     stroke,
     "stroke-width": strokeWidth,
+    ...(dash ? { "stroke-dasharray": dash } : {}),
+  });
+}
+
+/**
+ * Create an SVG circle: filled, or a hollow ring when `stroke` is set and
+ * `fill` is "none".
+ *
+ * @param {Object} options - Circle options
+ * @returns {SVGCircleElement}
+ */
+export function createSvgCircle({ cx, cy, r, fill, stroke, strokeWidth = 2 }) {
+  return createSvgElement("circle", {
+    cx,
+    cy,
+    r,
+    fill,
+    ...(stroke ? { stroke, "stroke-width": strokeWidth } : {}),
   });
 }
 

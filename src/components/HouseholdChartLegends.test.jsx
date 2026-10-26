@@ -1,0 +1,199 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
+import DistributionalChart from "./DistributionalChart";
+import WaterfallChart from "./WaterfallChart";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
+import { POLICY_DETAILS } from "../utils/policyDetails";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+
+// The household decile charts must list every selected measure in their
+// legend, £0 ones too (greyed out, with the reason under the chart): a
+// measure that is £0 for households by design, as the employer NI relief
+// is, once disappeared from the key.
+
+vi.mock("recharts", async () => {
+  const actual = await vi.importActual("recharts");
+  const { cloneElement } = await import("react");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }) => (
+      <div style={{ width: 800, height: 480 }}>{cloneElement(children, { width: 800, height: 480 })}</div>
+    ),
+  };
+});
+
+const EMPLOYER_NI = "employer_ni_relief_under_25s";
+
+/** A published CSV under public/data, as rows of strings. */
+function publishedRows(file) {
+  const [header, ...lines] = readFileSync(path.join(process.cwd(), "public", "data", file), "utf8")
+    .trim()
+    .split("\n");
+  const keys = header.split(",");
+  return lines.map((line) => Object.fromEntries(line.split(",").map((value, i) => [keys[i], value])));
+}
+
+// #185 on #104: a catalogue built from the flat files' own measures, as a
+// manifest with every one approved and every artifact verified (test only)
+const COMBINED = "autumn_budget_2026_combined";
+const YEARS = [2026, 2027, 2028, 2029, 2030, 2031];
+const budget = publishedRows("budgetary_impact.csv");
+const ALL = [...new Set(budget.map((row) => row.reform_id))].filter((id) => id !== COMBINED);
+const nameOf = (id) => budget.find((row) => row.reform_id === id).reform_name;
+const entry = (extra) => ({ status: "approved", years: YEARS, unsupported_years: [], ...extra });
+// A measure's card details, and the description the publication carries
+// for it (reforms.py's, which each entry records as `writtenFor`)
+const detailsOf = (id) => POLICY_DETAILS.find((policy) => policy.id === id);
+const catalogue = buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(ALL.map((id) => [id, entry({ name: nameOf(id), description: detailsOf(id)?.writtenFor, outputs_sha256: "a".repeat(64) })])),
+    combined: { [COMBINED]: entry({ name: nameOf(COMBINED), measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) }) },
+  },
+  budgetary: budget,
+  tablesByKey: Object.fromEntries([...ALL, COMBINED].map((id) => [id, { budgetary_impact: budget.filter((row) => row.reform_id === id) }])),
+});
+const render = (element) => renderReact(
+  <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
+);
+
+// The measure key's chips (MeasureKey): one per measure, its full name in
+// the title; muted ones folded under "with no effect" but still listed
+const keyChips = (container) => [...container.querySelectorAll(".measure-key [data-measure]")];
+const legendLabels = (container) => keyChips(container).map((node) => node.title);
+
+describe("legendMembership", () => {
+  it("lists every selected measure, in the legends' order, muted where it has no effect", () => {
+    const members = legendMembership(catalogue, ALL, (id) => id !== EMPLOYER_NI);
+    expect(members.map((member) => member.id).sort()).toEqual([...ALL].sort());
+    expect(members.filter((member) => member.muted).map((member) => member.id)).toEqual([EMPLOYER_NI]);
+  });
+
+  it("leaves out measures that are not selected", () => {
+    const members = legendMembership(catalogue, [EMPLOYER_NI], () => false);
+    expect(members).toEqual([
+      { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", description: detailsOf(EMPLOYER_NI).writtenFor, muted: true },
+    ]);
+  });
+
+  it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
+    expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
+    const whd = detailsOf("warm_home_discount_top_up");
+    expect(inForceIn(whd, 2026)).toBe(true);
+    expect(inForceIn(whd, 2027)).toBe(false);
+    expect(zeroReason(catalogue.byId.get("warm_home_discount_top_up"), 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
+    const freeze = detailsOf("threshold_freeze_2031_32");
+    expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
+    const fuelVat = detailsOf("road_fuel_vat_cut");
+    expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
+  });
+
+  it("never calls a measure out of force from details written for another description of it", () => {
+    // Changed since its entry was written (on Budget day, say): its window
+    // may no longer hold, so it is not used
+    const changed = { ...catalogue.byId.get("warm_home_discount_top_up"), description: "The Warm Home Discount rises for two winters." };
+    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households shown" });
+  });
+});
+
+describe.each([
+  ["relative", DistributionalChart, "distributional_impact.csv"],
+  ["absolute", WaterfallChart, "winners_losers.csv"],
+])("%s impact by decile, published data", (_, Chart, file) => {
+  const rows = publishedRows(file);
+
+  it.each([2027, 2028, 2029, 2030, 2031])("lists all nine selected measures in %s", (year) => {
+    const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={year} />);
+    expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
+  });
+
+  it("greys out the employer NI relief and says why under the chart", () => {
+    const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
+    const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
+    expect(item.className).toContain("is-muted");
+    // Folded away until "+3 with no effect" is opened
+    const more = within(container).getByRole("button", { name: "+3 with no effect" });
+    expect(item.closest("ul")).not.toBeVisible();
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(item.closest("ul")).toBeVisible();
+    // The card's own "About this chart" at its foot, closed until opened
+    const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+    const toggle = within(moreInfo).getByRole("button", { name: "About this chart" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(container.querySelector("[data-zero-measure]")).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    within(moreInfo).getByText("3 selected measures are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
+    // One disclosure per card: no second style
+    expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
+    const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
+    expect(employer.textContent).toMatch(/Wages are held fixed/);
+    expect(within(employer).getByRole("link", { name: "Public finances" })).toHaveAttribute(
+      "href",
+      "?tab=dashboard&sub=finances",
+    );
+    // The Warm Home Discount top-up is paid in 2026-27 only
+    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).not.toBeNull();
+    // A measure with an effect is neither greyed out nor in the note
+    expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
+    expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
+    // Closed, the title and a preview of what is inside; the £0 measures are a caveat
+    expect(moreInfo.querySelector(".disclosure-preview")).toHaveTextContent("How it's calculated · Caveats");
+    expect(moreInfo.querySelector(".disclosure-chip")).toBeNull();
+  });
+});
+
+describe("ChartMoreInfo", () => {
+  const members = [
+    { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", muted: true },
+    { id: "fuel_duty_rise_deferral", key: "measure:fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
+  ];
+
+  it("says one measure in the singular, and lists only the £0 ones", () => {
+    const { container } = render(<ChartMoreInfo members={members} year={2028} />);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+    expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
+      EMPLOYER_NI,
+    ]);
+  });
+
+  it("renders nothing when every measure has an effect and there is nothing else to say", () => {
+    const { container } = render(<ChartMoreInfo members={[members[1]]} year={2028} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("holds a card's other notes in the same panel", () => {
+    render(
+      <ChartMoreInfo members={members} year={2028}>
+        <p>Single years of age rest on fewer households.</p>
+      </ChartMoreInfo>,
+    );
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    screen.getByText("Single years of age rest on fewer households.");
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+  });
+});
+
+describe("ChartMoreInfo's employer NI revenue", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("quotes the verified revenue for the year shown", async () => {
+    // From the catalogue's verified budgetary_impact rows (#104), no fetch
+    const value = Number(budget.find((row) => row.reform_id === EMPLOYER_NI && row.year === "2027").value);
+    render(
+      <ChartMoreInfo
+        members={[{ id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true }]}
+        year={2027}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(
+      await screen.findByText(new RegExp(`about £${Math.abs(value).toFixed(1)}bn in 2027-28`)),
+    ).toBeInTheDocument();
+  });
+});

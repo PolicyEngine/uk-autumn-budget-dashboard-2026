@@ -10,11 +10,11 @@ Charts include:
 
 Usage:
     python scripts/generate_blog_charts.py --all
-    python scripts/generate_blog_charts.py fuel_duty_freeze
+    python scripts/generate_blog_charts.py fuel_duty_rise_deferral
 
 Examples:
     python scripts/generate_blog_charts.py --all
-    python scripts/generate_blog_charts.py fuel_duty_freeze
+    python scripts/generate_blog_charts.py fuel_duty_rise_deferral
 """
 
 import argparse

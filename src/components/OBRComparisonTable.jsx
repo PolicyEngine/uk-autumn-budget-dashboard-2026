@@ -1,73 +1,118 @@
 import React, { useState, useEffect } from "react";
+import SwapTransition from "./SwapTransition";
 import "./OBRComparisonTable.css";
+import PillSelect from "./PillSelect";
+import ViewToggle from "./ViewToggle";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import UnavailableNotice from "./publication/UnavailableNotice";
+import OBRDumbbellChart from "./OBRDumbbellChart";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { parseDashboardCsv } from "../utils/loadDashboard";
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import Disclosure from "./Disclosure";
+import SourceLink from "./SourceLink";
 
-function OBRComparisonTable({ selectedPolicies }) {
-  const [comparisonData, setComparisonData] = useState(null);
-  const [showBehavioural, setShowBehavioural] = useState(true);
+/** What the comparison says while the OBR has not costed the selected measures. */
+export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
 
+/**
+ * The OBR's and PolicyEngine's figures by measure and year, for displayable
+ * measures only: the OBR's from obr_comparison.csv once it verifies against
+ * the approved results, PolicyEngine's from the catalogue's verified
+ * budgetary tables. Null while loading. `{ unavailable: true }` when no OBR
+ * file can be bound, which is always today: obr_comparison.csv is not among
+ * the flat files a view may read (FLAT_VIEW_FILES in
+ * utils/publication/flat.js), however its OBR columns are filled.
+ */
+export function useObrComparisonData(enabled = true) {
+  const catalogue = useMeasureCatalogue();
+  const [loaded, setLoaded] = useState(null);
   useEffect(() => {
-    // Fetch both OBR comparison data and PolicyEngine budgetary impact data
-    Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/obr_comparison.csv`).then((res) => res.text()),
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`).then((res) => res.text()),
-    ])
-      .then(([obrCsvText, peCsvText]) => {
-        // Parse OBR data
-        const obrLines = obrCsvText.trim().split("\n");
-        const obrHeaders = obrLines[0].split(",");
-        const staticIdx = obrHeaders.indexOf("obr_static_value");
-        const behaviouralIdx = obrHeaders.indexOf("obr_post_behavioural_value");
-
-        const obrData = {};
-        for (let i = 1; i < obrLines.length; i++) {
-          const values = obrLines[i].split(",");
-          const reform_id = values[0];
-          const year = parseInt(values[2]);
-          const key = `${reform_id}_${year}`;
+    if (!enabled) return undefined;
+    let live = true;
+    loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
+      .then((obrCsvText) => {
+        const obrData = Object.create(null);
+        const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+        for (const row of parseDashboardCsv(obrCsvText)) {
+          const key = `${row.reform_id}_${row.year}`;
           obrData[key] = {
-            reform_id,
-            reform_name: values[1],
-            year,
-            obr_static: staticIdx >= 0 ? parseFloat(values[staticIdx]) : null,
-            obr_behavioural:
-              behaviouralIdx >= 0 ? parseFloat(values[behaviouralIdx]) : null,
+            reform_id: row.reform_id,
+            reform_name: row.reform_name,
+            year: Number(row.year),
+            obr_static: numeric(row.obr_static_value),
+            obr_behavioural: numeric(row.obr_post_behavioural_value),
           };
         }
-
-        // Parse PolicyEngine budgetary impact data
-        const peLines = peCsvText.trim().split("\n");
-        const peHeaders = peLines[0].split(",");
-        const reformIdIdx = peHeaders.indexOf("reform_id");
-        const yearIdx = peHeaders.indexOf("year");
-        const valueIdx = peHeaders.indexOf("value");
-
-        for (let i = 1; i < peLines.length; i++) {
-          const values = peLines[i].split(",");
-          const reform_id = values[reformIdIdx];
-          const year = parseInt(values[yearIdx]);
-          const pe_value = parseFloat(values[valueIdx]);
-          const key = `${reform_id}_${year}`;
-
-          if (obrData[key]) {
-            obrData[key].policyengine_value = pe_value;
-          }
+        for (const row of Object.values(catalogue.tablesByKey ?? {}).flatMap((tables) => tables.budgetary_impact ?? [])) {
+          const key = `${row.reform_id}_${row.year}`;
+          if (!obrData[key]) obrData[key] = {
+            reform_id: row.reform_id,
+            reform_name: row.reform_name,
+            year: Number(row.year),
+            obr_static: null,
+            obr_behavioural: null,
+          };
+          obrData[key].policyengine_value = numeric(row.value);
         }
 
         // Convert to array
         const data = Object.values(obrData);
-        setComparisonData(data);
+        if (live) setLoaded({
+          catalogue,
+          rows: data.filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year)),
+        });
       })
-      .catch((err) => console.error("Error loading comparison data:", err));
-  }, []);
+      .catch(() => { if (live) setLoaded({ catalogue, unavailable: true }); });
+    return () => { live = false; };
+  }, [enabled, catalogue]);
+  // Nothing loaded for an earlier catalogue is shown
+  return loaded?.catalogue === catalogue ? loaded : null;
+}
 
-  if (!comparisonData || selectedPolicies.length === 0) return null;
+/** Whether the OBR has a figure for any of the selected measures. */
+export function hasObrFigures(rows, selectedPolicies) {
+  return (rows ?? []).some(
+    (row) =>
+      selectedPolicies.includes(row.reform_id) &&
+      (Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural)),
+  );
+}
+
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data }) {
+  const catalogue = useMeasureCatalogue();
+  const { byId } = catalogue;
+  const fetched = useObrComparisonData(!data);
+  const comparisonData = data ?? fetched;
+  // Static by default: like for like with PolicyEngine's static estimates
+  const [showBehavioural, setShowBehavioural] = useState(false);
+  // The comparison shows as a chart or as a table, never both
+  const [view, setView] = useState("chart");
+  const showTable = view === "table";
+
+  if (selectedPolicies.length === 0) return null;
+  // Today no OBR file can be bound, so this is what shows
+  if (comparisonData?.unavailable) return <UnavailableNotice reason="The OBR comparison is unavailable: no OBR costings for this Budget are bound to the approved results." />;
+  if (!comparisonData) return null;
 
   // Filter to selected policies
-  const filteredData = comparisonData.filter((row) =>
-    selectedPolicies.includes(row.reform_id),
-  );
+  const filteredData = comparisonData.rows.filter((row) => selectedPolicies.includes(row.reform_id));
 
   if (filteredData.length === 0) return null;
+
+  // The OBR's costings are joined by measure id. Until it costs these
+  // measures (with the Budget on 28 October), none has an OBR figure, so
+  // nothing is paired: the comparison says when it will be available.
+  const hasFigures = hasObrFigures(filteredData, selectedPolicies);
+  if (!hasFigures) {
+    return (
+      <div className="obr-comparison-section">
+        <p className="comparison-description obr-unavailable">
+          {OBR_UNAVAILABLE}
+        </p>
+      </div>
+    );
+  }
 
   // Check if we have both static and behavioural data
   const hasBothTypes = filteredData.some(
@@ -75,11 +120,11 @@ function OBRComparisonTable({ selectedPolicies }) {
   );
 
   // Group by policy
-  const policiesMap = {};
+  const policiesMap = Object.create(null);
   filteredData.forEach((row) => {
     if (!policiesMap[row.reform_id]) {
       policiesMap[row.reform_id] = {
-        name: row.reform_name,
+        name: byId.get(row.reform_id)?.name ?? row.reform_name,
         years: {},
       };
     }
@@ -90,13 +135,18 @@ function OBRComparisonTable({ selectedPolicies }) {
     };
   });
 
-  const years = [2026, 2027, 2028, 2029, 2030];
-  const policies = Object.entries(policiesMap);
+  // Every year shown; a year the file does not cover reads "—"
+  const years = DISPLAY_YEARS;
+  const policies = catalogue.measures
+    .filter((measure) => policiesMap[measure.id])
+    .map((measure) => [measure.id, policiesMap[measure.id]]);
 
+  // Signed with a true minus; a value that rounds to zero reads "£0.0bn"
   const formatValue = (value) => {
     if (value === null || value === undefined || isNaN(value)) return "—";
-    const sign = value >= 0 ? "" : "-";
-    return `${sign}£${Math.abs(value).toFixed(1)}bn`;
+    const rounded = Math.abs(value).toFixed(1);
+    const sign = value < 0 && rounded !== "0.0" ? "\u2212" : "";
+    return `${sign}£${rounded}bn`;
   };
 
   const getDifferenceClass = (pe, obr) => {
@@ -120,38 +170,51 @@ function OBRComparisonTable({ selectedPolicies }) {
 
   return (
     <div className="obr-comparison-section">
-      <h2>PolicyEngine vs OBR comparison</h2>
-      <p className="comparison-description">
-        This table compares PolicyEngine's microsimulation estimates with the
-        OBR's official costings from the November 2025 Economic and Fiscal
-        Outlook. Values show annual budgetary impact in billions of pounds.
-        Positive values indicate revenue for the Government; negative values
-        indicate costs.
-      </p>
+      {/* Intro across the full width; the controls sit below it */}
+      <div className="obr-intro-row">
+        <p className="comparison-description">
+          PolicyEngine's static estimates against{" "}
+          <SourceLink source="obr_budget_2026_costings" />, £bn a year; positive values raise revenue.
+        </p>
+      </div>
 
-      {hasBothTypes && (
-        <div className="obr-toggle-container">
-          <span className="toggle-label">
-            Compare PolicyEngine (static) with OBR:
-          </span>
-          <div className="toggle-buttons">
-            <button
-              className={`toggle-btn ${!showBehavioural ? "active" : ""}`}
-              onClick={() => setShowBehavioural(false)}
-            >
-              Static
-            </button>
-            <button
-              className={`toggle-btn ${showBehavioural ? "active" : ""}`}
-              onClick={() => setShowBehavioural(true)}
-            >
-              Post-behavioural
-            </button>
-          </div>
-        </div>
+      <div className="obr-controls">
+        {hasBothTypes && (
+          <PillSelect
+            variant="light"
+            name="OBR basis"
+            prefix="OBR basis"
+            value={showBehavioural ? "post" : "static"}
+            onChange={(value) => setShowBehavioural(value === "post")}
+            options={[
+              { value: "static", label: "Static" },
+              { value: "post", label: "Post-behavioural" },
+            ]}
+          />
+        )}
+        {/* Chart or table: the dashboard's icon switch, at the row's right
+            (this comparison sits in a card's foot, with no header of its own) */}
+        <span className="obr-view-toggle">
+          <ViewToggle value={view} onChange={setView} name="the OBR comparison" />
+        </span>
+      </div>
+
+      {/* Chart or table: the new one fades in, the height eases */}
+      <SwapTransition swapKey={view}>
+      {!showTable && (
+        <OBRDumbbellChart
+          policies={policies}
+          year={selectedYear}
+          showBehavioural={showBehavioural}
+        />
       )}
 
-      <div className="comparison-table-wrapper">
+      {/* The table and its key replace the chart when "Table" is chosen */}
+      <div
+        id="obr-comparison-table"
+        className="comparison-table-wrapper"
+        hidden={!showTable}
+      >
         <table className="comparison-table">
           <thead>
             <tr>
@@ -165,8 +228,8 @@ function OBRComparisonTable({ selectedPolicies }) {
             <tr>
               {years.map((year) => (
                 <React.Fragment key={year}>
-                  <th className="source-header pe">PE</th>
-                  <th className="source-header obr">OBR</th>
+                  <th className="source-header pe">PolicyEngine (static)</th>
+                  <th className="source-header obr">OBR ({showBehavioural ? "post-behavioural" : "static"})</th>
                 </React.Fragment>
               ))}
             </tr>
@@ -186,9 +249,7 @@ function OBRComparisonTable({ selectedPolicies }) {
                       >
                         {formatValue(pe)}
                       </td>
-                      <td
-                        className={`value-cell obr ${getDifferenceClass(pe, obr)}`}
-                      >
+                      <td className="value-cell obr">
                         {formatValue(obr)}
                       </td>
                     </React.Fragment>
@@ -199,41 +260,43 @@ function OBRComparisonTable({ selectedPolicies }) {
           </tbody>
         </table>
       </div>
+      </SwapTransition>
 
-      <div className="comparison-legend">
+      <p className="comparison-legend" hidden={!showTable}>
+        Difference from OBR:{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-small"></span>
-          Difference &lt; £0.5bn
-        </span>
+          <span className="legend-dot diff-small" aria-hidden="true"></span>
+          under £0.5bn
+        </span>{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-medium"></span>
-          Difference £0.5-2bn
-        </span>
+          <span className="legend-dot diff-medium" aria-hidden="true"></span>
+          £0.5–2bn
+        </span>{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-large"></span>
-          Difference &gt; £2bn
+          <span className="legend-dot diff-large" aria-hidden="true"></span>
+          over £2bn
         </span>
-      </div>
-
-      <p className="comparison-note">
-        <strong>Note:</strong> PolicyEngine produces static microsimulation
-        estimates that do not include behavioural responses. The OBR provides
-        both static and post-behavioural costings.{" "}
-        {showBehavioural
-          ? "Post-behavioural costings include effects like tax avoidance, reduced consumption, and price pass-through."
-          : "Static costings assume no change in taxpayer behaviour."}{" "}
-        See{" "}
-        <a
-          href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          OBR EFO November 2025
-        </a>{" "}
-        for full methodology.
       </p>
     </div>
   );
 }
 
 export default OBRComparisonTable;
+
+/**
+ * The OBR comparison at the foot of the Public finances card: an expander
+ * once the OBR has costed any selected measure, and until then one muted
+ * line saying when it will be (an expander that opens to "not yet" reads
+ * as broken).
+ */
+export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
+  const data = useObrComparisonData();
+  if (!data || selectedPolicies.length === 0) return null;
+  // No verified OBR figures for the selection: nothing at all
+  if (data.unavailable || !hasObrFigures(data.rows, selectedPolicies)) return null;
+  return (
+    <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />
+    </Disclosure>
+  );
+}

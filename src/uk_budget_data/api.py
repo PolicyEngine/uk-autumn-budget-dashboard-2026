@@ -1,30 +1,31 @@
 """FastAPI backend for personal impact calculations.
 
 This module provides a REST API endpoint for calculating how Autumn Budget
-policies affect individual households over time.
+policies affect individual households.
 """
 
+import copy
+import functools
 import json
 import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import anyio
 import numpy as np
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from uk_budget_data.lifecycle_calculator import (
-    LifecycleInputs,
-    run_lifecycle_model,
-)
+from uk_budget_data import definitions, household_impact
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
+    household_workers,
     stop_workers,
 )
 from uk_budget_data.runtime_identity import runtime_identity
@@ -168,6 +169,31 @@ def get_calculator() -> PersonalImpactCalculator:
 # --concurrency.
 CALCULATIONS = anyio.CapacityLimiter(1)
 
+
+def household_request_limit() -> int:
+    """How many household-impact requests an instance works on at once.
+
+    With worker processes, ``HOUSEHOLD_CONCURRENT_REQUESTS`` (default 4):
+    their runs share the instance's worker slots fairly
+    (``personal_impact.FairSlots``), so a later visitor's headline is not
+    held behind an earlier visitor's whole calculation, while CPU and
+    memory stay bounded by the slots. Without workers every run is in this
+    process, so one request at a time.
+    """
+    # On Modal (HOUSEHOLD_RUNNER=modal) the runs happen in their own
+    # containers, not in this process, so requests can overlap.
+    modal_runner = os.environ.get("HOUSEHOLD_RUNNER") == "modal"
+    if household_workers() <= 1 and not modal_runner:
+        return 1
+    try:
+        return max(1, int(os.environ.get("HOUSEHOLD_CONCURRENT_REQUESTS", 4)))
+    except ValueError:
+        return 4
+
+
+# The household route's own limiter (see household_request_limit).
+HOUSEHOLD_REQUESTS = anyio.CapacityLimiter(household_request_limit())
+
 # Where a container's cgroup reports its peak memory: cgroup v2, then v1.
 MEMORY_PEAK_FILES = (
     Path("/sys/fs/cgroup/memory.peak"),
@@ -176,8 +202,8 @@ MEMORY_PEAK_FILES = (
 
 
 def memory_peak_bytes() -> Optional[int]:
-    """The container's peak memory use so far (its lifetime high-water
-    mark, page cache included), from its cgroup, or None where no cgroup
+    """The container's peak memory use so far (its high-water mark since it
+    started, page cache included), from its cgroup, or None where no cgroup
     reports it (outside a container)."""
     for path in MEMORY_PEAK_FILES:
         try:
@@ -269,6 +295,306 @@ async def calculate_personal_impact_stream(data: APIHouseholdInput):
         raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
 
 
+# --- One household, one year: POST /api/household-impact -------------------
+
+# The largest amount a field takes, in £ a year
+MAX_AMOUNT = 10_000_000
+
+
+class HouseholdChildRequest(BaseModel):
+    """A child: a dependant under policyengine-uk's rules, which count
+    everyone under 16 and a 16- to 19-year-old in full-time non-advanced
+    education (school or college). ``in_education`` says which a 16- to
+    19-year-old is; left out, policyengine-uk places a 16- or 17-year-old in
+    school and an 18- or 19-year-old at university (not a dependant)."""
+
+    model_config = {"extra": "forbid"}
+
+    age: int = Field(..., ge=0, le=household_impact.OLDEST_CHILD_AGE)
+    in_education: Optional[bool] = None
+
+
+class HouseholdAnswersRequest(BaseModel):
+    """A household, as the Personal impact view asks about it. Amounts are
+    £ a year, except the monthly rent."""
+
+    model_config = {"extra": "forbid"}
+
+    age: int = Field(default=40, ge=16, le=100)
+    employment_income: float = Field(default=35_000, ge=0, le=MAX_AMOUNT)
+    student_loan_plan: Literal[household_impact.STUDENT_LOAN_PLANS] = "NONE"
+    has_partner: bool = False
+    partner_age: int = Field(default=40, ge=16, le=100)
+    partner_employment_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    partner_student_loan_plan: Literal[household_impact.STUDENT_LOAN_PLANS] = (
+        "NONE"
+    )
+    children: list[HouseholdChildRequest] = Field(
+        default_factory=list, max_length=10
+    )
+    region: Literal[household_impact.REGIONS] = "LONDON"
+    claims_universal_credit: bool = False
+    tenure: Literal[household_impact.TENURES] = "OWNED_WITH_MORTGAGE"
+    monthly_rent: float = Field(default=0, ge=0, le=100_000)
+    brma: Optional[Literal[household_impact.BRMAS]] = Field(
+        default=None,
+        description=(
+            "Broad Rental Market Area, for Local Housing Allowance. Left "
+            "out: the region's BRMA with the most private-rented households "
+            "(policyengine-uk's default)."
+        ),
+    )
+    local_authority: Optional[Literal[household_impact.LOCAL_AUTHORITIES]] = (
+        Field(
+            default=None,
+            description=(
+                "Local authority. policyengine-uk reads it only for the few "
+                "Council Tax Reduction schemes it models, so it matters only "
+                "with council_tax entered; it does not choose the BRMA. Left "
+                "out: a local authority in the region's default BRMA (none "
+                "with a modelled working-age scheme)."
+            ),
+        )
+    )
+    council_tax: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100_000,
+        description=(
+            "Council Tax a year, as billed. Left out: estimated from "
+            "council_tax_band and the region's average Band D for 2026-27, "
+            "grown to the year (none in Northern Ireland)."
+        ),
+    )
+    council_tax_band: Literal[household_impact.COUNCIL_TAX_BANDS] = "D"
+    monthly_childcare: float = Field(
+        default=0,
+        ge=0,
+        le=10_000,
+        description="Childcare costs a month, with children only",
+    )
+    salary_year: int = Field(
+        default=household_impact.SALARY_YEAR,
+        description=(
+            "The year the salaries are entered for; they are grown to the "
+            "chosen year with the OBR average earnings index"
+        ),
+    )
+    dividend_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    savings_interest_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    property_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    private_pension_income: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Private and workplace pensions in payment, £ a year (not the "
+            "State Pension), as policyengine-uk's private_pension_income"
+        ),
+    )
+    partner_private_pension_income: float = Field(
+        default=0, ge=0, le=MAX_AMOUNT
+    )
+    petrol_spending: float = Field(default=0, ge=0, le=100_000)
+    diesel_spending: float = Field(default=0, ge=0, le=100_000)
+    electricity_spending: float = Field(
+        default=household_impact.ELECTRICITY_SPENDING,
+        ge=0,
+        le=100_000,
+        description=(
+            "Domestic electricity, £ a year including VAT, for the zero VAT "
+            "on domestic electricity. Left out: the average UK household's, "
+            "£20.00 a week (ONS, Family spending in the UK, April 2024 to "
+            "March 2025, Table A1, 4.4.1)."
+        ),
+    )
+    salary_sacrifice_pension_contributions: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Pension paid by salary sacrifice, £ a year. employment_income "
+            "is pay after the sacrifice, as policyengine-uk reads it: the "
+            "sacrifice changes no figure until the £2,000 cap from April "
+            "2029, which returns the excess to pay"
+        ),
+    )
+    state_pension: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100_000,
+        description=(
+            "State Pension, £ a year in the chosen year (not grown like the "
+            "salary), read only at State Pension age. Left out: the full "
+            "new State Pension for the chosen year, from policyengine-uk's "
+            "parameter."
+        ),
+    )
+    partner_state_pension: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100_000,
+        description="The partner's State Pension, as state_pension",
+    )
+
+    def answers(self) -> household_impact.HouseholdAnswers:
+        values = self.model_dump()
+        values["children"] = tuple(
+            household_impact.Child(**child) for child in values["children"]
+        )
+        return household_impact.HouseholdAnswers(**values)
+
+
+class HouseholdImpactRequest(BaseModel):
+    """A household, a policy year, and the measures to compare it under
+    (every measure the calculation knows when none are named)."""
+
+    model_config = {"extra": "forbid"}
+
+    year: int
+    policies: Optional[list[str]] = Field(default=None, min_length=1)
+    household: HouseholdAnswersRequest = Field(
+        default_factory=HouseholdAnswersRequest
+    )
+    include: list[Literal[household_impact.PARTS]] = Field(
+        default_factory=lambda: list(household_impact.PARTS),
+        description=(
+            "The slower parts to compute besides the headline and the "
+            "programmes: by_policy (one more run per measure) and sweep "
+            "(two runs). Send [] for the headline alone, then ask for the "
+            "rest."
+        ),
+    )
+
+    @field_validator("household")
+    @classmethod
+    def _salary_year(cls, household: "HouseholdAnswersRequest"):
+        if household.salary_year not in POLICY_YEARS:
+            raise ValueError(
+                f"household.salary_year: choose a year from "
+                f"{POLICY_YEARS[0]} to {POLICY_YEARS[-1]}"
+            )
+        return household
+
+    @model_validator(mode="after")
+    def _salary_not_after_year(self):
+        if self.household.salary_year > self.year:
+            raise ValueError(
+                "household.salary_year must not be after year: salaries are "
+                "grown forward to the chosen year"
+            )
+        return self
+
+    @field_validator("year")
+    @classmethod
+    def _policy_year(cls, year: int) -> int:
+        if year not in POLICY_YEARS:
+            raise ValueError(
+                f"Choose a year from {POLICY_YEARS[0]} to {POLICY_YEARS[-1]}"
+            )
+        return year
+
+    @field_validator("policies")
+    @classmethod
+    def _known_measures(cls, policies: Optional[list[str]]):
+        if policies is None:
+            return policies
+        unknown = sorted(set(policies) - set(household_impact.measure_ids()))
+        if unknown:
+            raise ValueError(f"Unknown measures: {', '.join(unknown)}")
+        return policies
+
+
+@functools.lru_cache(maxsize=64)
+def _cached_household_impact(request_json: str) -> dict:
+    """Answers by request, so moving the year or measures back and forth
+    reuses them. A refused request raises, and is not kept."""
+    data = HouseholdImpactRequest.model_validate_json(request_json)
+    return household_impact.calculate_household_impact(
+        data.household.answers(),
+        data.policies or household_impact.measure_ids(),
+        data.year,
+        include=tuple(data.include),
+        workers=household_workers(),
+    )
+
+
+def _household_impact(
+    data: HouseholdImpactRequest, requested: Optional[dict] = None
+) -> dict:
+    # Canonical JSON: the same request in another key order is one entry.
+    # The definitions are not part of it: the answer doesn't depend on
+    # them.
+    key = json.dumps(data.model_dump(mode="json"), sort_keys=True)
+    # Before the calculation: with one worker its runs share this process,
+    # and a warning from a bound module would leave it unbindable
+    # (uk_budget_data.definitions).
+    bound = definitions.definitions_for(
+        requested or {}, household_impact.measure_ids()
+    )
+    results = copy.deepcopy(_cached_household_impact(key))
+    results["definitions"] = bound
+    return results
+
+
+@app.post("/api/household-impact")
+async def calculate_household_impact(
+    data: HouseholdImpactRequest,
+    response: Response,
+    definition: list[str] = Query(
+        default=[],
+        description=(
+            "<measure id>:<commit>, once per measure: the commit its "
+            "approved receipt was made at. The answer's definitions give "
+            "each one's baseline and reform identities recomputed at that "
+            "commit from this build's code, to compare with the receipt "
+            "(uk_budget_data.definitions). A query parameter, so the body "
+            "a build without them refuses is unchanged."
+        ),
+    ),
+):
+    """One household's net income in one year before and after the
+    selected measures: the headline, each measure's own effect and the
+    interaction residual, the programmes, and the earnings sweep, with the
+    definitions named in ``definition`` (always present; empty when none
+    are named).
+
+    Runs in a worker thread, so ``/api/health`` keeps answering, through
+    its own limiter (``HOUSEHOLD_REQUESTS``): several requests at once
+    share the instance's worker processes run by run
+    (``personal_impact.FairSlots``), so none waits for another's whole
+    calculation and the processes, and so memory, stay bounded. A
+    calculation that passes its time limit is a 504. Out-of-range answers
+    are refused with a 422 naming the field.
+    """
+    try:
+        requested = definitions.parse_requested(definition)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        received = time.perf_counter()
+        results, calculating = await anyio.to_thread.run_sync(
+            timed,
+            functools.partial(_household_impact, requested=requested),
+            data,
+            limiter=HOUSEHOLD_REQUESTS,
+        )
+        response.headers["Server-Timing"] = server_timing(
+            calculating,
+            time.perf_counter() - received - calculating,
+            memory_peak_bytes(),
+        )
+        return results
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except TimeoutError as e:
+        raise HTTPException(
+            status_code=504, detail=f"Calculation timed out: {e}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
@@ -279,90 +605,6 @@ async def health_check():
 async def version():
     """Report this build's identity for deployed-route household checks."""
     return runtime_identity()
-
-
-class APILifecycleInput(BaseModel):
-    """API request model for lifecycle calculator inputs."""
-
-    current_age: int = Field(
-        default=30, ge=18, le=80, description="Current age"
-    )
-    current_salary: float = Field(
-        default=40_000, ge=0, description="Current annual salary in 2025 (GBP)"
-    )
-    retirement_age: int = Field(
-        default=67, ge=55, le=100, description="Retirement age"
-    )
-    life_expectancy: int = Field(
-        default=85, ge=60, le=100, description="Life expectancy"
-    )
-    student_loan_debt: float = Field(
-        default=50_000, ge=0, description="Student loan debt at graduation"
-    )
-    salary_sacrifice_per_year: float = Field(
-        default=5_000,
-        ge=0,
-        description="Annual salary sacrifice pension contribution",
-    )
-    rail_spending_per_year: float = Field(
-        default=2_000, ge=0, description="Annual rail spending"
-    )
-    petrol_spending_per_year: float = Field(
-        default=1_500, ge=0, description="Annual petrol spending"
-    )
-    dividends_per_year: float = Field(
-        default=2_000, ge=0, description="Annual dividend income"
-    )
-    savings_interest_per_year: float = Field(
-        default=1_500, ge=0, description="Annual savings interest income"
-    )
-    property_income_per_year: float = Field(
-        default=3_000, ge=0, description="Annual property income"
-    )
-    children_ages: list[int] = Field(
-        default_factory=list, description="Ages of children in 2025"
-    )
-
-    @field_validator("children_ages")
-    @classmethod
-    def validate_children_ages(cls, v):
-        """Validate that children ages are reasonable."""
-        if len(v) > 10:
-            raise ValueError("Maximum 10 children supported")
-        for age in v:
-            if age < 0 or age > 20:
-                raise ValueError("Children ages must be between 0 and 20")
-        return v
-
-
-@app.post("/api/lifecycle/calculate")
-async def calculate_lifecycle_impact(data: APILifecycleInput):
-    """Calculate lifetime policy impact for an individual.
-
-    Returns year-by-year impact breakdown for policies affecting income,
-    taxes, student loans, and benefits over a full working life.
-    """
-    try:
-        inputs = LifecycleInputs(
-            current_age=data.current_age,
-            current_salary=data.current_salary,
-            retirement_age=data.retirement_age,
-            life_expectancy=data.life_expectancy,
-            student_loan_debt=data.student_loan_debt,
-            salary_sacrifice_per_year=data.salary_sacrifice_per_year,
-            rail_spending_per_year=data.rail_spending_per_year,
-            petrol_spending_per_year=data.petrol_spending_per_year,
-            dividends_per_year=data.dividends_per_year,
-            savings_interest_per_year=data.savings_interest_per_year,
-            property_income_per_year=data.property_income_per_year,
-            children_ages=data.children_ages,
-        )
-        results = run_lifecycle_model(inputs)
-        return {"data": results}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
 
 
 def main():

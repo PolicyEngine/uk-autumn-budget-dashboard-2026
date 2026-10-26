@@ -1,0 +1,948 @@
+/* ------------------------------------------------------------------
+   Methodology view: a sticky contents list at the left (a jump menu on
+   a phone), then the sections, each with its title outside its cards.
+   ------------------------------------------------------------------ */
+
+.methodology-tab {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
+  padding-top: 8px;
+}
+
+.method-body {
+  min-width: 0;
+}
+
+/* Contents ----------------------------------------------------------- */
+
+.method-contents {
+  position: sticky;
+  top: calc(var(--sticky-offset) + 16px);
+  max-height: calc(100vh - var(--sticky-offset) - 32px);
+  overflow-y: auto;
+}
+
+.method-contents-title {
+  margin: 0 0 8px;
+  padding-left: 14px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.method-contents-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--card-border);
+}
+
+.method-contents-list a {
+  display: block;
+  margin-left: -2px;
+  padding: 6px 12px;
+  border-left: 2px solid transparent;
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--pe-gray-600);
+  text-decoration: none;
+  transition: color var(--pe-transition-fast), border-color var(--pe-transition-fast);
+}
+
+.method-contents-list a:hover {
+  color: var(--pe-gray-900);
+}
+
+.method-contents-list a[aria-current="location"] {
+  border-left-color: var(--band-teal);
+  color: var(--band-teal);
+  font-weight: 600;
+}
+
+.method-contents-list a:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+/* The jump menu, for a phone */
+.method-jump {
+  display: none;
+}
+
+/* Sections ----------------------------------------------------------- */
+
+.methodology-tab .method-section {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.methodology-tab .method-section + .method-section {
+  margin-top: 48px;
+}
+
+/* The section title takes focus from the contents, without a ring on
+   a mouse click */
+.method-section h2:focus {
+  outline: none;
+}
+
+.method-section h2:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 4px;
+  border-radius: var(--pe-radius-sm);
+}
+
+.method-section > .card + .card {
+  margin-top: 16px;
+}
+
+.method-anchor {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.method-card-title {
+  margin: 0 0 12px;
+  font-size: var(--fs-card-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-800);
+}
+
+.method-card .method-lead {
+  margin: 0 0 16px;
+  color: var(--pe-gray-700);
+}
+
+.method-card .method-more {
+  margin: 16px 0 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+/* A list of notes: the Living standards data notes and gaps */
+.method-card .method-list {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-card .method-lead + .method-list {
+  margin-top: 0;
+}
+
+.method-card .method-list li + li {
+  margin-top: 6px;
+}
+
+.method-card code {
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: var(--pe-radius-sm);
+  background: var(--pe-gray-100);
+  color: var(--pe-gray-800);
+}
+
+/* Fact grids: the term at the left, what it means at the right, with a
+   hairline between rows */
+.method-facts {
+  display: grid;
+  margin: 0;
+}
+
+.method-fact {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  column-gap: 24px;
+  padding: 12px 0;
+}
+
+.method-fact + .method-fact {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.method-fact:first-child {
+  padding-top: 0;
+}
+
+.method-fact:last-child {
+  padding-bottom: 0;
+}
+
+.method-facts-wide .method-fact {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.method-fact dt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 2px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-variant-caps: all-small-caps;
+  font-size: 0.95rem;
+  color: var(--pe-gray-500);
+}
+
+.method-fact dd {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-fact-summary {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+/* A term's icon: a small tinted chip, as the section headers' */
+.method-fact-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -3px;
+  border-radius: var(--pe-radius-sm);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-100);
+  color: var(--pe-teal-700);
+}
+
+.method-fact-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* The area checks: icon first, term in normal case */
+.method-checklist .method-fact dt {
+  font-variant-caps: normal;
+  letter-spacing: 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-800);
+}
+
+.method-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+/* Narrower screens ---------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .methodology-tab {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0;
+  }
+
+  .method-contents {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 24px;
+  }
+
+  .method-contents-title,
+  .method-contents-list {
+    display: none;
+  }
+
+  .method-jump {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--fs-small);
+    color: var(--pe-gray-600);
+  }
+
+  .method-jump-label {
+    flex: none;
+    font-weight: 600;
+  }
+
+  .method-jump select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--pe-radius-md);
+    background: var(--pe-surface);
+    font: inherit;
+    color: var(--pe-gray-800);
+  }
+
+  .method-jump select:focus-visible {
+    outline: 2px solid var(--pe-teal-500);
+    outline-offset: 2px;
+  }
+
+  .method-fact,
+  .method-facts-wide .method-fact {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+}
+
+/* Section headers: an icon chip, the title and subtitle, and tags ------- */
+
+.method-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.method-section-titles {
+  min-width: 0;
+}
+
+.method-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px !important;
+}
+
+.method-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--pe-radius-md);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-100);
+  color: var(--pe-teal-700);
+}
+
+.method-icon-md {
+  width: 40px;
+  height: 40px;
+}
+
+.method-icon-md svg {
+  width: 20px;
+  height: 20px;
+}
+
+.method-icon-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.method-icon-sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tags */
+.method-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--pe-gray-200);
+  background: var(--pe-gray-50);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+}
+
+.method-tag-teal {
+  border-color: var(--pe-teal-100);
+  background: var(--pe-teal-50);
+  color: var(--pe-teal-800);
+  font-variant-numeric: tabular-nums;
+}
+
+.method-tag-muted {
+  color: var(--pe-gray-500);
+}
+
+.method-tag-warning {
+  border-color: var(--c-loss-border);
+  background: var(--c-notice-bg);
+  color: var(--c-notice-text);
+}
+
+.method-tag-link {
+  text-decoration: none;
+}
+
+.method-tag-link:hover {
+  border-color: var(--pe-teal-300);
+}
+
+/* The contents' icons */
+.method-contents-list a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.method-contents-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--pe-gray-400);
+}
+
+.method-contents-list a[aria-current="location"] .method-contents-icon {
+  color: var(--band-teal);
+}
+
+/* Not modelled: a quieter table */
+.method-muted-card {
+  background: var(--pe-gray-50);
+}
+
+.method-card.method-muted-card .method-more {
+  margin: 0 0 12px;
+}
+
+/* Limitations: callouts */
+.method-callouts {
+  display: grid;
+  gap: 12px;
+}
+
+.method-callout {
+  display: flex;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--pe-teal-100);
+  border-left: 3px solid var(--pe-teal-500);
+  border-radius: var(--pe-radius-md);
+  background: var(--pe-surface);
+}
+
+.method-callout-warning {
+  border-color: var(--c-loss-border);
+  border-left-color: var(--c-loss);
+  background: var(--c-notice-bg);
+}
+
+.method-callout-icon {
+  display: inline-flex;
+  flex: none;
+  padding-top: 2px;
+  color: var(--pe-teal-600);
+}
+
+.method-callout-warning .method-callout-icon {
+  color: var(--c-loss-text);
+}
+
+.method-callout-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.method-callout-title {
+  margin: 0 0 4px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.method-callout-text {
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+/* Living standards' gaps: a list with a muted marker */
+.method-card .method-list-caveats {
+  padding-left: 0;
+  list-style: none;
+}
+
+.method-card .method-list-caveats li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.method-card .method-list-caveats li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-loss);
+}
+
+/* Back to top */
+.method-back {
+  margin: 12px 0 0;
+  text-align: right;
+  font-size: var(--fs-caption);
+}
+
+.method-back a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--pe-gray-500);
+  text-decoration: none;
+}
+
+.method-back a:hover {
+  color: var(--pe-teal-700);
+}
+
+.method-back svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 899px) {
+  /* The jump menu sticks under the band and tabs */
+  .method-contents {
+    position: sticky;
+    top: var(--sticky-offset);
+    z-index: 5;
+    margin: 0 -16px 24px;
+    padding: 8px 16px;
+    background: var(--pe-background);
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .method-section-heading {
+    gap: 12px;
+  }
+
+  .method-icon-md {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-contents-list a {
+    transition: none;
+  }
+}
+
+/* A measure's official sources, under its note */
+.method-sources {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+/* A short lead line, then one bullet per idea */
+.method-fact-lead {
+  margin: 0 0 6px;
+  color: var(--pe-gray-800);
+}
+
+.method-points {
+  margin: 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.method-points > li {
+  position: relative;
+  line-height: 1.6;
+}
+
+.method-points > li + li {
+  margin-top: 4px;
+}
+
+.method-points > li::before {
+  content: "";
+  position: absolute;
+  top: 0.68em;
+  left: -13px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pe-teal-400);
+}
+
+.method-card .method-lead + .method-points-lead {
+  margin: -8px 0 20px;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-700);
+}
+
+.method-callout-text p {
+  margin: 0 0 6px;
+}
+
+/* The scatter's band edges as a row of chips */
+.method-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.method-chips .method-tag {
+  font-variant-numeric: tabular-nums;
+}
+
+.method-row-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 3px;
+  color: var(--pe-gray-400);
+}
+
+/* Living standards: a small heading and icon lists */
+.method-subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-subhead svg {
+  width: 16px;
+  height: 16px;
+  color: var(--pe-teal-600);
+}
+
+.method-card .method-list-icons {
+  margin-top: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.method-card .method-list-icons li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-left: 0;
+}
+
+.method-card .method-list-icons li::before {
+  content: none;
+}
+
+.method-card .method-list-icons svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 3px;
+  color: var(--pe-teal-600);
+}
+
+.method-card .method-list-caveats svg {
+  color: var(--c-loss-text);
+}
+
+@media (max-width: 899px) {
+  /* Only the jump menu sticks here: the title band and tabs scroll away */
+  .app:has(.methodology-tab) .title-row,
+  .app:has(.methodology-tab) .view-tabs-bar {
+    position: static;
+  }
+
+  .method-contents {
+    top: 0;
+  }
+
+  .methodology-tab .method-section {
+    scroll-margin-top: 72px;
+  }
+
+  .methodology-tab .method-section + .method-section {
+    margin-top: 32px;
+  }
+
+  /* 40px tap areas */
+  .method-back a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+
+  .method-back {
+    margin-top: 4px;
+  }
+}
+
+/* Flow: the step a section explains, a summary that reads on its own, and
+   the technical details behind a toggle ------------------------------- */
+
+.method-section-heading {
+  align-items: center;
+}
+
+.method-summary {
+  padding: 20px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--pe-surface);
+}
+
+/* Intros and text run the card's full width, like the cards below them */
+.method-summary > p {
+  margin: 0;
+  font-size: var(--fs-body-lg);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-summary a,
+.method-details a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.method-summary a:hover,
+.method-details a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-summary .method-card-title {
+  margin-bottom: 6px;
+}
+
+.method-section > .method-summary + *,
+.method-section > .card + .card {
+  margin-top: 16px;
+}
+
+.method-details {
+  margin-top: 12px;
+}
+
+.method-details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--pe-surface);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  cursor: pointer;
+  list-style: none;
+}
+
+.method-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.method-details > summary:hover {
+  border-color: var(--pe-teal-300);
+}
+
+.method-details > summary:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.method-details > summary svg {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--pe-transition-fast);
+}
+
+.method-details[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.method-details-body {
+  margin-top: 12px;
+  padding: 20px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--pe-surface);
+}
+
+.method-details-body > .card {
+  border: 0;
+  padding: 0;
+}
+
+.method-details-body > .card + .card {
+  margin-top: 24px;
+}
+
+.method-details-title {
+  margin: 24px 0 10px;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-details-title:first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 899px) {
+  .method-summary,
+  .method-details-body {
+    padding: 16px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-details > summary svg {
+    transition: none;
+  }
+}
+
+.method-details-body .method-more {
+  margin: 0 0 12px;
+}
+
+.method-details-body > .method-facts + .method-more {
+  margin: 16px 0 0;
+}
+
+/* A term's one-line value, with its detail folded under "Details" */
+.method-fact-value {
+  display: block;
+}
+
+.method-fact-more {
+  margin-top: 4px;
+}
+
+.method-fact-more > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  cursor: pointer;
+}
+
+.method-fact-more > summary:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+.method-fact-more[open] > summary {
+  margin-bottom: 4px;
+}
+
+.method-fact-more .method-points {
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 899px) {
+  .method-fact-more > summary {
+    min-height: 40px;
+  }
+}
+
+/* Section icons are circles on every tab (SectionHeading's .section-icon):
+   the title's line box tall, level with its first line */
+.method-section-heading {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.method-section-heading .method-icon {
+  width: var(--section-line, 32px);
+  height: var(--section-line, 32px);
+  border: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+}
+
+.method-section-heading .method-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .method-section-heading {
+    gap: 10px;
+  }
+
+  .method-section-heading .method-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* The pointer to Policies, where each measure's description and modelling live */
+.method-pointer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.method-pointer svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Unavailable and not modelled: a name and its reason per line */
+.mm-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-reasons li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 6px 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mm-reasons li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.mm-reason-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.mm-reason-why {
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 899px) {
+  .mm-reasons li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+

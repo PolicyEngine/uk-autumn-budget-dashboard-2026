@@ -1,0 +1,36 @@
+/* Young people: the chart cards in the page's charts grid, two pairs;
+   the first pair has a choice box above each plot. Links to
+   #young-people land on the first section's heading. */
+
+#young-people {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.young-people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The choice box above a plot, with room before the plot's top tick; both
+   cards of the first pair have one, so their plots still start level */
+.young-people-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 24px;
+}
+
+
+/* By age's Age group control: the chips in one row that scrolls sideways
+   on a phone, never wider than the page */
+.age-group-control {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.age-group-control .obr-view-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}

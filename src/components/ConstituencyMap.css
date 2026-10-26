@@ -2,97 +2,57 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: white;
-  padding: 16px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /* The card (white, border, radius, padding) comes from the page layout */
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   height: 100%;
 }
 
-/* Header section */
-.map-header {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 4px;
-}
-
-.map-header h2 {
-  margin: 0 0 6px 0;
-  color: #374151;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.map-header .chart-description {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-/* Which measure the map shows */
-.map-policy-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 8px 12px;
-  background: #f0fdfa;
-  border-left: 3px solid #319795;
-  border-radius: 4px;
-}
-
-.map-policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
-.map-policy-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #0f766e;
-}
-
-/* Kept as they were: other components' .policy-label and .policy-name
-   share these global names. */
-.policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
 .policy-name {
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: #319795;
+  color: var(--pe-teal-500);
 }
 
 .constituency-map-wrapper .publication-unavailable a {
-  color: #0f766e;
+  color: var(--pe-teal-700);
   font-weight: 500;
   text-decoration: underline;
 }
 
-/* Top bar with search and the outcome toggle */
+/* One row: the view switch, the measure, the Options pill and the search
+   box; the search drops to its own line when the row is full */
 .map-top-bar {
   display: flex;
-  gap: 24px;
-  align-items: flex-end;
-  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-/* Search section */
+/* Search: fills the rest of the row */
 .map-search-section {
-  flex: 1;
-  min-width: 250px;
-  max-width: 400px;
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+/* The view switch, the measure and the Options pill wrap on a narrow card */
+.map-top-bar .control-bar {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.map-top-bar .control-bar > * {
+  max-width: 100%;
 }
 
 .map-search-label {
   display: block;
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 8px 0;
 }
 
@@ -102,17 +62,38 @@
 
 .constituency-search {
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 5px;
-  font-size: 0.8125rem;
-  transition: all 0.2s ease;
+  height: 32px;
+  box-sizing: border-box;
+  /* The control pills' shape and type, a magnifier at the left */
+  padding: 0 14px 0 38px;
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-700);
+  background: var(--pe-surface)
+    var(--icon-search)
+    no-repeat 14px center;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.constituency-search:focus {
+.constituency-search:hover:not(:disabled) {
+  border-color: var(--pe-teal-500);
+}
+
+.constituency-search:focus,
+.constituency-search:focus-visible {
   outline: none;
-  border-color: #319795;
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+  border-color: var(--pe-teal-500);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constituency-search {
+    transition: none;
+  }
 }
 
 .search-results {
@@ -120,10 +101,10 @@
   z-index: 10;
   width: 100%;
   margin-top: 4px;
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-300);
   border-radius: 5px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px var(--shadow-soft);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -134,7 +115,7 @@
   padding: 10px 12px;
   background: none;
   border: none;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--pe-gray-100);
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -145,43 +126,221 @@
 
 .search-result-item:hover,
 .search-result-item:focus-visible {
-  background: #f9fafb;
+  background: var(--pe-gray-50);
 }
 
 .result-name {
   font-weight: 500;
-  font-size: 0.875rem;
-  color: #374151;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
   margin-bottom: 2px;
 }
 
 .result-value {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
 }
 
-/* Map content container */
+/* The map, then its key under it at every width, never over it. The SVG
+   keeps the whole of Great Britain and Northern Ireland, Shetland
+   included, in view at its full fit. */
 .map-content {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-content > .map-key {
+  order: 1;
 }
 
 .map-canvas {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-/* The SVG fills the width; past 600px tall it shows more on either side
-   of the map, and the legend and logo keep to its corners. */
+/* The SVG's viewBox is the box round every seat, so the map fills its
+   column at its own shape, whole. Its own legend is for the exported file
+   only: on screen the key sits beside or under the map. */
 .map-canvas svg {
-  background: white;
+  background: var(--c-surface);
   border-radius: 4px;
   width: 100%;
   height: auto;
-  max-height: 600px;
+  max-height: min(600px, 70vh);
   display: block;
 }
+
+.map-canvas svg g.map-legend {
+  display: none;
+}
+
+.map-key {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--fs-micro);
+  line-height: 16px;
+  color: var(--pe-gray-700);
+}
+
+/* The title and its info icon on their own line */
+.map-key-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.map-key-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.map-key-count {
+  margin-left: auto;
+  color: var(--pe-teal-700);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ramp, its breaks under the joins, Loss and Gain under its ends */
+.map-key-scale {
+  width: min(320px, 100%);
+}
+
+.map-key-ramp {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.map-key-segment {
+  flex: 1;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-key-ticks {
+  position: relative;
+  height: 18px;
+}
+
+.map-key-tick {
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--pe-gray-600);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A small mark from the join down to its label */
+.map-key-tick::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  height: 4px;
+  border-left: 1px solid var(--pe-gray-400);
+}
+
+.map-key-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--pe-gray-500);
+}
+
+.map-key-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+}
+
+.map-key-statuses-label {
+  color: var(--pe-gray-500);
+}
+
+.map-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-key-swatch {
+  flex: none;
+}
+
+/* While an entry is hovered the others fade, as do the seats it leaves out */
+.map-key.is-highlighting :is(.map-key-segment, .map-key-item):not(.is-active) {
+  opacity: 0.35;
+}
+
+.map-key-segment:focus-visible,
+.map-key-item:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.map-canvas svg path.constituency-path {
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-canvas svg path.constituency-path[data-dim="true"] {
+  opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-key-segment,
+  .map-key-item,
+  .map-canvas svg path.constituency-path {
+    transition: none;
+  }
+}
+
+/* The view switch: the shared segmented control on the row, its name
+   for screen readers only */
+.map-view-switch .control-bar-group {
+  display: block;
+}
+
+.map-view-switch .control-bar-group-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.map-view-switch .control-bar-segments {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
 
 /* Map controls container */
 .map-controls-container {
@@ -199,10 +358,10 @@
   display: flex;
   flex-direction: row;
   gap: 4px;
-  background: white;
+  background: var(--c-surface);
   padding: 2px;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--shadow-soft);
 }
 
 .zoom-control-btn {
@@ -215,14 +374,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--pe-gray-500);
   transition: all 0.2s ease;
   padding: 0;
 }
 
 .zoom-control-btn:hover {
-  background: #f3f4f6;
-  color: #319795;
+  background: var(--pe-gray-100);
+  color: var(--pe-teal-500);
 }
 
 .zoom-control-btn svg {
@@ -241,11 +400,11 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  background: white;
-  border: 2px solid #319795;
-  border-radius: 8px;
+  background: var(--c-surface);
+  border: 2px solid var(--pe-teal-500);
+  border-radius: var(--pe-radius-md);
   padding: 12px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-strong);
   pointer-events: auto;
   min-width: 220px;
   max-width: 300px;
@@ -280,19 +439,19 @@
   border: none;
   cursor: pointer;
   font-size: 20px;
-  color: #9ca3af;
+  color: var(--pe-gray-400);
   line-height: 1;
   transition: color 0.2s ease;
 }
 
 .tooltip-close:hover {
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .constituency-tooltip h4 {
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 8px 0;
   padding-right: 20px;
 }
@@ -302,25 +461,18 @@
   line-height: 1.4;
 }
 
-/* Kept as they were: LifecycleCalculator shares these global names. */
+/* Kept as they were: other views share these global names. */
 .tooltip-value {
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   margin: 4px 0;
   line-height: 1;
 }
 
 .tooltip-label {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
   margin: 4px 0 0 0;
-}
-
-.tooltip-value-secondary {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 8px 0 4px 0;
-  line-height: 1;
 }
 
 .constituency-tooltip .tooltip-value {
@@ -329,34 +481,34 @@
 }
 
 .tooltip-interval {
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 /* An approximate figure's interval is the thing to read. */
 .tooltip-interval-emphasis {
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
   padding: 4px 8px;
-  background: #fff7e6;
+  background: var(--c-notice-bg);
   border-radius: 4px;
 }
 
 .tooltip-detail {
-  font-size: 0.8125rem;
-  color: #4b5563;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
 }
 
 .tooltip-note {
-  font-size: 0.875rem;
-  color: #374151;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
 }
 
 .tooltip-region {
-  font-size: 0.8125rem;
-  color: #4b5563;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
   padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pe-gray-200);
 }
 
 /* Loading state */
@@ -366,8 +518,8 @@
   justify-content: center;
   height: 400px;
   margin: 0;
-  font-size: 1.25rem;
-  color: #6b7280;
+  font-size: var(--fs-section);
+  color: var(--pe-gray-500);
   /* Shown only if loading takes more than 300ms, to avoid a flash. */
   opacity: 0;
   animation: constituency-loading-in 0s linear 300ms forwards;
@@ -380,19 +532,23 @@
 }
 
 /* Responsive design */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .map-top-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 8px;
   }
+
+  /* Stacked, the search box keeps its own height */
+  .map-search-section {
+    flex: none;
+  }
+}
+
+@media (max-width: 768px) {
 
   .map-search-section {
     max-width: 100%;
-  }
-
-  .map-top-bar .outcome-toggle {
-    align-self: flex-start;
   }
 
   .map-controls-container {
@@ -414,4 +570,124 @@
     width: 12px;
     height: 12px;
   }
+}
+
+/* Before results are published: the grey map with the notice over it */
+.map-template-canvas {
+  position: relative;
+  margin-top: 8px;
+}
+
+.map-template-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+}
+
+.map-template-overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 360px);
+}
+
+.map-template-overlay .publication-unavailable {
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
+  box-shadow: 0 4px 16px var(--shadow-soft);
+}
+
+.map-template .constituency-search:disabled {
+  background-color: var(--pe-gray-50);
+  cursor: not-allowed;
+}
+
+/* Without the boundaries, the notice sits in flow */
+.map-template-empty .map-template-overlay {
+  position: static;
+  transform: none;
+  width: auto;
+}
+
+/* The template plot matches the scatter beside it */
+.map-template-svg {
+  max-height: 380px;
+}
+
+/* Colour scale without values */
+.map-scale-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.map-scale-swatch {
+  width: 28px;
+  height: 10px;
+}
+
+.map-scale-end {
+  padding: 0 6px;
+}
+
+/* The card's body: the map view (search box, then map) or the Rankings
+   view (top and bottom 10). On a wide screen it keeps one height, so
+   switching views never moves the card or the scatter beside it. */
+.constituency-body {
+  padding-top: 16px;
+  container: constituency-body / inline-size;
+}
+
+.constituency-body .map-search-section {
+  max-width: 100%;
+}
+
+.map-content[hidden] {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .constituency-body {
+    height: 440px;
+    box-sizing: border-box;
+    /* Never clip: a narrow card's longer names scroll within it */
+    overflow-y: auto;
+  }
+
+  /* The map fits the body's height whole: the SVG takes the height left
+     and scales the drawing area into it, so nothing is cut off */
+  .constituency-body > .swap-transition-inner,
+  .constituency-body .map-content:not([hidden]) {
+    height: 100%;
+  }
+
+  .constituency-body .map-canvas {
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .constituency-body .map-canvas svg {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .constituency-body .rankings-panel {
+    height: 100%;
+  }
+}
+
+/* On a phone the controls stack; the switch keeps its own width */
+.map-top-bar .obr-view-switch {
+  align-self: flex-start;
+}
+
+/* The Table view, with the notice over it before results are published */
+.rankings-panel {
+  position: relative;
 }

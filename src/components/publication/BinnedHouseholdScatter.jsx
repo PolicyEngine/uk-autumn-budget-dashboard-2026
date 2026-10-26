@@ -11,21 +11,51 @@ import {
   ZAxis,
 } from "recharts";
 import { PROVISIONAL_LABEL } from "../../utils/publication/manifest";
-import { bandLabel, SCATTER_BINS } from "../../utils/publication/scatter";
+import {
+  bandLabel,
+  CHANGE_MAX,
+  CHANGE_MIN,
+  changeBandLabel,
+  changeKind,
+  openEdge,
+  SCATTER_BINS,
+  toChangeAxis,
+} from "../../utils/publication/scatter";
 import UnavailableNotice from "./UnavailableNotice";
 import "./publication.css";
+import { CHART_COLOURS } from "../../utils/chartTheme";
+import { TOOLTIP_PROPS } from "../ChartTooltip";
 
 const pounds = (value) =>
-  `£${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value)}`;
+  `${value < 0 ? "−" : ""}£${new Intl.NumberFormat("en-GB", {
+    maximumFractionDigits: 0,
+  }).format(Math.abs(value))}`;
 const thousands = (value) =>
   `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(value / 1000)}k`;
 
-// Losses amber, gains teal; the band holding zero (£0 to £100) grey.
+const COLOURS = { loss: CHART_COLOURS.loss, gain: CHART_COLOURS.gain, zero: CHART_COLOURS.noChange };
+
+// Losses amber, gains teal; the no-change band, (−£1, £1), grey.
 export function colourFor(point) {
-  if (point.changeBand + SCATTER_BINS.change_band_width <= 0) return "#D97706";
-  if (point.changeBand > 0) return "#319795";
-  return "#9CA3AF";
+  return COLOURS[changeKind(point.changeBand, point.changeBandUpper)];
 }
+
+// Change ticks on the symlog axis, in £, and the open bands' place beyond
+// ±£5,000.
+const CHANGE_TICKS = [-5000, -1000, -250, -50, 0, 50, 250, 1000, 5000];
+const OPEN_BAND_OFFSET = 0.2;
+const changePosition = (point) => {
+  const edge = openEdge(point.changeBand, point.changeBandUpper);
+  const position = toChangeAxis(point.change);
+  if (edge === "upper") return position + OPEN_BAND_OFFSET;
+  if (edge === "lower") return position - OPEN_BAND_OFFSET;
+  return position;
+};
+const CHANGE_DOMAIN = [
+  toChangeAxis(CHANGE_MIN) - 2 * OPEN_BAND_OFFSET,
+  toChangeAxis(CHANGE_MAX) + 2 * OPEN_BAND_OFFSET,
+];
+const tickPounds = new Map(CHANGE_TICKS.map((value) => [toChangeAxis(value), value]));
 
 function CellTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -44,15 +74,8 @@ function CellTooltip({ active, payload }) {
         )}
       </p>
       <p>
-        Change{" "}
-        {bandLabel(
-          point.changeBand,
-          bins.change_band_width,
-          bins.change_min,
-          bins.change_max,
-          pounds,
-        )}{" "}
-        a year
+        Change a year:{" "}
+        {changeBandLabel(point.changeBand, point.changeBandUpper, pounds)}
       </p>
       <p>{thousands(point.households)} households</p>
     </div>
@@ -62,6 +85,8 @@ function CellTooltip({ active, payload }) {
 /**
  * Households by baseline income and income change, from binned cells.
  * Each bubble is one cell; its area shows how many households it holds.
+ * The change axis is symlog, so the narrow bands near zero and the wide
+ * ones both read; the open bands beyond ±£5,000 sit just beyond that edge.
  *
  * @param {{series: Object}} props - The result of `scatterSeries`.
  */
@@ -71,6 +96,7 @@ function BinnedHouseholdScatter({ series }) {
   }
   const points = series.points.map((point) => ({
     ...point,
+    y: changePosition(point),
     fill: colourFor(point),
   }));
   return (
@@ -80,7 +106,7 @@ function BinnedHouseholdScatter({ series }) {
       )}
       <ResponsiveContainer width="100%" height={350}>
         <ScatterChart margin={{ top: 20, right: 30, left: 90, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLOURS.grid} />
           <XAxis
             type="number"
             dataKey="income"
@@ -90,10 +116,17 @@ function BinnedHouseholdScatter({ series }) {
           />
           <YAxis
             type="number"
-            dataKey="change"
+            dataKey="y"
             name="Income change"
-            domain={[SCATTER_BINS.change_min, SCATTER_BINS.change_max]}
-            tickFormatter={pounds}
+            domain={CHANGE_DOMAIN}
+            ticks={[...tickPounds.keys()]}
+            interval={0}
+            tickFormatter={(value) => {
+              const amount = tickPounds.get(value) ?? 0;
+              if (amount >= CHANGE_MAX) return `≥ ${pounds(amount)}`;
+              if (amount <= CHANGE_MIN) return `≤ ${pounds(amount)}`;
+              return pounds(amount);
+            }}
             label={{
               value: "Change in household net income (£ a year)",
               angle: -90,
@@ -103,12 +136,12 @@ function BinnedHouseholdScatter({ series }) {
             }}
           />
           <ZAxis type="number" dataKey="households" range={[20, 400]} />
-          <ReferenceLine y={0} stroke="#9CA3AF" />
-          <Tooltip content={<CellTooltip />} />
+          <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} />
+          <Tooltip content={<CellTooltip />} trigger={TOOLTIP_PROPS.trigger} />
           <Scatter data={points} shape="circle" isAnimationActive={false}>
             {points.map((point) => (
               <Cell
-                key={`${point.incomeBand}:${point.changeBand}`}
+                key={`${point.incomeBand}:${point.changeBand}:${point.changeBandUpper}`}
                 fill={point.fill}
               />
             ))}

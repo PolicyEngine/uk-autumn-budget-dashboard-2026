@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -11,37 +11,88 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Customized,
+  Scatter,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { POLICY_COLORS } from "../utils/policyConfig";
-import "./DistributionalChart.css";
-import "./ChartExport.css";
+import { decileCsv } from "../utils/chartCsv";
+import ChartDownloadMenu from "./ChartDownloadMenu";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
+import ChartUnitLabel from "../utils/ChartUnitLabel";
+import UnpublishedPlot from "./UnpublishedPlot";
+import NoBreakYear from "./NoBreakYear";
+import UnavailableNotice from "./publication/UnavailableNotice";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import {
+  barShape,
+  useNarrowViewport,
+  GRID_PROPS,
+  TICK_STYLE,
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  chartMargin,
+  legendWrapperStyle,
+  axisWidth,
+  CHART_COLOURS,
+  divergingAxis,
+} from "../utils/chartTheme";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion, netDot } from "../utils/chartMotion";
+import TitleIcon from "./TitleIcon";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { decileSentence } from "../utils/plainSentences";
+import {
+  decileMembership,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
-// Order for distributional chart: good for households first, then bad
-const ALL_POLICY_NAMES = [
-  // Good for households (positive, teal/green)
-  "2 child limit repeal",
-  "Fuel duty freeze extension",
-  "Rail fares freeze",
-  // Bad for households (negative, amber)
-  "Threshold freeze extension",
-  "Dividend tax increase (+2pp)",
-  "Savings income tax increase (+2pp)",
-  "Property income tax increase (+2pp)",
-  "Freeze student loan repayment thresholds",
-  "NICs on salary sacrifice (>£2k)",
-];
+// The published catalogue supplies the shared measure order and colours.
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the percentage change in net income by decile, displaying the proportional impact relative to baseline income. Positive values indicate gains; negative values indicate losses.";
+  "Change in household net income by income decile, as a share of its net income.";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+const decileOrder = [
+  "1st",
+  "2nd",
+  "3rd",
+  "4th",
+  "5th",
+  "6th",
+  "7th",
+  "8th",
+  "9th",
+  "10th",
+];
+
+// The card's "About this chart"
+const RELATIVE_INFO = {
+  how: [
+    "The decile's total change over its total net income, so larger incomes weigh more than in an average of percentages.",
+  ],
+  method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
+};
+
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
+  const narrow = useNarrowViewport();
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
+  const catalogue = useMeasureCatalogue();
+  const {
+    displayable: POLICIES,
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = catalogue;
+  const hasUnavailableSelection = selectedPolicies.some(
+    (id) => !POLICIES.some((policy) => policy.id === id),
+  );
 
   const formatPercent = (value) => `${value.toFixed(1)}%`;
 
@@ -51,73 +102,62 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   };
 
   // Build chart data for internal year
-  const POLICIES = [
-    { id: "two_child_limit", name: "2 child limit repeal" },
-    { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-    { id: "rail_fares_freeze", name: "Rail fares freeze" },
-    { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-    { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-    {
-      id: "savings_tax_increase_2pp",
-      name: "Savings income tax increase (+2pp)",
-    },
-    {
-      id: "property_tax_increase_2pp",
-      name: "Property income tax increase (+2pp)",
-    },
-    {
-      id: "freeze_student_loan_thresholds",
-      name: "Freeze student loan repayment thresholds",
-    },
-    { id: "salary_sacrifice_cap", name: "NICs on salary sacrifice (>£2k)" },
-  ];
+  // Memoised: a re-render with the same year and policies keeps the same
+  // array, so Recharts tweens once from the old year instead of restarting
+  const data = useMemo(() => {
+    const distributionalSelectedYear = rawData
+      ? rawData.filter(
+          (row) =>
+            parseInt(row.year) === selectedYear &&
+            selectedPolicies.includes(row.reform_id) &&
+            isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+        )
+      : [];
 
-  const decileOrder = [
-    "1st",
-    "2nd",
-    "3rd",
-    "4th",
-    "5th",
-    "6th",
-    "7th",
-    "8th",
-    "9th",
-    "10th",
-  ];
-  const distributionalSelectedYear = rawData
-    ? rawData.filter(
-        (row) =>
-          parseInt(row.year) === selectedYear &&
-          selectedPolicies.includes(row.reform_id),
-      )
-    : [];
-
-  // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
-  const FLIP_SIGN_POLICIES = [];
-
-  const data = decileOrder.map((decile) => {
-    const dataPoint = { decile };
-    let netChange = 0;
-    POLICIES.forEach((policy) => {
-      const isSelected = selectedPolicies.includes(policy.id);
-      const dataRow = distributionalSelectedYear.find(
-        (row) => row.reform_id === policy.id && row.decile === decile,
-      );
-      let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-      // Flip sign for policies with incorrect data sign
-      if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-        value = -value;
-      }
-      dataPoint[policy.name] = value;
-      netChange += value;
+    return decileOrder.map((decile) => {
+      const dataPoint = { decile };
+      let netChange = 0;
+      let incomplete = hasUnavailableSelection;
+      POLICIES.forEach((policy) => {
+        const isSelected = selectedPolicies.includes(policy.id);
+        const dataRow = distributionalSelectedYear.find(
+          (row) => row.reform_id === policy.id && row.decile === decile,
+        );
+        const parsedValue = dataRow ? Number.parseFloat(dataRow.value) : NaN;
+        const value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
+        if (isSelected && value === null) incomplete = true;
+        dataPoint[policy.seriesKey] = value;
+        if (value !== null) netChange += value;
+      });
+      dataPoint.netChange = incomplete ? null : netChange;
+      dataPoint.incomplete = incomplete;
+      return dataPoint;
     });
-    dataPoint.netChange = netChange;
-    return dataPoint;
-  });
+  }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
 
-  // Calculate y-axis domain across ALL years, symmetrical around zero
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect on any household this year is greyed out, and the note under
+  // the chart says why (legendMembership)
+  const members = useMemo(
+    () => decileMembership(catalogue, rawData, "value", selectedPolicies, selectedYear),
+    [catalogue, rawData, selectedPolicies, selectedYear],
+  );
+  const activePolicies = drawnNames(members);
+  const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
+  // In a section with a shared key (MeasureKey), the card draws no legend
+  const key = useMeasureKey(members, netLabel);
+  // The legend took about 160px (300 on a phone) of the chart's height;
+  // with the section's key above the pair, the plot keeps its own size
+  // With no legend under the plot, room below the axis for the logo
+  const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
+  const plotHeight = key.shared ? (narrow ? 390 : 410) : narrow ? 620 : 480;
+
+  // The y axis for the year shown, from the lowest to the highest stack and
+  // always including 0 (not mirrored about 0, so no half of the plot is empty)
   const calculateYAxisDomain = () => {
-    const allYears = [2026, 2027, 2028, 2029, 2030];
+    // The year shown, so the axis fits its bars
+    const allYears = [selectedYear];
     let minValue = 0;
     let maxValue = 0;
 
@@ -126,7 +166,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
         ? rawData.filter(
             (row) =>
               parseInt(row.year) === year &&
-              selectedPolicies.includes(row.reform_id),
+              selectedPolicies.includes(row.reform_id) &&
+              isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
           )
         : [];
 
@@ -139,11 +180,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
           const dataRow = yearData.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
           );
-          let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          // Flip sign for policies with incorrect data sign
-          if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-            value = -value;
-          }
+          const parsedValue = isSelected && dataRow ? Number.parseFloat(dataRow.value) : NaN;
+          const value = Number.isFinite(parsedValue) ? parsedValue : 0;
           if (value > 0) positiveSum += value;
           else negativeSum += value;
         });
@@ -153,35 +191,26 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       });
     });
 
-    // Round to nice numbers and make symmetrical
-    const roundToNice = (val) => {
-      if (val <= 1) return Math.ceil(val * 2) / 2; // Round to 0.5
-      if (val <= 5) return Math.ceil(val); // Round to 1
-      return Math.ceil(val / 2) * 2; // Round to 2
-    };
-
-    const maxAbs = Math.max(Math.abs(minValue), Math.abs(maxValue)) + 0.2;
-    const rounded = roundToNice(maxAbs);
-
-    return [-rounded, rounded];
+    // Symmetric about zero when deciles gain and lose (divergingAxis)
+    return divergingAxis([minValue, maxValue]);
   };
 
-  const yAxisDomain = calculateYAxisDomain();
+  const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
+  const hasIncompleteResults = data.some((point) => point.incomplete);
 
   if (!rawData || rawData.length === 0) {
     return (
       <div className="distributional-chart">
-        <h2>Relative impact by income decile</h2>
+        <h3>Relative impact by income decile</h3>
         <p className="chart-description">
-          This chart shows the percentage change in net income by decile,
-          displaying the proportional impact relative to baseline income.
+            {CHART_DESCRIPTION}
         </p>
         <div
           style={{
             padding: "60px 20px",
             textAlign: "center",
-            color: "#666",
-            backgroundColor: "#f9f9f9",
+            color: CHART_COLOURS.tick,
+            backgroundColor: CHART_COLOURS.mutedFill,
             borderRadius: "8px",
           }}
         >
@@ -193,196 +222,182 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
     );
   }
 
-  // Check which policies have non-zero values
-  const hasNonZeroValues = (policyName) => {
-    return data.some((d) => Math.abs(d[policyName] || 0) > 0.0001);
-  };
 
-  const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
-
-  // Build legend items for export - include ALL policies for consistency across exports
+  // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...ALL_POLICY_NAMES.map((name) => ({
-      color: POLICY_COLORS[name],
-      label: name,
-      type: "rect",
-    })),
+    ...exportLegendItems(members, catalogue),
     ...(activePolicies.length > 1
-      ? [{ color: "#000000", label: "Net change", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
   ];
 
   const chartTitle = `Relative impact by income decile, ${formatYearRange(selectedYear)}`;
 
-  const handleExportSvg = async () => {
-    await exportChartAsSvg(chartRef, "distributional-impact", {
-      title: chartTitle,
-      description: CHART_DESCRIPTION,
-      legendItems,
-      logo: CHART_LOGO,
-    });
+  const published = (rawData ?? []).some(
+    (row) => parseInt(row.year) === selectedYear,
+  );
+  const exportName = `relative-impact-decile-${selectedYear}`;
+  const exportOptions = {
+    title: chartTitle,
+    description: CHART_DESCRIPTION,
+    legendItems,
+    logo: CHART_LOGO,
+  };
+  const selectedMeasures = POLICIES.filter((policy) =>
+    selectedPolicies.includes(policy.id),
+  );
+  // One menu: the chart's data as CSV, and the chart as PNG or SVG.
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: () => decileCsv(data, selectedMeasures, { kind: "relative", year: selectedYear }),
+    published,
   };
 
   return (
     <div className="distributional-chart">
       <div className="chart-header">
         <div>
-          <h2>{chartTitle}</h2>
+          <h3>
+            <TitleIcon name="bars" />
+            <span className="title-text">
+              <NoBreakYear text={chartTitle} />
+            </span>
+          </h3>
+          {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            This chart shows the percentage change in net income by decile,
-            displaying the proportional impact relative to baseline income.
-            Positive values indicate gains; negative values indicate losses.
+            {decileSentence(data, "relative") ?? CHART_DESCRIPTION}
           </p>
         </div>
-        <button
-          className="export-button"
-          onClick={handleExportSvg}
-          title="Download as SVG"
-          aria-label="Download chart as SVG"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
+        <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={420}>
-          <ComposedChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 70, bottom: 20 }}
-            stackOffset="sign"
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-            <XAxis
-              dataKey="decile"
-              tickFormatter={formatDecile}
-              tick={{ fontSize: 12, fill: "#666" }}
-              label={{
-                value: "Income decile",
-                position: "insideBottom",
-                offset: -10,
-                style: { fill: "#374151", fontSize: 12, fontWeight: 500 },
-              }}
-            />
-            <YAxis
-              domain={yAxisDomain}
-              label={{
-                value: "Percentage change in net income (%)",
-                angle: -90,
-                position: "insideLeft",
-                dx: -30,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 13,
-                  fontWeight: 500,
-                },
-              }}
-              tickFormatter={formatPercent}
-              tick={{ fontSize: 12, fill: "#666" }}
-              ticks={(() => {
-                const [min, max] = yAxisDomain;
-                const range = max - min;
-                let interval = 0.5;
-                if (range > 4) interval = 1;
-                if (range > 10) interval = 2;
-                const ticks = [];
-                for (let i = min; i <= max + 0.001; i += interval) {
-                  ticks.push(Math.round(i * 10) / 10);
-                }
-                if (!ticks.includes(0)) ticks.push(0);
-                return ticks.sort((a, b) => a - b);
-              })()}
-            />
-            <ReferenceLine y={0} stroke="#666" strokeWidth={1} />
-            <Tooltip
-              formatter={(value, name) => [
-                formatPercent(value),
-                name === "netChange" ? "Net change" : name,
-              ]}
-              labelFormatter={(label) => `${label} decile`}
-              contentStyle={{
-                background: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
-              wrapperStyle={{
-                top: "-120px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-              cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
-            />
-            <Legend
-              wrapperStyle={{ paddingTop: "20px", paddingRight: "140px" }}
-              iconType="rect"
-              formatter={(value) => (
-                <span
-                  style={{
-                    color: "#374151",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {value}
-                </span>
-              )}
-              payload={[
-                ...ALL_POLICY_NAMES.map((name) => ({
-                  value: name,
-                  type: "rect",
-                  color: POLICY_COLORS[name],
-                })),
-                ...(activePolicies.length > 1
-                  ? [
-                      {
-                        value: "Net change",
-                        type: "line",
-                        color: "#000000",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-            {ALL_POLICY_NAMES.map((policyName) => (
-              <Bar
-                key={policyName}
-                dataKey={policyName}
-                fill={POLICY_COLORS[policyName]}
-                name={policyName}
-                stackId="stack"
-                animationDuration={500}
-                animationBegin={0}
-                hide={!hasNonZeroValues(policyName)}
+        {published && hasIncompleteResults && (
+          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+        )}
+        {published ? (
+          <ResponsiveContainer width="100%" height={plotHeight}>
+            <ComposedChart
+              data={data}
+              margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
+              stackOffset="sign"
+            >
+              <CartesianGrid {...GRID_PROPS} />
+              <XAxis
+                dataKey="decile"
+                tickFormatter={formatDecile}
+                tick={TICK_STYLE}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                interval={0}
+                height={44}
+                label={{
+                  value: "Income decile",
+                  position: "insideBottom",
+                  offset: 2,
+                  style: AXIS_TITLE_STYLE,
+                }}
               />
-            ))}
-            <Line
-              type="monotone"
-              dataKey="netChange"
-              stroke="#000000"
-              strokeWidth={3}
-              dot={{ fill: "#000000", stroke: "#000000", strokeWidth: 1, r: 3 }}
-              name="netChange"
-              animationDuration={500}
-              hide={activePolicies.length <= 1}
-            />
+              <YAxis
+                domain={yAxisDomain}
+                ticks={yAxisTicks}
+                width={axisWidth(yAxisTicks, formatPercent)}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={formatPercent}
+                tick={TICK_STYLE}
+              />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+
+              {/* One segment at a time, beside the cursor; the other measures dim */}
+
+              <Tooltip
+
+                {...TOOLTIP_PROPS}
+
+                shared={false}
+
+                cursor={false}
+
+                offset={16}
+
+                content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => `Income decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`} format={(value) => `${value.toFixed(2)}%`} netKey="netChange" netLabel="Net change" />}
+
+              />
+              {!key.shared && (
+                <Legend
+                  wrapperStyle={legendWrapperStyle(narrow)}
+                  content={
+                    <MeasureKey
+                      members={members}
+                      netLabel={netLabel}
+                      highlight={key.highlight}
+                      onHighlight={key.setHighlight}
+                    />
+                  }
+                />
+              )}
+              {ALL_POLICY_NAMES.map((policyName) => (
+                <Bar
+                  key={policyName}
+                  dataKey={policyName}
+                  fill={POLICY_COLORS[policyName]}
+                  fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(key.highlight, policyName)}
+                  onMouseEnter={() => setHoveredMeasure(policyName)}
+                  onMouseLeave={() => setHoveredMeasure(null)}
+                  name={bySeriesKey.get(policyName)?.label ?? policyName}
+                  stackId="stack"
+                  shape={barShape(ALL_POLICY_NAMES)}
+                  {...chartMotion()}
+                  // Always mounted (a zero series has no height), so a series that
+                  // starts in a later year grows in place instead of remounting
+                />
+              ))}
+              <Line
+                // Straight segments: deciles are categories, not a curve
+                // A smooth net line that never overshoots its points (monotone)
+                type="monotone"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
+                stroke={CHART_COLOURS.net}
+                strokeWidth={2}
+                dot={false}
+                name="netChange"
+                {...chartMotion()}
+                hide={activePolicies.length <= 1}
+              />
+              {/* The net dots as a Scatter: Recharts hides a Line's own dots while
+                  it animates, so they would vanish and pop back on every year
+                  change; a Scatter's points tween with the line instead */}
+              <Scatter
+                dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
+                shape={netDot}
+                legendType="none"
+                tooltipType="none"
+                {...chartMotion()}
+                hide={activePolicies.length <= 1}
+              />
+              <Customized component={<ChartUnitLabel text="Change in net income (%)" />} />
             <Customized component={PolicyEngineLogo} />
-          </ComposedChart>
-        </ResponsiveContainer>
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          <UnpublishedPlot
+            height={plotHeight}
+            yearLabel={formatYearRange(selectedYear)}
+          />
+        )}
       </div>
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} info={RELATIVE_INFO} />
+        </div>
+      )}
     </div>
   );
 }

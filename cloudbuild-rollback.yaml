@@ -195,8 +195,10 @@ steps:
           "$$tag" > /workspace/tagged_url
 
   # What the revision's image says it is, as data: its identity and the
-  # years and policies its calculator covers (deploy_smoke's
-  # print_expectations, written out so an image older than that function
+  # years and policies its calculator covers, and whether it has the
+  # single-year route, and the definitions it computes for every measure at
+  # this commit
+  # (deploy_smoke's print_expectations, written out so an image older than that function
   # can answer). Nothing here decides pass or fail.
   - id: expectations
     name: 'gcr.io/cloud-builders/docker'
@@ -205,10 +207,13 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import json
+        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import importlib, importlib.util, json
         from uk_budget_data import personal_impact
         from uk_budget_data.runtime_identity import runtime_identity
-        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS)}, sort_keys=True))' > /workspace/expectations.json
+        bound = importlib.import_module("uk_budget_data.definitions") if importlib.util.find_spec("uk_budget_data.definitions") else None
+        sha = runtime_identity()["git_sha"]
+        definitions = {"declared": True, "at": sha, "expected": bound.definitions_for({m: sha for m in importlib.import_module("uk_budget_data.household_impact").measure_ids()})} if bound is not None and isinstance(sha, str) and bound.FULL_COMMIT.fullmatch(sha) else {"declared": False}
+        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS), "household_impact": {"declared": importlib.util.find_spec("uk_budget_data.household_impact") is not None}, "definitions": definitions}, sort_keys=True))' > /workspace/expectations.json
 
   # Main's checker, on plain Python: the revision's own code decides
   # nothing.

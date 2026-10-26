@@ -2013,3 +2013,14 @@ def test_a_row_for_the_area_routing_status_is_removed(base):
     assert after == []
     assert f"{rr.AREA_ROUTING_FILE}," not in review
     assert kept in review
+
+
+def test_every_artifact_table_has_a_review_kind_or_a_reason():
+    """A table an artifact may list must be reviewable, or say why not:
+    otherwise ``publish review-rows`` refuses every artifact holding it
+    (poverty_inequality.csv from #196 had neither)."""
+    from uk_budget_data.publication.tables import TABLES
+
+    for name in TABLES:
+        file = f"{name}.csv"
+        assert file in rr.TABLE_KINDS or file in rr.NO_ROW_REASONS, file

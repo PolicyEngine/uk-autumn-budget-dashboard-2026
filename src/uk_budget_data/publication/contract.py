@@ -17,6 +17,7 @@ import json
 import sys
 
 from uk_budget_data import data_limits, measure_templates, model_limits
+from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.receipt import receipt_api
@@ -110,6 +111,19 @@ def contract() -> dict:
             "min_households": SCATTER_MIN_HOUSEHOLDS,
             "round_to": SCATTER_ROUND_TO,
         },
+        # The households the income curve covers, in display order, with
+        # what the page says about each
+        "income_curve_households": [
+            {
+                "id": household.id,
+                "label": household.label,
+                "definition": household.definition,
+                "x_variable": household.x_variable,
+                "x_label": household.x_label,
+                "x_max": household.x_max,
+            }
+            for household in EXAMPLE_HOUSEHOLDS
+        ],
         "deciles": _in_decile_order(DECILES),
         "winners_groups": _in_decile_order(WINNERS_GROUPS),
         "tables": {

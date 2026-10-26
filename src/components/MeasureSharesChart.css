@@ -1,0 +1,104 @@
+.msc-wrap {
+  container-type: inline-size;
+}
+
+/* One row per measure: name | 100% bar | ▲ column | ▼ column. The name
+   wraps to two lines and is never clipped; the two share columns are fixed
+   and right-aligned so they line up row to row. */
+.msc {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(150px, 32%) minmax(0, 1fr) 64px 64px;
+  column-gap: 12px;
+  row-gap: 4px;
+  font-size: var(--fs-caption);
+}
+
+.msc-row {
+  display: contents;
+}
+
+.msc-row > * {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.msc-label {
+  color: var(--pe-gray-700);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  align-self: center;
+  min-height: 0;
+}
+
+.msc-bar-cell {
+  min-width: 0;
+}
+
+.msc-bar-cell:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+/* The page's bar rounding (chartTheme BAR_RADIUS, 5px) at both ends */
+.msc-bar {
+  display: flex;
+  width: 100%;
+  height: 22px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.msc-seg {
+  height: 100%;
+}
+
+.msc-num {
+  justify-content: flex-end;
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.msc-head > * {
+  min-height: 20px;
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
+.msc-up {
+  color: var(--c-gain);
+}
+
+.msc-down {
+  color: var(--c-loss);
+}
+
+/* A phone or narrow card: the name on its own line above the bar */
+@container (max-width: 520px) {
+  .msc-row > .msc-label {
+    grid-column: 1 / -1;
+    min-height: 0;
+    padding-top: 6px;
+    -webkit-line-clamp: unset;
+  }
+
+  .msc {
+    grid-template-columns: minmax(0, 1fr) 56px 56px;
+  }
+
+  .msc-head > .msc-label {
+    display: none;
+  }
+}
+
+/* The focus row (16 to 24 on Young people): its name in bold */
+.msc-label.is-focus {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}

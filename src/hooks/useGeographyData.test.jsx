@@ -2,10 +2,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook as renderHookReact, waitFor } from "@testing-library/react";
 import { AREA_ROUTING_CONTENTS } from "../../scripts/check-public-files.mjs";
 import {
   loadAreaRouting,
+  loadBoundaries,
+  loadGeographyFile,
   resetGeographyCache,
   useAreaRouting,
   useConstituencyBoundaries,
@@ -17,6 +19,16 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { geographyCatalogue, GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const renderHook = (callback, options = {}) => renderHookReact(callback, { wrapper: GeographyCatalogueProvider, ...options });
 
 // Written by uk_budget_data.area_routing from the installed bundle.
 const PUBLIC_AREA_ROUTING = readFileSync(
@@ -55,15 +67,33 @@ describe("useGeographyData", () => {
     // A component mounted later reads the cache at once.
     const third = renderHook(() => useGeographyData("regional"));
     expect(third.result.current.status).toBe("ready");
-    expect(third.result.current.table).toBe(first.result.current.table);
+    expect(third.result.current.table).toEqual(first.result.current.table);
     expect(fetchImpl.calls).toEqual(["/data/regional.csv"]);
   });
 
-  it("says a missing file is unavailable", async () => {
+  it("withholds every row when the published file cannot be loaded", async () => {
     vi.stubGlobal("fetch", geographyFetch({ "/data/regional.csv": 404 }));
     const { result } = renderHook(() => useGeographyData("regional"));
-    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current.table).toBeNull();
+  });
+
+  it("does not request a file the build does not ship", async () => {
+    const fetchImpl = geographyFetch();
+    const state = await loadGeographyFile("regional", {
+      fetchImpl,
+      base: "",
+      published: ["constituency.csv"],
+    });
+    expect(state.status).toBe("unavailable");
+    expect(fetchImpl.calls).toEqual([]);
+    const shipped = await loadGeographyFile("regional", {
+      fetchImpl,
+      base: "",
+      published: ["regional.csv"],
+    });
+    expect(shipped.status).toBe("ready");
+    expect(fetchImpl.calls).toEqual(["/data/regional.csv"]);
   });
 
   it("refuses the 2025 constituency table and keeps no rows", async () => {
@@ -134,13 +164,13 @@ describe("useConstituencyBoundaries", () => {
     const { result } = renderHook(() => useConstituencyBoundaries());
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.features).toHaveLength(8);
-    expect(fetchImpl.calls).toEqual(["/data/uk_constituencies_2024.geojson"]);
+    expect(fetchImpl.calls).toEqual(["/data/uk_constituencies_2024.topo.json"]);
   });
 
   it("reports boundaries that are not a feature collection", async () => {
     vi.stubGlobal(
       "fetch",
-      geographyFetch({ "/data/uk_constituencies_2024.geojson": "{}" }),
+      geographyFetch({ "/data/uk_constituencies_2024.topo.json": "{}" }),
     );
     const { result } = renderHook(() => useConstituencyBoundaries());
     await waitFor(() => expect(result.current.status).toBe("error"));
@@ -203,6 +233,41 @@ describe("useAreaRouting", () => {
     expect(result.current.routing).toBeNull();
   });
 
+  it("tries a missing file again on the next view, under the same publication", async () => {
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: 404 }));
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("unavailable"));
+    first.unmount();
+    vi.stubGlobal("fetch", geographyFetch());
+    const second = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(second.result.current.status).toBe("ready"));
+    expect(second.result.current.routing.areaViews).toBe("available");
+  });
+
+  it("keeps an answer for its publication and reads routing again for a newer one", async () => {
+    const before = geographyFetch({ [AREA_ROUTING_URL]: areaRouting("not_available") });
+    vi.stubGlobal("fetch", before);
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+    const after = geographyFetch();
+    vi.stubGlobal("fetch", after);
+    const same = renderHook(() => useAreaRouting());
+    expect(same.result.current.routing.areaViews).toBe("not_available");
+    expect(after.calls).toEqual([]);
+    same.unmount();
+    const newer = buildMeasureCatalogue({
+      manifest: { ...geographyCatalogue.manifest, revision: 2, snapshotSha256: "b".repeat(64) },
+      tablesByKey: geographyCatalogue.tablesByKey,
+    });
+    const next = renderHookReact(() => useAreaRouting(), {
+      wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={newer}>{children}</MeasureCatalogueProvider>,
+    });
+    await waitFor(() => expect(next.result.current.status).toBe("ready"));
+    expect(next.result.current.routing.areaViews).toBe("available");
+    expect(after.calls).toEqual([AREA_ROUTING_URL]);
+  });
+
   it("reads every answer the public file checks accept, as written", async () => {
     expect(AREA_ROUTING_CONTENTS.size).toBe(5);
     for (const text of AREA_ROUTING_CONTENTS) {
@@ -260,5 +325,23 @@ describe("useAreaRouting", () => {
     });
     const { result } = renderHook(() => useAreaRouting());
     await waitFor(() => expect(result.current.status).toBe("error"));
+  });
+});
+
+describe("the TopoJSON boundaries", () => {
+  it("decodes the published file to the GeoJSON's seats, with the properties the page reads", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const read = (name) => readFileSync(join(process.cwd(), "public", "data", name), "utf-8");
+    const topo = read("uk_constituencies_2024.topo.json");
+    const geojson = JSON.parse(read("uk_constituencies_2024.geojson"));
+    const fetchImpl = async () => new Response(topo, { status: 200 });
+    const state = await loadBoundaries({ fetchImpl, base: "" });
+    expect(state.status).toBe("ready");
+    expect(state.features.map((f) => f.properties.GSScode)).toEqual(geojson.features.map((f) => f.properties.GSScode));
+    for (const [index, feature] of state.features.entries()) {
+      const source = geojson.features[index].properties;
+      expect(feature.properties).toEqual({ Name: source.Name, CTR_REG: source.CTR_REG, Country: source.Country, GSScode: source.GSScode });
+    }
   });
 });

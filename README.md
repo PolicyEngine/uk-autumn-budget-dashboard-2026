@@ -1,234 +1,183 @@
-# UK Autumn Budget 2026 Dashboard
+# UK Autumn Budget 2026 dashboard
 
-A web application for analysing the impact of UK Autumn Budget 2026 policies on households and public finances, powered by [PolicyEngine UK](https://policyengine.org/uk).
+PolicyEngine's dashboard for the UK Autumn Budget 2026 (Wednesday 28 October 2026). It shows how the Autumn Budget 2026 measures change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. Budget figures appear only after verified publication. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
 
-## Features
+| Link | |
+|---|---|
+| Live dashboard | <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026> |
+| Household API | <https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/household-impact> (`POST`; see [Architecture](#architecture)) |
+| Budget-day runbook | [`docs/budget-day-runbook.md`](docs/budget-day-runbook.md) |
+| Decision log | [Issue #119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119) |
+| Drill reruns (the four mock Budgets on today's engine) | <https://uk-ab2026-drill-reruns.vercel.app> |
 
-- **Interactive policy selection**: Choose from various budget policy options
-- **Configurable parameters**: Adjust policy parameters (rates, thresholds, years)
-- **Real-time analysis**: Automatic calculations when policies are selected or modified
-- **Rich visualisations**: Charts showing budgetary impact, poverty effects, and distributional analysis
-- **URL sharing**: Share specific policy configurations via URL parameters
-- **Data export**: Download analysis results in TXT format
+## Tabs
 
-## Getting started
+The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures and the household answers are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`), so a link reopens the same view.
 
-### Prerequisites
+| Tab | What it shows |
+|---|---|
+| Population impact | The selected measures' effects, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** (results by constituency, the change by income decile, the household scatter, example households), **Young people** (results by age), **Pensioners** (people at or over State Pension age, from the same results by age), **Living standards** (growth across the distribution, and inequality), **Poverty** (change in the poverty rate) and **Public finances** (revenue impact, and the OBR comparison once published). Living standards and Poverty each link to their twin without the measures on the Pre-measures forecast. |
+| Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
+| Pre-measures forecast | The outlook without the Budget's measures, under current law (`?tab=outlook`; old `?tab=living` and `?sub=baseline` links still open it). Sub-tabs: **Living standards** (incomes over time, growth across the distribution, inequality over time; the default), **Poverty** (poverty over time, who is in poverty) and **Forecast changes** (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance), as `?sub=poverty` and `?sub=forecast`. Projections run from 2027-28 to 2031-32, with HBAI outturn and OBR series. Living standards and Poverty mirror Population impact's sub-tabs of the same names, which show the selected measures' effect; each links to its twin. |
+| Policies | Every published measure in one place: its published name and description, and, where [`src/utils/policyDetails.js`](src/utils/policyDetails.js) has an entry for its id, when it starts and is in force, its type, and its main modelling assumption and source behind "Details". Population impact links here rather than repeating it. |
+| Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
-- [Bun](https://bun.sh), which CI uses for the frontend (`bun.lock` is the lockfile), and Node.js 20.9 or later, which Next.js 16 needs to run
-- [uv](https://docs.astral.sh/uv/) and Python 3.13 or later (`requires-python` in `pyproject.toml`), for data generation
+Every chart downloads as CSV, PNG, SVG or plain text.
 
-### Installation
+## Measures
 
-- Install the frontend dependencies: `bun install --frozen-lockfile`
-- Install the Python package for data generation: `uv sync --locked --extra dev`
+The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates them all together, with their interactions.
 
-### Development
+The list on `main` today:
 
-Run the development server:
+| Id | Measure |
+|---|---|
+| `fuel_duty_rise_deferral` | Fuel duty rises deferred: 52.95p held through winter 2026-27, the 5p restored in 2027-28 |
+| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension over State Pension age, from April 2027 |
+| `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
+| `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
+| `employer_ni_relief_under_25s` | Employer NI relief for employees aged 21 to 24 (extending the under-21 relief): none up to the upper earnings limit, from April 2027 |
+| `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
+| `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit cut from £1m to £500,000, from April 2027 |
+| `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
+| `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+
+List them from the command line with `uv run uk-budget-data generate --list-reforms`.
+
+## Architecture
+
+- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Pre-measures forecast read precomputed files from `public/data/`; Household impact calls the household API.
+- **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
+- **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
+
+**Engine.** The project depends on `policyengine[uk]` 6.10.2 (`pyproject.toml`, `uv.lock`), which pins policyengine-uk 2.132.6 and the certified Microcosm national dataset that goes with it. Population results are built with `pe.uk.managed_microsimulation()`, which downloads that dataset from a private Hugging Face repository and so needs `HUGGING_FACE_TOKEN`. Household calculations need no dataset. Upgrade the bundle, never policyengine-uk alone (see [`.claude/CLAUDE.md`](.claude/CLAUDE.md)).
+
+## Publication and verified routes
+
+Measure definitions do not authorise publication. The page builds its measure catalogue from `public/data/manifest.json`, which must identify the 28 October 2026 Budget (`release: uk-autumn-budget-2026` and the matching `budget` id and date). Labels, descriptions, selection, chart series and colours come from that catalogue. A Budget row requires an approved or provisional entry, a supported year and an artifact verified against its receipt and manifest. Package figures require the combined run of exactly the displayable measures. Chart series use `measure:<id>` keys; ordering and colours depend on the measure id and supported budgetary direction.
+
+| Figures | Verified route |
+|---|---|
+| Public finances, deciles, winners and losers, metrics and household scatter | Receipt-verified artifacts through `loadDashboard` and `loadPublication` |
+| Example households and young people | Artifact tables rechecked against their receipts with `loadVerifiedTable` |
+| Regional and constituency results | SHA-256-bound release index plus `area_provenance.json`, with approved artifact, receipt and actual baseline/reform identities |
+| Household impact | Live single-year household API after the same catalogue and year gate; held, unpublished or failed selections are unavailable, never zero. Each request waits for a check of the live manifest and is dropped if the snapshot changed; an answer from other policyengine, policyengine-uk or policyengine-core versions than the selected measures' receipts record is refused |
+| OBR comparison | Unavailable until a 2026 source is verified; the existing CSV contains November 2025 costings |
+
+The page shell, Methodology, Living standards baseline and March 2026 forecast remain available without a Budget manifest. The Budget-day forecast remains unavailable until verified provenance exists; `post_published` alone does not authorise it. Missing, invalid, unreachable or other-Budget manifests remove Budget figures, with no fallback to unverified flat files. Focus and five-minute checks replace changed snapshots or restore verified results after recovery; Household impact caches are bound to the publication snapshot.
+
+Before simulation, the area run compares its actual baseline and reform identities with approved receipts. `uk-budget-data publish index` binds exactly the CSV files the run wrote, their aliases and the provenance sidecar to the manifest revision and bytes; the page verifies those digests before showing figures. A changed or incomplete area snapshot stays unavailable until its matching index is published.
+
+Frontend tests include unfamiliar measure ids, held and stale entries, tampered artifacts and flat files, mismatched revisions and the real unreceipted `public/data`. Fast-check properties cover the publication gates, catalogue membership, colours and series keys; Hypothesis tests pin area identity and provenance invariants. The legacy-name guard covers frontend source; Python owns the measure definitions.
+
+## Local development
+
+Prerequisites: [Bun](https://bun.sh) (`bun.lock` is the lockfile), Node.js 20.9 or later, [uv](https://docs.astral.sh/uv/) and Python 3.13 or later.
 
 ```bash
+uv sync --locked --extra dev          # Python package and API
+bun install --frozen-lockfile         # web app
+cp .env.example .env.local            # then fill in HUGGING_FACE_TOKEN if you will generate data
+```
+
+Run the household API and the web app in two terminals:
+
+```bash
+HOUSEHOLD_WORKERS=2 PORT=8010 uv run uk-budget-api
 bun run dev
 ```
 
-The dashboard is a Next.js app, served at `http://localhost:3000/uk/autumn-budget-2026` by default: `next.config.ts` sets that base path unless `NEXT_PUBLIC_BASE_PATH` is defined. Set `NEXT_PUBLIC_BASE_PATH=` (empty) to serve it at the root.
+The page is at <http://localhost:3000/uk/autumn-budget-2026>.
 
-### Building for production
+| Variable | Used by | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_HOUSEHOLD_API_URL` | web app, at build time | The API's URL followed by `/api/household-impact`, no trailing slash (locally `http://localhost:8010/api/household-impact`). The build fails on a value in any other form, and a Vercel production build fails without one (`scripts/household-api-env.mjs`). |
+| `NEXT_PUBLIC_BASE_PATH` | web app | Overrides the base path; set it empty to serve at the root. |
+| `HUGGING_FACE_TOKEN` | data package | Read access to the certified dataset. |
+| `PORT`, `HOUSEHOLD_WORKERS` | API | Port (default 5001) and worker processes for household calculations. |
 
-```bash
-bun run build
-```
+`make dev` runs the API in Docker instead (`docker-compose.yml`, on port 5001), so point `NEXT_PUBLIC_HOUSEHOLD_API_URL` at `http://localhost:5001/api/household-impact` if you use it.
 
-The build first checks every file under `public/` against its review list (`scripts/check-public-files.mjs`). Serve the production build:
+### Tests and lint
 
-```bash
-bun run start
-```
+| | Command |
+|---|---|
+| Python tests, as CI runs them | `uv run pytest -m "not certified_data" -n 4 --dist loadgroup --no-loadscope-reorder` |
+| Tests on the certified data (needs `HUGGING_FACE_TOKEN`) | `uv run pytest -m certified_data` |
+| Python lint | `uv run black --check src/ tests/` and `uv run ruff check src/ tests/` (`make format` fixes) |
+| Frontend tests and lint | `bun run test`, `bun run lint` |
+| Production build | `bun run build`, then `bun run start` |
 
-## Project structure
-
-```
-src/
-├── app/                 # Next.js app router: layout.tsx, page.tsx, globals.css
-├── App.jsx              # Main application controller
-├── components/          # React components
-│   ├── PolicySelector.jsx        # Policy selection
-│   ├── BudgetaryImpactChart.jsx  # Budgetary impact chart
-│   └── ...
-└── uk_budget_data/      # Python data generation package
-    ├── __init__.py      # Public API exports
-    ├── models.py        # Pydantic data models
-    ├── reforms.py       # Autumn Budget 2026 reform definitions
-    ├── calculators.py   # Metric calculators
-    ├── pipeline.py      # Data generation pipeline
-    └── cli.py           # Command-line interface
-
-tests/                   # Python tests for data generation
-public/data/             # Generated CSV data files
-data_inputs/             # Reference data (OBR estimates, constituencies)
-```
+Mark any test that takes minutes with `@pytest.mark.slow`; under xdist such tests are collected first, so each one added lengthens the run.
 
 ## Data generation
 
-The dashboard displays pre-calculated data from CSV files. The `uk_budget_data` Python package generates this data using PolicyEngine UK microsimulation.
+The web app's population figures are files in `public/data/`, written by the `uk-budget-data` CLI (`uv run uk-budget-data --help` lists every command):
 
-### Quick start
+| Command | Writes |
+|---|---|
+| `generate` | The national results for every measure and year (`--reforms`, `--years` narrow it; `--artifacts` writes one receipted artifact per measure for the publication manifest) |
+| `geography` | Disclosure-controlled results by region and constituency |
+| `constituencies` | `constituency.csv` from Microcosm's published local-area cut: `geography`'s seats pass with each measure in a fresh process, resumable, with a timing and memory table (`--dry-run` checks the cut and the gates only; see the runbook's "Results by constituency on the local-area cut") |
+| `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
+| `living-standards` | `living_standards_outlook.json`, the Pre-measures forecast tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
+| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Pre-measures forecast tab's Forecast changes series |
+| `scripts/precompute_household_presets.py` (not the CLI; reads `bun scripts/household-preset-requests.mjs`) | `household_presets.json`, the Household impact examples' answers with every measure selected, 2027-28 to 2031-32, shown at once when an example is chosen (no dataset needed; about ten minutes locally) |
+| `publish …` | Reconciles, stages, approves and checks entries in the publication manifest |
 
-```python
-from pathlib import Path
+The same pipeline is importable: `from uk_budget_data import generate_all_data, get_reform, DataConfig`. A `Reform` can carry `baseline_parameter_changes` to compare against something other than current law (`src/uk_budget_data/models.py`).
 
-from uk_budget_data import generate_all_data, get_reform, DataConfig
+## Budget day
 
-# Generate data for all Autumn Budget 2026 reforms
-generate_all_data()
+The full sequence, roles and timings are in the [runbook](docs/budget-day-runbook.md); the design behind it is in [`docs/budget-day-publication.md`](docs/budget-day-publication.md). In order:
 
-# Or with custom configuration
-config = DataConfig(
-    years=[2026, 2027, 2028, 2029],
-    output_dir=Path("./public/data"),
-)
-generate_all_data(config=config)
+| Step | What happens | Runbook |
+|---|---|---|
+| Start | Pull `main`, sync, run the certified-data tests and the household route check | [G0](docs/budget-day-runbook.md#g0-start-receipt-by-1130) |
+| OBR tables | Download the OBR workbooks **in a browser** (obr.uk refuses scripts) and import them | [Documents arrive](docs/budget-day-runbook.md#documents-arrive-1340), [OBR forecast](docs/budget-day-runbook.md#budget-day-obr-forecast-living-standards-tab-from-1340) |
+| Generate | `generate --artifacts`, one receipted artifact per measure, locally or on Modal | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315) |
+| Stage | `publish reconcile` and `publish stage`; each measure needs a signed expected-effects row (in #140, after #104) | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315), [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Attest | Hand-written modifiers (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
+| Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
+| Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |
 
-# Generate for specific reforms only
-reforms = [get_reform("two_child_limit"), get_reform("fuel_duty_freeze")]
-generate_all_data(reforms=reforms)
-```
+**Who signs what.** The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) carry a reviewer's name. Each attestation needs two distinct people. Approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
 
-### CLI usage
+### Running it
 
-- List the available reforms: `uv run uk-budget-data generate --list-reforms`
-- Generate all data: `uv run uk-budget-data generate`
-- Generate for specific reforms: `uv run uk-budget-data generate --reforms two_child_limit fuel_duty_freeze`
-- Choose the years: `uv run uk-budget-data generate --years 2026 2027`
-- See every command: `uv run uk-budget-data --help`
+- **Locally.** `uv run uk-budget-data generate --artifacts …` runs one measure at a time. A receipted measure peaks at about 14–17 GB, so run in parallel (`--jobs`, in #112) only with more than about 40 GB free. Results by area need up to about 64 GB (#115, #138).
+- **On Modal.** The flat CSVs: `uv run --with modal==1.6.2 uk-budget-data generate --backend modal`, and on a pull request that changes a measure, the "Results on Modal" workflow, which uploads them for review and never commits or signs. Receipted artifacts in #139. Results by constituency: `uk-budget-data constituencies` (runbook, "Results by constituency on the local-area cut"). All read the certified data with the `policyengine` workspace's existing `pe-uk-private-hf-read-token` secret. One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
+- **Household API.** Deployed by the "Deploy the household API" workflow (below). Budget-week capacity (8 vCPU, 8 GiB, eight workers, one instance kept warm) is in #141; set it back after the Budget.
 
-### Disclosure control
+## Review and sign-off
 
-The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/` is a publication. A check runs on every pull request:
+The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/` is a publication.
 
-```bash
-uv run python scripts/check_public_data.py
-```
+- Each file under `public/` must be listed in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`). Any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights.
+- The one exception is `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`: it takes no review entry, and may hold only one of the few texts that module writes.
+- Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) are reviewed as kind `disclosure_table` and must also pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
+- `area_provenance.json` is reviewed as `publication_provenance` under its closed metadata schema; each area CSV still passes disclosure validation.
+- Two checks enforce the list: `uv run python scripts/check_public_data.py` (CI's Public data check) and `bun scripts/check-public-files.mjs` (run by `bun run build`, so a deploy fails too). They print file paths and rule names, never values.
+- `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate).
+- `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.
 
-Each file under `public/` must be listed in `data_inputs/public_data_review.csv` with the sha256 of the bytes a person reviewed; any change fails until it is reviewed again. The one exception is the page's area routing status, `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`: it takes no review entry, and both checks refuse one, but it may hold only one of the few texts that module writes. A table written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) is reviewed as kind `disclosure_table` and must also pass the layer's `validate_public`. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights. The check prints file paths and rule names, never values. The build runs a smaller check of the same list (`scripts/check-public-files.mjs`), so a deploy fails too.
+## Deployment
 
-To review a changed file, record its new sha256 in the review list:
+- **Web app:** the Vercel project `uk-autumn-budget-2026` builds `main` with `bun run build` (`vercel.json`); a merge to `main` publishes. Set `NEXT_PUBLIC_HOUSEHOLD_API_URL` for Production and Preview.
+- **Household API:** the "Deploy the household API" workflow ([`.github/workflows/deploy-api.yml`](.github/workflows/deploy-api.yml)) submits [`cloudbuild.yaml`](cloudbuild.yaml), which deploys only a commit on `main`, smoke-tests the new revision before moving traffic, and rolls back through [`cloudbuild-rollback.yaml`](cloudbuild-rollback.yaml). Deploys on push stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true`; until then, run the workflow by hand.
 
-```bash
-shasum -a 256 public/data/budgetary_impact.csv
-```
-
-Results by area go through the disclosure layer only. The legacy constituency calculators take direct means with no disclosure control. They run only with `--legacy-geography`, and write to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, which must be outside any git repository:
-
-```bash
-UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026 uv run uk-budget-data generate --legacy-geography
-```
-
-### Custom baseline scenarios
-
-Some reforms compare against a custom baseline rather than current law. For example, the fuel duty freeze compares the announced policy (freeze extension) against what would happen if the 5p cut ended.
-
-```python
-from uk_budget_data.models import Reform
-
-# Reform with custom baseline
-fuel_duty = Reform(
-    id="fuel_duty_freeze",
-    name="Fuel duty freeze",
-    # Baseline: higher rates (no freeze)
-    baseline_parameter_changes={
-        "gov.hmrc.fuel_duty.petrol_and_diesel": {"2026": 0.58},
-    },
-    # Reform: lower rates (with freeze)
-    parameter_changes={
-        "gov.hmrc.fuel_duty.petrol_and_diesel": {"2026": 0.54},
-    },
-)
-```
-
-You can also set a global baseline for all reforms (e.g., pre-Autumn Budget baseline):
-
-```python
-config = DataConfig(
-    baseline_parameter_changes={
-        # Pre-Autumn Budget parameter values
-        "gov.hmrc.income_tax.rates.uk[1].threshold": {"2026": 37700},
-    }
-)
-generate_all_data(config=config)
-```
-
-### Running tests
-
-- Run all tests: `uv run pytest`
-- Run on four worker processes, as CI does: `uv run pytest -n 4 --dist loadgroup --no-loadscope-reorder`
-- Run with coverage: `uv run pytest --cov=uk_budget_data`
-
-Mark any test that takes minutes with `@pytest.mark.slow`; under xdist
-such tests are collected first. With the command above, the first four slow
-units start on separate workers, and the rest follow as each worker's next
-unit (tests that share one household, through an `xdist_group`, count as one
-unit). Each slow unit added lengthens the run.
-
-## Available reforms
-
-The dashboard analyses these November 2025 Autumn Budget policies:
-
-| Reform | Description |
-|--------|-------------|
-| `two_child_limit` | Repeal of the two-child limit on benefits |
-| `fuel_duty_freeze` | Extension of the fuel duty freeze |
-| `threshold_freeze_extension` | Extension of income tax threshold freeze |
-| `dividend_tax_increase_2pp` | +2pp on dividend tax rates |
-| `savings_tax_increase_2pp` | +2pp on savings income tax |
-| `property_tax_increase_2pp` | +2pp on property income tax |
-| `rail_fares_freeze` | One-year freeze on regulated rail fares |
-| `freeze_student_loan_thresholds` | Freeze Plan 2 repayment thresholds |
-| `salary_sacrifice_cap` | Cap NI-free salary sacrifice at £2,000 |
-
-## Technology stack
-
-- **Frontend**: Next.js 16 with React 19
-- **Charts**: Recharts 2.15 (built on D3)
-- **Data generation**: Python 3.13+, PolicyEngine UK through policyengine.py
-- **State management**: React hooks (useState, useEffect, useMemo)
-- **Styling**: Tailwind CSS 4 with `@policyengine/ui-kit`'s theme, plus component CSS
-- **Tests**: Vitest for the frontend, pytest for the Python package
-- **Build tool**: Next.js, run with Bun
-
-## Design system
-
-The dashboard uses PolicyEngine UK's design system:
-
-- **Colour palette**:
-  - Primary teal: `#319795`
-  - Teal light: `#4db3b1`
-  - Teal dark: `#277674`
-  - Grey scale: `#f9fafb` to `#111827`
-
-- **Typography**: Roboto font with multiple weights for clear hierarchy
-
-- **Responsive**: Mobile-friendly design with breakpoints at 768px
-
-## Style guide
-
-See `.claude/CLAUDE.md` for comprehensive style and architecture guidelines including:
-
-- Colour palette and typography
-- Component patterns and React conventions
-- Chart configuration best practices
-- British English formatting rules
-- Accessibility requirements
+Settings, service limits and fallbacks are under "Production setup" in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#production-setup-as-created).
 
 ## Contributing
 
-When contributing to this project:
-
-1. Follow the guidelines in `.claude/CLAUDE.md`
-2. Run `make format` before committing Python code
-3. Run `bun run lint --fix` before committing JavaScript
-4. Ensure tests pass with `uv run pytest`
+Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens ([`docs/COLOURS.md`](docs/COLOURS.md), enforced by `src/colourGuard.test.js` and ESLint). Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
 
 ## Licence
 
-This project is for policy analysis purposes. Data and analysis powered by PolicyEngine UK.
+This project is for policy analysis. Data and analysis powered by PolicyEngine UK.
+
+The constituency hex map's layout (`data_inputs/constituency_hexes.json`) is the Open Innovations HexJSON of the 2024 Westminster constituencies (open-innovations/constituencies, `src/_data/hexjson/uk-constituencies-2024.hexjson`), © Open Innovations, CC BY 4.0. Its drawing follows PolicyEngine's uk-mansion-tax hex map.

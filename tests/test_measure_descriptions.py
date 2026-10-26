@@ -6,23 +6,14 @@ it changes, and its copy may name only those, so a new measure must
 declare its taxes too. Copy that names a tax this module doesn't know
 fails until the tax is added. An unnamed "tax" or "taxed" reads as income
 tax, an unnamed "duty" as a duty and an unnamed "levy" as a levy, so each
-fails in the copy of a measure that declares none. The salary sacrifice
-cap's description said that contributions above the cap were charged
-income tax, though the cap is a National Insurance measure (coordinator,
-23 October, from the UK hub).
+fails in the copy of a measure that declares none. A salary sacrifice
+cap measure's description once said that contributions above the cap were
+charged income tax, though the cap is a National Insurance measure
+(coordinator, 23 October, from the UK hub); the check below keeps that
+copy failing.
 
-Second-round and modelling effects don't count as moving a tax. The cap's
-broad-base haircut lowers every worker's employment income, and so their
-income tax, a little. In the model the excess above the cap also raises
-some people's income tax. It raises their adjusted net income, and so the
-High Income Child Benefit Charge, from £60,000, and the personal allowance
-taper, from £100,000. And the model relieves it only up to the person's
-annual allowance, and charges more annual allowance charge where the
-higher income tapers that allowance further below their pension savings,
-or raises the marginal rate the charge is levied at (see
-``create_salary_sacrifice_cap_reform``). The cap changes no income
-tax rule, and the OBR describes it as raising NICs, so it declares
-National Insurance alone.
+Second-round and modelling effects don't count as moving a tax: a measure
+declares the taxes whose rules its code changes.
 """
 
 import re
@@ -161,27 +152,22 @@ TAX_PARAMETERS = {
 
 # The taxes each registered measure moves, read from its code.
 DECLARED = {
-    # Universal Credit and Child Tax Credit are benefits.
-    "two_child_limit": set(),
-    "fuel_duty_freeze": {"fuel duty"},
-    # Rail subsidy spending.
-    "rail_fares_freeze": set(),
-    "threshold_freeze_extension": {"income tax"},
-    # Its baseline modifier sets the dividend rates, under
-    # gov.hmrc.income_tax, which no parameter change shows.
-    "dividend_tax_increase_2pp": {"income tax"},
-    "savings_tax_increase_2pp": {"income tax"},
-    "property_tax_increase_2pp": {"income tax"},
+    # The duty, and the VAT charged on it at the pump.
+    "fuel_duty_rise_deferral": {"fuel duty", "VAT"},
+    "state_pension_income_tax_protection": {"income tax"},
+    # A payment, through the cost-of-living channel.
+    "warm_home_discount_top_up": set(),
+    "domestic_electricity_zero_vat": {"VAT"},
+    # Employer (secondary Class 1) contributions.
+    "employer_ni_relief_under_25s": {"National Insurance"},
+    # From 2031-32 the engine sets the NI primary threshold and upper
+    # earnings limit at the allowance and higher rate threshold, so holding
+    # those holds them too.
+    "threshold_freeze_2031_32": {"income tax", "National Insurance"},
+    "badr_lifetime_limit_cut": {"capital gains tax"},
+    "road_fuel_vat_cut": {"VAT"},
     # Student loan repayments are not a tax.
-    "freeze_student_loan_thresholds": set(),
-    # The excess above the cap is treated as earnings for National
-    # Insurance. In the model it also raises some people's income tax:
-    # through the High Income Child Benefit Charge and the personal
-    # allowance taper, and through the annual allowance, which limits its
-    # relief and whose charge rises where the allowance tapers further or
-    # the rate it is levied at rises (see the module docstring). But the
-    # cap changes no income tax rule.
-    "salary_sacrifice_cap": {"National Insurance"},
+    "plan_2_threshold_unfreeze": set(),
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
@@ -330,50 +316,37 @@ def test_parameter_changes_agree_with_the_declarations():
     assert not undeclared, f"changed but not declared: {undeclared}"
 
 
-def test_the_salary_sacrifice_copy_reads_its_figures_from_the_model():
-    measure = get_reform("salary_sacrifice_cap")
-    parameters = installed_system.parameters.gov
-    cap = parameters.hmrc.national_insurance.salary_sacrifice_pension_cap
-    haircut = (
-        parameters.contrib.behavioral_responses
-    ).salary_sacrifice_broad_base_haircut_rate
-    assert f"£{cap('2029-04-06'):,.0f} per year" in measure.description
-    assert f"({haircut('2029-04-06'):.2%})" in measure.description
-    assert (
-        "The excess above the cap is treated as earnings for National "
-        "Insurance, so it attracts employee and employer National "
-        "Insurance."
-    ) in measure.description
-
-
 def test_the_old_salary_sacrifice_copy_fails():
+    """The dropped salary sacrifice cap measure's old copy, on a measure
+    declaring National Insurance alone."""
+    national_insurance = {"National Insurance"}
     old = (
         "Contributions above the cap become employment income subject to "
         "income tax and NICs."
     )
-    assert taxes_named(old) - DECLARED["salary_sacrifice_cap"] == {
-        "income tax"
-    }
+    assert taxes_named(old) - national_insurance == {"income tax"}
     # And without "income", it says tax unnamed.
     old = old.replace("income tax", "tax")
-    assert bare_words(old, DECLARED["salary_sacrifice_cap"]) == ["tax"]
+    assert bare_words(old, national_insurance) == ["tax"]
 
 
 def test_the_threshold_freeze_copy_states_the_frozen_thresholds():
     """The higher rate threshold is the personal allowance plus the basic
-    rate band, not the band alone, in each year of the freeze."""
+    rate band, not the band alone: the 2030-31 values held in 2031-32,
+    against the engine's 2031-32 values."""
     income_tax = installed_system.parameters.gov.hmrc.income_tax
-    description = get_reform("threshold_freeze_extension").description
-    for year in (2028, 2029, 2030):
-        instant = f"{year}-04-06"
-        allowance = income_tax.allowances.personal_allowance.amount(instant)
-        band = income_tax.rates.uk.brackets[1].threshold(instant)
-        assert (
-            f"Personal allowance remains at £{allowance:,.0f}" in description
-        ), year
-        assert (
-            f"higher rate threshold at £{allowance + band:,.0f}" in description
-        ), year
+    description = get_reform("threshold_freeze_2031_32").description
+    held = "2030-04-06"
+    allowance = income_tax.allowances.personal_allowance.amount(held)
+    band = income_tax.rates.uk.brackets[1].threshold(held)
+    assert f"personal allowance stays at £{allowance:,.0f}" in description
+    assert f"basic rate band at £{band:,.0f}" in description
+    assert f"higher rate threshold of £{allowance + band:,.0f}" in description
+    current = "2031-04-06"
+    assert (
+        f"£{income_tax.allowances.personal_allowance.amount(current):,.0f} "
+        f"and £{income_tax.rates.uk.brackets[1].threshold(current):,.0f}"
+    ) in description
 
 
 def test_the_names_are_read_as_copy_uses_them():

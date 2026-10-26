@@ -8,7 +8,7 @@ import httpx
 import pytest
 import yaml
 from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
-from hypothesis import assume, example, given
+from hypothesis import assume, example, given, settings
 from hypothesis import strategies as st
 
 from tests.publication_support import SMALL_DATASET_NAME
@@ -541,6 +541,8 @@ def masked(text, token):
     return text.replace(token_fingerprint(token), "\0")
 
 
+# This property performs temporary-file I/O; its invariant is independent of host latency.
+@settings(deadline=None)
 @given(token=tokens, other=tokens, case=st.sampled_from(sorted(OUTCOMES)))
 # A token that is part of the fixed wording ("token fingerprint"): it is in
 # every token's text, so it says nothing about the token.

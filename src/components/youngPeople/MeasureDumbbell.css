@@ -1,0 +1,337 @@
+/* Effect of each policy: one row per policy, a ring (all ages) and a dot
+   (the chosen group) on one £ axis, the group's value and gap at the right.
+   One type scale with its pair (Better and worse off): row labels and
+   values at the caption size, the gap line and axis ticks at 12px, as
+   every Recharts axis (TICK_STYLE). The value column is as wide as the
+   pair's split column (112px), so both cards' numbers end on one edge. */
+.measure-dumbbell {
+  --md-label: 200px;
+  --md-values: 112px;
+  --md-gap: 12px;
+  --md-cols: var(--md-label) minmax(0, 1fr) var(--md-values);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-caption);
+}
+
+/* In a pair of cards, the plot is as tall as its neighbour's Recharts plot
+   (the card's height): the same room above the first row (PLOT_TOP) and
+   an axis as tall as X_AXIS_HEIGHT, the rows sharing the rest evenly, so
+   the axis titles line up and no gap opens above the legend. */
+@media (min-width: 1025px) {
+  /* When the neighbour's plot is taller still (a single-age view), the
+     dumbbell grows with the shared row, its axis kept at the bottom */
+  .charts-grid:has(> div + div) .chart-plot:has(> .measure-dumbbell) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div + div) .measure-dumbbell {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    padding: 16px 0 6px;
+  }
+
+  /* Rows keep their own 44px height (no stretching into tall gaps); the
+     axis stays at the bottom */
+
+  /* The axis follows the last row, not the card's foot, so no empty band
+     opens between them */
+}
+
+.measure-dumbbell-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--md-cols);
+  align-items: center;
+  column-gap: var(--md-gap);
+  min-height: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.measure-dumbbell-row:not(.measure-dumbbell-axis):hover,
+.measure-dumbbell-row.is-active {
+  background: var(--pe-gray-50);
+}
+
+.measure-dumbbell-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
+}
+
+.measure-dumbbell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--pe-gray-700);
+  line-height: 1.3;
+}
+
+/* Two lines at most; the full name is in the row's title and tooltip */
+.measure-dumbbell-label {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.measure-dumbbell-swatch {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+/* The plot fills its row's height, so the gridlines run unbroken from
+   row to row */
+.measure-dumbbell-plot {
+  position: relative;
+  align-self: stretch;
+  min-height: 28px;
+}
+
+.measure-dumbbell-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--pe-gray-100);
+}
+
+.measure-dumbbell-grid.is-zero {
+  border-left: 1px solid var(--pe-gray-500);
+}
+
+.measure-dumbbell-link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--c-no-change);
+}
+
+.measure-dumbbell-link.more {
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-link.less {
+  background: var(--c-loss);
+}
+
+.measure-dumbbell-ring,
+.measure-dumbbell-dot {
+  position: absolute;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.measure-dumbbell-ring {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid var(--c-before);
+  background: var(--c-surface);
+}
+
+.measure-dumbbell-dot {
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  align-self: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.measure-dumbbell-values strong {
+  color: var(--pe-gray-800);
+  font-weight: 600;
+}
+
+/* The gap to all ages as a compact pill */
+.measure-dumbbell-gap {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
+}
+
+.measure-dumbbell-gap.more {
+  color: var(--c-gain-text);
+  background: color-mix(in srgb, var(--c-gain) 12%, transparent);
+}
+
+.measure-dumbbell-gap.less {
+  color: var(--c-loss-text);
+  background: var(--c-loss-soft);
+}
+
+/* The x axis: ticks on an axis line, then the unit centred under the
+   plot, 44px in all (X_AXIS_HEIGHT), as a Recharts x axis */
+.measure-dumbbell-axis {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 44px;
+}
+
+.measure-dumbbell-axis .measure-dumbbell-row {
+  min-height: 22px;
+}
+
+.measure-dumbbell-axis .measure-dumbbell-plot {
+  min-height: 22px;
+  border-top: 1px solid var(--c-axis);
+}
+
+.measure-dumbbell-tick {
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--c-tick);
+  white-space: nowrap;
+}
+
+.measure-dumbbell-unit {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  white-space: nowrap;
+  padding-left: calc(6px + var(--md-label) + var(--md-gap));
+  padding-right: calc(6px + var(--md-values) + var(--md-gap));
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--c-axis-title);
+}
+
+.measure-dumbbell-tip {
+  position: absolute;
+  z-index: 5;
+  left: calc(6px + var(--md-label));
+  bottom: calc(100% - 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 4px 12px var(--shadow-soft);
+  font-size: 0.75rem;
+  color: var(--pe-gray-700);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.measure-dumbbell-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+  /* As the pair's GroupedLegend */
+  font-size: 12.5px;
+  color: var(--pe-gray-700);
+}
+
+.measure-dumbbell-legend i {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+.measure-dumbbell-legend i.dot {
+  width: 9px;
+  height: 9px;
+  background: var(--c-gain);
+}
+
+.measure-dumbbell-legend i.ring {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--c-before);
+}
+
+/* Phones: the name with its value and gap on one line, then the plot
+   across the full width */
+@media (max-width: 600px) {
+  .measure-dumbbell-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name values"
+      "plot plot";
+    row-gap: 2px;
+  }
+
+  .measure-dumbbell-name {
+    grid-area: name;
+  }
+
+  .measure-dumbbell-values {
+    grid-area: values;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .measure-dumbbell-plot {
+    grid-area: plot;
+  }
+
+  .measure-dumbbell-plot {
+    min-height: 26px;
+  }
+
+  /* The name has the row's width less the value: no clamp needed */
+  .measure-dumbbell-label {
+    display: block;
+  }
+
+  .measure-dumbbell-axis .measure-dumbbell-row {
+    grid-template-areas: "plot plot";
+  }
+
+  .measure-dumbbell-axis .measure-dumbbell-name,
+  .measure-dumbbell-axis .measure-dumbbell-values {
+    display: none;
+  }
+
+  .measure-dumbbell-unit {
+    padding: 0;
+  }
+
+  .measure-dumbbell-tip {
+    left: 6px;
+  }
+}
+
+/* A dumbbell card with no controls of its own (Pensioners' Effect of each
+   policy) beside one that has them: the plot takes the controls row too,
+   so no empty row opens above it; it grows to the neighbour's plot bottom,
+   so the axes still line up. */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) > div:not(:has(> .chart-controls)) > .chart-plot:has(> .measure-dumbbell) {
+    grid-row: 3 / span 2;
+  }
+}
