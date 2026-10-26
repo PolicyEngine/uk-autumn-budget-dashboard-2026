@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -16,7 +16,7 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
 import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
@@ -35,7 +35,6 @@ import {
   axisWidth,
   CHART_COLOURS,
   divergingAxis,
-  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -62,6 +61,8 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable: POLICIES,
@@ -292,27 +293,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 
+              {/* One segment at a time, beside the cursor; the other measures dim */}
+
               <Tooltip
 
                 {...TOOLTIP_PROPS}
 
-                cursor={HOVER_CURSOR}
+                shared={false}
 
-                content={
+                cursor={false}
 
-                  <ChartTooltip
+                offset={16}
 
-                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
-
-                    labelFormat={(label) => `Income decile ${label}, ${formatYearRange(selectedYear)}`}
-
-                    netKey="netChange"
-
-                    netLabel="Net change"
-
-                  />
-
-                }
+                content={<SegmentTooltip labelOf={(row) => `Income decile ${row.decile}, ${formatYearRange(selectedYear)}`} format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`} netKey="netChange" netLabel="Net change" />}
 
               />
               {!key.shared && (
@@ -333,7 +326,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
-                  fillOpacity={measureOpacity(key.highlight, policyName)}
+                  fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(key.highlight, policyName)}
+                  onMouseEnter={() => setHoveredMeasure(policyName)}
+                  onMouseLeave={() => setHoveredMeasure(null)}
                   name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
                   shape={barShape(ALL_POLICY_NAMES)}
