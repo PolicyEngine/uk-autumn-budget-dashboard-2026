@@ -2219,13 +2219,14 @@
   scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
 }
 
-/* "Show all households", at the start of the folded strip: a filled teal
-   secondary button, plain to see */
+/* "Show all households" / "Show fewer", at the end of the heading row: a
+   filled teal secondary button, plain to see */
 .household-cards-back {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 7px;
-  margin: 0 0 10px 3px;
+  margin: 0;
   padding: 7px 14px 7px 11px;
   font: inherit;
   font-size: var(--fs-caption);
