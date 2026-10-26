@@ -1237,19 +1237,6 @@
   margin: 0 0 8px;
 }
 
-.waterfall-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
-.waterfall-header .chart-description {
-  margin: 4px 0 0;
-}
 
 .waterfall-scale-note {
   margin: 2px 0 0;

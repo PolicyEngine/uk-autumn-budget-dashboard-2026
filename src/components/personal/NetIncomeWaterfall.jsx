@@ -105,12 +105,14 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   return (
     <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? (splitFailed ? "unavailable" : "pending") : "ready"} data-year={yearLabel}>
       {/* A title and one line, as every card has */}
-      <div className="waterfall-header">
-        <h3 className="waterfall-title">
-          <TitleIcon name="bars" />
-          <span className="title-text">How each policy changes your income</span>
-        </h3>
-        <p className="chart-description">{waterfallSentence(totals, pending ? null : shownSteps, yearLabel)}</p>
+      <div className="chart-header waterfall-header">
+        <div>
+          <h3>
+            <TitleIcon name="bars" />
+            <span className="title-text">How each policy changes your income</span>
+          </h3>
+          <p className="chart-description">{waterfallSentence(totals, pending ? null : shownSteps, yearLabel)}</p>
+        </div>
       </div>
       <div ref={wrapperRef} style={{ position: "relative" }}>
         <svg
