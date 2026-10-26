@@ -101,3 +101,28 @@ def test_cli_offers_income_distribution():
 
     parsed = parse_args(["generate", "--only", "income_distribution"])
     assert parsed.only == "income_distribution"
+
+
+def test_comparable_income_leaves_out_what_the_calculator_never_counts():
+    # Household net income £50,000 includes £7,000 of NHS spending in kind
+    # and is net of £1,000 business rates, £100 corporate stamp duty and
+    # £600 stamp duty: £50,000 - £7,000 + £1,700 = £44,700.
+    from types import SimpleNamespace
+
+    from uk_budget_data.calculators import comparable_net_income
+
+    values = {
+        "household_net_income": 50_000,
+        "nhs_spending": 7_000,
+        "business_rates": 1_000,
+        "corporate_sdlt": 100,
+        "expected_sdlt": 600,
+        "expected_ltt": 0,
+        "expected_lbtt": 0,
+    }
+    sim = SimpleNamespace(
+        calculate=lambda variable, period, map_to: SimpleNamespace(
+            values=np.array([values[variable]], dtype=float)
+        )
+    )
+    assert comparable_net_income(sim, 2027).tolist() == [44_700.0]

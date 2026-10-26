@@ -1169,6 +1169,41 @@ DISTRIBUTION_PERCENTILES = tuple(range(5, 96))
 DISTRIBUTION_MIN_HOUSEHOLDS = SINGLE_AGE_MIN_RECORDS
 DISTRIBUTION_BAND = 1.0
 DISTRIBUTION_SIDES = ("baseline", "reform")
+# Items in the survey data's household net income that the household
+# calculator never gives a household it builds from the form, so a reader
+# can be placed on the distribution: NHS spending in kind (a benefit in
+# household_benefits), and the business rates and stamp duty the model
+# attributes to households (taxes in household_tax).
+NOT_IN_CALCULATOR_BENEFITS = ("nhs_spending",)
+NOT_IN_CALCULATOR_TAXES = (
+    "business_rates",
+    "corporate_sdlt",
+    "expected_sdlt",
+    "expected_ltt",
+    "expected_lbtt",
+)
+
+
+def comparable_net_income(sim, year: int) -> np.ndarray:
+    """Household net income as the household calculator counts it, by
+    household: ``household_net_income`` less NHS spending in kind, plus the
+    attributed business rates and stamp duty (NOT_IN_CALCULATOR_*). What
+    stays is earnings and other market income, cash benefits and free
+    childcare, less income tax, National Insurance, council tax, fuel duty,
+    VAT changes, student loan repayments and pension contributions."""
+
+    def household(variable):
+        return np.asarray(
+            sim.calculate(variable, period=year, map_to="household").values,
+            dtype=float,
+        )
+
+    income = household("household_net_income")
+    for variable in NOT_IN_CALCULATOR_BENEFITS:
+        income = income - household(variable)
+    for variable in NOT_IN_CALCULATOR_TAXES:
+        income = income + household(variable)
+    return income
 
 
 def distribution_points(
@@ -1226,12 +1261,13 @@ def distribution_points(
 class IncomeDistributionCalculator(BaseCalculator):
     """Percentiles of equivalised household net income, before and after.
 
-    The income is PolicyEngine's ``equiv_household_net_income``: household
-    net income (after direct and indirect taxes, so VAT and fuel duty
-    measures count) divided by the HBAI modified OECD scale. It is the
-    figure the household calculator shows, equivalised the same way, so a
-    reader's household can be placed on it. (The decile charts rank
-    households on the HBAI definition, which leaves out indirect taxes.)
+    The income is ``comparable_net_income`` (household net income as the
+    household calculator counts it, so fuel duty and VAT measures count,
+    and NHS spending in kind and attributed business taxes do not) divided
+    by the HBAI modified OECD scale (``household_equivalisation_bhc``), so
+    a reader's household from the calculator can be placed on it. It is
+    not the HBAI income the decile charts rank on, which leaves out fuel
+    duty and VAT.
 
     People are counted, not households: each household weighs its weight
     times its size, as the deciles do. The ``baseline`` points rank
@@ -1260,8 +1296,10 @@ class IncomeDistributionCalculator(BaseCalculator):
             {
                 "people": household(baseline, "household_weight")
                 * household(baseline, "household_count_people"),
-                "baseline": household(baseline, "equiv_household_net_income"),
-                "reform": household(reformed, "equiv_household_net_income"),
+                "baseline": comparable_net_income(baseline, year)
+                / household(baseline, "household_equivalisation_bhc"),
+                "reform": comparable_net_income(reformed, year)
+                / household(reformed, "household_equivalisation_bhc"),
             }
         )
         if survey_households is not None:
