@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
@@ -24,6 +24,15 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),

@@ -8,9 +8,9 @@ import Note from "../Note";
 import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
 import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
-import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } from "./youngPeopleData";
+import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
-import { getPolicyColor } from "../../utils/policyConfig";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
@@ -45,6 +45,7 @@ export const DUMBBELL_MAX_STEPS = 4;
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
 export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height }) {
+  const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
@@ -84,7 +85,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <span className="measure-dumbbell-swatch" style={{ background: getPolicyColor(row.id) }} aria-hidden="true" />
+              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
               <span className="measure-dumbbell-label">{row.name}</span>
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
@@ -153,6 +154,7 @@ const UNIT = "Average change per person (£ a year)";
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
 function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
   const [band, setBand] = useState(YOUNG_BAND);
   const GROUPS = groupsFor(band);
@@ -180,11 +182,12 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's More info row, each with its colour and reason
+  // No effect: in the card's More info row, each with its colour. No reason
+  // per measure: a list of them by id would be a measure list of the page's
+  // own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: getPolicyColor(policy.id),
-    reason: noEffectReason(policy.id, selectedYear),
+    color: byId.get(policy.id)?.color,
   }));
   const csvText = () =>
     buildChartCsv({
@@ -246,7 +249,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>None of the selected policies changes household incomes in {yearLabel}.</p>
+            <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
+              ? `None of the selected policies changes household incomes in ${yearLabel}.`
+              : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
           </div>
         )}
       </div>

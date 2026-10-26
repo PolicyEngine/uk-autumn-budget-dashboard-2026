@@ -23,6 +23,10 @@ export function householdAnswerFor(body) {
   const request = typeof body === "string" ? JSON.parse(body) : body ?? {};
   const include = request.include ?? ["by_policy", "sweep"];
   const answer = { ...fixture, year: request.year ?? fixture.year };
+  // The real route reports only unmodelled measures in this request.
+  if (Array.isArray(request.policies)) {
+    answer.not_modelled = fixture.not_modelled.filter((measure) => request.policies.includes(measure.id));
+  }
   if (!include.includes("by_policy")) answer.by_policy = null;
   if (!include.includes("sweep")) answer.sweep = null;
   return answer;

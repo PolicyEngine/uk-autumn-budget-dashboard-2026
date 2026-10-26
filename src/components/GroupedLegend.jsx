@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { FLOW_BELOW, flowWidth, legendLayout, subColumns } from "../utils/legendLayout";
 import "./GroupedLegend.css";
 
@@ -16,17 +16,20 @@ export function legendGroups(items) {
     return [[null, items]];
   }
   return [
-    ["Raise revenue", items.filter((item) => item.raises)],
-    ["Cost revenue", items.filter((item) => !item.raises)],
+    ["Raise revenue", items.filter((item) => item.direction !== "neutral" && item.raises)],
+    ["Cost revenue", items.filter((item) => item.direction !== "neutral" && !item.raises)],
+    ["Other measures", items.filter((item) => item.direction === "neutral")],
   ].filter(([, groupItems]) => groupItems.length > 0);
 }
 
 /** The dashboard's policy names as legend items, coloured as in the charts. */
-export const policyItems = (names) =>
+export const policyItems = (names, catalogue) =>
   names.map((name) => ({
-    label: name,
-    color: POLICY_COLORS[name],
-    raises: REVENUE_RAISING_NAMES.has(name),
+    key: name,
+    label: catalogue.bySeriesKey.get(name)?.label ?? name,
+    color: catalogue.policyColors[name],
+    raises: catalogue.revenueRaisingNames.has(name),
+    direction: catalogue.bySeriesKey.get(name)?.direction,
   }));
 
 /** A legend key: a square, or a short line (dashed when `dash` is set). */
@@ -124,7 +127,8 @@ function textMeasurer(node) {
  * (a measure that is £0 in the year shown, legendMembership) is greyed out.
  */
 function GroupedLegend({ names, items, netLabel }) {
-  const all = items ?? policyItems(names ?? []);
+  const catalogue = useMeasureCatalogue();
+  const all = items ?? policyItems(names ?? [], catalogue);
   const groups = legendGroups(all);
   const ref = useRef(null);
   const [layout, setLayout] = useState(null);
@@ -184,7 +188,7 @@ function GroupedLegend({ names, items, netLabel }) {
       <div ref={ref} className="grouped-legend is-row">
         <ul className="grouped-legend-row">
           {all.map((item) => (
-            <li key={item.label} className={`grouped-legend-item${item.muted ? " is-muted" : ""}`}>
+            <li key={item.key ?? item.label} className={`grouped-legend-item${item.muted ? " is-muted" : ""}`}>
               <Swatch item={item} />
               <ItemLabel item={item} />
             </li>
@@ -222,7 +226,7 @@ function GroupedLegend({ names, items, netLabel }) {
                     style={width ? { width } : undefined}
                   >
                     {column.map((item) => (
-                      <li key={item.label} className={item.muted ? "is-muted" : undefined}>
+                      <li key={item.key ?? item.label} className={item.muted ? "is-muted" : undefined}>
                         <Swatch item={item} />
                         <ItemLabel item={item} />
                       </li>

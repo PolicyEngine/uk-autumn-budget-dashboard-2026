@@ -1734,6 +1734,7 @@ def calculate_household_impact(
     reform_net = after["household_net_income"]
     combined = reform_net - base_net
 
+    identity = runtime_identity()
     result = {
         "year": year,
         "fiscal_year": fiscal_year(year),
@@ -1812,7 +1813,11 @@ def calculate_household_impact(
             ),
         },
         "sweep": None,
-        "engine": runtime_identity()["packages"],
+        "engine": identity["packages"],
+        # The build's commit: the page uses a breakdown from a second
+        # deployment (the Modal detail service) only when it reports the
+        # same commit as the headline
+        "git_sha": identity["git_sha"],
     }
     if by_policy:
         if many:

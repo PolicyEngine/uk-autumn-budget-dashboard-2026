@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { COMBINED_REFORM_ID } from "./policyConfig";
+import fc from "fast-check";
 import {
+  COMBINED_REFORM_ID,
   curveOf,
   describePosition,
   distributionRunFor,
@@ -106,13 +107,30 @@ describe("householdPosition", () => {
 describe("distributionRunFor", () => {
   const all = ["a", "b", "c"];
   it("uses a single measure's own run", () => {
-    expect(distributionRunFor(["b"], all)).toEqual({ reformId: "b", exact: true });
+    expect(distributionRunFor(["b"], all, all)).toEqual({ reformId: "b", exact: true });
   });
   it("uses the package's run for every measure, exactly", () => {
-    expect(distributionRunFor(["c", "a", "b"], all)).toEqual({ reformId: COMBINED_REFORM_ID, exact: true });
+    expect(distributionRunFor(["c", "a", "b"], all, ["b", "c", "a"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: true });
   });
   it("maps part of the package to the package's run, flagged", () => {
-    expect(distributionRunFor(["a", "b"], all)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+    expect(distributionRunFor(["a", "b"], all, all)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+  });
+  it("never calls the package's run exact after a withdrawal: it still holds the withdrawn measure", () => {
+    // "d" withdrawn: three published, the package run with all four
+    expect(distributionRunFor(["a", "b", "c"], all, ["a", "b", "c", "d"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+    // or no verified package at all
+    expect(distributionRunFor(["a", "b", "c"], all, null)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+  });
+  it("is exact for two or more measures only when the selection, the published set and the package's members are one set", () => {
+    const id = fc.constantFrom("a", "b", "c", "d", "e");
+    fc.assert(
+      fc.property(fc.uniqueArray(id), fc.uniqueArray(id), fc.option(fc.uniqueArray(id), { nil: null }), (selected, published, members) => {
+        fc.pre(selected.length > 1);
+        const { exact } = distributionRunFor(selected, published, members);
+        const same = (x, y) => x.length === y.length && x.every((v) => y.includes(v));
+        expect(exact).toBe(published.length > 0 && members !== null && same(selected, published) && same(members, published));
+      }),
+    );
   });
 });
 

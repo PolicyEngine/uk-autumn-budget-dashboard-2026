@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as renderReact, screen } from "@testing-library/react";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import PensionersSection from "../PensionersSection";
 import {
   aggregateFrom,
@@ -11,7 +12,27 @@ import {
 } from "./pensionersData";
 import { singleAgeBars, SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "../youngPeople/youngPeopleData";
 import { SINGLE_AGE_TOP, singleAgeKey } from "../../utils/ageImpact";
-import { COMBINED_REFORM_ID } from "../../utils/policyConfig";
+// The package's combined run, as the catalogue names it (#104)
+const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
+
+// #185 on #104: the age table comes from verified artifacts; here it is
+// served as the verified rows that route returns (as YoungPeopleSection's
+// test does)
+vi.mock("../../utils/loadDashboard", async (importOriginal) => {
+  const actual = await importOriginal();
+  const { parseTable } = await import("../../utils/publication/csv");
+  const { isCatalogueRowDisplayable } = await import("../../utils/measureCatalogue");
+  return {
+    ...actual,
+    loadVerifiedTable: async (catalogue, table) => {
+      const response = await fetch(`/data/${table}.csv`);
+      if (!response.ok) throw new Error(`${table} is unavailable`);
+      return parseTable(table, await response.text()).filter((row) =>
+        isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+      );
+    },
+  };
+});
 
 vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
@@ -30,6 +51,17 @@ const POLICIES = [
   { id: "threshold_freeze_2031_32", name: "Threshold freeze 2031-32" },
 ];
 const ALL = POLICIES.map((policy) => policy.id);
+const catalogue = buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(POLICIES.map((policy) => [policy.id, { name: policy.name, status: "approved", years: [2026, 2027], unsupported_years: [], outputs_sha256: "a".repeat(64) }])),
+    combined: { [COMBINED_REFORM_ID]: { name: "All measures", status: "approved", years: [2026, 2027], unsupported_years: [], measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) } },
+  },
+  budgetary: POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, year: 2027, value: index === 0 ? -1 : 1 })),
+  tablesByKey: Object.fromEntries([...ALL, COMBINED_REFORM_ID].map((id) => [id, {}])),
+});
+const render = (element) => renderReact(
+  <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
+);
 
 // Every single age 50 to 90+, 2026 and 2027: pensioners gain £100 from
 // the protection at every age from 66 (so 66 counts only in 2026), the
@@ -85,7 +117,7 @@ describe("pensioners data", () => {
   });
 
   it("splits better and worse off into pensioners, the rest and all ages, from one run", () => {
-    const shares = pensionerShares(fixture(), POLICIES, ALL, 2027);
+    const shares = pensionerShares(fixture(), POLICIES, ALL, 2027, COMBINED_REFORM_ID);
     expect(shares.run).toBe(COMBINED_REFORM_ID);
     const [pensioners, under, all] = shares.groups;
     expect(pensioners.row.pct_better_off).toBeCloseTo(40);
@@ -94,11 +126,11 @@ describe("pensioners data", () => {
     expect(under.row.pct_better_off).toBeCloseTo((2000 - 960) / 7600 * 100);
     expect(all.row.pct_better_off).toBe(20);
     // No run for part of the selection
-    expect(pensionerShares(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027)).toBeNull();
+    expect(pensionerShares(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027, COMBINED_REFORM_ID)).toBeNull();
   });
 
   it("splits better and worse off by single year of age from State Pension age, then the total", () => {
-    const at = (year) => pensionerSharesBySingleAge(fixture(), POLICIES, ALL, year).groups;
+    const at = (year) => pensionerSharesBySingleAge(fixture(), POLICIES, ALL, year, COMBINED_REFORM_ID).groups;
     // 67 to 90+ from 2027-28, then Pensioners; 66 to 90+ in 2026-27
     const groups = at(2027);
     expect(groups.map((group) => group.label)).toEqual([
@@ -113,10 +145,10 @@ describe("pensioners data", () => {
     const thin = fixture().map((row) =>
       row.reform_id === COMBINED_REFORM_ID && row.year === 2027 && row.age_band === "70" ? { ...row, sample_size: 10 } : row,
     );
-    const thinGroups = pensionerSharesBySingleAge(thin, POLICIES, ALL, 2027).groups;
+    const thinGroups = pensionerSharesBySingleAge(thin, POLICIES, ALL, 2027, COMBINED_REFORM_ID).groups;
     expect(thinGroups.find((group) => group.label === "70").suppressed).toBe(true);
     expect(thinGroups.at(-1).suppressed).toBe(true);
-    expect(pensionerSharesBySingleAge(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027)).toBeNull();
+    expect(pensionerSharesBySingleAge(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027, COMBINED_REFORM_ID)).toBeNull();
   });
 
   it("leaves Young people's single-age bars as they were", () => {

@@ -10,7 +10,6 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-  LabelList,
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
@@ -19,7 +18,8 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
-import { POLICY_COLORS, ALL_POLICY_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -28,7 +28,6 @@ import {
   AXIS_TITLE_STYLE,
   chartMargin,
   legendWrapperStyle,
-  legendLabelStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
@@ -192,16 +191,16 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selecte
  * The measures in the chart's order: raise revenue, then cost revenue, each
  * group by size (mean absolute £bn over the years shown), largest first.
  * The stack (largest nearest zero), the legend and the tooltip all take
- * this order, as the colours do (POLICY_COLORS shades each group's ramp by
- * the same ranking, from the full package).
+ * this order. The groups and series keys come from the catalogue (#104);
+ * measures with no published costing ("neutral") come last.
  */
-export function measureOrder(data) {
-  const byGroup = (raises) =>
+export function measureOrder(data, catalogue) {
+  const byDirection = (direction) =>
     orderBySize(
-      ALL_POLICY_NAMES.filter((name) => REVENUE_RAISING_NAMES.has(name) === raises),
+      catalogue.allPolicyNames.filter((key) => catalogue.bySeriesKey.get(key)?.direction === direction),
       data,
     );
-  return [...byGroup(true), ...byGroup(false)];
+  return [...byDirection("revenue"), ...byDirection("cost"), ...byDirection("neutral")];
 }
 
 // Chart metadata for export
@@ -212,20 +211,26 @@ const CHART_DESCRIPTION =
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  const catalogue = useMeasureCatalogue();
+  const {
+    displayable,
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = catalogue;
 
   if (!data || data.length === 0) return null;
+  if (!displayable.length) return <UnavailableNotice reason="Revenue figures are unavailable until approved results verify." />;
 
   const formatCurrencyTick = (value) =>
     value < 0 ? `-£${Math.abs(value)}bn` : `£${value}bn`;
-  const formatCurrencyTooltip = (value) =>
-    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `£${value.toFixed(1)}bn`;
 
   // Check which policies have non-zero values for legend/tooltip
   const hasNonZeroValues = (policyName) => {
     return data.some((d) => Math.abs(d[policyName] || 0) > 0.001);
   };
 
-  const orderedPolicies = measureOrder(data);
+  const orderedPolicies = measureOrder(data, catalogue);
   const activePolicies = orderedPolicies.filter(hasNonZeroValues);
 
   // Y axis: symmetric about zero when the year's stacks go both ways
@@ -250,9 +255,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const legendItems = [
     ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
-      label: name,
+      label: bySeriesKey.get(name)?.label ?? name,
       type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net impact", type: "line" }]
@@ -271,7 +276,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => revenueCsv(data, activePolicies),
+    csv: () => revenueCsv(data, activePolicies.map((key) => bySeriesKey.get(key))),
   };
 
   return (
@@ -353,7 +358,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                name={policyName}
+                name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 {...chartMotion()}
                 // Always mounted (a zero series has no height), so a series that

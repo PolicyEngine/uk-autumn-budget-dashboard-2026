@@ -85,7 +85,8 @@ describe("the request the form sends", () => {
   });
 
   it("leaves the examples' precomputed requests as they were", () => {
-    for (const { request } of presetRequests()) {
+    // On #104 the measures come from the publication; any list will do
+    for (const { request } of presetRequests(["alpha", "beta"])) {
       expect(JSON.stringify(request)).not.toMatch(/constituency/);
     }
   });

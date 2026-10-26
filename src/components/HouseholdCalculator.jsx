@@ -4,12 +4,13 @@ import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import HouseholdCards from "./personal/HouseholdCards";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
 import useBasisIncome from "../hooks/useBasisIncome";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import HouseholdScatter from "./HouseholdScatter";
-import { PRESET_POLICIES, loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
+import { loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -318,6 +319,10 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  publicationKey = "",
+  expectedEngine = null,
+  presetEngine = null,
+  confirmPublication = null,
   active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
@@ -360,20 +365,33 @@ function HouseholdCalculator({
   const [seeded, setSeeded] = useState(0);
   // and each example's change in net income, for its card
   const [presetChanges, setPresetChanges] = useState({});
+  // The measures the cards' figures are for: every published one, in the
+  // page's order (#104: the page keeps no list of its own). The file's
+  // answers count only for exactly these, under the engine their receipts
+  // record (`presetEngine`, not the selection's: with nothing selected that
+  // is null, and none are loaded then).
+  const presetPolicies = useMemo(
+    () => policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
+    [policies],
+  );
+  const presetKey = presetPolicies.join(",");
   useEffect(() => {
     let live = true;
-    loadPresetResults().then((entries) => {
+    const options = { policies: presetPolicies, expectedEngine: presetEngine, publicationKey };
+    loadPresetResults(options).then((entries) => {
       if (!live || entries.length === 0) return;
       seedHouseholdImpactCache(entries);
       setSeeded((n) => n + 1);
     });
-    loadPresetChanges().then((changes) => {
+    loadPresetChanges(options).then((changes) => {
       if (live) setPresetChanges(changes);
     });
     return () => {
       live = false;
     };
-  }, []);
+    // presetKey stands for presetPolicies; presetEngine for its own JSON
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKey, publicationKey, JSON.stringify(presetEngine)]);
 
   // The example shown, if any: its salary's source goes in "Based on"
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
@@ -386,8 +404,9 @@ function HouseholdCalculator({
   // The cards' figures are for every measure: shown only while every
   // measure is selected
   const allSelected =
-    householdPolicies.length === PRESET_POLICIES.length &&
-    PRESET_POLICIES.every((id) => householdPolicies.includes(id));
+    presetPolicies.length > 0 &&
+    householdPolicies.length === presetPolicies.length &&
+    presetPolicies.every((id) => householdPolicies.includes(id));
   // Fill the form from an example and show its result at once (no
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
@@ -414,9 +433,17 @@ function HouseholdCalculator({
     year: submitted?.year ?? year,
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
+    publicationKey,
+    expectedEngine,
+    confirmPublication,
     seeded,
     household: submitted?.household ?? null,
   });
+  const unmodelled = householdResult.data?.notModelled ?? [];
+  const selectionUnavailable = !noneSelected && unmodelled.length > 0;
+  const unavailableNames = unmodelled.map((measure) =>
+    policies.find((policy) => policy.id === measure.id)?.name ?? measure.name ?? measure.id,
+  );
   // The answers, year or policies differ from those of the result shown
   const changed =
     submitted !== null &&
@@ -759,6 +786,9 @@ function HouseholdCalculator({
   const basisIncome = useBasisIncome({
     inputs: submitted?.inputs ?? null,
     policies: submitted?.policies ?? [],
+    presetPolicies,
+    publicationKey,
+    expectedEngine,
     basisYear,
     enabled: placed !== null,
   });
@@ -853,24 +883,31 @@ function HouseholdCalculator({
             what to do */}
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
-          <SingleYearHeadline
-            result={householdResult}
-            year={submitted?.year ?? year}
-            policies={policies}
-            noPolicies={noneSelected}
-            renting={isRenting((submitted?.inputs ?? inputs).tenure)}
-            spending={{
-              petrol: (submitted?.inputs ?? inputs).petrol_spending_per_year,
-              diesel: (submitted?.inputs ?? inputs).diesel_spending_per_year,
-              electricity: (submitted?.inputs ?? inputs).electricity_spending_per_year,
-              assumed: spendingAssumed(submitted?.inputs ?? inputs, presetId),
-            }}
-            submitted={submitted !== null}
-            changed={changed}
-            policyCount={submitted?.policies.length ?? householdPolicies.length}
-            startedAt={submitted?.at ?? null}
-            salarySource={activePreset?.salarySource ?? null}
-          />
+          {selectionUnavailable ? (
+            <UnavailableNotice reason="Household impact is unavailable for this selection">
+              <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
+              <p>Select measures that can all be calculated to see your household&apos;s results.</p>
+            </UnavailableNotice>
+          ) : (
+            <SingleYearHeadline
+              result={householdResult}
+              year={submitted?.year ?? year}
+              policies={policies}
+              noPolicies={noneSelected}
+              renting={isRenting((submitted?.inputs ?? inputs).tenure)}
+              spending={{
+                petrol: (submitted?.inputs ?? inputs).petrol_spending_per_year,
+                diesel: (submitted?.inputs ?? inputs).diesel_spending_per_year,
+                electricity: (submitted?.inputs ?? inputs).electricity_spending_per_year,
+                assumed: spendingAssumed(submitted?.inputs ?? inputs, presetId),
+              }}
+              submitted={submitted !== null}
+              changed={changed}
+              policyCount={submitted?.policies.length ?? householdPolicies.length}
+              startedAt={submitted?.at ?? null}
+              salarySource={activePreset?.salarySource ?? null}
+            />
+          )}
         </div>
         )}
       </div>
@@ -889,7 +926,7 @@ function HouseholdCalculator({
       )}
 
       {/* The results' sections, below the form and headline, once asked */}
-      {submitted !== null && !noneSelected && (
+      {submitted !== null && !noneSelected && !selectionUnavailable && (
         <div role="region" aria-label="Your household's results">
           <SingleYearDetails
             result={householdResult}

@@ -74,7 +74,7 @@ describe("parseScatterCsv", () => {
 
 describe("scatterView", () => {
   const view = (selectedIds, year = 2029, data = ready) =>
-    scatterView({ data, selectedIds, policyIds: POLICY_IDS, year });
+    scatterView({ data, selectedIds, policyIds: POLICY_IDS, year, packageId: "all_combined" });
 
   it("shows one measure's cells for that measure and year, centred in their bands", () => {
     const result = view(["a"]);
