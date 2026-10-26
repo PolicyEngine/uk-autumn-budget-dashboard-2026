@@ -1,28 +1,17 @@
-/* A chart card's "More info" (ChartMoreInfo): small text, as "About this
-   chart"; the £0 measures one per line */
-.chart-more-info-content {
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-.chart-more-info-content p {
-  margin: 0;
-}
-
-.chart-more-info-content > * + * {
-  margin-top: 8px;
-}
-
+/* The £0 measures, one caveat in a card's "About this chart" */
 .zero-measures-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin: 6px 0;
+  gap: 2px;
+  margin: 4px 0 0;
   padding: 0;
   list-style: none;
 }
 
-.chart-more-info-content a {
-  color: var(--pe-teal-700);
+.chart-more-info-legacy > p {
+  margin: 0;
+}
+
+.chart-more-info-legacy > p + p {
+  margin-top: 6px;
 }

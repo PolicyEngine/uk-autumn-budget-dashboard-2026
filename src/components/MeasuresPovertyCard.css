@@ -9,7 +9,7 @@
 .wf {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(120px, 32%) minmax(0, 1fr) 112px;
+  grid-template-columns: minmax(120px, 30%) minmax(0, 1fr) 168px;
   column-gap: 12px;
   font-size: var(--fs-caption);
 }
@@ -30,11 +30,13 @@
   line-height: 1.25;
 }
 
+/* Each measure's own colour, as a dot by its name (the bars are coloured
+   by direction) */
 .wf-key {
   flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }
 
 .wf-track {
@@ -51,7 +53,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--pe-gray-100);
+  border-left: 1px dashed var(--c-grid);
 }
 
 .wf-grid.wf-zero {
@@ -68,9 +70,10 @@
 .wf-bar {
   position: absolute;
   top: 50%;
-  height: 20px;
+  height: 16px;
   transform: translateY(-50%);
-  border-radius: 3px;
+  /* The dashboard's bar style (chartTheme BAR_RADIUS) */
+  border-radius: var(--bar-radius);
 }
 
 .wf-row > .wf-value {
@@ -85,7 +88,6 @@
 .wf-main {
   color: var(--pe-gray-800);
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .wf-pp {
@@ -111,7 +113,7 @@
 }
 
 .wf-total .wf-bar {
-  height: 24px;
+  height: 20px;
 }
 
 .wf-axis > *,
@@ -135,22 +137,14 @@
   font-size: var(--fs-micro);
 }
 
-/* The measures that move no one: one muted line under the chart */
+/* The measures that move no one, in More info */
 .wf-none {
-  margin: 8px 0 0;
-  color: var(--pe-gray-500);
-  font-size: var(--fs-micro);
-  line-height: 1.4;
-}
-
-.wf-info {
-  margin-left: 4px;
-  vertical-align: middle;
+  margin: 0 0 8px;
 }
 
 @container (max-width: 520px) {
   .wf {
-    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr) 96px;
+    grid-template-columns: minmax(96px, 32%) minmax(0, 1fr) 108px;
     column-gap: 8px;
   }
 
@@ -191,4 +185,14 @@
 
 .mp-card .chart-logo {
   align-items: flex-end;
+}
+
+/* The axis's end ticks sit inside the track, so "0" and the last never run
+   into each other on a narrow card */
+.wf-axis .wf-tick:first-child {
+  transform: none;
+}
+
+.wf-axis .wf-tick:last-child {
+  transform: translateX(-100%);
 }

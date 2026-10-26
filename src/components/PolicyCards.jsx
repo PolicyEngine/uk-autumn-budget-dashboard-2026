@@ -1,11 +1,49 @@
+import { useState } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { withPolicyDetails } from "../utils/policyDetails";
+import { parameterTableFor } from "../utils/policyParameters";
+import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
+import Disclosure from "./Disclosure";
+import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
+
+/** The one name of every Policies card's disclosure. */
+export const HOW_IT_IS_MODELLED = "How it is modelled";
+
+// A details sentence that states a limitation: one of the published
+// limitations' patterns, or the words the details use for them
+const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b/i;
+const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
+
+/**
+ * A measure's "How it is modelled", in About this chart's sections: its
+ * modelling details and fact labels as How it's calculated, and as Caveats
+ * every stated limitation the card does not already show and any modelling
+ * note. A limitation is said once: in the details' own words where they
+ * state it, else in the published description's.
+ */
+export function modellingInfo(policy) {
+  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
+  const details = sentences(policy.details);
+  return {
+    how: [
+      ...details.filter((sentence) => !isLimit(sentence)),
+      modelling.facts.length > 0 && `Modelled with: ${modelling.facts.join(" · ")}.`,
+    ],
+    caveats: [
+      ...details.filter(isLimit),
+      ...modelling.limits.filter((limit) => !limit.said).map((limit) => limit.sentence),
+      ...modelling.notePoints,
+    ],
+  };
+}
+import Tip from "./Tip";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
 // measure's budgetary effect. Cards carry no icon per measure: a map by
 // measure id would be a measure list of the page's own.
-const GROUPS = [
+export const GROUPS = [
   { heading: "Raises revenue", direction: "revenue", arrow: "arrowUp" },
   { heading: "Costs revenue", direction: "cost", arrow: "arrowDown" },
   { heading: "Other measures", direction: "neutral", arrow: null },
@@ -83,7 +121,7 @@ const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => mon
  * back in two stages, are small diamonds labelled below the axis. One
  * image, described in words for screen readers.
  */
-function PolicyTimeline({ policy }) {
+function PolicyTimeline({ policy, highlight }) {
   const { from, to } = policy.inForce;
   const start = timelineMonth(from);
   const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
@@ -121,6 +159,16 @@ function PolicyTimeline({ policy }) {
               );
             })}
           </svg>
+          {/* The years a hovered step of "What changes" covers */}
+          {highlight && (
+            <span
+              className="ptl-year-band"
+              style={{
+                left: share((highlight.from - TIMELINE_START_YEAR) * 12),
+                width: share((highlight.to - highlight.from + 1) * 12),
+              }}
+            />
+          )}
           <span className="ptl-budget-line" style={{ left: share(BUDGET_DAY_MONTH) }} />
           <span
             className={`ptl-span${to ? "" : " is-lasting"}`}
@@ -135,7 +183,11 @@ function PolicyTimeline({ policy }) {
               style={{ left: share(timelineMonth(step.month)) }}
             />
           ))}
-          {!to && <span className="ptl-arrow" />}
+          {!to && (
+            <Tip content="No end date">
+              <span className="ptl-arrow" />
+            </Tip>
+          )}
         </div>
         {" "}
         {/* Always there, empty when unused, so the years line up across a row */}
@@ -153,8 +205,15 @@ function PolicyTimeline({ policy }) {
         </div>
       </div>
       <div className="policy-timeline-labels">
-        {TIMELINE_LABELS.map((label) => (
-          <span key={label}>
+        {TIMELINE_LABELS.map((label, i) => (
+          <span
+            key={label}
+            className={
+              highlight && TIMELINE_START_YEAR + i >= highlight.from && TIMELINE_START_YEAR + i <= highlight.to
+                ? "is-lit"
+                : undefined
+            }
+          >
             <span className="policy-timeline-label-full">{label}</span>
             <span className="policy-timeline-label-short">{label.slice(2)}</span>{" "}
           </span>
@@ -165,15 +224,22 @@ function PolicyTimeline({ policy }) {
 }
 
 /**
- * One measure's card. Every card has the same five rows, in the same order,
+ * One measure's card. Every card has the same six rows, in the same order,
  * and the cards of a grid row share them (CSS subgrid), so each row lines
  * up across the cards: the head (type and any "Temporary" badge on one
- * line, then the name), the summary, when it is in force (Starts and Ends,
- * the Ends slot kept even when empty, then the timeline), the source, and
- * the footer ("How it is modelled" and "See its effect" on one line).
+ * line, then the name), the summary, what changes (the model's parameters,
+ * current law beside the measure; the slot kept, empty, when the file has
+ * no table for the measure as published), when it is in force (Starts and
+ * Ends, the Ends slot kept even when empty, then the timeline), the
+ * source, and the footer ("How it is modelled" and "See its effect" on
+ * one line).
  */
-function PolicyCard({ policy, onShowEffect }) {
+function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
+  // The years a hovered step of "What changes" covers, marked on the timeline
+  const [highlight, setHighlight] = useState(null);
+  // What the published wording says about how it is modelled
+  const modelling = modellingInfo(policy);
   return (
     <li
       className="policy-card"
@@ -193,6 +259,16 @@ function PolicyCard({ policy, onShowEffect }) {
 
       <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
 
+      <div className="policy-card-spec">
+        {parameters && (
+          <PolicyChange
+            entry={parameters}
+            direction={policy.direction}
+            onHighlight={setHighlight}
+          />
+        )}
+      </div>
+
       <div className="policy-card-when">
         <dl className="policy-card-dates">
           <div>
@@ -210,30 +286,37 @@ function PolicyCard({ policy, onShowEffect }) {
             )}
           </div>
         </dl>
-        {policy.inForce && <PolicyTimeline policy={policy} />}
+        {policy.inForce && (
+          <PolicyTimeline policy={policy} highlight={highlight} />
+        )}
       </div>
 
-      <p className="policy-card-source-line">
+      {/* The footer, one line: the source, how it is modelled, its effect */}
+      <div className="policy-card-foot">
         {policy.source && (
+          <Tip content={policy.source.label}>
           <a
             className="policy-card-source"
             href={policy.source.href}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Source: {policy.source.label}
+            Source
+            <span className="policy-sr-only">: {policy.source.label}</span>
             <ExternalLink size={14} aria-hidden="true" />
             <span className="policy-sr-only"> (opens in a new tab)</span>
           </a>
+          </Tip>
         )}
-      </p>
-
-      <div className="policy-card-foot">
-        {policy.details && (
-          <details className="policy-card-details">
-            <summary>How it is modelled</summary>
-            <p>{policy.details}</p>
-          </details>
+        {hasInfo(modelling) && (
+          <Disclosure
+            compact
+            title={HOW_IT_IS_MODELLED}
+            className="policy-card-details"
+            preview={infoPreview(modelling)}
+          >
+            <InfoSections info={modelling} />
+          </Disclosure>
         )}
         {onShowEffect && (
           <button
@@ -258,10 +341,12 @@ function PolicyCard({ policy, onShowEffect }) {
  * description comes from policyDetails.js where it has the id. Each card gives what
  * changes, what kind of measure it is, when it starts and ends (with a
  * timeline over the charts' years), how it is modelled and a source where
- * one exists. Revenue figures stay in the charts: "See its effect" opens
+ * one exists, and what changes: the model's parameters before and after
+ * (public/data/policy_parameters.json). Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
  */
-function PolicyCards({ policies, selectedPolicies, onShowEffect }) {
+function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
+  const tables = usePolicyParameters(parameterTables);
   return GROUPS.map(({ heading, direction, arrow }) => {
     const items = policies
       .filter((policy) =>
@@ -288,7 +373,12 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect }) {
         </div>
         <ul className="policy-cards">
           {items.map((policy) => (
-            <PolicyCard key={policy.id} policy={policy} onShowEffect={onShowEffect} />
+            <PolicyCard
+              key={policy.id}
+              policy={policy}
+              onShowEffect={onShowEffect}
+              parameters={parameterTableFor(tables, policy)}
+            />
           ))}
         </ul>
       </section>
