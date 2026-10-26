@@ -37,17 +37,19 @@ function markHintSeen() {
  *   <SeriesToggle series={series} shown={shown} onChange={setShown} onHover={setHovered} />
  *
  * @param {Object} props
- * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string}>} props.series
+ * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block"}>} props.series
+ *   (`shape: "block"` for a filled layer: a square swatch)
  * @param {string[]} props.shown - The keys of the lines drawn
  * @param {(keys: string[]) => void} props.onChange - The next keys drawn, in `series` order
  * @param {(key: string|null) => void} [props.onHover]
  * @param {string} [props.label] - What the chips are, for screen readers ("Lines")
  * @param {boolean} [props.narrow] - Short labels (`short`) where given
+ * @param {string} [props.lead] - The lead-in before the chips ("Show lines:"; "Show:" for layers)
  * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
  *   items that are not lines (the selected year's shading), after the chips,
  *   as a swatch and a label, not a button
  */
-export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false, extras = [] }) {
+export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false, extras = [], lead = "Show lines:" }) {
   // Read after mount, so the server and first render agree
   const [hint, setHint] = useState(false);
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
     <div className="series-toggle-wrap">
       <div className="series-toggle" role="group" aria-label={`${label}: show or hide`}>
         <span className="series-toggle-lead" aria-hidden="true">
-          Show lines:
+          {lead}
         </span>
         {series.map((s) => {
           const active = on.has(s.key);
@@ -94,7 +96,13 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
               <svg className="series-toggle-check" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
                 {active && <path d="M1.5 5.2 4 7.6 8.6 2.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
               </svg>
-              <svg className="series-toggle-swatch" width="18" height="10" viewBox="0 0 18 10" aria-hidden="true">
+{s.shape === "block" ? (
+                // A filled layer (a stacked band): a square swatch
+                <svg className="series-toggle-swatch" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <rect x="1" y="1" width="10" height="10" rx="2" fill={s.colour} />
+                </svg>
+              ) : (
+                            <svg className="series-toggle-swatch" width="18" height="10" viewBox="0 0 18 10" aria-hidden="true">
                 <line
                   x1="1"
                   y1="5"
@@ -106,6 +114,7 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
                   strokeDasharray={s.dash}
                 />
               </svg>
+              )}
               <span className="series-toggle-label">{narrow && s.short ? s.short : s.label}</span>
             </button>
             </Tip>

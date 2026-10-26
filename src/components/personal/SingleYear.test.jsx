@@ -137,8 +137,9 @@ describe("Household impact's results", () => {
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
     // income charts below the calculator, the published household scatter
-    // (the result among all households) and the UK files "Where you sit"
-    // reads, only the household route
+    // (the result among all households, loaded on demand through its
+    // artifact's receipt) and the UK files "Where you sit" reads, only the
+    // household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
@@ -146,6 +147,7 @@ describe("Household impact's results", () => {
           !url.endsWith("/household_presets.json") &&
           !url.endsWith("/income_curve.csv") &&
           !url.endsWith("/household_scatter_binned.csv") &&
+          !url.endsWith("/receipt.json") &&
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
           !url.endsWith("/distributional_impact.csv") &&
@@ -308,7 +310,16 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
-    expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
+    // Each detail in a tip, shown on focus or hover
+    const tipOf = (label) => {
+      const button = within(box(label)).getByRole("button");
+      fireEvent.focus(button);
+      const id = button.getAttribute("aria-describedby").split(" ").pop();
+      const text = document.getElementById(id).textContent;
+      fireEvent.blur(button);
+      return text;
+    };
+    expect(tipOf("Rent area")).toBe("region default");
     // A supported selection has nothing left out: an unmodelled measure
     // makes the whole selection unavailable instead (#104)
     expect(assumptions).not.toHaveTextContent("not shown");
@@ -320,9 +331,11 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
     // Not entered by the reader: marked as assumed, with what it does
     expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
-    expect(within(box("Spending a year")).getByRole("tooltip")).toHaveTextContent(
+    expect(tipOf("Spending a year")).toBe(
       "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
     );
+    // Whose result it is, in one line under the figure
+    expect(card.querySelector(".result-summary")).toHaveTextContent("£34,192 and £12,822 salaries · renting in Central Greater Manchester");
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -1043,5 +1056,18 @@ describe("the assumed-spending caution", () => {
     const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
     expect(spendingAssumed(own, "driver")).toBe("example");
     expect(spendingAssumed(own, null)).toBeNull();
+  });
+});
+
+describe("the result's one-line summary", () => {
+  it("names salary, family, home and band, from the answers and the answer", async () => {
+    const { householdSummary } = await import("./SingleYearResults");
+    const data = { salaryUsed: 24166, partnerSalaryUsed: null, area: { brma: "CENTRAL_GREATER_MANCHESTER" }, councilTax: { band: "D" } };
+    expect(householdSummary(data, { tenure: "RENT_PRIVATELY", regionLabel: "North West" })).toBe(
+      "£24,166 salary · renting in Central Greater Manchester · band D",
+    );
+    expect(householdSummary({ ...data, partnerSalaryUsed: 0 }, { tenure: "OWNED_WITH_MORTGAGE", regionLabel: "North West", partner: true, children: 2 })).toBe(
+      "£24,166 salary · couple, 2 children · owns with a mortgage · North West · band D",
+    );
   });
 });

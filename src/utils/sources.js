@@ -95,6 +95,15 @@ export const SOURCES = {
     label: "Microcosm",
     url: "https://github.com/PolicyEngine/microcosm",
   },
+  // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
+  dwp_hbai_methodology: {
+    label: "DWP, Households Below Average Income: background information and methodology",
+    url: "https://www.gov.uk/government/statistics/households-below-average-income-for-financial-years-ending-1995-to-2025/households-below-average-income-background-information-and-methodology-report-fye-2025",
+  },
+  policyengine_uk_parameters: {
+    label: "policyengine-uk parameters",
+    url: "https://github.com/PolicyEngine/policyengine-uk/tree/main/policyengine_uk/parameters",
+  },
 };
 
 /** Attributes for a link to an external source. */

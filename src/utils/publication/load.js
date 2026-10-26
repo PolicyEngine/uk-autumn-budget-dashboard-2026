@@ -7,12 +7,13 @@
  * is unavailable, never partly shown.
  */
 
+import { cachedFile, cachedReceipt, forgetReceipt, rememberFile, rememberReceipt } from "./cache";
 import { parseTable, tableForFile, TABLES } from "./csv";
-import { receiptProblems, sha256Hex, verifyFile, verifyReceiptFiles } from "./digest";
+import { receiptProblems, sha256Hex, verifyReceiptFiles } from "./digest";
+import { manifestUrl, takeEarlyManifest } from "./early";
 import { assertCurrentRelease } from "./release";
 import {
   isDisplayable,
-  MANIFEST_FILE,
   parseManifest,
   RECEIPT_FILE,
 } from "./manifest";
@@ -26,6 +27,21 @@ export const DEFAULT_TABLES = [
   "metrics",
   "household_scatter_binned",
 ];
+
+/**
+ * The tables the page waits for before its first chart: every view's
+ * headline figures. The household scatter (about three quarters of the
+ * bytes) and the age table load when a view needs them, or when the page is
+ * idle, through the same checks.
+ */
+export const CATALOGUE_TABLES = DEFAULT_TABLES.filter(
+  (table) => table !== "household_scatter_binned",
+);
+
+// Every artifact must list these files, whichever tables a load reads, as
+// it had to when every load read all of them: an artifact without one is
+// refused whole, never shown in part.
+const LISTED_TABLES = DEFAULT_TABLES;
 
 function isAbort(error) {
   return error?.name === "AbortError";
@@ -51,8 +67,12 @@ export async function loadManifest(
   basePath,
   { fetchImpl = fetch, signal } = {},
 ) {
-  const url = `${basePath}/data/${MANIFEST_FILE}`;
-  const response = await fetchImpl(url, { signal, cache: "no-cache" });
+  const url = manifestUrl(basePath);
+  // The head's script started this request before the page's code loaded
+  // (early.js); only the page's own fetch adopts it, once
+  const early = fetchImpl === globalThis.fetch ? takeEarlyManifest(url) : null;
+  let response = early ? await early.catch(() => null) : null;
+  if (!response) response = await fetchImpl(url, { signal, cache: "no-cache" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   const bytes = await response.arrayBuffer();
@@ -75,9 +95,35 @@ export function receiptEngine(receipt) {
   return engine;
 }
 
+const decode = (bytes) => new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+
+// Each verified file's parsed table, by digest and table: a file is parsed
+// once per page, whichever view asks for it
+const parsed = new Map();
+
+function parsedTable(table, digest, bytes) {
+  const key = `${digest}:${table}`;
+  if (!parsed.has(key)) parsed.set(key, parseTable(table, decode(bytes)));
+  return parsed.get(key);
+}
+
+/** Forget parsed tables (tests). */
+export function resetParsedTables() {
+  parsed.clear();
+}
+
+async function fetchBytes(fetchImpl, url, signal) {
+  const response = await fetchOk(fetchImpl, url, { signal });
+  return new Uint8Array(await response.arrayBuffer());
+}
+
 /**
  * Fetch one entry's artifact and return its verified, typed tables, with
  * the package versions its receipt records as `engine`.
+ *
+ * No table is requested until its receipt has passed every check. Bytes
+ * already verified on this page or a previous visit are read from the
+ * cache (cache.js) and checked again, so a repeat load makes no request.
  *
  * @throws {Error} naming the first check that failed.
  */
@@ -91,15 +137,32 @@ export async function loadArtifact(
     throw new Error(`${key} is ${entry?.status}: its figures are not shown`);
   }
   const base = `${basePath}/data/${entry.artifact}`;
-  const receipt = await (
-    await fetchOk(fetchImpl, `${base}/${RECEIPT_FILE}`, { signal })
-  ).json();
+  const keptReceipt = await cachedReceipt(entry.artifact_sha256, fetchImpl);
+  const receiptBytes = keptReceipt ?? await fetchBytes(fetchImpl, `${base}/${RECEIPT_FILE}`, signal);
+  let receipt;
+  try {
+    receipt = JSON.parse(decode(receiptBytes));
+  } catch {
+    if (keptReceipt) forgetReceipt(entry.artifact_sha256, fetchImpl);
+    throw new Error("the receipt is not valid JSON");
+  }
   const problems = await receiptProblems(receipt, key, entry);
-  if (problems.length > 0) throw new Error(problems.join("; "));
+  if (problems.length > 0) {
+    if (keptReceipt) forgetReceipt(entry.artifact_sha256, fetchImpl);
+    throw new Error(problems.join("; "));
+  }
   if (!(await verifyReceiptFiles(receipt, entry))) {
+    if (keptReceipt) forgetReceipt(entry.artifact_sha256, fetchImpl);
     throw new Error("the receipt's files are not the ones the manifest names");
   }
-  const listed = Object.keys(receipt.dashboard.files);
+  const files = receipt.dashboard.files;
+  const listed = Object.keys(files);
+  for (const table of LISTED_TABLES) {
+    if (TABLES[table].required && !listed.includes(TABLES[table].file)) {
+      throw new Error(`the artifact has no ${TABLES[table].file}`);
+    }
+  }
+  if (!keptReceipt) rememberReceipt(entry.artifact_sha256, receiptBytes, fetchImpl);
   const loaded = {};
   await Promise.all(
     tables.map(async (table) => {
@@ -110,15 +173,16 @@ export async function loadArtifact(
         }
         return;
       }
-      const response = await fetchOk(fetchImpl, `${base}/${fileName}`, {
-        signal,
-      });
-      const bytes = await response.arrayBuffer();
-      if (!(await verifyFile(fileName, bytes, receipt))) {
-        throw new Error(`${fileName} does not match its receipt`);
+      const digest = files[fileName];
+      let bytes = await cachedFile(digest, fetchImpl);
+      if (!bytes) {
+        bytes = await fetchBytes(fetchImpl, `${base}/${fileName}`, signal);
+        if ((await sha256Hex(bytes)) !== digest) {
+          throw new Error(`${fileName} does not match its receipt`);
+        }
+        rememberFile(digest, bytes, fetchImpl);
       }
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-      loaded[tableForFile(fileName)] = parseTable(table, text);
+      loaded[tableForFile(fileName)] = parsedTable(table, digest, bytes);
     }),
   );
   loaded.engine = receiptEngine(receipt);

@@ -1,4 +1,5 @@
 import { createElement, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import CountUpText from "./CountUpText";
 import { ArrowRight, Coins, Flame, Fuel, Percent, Zap } from "lucide-react";
 import {
   FIRST_YEAR,
@@ -216,12 +217,12 @@ function BeforeAfter({ row, tone }) {
       <div className="pchg-ba-tiles">
         <div className="pchg-tile is-before">
           <span className="pchg-tile-name">Current law</span>
-          <span className="pchg-tile-value">{formatValue(point.before, unit)}</span>
+          <span className="pchg-tile-value"><CountUpText text={formatValue(point.before, unit)} /></span>
         </div>
         <ArrowRight className="pchg-ba-arrow" size={20} aria-label="becomes" />
         <div className="pchg-tile is-after">
           <span className="pchg-tile-name">With the measure</span>
-          <span className="pchg-tile-value">{formatValue(point.after, unit)}</span>
+          <span className="pchg-tile-value"><CountUpText text={formatValue(point.after, unit)} /></span>
           <span className={`pchg-chip is-${tone}`}>{tileChange(point.before, point.after, unit)}</span>
         </div>
       </div>

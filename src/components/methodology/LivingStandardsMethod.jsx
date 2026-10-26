@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
-import { SourceLink, Tag } from "./MethodUi";
+import { ExternalLink, SourceLink, Tag } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
 import { METHOD_ANCHORS } from "./anchors";
@@ -18,7 +18,9 @@ import { METHOD_ANCHORS } from "./anchors";
 const UNVALIDATED = /unvalidated|not yet validated/i;
 const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
-const ext = { target: "_blank", rel: "noopener noreferrer" };
+// A package's GitHub release, by the version the outlook file records
+// (each tag is the bare version, e.g. policyengine.py 6.10.2, policyengine-uk 2.132.6)
+const releaseUrl = (repo, version) => `https://github.com/PolicyEngine/${repo}/releases/tag/${version}`;
 
 /** The deflators in a few words, from meta.deflator. */
 function deflatorWords(text = "") {
@@ -41,9 +43,9 @@ function ucHealthElementFix({ fix, engine }) {
     value: (
       <>
         Patched for {span} (
-        <a href={fix.upstream_fix_url} {...ext}>
+        <ExternalLink href={fix.upstream_fix_url}>
           {fix.upstream_fix.replace(/^PolicyEngine\//, "").replace("#", " #")}
-        </a>
+        </ExternalLink>
         )
       </>
     ),
@@ -53,6 +55,31 @@ function ucHealthElementFix({ fix, engine }) {
       `${Math.round(fix.new_claimant_share * 100)}% of claimants count as new, as in ${last}.`,
     ],
   };
+}
+
+// In the data's notes, a policyengine-uk pull request ("policyengine-uk#2531")
+// and the HBAI statistics are named in words; each becomes a link
+const NOTE_LINKS = /(policyengine-uk ?#\d+|Households Below Average Income)/;
+function linkNote(note) {
+  if (typeof note !== "string" || !NOTE_LINKS.test(note)) return note;
+  return note.split(NOTE_LINKS).map((part, index) => {
+    const pr = part.match(/^policyengine-uk ?#(\d+)$/);
+    if (pr) {
+      return (
+        <ExternalLink key={index} href={`https://github.com/PolicyEngine/policyengine-uk/pull/${pr[1]}`}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    if (part === "Households Below Average Income") {
+      return (
+        <ExternalLink key={index} href={HBAI_URL}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    return part;
+  });
 }
 
 /**
@@ -69,7 +96,7 @@ function ChartNotes({ outlook, meta }) {
     ["Depth of poverty", outlook.deep_poverty?.notes],
     ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
   ]
-    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote)])
+    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote).map(linkNote)])
     .filter(([, notes]) => notes.length);
   if (!groups.length) return null;
   return (
@@ -117,7 +144,13 @@ export default function LivingStandardsMethod() {
         <h3 className="method-card-title">Engine and data</h3>
         <FactList
           items={[
-            ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
+            [
+              "Model",
+              <>
+                <ExternalLink href={releaseUrl("policyengine.py", meta.policyengine)}>policyengine {meta.policyengine}</ExternalLink>{" "}
+                (<ExternalLink href={releaseUrl("policyengine-uk", meta.policyengine_uk)}>policyengine-uk {meta.policyengine_uk}</ExternalLink>)
+              </>,
+            ],
             ["Data", dataset],
             unvalidated && ["Status", <Tag key="status" tone="warning">Unvalidated</Tag>],
             meta.headline_start_year &&
@@ -136,13 +169,11 @@ export default function LivingStandardsMethod() {
               {
                 value: (
                   <>
-                    <a href={hbai.url || HBAI_URL} {...ext}>
-                      DWP HBAI
-                    </a>
+                    <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
                     ; <SourceLink id="obr_efo_current" />
                   </>
                 ),
-                more: notes.map(text),
+                more: notes.map((n) => linkNote(text(n))),
               },
             ],
           ].filter(Boolean)}
@@ -159,7 +190,7 @@ export default function LivingStandardsMethod() {
             {caveats.map((c) => (
               <li key={c}>
                 <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
-                <span>{text(c)}</span>
+                <span>{linkNote(text(c))}</span>
               </li>
             ))}
           </ul>

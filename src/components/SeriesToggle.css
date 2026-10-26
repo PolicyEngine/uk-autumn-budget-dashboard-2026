@@ -102,3 +102,7 @@
   border-radius: 3px;
   border: 1px solid var(--pe-gray-200);
 }
+
+.series-toggle-chip:not(.is-on) .series-toggle-swatch rect {
+  fill: var(--pe-gray-300);
+}
