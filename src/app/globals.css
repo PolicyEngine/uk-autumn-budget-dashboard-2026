@@ -723,18 +723,28 @@ body {
 }
 
 /* Section headings (SectionHeading.jsx): an icon in a tinted circle, the
-   title and a "#" link,
-   the subtitle below, and one even hairline under it all. The circle is larger than a card's
-   square chip, so a section reads above its cards. */
+   title and a "#" link, the subtitle below. The circle is larger than a
+   card's square chip, so a section reads above its cards. */
 .section-heading {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  /* Icon and title share the first row, centred on each other; the
+     subtitle sits in the second row, under the title, not the icon. No
+     rule under it: spacing alone sets it off. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
   margin: 0 0 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--c-grid);
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+/* Without an icon the title and subtitle take the whole width */
+.section-heading:not(.has-icon):not(.method-section-heading) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.section-heading > .section-icon {
+  grid-row: 1;
 }
 
 /* Between sections: 48px (chart sections). None above the first. */
@@ -755,22 +765,35 @@ body {
   color: var(--pe-teal-700);
 }
 
+/* Its title row and subtitle are the grid's own cells */
 .section-heading-text {
-  min-width: 0;
-  flex: 1;
+  display: contents;
 }
 
-.section-heading.has-icon .section-heading-text {
-  padding-top: 7px;
+.section-heading > .section-heading-text > p {
+  grid-column: -2;
+  grid-row: 2;
 }
 
 .section-heading-title {
+  grid-row: 1;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   column-gap: 10px;
-  row-gap: 4px;
-  margin-bottom: 4px;
+}
+
+/* A long title wraps; the "#" stays at its end, never on a line of its own */
+.section-heading-title h2 {
+  min-width: 0;
+}
+
+.section-anchor {
+  flex: none;
+}
+
+.section-heading > .section-heading-text > p {
+  margin-top: 4px;
 }
 
 .section-heading h2 {
@@ -847,9 +870,6 @@ body {
     height: 18px;
   }
 
-  .section-heading.has-icon .section-heading-text {
-    padding-top: 4px;
-  }
 }
 
 /* A source named in a section's intro reads as a link, as does the line
@@ -1750,20 +1770,23 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* Cards flow down two columns, each as tall as its content, so a short
+   card never leaves a gap beside a tall one (no shared rows) */
 .policy-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  columns: 2;
+  column-gap: 20px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Each card is six rows (head, summary, what changes, when, source,
-   footer). The cards
-   of a grid row share those rows through subgrid, so each row lines up
-   across them and the cards are the same height; without subgrid the card
-   is a flex column with its footer pinned to the bottom. */
+.policy-cards > .policy-card {
+  break-inside: avoid;
+  margin-bottom: 20px;
+}
+
+/* Each card is a flex column: head, summary, what changes, when, source,
+   and the footer. */
 .policy-card {
   position: relative;
   display: flex;
@@ -1779,23 +1802,6 @@ body {
 }
 
 /* The measure's colour, as a band along the top */
-@supports (grid-template-rows: subgrid) {
-  .policy-card {
-    display: grid;
-    grid-row: span 6;
-    grid-template-rows: subgrid;
-    row-gap: 16px;
-    align-content: start;
-  }
-
-  /* The footer keeps its place under the source when a neighbour's opened
-     text makes the shared row taller (after the base rule below, so more
-     specific) */
-  .policy-card > .policy-card-foot {
-    align-self: start;
-    margin-top: 0;
-  }
-}
 
 .policy-card::before {
   content: "";
@@ -2224,6 +2230,16 @@ body {
   min-width: 0;
 }
 
+/* No shared rows across cards now, so an empty slot takes no room */
+.policy-card-spec:empty,
+.policy-card-source-line:empty {
+  display: none;
+}
+
+.policies-more-info {
+  margin: -8px 0 16px;
+}
+
 .pchg {
   display: flex;
   flex-direction: column;
@@ -2486,10 +2502,14 @@ body {
   text-underline-offset: 3px;
 }
 
-/* A switch measure's change, on its timeline chip: "5% → 0%" */
-.ptl-change {
-  margin-right: 6px;
-  font-weight: 700;
+.pchg-reveals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}
+
+.pchg-reveals > div {
+  flex: 1 1 100%;
 }
 
 .pchg-chip {
@@ -2538,8 +2558,11 @@ body {
 
 @media (max-width: 768px) {
   .policy-cards {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    columns: 1;
+  }
+
+  .policy-cards > .policy-card {
+    margin-bottom: 16px;
   }
 
   /* One column: nothing to line up across, so a plain column with no

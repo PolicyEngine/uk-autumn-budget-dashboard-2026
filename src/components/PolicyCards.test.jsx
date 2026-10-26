@@ -266,16 +266,17 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     ]);
   });
 
-  it("switch: nothing in the block; the timeline's in-force span says the change", () => {
+  it("switch: the two values, with the window drawn on the card's timeline", () => {
     const window = tables("switch", [
       { label: "A VAT rate", unit: "percent", unit_words: null, primary: true, source,
         points: [{ key: "2026-10-01/2028-03-31", label: "October 2026 to March 2028", year: 2026, before: 0.05, after: 0 }] },
     ]);
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
-    expect(within(item).queryByRole("region", { name: "What changes" })).toBeNull();
-    expect(item.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
-    expect(item.querySelector(".ptl-chip")).toHaveTextContent("5% → 0%18 months");
-    expect(within(item).getByRole("img", { name: /While in force: 5% → 0%\.$/ })).toBeTruthy();
+    const block = within(item).getByRole("region", { name: "What changes" });
+    expect(block).toHaveTextContent("A VAT rate, October 2026 to March 2028");
+    expect(block.querySelector(".pchg-ba-values")).toHaveTextContent("5% → 0%");
+    // Each fact once: the timeline says how long, not the rates again
+    expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });
 
   it("draws the real file's nine measures each their own way", () => {
@@ -286,28 +287,30 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue", ".pchg-ba"],
       ["employer_ni_relief_under_25s", "Employer NI relief for under-25s", "cost", ".pchg-ba"],
       ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "revenue", ".pchg-table"],
-      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", null],
-      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", null],
-      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", null],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150 → £250+£100"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5% → 0%"],
+      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", ".pchg-ba", "20% → 15%"],
     ];
-    const chips = { warm_home_discount_top_up: "£150 → £250", domestic_electricity_zero_vat: "5% → 0%", road_fuel_vat_cut: "20% → 15%" };
-    for (const [id, name, direction, selector] of cases) {
+    for (const [id, name, direction, selector, values] of cases) {
       render(<PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />);
       const item = screen.getByRole("listitem");
-      if (selector) expect(item.querySelector(selector), id).toBeTruthy();
-      else expect(item.querySelector(".ptl-change"), id).toHaveTextContent(chips[id]);
+      expect(item.querySelector(selector), id).toBeTruthy();
+      if (values) expect(item.querySelector(".pchg-ba-values"), id).toHaveTextContent(values);
       cleanup();
     }
   });
 
-  it("shows the fuel duty yearly averages only when asked", () => {
+  it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
     render(<PolicyCards policies={[published("fuel_duty_rise_deferral", "Fuel duty rises deferred")]} selectedPolicies={["fuel_duty_rise_deferral"]} parameterTables={file} />);
-    const button = screen.getByRole("button", { name: "Show the yearly averages" });
-    expect(screen.queryByRole("table", { name: /As modelled/ })).toBeNull();
-    fireEvent.click(button);
-    const table = screen.getByRole("table", { name: /As modelled/ });
-    expect(within(table).getAllByRole("row")).toHaveLength(7);
-    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
+    expect(screen.queryByRole("table")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
+    const dates = screen.getByRole("table");
+    // From 1 January 2027 on: the timeline's first day equals current law, so is left out
+    expect(within(dates).getAllByRole("row")).toHaveLength(10);
+    expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
+    fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
+    const averages = screen.getByRole("table", { name: /As modelled/ });
+    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
   });
 
   it("shows nothing for a measure described otherwise than when the file was built, keeping the empty slot", () => {
