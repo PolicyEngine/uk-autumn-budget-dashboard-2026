@@ -55,7 +55,9 @@ def probe(year: int, ids: list[str]) -> dict:
     }
 
 
-def _request(url: str, body: Optional[dict] = None, timeout: float = TIMEOUT_S):
+def _request(
+    url: str, body: Optional[dict] = None, timeout: float = TIMEOUT_S
+):
     """(status, parsed JSON or text); a failure to answer is (None, reason)."""
     data = None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(
@@ -83,14 +85,24 @@ def api_problems(
         base_url = base_url[: -len(HOUSEHOLD_IMPACT_ROUTE)]
     problems = []
     status, version = _request(base_url + VERSION_ROUTE, timeout=timeout)
-    packages = version.get("packages") if status == 200 and isinstance(version, dict) else None
+    packages = (
+        version.get("packages")
+        if status == 200 and isinstance(version, dict)
+        else None
+    )
     if packages is None:
-        problems.append(f"{base_url}{VERSION_ROUTE}: no package versions ({status})")
+        problems.append(
+            f"{base_url}{VERSION_ROUTE}: no package versions ({status})"
+        )
     status, answer = _request(
         base_url + HOUSEHOLD_IMPACT_ROUTE, probe(year, ids), timeout=timeout
     )
     if status != 200:
-        detail = json.dumps(answer) if isinstance(answer, (dict, list)) else str(answer)
+        detail = (
+            json.dumps(answer)
+            if isinstance(answer, (dict, list))
+            else str(answer)
+        )
         unknown = re.search(r"Unknown measures: ([a-z0-9_, ]+)", detail)
         if unknown:
             problems.append(
@@ -173,7 +185,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         for problem in problems:
             print(f"FAIL {problem}")
         return 1
-    print(f"OK: {len(args.base_url)} API(s) and the presets cover the page's {len(ids)} measures")
+    print(
+        f"OK: {len(args.base_url)} API(s) and the presets cover the page's {len(ids)} measures"
+    )
     return 0
 
 
