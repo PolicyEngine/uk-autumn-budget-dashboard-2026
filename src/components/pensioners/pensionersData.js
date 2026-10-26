@@ -202,3 +202,55 @@ export function pensionerShares(rows, policies, selected, year, combinedId = nul
     ],
   };
 }
+
+/**
+ * A centred moving average of each age's net change (`netChange`), over
+ * `window` single years of age (five by default): the line through the
+ * Change by age bars, so the trend reads through the survey noise of single
+ * years. An age's average uses the ages in its window that have a value,
+ * and needs at least three of them; the ends of the range average the ages
+ * there are. Returns the points with `smooth` added (null where too few).
+ */
+export function smoothByAge(points, window = 5) {
+  const half = Math.floor(window / 2);
+  return points.map((point, index) => {
+    const values = points
+      .slice(Math.max(0, index - half), index + half + 1)
+      .map((each) => each.netChange)
+      .filter((value) => value !== null && Number.isFinite(value));
+    const smooth = point.netChange !== null && values.length >= 3 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+    return { ...point, smooth };
+  });
+}
+
+/**
+ * The pensioners' change in every year shown, with each selected measure's
+ * own part, in the shape of groupMeasureSeries (youngPeopleData.js), so the
+ * change-by-year card's annotations, tooltip and breakdown read it:
+ * `{ year, published, net, parts: [{ id, key, value }], ...bySeries }`.
+ * `net` is null in a year not published, or where any measure's pensioner
+ * rows are missing or thin.
+ */
+export function pensionerMeasureSeries(rows, policies, selected, years) {
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
+  return years.map((year) => {
+    const parts = [];
+    let complete = chosen.length > 0 && chosen.length === selected.length && hasYear(rows, year);
+    for (const policy of complete ? chosen : []) {
+      const group = pensionerRow(rows, policy.id, year);
+      if (!group || !Number.isFinite(group.mean_change)) {
+        complete = false;
+        break;
+      }
+      parts.push({ id: policy.id, key: policy.seriesKey ?? `measure:${policy.id}`, value: group.mean_change });
+    }
+    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    return {
+      year: Number(year),
+      published: complete,
+      net: complete ? parts.reduce((sum, part) => sum + part.value, 0) : null,
+      parts: complete ? parts : [],
+      ...bySeries,
+    };
+  });
+}

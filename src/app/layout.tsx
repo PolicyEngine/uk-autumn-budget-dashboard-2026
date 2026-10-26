@@ -4,6 +4,8 @@ import "@policyengine/ui-kit/styles.css";
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import SiteFooter from '@/components/SiteFooter';
+import { DEEP_LINK_SCRIPT } from '@/utils/landing';
+import { earlyManifestScript } from '@/utils/publication/early';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
@@ -25,8 +27,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-GB">
+    // The inline script marks a link to a view on <html> before hydration
+    <html lang="en-GB" suppressHydrationWarning>
       <head>
+        {/* Before the first paint: a link to a view (?tab=, ?sub=, ...)
+            keeps the server's landing page hidden (utils/landing.js) */}
+        <script dangerouslySetInnerHTML={{ __html: DEEP_LINK_SCRIPT }} />
+        {/* The manifest request starts here, not after the page's code has
+            loaded (utils/publication/early.js) */}
+        <script dangerouslySetInnerHTML={{ __html: earlyManifestScript(process.env.NEXT_PUBLIC_BASE_PATH || '') }} />
         <link
           rel="stylesheet"
           href="https://unpkg.com/@policyengine/design-system/dist/tokens.css"

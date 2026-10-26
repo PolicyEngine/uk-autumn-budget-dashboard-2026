@@ -1118,7 +1118,79 @@
 
 /* Under the waterfall: policies under £1, notes, and those with no effect */
 .result-card-notes {
-  padding: 0 28px 16px;
+  padding: 0;
+}
+
+/* Whose result it is, under the figure: one muted line */
+.result-summary {
+  margin: 10px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+/* "About this result", at the card's foot, in the charts' "About this
+   chart" style: a bullet on assumed spending, then two columns with
+   matching headings, Based on and No effect on you; stacked on a phone */
+.result-card-about {
+  margin: 0 28px 12px;
+}
+
+.result-about-caution {
+  margin: 0;
+}
+
+.result-about-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px 40px;
+  align-items: start;
+}
+
+.result-card-about .result-card-basis {
+  display: block;
+  padding: 0;
+}
+
+.result-card-about .result-foot-items {
+  padding-left: 23px;
+}
+
+.result-no-effect-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0 0 0 23px;
+  list-style: none;
+}
+
+.result-no-effect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  color: var(--pe-gray-700);
+  background: var(--c-muted-fill);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+
+.result-no-effect-chip .info-tip {
+  margin-right: -4px;
+}
+
+.result-card-about .result-card-notes {
+  margin: 0;
+  padding-left: 16px;
+}
+
+@media (max-width: 599px) {
+  .result-card-about {
+    margin: 0 16px 8px;
+  }
 }
 
 .result-card-notes .single-year-quiet {
