@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
 import { render, screen } from "@testing-library/react";
-import BudgetaryImpactChart from "./BudgetaryImpactChart";
+import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
-import { measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
+import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
 
 // Recharts ResponsiveContainer measures the parent in jsdom and refuses
 // to render its children when width / height resolve to zero. Replace it
@@ -41,5 +41,11 @@ describe("BudgetaryImpactChart", () => {
     expect(
       screen.getByTestId("recharts-responsive-container"),
     ).toBeInTheDocument();
+  });
+
+  it("orders raisers before costs, each group by size (the catalogue's groups)", () => {
+    const keyOf = (id) => catalogue.byId.get(id).seriesKey;
+    const order = measureOrder(mockData, catalogue);
+    expect(order).toEqual([keyOf(BETA), keyOf(ALPHA)]);
   });
 });

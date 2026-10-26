@@ -1,0 +1,224 @@
+/* Household impact: where you sit in the UK income distribution */
+
+.position-card.is-loading {
+  min-height: 420px;
+}
+
+.position-headline {
+  margin: 4px 0;
+  font-size: 1.375rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.position-result {
+  margin: 0 0 12px;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.position-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+}
+
+.position-where,
+.position-gains {
+  display: block;
+  overflow: visible;
+}
+
+.position-note {
+  margin: 6px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+.position-panels {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.position-panels.is-stacked {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.position-svg {
+  display: block;
+  overflow: visible;
+}
+
+.position-legend {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.position-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0 4px;
+}
+
+.position-compare-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 260px) 1fr minmax(90px, auto);
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+}
+
+.position-compare-row.is-you {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.position-compare-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--pe-gray-100);
+  overflow: hidden;
+}
+
+.position-compare-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 7px;
+}
+
+.position-compare-bar.is-gain {
+  background: var(--c-gain);
+  opacity: 0.55;
+}
+
+.position-compare-bar.is-loss {
+  background: var(--c-loss);
+  opacity: 0.55;
+}
+
+.position-compare-row.is-you .position-compare-bar {
+  opacity: 1;
+}
+
+.position-compare-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+
+.position-compare-other {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+@media (max-width: 560px) {
+  .position-compare-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+  }
+
+  .position-compare-label {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .position-headline {
+    font-size: 1.125rem;
+  }
+}
+
+.position-moves-lead {
+  margin: 0 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.position-moves-chart {
+  display: block;
+  overflow: visible;
+}
+
+.position-cuts {
+  width: 100%;
+  max-width: 640px;
+  margin-top: 16px;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+}
+
+.position-cuts caption {
+  margin-bottom: 6px;
+  text-align: left;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
+}
+
+.position-cuts th,
+.position-cuts td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--pe-gray-200);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.position-cuts th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.position-cuts thead th {
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.position-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.position-chip {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--pe-gray-100);
+}
+
+.position-chip dt {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
+}
+
+.position-chip dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .position-chips {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .position-chip.is-place {
+    grid-column: 1 / -1;
+  }
+}

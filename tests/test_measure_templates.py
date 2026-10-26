@@ -371,6 +371,48 @@ def test_vat_resources_equal_opposite_government_receipts(
     assert resources == pytest.approx(-balance, abs=0.01)
 
 
+@pytest.mark.parametrize(
+    "region, geography, expected",
+    [
+        ("LONDON", "GB", -50),
+        ("SCOTLAND", "GB", -50),
+        ("NORTHERN_IRELAND", "GB", 0),
+        ("NORTHERN_IRELAND", "UK", -50),
+    ],
+)
+def test_vat_base_change_in_great_britain_only(region, geography, expected):
+    """A GB-only change leaves Northern Ireland's households at the
+    baseline VAT (the temporary zero rate on domestic electricity is for
+    Great Britain only)."""
+    situation = _situation(domestic_energy_consumption=0)
+    situation["households"]["h"]["region"] = {2027: region}
+    situation["households"]["h"]["electricity_consumption"] = {2027: 1_050}
+    sim = Simulation(situation=situation)
+    vat_before = _value(sim, "vat")
+    apply_vat_base_change(
+        sim,
+        spending_variable="electricity_consumption",
+        rate_change=-0.05,
+        start_year=2027,
+        end_year=2027,
+        geography=geography,
+    )
+    assert _value(sim, "vat") - vat_before == pytest.approx(expected, abs=0.01)
+
+
+def test_vat_base_change_refuses_an_unknown_geography():
+    sim = Simulation(situation=_situation(domestic_energy_consumption=0))
+    with pytest.raises(ValueError, match="geography must be GB or UK"):
+        apply_vat_base_change(
+            sim,
+            spending_variable="electricity_consumption",
+            rate_change=-0.05,
+            start_year=2027,
+            end_year=2027,
+            geography="ENGLAND",
+        )
+
+
 def _uc_household(income=8000, region="LONDON"):
     situation = _situation(
         income=income, rent=9600, tenure_type="RENT_PRIVATELY"

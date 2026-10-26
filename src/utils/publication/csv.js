@@ -124,14 +124,15 @@ function typed(text, kind, where) {
  *
  * @param {string} name - A table name from the publication format.
  * @param {string} text - The file's text.
+ * @param {Array<[string, string]>} [columns] - The columns to expect; the
+ *   contract's by default (parseFlatTable passes a flat file's wider set).
  * @returns {Array<Object>} One object per row, keyed by column.
  * @throws {TableError}
  */
-export function parseTable(name, text) {
+export function parseTable(name, text, columns = TABLES[name]?.columns) {
   if (!Object.hasOwn(TABLES, name)) {
     throw new TableError(`${name} is not a published table`);
   }
-  const columns = TABLES[name].columns;
   const [header, ...lines] = parseCsv(text);
   const expected = columns.map(([column]) => column);
   if (!header || header.join(",") !== expected.join(",")) {
@@ -154,6 +155,49 @@ export function parseTable(name, text) {
       ]),
     );
   });
+}
+
+/**
+ * Columns a flat file under public/data carries after its contract columns.
+ * metrics.csv adds the poverty and inequality measures the summary charts
+ * choose between (uk_budget_data.calculators: POVERTY_MEASURES, POVERTY_GROUPS
+ * and inequality_changes). Receipted artifacts keep the contract's columns
+ * only, so parseTable never accepts these.
+ */
+const POVERTY_COLUMNS = ["abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc"].flatMap((measure) =>
+  ["", "child_"].flatMap((group) => [
+    [`${group}poverty_${measure}_change_pp`, "float"],
+    [`${group}poverty_${measure}_change_pct`, "float"],
+  ]),
+);
+
+export const FLAT_EXTRA_COLUMNS = {
+  metrics: [
+    ...POVERTY_COLUMNS,
+    ["top_10_share_change_pp", "float"],
+    ["top_1_share_change_pp", "float"],
+    ["p90_p10_change", "float"],
+  ],
+};
+
+/**
+ * Parse a flat file under public/data: the contract's columns, then either
+ * none or all of the table's FLAT_EXTRA_COLUMNS, in order and typed. An
+ * older file without the extras still parses.
+ *
+ * @param {string} name - A table name from the publication format.
+ * @param {string} text - The file's text.
+ * @returns {Array<Object>} One object per row, keyed by column.
+ * @throws {TableError}
+ */
+export function parseFlatTable(name, text) {
+  const extras = FLAT_EXTRA_COLUMNS[name] ?? [];
+  const [header] = parseCsv(text);
+  const contracted = Object.hasOwn(TABLES, name) ? TABLES[name].columns.length : 0;
+  if (!extras.length || !header || header.length === contracted) {
+    return parseTable(name, text);
+  }
+  return parseTable(name, text, [...TABLES[name].columns, ...extras]);
 }
 
 /** The table name for a published file name, or null. */
