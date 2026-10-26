@@ -19,7 +19,7 @@ import {
   statePensionFor,
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
-import { SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "../utils/householdDefaults";
+import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "../utils/householdDefaults";
 
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
@@ -278,6 +278,20 @@ const PREFILL_HINTS = {
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
     } 2026); change it if yours differs.`,
 };
+
+/**
+ * Whether the spending the fuel and electricity measures act on is assumed:
+ * "average" while it is the prefilled average household's (ONS), "example"
+ * for an example's own figure, null once the reader has entered their own.
+ */
+export function spendingAssumed(answers, presetId) {
+  const average =
+    answers.petrol_spending_per_year === DEFAULT_SPENDING.petrol &&
+    answers.diesel_spending_per_year === DEFAULT_SPENDING.diesel &&
+    answers.electricity_spending_per_year === DEFAULT_SPENDING.electricity;
+  if (average) return "average";
+  return presetId !== null ? "example" : null;
+}
 
 // The form's last state, kept for the session so switching tabs keeps it
 const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
@@ -766,6 +780,7 @@ function HouseholdCalculator({
               petrol: (submitted?.inputs ?? inputs).petrol_spending_per_year,
               diesel: (submitted?.inputs ?? inputs).diesel_spending_per_year,
               electricity: (submitted?.inputs ?? inputs).electricity_spending_per_year,
+              assumed: spendingAssumed(submitted?.inputs ?? inputs, presetId),
             }}
             submitted={submitted !== null}
             changed={changed}

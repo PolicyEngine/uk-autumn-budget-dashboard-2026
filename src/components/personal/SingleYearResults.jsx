@@ -123,11 +123,20 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
     const parts = [];
     if (fuel > 0) parts.push(`fuel ${money(fuel)}`);
     if (electricity > 0) parts.push(`electricity ${money(electricity)}`);
+    // Assumed, not entered: the prefilled average, or an example's figure
+    const assumed = spending?.assumed ?? null;
     items.push({
       id: "spending",
-      label: "Spending a year",
+      label:
+        assumed === "average"
+          ? "Spending a year (assumed, ONS average)"
+          : assumed === "example"
+            ? "Spending a year (assumed)"
+            : "Spending a year",
       value: parts.join(", "),
-      detail: "petrol, diesel and electricity, from More details",
+      detail: assumed
+        ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
+        : "petrol, diesel and electricity, from More details",
     });
   }
   if (showDependantsNote(data)) {
@@ -148,6 +157,22 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
     });
   }
   return items;
+}
+
+// The measures whose gain scales with the fuel and electricity a household
+// buys
+export const SPENDING_MEASURES = ["fuel_duty_rise_deferral", "road_fuel_vat_cut", "domestic_electricity_zero_vat"];
+
+/**
+ * Whether most of a change comes from the spending-driven measures: their
+ * part has the change's sign and is more than half of it.
+ */
+export function mostlyFromSpending(byPolicy, change) {
+  if (!byPolicy || !change) return false;
+  const part = byPolicy.measures
+    .filter((row) => SPENDING_MEASURES.includes(row.id))
+    .reduce((sum, row) => sum + row.change, 0);
+  return part / change > 0.5;
 }
 
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
@@ -266,7 +291,7 @@ function BeforeAfterBars({ totals }) {
  * bars; under the figure, what it is based on, each note behind an "i". The
  * figure is one element, so it reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) {
   const shown = Math.round(useCountUp(totals.change));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
@@ -305,6 +330,9 @@ function ResultCard({ totals, yearLabel, policyCount, items }) {
               </p>
             )}
           </div>
+          {caution && (
+            <p className="result-caution">Most of this comes from assumed fuel and electricity spending.</p>
+          )}
           {items.length > 0 && (
             <div className="result-card-basis">
               <span className="result-foot-title">Based on</span>
@@ -400,6 +428,7 @@ export function SingleYearHeadline({
             yearLabel={yearLabel}
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource })}
+            caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
           />
         </div>
       )}

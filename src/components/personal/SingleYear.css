@@ -609,7 +609,7 @@
 .result-card-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -752,12 +752,20 @@
   transform: scaleX(1);
 }
 
+/* Under the figure, when most of it comes from assumed spending */
+.result-caution {
+  margin: -4px 4px 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
 /* What the figure is based on, under it in the left column: one fact a
    row, its label on the left and its value (and "i") on the right */
 .result-card-basis {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   padding: 0 4px;
 }
 
@@ -780,32 +788,40 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px 16px;
-  padding: 7px 0;
+  gap: 2px 12px;
+  padding: 5px 0;
   font-size: var(--fs-caption);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .result-foot-item + .result-foot-item {
   border-top: 1px solid var(--card-border);
 }
 
+/* The label gives way first; the value keeps its line where it can, its
+   "i" after its last word */
 .result-foot-item dt {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--pe-gray-500);
 }
 
 .result-foot-item dd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  min-width: 0;
+  flex: 0 0 auto;
+  max-width: 62%;
   margin: 0;
   font-weight: 600;
   text-align: right;
   color: var(--pe-gray-800);
+}
+
+.result-foot-item dd .info-icon-wrapper {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.result-foot-item dd .info-tooltip {
+  text-align: left;
 }
 
 /* A detail card while it is calculated: empty at its final height, with

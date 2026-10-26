@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
-import { resetSavedWizard } from "../HouseholdCalculator";
+import { mostlyFromSpending } from "./SingleYearResults";
+import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { PRESET_POLICIES, presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
@@ -191,6 +192,11 @@ describe("the household calculation, from the fixture", () => {
     // The spending the fuel and electricity measures act on (the form's
     // prefilled averages: petrol £620 and diesel £340, electricity £1,040)
     expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
+    // Not entered by the reader: marked as assumed, with what it does
+    expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
+    expect(within(box("Spending a year")).getByRole("tooltip")).toHaveTextContent(
+      "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
+    );
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -841,5 +847,28 @@ describe("keepSentence: the marginal rate as money", () => {
   it("is null without both rates", () => {
     expect(keepSentence(null, 0.4)).toBeNull();
     expect(keepSentence(0.4, undefined)).toBeNull();
+  });
+});
+
+describe("the assumed-spending caution", () => {
+  const byPolicy = (rows) => ({ measures: rows.map(([id, change]) => ({ id, change })) });
+
+  it("says most of a change is from spending only when those measures are more than half of it", () => {
+    const fuel = byPolicy([["fuel_duty_rise_deferral", 60], ["domestic_electricity_zero_vat", 30], ["state_pension_income_tax_protection", 10]]);
+    expect(mostlyFromSpending(fuel, 100)).toBe(true);
+    const pension = byPolicy([["fuel_duty_rise_deferral", 20], ["state_pension_income_tax_protection", 80]]);
+    expect(mostlyFromSpending(pension, 100)).toBe(false);
+    // A loss mostly from elsewhere, a gain from spending: not "most of this"
+    expect(mostlyFromSpending(byPolicy([["road_fuel_vat_cut", 10]]), -50)).toBe(false);
+    expect(mostlyFromSpending(null, 100)).toBe(false);
+    expect(mostlyFromSpending(fuel, 0)).toBe(false);
+  });
+
+  it("calls spending assumed at the prefilled averages or an example's figure, not once the reader enters their own", () => {
+    expect(spendingAssumed(WIZARD_DEFAULTS, null)).toBe("average");
+    expect(spendingAssumed(WIZARD_DEFAULTS, "driver")).toBe("average");
+    const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
+    expect(spendingAssumed(own, "driver")).toBe("example");
+    expect(spendingAssumed(own, null)).toBeNull();
   });
 });
