@@ -54,6 +54,11 @@ MANIFEST_PATH = "public/data/manifest.json"
 # Python files, which is_non_calculation_path never treats as published
 # files or docs: wherever they sit, an import could reach them.
 PYTHON_SUFFIXES = (".py", ".pyc")
+# Suffixes of the Treasury reconciliation inputs under data_inputs/treasury/
+# (is_non_calculation_path): the sources, mapping, expected effects,
+# exceptions, policy and README. Only reconcile, responsiveness, publish and
+# exports read them; generation never does.
+TREASURY_SUFFIXES = (".csv", ".yaml", ".md")
 # Suffixes of the page's own files under src/, outside the Python package
 # (is_non_calculation_path). Python reads nothing there.
 FRONTEND_SUFFIXES = (
@@ -203,9 +208,13 @@ def is_non_calculation_path(path: str) -> bool:
     """Whether a committed path cannot change what a measure calculates.
 
     These are what the commits after an approval touch: attestations,
-    published files, the disclosure review, docs and the page. Everything
-    else, including any path not listed here and any Python file under
-    ``public/`` or ``docs/``, could change a calculation. Inputs a command
+    published files, the disclosure review, docs, the page, and the
+    Treasury reconciliation inputs (G3 commits the Treasury entry, mapping
+    and exceptions after G2 has generated the measures; only the
+    publication commands read them, never generation). Everything else,
+    including any path not listed here, any Python file under ``public/``
+    or ``docs/`` and any file under ``data_inputs/treasury/`` that isn't
+    CSV, YAML or Markdown, could change a calculation. Inputs a command
     is given explicitly are its run's inputs, not the repository's code,
     and this does not cover them.
     """
@@ -216,6 +225,8 @@ def is_non_calculation_path(path: str) -> bool:
         return len(parts) == 4 and parts[3].endswith(".json")
     if path == "data_inputs/public_data_review.csv":
         return True
+    if parts[:2] == ["data_inputs", "treasury"]:
+        return len(parts) > 2 and path.endswith(TREASURY_SUFFIXES)
     if parts[0] in ("public", "docs"):
         return len(parts) > 1 and not path.casefold().endswith(PYTHON_SUFFIXES)
     if len(parts) == 1:
