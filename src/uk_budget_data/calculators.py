@@ -1161,6 +1161,148 @@ class AgeImpactCalculator(BaseCalculator):
         return rows
 
 
+# The income distribution: the percentiles published, and the floor on
+# the survey households behind each one.
+DISTRIBUTION_PERCENTILES = tuple(range(5, 96))
+# Each percentile is the mean over the people in a band one percentile wide
+# around it; a band with fewer survey households than this has no row.
+DISTRIBUTION_MIN_HOUSEHOLDS = SINGLE_AGE_MIN_RECORDS
+DISTRIBUTION_BAND = 1.0
+DISTRIBUTION_SIDES = ("baseline", "reform")
+
+
+def distribution_points(
+    income: np.ndarray,
+    people: np.ndarray,
+    survey_households: Optional[np.ndarray] = None,
+    percentiles=DISTRIBUTION_PERCENTILES,
+    band: float = DISTRIBUTION_BAND,
+    min_households: int = DISTRIBUTION_MIN_HOUSEHOLDS,
+) -> list[tuple[int, float, int]]:
+    """Smoothed percentile points of a person-weighted income distribution.
+
+    ``income`` is each household's income, ``people`` its weight in people
+    (household weight times household size), so a point is where a share
+    of people, not of households, lies below. Households are sorted by
+    income; each person sits at the midpoint of their household's slice of
+    the cumulative share. The point for percentile p is the person-weighted
+    mean income of the people between p - band/2 and p + band/2, so it is
+    never one household's own figure. A band with fewer than
+    ``min_households`` survey households (distinct ``survey_households``
+    ids; the household records when None) is left out.
+
+    Returns (percentile, income, survey households) for each kept point.
+    """
+    income = np.asarray(income, dtype=float)
+    people = np.asarray(people, dtype=float)
+    keep = people > 0
+    income, people = income[keep], people[keep]
+    ids = (
+        np.arange(len(keep))[keep]
+        if survey_households is None
+        else np.asarray(survey_households)[keep]
+    )
+    order = np.argsort(income, kind="stable")
+    income, people, ids = income[order], people[order], ids[order]
+    total = people.sum()
+    if total <= 0:
+        return []
+    upper = np.cumsum(people) / total * 100
+    middle = upper - people / total * 100 / 2
+    points = []
+    for p in percentiles:
+        members = (middle >= p - band / 2) & (middle < p + band / 2)
+        households = len(np.unique(ids[members]))
+        if households < min_households:
+            continue
+        w = people[members]
+        points.append(
+            (int(p), float((w * income[members]).sum() / w.sum()), households)
+        )
+    return points
+
+
+@dataclass
+class IncomeDistributionCalculator(BaseCalculator):
+    """Percentiles of equivalised household net income, before and after.
+
+    The income is PolicyEngine's ``equiv_household_net_income``: household
+    net income (after direct and indirect taxes, so VAT and fuel duty
+    measures count) divided by the HBAI modified OECD scale. It is the
+    figure the household calculator shows, equivalised the same way, so a
+    reader's household can be placed on it. (The decile charts rank
+    households on the HBAI definition, which leaves out indirect taxes.)
+
+    People are counted, not households: each household weighs its weight
+    times its size, as the deciles do. The ``baseline`` points rank
+    everyone's income before the measure, the ``reform`` points everyone's
+    income after it, each against its own distribution. Points run from
+    the 5th to the 95th percentile; see ``distribution_points`` for how
+    each is made and when one is left out.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        survey_households=None,
+    ) -> list[dict]:
+        def household(sim, variable):
+            return np.asarray(
+                sim.calculate(variable, period=year, map_to="household").values,
+                dtype=float,
+            )
+
+        frame = pd.DataFrame(
+            {
+                "people": household(baseline, "household_weight")
+                * household(baseline, "household_count_people"),
+                "baseline": household(baseline, "equiv_household_net_income"),
+                "reform": household(reformed, "equiv_household_net_income"),
+            }
+        )
+        if survey_households is not None:
+            frame["survey_household"] = np.asarray(survey_households)
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        """Rows from a household-level frame: ``people`` (weight times
+        size), ``baseline`` and ``reform`` equivalised net income, and
+        optionally ``survey_household`` ids."""
+        ids = (
+            frame["survey_household"].to_numpy()
+            if "survey_household" in frame
+            else None
+        )
+        rows = []
+        for side in DISTRIBUTION_SIDES:
+            for percentile, income, _ in distribution_points(
+                frame[side].to_numpy(), frame["people"].to_numpy(), ids
+            ):
+                rows.append(
+                    {
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "side": side,
+                        "percentile": percentile,
+                        "equivalised_net_income": round(income),
+                    }
+                )
+        return rows
+
+
 def get_standard_calculators(
     years: list[int] = None,
     income_curve_points: int = 201,
@@ -1192,4 +1334,5 @@ def get_standard_calculators(
         "constituency": ConstituencyCalculator(),
         "demographic_constituency": DemographicConstituencyCalculator(),
         "age_impact": AgeImpactCalculator(),
+        "income_distribution": IncomeDistributionCalculator(),
     }
