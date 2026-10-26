@@ -25,7 +25,7 @@ import { useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { NEWEST_SHOWN, earliestForecast, loadForecastVintages, vintageLabel } from "../../utils/forecastVintages/load";
-import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, pointsIn } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, brushRange, buildView, checkSentence, pointsIn } from "../../utils/forecastVintages/view";
 import "../livingStandards/LivingStandards.css";
 import "./ForecastVintages.css";
 
@@ -189,8 +189,10 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
 
   const chartKey = `${variable.id}|${unit}|${annualOn}|${showPast}|${history}`;
   const rowCount = view.rows?.length ?? 0;
+  // Two rows or more, as the brush keeps them (every view drawn has two)
+  const opening = [history ? 0 : (view.windowStart ?? 0), Math.max(0, rowCount - 1)];
   const range =
-    brush.key === chartKey && brush.range ? brush.range : [history ? 0 : (view.windowStart ?? 0), Math.max(0, rowCount - 1)];
+    brush.key === chartKey && brush.range ? brush.range : rowCount >= 2 ? brushRange(opening, null, rowCount) : opening;
   const annualised = quarterly && !annualOn && unit === "level" && variable.units.level?.annualise === true;
 
   const controls = (

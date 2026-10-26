@@ -901,7 +901,7 @@ def _without_transform(variable_id: str, unit: str):
         # under the rate's own axis
         (_units("psnd", "pct", transform="growth"), "other units"),
         (_units("unemployment", "pct", transform="growth"), "other units"),
-        (_units("psnb", "pct", transform="growth"), "other units"),
+        (_units("psnb", "pct", transform="growth"), "taken of no level"),
         (_without_transform("real_gdp", "pct"), "other units"),
         (_units("psnb", "pct", **{"from": "level"}), "other units"),
         (_units("psnb", "level", **{"from": "share"}), "other units"),
@@ -926,6 +926,82 @@ def test_a_unit_reads_only_a_measure_its_figures_are_in(variable, message):
     # measure in %, a % change one that is not, £ never one in %
     with pytest.raises(B.BuildError, match=message):
         B.check_units(variable)
+
+
+def _with(variable_id: str, **fields):
+    variable = next(v for v in V.VARIABLES if v.id == variable_id)
+    return dataclasses.replace(variable, **fields)
+
+
+def _level_with(variable_id: str, **fields):
+    variable = next(v for v in V.VARIABLES if v.id == variable_id)
+    return dataclasses.replace(
+        variable, level=dataclasses.replace(variable.level, **fields)
+    )
+
+
+@pytest.mark.parametrize(
+    "variable, message",
+    [
+        # Found by the twelfth review: a unit the page has no pill for, and
+        # an index or % change of a share, built and then refused by the page
+        (
+            _with(
+                "receipts",
+                units={
+                    **_units("receipts", "level").units,
+                    "foo": {
+                        "label": "Foo",
+                        "axis": "£ billion",
+                        "from": "level",
+                    },
+                },
+            ),
+            "unknown units",
+        ),
+        (_with("receipts", units={}), "unknown units"),
+        (
+            _units("receipts", "index", **{"from": "share"}),
+            "taken of no level",
+        ),
+        (_units("receipts", "level", axis=""), "no label or axis"),
+        (_units("receipts", "level", label=None), "no label or axis"),
+        (_with("receipts", id="Receipts"), "no id, label or frequency"),
+        (_with("receipts", label=""), "no id, label or frequency"),
+        (_with("receipts", frequency="monthly"), "no id, label or frequency"),
+        (_with("receipts", notes=("",)), "notes that are not text"),
+        (_level_with("receipts", unit=""), "no unit or sources"),
+        (_level_with("receipts", decimals=7), "no decimals"),
+        (_level_with("receipts", decimals=-1), "no decimals"),
+        (_level_with("receipts", decimals=1.5), "no decimals"),
+        (_level_with("receipts", decimals=True), "no decimals"),
+    ],
+    ids=[
+        "unknown unit",
+        "no units",
+        "index of a share",
+        "no axis",
+        "no label",
+        "id unfit for an address",
+        "no label",
+        "unknown frequency",
+        "blank note",
+        "no unit",
+        "seven decimals",
+        "negative decimals",
+        "fractional decimals",
+        "decimals a flag",
+    ],
+)
+def test_the_build_writes_no_variable_the_page_refuses(variable, message):
+    # load.js's variableProblem and measureProblem, field by field
+    with pytest.raises(B.BuildError, match=message):
+        B.check_variable(variable)
+
+
+def test_every_variable_is_one_the_page_takes():
+    for variable in V.VARIABLES:
+        B.check_variable(variable)
 
 
 def test_every_committed_figure_is_written_to_four_decimals(committed):

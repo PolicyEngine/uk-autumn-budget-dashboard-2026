@@ -287,6 +287,9 @@ function unitProblem(id, unit, spec, frequency) {
   // Only % is a change on a year earlier, and only a quarterly measure's
   // £ is a quarter at an annual rate
   if (!absent(spec.transform) && !(spec.transform === "growth" && unit === "pct")) return `${id}: an unknown unit transform`;
+  // An index or a % change is taken of the level, never of a share: its
+  // axis (the page's own) says only that it is one
+  if ((unit === "index" || spec.transform === "growth") && spec.from !== "level") return `${id}: its ${unit} unit is taken of no level`;
   if (!absent(spec.annualise) && typeof spec.annualise !== "boolean") return `${id}: an unknown unit transform`;
   // and it always is: its axis names a year, and its figures are a quarter's
   if (Boolean(spec.annualise) !== (unit === "level" && frequency === "quarterly")) {

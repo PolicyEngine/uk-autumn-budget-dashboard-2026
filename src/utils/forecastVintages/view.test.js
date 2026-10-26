@@ -5,8 +5,10 @@ import { MAX_VALUE, NEWEST_SHOWN, earliestForecast, forecastVintagesProblem, lau
 import { lastIndex, pctChange, periodIndex, toSeries } from "./transforms";
 import {
   DRAW_LIMIT,
+  GROWTH_AXIS,
   OUTTURN_KEY,
   UNIT_ORDER,
+  brushRange,
   buildView,
   checkSentence,
   drawable,
@@ -172,7 +174,10 @@ describe("the committed file", () => {
     // rate, under the rate's own axis (debt's 93.2% of GDP drawn as 0.3%)
     ["a % change of no measure in %", (d) => (byId(d, "psnd").units.pct.transform = "growth"), /reads a measure in other units/],
     ["a % change of no rate", (d) => (byId(d, "unemployment").units.pct.transform = "growth"), /reads a measure in other units/],
-    ["a % change of no share", (d) => (byId(d, "psnb").units.pct.transform = "growth"), /reads a measure in other units/],
+    ["a % change of no share", (d) => (byId(d, "psnb").units.pct.transform = "growth"), /taken of no level/],
+    // Found by the twelfth review: an index or a % change of a share
+    // reads as one of the level under the axis the page gives it
+    ["an index of the level", (d) => (byId(d, "receipts").units.index.from = "share"), /index unit is taken of no level/],
     // Found by the fourth review: a check stated in terms its gaps are
     // not in, and a forecast the build would not write
     ["a check in its measure's terms", (d) => (byId(d, "employment").level.check.in = "% change on a year earlier"), /outturn check is incomplete/],
@@ -785,6 +790,23 @@ describe("an index or a % change", () => {
 });
 
 describe("what the file says of itself", () => {
+  // Found by the twelfth review: receipts' % unit made a % change of its
+  // level (£) kept "% of GDP" as its axis, over its growth: 40.0% read 8.0%
+  it("names a % change as one, whatever the file's axis says", () => {
+    const data = clone();
+    const receipts = byId(data, "receipts");
+    Object.assign(receipts.units.pct, { from: "level", transform: "growth" });
+    expect(forecastVintagesProblem(data)).toBeNull();
+    expect(buildView(data, receipts, { unit: "pct", showPast: true }).axisLabel).toBe(GROWTH_AXIS);
+    // As every % change in the committed file says of itself
+    const growth = DATA.variables.filter((v) => v.units.pct?.transform === "growth");
+    expect(growth.length).toBeGreaterThan(5);
+    for (const v of growth) {
+      expect(v.units.pct.axis).toBe(GROWTH_AXIS);
+      expect(buildView(DATA, v, { unit: "pct", showPast: true }).axisLabel).toBe(GROWTH_AXIS);
+    }
+  });
+
   it("names each forecast's launch period by the launch rules", () => {
     for (const v of DATA.variables) {
       for (const name of ["level", "share"].filter((n) => v[n])) {
@@ -828,5 +850,43 @@ describe("what the file says of itself", () => {
     expect(forecastVintagesProblem(data)).toMatch(/outturn check is incomplete/);
     Object.assign(m.check, { in: "% change on a year earlier", tolerance_is_share: false, tolerance: 25 });
     expect(forecastVintagesProblem(data)).toBeNull();
+  });
+});
+
+// Found by the twelfth review: the brush's ends could meet on one period,
+// which draws no line and leaves the labels no plot to be laid out across
+describe("the brush's range", () => {
+  const range = (count) =>
+    fc.tuple(fc.nat({ max: count - 1 }), fc.nat({ max: count - 1 })).map(([a, b]) => [Math.min(a, b), Math.max(a, b)]);
+  it("keeps two rows or more, and what the brush asks for where it can", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 2, max: 300 }).chain((count) => fc.tuple(fc.constant(count), fc.nat({ max: count - 1 }), fc.nat({ max: count - 1 }), fc.option(range(count)))),
+        ([count, start, end, before]) => {
+          const [lo, hi] = brushRange([start, end], before, count);
+          expect(Number.isInteger(lo) && Number.isInteger(hi)).toBe(true);
+          expect(0 <= lo && lo < hi && hi <= count - 1).toBe(true);
+          if (start !== end) expect([lo, hi]).toEqual([Math.min(start, end), Math.max(start, end)]);
+          else {
+            // Two rows, one of them where the ends met
+            expect(hi - lo).toBe(1);
+            expect(lo === start || hi === start).toBe(true);
+          }
+        },
+      ),
+      { numRuns: 2000 },
+    );
+  });
+
+  it("stops the end that moved a row short of the other", () => {
+    // The end dragged back onto the start; the start dragged on to the end
+    expect(brushRange([10, 10], [10, 20], 40)).toEqual([10, 11]);
+    expect(brushRange([20, 20], [10, 20], 40)).toEqual([19, 20]);
+    // At the first and last rows
+    expect(brushRange([0, 0], [0, 5], 40)).toEqual([0, 1]);
+    expect(brushRange([0, 0], [3, 5], 40)).toEqual([0, 1]);
+    expect(brushRange([39, 39], [30, 39], 40)).toEqual([38, 39]);
+    expect(brushRange([39, 39], [39, 39], 40)).toEqual([38, 39]);
+    expect(brushRange([5, 5], null, 40)).toEqual([4, 5]);
   });
 });

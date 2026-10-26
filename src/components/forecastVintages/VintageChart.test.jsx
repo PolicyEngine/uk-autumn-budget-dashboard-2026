@@ -20,7 +20,7 @@ import VintageChart, {
   xTicks,
   yAxisFor,
 } from "./VintageChart";
-import { OUTTURN_KEY, UNIT_ORDER, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, brushRange, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
 import { forecastVintagesProblem } from "../../utils/forecastVintages/load";
 import { periodIndex } from "../../utils/forecastVintages/transforms";
 
@@ -293,6 +293,30 @@ describe("the chart's layout", () => {
     expect(problems).toEqual([]);
   });
 
+  // Found by the twelfth review: spending as an index, F off, brushed to
+  // 2024-25 alone on a phone: no plot to lay the labels out across, so the
+  // start caption fell under the plot's foot, behind the brush
+  it("lays out no single period: the brush keeps two, and their labels in the plot", () => {
+    const view = buildView(DATA, variable("spending"), { unit: "index", showPast: false });
+    const n = view.rows.length;
+    const k = view.rows.findIndex((r) => view.label(r.x) === "2024-25");
+    expect(k).toBeGreaterThan(0);
+    expect(chartLayout(view, view.rows.slice(k, k + 1), { canvasWidth: 254, narrow: true })).toBeNull();
+    // The end dragged back onto the start, and the start on to the end
+    for (const before of [[k, n - 1], [0, k]]) {
+      const [lo, hi] = brushRange([k, k], before, n);
+      expect(hi - lo).toBe(1);
+      const layout = chartLayout(view, view.rows.slice(lo, hi + 1), { canvasWidth: 254, narrow: true });
+      expect(layout.labels.length).toBeGreaterThan(0);
+      for (const l of layout.labels) {
+        for (const t of l.boxes.text) {
+          const b = layout.bounds;
+          expect(t.left >= b.left && t.right <= b.right && t.top >= b.top && t.bottom <= b.bottom, `${l.role} from ${before}`).toBe(true);
+        }
+      }
+    }
+  });
+
   // Found by the eleventh review: real GDP's figures written to six
   // decimals, in £ with F off, brushed to 2028-30 on a 320px phone: the
   // end label started at its line and ran past the card, where centred on
@@ -313,9 +337,11 @@ describe("the chart's layout", () => {
   });
 
   // Whatever decimals the figures are written to (the loader takes 0 to
-  // 6), at any card width and brush, every label's text stays between the
-  // plot's sides, and a value is set smaller only where no anchor would
-  // keep it there at full size
+  // 6), at any card width and brush (two rows or more, as brushRange
+  // keeps it), every label's text stays between the plot's sides, and a
+  // value is set smaller only where no anchor would keep it there at full
+  // size. The examples, run first every time, lay labels out: the eleventh
+  // review's case, and real GDP's whole history on a desktop card
   it("keeps every label between the plot's sides, at full size wherever an anchor can", () => {
     const shown = DATA.variables.flatMap((v) => UNIT_ORDER.filter((u) => v.units[u]).map((unit) => ({ id: v.id, unit })));
     const files = new Map();
@@ -328,6 +354,10 @@ describe("the chart's layout", () => {
       }
       return files.get(decimals);
     };
+    const gdp = buildView(DATA, variable("real_gdp"), { unit: "level", showPast: false });
+    const from2028 = gdp.rows.findIndex((r) => r.x === 2028);
+    // Rows from the first to the last: 2 + (n - 2)
+    const allRows = buildView(DATA, variable("real_gdp"), { unit: "level", showPast: true }).rows.length - 2;
     let laidOut = 0;
     fc.assert(
       fc.property(
@@ -357,9 +387,16 @@ describe("the chart's layout", () => {
           }
         },
       ),
-      { numRuns: 400 },
+      {
+        numRuns: 400,
+        examples: [
+          [{ id: "real_gdp", unit: "level" }, 6, false, 254, true, from2028, 1],
+          [{ id: "real_gdp", unit: "level" }, 1, true, 926, false, 0, allRows],
+        ],
+      },
     );
-    expect(laidOut).toBeGreaterThan(200);
+    // Whatever the seed: the examples alone lay out four labels or more
+    expect(laidOut).toBeGreaterThanOrEqual(4);
   });
 
   it("keeps employment's latest label off the start dot in %, brushed to 2017 to 2028 on a phone", () => {

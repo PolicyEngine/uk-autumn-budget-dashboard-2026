@@ -43,6 +43,11 @@ OUTPUT_PATH = Path("public/data/obr_forecast_vintages.json")
 NEWEST_VINTAGE = (2026, 3)
 CHECK_PERIODS = 8
 DECIMALS = 4
+# What the page can draw (load.js): its unit pills, frequencies, and the
+# most decimals a measure's figures are written with
+UNITS = ("level", "index", "pct")
+FREQUENCIES = ("calendar", "fiscal", "quarterly")
+MAX_DECIMALS = 6
 
 # This parliament: from the quarter (year, fiscal year) before the July
 # 2024 general election to the last complete quarter (year, fiscal year)
@@ -744,16 +749,60 @@ def _sources_meta(series: dict, retrieved: dict, hpi: dict) -> dict:
     }
 
 
+def _is_text(value) -> bool:
+    return isinstance(value, str) and value != ""
+
+
+def check_variable(variable: V.Variable) -> None:
+    """Raise unless the page's loader takes the variable as written.
+
+    Its fields as load.js's variableProblem and measureProblem read them;
+    the figures, checks and forecasts are held to the page's rules as each
+    measure is built.
+    """
+    if not (
+        isinstance(variable.id, str)
+        and re.fullmatch(r"[a-z][a-z0-9_]*", variable.id)
+        and _is_text(variable.label)
+        and variable.frequency in FREQUENCIES
+    ):
+        raise BuildError(f"{variable.id}: no id, label or frequency")
+    if not all(_is_text(note) for note in variable.notes):
+        raise BuildError(f"{variable.id}: notes that are not text")
+    for measure in (variable.level, variable.share):
+        if measure is None:
+            continue
+        if not (_is_text(measure.unit) and _is_text(measure.outturn_source)):
+            raise BuildError(f"{variable.id}: no unit or sources")
+        decimals = measure.decimals
+        if not (
+            isinstance(decimals, int)
+            and not isinstance(decimals, bool)
+            and 0 <= decimals <= MAX_DECIMALS
+        ):
+            raise BuildError(f"{variable.id}: no decimals")
+    check_units(variable)
+
+
 def check_units(variable: V.Variable) -> None:
     """Raise unless the variable's unit pills are ones the page can draw."""
+    if not variable.units or any(unit not in UNITS for unit in variable.units):
+        raise BuildError(f"{variable.id}: unknown units")
     for unit, spec in variable.units.items():
-        if spec["from"] not in ("level", "share"):
+        if not (_is_text(spec.get("label")) and _is_text(spec.get("axis"))):
+            raise BuildError(f"{variable.id}: {unit} has no label or axis")
+        if spec.get("from") not in ("level", "share"):
             raise BuildError(f"{variable.id}: {unit} reads no measure")
         if spec["from"] == "share" and variable.share is None:
             raise BuildError(f"{variable.id}: {unit} reads a share it lacks")
         transform = spec.get("transform")
         if transform is not None and (transform != "growth" or unit != "pct"):
             raise BuildError(f"{variable.id}: {unit} has an unknown transform")
+        # An index or a % change is taken of the level, never of a share:
+        # its axis says only that it is one
+        of_level = spec["from"] == "level"
+        if (unit == "index" or transform == "growth") and not of_level:
+            raise BuildError(f"{variable.id}: {unit} is taken of no level")
         # A % shown as published reads a measure in %, a % change one that
         # is not (a rate's change on a year earlier is no rate), and £ or
         # people never read one: the page's loader refuses a file otherwise
@@ -790,6 +839,7 @@ def build(root: Path = Path(".")) -> dict:
 
     out = []
     for variable in V.VARIABLES:
+        check_variable(variable)
         record = {
             "id": variable.id,
             "label": variable.label,
@@ -809,7 +859,6 @@ def build(root: Path = Path(".")) -> dict:
                 else None
             ),
         }
-        check_units(variable)
         out.append(record)
 
     return {

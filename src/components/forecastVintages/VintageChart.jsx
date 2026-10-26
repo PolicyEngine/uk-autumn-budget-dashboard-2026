@@ -31,7 +31,7 @@ import {
   useNarrowViewport,
 } from "../../utils/chartTheme";
 import UnavailableNotice from "../publication/UnavailableNotice";
-import { OUTTURN_KEY, niceAxis, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, brushRange, niceAxis, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
 
 // The lines differ in pattern and weight as well as colour
 export const LINE_STYLE = {
@@ -415,10 +415,13 @@ const yWidthFor = (view, axis) =>
  * (its text on another dot, say), room above or below is tried, and kept
  * if it leaves fewer. At most ROOM_ROUNDS rounds either way. Null where
  * no y axis can be stepped over the rows, which a view buildView can draw
- * never is (its values are within DRAW_LIMIT): the chart then says so
- * rather than drawing them on an axis that does not cover them.
+ * never is (its values are within DRAW_LIMIT), or where there are fewer
+ * than two rows, which the brush never shows (brushRange): the chart then
+ * says so rather than drawing them on an axis that does not cover them,
+ * or labels with no plot to be laid out across.
  */
 export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
+  if (rows.length < 2) return null;
   const plotHeight = PLOT_HEIGHT[narrow ? "narrow" : "wide"];
   const first = rows[0]?.x;
   const last = rows[rows.length - 1]?.x;
@@ -723,7 +726,7 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
                 stroke={CHART_COLOURS.highlight}
                 fill={CHART_COLOURS.surface}
                 tickFormatter={(x) => view.label(x)}
-                onChange={({ startIndex, endIndex }) => onRange([startIndex, endIndex])}
+                onChange={({ startIndex, endIndex }) => onRange(brushRange([startIndex, endIndex], range, view.rows.length))}
               />
               <Customized component={<ChartUnitLabel text={view.axisLabel} horizontal />} />
             </LineChart>

@@ -27,6 +27,27 @@ const gb = (digits) => new Intl.NumberFormat("en-GB", { minimumFractionDigits: d
 /** The unit pills a variable offers, in the page's order. */
 export const UNIT_ORDER = ["level", "index", "pct"];
 
+/** What a % change's axis says: the page's words, as an index's are. */
+export const GROWTH_AXIS = "% change on a year earlier";
+
+/**
+ * The [first, last] rows the brush shows, from what it asks for: at least
+ * two rows, as every line is (a line of one period draws nothing, and its
+ * labels have no plot to be laid out across). Where its two ends meet,
+ * the one that moved stops a row short of the other; `before` is the
+ * range it moved from. Over `count` rows, two or more.
+ */
+export function brushRange([start, end], before, count) {
+  const last = count - 1;
+  let [lo, hi] = [Math.max(0, Math.min(start, end)), Math.min(last, Math.max(start, end))];
+  if (hi > lo) return [lo, hi];
+  // The end moved onto the start, or the start onto the end
+  if (before && before[1] !== hi) hi = Math.min(last, lo + 1);
+  else lo = Math.max(0, hi - 1);
+  if (hi === lo) [lo, hi] = lo === 0 ? [0, 1] : [lo - 1, lo];
+  return [lo, hi];
+}
+
 /**
  * Levels for one measure: the outturn and each forecast carried on from
  * it, at the variable's own frequency or (annual, for a quarterly
@@ -327,8 +348,14 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
       quarterlyAnnual ? "annual" : unit === "level" && spec.annualise ? "annualised" : null,
       unit === "index" ? "index" : unit === "pct" && spec.transform === "growth" ? "growth" : null,
     ].filter(Boolean),
-    // An index names its base period: the start of the parliament
-    axisLabel: unit === "index" ? `Index (${periodLabel(start, frequency)} = 100)` : spec.axis,
+    // An index names its base period, the start of the parliament, and a
+    // % change says it is one: the page's own words, whatever the file's
+    axisLabel:
+      unit === "index"
+        ? `Index (${periodLabel(start, frequency)} = 100)`
+        : unit === "pct" && spec.transform === "growth"
+          ? GROWTH_AXIS
+          : spec.axis,
     format: formatterFor(variable, unit, measure),
     rows,
     outturn: shown.outturn,

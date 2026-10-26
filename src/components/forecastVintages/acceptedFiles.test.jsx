@@ -227,6 +227,8 @@ function unitsOk(variable) {
     // % alone is a change on a year earlier; £ alone is at an annual
     // rate, and always for a quarterly measure (the build's units check)
     if (!missing(spec.transform) && !(spec.transform === "growth" && unit === "pct")) return false;
+    // An index or a % change is the page's own, of the level
+    if ((unit === "index" || spec.transform === "growth") && spec.from !== "level") return false;
     if (!missing(spec.annualise) && typeof spec.annualise !== "boolean") return false;
     if ((spec.annualise === true) !== (unit === "level" && variable.frequency === "quarterly")) return false;
   }
