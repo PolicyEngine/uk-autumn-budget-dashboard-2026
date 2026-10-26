@@ -185,8 +185,8 @@ describe("MethodologyTab", () => {
     fireEvent.click(notes);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    // The current-law cards on the Pre-measures forecast's sub-tabs
-    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["OBR forecast", "forecast"]]) {
+    // The current-law cards on the OBR forecast's sub-tabs
+    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["Forecast changes", "forecast"]]) {
       const link = within(living).getByRole("link", { name });
       expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
       fireEvent.click(link);

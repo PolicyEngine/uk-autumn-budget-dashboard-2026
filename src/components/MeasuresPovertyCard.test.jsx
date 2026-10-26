@@ -119,30 +119,34 @@ describe("the Poverty sub-tab's measures pair", () => {
     const choice = within(panel).getByRole("group", { name: "Poverty measure" });
     expect(choice.nextElementSibling).toBe(change.parentElement);
     for (const c of [change, measures]) {
-      expect(within(c).queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
+      expect(within(c).queryByRole("button", { name: /^Options:/ })).toBeNull();
     }
     // The change in people, from the outlook's population
     await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/), { timeout: 5000 });
-    // A waterfall in people: short names, the package last, the measures
-    // that move no one on one muted line
+    // A waterfall in people: short names, the package last; the measures
+    // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
     expect(rows[0]).toBe("Plan 2 threshold unfrozen");
     expect(rows.at(-1)).toBe("Package");
     expect(rows).not.toContain("Employer NI relief, under-25s");
-    expect(within(measures).getByText(/^No effect on poverty: /)).toHaveTextContent(/BADR restricted/);
+    expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
     expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
 
     // One poverty choice for both cards
-    fireEvent.click(within(choice).getByRole("button", { name: /^Poverty line:/ }));
-    fireEvent.click(within(choice).getByRole("option", { name: "Relative" }));
-    expect(within(choice).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Relative");
+    // One Options pill above the pair, its summary the measure
+    fireEvent.click(within(choice).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(choice).getByRole("radiogroup", { name: "Poverty line" })).getByRole("radio", { name: "Relative" }));
+    expect(within(choice).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
     expect(change.querySelector(".chart-description")).toHaveTextContent(/relative/i);
 
     // More info: the £0 measures and that the parts need not add up
     fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
+    const none = measures.querySelector(".wf-none");
+    expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);
+    expect(none).toHaveTextContent(/change prices/);
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
   });
 });

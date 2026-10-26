@@ -135,17 +135,9 @@
   font-size: var(--fs-micro);
 }
 
-/* The measures that move no one: one muted line under the chart */
+/* The measures that move no one, in More info */
 .wf-none {
-  margin: 8px 0 0;
-  color: var(--pe-gray-500);
-  font-size: var(--fs-micro);
-  line-height: 1.4;
-}
-
-.wf-info {
-  margin-left: 4px;
-  vertical-align: middle;
+  margin: 0 0 8px;
 }
 
 @container (max-width: 520px) {

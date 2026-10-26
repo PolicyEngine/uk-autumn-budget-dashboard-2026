@@ -1,5 +1,5 @@
 // Incomes and poverty under current law, before any Budget measure: the
-// Pre-measures forecast's Living standards and Poverty sub-tabs, the twins
+// OBR forecast's Living standards and Poverty sub-tabs, the twins
 // of Population impact's sub-tabs of the same names (which show the
 // measures' effect). Ported from PolicyEngine/uk-living-standards-outlook
 // (branch review-1-fixes, db0c8e4). It reads
@@ -81,7 +81,7 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
             {rows.map((row, i) => (
               <div key={i} className="charts-grid">
                 {row.map((S, j) => (
-                  <S key={j} data={data} />
+                  <S key={j} data={data} onShowTab={onShowTab} />
                 ))}
               </div>
             ))}

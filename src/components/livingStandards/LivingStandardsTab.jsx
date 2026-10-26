@@ -1,7 +1,7 @@
-// The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
+// The OBR forecast view (?tab=outlook; ?tab=living before): the
 // outlook without the Budget measures, under current law, in three
 // sub-tabs. Living standards and Poverty (CurrentLawSection) mirror
-// Population impact's sub-tabs of the same names; OBR forecast is the OBR
+// Population impact's sub-tabs of the same names; Forecast changes is the OBR
 // economic forecast behind the baseline, as calendar-year growth. Ported
 // from PolicyEngine/uk-living-standards-outlook (branch review-1-fixes,
 // db0c8e4), its Baseline outlook and Forecast changes tabs. It reads
@@ -71,11 +71,11 @@ function ForecastPanel({ forecast, data }) {
   );
 }
 
-/** The Pre-measures forecast's sub-tabs; the first, Living standards, is the default. */
+/** The OBR forecast's sub-tabs; the first, Living standards, is the default. */
 export const OUTLOOK_SUB_TABS = [
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
-  { value: "forecast", label: "OBR forecast", icon: "trend" },
+  { value: "forecast", label: "Forecast changes", icon: "trend" },
 ];
 
 const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
@@ -83,11 +83,11 @@ const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
 const ID_PREFIX = "outlook";
 
 /**
- * The Pre-measures forecast view: what happens without the measures, under
+ * The OBR forecast view: what happens without the measures, under
  * current law, as pill sub-tabs under the view tabs. Living standards
  * (incomes, growth across the distribution, inequality) and Poverty are the
  * twins of Population impact's sub-tabs of the same names, which show the
- * selected measures' effect; each links to the other. OBR forecast is the
+ * selected measures' effect; each links to the other. Forecast changes is the
  * forecast the baseline is built on. The open sub-tab is ?sub=
  * (useSubTabParam): Living standards has no parameter, the others are
  * ?sub=poverty and ?sub=forecast. The outlook is read once for every
@@ -110,7 +110,7 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
         tabs={OUTLOOK_SUB_TABS}
         value={sub}
         onChange={setSub}
-        ariaLabel="Pre-measures forecast sections"
+        ariaLabel="OBR forecast sections"
         idPrefix={ID_PREFIX}
       />
       {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (

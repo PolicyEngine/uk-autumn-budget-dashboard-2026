@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen, within } from "@testing-library/react";
 import SummaryMetricChart, {
   SUMMARY_METRICS,
   metricByYear,
@@ -102,25 +102,27 @@ describe("measure choices", () => {
 
   it("hides the pills when the file has only the headline columns", () => {
     render(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={ROWS} {...props} />);
-    expect(screen.queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Options:/ })).toBeNull();
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={ROWS} {...props} />);
-    expect(screen.queryByRole("button", { name: /^Inequality measure:/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Options:/ })).toBeNull();
   });
 
   it("names the poverty measure chosen and puts it in the address", () => {
     window.history.replaceState(null, "", "/?tab=dashboard&sub=poverty");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={WIDE} {...props} />);
-    // One pill per choice, under the description
-    const choose = (pill, option) => {
-      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${pill}:`) }));
-      fireEvent.click(screen.getByRole("option", { name: option }));
-    };
+    // One Options pill under the description, its choices as segmented
+    // toggles in its popover
     const choices = document.querySelector(".summary-metric-choices");
     expect(choices.previousElementSibling).toHaveClass("chart-header");
+    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const choose = (group, option) => {
+      fireEvent.click(within(screen.getByRole("radiogroup", { name: group })).getByRole("radio", { name: option }));
+    };
     choose("Poverty line", "Relative");
     choose("Housing costs", "After housing costs");
     choose("People", "Children");
-    expect(screen.getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
+    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Relative · After housing costs · Children");
     expect(screen.getByRole("heading")).toHaveTextContent("Change in the child poverty rate");
     expect(screen.getByText(/Change in relative child poverty \(AHC\), pp, by year/)).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
@@ -131,16 +133,17 @@ describe("measure choices", () => {
   it("reads the inequality measure from the address", () => {
     window.history.replaceState(null, "", "/?sub=living&inequality=top-10");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={WIDE} {...props} />);
-    expect(screen.getByRole("button", { name: /^Inequality measure:/ })).toHaveTextContent("Top 10% share");
+    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent("Top 10% share");
     expect(screen.getByText(/top 10% of people|10% of people with the highest incomes/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Inequality measure:/ }));
-    expect(screen.getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""))).toEqual([
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const group = screen.getByRole("radiogroup", { name: "Inequality measure" });
+    expect(within(group).getAllByRole("radio").map((o) => o.textContent)).toEqual([
       "Gini",
       "Top 10% share",
       "Top 1% share",
       "90/10 ratio",
     ]);
-    fireEvent.click(screen.getByRole("option", { name: "Gini" }));
+    fireEvent.click(within(group).getByRole("radio", { name: "Gini" }));
     expect(new URLSearchParams(window.location.search).get("inequality")).toBeNull();
   });
 });

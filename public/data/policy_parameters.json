@@ -18,10 +18,18 @@
       "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "rows": [
         {
-          "label": "Fuel duty from each date it changes",
+          "label": "Fuel duty",
           "unit": "pence_per_litre",
+          "unit_words": "pence a litre",
           "primary": true,
           "points": [
+            {
+              "key": "2026-04-01",
+              "label": "1 April 2026",
+              "year": 2026,
+              "before": 52.95,
+              "after": 52.95
+            },
             {
               "key": "2027-01-01",
               "label": "1 January 2027",
@@ -100,6 +108,7 @@
         {
           "label": "Fuel duty, averaged over the year",
           "unit": "pence_per_litre",
+          "unit_words": "pence a litre",
           "primary": false,
           "points": [
             {
@@ -165,6 +174,7 @@
         {
           "label": "Income tax allowance over State Pension age",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -230,6 +240,7 @@
         {
           "label": "Warm Home Discount",
           "unit": "gbp",
+          "unit_words": "£ a household, once",
           "primary": true,
           "points": [
             {
@@ -258,8 +269,9 @@
       "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
       "rows": [
         {
-          "label": "VAT on domestic electricity in Great Britain while in force",
+          "label": "VAT on domestic electricity in Great Britain",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -284,6 +296,7 @@
         {
           "label": "VAT on domestic electricity in Great Britain, averaged over the year",
           "unit": "percent",
+          "unit_words": null,
           "primary": false,
           "points": [
             {
@@ -349,6 +362,7 @@
         {
           "label": "Employer National Insurance rate, employees aged 21 to 24",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -409,6 +423,7 @@
         {
           "label": "Earnings relieved for ages 21 to 24, up to",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": false,
           "points": [
             {
@@ -473,6 +488,7 @@
         {
           "label": "Personal allowance",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -532,6 +548,7 @@
         {
           "label": "Higher rate threshold",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {
@@ -592,6 +609,7 @@
         {
           "label": "Basic rate band",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": false,
           "points": [
             {
@@ -656,6 +674,7 @@
         {
           "label": "Business Asset Disposal Relief lifetime limit",
           "unit": "gbp",
+          "unit_words": "£ of gains over a lifetime",
           "primary": true,
           "points": [
             {
@@ -718,8 +737,9 @@
       "description": "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
       "rows": [
         {
-          "label": "VAT on petrol and diesel while in force",
+          "label": "VAT on petrol and diesel",
           "unit": "percent",
+          "unit_words": null,
           "primary": true,
           "points": [
             {
@@ -744,6 +764,7 @@
         {
           "label": "VAT on petrol and diesel, averaged over the year",
           "unit": "percent",
+          "unit_words": null,
           "primary": false,
           "points": [
             {
@@ -809,6 +830,7 @@
         {
           "label": "Plan 2 repayment threshold",
           "unit": "gbp",
+          "unit_words": "£ a year",
           "primary": true,
           "points": [
             {

@@ -5,13 +5,14 @@
 // step closes the gap; the package total ends it. People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
-// throughout. Measures that move no one are one muted line, not empty rows.
+// throughout. Measures that move no one are one line in More info, not
+// empty rows.
 // The poverty choice is shared with the Change in the poverty rate chart
 // beside it (usePovertyChoice, ?poverty=).
 
 import { useRef } from "react";
 import LsCard from "./livingStandards/LsCard";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
@@ -194,19 +195,16 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           }),
       }}
       // With the choice above the pair (PovertyMeasuresRow), none in the card
-      controls={!choiceAbove && controls.map((control) => (
-        <PillSelect
-          key={control.label}
-          variant="light"
-          prefix={control.label}
-          name={control.label}
-          options={control.options}
-          value={control.value}
-          onChange={control.onChange}
-        />
-      ))}
+      controls={!choiceAbove && <ControlBar name={metric.title} options={controls} />}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
+          {/* The measures that move no one, and why, here rather than under
+              the chart */}
+          {zero.length > 0 && (
+            <p className="wf-none">
+              <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}.{zeroInfo && ` ${zeroInfo}`}
+            </p>
+          )}
           <p>
             Each step is a selected measure modelled on its own, largest first, and the package bar all of them together,
             in {year}: the change in {metric.phrase}.{metric.detail ? ` ${metric.detail}` : ""}
@@ -282,23 +280,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           <FloatingTooltip tip={tip} />
         </div>
       </div>
-      <div className="chart-legend">
-        {zero.length > 0 && (
-          <p className="wf-none">
-            No effect on poverty: {zero.map((m) => m.name).join(", ")}
-            {zeroInfo && (
-              <span className="info-icon-wrapper wf-info">
-                <button type="button" className="info-icon" aria-label="Why these move no one">
-                  i
-                </button>
-                <span className="info-tooltip" role="tooltip">
-                  {zeroInfo}
-                </span>
-              </span>
-            )}
-          </p>
-        )}
-      </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
@@ -334,17 +315,7 @@ export function PovertyChoiceBar() {
   const { controls } = usePovertyChoice();
   return (
     <div className="section-controls" role="group" aria-label="Poverty measure">
-      {controls.map((control) => (
-        <PillSelect
-          key={control.label}
-          variant="light"
-          prefix={control.label}
-          name={control.label}
-          options={control.options}
-          value={control.value}
-          onChange={control.onChange}
-        />
-      ))}
+      <ControlBar name="Poverty measure" options={controls} />
     </div>
   );
 }
