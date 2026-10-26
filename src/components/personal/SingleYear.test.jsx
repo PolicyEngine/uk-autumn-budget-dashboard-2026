@@ -294,6 +294,10 @@ describe("the household calculation, from the fixture", () => {
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
     expect(panel).not.toHaveTextContent("before and after the selected policies.");
+    // Only the essentials show: what it is based on is under "About this
+    // result", closed at first
+    expect(card.querySelector("dl.result-foot-items")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "About this result" }));
     // What it is based on: a strip, each a label over its value, the note
     // behind an "i"; the rail explanation is in "About these figures"
     const assumptions = panel.querySelector("dl.result-foot-items");
@@ -343,11 +347,14 @@ describe("the household calculation, from the fixture", () => {
       .reduce((a, b) => a + b, 0);
     expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
-    // The measures that leave the household where it was: one muted line
-    // under the steps, not a row each, with each full name on hover
-    const noEffect = container.querySelector(".net-income-waterfall .waterfall-no-effect");
-    expect(noEffect).toHaveTextContent(/^No effect on you: /);
-    const names = [...noEffect.querySelectorAll("span")].map((span) => span.title);
+    // The measures that leave the household where it was: not under the
+    // steps but under "About this result", one bullet each, each full
+    // name on hover
+    expect(container.querySelector(".net-income-waterfall .waterfall-no-effect")).toBeNull();
+    fireEvent.click(within(headlineCard()).getByRole("button", { name: "About this result" }));
+    const noEffect = container.querySelector(".result-card-no-effect");
+    expect(noEffect).toHaveTextContent(/^No effect on you/);
+    const names = [...noEffect.querySelectorAll("li")].map((item) => item.title);
     expect(names).toContain("Dividend tax increase (+2pp)");
     expect(names).not.toContain("Interaction between policies");
     expect(container.querySelector(".no-effect-item")).toBeNull();

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import Tip from "./Tip";
-import TitleIcon from "./TitleIcon";
+import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
 
 // How long a first tap on a touch screen waits for a second (which goes
@@ -47,7 +47,9 @@ export default function HomeButton({ current, onHome }) {
           onHome();
         }}
       >
-        <TitleIcon name="house" bare size={18} />
+        {/* PolicyEngine's square mark (@policyengine/ui-kit's white-square.svg) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={mark.src ?? mark} alt="" className="home-button-mark" />
       </button>
     </Tip>
   );

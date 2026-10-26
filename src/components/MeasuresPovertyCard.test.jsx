@@ -127,7 +127,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures reduce the poverty rate by less than 0\.1 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
-    const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
+    const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
     expect(rows[0]).toBe("Plan 2 threshold unfrozen");
     expect(rows.at(-1)).toBe("All measures together");
     expect(rows).not.toContain("Employer NI relief, under-25s");

@@ -8,6 +8,8 @@
 // never a background band.
 
 import { useRef } from "react";
+import MeasureRowLabel from "./MeasureRowLabel";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
@@ -26,6 +28,8 @@ const KEYS = OUTCOMES.map((outcome) => outcome.key);
  */
 export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphasis = null, labelFor = null }) {
   const ref = useRef(null);
+  // A measure's row gets the shared label; an age group's its name
+  const { byId } = useMeasureCatalogue();
   const { tip, handlers } = useFloatingTooltip(ref, `${groupLabel}-${yearLabel}-${rows.length}`);
   return (
     <div className="msc-wrap">
@@ -45,7 +49,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
         return (
           <div className="msc-row" role="row" key={id}>
             <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" title={fullName ?? name}>
-              {name}
+              {byId?.get(id) ? <MeasureRowLabel measure={byId.get(id)} name={name} /> : name}
             </span>
             <span
               className="msc-bar-cell has-tooltip"

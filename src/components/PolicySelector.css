@@ -80,7 +80,7 @@
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
   box-shadow: 0 4px 12px var(--shadow-strong);
-  width: 380px;
+  width: 320px;
   max-width: calc(100vw - 32px);
   /* Never taller than the screen below the sticky title row */
   max-height: min(500px, calc(100dvh - var(--title-row-height, 68px) - 24px));
@@ -88,49 +88,70 @@
 }
 
 .policy-list {
-  padding: 8px;
+  padding: 6px 8px;
 }
 
+/* "Raises revenue", "Costs revenue": small labels over their policies */
+.policy-group + .policy-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.policy-group-label {
+  margin: 0;
+  padding: 6px 8px 2px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+/* One compact row per policy: checkbox, colour, short name, info */
 .policy-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 4px 0 8px;
+  border-radius: 6px;
+  transition: background-color var(--motion-fast) var(--ease-out);
 }
 
 .policy-item:hover {
   background: var(--pe-gray-50);
 }
 
+.policy-item-label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 36px;
+  cursor: pointer;
+}
+
 .policy-item input[type="checkbox"] {
-  margin-top: 4px;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
   accent-color: var(--pe-teal-700);
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.policy-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
+.policy-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
 
-.policy-name {
-  font-weight: 500;
-  color: var(--pe-gray-700);
-  font-size: var(--fs-body-lg);
-}
-
-.policy-description {
+.policy-selector-name {
+  min-width: 0;
   font-size: var(--fs-small);
-  color: var(--pe-gray-500);
-  line-height: 1.4;
+  font-weight: 500;
+  color: var(--pe-gray-800);
 }
 
 @media (max-width: 768px) {
