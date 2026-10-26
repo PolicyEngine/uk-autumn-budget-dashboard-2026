@@ -927,6 +927,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
         <>
           <SectionHeading
             id={YOUNG_PEOPLE_ANCHOR}
+            icon="cake"
             title="Change by age"
             subtitle="How household net income changes for each age group, in the selected year and over time."
           />
@@ -942,6 +943,8 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             </section>
           </MeasureKeyProvider>
           <SectionHeading
+            id="young-people-who-gains"
+            icon="userPlus"
             title="Who gains and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."
           />

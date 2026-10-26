@@ -240,11 +240,11 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     for (const name of cards) {
       expect(within(panel).getByRole("heading", { level: 3, name: new RegExp(`^${name}$`) })).toBeInTheDocument();
     }
-    // Below the measures' effect, each subtitle saying with or without them
+    // Below the measures' effect, each section's pill saying with or without them
     const [effect] = within(panel).getAllByRole("heading", { name: measures });
     expect(effect.compareDocumentPosition(baseline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(panel.textContent).toMatch(/With the selected measures:/);
-    expect(panel.textContent).toMatch(/Without the measures:/);
+    expect(panel.textContent).toMatch(/With the selected measures/);
+    expect(panel.textContent).toMatch(/Without the measures/);
     // No link to the sub-tab itself, nor away to the same cards
     expect(within(panel).queryByRole("link", { name: label })).toBeNull();
     expect(within(panel).queryByRole("link", { name: /Pre-measures forecast/ })).toBeNull();

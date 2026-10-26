@@ -377,8 +377,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           {measures && (
             <>
               <SectionHeading
+                icon="wallet"
+                tag="measures"
                 title="How the measures change incomes"
-                subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures follow."
+                subtitle="How they change net income across the income distribution in the selected year. Incomes without the measures follow."
               />
               {/* Both cards colour by measure: one key above the pair
                   (MeasureKey), and hovering a measure there shows it in
@@ -407,11 +409,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           {/* Inequality: the measures' effect beside its level under
               current law (side by side on a desktop, stacked on a phone) */}
           <SectionHeading
+            icon="scale"
+            tag={measures ? undefined : "current-law"}
             title="Inequality"
             subtitle={
               measures
                 ? "With the selected measures: the change in inequality each year. Without the measures: inequality under current law."
-                : "Without the measures: inequality under current law."
+                : "Inequality under current law."
             }
           />
           <section id="inequality" className="report-section">
@@ -438,8 +442,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           {measures && (
             <>
               <SectionHeading
+                icon="lifebuoy"
+                tag="measures"
                 title="How the measures change poverty"
-                subtitle="With the selected measures: the change in the poverty rate each year, and each measure's part in the selected year. Poverty without the measures is below."
+                subtitle="The change in the poverty rate each year, and each measure's part in the selected year. Poverty without the measures is below."
               />
               {/* The change by year beside which measures move it, then
                   current law: four cards, two a row on a desktop */}
@@ -484,6 +490,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       return (
         <div className="results-container">
           <SectionHeading
+            icon="banknote"
             title="Public finances"
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
@@ -508,6 +515,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             households one by one. Results by region are hidden for now
             (RegionView is kept, not rendered). */}
         <SectionHeading
+          icon="compass"
           title="Where and who"
           subtitle="Average change by constituency, and how changes vary between households."
         />
@@ -637,6 +645,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           // Every published measure's card, whatever the band's selection
           <div className="results-container">
             <SectionHeading
+              icon="fileText"
               title="Policies"
               subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
             />

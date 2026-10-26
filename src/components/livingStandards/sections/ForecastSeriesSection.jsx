@@ -144,6 +144,13 @@ function ForecastCard({ series, forecast, published, view }) {
   );
 }
 
+// Each forecast group's icon, by its title in the data; "trend" otherwise
+const SECTION_ICONS = {
+  "Inflation and price indices": "tag",
+  "Income and earnings": "briefcase",
+  "Housing and rent": "key",
+};
+
 const pairs = (items) =>
   items.reduce((rows, item, i) => (i % 2 ? rows[rows.length - 1].push(item) : rows.push([item]), rows), []);
 
@@ -153,7 +160,12 @@ export default function ForecastSeriesSection({ data, view, subtitles = {} }) {
   const published = Boolean(forecast.post_published);
 
   return forecast.sections.map((section) => [
-    <SectionHeading key={`${section.title}-heading`} title={section.title} subtitle={subtitles[section.title]} />,
+    <SectionHeading
+      key={`${section.title}-heading`}
+      icon={SECTION_ICONS[section.title] ?? "trend"}
+      title={section.title}
+      subtitle={subtitles[section.title]}
+    />,
     <section key={section.title} className="report-section ls-section">
       {/* Two cards a row, so each pair lines up */}
       {pairs(section.series).map((pair) => (

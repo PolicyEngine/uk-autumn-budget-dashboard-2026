@@ -24,9 +24,10 @@ import "./LivingStandards.css";
 const SECTIONS = {
   incomes: {
     title: "Incomes under current law",
+    icon: "wallet",
     subtitle: (
       <>
-        Without the measures: incomes before any Budget measure, on the{" "}
+        Incomes before any Budget measure, on the{" "}
         <SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink> forecast.
       </>
     ),
@@ -34,7 +35,8 @@ const SECTIONS = {
   },
   poverty: {
     title: "Poverty under current law",
-    subtitle: "Without the measures: poverty before any Budget measure.",
+    icon: "lifebuoy",
+    subtitle: "Poverty before any Budget measure.",
     cards: [PovertyOverTimeCard, WhoIsInPovertySection],
   },
 };
@@ -52,7 +54,7 @@ export default function CurrentLawSection({ id }) {
       <OutlookStatus loading={loading} error={error} />
       {cards.length > 0 && (
         <>
-          <SectionHeading title={section.title} subtitle={section.subtitle} />
+          <SectionHeading icon={section.icon} tag="current-law" title={section.title} subtitle={section.subtitle} />
           <SectionYearRange data={data} />
           <section id={`current-law-${id}`} className="report-section ls-section">
             <div className="charts-grid">

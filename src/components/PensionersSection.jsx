@@ -889,6 +889,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
     <>
       <SectionHeading
         id={PENSIONERS_ANCHOR}
+        icon="armchair"
         title="Change for pensioners"
         subtitle="Pensioners here are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28, as State Pension age rises to 67. Each person counts their household's change in net income."
       />
@@ -904,6 +905,8 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         </section>
       </MeasureKeyProvider>
       <SectionHeading
+        id="pensioners-who-gains"
+        icon="userPlus"
         title="Who gains and from what"
         subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
       />
