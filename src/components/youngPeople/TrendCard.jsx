@@ -16,6 +16,7 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
+import SeriesToggle from "../SeriesToggle";
 import { measureOpacity, useMeasureKey } from "../MeasureKey";
 import {
   GRID_PROPS,
@@ -294,6 +295,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
+  // All age groups: which lines are drawn (SeriesToggle), every one at first
+  const [shownGroups, setShownGroups] = useState(() => SERIES.map((series) => series.key));
+  const groupsView = compare === "groups" && view === "lines";
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
@@ -347,7 +351,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         const down = keys.reduce((sum, each) => sum + Math.min(0, point[each]), 0);
         return [up, down, point.net];
       })
-    : lineData.flatMap((point) => groupKeys.map((each) => point[each])).filter((v) => v !== null && v !== undefined);
+    : lineData
+        // All age groups: fitted to the lines shown
+        .flatMap((point) => groupKeys.filter((each) => !groupsView || shownGroups.includes(each)).map((each) => point[each]))
+        .filter((v) => v !== null && v !== undefined);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = raw.filter((point) => !point.published);
@@ -473,7 +480,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     published: raw.some((point) => point.published),
   };
   const yWidth = axisWidth(ticks, signedPounds);
-  const margin = plotMargin(narrow, { right: byMeasure ? 16 : narrow ? 44 : 84 });
+  const margin = plotMargin(narrow, { right: byMeasure || groupsView ? 16 : narrow ? 44 : 84 });
 
   return (
     <div className="young-people-trend">
@@ -568,7 +575,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               />
             )}
             {!byMeasure &&
-              ordered.map((line) => (
+              ordered.filter((line) => !groupsView || shownGroups.includes(line.key)).map((line) => (
                 <Line
                   key={line.key}
                   type="linear"
@@ -576,15 +583,17 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   name={line.label}
                   stroke={line.colour}
                   strokeWidth={line.width}
+                  // All age groups: a hovered chip or line brings its line forward
+                  strokeOpacity={groupsView && hovered && hovered !== line.key ? 0.22 : 1}
                   strokeDasharray={line.dash}
-                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5 } : false}
+                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
                   activeDot={line.strong ? { r: 5 } : false}
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
                   onMouseLeave={() => setHovered(null)}
                 />
               ))}
-            {!byMeasure && (
+            {!byMeasure && !groupsView && (
               <Customized
                 component={
                   <EndLabels data={lineData} lines={lines} hovered={hovered} onHover={setHovered} narrow={narrow} />
@@ -597,7 +606,20 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="chart-legend" />
+      <div className="chart-legend">
+        {/* All age groups: the chips are the key, one per line, to show or
+            hide it; the focus view names its lines at their ends */}
+        {groupsView && (
+          <SeriesToggle
+            series={lines.map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
+            shown={shownGroups}
+            onChange={setShownGroups}
+            onHover={setHovered}
+            label="Age groups"
+            narrow={narrow}
+          />
+        )}
+      </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
