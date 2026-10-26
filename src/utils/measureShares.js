@@ -10,7 +10,8 @@ import { shortNameOf } from "./policyDetails";
 import { formatShare } from "./shareFormat";
 
 /**
- * The per-measure view, or null when the selection has its own run.
+ * The per-measure view, or null when the selection has its own published
+ * run for the year.
  *
  * @param {Function} sharesFn - (rows, policies, [id], year) => {groups} | null
  * @param {string} groupKey - The group shown (e.g. "16_24", "pensioners")
@@ -21,7 +22,9 @@ import { formatShare } from "./shareFormat";
  */
 export function sharesByMeasure(sharesFn, rows, policies, selected, year, combinedId, groupKey) {
   if (selected.length < 2) return null;
-  if (wholeSelectionRun(policies, selected, combinedId)) return null;
+  // The whole selection's run, when it is published for the year (a
+  // withdrawn or unsupported package gives no rows, so each measure's own)
+  if (wholeSelectionRun(policies, selected, combinedId) && sharesFn(rows, policies, selected, year, combinedId)) return null;
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   let groups = [];
   const out = [];

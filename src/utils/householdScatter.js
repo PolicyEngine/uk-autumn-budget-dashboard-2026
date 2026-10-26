@@ -150,7 +150,10 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
     );
   }
   if (choice.kind === "no-package") {
-    return notice("Household results are not yet published for the full package.");
+    return notice(
+      "Household results are not published for this combination of measures.",
+      "They are published for each measure on its own, and for all measures together once the package's combined run is published. Groups of households cannot be added up across measures.",
+    );
   }
   if (!reforms.includes(choice.reform)) {
     return notice("Household results are not yet published for this measure.");

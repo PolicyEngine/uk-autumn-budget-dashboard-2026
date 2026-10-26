@@ -133,19 +133,6 @@ button.measure-key-chip:focus-visible,
   fill: var(--c-net);
 }
 
-/* Visually hidden: the full name for screen readers */
-.measure-key-full {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 .measure-key-more {
   height: 26px;
   padding: 0 10px;
