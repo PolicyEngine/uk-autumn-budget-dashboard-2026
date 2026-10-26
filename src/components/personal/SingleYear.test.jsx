@@ -1118,3 +1118,17 @@ describe("the Across earnings cards together", () => {
     }
   });
 });
+
+describe("the breakdown's one line", () => {
+  it("says which groups the policies change, and which they leave", async () => {
+    const { breakdownSentence } = await import("./ProgrammeTable");
+    const group = (id, change) => ({ id, shown: { change } });
+    expect(breakdownSentence([group("income", 0), group("tax", 60), group("benefit", 0)])).toBe(
+      "Your taxes fall by £60 a year with the selected policies; income and benefits are unchanged.",
+    );
+    expect(breakdownSentence([group("income", 0), group("tax", -20), group("benefit", 15)])).toBe(
+      "Your taxes rise by £20 a year and benefits rise by £15 a year with the selected policies; income is unchanged.",
+    );
+    expect(breakdownSentence([group("income", 0), group("tax", 0)])).toBe("The selected policies leave your income, taxes and benefits unchanged.");
+  });
+});

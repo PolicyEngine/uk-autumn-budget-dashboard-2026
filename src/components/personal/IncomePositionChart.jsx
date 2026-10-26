@@ -849,8 +849,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {showAs === "rank"
-                  ? "Read up from you: how many in 100 people have a lower household income than you."
-                  : "How many people live at each household income, with yours on it."}
+                  ? "The share of people with a lower household income than each point (adjusted for household size), with yours marked."
+                  : "How many people live at each household income (adjusted for household size), with yours marked."}
               </p>
             </div>
             <ChartDownloadMenu
@@ -914,7 +914,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {compareBy === "tenths"
-                  ? `Average change by income tenth; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)}, at ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)} (the dark line).`
+                  ? `Average change in net income, ${unit === "pct" ? "as a % of income" : "in £ a year"}, for each tenth of people by income; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)} (${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}).`
                   : "Your change beside your tenth's average, the average UK household and the middle income."}
               </p>
             </div>

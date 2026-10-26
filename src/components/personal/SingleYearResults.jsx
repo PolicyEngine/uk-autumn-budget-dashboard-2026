@@ -682,7 +682,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
 
       <SectionHeading
         icon="layers"
-        title="Breakdown of household net income"
+        title="Your income, taxes and benefits"
         subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
       />
       <section className="report-section" id="household-breakdown">
