@@ -1,24 +1,26 @@
 // The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
-// OBR economic forecast behind the current-law baseline, as calendar-year
-// growth. The baseline itself (incomes and poverty under current law) is on
-// Population impact's Living standards and Poverty sub-tabs
-// (CurrentLawSection). Ported from PolicyEngine/uk-living-standards-outlook
-// (branch review-1-fixes, db0c8e4), its Forecast changes tab. It reads
+// outlook without the Budget measures, under current law, in three
+// sub-tabs. Living standards and Poverty (CurrentLawSection) mirror
+// Population impact's sub-tabs of the same names; OBR forecast is the OBR
+// economic forecast behind the baseline, as calendar-year growth. Ported
+// from PolicyEngine/uk-living-standards-outlook (branch review-1-fixes,
+// db0c8e4), its Baseline outlook and Forecast changes tabs. It reads
 // public/data/living_standards_outlook.json; the Methodology view states
-// its engine version, status and notes. Old links to the view's sub-tabs
-// (?sub=forecast, ?sub=baseline) are handled in App.jsx.
+// its engine version, status and notes. The old ?sub=baseline link is
+// handled in App.jsx.
 
 import { useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
+import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
+import CurrentLawSection from "./CurrentLawSection";
 import { ForecastSource } from "./sources";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
 import { forecastName } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
-import CurrentLawSection from "./CurrentLawSection";
 import "./LivingStandards.css";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
@@ -32,7 +34,7 @@ function ForecastPanel({ forecast, data }) {
     return (
       <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
         <p>
-          Incomes and poverty under current law, on the forecast they were built from, remain on Population impact&apos;s
+          Incomes and poverty under current law, on the forecast they were built from, remain on this view&apos;s
           Living standards and Poverty sub-tabs.
         </p>
       </UnavailableNotice>
@@ -69,30 +71,62 @@ function ForecastPanel({ forecast, data }) {
   );
 }
 
+/** The Pre-measures forecast's sub-tabs; the first, Living standards, is the default. */
+export const OUTLOOK_SUB_TABS = [
+  { value: "living", label: "Living standards", icon: "coins" },
+  { value: "poverty", label: "Poverty", icon: "percent" },
+  { value: "forecast", label: "OBR forecast", icon: "trend" },
+];
+
+const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
+
+const ID_PREFIX = "outlook";
+
 /**
+ * The Pre-measures forecast view: what happens without the measures, under
+ * current law, as pill sub-tabs under the view tabs. Living standards
+ * (incomes, growth across the distribution, inequality) and Poverty are the
+ * twins of Population impact's sub-tabs of the same names, which show the
+ * selected measures' effect; each links to the other. OBR forecast is the
+ * forecast the baseline is built on. The open sub-tab is ?sub=
+ * (useSubTabParam): Living standards has no parameter, the others are
+ * ?sub=poverty and ?sub=forecast. The outlook is read once for every
+ * sub-tab (useOutlook).
+ *
  * @param {Object} props
- * @param {boolean} [props.withCurrentLaw] - Also show incomes and poverty
- *   under current law, below the forecast. App sets it while no Budget
- *   publication verifies (#104): Population impact, their usual home, is
- *   unavailable then, and these cards read only the independent outlook,
- *   so they stay reachable.
+ * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
+ * @param {(tab: string, sub: string) => void} [props.onShowTab] - Open another view at a sub-tab
  */
-export default function LivingStandardsTab({ withCurrentLaw = false }) {
-  const { loading, data, error } = useOutlook();
+export default function LivingStandardsTab({ active = true, onShowTab }) {
+  const outlook = useOutlook();
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
+  // Sub-tabs opened so far stay mounted, hidden while another is shown
+  const [visited, setVisited] = useState([sub]);
+  if (!visited.includes(sub)) setVisited([...visited, sub]);
+  const { loading, data, error } = outlook;
   return (
     <>
-      <OutlookStatus loading={loading} error={error} />
-      {data?.forecast && (
-        <div className="results-container">
-          <ForecastPanel forecast={data.forecast} data={data} />
-        </div>
-      )}
-      {withCurrentLaw && (
-        <div className="results-container">
-          <CurrentLawSection id="incomes" />
-          <CurrentLawSection id="poverty" />
-        </div>
-      )}
+      <SubTabs
+        tabs={OUTLOOK_SUB_TABS}
+        value={sub}
+        onChange={setSub}
+        ariaLabel="Pre-measures forecast sections"
+        idPrefix={ID_PREFIX}
+      />
+      {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
+        <SubTabPanel key={value} idPrefix={ID_PREFIX} value={value} hidden={value !== sub}>
+          <div className="results-container">
+            {value === "forecast" ? (
+              <>
+                <OutlookStatus loading={loading} error={error} />
+                {data?.forecast && <ForecastPanel forecast={data.forecast} data={data} />}
+              </>
+            ) : (
+              <CurrentLawSection id={value} outlook={outlook} onShowTab={onShowTab} />
+            )}
+          </div>
+        </SubTabPanel>
+      ))}
     </>
   );
 }

@@ -185,8 +185,13 @@ describe("MethodologyTab", () => {
     fireEvent.click(notes);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    fireEvent.click(within(living).getByRole("link", { name: "Pre-measures forecast" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("outlook");
+    // The current-law cards on the Pre-measures forecast's sub-tabs
+    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["OBR forecast", "forecast"]]) {
+      const link = within(living).getByRole("link", { name });
+      expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
+      fireEvent.click(link);
+      expect(onShowTab).toHaveBeenLastCalledWith("outlook", sub);
+    }
     const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
