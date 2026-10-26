@@ -46,7 +46,8 @@ const nextConfig: NextConfig = {
   ...(basePath ? { basePath } : {}),
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
-    NEXT_PUBLIC_POLICYENGINE_VERSION: lockedVersion('policyengine'),
+    // Drill 5: the drill's figures come from another pin than uv.lock's
+    NEXT_PUBLIC_POLICYENGINE_VERSION: process.env.DRILL_POLICYENGINE_VERSION || lockedVersion('policyengine'),
     NEXT_PUBLIC_PUBLISHED_GEOGRAPHY: publishedGeography(),
   },
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
