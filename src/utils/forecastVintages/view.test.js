@@ -15,6 +15,7 @@ import {
   formatterFor,
   niceAxis,
   stepDecimals,
+  unitAxis,
 } from "./view";
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
@@ -805,6 +806,32 @@ describe("what the file says of itself", () => {
       expect(v.units.pct.axis).toBe(GROWTH_AXIS);
       expect(buildView(DATA, v, { unit: "pct", showPast: true }).axisLabel).toBe(GROWTH_AXIS);
     }
+  });
+
+  it("names each unit as its axis does, in every committed view", () => {
+    let views = 0;
+    for (const v of DATA.variables) {
+      for (const unit of Object.keys(v.units)) {
+        for (const annual of v.frequency === "quarterly" ? [false, true] : [false]) {
+          const view = buildView(DATA, v, { unit, annual });
+          if (view.unavailable) continue;
+          views += 1;
+          expect(unitAxis(v, unit, DATA.meta.parliament, { annual }), `${v.id} ${unit} ${annual}`).toBe(view.axisLabel);
+        }
+      }
+    }
+    expect(views).toBeGreaterThan(40);
+    // An index names its base period in the frequency drawn
+    const rhdi = byId(DATA, "rhdi_per_person");
+    expect(unitAxis(rhdi, "index", DATA.meta.parliament)).toBe("Index (Q2 2024 = 100)");
+    expect(unitAxis(rhdi, "index", DATA.meta.parliament, { annual: true })).toBe("Index (2024 = 100)");
+    expect(unitAxis(byId(DATA, "receipts"), "index", DATA.meta.parliament)).toBe("Index (2024-25 = 100)");
+    // and a % change says it is one, over the file's axis
+    const data = clone();
+    const receipts = byId(data, "receipts");
+    Object.assign(receipts.units.pct, { from: "level", transform: "growth" });
+    expect(receipts.units.pct.axis).toBe("% of GDP");
+    expect(unitAxis(receipts, "pct", data.meta.parliament)).toBe(GROWTH_AXIS);
   });
 
   it("names each forecast's launch period by the launch rules", () => {

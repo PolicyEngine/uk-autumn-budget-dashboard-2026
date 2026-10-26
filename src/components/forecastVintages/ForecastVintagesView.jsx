@@ -25,7 +25,7 @@ import { useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { NEWEST_SHOWN, earliestForecast, loadForecastVintages, vintageLabel } from "../../utils/forecastVintages/load";
-import { OUTTURN_KEY, UNIT_ORDER, brushRange, buildView, checkSentence, pointsIn } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, brushRange, buildView, checkSentence, pointsIn, unitAxis } from "../../utils/forecastVintages/view";
 import "../livingStandards/LivingStandards.css";
 import "./ForecastVintages.css";
 
@@ -124,20 +124,36 @@ export function cardNotes(variable, view, { showPast }) {
 }
 
 /**
+ * A figure as CSV text, to 12 significant figures: an index of a small
+ * level or a % change keeps the figure the chart draws, whatever its
+ * scale, where a fixed number of decimals could write it as 0. Blank for
+ * no figure, never zero.
+ */
+export function csvFigure(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  const figure = Number(Number(value).toPrecision(12));
+  return Object.is(figure, -0) ? "0" : String(figure);
+}
+
+/**
  * The CSV download: a row per period shown, the outturn and each forecast
  * drawn as columns; a period a series does not cover is blank, never zero.
  */
 export function vintageCsv({ title, units, view, rows, notes = [] }) {
+  const keys = [OUTTURN_KEY, ...view.vintages.map((v) => v.key)];
   return buildChartCsv({
     title: `${title}: OBR forecasts and ONS outturn`,
     units,
     source: SOURCE_LINE,
     columns: [
       { key: "period", label: "Period" },
-      { key: OUTTURN_KEY, label: "Outturn", decimals: 4 },
-      ...view.vintages.map((v) => ({ key: v.key, label: `${v.label} forecast`, decimals: 4 })),
+      { key: OUTTURN_KEY, label: "Outturn" },
+      ...view.vintages.map((v) => ({ key: v.key, label: `${v.label} forecast` })),
     ],
-    rows: rows.map((row) => ({ ...row, period: view.label(row.x) })),
+    rows: rows.map((row) => ({
+      period: view.label(row.x),
+      ...Object.fromEntries(keys.map((k) => [k, csvFigure(row[k])])),
+    })),
     notes,
   });
 }
@@ -211,7 +227,12 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
           label="Unit"
           value={unit}
           onChange={(next) => setUnitBy((current) => ({ ...current, [variable.id]: next }))}
-          options={units.map((u) => ({ value: u, label: variable.units[u].label, title: variable.units[u].axis }))}
+          // Each unit as its axis names it, as the chart would draw it now
+          options={units.map((u) => ({
+            value: u,
+            label: variable.units[u].label,
+            title: unitAxis(variable, u, data.meta.parliament, { annual: annualOn }),
+          }))}
         />
       )}
       <Toggles

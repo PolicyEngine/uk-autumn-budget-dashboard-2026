@@ -31,6 +31,21 @@ export const UNIT_ORDER = ["level", "index", "pct"];
 export const GROWTH_AXIS = "% change on a year earlier";
 
 /**
+ * What a unit's figures are, as its axis and its button both say: an
+ * index names its base period, the start of the parliament in the
+ * frequency drawn (calendar years for a quarterly measure's annual
+ * totals), and a % change says it is one, in the page's own words
+ * whatever the file's; any other unit, the file's axis.
+ */
+export function unitAxis(variable, unit, parliament, { annual = false } = {}) {
+  const spec = variable.units[unit];
+  const frequency = annual && variable.frequency === "quarterly" ? "calendar" : variable.frequency;
+  if (unit === "index") return `Index (${periodLabel(periodIndex(parliament.start[frequency], frequency), frequency)} = 100)`;
+  if (unit === "pct" && spec.transform === "growth") return GROWTH_AXIS;
+  return spec.axis;
+}
+
+/**
  * The [first, last] rows the brush shows, from what it asks for: at least
  * two rows, as every line is (a line of one period draws nothing, and its
  * labels have no plot to be laid out across). Where its two ends meet,
@@ -348,14 +363,7 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
       quarterlyAnnual ? "annual" : unit === "level" && spec.annualise ? "annualised" : null,
       unit === "index" ? "index" : unit === "pct" && spec.transform === "growth" ? "growth" : null,
     ].filter(Boolean),
-    // An index names its base period, the start of the parliament, and a
-    // % change says it is one: the page's own words, whatever the file's
-    axisLabel:
-      unit === "index"
-        ? `Index (${periodLabel(start, frequency)} = 100)`
-        : unit === "pct" && spec.transform === "growth"
-          ? GROWTH_AXIS
-          : spec.axis,
+    axisLabel: unitAxis(variable, unit, parliament, { annual: quarterlyAnnual }),
     format: formatterFor(variable, unit, measure),
     rows,
     outturn: shown.outturn,

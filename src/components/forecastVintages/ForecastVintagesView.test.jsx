@@ -9,10 +9,11 @@ import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import ForecastVintagesView, { cardNotes, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
-import { earliestForecast, resetForecastVintages } from "../../utils/forecastVintages/load";
+import fc from "fast-check";
+import ForecastVintagesView, { cardNotes, csvFigure, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
+import { earliestForecast, forecastVintagesProblem, resetForecastVintages } from "../../utils/forecastVintages/load";
 import { periodIndex, toSeries } from "../../utils/forecastVintages/transforms";
-import { buildView, pointsIn } from "../../utils/forecastVintages/view";
+import { GROWTH_AXIS, buildView, pointsIn } from "../../utils/forecastVintages/view";
 
 // jsdom lays nothing out, so ResponsiveContainer would draw nothing: give
 // the chart a fixed size
@@ -111,6 +112,28 @@ describe("the chart", () => {
     expect(option("Annual totals")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Quarterly annualised (×4)")).toBeInTheDocument();
     expect(window.location.search).toBe("?tab=forecasts");
+  });
+
+  // Found by the thirteenth review: a % change's button kept the file's
+  // axis, "% of GDP", on hover, under a chart that says what it is
+  it("names each unit's button as its axis, as the chart would draw it", async () => {
+    await renderView();
+    const titles = () => within(screen.getByRole("group", { name: "Unit" })).getAllByRole("button").map((b) => b.title);
+    expect(titles()).toEqual([RHDI.units.level.axis, "Index (Q2 2024 = 100)", GROWTH_AXIS]);
+    fireEvent.click(option("Annual totals"));
+    expect(titles()[1]).toBe("Index (2024 = 100)");
+    cleanup();
+    resetForecastVintages();
+    const data = structuredClone(DATA);
+    Object.assign(data.variables.find((v) => v.id === "receipts").units.pct, { from: "level", transform: "growth" });
+    vi.stubGlobal("fetch", respond(data));
+    window.history.replaceState({}, "", "/?tab=forecasts&variable=receipts");
+    render(<ForecastVintagesView />);
+    const percent = await screen.findByRole("button", { name: "%" });
+    expect(percent).toHaveAttribute("title", GROWTH_AXIS);
+    fireEvent.click(percent);
+    expect(screen.getByRole("button", { name: "%" })).toHaveAttribute("aria-pressed", "true");
+    expect(svgText(document.body)).toContain(GROWTH_AXIS);
   });
 
   it("labels the start, latest and end points as the chart it is modelled on", async () => {
@@ -459,6 +482,70 @@ describe("the CSV download", () => {
     expect(first.slice(2).every((cell) => cell === "")).toBe(true);
     expect(text).not.toMatch(/PolicyEngine/);
     expect(lines[lines.length - 1]).toBe("# A note.");
+  });
+
+  const body = (text, view) =>
+    text
+      .replace(/^\uFEFF/, "")
+      .split("\r\n")
+      .slice(3, 3 + view.rows.length)
+      .map((line) => line.split(","));
+
+  // Found by the thirteenth review: four decimals wrote a figure the chart
+  // draws, an index of a small level, as 0
+  it("writes a figure the chart draws however small, never as 0", () => {
+    const data = structuredClone(DATA);
+    const receipts = data.variables.find((v) => v.id === "receipts");
+    receipts.level.vintages.at(-1).values["2030-31"] = 0.0001;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    // Index, F off
+    const view = buildView(data, receipts, { unit: "index", showPast: false });
+    const newest = view.vintages.at(-1);
+    const row = view.rows.find((r) => r.x === periodIndex("2030-31", "fiscal"));
+    expect(row[newest.key]).toBeGreaterThan(0);
+    expect(row[newest.key]).toBeLessThan(0.0001);
+    const text = vintageCsv({ title: receipts.label, units: view.axisLabel, view, rows: view.rows });
+    const cells = body(text, view).find((line) => line[0] === "2030-31");
+    const written = Number(cells.at(-1));
+    expect(written).not.toBe(0);
+    expect(Math.abs(written - row[newest.key])).toBeLessThanOrEqual(1e-11 * row[newest.key]);
+  });
+
+  it("reads each figure back to within a hundred-billionth of it, at any scale", () => {
+    fc.assert(
+      fc.property(fc.double({ noNaN: true, noDefaultInfinity: true, min: -1e15, max: 1e15 }), (v) => {
+        const back = Number(csvFigure(v));
+        expect(Math.abs(back - v)).toBeLessThanOrEqual(1e-11 * Math.abs(v));
+        expect(back === 0).toBe(v === 0);
+      }),
+      { numRuns: 2000, examples: [[8.767784354590242e-6], [0.30000000000000004], [-0], [5e-324], [-1e15], [296673.4739770459]] },
+    );
+    expect(csvFigure(0.30000000000000004)).toBe("0.3");
+    expect(csvFigure(-0)).toBe("0");
+    expect([null, undefined, NaN].map(csvFigure)).toEqual(["", "", ""]);
+  });
+
+  it("writes every figure of every committed view as the chart draws it, and a blank for none", () => {
+    let figures = 0;
+    for (const variable of DATA.variables) {
+      for (const unit of Object.keys(variable.units)) {
+        for (const annual of variable.frequency === "quarterly" ? [false, true] : [false]) {
+          const view = buildView(DATA, variable, { unit, annual });
+          if (view.unavailable) continue;
+          const keys = ["outturn", ...view.vintages.map((v) => v.key)];
+          const rows = body(vintageCsv({ title: variable.label, units: view.axisLabel, view, rows: view.rows }), view);
+          view.rows.forEach((row, i) => {
+            keys.forEach((k, j) => {
+              const cell = rows[i][1 + j];
+              if (row[k] == null) return expect(cell).toBe("");
+              figures += 1;
+              expect(Math.abs(Number(cell) - row[k]), `${variable.id} ${unit} ${k}`).toBeLessThanOrEqual(1e-11 * Math.abs(row[k]));
+            });
+          });
+        }
+      }
+    }
+    expect(figures).toBeGreaterThan(10000);
   });
 });
 

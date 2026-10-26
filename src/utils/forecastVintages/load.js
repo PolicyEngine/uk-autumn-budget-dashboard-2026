@@ -73,7 +73,9 @@ const isObject = (v) => v != null && typeof v === "object" && !Array.isArray(v);
 const isId = (v) => typeof v === "string" && /^[a-z][a-z0-9_]*$/.test(v);
 const isUrl = (v) => typeof v === "string" && /^https:\/\/[^\s"'<>]+$/.test(v);
 const isSha = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
-const isDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+// A day the calendar has: Date.parse reads 30 February as 2 March
+const isDate = (v) =>
+  typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().startsWith(v);
 const oneOf = (list, v) => typeof v === "string" && list.includes(v);
 const unique = (list) => new Set(list).size === list.length;
 const absent = (v) => v === undefined || v === null;

@@ -29,6 +29,7 @@ A failed check raises :class:`BuildError` and writes nothing.
 """
 
 import csv
+import datetime
 import hashlib
 import io
 import json
@@ -861,7 +862,7 @@ def build(root: Path = Path(".")) -> dict:
         }
         out.append(record)
 
-    return {
+    document = {
         "meta": {
             "built_by": "uk-budget-data forecast-vintages",
             "newest_vintage": "March 2026",
@@ -880,6 +881,150 @@ def build(root: Path = Path(".")) -> dict:
         },
         "variables": out,
     }
+    # As the page reads it: what JSON makes of the document
+    check_document(json.loads(output_text(document)))
+    return document
+
+
+# As load.js's isUrl and isSha read them; a byte-order mark is no address
+_URL = re.compile(r"https://[^\s\ufeff\"'<>]+")
+_SHA = re.compile(r"[0-9a-f]{64}")
+
+
+def _is_url(value) -> bool:
+    return isinstance(value, str) and _URL.fullmatch(value) is not None
+
+
+def _is_date(value) -> bool:
+    """A day written YYYY-MM-DD that the calendar has (isDate in load.js)."""
+    if not (
+        isinstance(value, str)
+        and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value)
+    ):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _once(items) -> bool:
+    try:
+        return len(set(items)) == len(items)
+    except TypeError:
+        return False
+
+
+def _at(value, *keys):
+    """``value[key][...]``, or None where any step is not an object."""
+    for key in keys:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
+
+
+def check_document(document: dict) -> None:
+    """Raise unless the page's loader takes the file as a whole.
+
+    What forecastVintagesProblem and metaProblem (load.js) check across
+    the variables and in meta: some variables, each once; launch rules and
+    parliament dates for every frequency drawn (and calendar years, a
+    quarterly measure's annual totals); what is left out and the gaps,
+    each once; and the sources, each once, with https addresses, release
+    dates and checksums. Each variable's own fields are held to the page's
+    rules before it is built (check_variable, build_measure). The page
+    and the build are held to the same cases in
+    tests/fixtures/forecast_vintages_document_cases.json.
+    """
+    variables = document.get("variables")
+    if not isinstance(variables, list) or not variables:
+        raise BuildError("no variables")
+    if not all(isinstance(v, dict) for v in variables):
+        raise BuildError("no variables")
+    if not _once([v.get("id") for v in variables]):
+        raise BuildError("a variable twice")
+    meta = document.get("meta")
+    if not isinstance(meta, dict):
+        raise BuildError("no meta")
+    frequencies = {v.get("frequency") for v in variables}
+    rules = meta.get("launch_rules")
+    if not isinstance(rules, dict) or not all(
+        _is_text(rules.get(f)) for f in frequencies
+    ):
+        raise BuildError("no launch rules")
+    dated = frequencies | (
+        {"calendar"} if "quarterly" in frequencies else set()
+    )
+    for f in dated:
+        start = _at(meta, "parliament", "start", f)
+        end = _at(meta, "parliament", "end", f)
+        first, last = page_period(start, f), page_period(end, f)
+        if first is None or last is None or first >= last:
+            raise BuildError("no parliament dates")
+    left_out = meta.get("left_out")
+    if not (
+        isinstance(left_out, list)
+        and all(
+            isinstance(item, dict)
+            and _is_text(item.get("what"))
+            and _is_text(item.get("why"))
+            for item in left_out
+        )
+        and _once([item["what"] for item in left_out])
+    ):
+        raise BuildError("no list of what is left out")
+    gaps = meta.get("gaps")
+    if not (
+        isinstance(gaps, list)
+        and all(_is_text(g) for g in gaps)
+        and _once(gaps)
+    ):
+        raise BuildError("no list of gaps")
+    found = meta.get("sources")
+    if not isinstance(found, dict):
+        raise BuildError("no OBR sources")
+    obr = found.get("obr")
+    if not (
+        isinstance(obr, list)
+        and obr
+        and all(
+            isinstance(s, dict)
+            and _is_text(s.get("id"))
+            and _is_text(s.get("title"))
+            and _is_url(s.get("url"))
+            and (s.get("archive_url") is None or _is_url(s.get("archive_url")))
+            and isinstance(s.get("sha256"), str)
+            and _SHA.fullmatch(s["sha256"])
+            for s in obr
+        )
+        and _once([s["id"] for s in obr])
+    ):
+        raise BuildError("no OBR sources")
+    ons = found.get("ons")
+    if not (
+        isinstance(ons, list)
+        and ons
+        and all(
+            isinstance(s, dict)
+            and all(_is_text(s.get(k)) for k in ("cdid", "dataset", "title"))
+            and _is_url(s.get("page"))
+            and _is_date(s.get("release_date"))
+            and isinstance(s.get("sha256"), str)
+            and _SHA.fullmatch(s["sha256"])
+            for s in ons
+        )
+        and _once([s["cdid"] for s in ons])
+    ):
+        raise BuildError("no ONS sources")
+    hpi = found.get("hpi")
+    if hpi is not None and not (
+        isinstance(hpi, dict)
+        and _is_url(hpi.get("page"))
+        and _is_text(hpi.get("title"))
+        and isinstance(hpi.get("sha256"), str)
+        and _SHA.fullmatch(hpi["sha256"])
+    ):
+        raise BuildError("an incomplete House Price Index source")
 
 
 def output_text(doc: dict) -> str:

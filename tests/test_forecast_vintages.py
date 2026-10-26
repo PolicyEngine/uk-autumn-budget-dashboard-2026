@@ -1148,6 +1148,67 @@ def test_an_outturn_with_a_year_missing_between_is_not_written(monkeypatch):
         B.build(ROOT)
 
 
+# --- A file the page takes as a whole -----------------------------------------
+
+DOCUMENT_CASES = json.loads(
+    (
+        ROOT / "tests" / "fixtures" / "forecast_vintages_document_cases.json"
+    ).read_text()
+)["cases"]
+
+
+def _apply_document_op(data: dict, op: dict) -> None:
+    """One change from the shared document cases, made in place."""
+    parent = data
+    for step in op["path"][:-1]:
+        parent = parent[step]
+    last = op["path"][-1]
+    if op["op"] == "set":
+        parent[last] = json.loads(json.dumps(op["to"]))
+    elif op["op"] == "delete":
+        del parent[last]
+    elif op["op"] == "append":
+        parent[last].append(json.loads(json.dumps(op["to"])))
+    else:
+        raise ValueError(f"Unknown document case op {op['op']!r}")
+
+
+@pytest.mark.parametrize("case", DOCUMENT_CASES, ids=lambda c: c["name"])
+def test_the_build_reads_the_file_as_the_page_does(committed, case):
+    # The page's loader (forecastVintagesProblem) is held to the same cases
+    # in src/utils/forecastVintages/document.test.js, so the two agree
+    data = json.loads(json.dumps(committed))
+    for op in case["ops"]:
+        _apply_document_op(data, op)
+    if case["accepted"]:
+        B.check_document(data)
+    else:
+        with pytest.raises(B.BuildError):
+            B.check_document(data)
+
+
+def test_the_build_writes_no_variable_twice(monkeypatch):
+    # Found by the thirteenth review: each variable's id was checked on its
+    # own, so the build wrote receipts as a second "spending" and the page
+    # refused the whole file ("a variable twice")
+    variables = [
+        dataclasses.replace(v, id="spending") if v.id == "receipts" else v
+        for v in V.VARIABLES
+    ]
+    monkeypatch.setattr(V, "VARIABLES", variables)
+    with pytest.raises(B.BuildError, match="a variable twice"):
+        B.build(ROOT)
+
+
+def test_the_build_checks_the_file_as_json_reads_it(monkeypatch):
+    # The page reads the JSON the build writes, not the objects it holds
+    seen = []
+    monkeypatch.setattr(B, "check_document", seen.append)
+    built = B.build(ROOT)
+    assert len(seen) == 1 and seen[0] is not built
+    assert seen[0] == json.loads(B.output_text(built))
+
+
 # --- A forecast's figures after its launch -------------------------------------
 
 COMMITTED_TEXT = COMMITTED.read_text()
