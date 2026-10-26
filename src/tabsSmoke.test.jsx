@@ -81,7 +81,7 @@ const LOADED = {
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
-  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: "Forecast changes" }),
+  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecast$/ }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -279,7 +279,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ }, { timeout: 5000 });
     fireEvent.click(screen.getByRole("tab", { name: "Forecast changes" }));
     const forecast = screen.getByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(forecast).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(await within(forecast).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-incomes")).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-poverty")).toHaveLength(1);

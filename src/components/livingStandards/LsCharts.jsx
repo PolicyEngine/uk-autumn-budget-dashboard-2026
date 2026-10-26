@@ -101,6 +101,53 @@ function ChartRows({ plotRef, children, legendItems, height, legendNote = null }
   );
 }
 
+// Room right of the plot for direct labels, and their least spacing
+const END_LABEL_WIDTH = 150;
+const END_LABEL_GAP = 14;
+
+/**
+ * Each line's name at its last point, right of the plot, nudged apart so
+ * close lines' labels never overlap (a thin leader joins a moved label to
+ * its line). Drawn in the chart's SVG, so the downloads carry it.
+ */
+function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis?.scale) return null;
+  const labels = series
+    .map((s) => {
+      const last = [...data].reverse().find((d) => d[s.key] != null);
+      if (!last) return null;
+      const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
+      const y = yAxis.scale(last[s.key]);
+      return { key: s.key, name: s.name, colour: s.colour, x, y, at: y };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.y - b.y);
+  // Push each label down clear of the one above, then back up from the
+  // bottom so the stack stays inside the plot
+  for (let i = 1; i < labels.length; i += 1) labels[i].at = Math.max(labels[i].at, labels[i - 1].at + END_LABEL_GAP);
+  const bottom = yAxis.y + yAxis.height;
+  for (let i = labels.length - 1; i >= 0; i -= 1) {
+    const limit = i === labels.length - 1 ? bottom : labels[i + 1].at - END_LABEL_GAP;
+    labels[i].at = Math.min(labels[i].at, limit);
+  }
+  return (
+    <g className="ls-end-labels">
+      {labels.map((l) => (
+        <g key={l.key}>
+          {Math.abs(l.at - l.y) > 2 && (
+            <path d={`M${l.x + 5},${l.y} L${l.x + 12},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
+          )}
+          <text x={l.x + 14} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
+            {l.name}
+          </text>
+        </g>
+      ))}
+    </g>
+  );
+}
+
 /**
  * Line chart in the dashboard's chart theme: light horizontal grid, the
  * unit above the plot, the shared tooltip, and the shared legend and the
@@ -123,10 +170,15 @@ export function LsLineChart({
   baseYear = BASE_YEAR,
   // [from, to]: the years a card's sentence compares, shaded on the chart
   highlight = null,
+  // Name each line at its end, right of the plot (wide screens only; the
+  // legend names them on a phone)
+  endLabels = false,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
+  const labelled = endLabels && !narrow && width >= 560;
+  const margin = labelled ? { ...MARGIN, right: END_LABEL_WIDTH } : MARGIN;
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
   const band = highlight ? highlight.map(asKey) : null;
@@ -137,7 +189,7 @@ export function LsLineChart({
   return (
     <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={MARGIN}>
+        <LineChart data={data} margin={margin}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -190,6 +242,7 @@ export function LsLineChart({
             />
           ))}
           <Customized component={<ChartUnitLabel text={yLabel} horizontal />} />
+          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} />} />}
         </LineChart>
       </ResponsiveContainer>
     </ChartRows>

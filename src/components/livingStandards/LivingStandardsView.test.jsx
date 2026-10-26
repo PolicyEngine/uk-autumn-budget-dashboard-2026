@@ -108,9 +108,9 @@ describe("the OBR forecast view", () => {
     expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "Forecast changes"]);
     expect(subTabs[0]).toHaveAttribute("aria-selected", "true");
     expect(await within(panel).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
-    expect(within(panel).queryByRole("heading", { name: "Forecast changes" })).toBeNull();
+    expect(within(panel).queryByRole("heading", { name: /economic forecast$/ })).toBeNull();
     fireEvent.click(subTabs[2]);
-    expect(await within(panel).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(await within(panel).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
     expect(window.location.search).toBe("?tab=outlook&sub=forecast");
     fireEvent.click(subTabs[0]);
     // Its engine and data are said in Methodology, not on this view
@@ -426,7 +426,7 @@ describe("the OBR forecast view", () => {
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(panel).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(await within(panel).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", "forecast"]);
     // The OBR's household income per person card is gone

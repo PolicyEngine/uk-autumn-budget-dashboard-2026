@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -70,7 +70,7 @@ async function renderForecast(data, props = {}) {
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
   render(<LivingStandardsTab {...props} />);
   if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
-  else await screen.findByRole("heading", { name: "Forecast changes" });
+  else await screen.findByRole("heading", { name: "OBR March 2026 economic forecast" });
 }
 
 const card = (name) => screen.getByRole("heading", { level: 3, name }).closest(".ls-card");
@@ -104,15 +104,33 @@ describe("the fixtures", () => {
 describe("Forecast changes with one forecast", () => {
   it("draws the one forecast, named from the sources config, and nothing about a later one", async () => {
     await renderForecast(unpublishedOutlook());
-    expect(screen.getByText(/The OBR forecast behind the baseline: calendar-year growth, from the/)).toBeInTheDocument();
+    expect(screen.getByText(/Calendar-year growth behind the baseline, from the/)).toBeInTheDocument();
+    // Named for the forecast, not the sub-tab's label again
+    expect(screen.queryByRole("heading", { level: 2, name: "Forecast changes" })).toBeNull();
     expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
-    const cpi = card(/^CPI inflation$/);
-    const legend = cpi.querySelector(".chart-legend");
-    expect(legend).toHaveTextContent("OBR, March 2026");
+    // One comparable card per group: the four price measures on one chart
+    const prices = card(/^Inflation measures$/);
+    const legend = prices.querySelector(".chart-legend");
+    for (const name of ["CPI", "CPIH", "CPI after housing costs", "RPI"]) expect(legend).toHaveTextContent(name);
     expect(legend).not.toHaveTextContent("Budget forecast");
+    for (const name of [/^Earnings and other income$/, /^House prices and rents$/, /^Mortgage interest payments$/]) {
+      expect(card(name)).toBeTruthy();
+    }
+    // No sentence repeats its series' name as a verb ("growth growing")
+    expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
     // The tile shows one value and no change
     expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
+  });
+
+  it("switches every card to a table of the series by year", async () => {
+    await renderForecast(unpublishedOutlook());
+    const prices = card(/^Inflation measures$/);
+    fireEvent.click(within(prices).getByRole("button", { name: "Options: Chart" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Table" }));
+    const table = await within(card(/^Inflation measures$/)).findByRole("table");
+    expect(within(table).getByRole("columnheader", { name: "CPIH" })).toBeInTheDocument();
+    expect(within(table).getAllByRole("row")).toHaveLength(1 + REAL.forecast.sections[0].series[0].pre.length);
   });
 });
 
