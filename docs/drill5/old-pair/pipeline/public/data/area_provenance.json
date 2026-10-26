@@ -1,0 +1,210 @@
+{
+  "files": {
+    "constituency.csv": "c6e28d5e26bd9aad9f81012e4284f0c019df17036cf9a2c8ff208343036ec97b"
+  },
+  "manifest_revision": 57,
+  "manifest_sha256": "73fd672b5ba51f256bbc793ecfbbcd3b56d9a909d992e55a068ce823f8274611",
+  "reforms": {
+    "badr_lifetime_limit_cut": {
+      "artifact": "artifacts/badr_lifetime_limit_cut/eb4165e9c0c701cb",
+      "artifact_sha256": "eb4165e9c0c701cbd1693752978bf13c54c9e622e2b31e21de84a33d9745eed4",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "badr_lifetime_limit_cut",
+      "outputs_sha256": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5",
+      "receipt_sha256": "0bd8bc16ed5b4afbcde3f031e6b79cc0b22762abfd4d64497b09758075809770",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "205cb3ed6fcee61a541f972b8d632251bfed2afff08357523360999d742c38f2",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "cgt_main_rates_up_2pp": {
+      "artifact": "artifacts/cgt_main_rates_up_2pp/90ec6ec169bc1fe8",
+      "artifact_sha256": "90ec6ec169bc1fe81b88df72d8c3b186680f03d06daaa1047771d6f760e8e82f",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "cgt_main_rates_up_2pp",
+      "outputs_sha256": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+      "receipt_sha256": "6b599def2f7fbe50059c9b2a36de2ea4c049ecbfe1c77c89cc8ed8054a256366",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "5fb2aebbed64d4e47ab081d937253f40390cfbb7c9f3f99470c67e027d8e86cb",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "dividend_rates_up_1pp": {
+      "artifact": "artifacts/dividend_rates_up_1pp/f377d9e87f9d1750",
+      "artifact_sha256": "f377d9e87f9d17508543dc5da3f1cc01d5b0ce7821a145fd56438381b2ea6162",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "dividend_rates_up_1pp",
+      "outputs_sha256": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
+      "receipt_sha256": "eb960e66c81c3ca58b29fac52dd7eadb26b57196ebe054b50607ecc987ff52ba",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "3bcf624e8bce642df507223da29f5914091b64617fc373697aeeaa4bab2cd312",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "employer_ni_relief_under_25s": {
+      "artifact": "artifacts/employer_ni_relief_under_25s/21217d8e9f2c2265",
+      "artifact_sha256": "21217d8e9f2c2265edf58817aad030b0969d4b64cad34e2c6a981157248253d2",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "employer_ni_relief_under_25s",
+      "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+      "receipt_sha256": "012210795d4b8bf5971cb984a27724312b2274d2659ae4edee53112e70533997",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "4ed27913c203ad9cf3888e47bb5c573359b43c205fb5d735e92c7147b5cca715",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "employer_ni_secondary_threshold_raised": {
+      "artifact": "artifacts/employer_ni_secondary_threshold_raised/b3bf2eeaa1bd89ac",
+      "artifact_sha256": "b3bf2eeaa1bd89aceaf5c57a802167ec209d5f46699659db09c06285953ba475",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "employer_ni_secondary_threshold_raised",
+      "outputs_sha256": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
+      "receipt_sha256": "1c555e869393612f8a52cb8103212d0cee7cc8c7bddd52f09b6cd4c3c75007e9",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "ed3e2c0c47cce5c21cede92e1aca6ab93363ab4b0b97ae08b16d2e527679dc0c",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "lha_reset_april_2027": {
+      "artifact": "artifacts/lha_reset_april_2027/983d55bcb3721901",
+      "artifact_sha256": "983d55bcb3721901ca8a3ebb6746ea76cbe16f9fd3dbc8b543df5ab2a738e423",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "lha_reset_april_2027",
+      "outputs_sha256": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
+      "receipt_sha256": "6647f094d239f2d07bad97fd53c464f65cfaaa709b75ec66a2c0b489fce06828",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "52ccdf8ee1176d7e42ce604b81b3bbd2bac1b715e4e203a8bf25ef77bb2004ec",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "state_pension_income_tax_protection": {
+      "artifact": "artifacts/state_pension_income_tax_protection/1982c68361c9bad1",
+      "artifact_sha256": "1982c68361c9bad124b3f10771dbd8180d722ba34919a5d72b844f29951d49bf",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "state_pension_income_tax_protection",
+      "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+      "receipt_sha256": "2baac7d0e8f4bff17f5c0c3ac225a53c752bda94b38180a5c17ba51a7d57c4ca",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "02dbc091aac3bff756b1e27601fceb523dd0125e72f850553b3df3d8a8cec2a4",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "state_pension_income_tax_protection_extended": {
+      "artifact": "artifacts/state_pension_income_tax_protection_extended/1fac4183e7f75547",
+      "artifact_sha256": "1fac4183e7f7554706877dca59da5951df609faa84c4c2b72f14dd57710cb741",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "state_pension_income_tax_protection_extended",
+      "outputs_sha256": "2d8a2ad4ad490fa450528d8e91d37336179e2830db5f56f9cb39f6520ef6f320",
+      "receipt_sha256": "e90edfc7c1a6143f1a09c4cbd7aa3be6887dc567978301d65217b49b83a4994f",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "840581ce896b8794832c3a867058ad85af0ff68729bef8e6864f45a591d8670b",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "threshold_freeze_2031_32": {
+      "artifact": "artifacts/threshold_freeze_2031_32/4e4325194ea7133a",
+      "artifact_sha256": "4e4325194ea7133a82336afe7cfa19c0794b7ef89e3e08ba299b5cddcb852707",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "threshold_freeze_2031_32",
+      "outputs_sha256": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+      "receipt_sha256": "0cd55dbf5112f1531f7690066edbbef89c290062817c5cdfeea230f0c8590339",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "063198c6a6e3feafc408048ec32bee806d2ab113a01315e43690d6eabad61a21",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "warm_home_discount_top_up": {
+      "artifact": "artifacts/warm_home_discount_top_up/8a74064ca03ecbb3",
+      "artifact_sha256": "8a74064ca03ecbb30732080925345c9a8e375a834b5b7de118c5574e98f48d53",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "key": "warm_home_discount_top_up",
+      "outputs_sha256": "873030b281673a1724093f6fc82fe3d1efc2d426acabd941725eeaf5718cc18d",
+      "receipt_sha256": "f9c3367f6ac5ab3e3638bac6c1024000b43510333e9025e8e6667543c47a36da",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "90796089418a575937edca7c3c93c90ca7eb267d5f3ed35009973508e4f80687",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    }
+  },
+  "schema": "uk-budget-area-provenance/v1"
+}

@@ -1,0 +1,187 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Drill 5 mock measure. The High Value Council Tax Surcharge starts at \u00a31.5 million instead of \u00a32 million (2026 prices, uprated as current law), so homes from \u00a31.5 million pay the first band's \u00a32,500 from April 2028.",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+      "receipt_sha256": "cab019efc7e09a034a1085334707dcc7129931d99fbbc681107c4b03bb0f39b5"
+    },
+    "files": {
+      "age_impact.csv": "13a1bd7d18b848972c688a594e31a1da55ea7fe740051d7b83372a5224f07378",
+      "budgetary_impact.csv": "f55f21ac5a5003d75f78e12833a8bb082e08d2126087942006927bc96e328543",
+      "distributional_impact.csv": "622ab7700023069709f41a723786ec4f69f6cc8ff7f92dc656a72b4297cd4f18",
+      "household_scatter_binned.csv": "ef6e1811ba2c61ab85d58350ddcf5399442c91b682ed4a84936d30a3fa14eeb3",
+      "income_curve.csv": "cf1e0dfdc2f2a3131d367b2611cb73a1388851c448b64b5ce4ce793f0ecf38be",
+      "metrics.csv": "9c07269787cf9ba8275aaa3103ce0bec7a49d17db78542fa1e4f54d7cae1cafd",
+      "winners_losers.csv": "7b95a7730a025b97e550be242197f3e0a8fa8d3b07ab19a2dc859ae4c67498e4"
+    },
+    "generated_at": "2026-10-26T12:52:05.109698+00:00",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpeLhRAI/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "uc_standard_allowance_below_cpi",
+      "state_pension_income_tax_protection",
+      "state_pension_income_tax_protection_extended",
+      "domestic_electricity_zero_vat",
+      "employer_ni_secondary_threshold_raised",
+      "employer_ni_relief_under_25s",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "2ceef296d1bbd3a4913a1cd532900439bc7ff76f",
+    "key": "council_tax_surcharge_from_1_5m",
+    "measure_ids": [
+      "council_tax_surcharge_from_1_5m"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [
+      {
+        "key": "benefit_uprating_september_cpi",
+        "parameters": [
+          "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold"
+        ],
+        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast, and so do the triple lock's CPI leg and the September CPI index, by which additional State Pension and new State Pension protected payments rise once policyengine-uk #2336 is in the model. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "Council tax surcharge from \u00a31.5m",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "council_tax_surcharge_from_1_5m baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "council_tax_surcharge_from_1_5m",
+      "reform_sha256": "07ed2b958ace643489bfdadd8945657691d4ff45f5d41dd973b7f572f1559472",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

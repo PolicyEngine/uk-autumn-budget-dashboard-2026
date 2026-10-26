@@ -1,0 +1,15 @@
+{
+  "aliases": {},
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
+  "files": {
+    "constituency.csv": "c6e28d5e26bd9aad9f81012e4284f0c019df17036cf9a2c8ff208343036ec97b"
+  },
+  "flat_provenance_sha256": "b6ab355f040e92e5be94621c95c2042226c445580119651d9271f37cf362fe9e",
+  "manifest_revision": 58,
+  "manifest_sha256": "1abf1fe78abf28abe37b8a84c6b37d2ff97cb9ce781d0c00aafb9a3a7160d64d",
+  "release": "uk-autumn-budget-2026",
+  "schema": "uk-budget-release-index/v1"
+}

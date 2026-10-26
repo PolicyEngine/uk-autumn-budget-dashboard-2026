@@ -1,0 +1,7 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2026,0.0,0.0,0.0,0.0
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2027,7.571489895402769,-0.0006560963239535324,0.0,0.0
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2028,7.612851094186825,-0.0006587777360296036,0.0,0.0
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2029,7.641849600516585,-0.000662454183257801,9.536743e-07,7.256081e-06
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2030,7.693187169564129,-0.0006641997714081473,0.0,0.0
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2031,7.714016804116966,-0.0006595047930519099,0.0,0.0
