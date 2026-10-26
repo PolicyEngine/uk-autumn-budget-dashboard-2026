@@ -26,13 +26,16 @@ jobs:
     # ten measures through policyengine-uk Simulation (hh-all-measures), and
     # "the rest" hit 30 minutes at 54%: the household route files took about
     # 4,100 worker-seconds of it, so they run as a fourth part. On 26 October
-    # that part ran 21 minutes on #104's last commit and 30:01 on its merge
-    # (5ee4e23), which the limit cancelled with all 238 tests passed: the
-    # three skip-parity sweeps took 486-539 s each and the nine all-measures
-    # parity runs 201-239 s each. Those two files now run as "household
-    # sweeps" and the route files as "household routes". A test file named
-    # in no part runs in "the rest", and tests/test_ci_parts.py checks that
-    # the parts partition the suite.
+    # that part's job ran 21 minutes on #104's last commit and 30:31 on its
+    # merge (5ee4e23; 30:01 of pytest), where the limit cancelled it with all
+    # 238 tests passed. On that slower runner its tests took about 7,090
+    # worker-seconds: the three skip-parity sweeps in test_household_impact.py
+    # 486-539 s each, and the nine all-measures parity runs 201-239 s each.
+    # It now runs as two parts of roughly equal work: "household impact"
+    # (test_household_impact.py, about 3,000 worker-seconds there) and
+    # "household routes" (the all-measures parity file and the four route
+    # files, about 4,100). A test file named in no part runs in "the rest",
+    # and tests/test_ci_parts.py checks that the parts partition the suite.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -55,12 +58,12 @@ jobs:
               tests/test_property_band_index.py
               tests/test_native_measure_regressions.py
               tests/test_measure_keys.py
-          - part: household sweeps
+          - part: household impact
             tests: >-
-              tests/test_household_impact_all_measures.py
               tests/test_household_impact.py
           - part: household routes
             tests: >-
+              tests/test_household_impact_all_measures.py
               tests/test_household_calculator_route.py
               tests/test_household_route_parity.py
               tests/test_household_impact_api.py
