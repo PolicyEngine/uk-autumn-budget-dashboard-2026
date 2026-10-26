@@ -1554,7 +1554,6 @@ body {
 }
 
 .policy-timeline-key {
-  max-width: 68ch;
   margin: 0 0 24px;
   font-size: var(--fs-small);
   line-height: 1.55;
