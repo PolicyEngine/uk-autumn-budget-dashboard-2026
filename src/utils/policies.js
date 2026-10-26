@@ -31,7 +31,8 @@ export const POLICIES = [
   {
     id: "state_pension_income_tax_protection",
     name: "State Pension income tax protection",
-    description: "No income tax for pensioners whose only income is the State Pension",
+    description:
+      "No income tax for pensioners whose only income is the State Pension",
     summary:
       "People whose only income is the full new State Pension pay no income tax.",
     starts: "April 2027",
@@ -42,13 +43,14 @@ export const POLICIES = [
   {
     id: "warm_home_discount_top_up",
     name: "Warm Home Discount top-up",
-    description: "Raise the Warm Home Discount from £150 to £250 for one winter",
+    description:
+      "Raise the Warm Home Discount from £150 to £250 for one winter",
     summary:
       "Raises the Warm Home Discount from £150 to £250 for winter 2026-27.",
     starts: "Winter 2026-27",
     type: "Benefit",
     details:
-      "Paid to households in Great Britain on Universal Credit or Pension Credit. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate.",
+      "Paid to households in Great Britain on Universal Credit, Pension Credit, Housing Benefit or income-related ESA, the 2026-27 core group in England and Wales. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. Scotland's scheme has its own core group, so eligibility there is approximate.",
     source: {
       label: "Warm Home Discount",
       href: "https://www.gov.uk/the-warm-home-discount-scheme",
@@ -78,7 +80,7 @@ export const POLICIES = [
     starts: "April 2027",
     type: "National Insurance",
     details:
-      "Extends the existing under-21 relief to ages 21 to 24. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
+      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
   },
   {
     id: "threshold_freeze_2031_32",

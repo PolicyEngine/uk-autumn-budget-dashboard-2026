@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import TitleIcon from "./TitleIcon";
+import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
-import SectionHeading from "./SectionHeading";
+import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
+import ExamplePicker from "./personal/ExamplePicker";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
@@ -10,13 +11,17 @@ import {
   OLDEST_CHILD_AGE,
   asksEducation,
   atStatePensionAge,
+  buildHouseholdRequest,
   isRenting,
   parseChildrenAges,
+  requestKey,
   statePensionFor,
 } from "../utils/householdImpactApi";
+import useCollapse from "../hooks/useCollapse";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
-import { ChoiceTiles, NumberField } from "./personal/FormControls";
+import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
 // The form's answers, each at a typical value until changed. Sources:
@@ -58,44 +63,41 @@ export const WIZARD_DEFAULTS = {
   partner_state_pension_per_year: null,
 };
 
-// The form: one list of questions, each a row showing its answer that opens
-// in place to change it. The essentials first, then the optional details.
-// `children` stands for one row per child (their age and, from 16, their
-// education).
+// The form: one card of questions in labelled sections, each a grid of
+// boxes. The essentials first, then the optional details in More details,
+// closed at first, in groups of their own. `children` stands for each
+// child's answers (their age and, from 16, their education).
 export const FORM_SECTIONS = [
+  { title: "You", icon: "user", fields: ["current_age", "current_salary", "region"] },
   {
-    title: null,
-    fields: [
-      "current_age",
-      "current_salary",
-      "region",
-      "has_partner",
-      "partner_age",
-      "partner_salary",
-      "children_count",
-      "children",
-      "tenure",
-      "monthly_rent",
-    ],
+    title: "Family and home",
+    icon: "house",
+    fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
   },
   {
     title: "More details",
-    fields: [
-      "savings_interest_per_year",
-      "dividends_per_year",
-      "property_income_per_year",
-      "private_pension_per_year",
-      "partner_private_pension_per_year",
-      "state_pension_per_year",
-      "partner_state_pension_per_year",
-      "salary_sacrifice_per_year",
-      "student_loan_plan",
-      "petrol_spending_per_year",
-      "diesel_spending_per_year",
-      "electricity_spending_per_year",
-      "council_tax_band",
-      "monthly_childcare",
-      "claims_universal_credit",
+    icon: "sliders",
+    collapsible: true,
+    groups: [
+      { title: "Other income", icon: "coins", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
+      {
+        title: "Pension and student loan",
+        icon: "piggy",
+        fields: [
+          "private_pension_per_year",
+          "partner_private_pension_per_year",
+          "state_pension_per_year",
+          "partner_state_pension_per_year",
+          "salary_sacrifice_per_year",
+          "student_loan_plan",
+        ],
+      },
+      {
+        title: "Spending",
+        icon: "cart",
+        fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
+      },
+      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
     ],
   },
 ];
@@ -124,7 +126,7 @@ const MAX_CHILDREN = 6;
 // A child's age when added (as Spring Statement's calculator does)
 const NEW_CHILD_AGE = 5;
 
-// Choices shown as boxes
+// Choices shown as selects
 const CHOICE_CONFIGS = {
   region: {
     label: "Region",
@@ -181,6 +183,7 @@ const CHOICE_CONFIGS = {
       { value: false, label: "No" },
     ],
     hint: "Yes counts the Universal Credit your answers entitle you to.",
+    hintAs: "tooltip",
   },
 };
 
@@ -195,13 +198,13 @@ const NUMBER_CONFIGS = {
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   private_pension_per_year: {
-    label: "Your private or workplace pension",
+    label: "Private or workplace pension",
     min: 0,
     max: 200000,
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Pensions you are paid, before tax, not counting the State Pension.",
+    hint: "Your private or workplace pension: pensions you are paid, before tax, not counting the State Pension.",
   },
   partner_private_pension_per_year: {
     label: "Partner's private or workplace pension",
@@ -221,13 +224,13 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
   },
   salary_sacrifice_per_year: {
-    label: "Pension paid by salary sacrifice",
+    label: "Salary sacrifice pension",
     min: 0,
     max: 60000,
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "From April 2029 the National Insurance relief is capped at £2,000 a year.",
+    hint: "Pension paid by salary sacrifice. From April 2029 the National Insurance relief is capped at £2,000 a year.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -289,6 +292,11 @@ const PREFILLED = {
   monthly_rent: (year, inputs) => regionalRent(inputs.region),
 };
 
+// A short hint goes under its box; a long one behind an "i" by the label
+// Long notes behind the "i"; short ones under the box. A field can ask for
+// the "i" so its note never makes its row taller than the others.
+const hintPlace = (hint, place) => place ?? (hint && hint.length > 60 ? "tooltip" : "below");
+
 const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? region;
 
 // The prefilled fields' notes: what the prefill is
@@ -306,58 +314,15 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, open: null, presetId: null };
+const savedWizard = { inputs: null, presetId: null, moreOpen: false, submitted: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, open: null, presetId: null });
-}
-
-const money = (value) => `£${d3.format(",.0f")(value)}`;
-
-/** A row's answer, as the closed row shows it. */
-function summaryOf(id, inputs, year) {
-  if (CHOICE_CONFIGS[id]) {
-    const config = CHOICE_CONFIGS[id];
-    if (config.summary) return config.summary(inputs[id]);
-    return config.options.find((option) => option.value === inputs[id])?.label ?? String(inputs[id]);
-  }
-  const config = NUMBER_CONFIGS[id];
-  const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-  if (!config.money) return String(value);
-  return config.suffix ? `${money(value)} ${config.suffix}` : money(value);
+  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false, submitted: null });
 }
 
 /**
- * One question: a row showing its label and answer that opens in place to
- * change it.
- */
-function FormRow({ rowId, label, summary, open, onToggle, children }) {
-  const panelId = `household-row-${rowId}`;
-  const buttonId = `${panelId}-button`;
-  return (
-    <li className={`household-row ${open ? "is-open" : ""}`} data-row={rowId}>
-      <button
-        type="button"
-        id={buttonId}
-        className="household-row-button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={onToggle}
-      >
-        <span className="household-row-label">{label}</span>
-        <span className="household-row-value">{summary}</span>
-        <span className="household-row-chevron" aria-hidden="true" />
-      </button>
-      <div id={panelId} role="region" aria-labelledby={buttonId} className="household-row-panel" hidden={!open}>
-        {open && children}
-      </div>
-    </li>
-  );
-}
-
-/**
- * The Personal impact view: one list of questions about a household, each
+ * The Household impact view: one list of questions about a household, each
  * opening in place, with its net income in the year chosen in the title
  * band before and after the selected policies shown alongside and updated
  * as the answers change, from policyengine.py's household calculation
@@ -367,12 +332,17 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
-  // The row open (one at a time); kept between tab switches for the session
-  const [openRow, setOpenRow] = useState(() => savedWizard.open);
+  // More details, closed at first; kept between tab switches for the session
+  const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
+  const more = useCollapse(moreOpen);
+  // The answers, year and policies last sent with Calculate: nothing is
+  // asked before it, and a result stays tied to what it was asked with
+  const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
   const selectionKey = selectedPolicies.join(",");
 
   const handleInputChange = (id, value) => {
@@ -384,32 +354,83 @@ function HouseholdCalculator({
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
-  // Remember the inputs and the open row for this session
+  // Remember the inputs and whether More details is open for this session
   useEffect(() => {
     savedWizard.inputs = inputs;
-    savedWizard.open = openRow;
     savedWizard.presetId = presetId;
-  }, [inputs, openRow, presetId]);
+    savedWizard.moreOpen = moreOpen;
+    savedWizard.submitted = submitted;
+  }, [inputs, presetId, moreOpen, submitted]);
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
     setInputs({ ...WIZARD_DEFAULTS, ...preset.inputs });
     setPresetId(preset.id);
   };
-  const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
+  const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
 
-  // The results, updated as the answers change
   const householdPolicies = useMemo(
     () => (selectionKey ? selectionKey.split(",") : []),
     [selectionKey],
   );
-  const householdResult = useHouseholdImpact({
-    inputs,
-    year,
-    policies: householdPolicies,
-    enabled: true,
-  });
   const noneSelected = householdPolicies.length === 0;
+  // The results for the answers sent with Calculate, never the ones being
+  // edited. The request carries on whatever else changes on the page (this
+  // view stays mounted while another is shown).
+  const householdResult = useHouseholdImpact({
+    inputs: submitted?.inputs ?? inputs,
+    year: submitted?.year ?? year,
+    policies: submitted?.policies ?? householdPolicies,
+    enabled: submitted !== null,
+  });
+  // The answers, year or policies differ from those of the result shown
+  const changed =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+  // Busy while the headline is calculated, and while the slower parts are
+  // for these same answers; changed answers can be sent once the headline
+  // is back, without waiting for the split by policy and the sweep
+  const running =
+    submitted !== null &&
+    (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
+
+  // Once a household has been calculated, the title bar's year or policies
+  // rerun it, with the same answers, without a second Calculate. Not while
+  // the answers are being edited (the reader presses Calculate then), and
+  // only while this view is shown: a change made on another view (Play
+  // through years runs five) is caught up once, on coming back, rather than
+  // calculated for every year passed through.
+  const answersEdited =
+    submitted !== null &&
+    requestKey(buildHouseholdRequest(inputs, { year: 0, policies: [] })) !==
+      requestKey(buildHouseholdRequest(submitted.inputs, { year: 0, policies: [] }));
+  useEffect(() => {
+    if (!active || submitted === null || answersEdited || householdPolicies.length === 0) return;
+    const samePolicies = submitted.policies.join(",") === selectionKey;
+    if (submitted.year === year && samePolicies) return;
+    setSubmitted({ inputs: submitted.inputs, year, policies: householdPolicies, at: Date.now() });
+    // Only the bar's year and policies (and coming back to the view) rerun it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, selectionKey, active]);
+
+  const resultsRef = useRef(null);
+  const calculate = (event) => {
+    event?.preventDefault();
+    // One calculation at a time; nothing to ask without a policy
+    if (running || noneSelected) return;
+    setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now() });
+    // On a phone the results start screens below the button: bring the
+    // waiting message into view, so pressing Calculate visibly does something
+    requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      const { top } = target.getBoundingClientRect();
+      if (top > window.innerHeight * 0.6) {
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      }
+    });
+  };
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
@@ -434,180 +455,256 @@ function HouseholdCalculator({
     }));
   };
 
-  const toggle = (rowId) => setOpenRow((current) => (current === rowId ? null : rowId));
-
-  // A question's input, inside its open row
-  const renderInput = (id) => {
+  // One question: its box, label above and hint below
+  const renderField = (id) => {
+    if (!fieldApplies(id)) return null;
+    if (id === "children") return childAges.map(renderChild);
+    let field;
     if (id === "children_count") {
-      return (
-        <ChoiceTiles
+      field = (
+        <SelectField
           id={id}
-          {...CHOICE_CONFIGS.children_count}
-          label={CHOICE_CONFIGS.children_count.question}
-          hideLabel
+          label={CHOICE_CONFIGS.children_count.label}
+          options={CHOICE_CONFIGS.children_count.options}
           value={childrenCount}
           onChange={setChildrenCount}
         />
       );
-    }
-    if (CHOICE_CONFIGS[id]) {
+    } else if (CHOICE_CONFIGS[id]) {
       const config = CHOICE_CONFIGS[id];
-      return (
-        <ChoiceTiles
+      // An option's own note (a loan plan's) stands in for the field's
+      const chosen = config.options.find((option) => option.value === inputs[id]);
+      field = (
+        <SelectField
           id={id}
-          {...config}
-          label={config.question ?? config.label}
-          hideLabel={!config.question}
+          label={config.label}
+          options={config.options}
           value={inputs[id]}
+          hint={chosen?.hint ?? config.hint}
+          hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
           onChange={(value) => handleInputChange(id, value)}
         />
       );
+    } else {
+      const config = NUMBER_CONFIGS[id];
+      const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
+      const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
+      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
+      field = (
+        <div className="number-field-wrap">
+          <NumberField
+            id={id}
+            {...config}
+            hint={hint}
+            hintAs={hintPlace(hint)}
+            value={value}
+            onChange={(next) => handleInputChange(id, next)}
+          />
+          {PREFILLED[id] && !prefilled && (
+            <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
+              {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
+            </button>
+          )}
+        </div>
+      );
     }
-    const config = NUMBER_CONFIGS[id];
-    const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
-    const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-    const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
     return (
-      <div className="number-field-wrap">
-        <NumberField
-          id={id}
-          {...config}
-          hideLabel
-          hint={hint}
-          value={value}
-          onChange={(next) => handleInputChange(id, next)}
-        />
-        {PREFILLED[id] && !prefilled && (
-          <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
-            {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
-          </button>
-        )}
+      <div key={id} className="household-field" data-row={id}>
+        {field}
       </div>
     );
   };
 
-  // One child's row: their age and, from 16, whether they are in school or
+  // One child: their age and, from 16, whether they are in school or
   // college
-  const renderChild = (age, index) => {
-    const rowId = `child_${index}`;
-    const education = asksEducation(age) ? (childEducation(index) ? " · in education" : " · not in education") : "";
-    return (
-      <FormRow
-        key={rowId}
-        rowId={rowId}
-        label={`Child ${index + 1}`}
-        summary={`Age ${age}${education}`}
-        open={openRow === rowId}
-        onToggle={() => toggle(rowId)}
-      >
-        <div className="child-answers">
-          <NumberField
-            id={`child_age_${index}`}
-            label={`Child ${index + 1}'s age`}
-            value={age}
-            min={0}
-            max={OLDEST_CHILD_AGE}
-            step={1}
-            hint="Age in 2026, from 0 to 19."
-            outOfRangeMessage={CHILD_AGE_MESSAGE}
-            onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+  const renderChild = (age, index) => (
+    <div
+      key={`child_${index}`}
+      className={`household-field household-child ${asksEducation(age) ? "has-education" : ""}`.trim()}
+      data-row={`child_${index}`}
+    >
+      <div className="child-answers">
+        <NumberField
+          id={`child_age_${index}`}
+          label={`Child ${index + 1}'s age`}
+          value={age}
+          min={0}
+          max={OLDEST_CHILD_AGE}
+          step={1}
+          // Ages are taken in the chosen year (the calculation does not age
+          // anyone from 2026, unlike the salary, which it grows)
+          hint={`Age in ${fiscalYearTick(year)}, from 0 to 19.`}
+          outOfRangeMessage={CHILD_AGE_MESSAGE}
+          onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+        />
+        {asksEducation(age) && (
+          <SelectField
+            id={`child_in_education_${index}`}
+            label={`Child ${index + 1} in full-time education (non-advanced)`}
+            options={YES_NO.slice().reverse()}
+            value={childEducation(index)}
+            onChange={(value) => setChildEducation(index, value)}
+            hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
+            hintAs="tooltip"
           />
-          {asksEducation(age) && (
-            <ChoiceTiles
-              id={`child_in_education_${index}`}
-              label={`Child ${index + 1} in full-time education (non-advanced)`}
-              layout="compact"
-              options={YES_NO.slice().reverse()}
-              value={childEducation(index)}
-              onChange={(value) => setChildEducation(index, value)}
-              hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
-            />
-          )}
-        </div>
-      </FormRow>
-    );
-  };
+        )}
+      </div>
+    </div>
+  );
 
-  const renderRow = (id) => {
-    if (!fieldApplies(id)) return null;
-    if (id === "children") return childAges.map(renderChild);
-    const config = CHOICE_CONFIGS[id] ?? NUMBER_CONFIGS[id];
-    const summary = id === "children_count" ? String(childrenCount) : summaryOf(id, inputs, year);
+  const renderGrid = (fields) => <div className="household-grid">{fields.map(renderField)}</div>;
+
+  const renderSection = (section, index) => {
+    const labelId = `household-section-${index}`;
+    if (!section.collapsible) {
+      return (
+        <section key={section.title} className="household-group" aria-labelledby={labelId}>
+          <h3 className="household-group-label" id={labelId}>
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
+            {section.title}
+          </h3>
+          {renderGrid(section.fields)}
+        </section>
+      );
+    }
+    const fields = section.groups.flatMap((group) => group.fields);
+    const shown = fields.filter(fieldApplies).length;
+    const panelId = `${labelId}-panel`;
     return (
-      <FormRow
-        key={id}
-        rowId={id}
-        label={config.label}
-        summary={summary}
-        open={openRow === id}
-        onToggle={() => toggle(id)}
-      >
-        {renderInput(id)}
-      </FormRow>
+      <section key={section.title} className="household-group household-more">
+        <h3 className="household-group-label">
+          <button
+            type="button"
+            className="household-more-toggle"
+            id={labelId}
+            aria-expanded={moreOpen}
+            aria-controls={panelId}
+            onClick={() => setMoreOpen((value) => !value)}
+          >
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
+            {section.title}{" "}
+            <span className="household-more-count">{shown} questions</span>
+            <svg
+              className="household-more-chevron"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </h3>
+        {more.mounted && (
+          <div
+            id={panelId}
+            role="region"
+            aria-labelledby={labelId}
+            className={`expander-body ${more.expanded ? "is-expanded" : ""}`}
+          >
+            <div className="expander-inner">
+            <div className="household-more-panel">
+            {section.groups.map((group) => {
+              if (!group.fields.some(fieldApplies)) return null;
+              const groupId = `${labelId}-${group.title.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+              return (
+                <div key={group.title} className="household-subgroup" role="group" aria-labelledby={groupId}>
+                  <h4 className="household-subgroup-label" id={groupId}>
+                    <TitleIcon name={group.icon} bare size={13} className="household-label-icon" />
+                    {group.title}
+                  </h4>
+                  {renderGrid(group.fields)}
+                </div>
+              );
+            })}
+            </div>
+            </div>
+          </div>
+        )}
+      </section>
     );
   };
 
   return (
     <div className="household-calculator">
-      <SectionHeading
-        title="Your household"
-        subtitle="Every answer starts at a typical value. Open a row to change it; the results update as you go."
-      />
       <div className="household-layout">
-        <div className="household-form">
-          <div className="household-examples" role="group" aria-labelledby="household-examples-label">
-            <span id="household-examples-label" className="household-examples-label">
-              Start from an example
-            </span>
-            {YOUNG_PERSON_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className={`example-chip ${presetId === preset.id ? "is-active" : ""}`}
-                aria-pressed={presetId === preset.id}
-                onClick={() => applyPreset(preset)}
-              >
-                {preset.label}
-              </button>
-            ))}
+        {/* The whole form in one card: a header with the examples, then
+            the questions in sections */}
+        <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
+          <div className="household-form-header">
+            <div className="household-form-title">
+              <h2>
+                <TitleIcon name="house" />
+                Your household
+              </h2>
+              <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
+            </div>
+            <div className="household-header-actions">
+            <ExamplePicker
+              groups={EXAMPLE_GROUPS}
+              value={presetId}
+              onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
+            />
+            <button
+              type="submit"
+              className={`calculate-button ${running ? "is-busy" : ""}`}
+              disabled={running || noneSelected}
+              aria-busy={running || undefined}
+            >
+              {running ? (
+                <>
+                  <span className="calculate-spinner" aria-hidden="true" />
+                  Calculating…
+                </>
+              ) : (
+                <>
+                  Calculate
+                  <span className="calculate-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </>
+              )}
+            </button>
+            </div>
           </div>
           {activePreset && (
             <p className="household-examples-note" role="status">
               {activePreset.note}
             </p>
           )}
-          {FORM_SECTIONS.map((section, index) => (
-            <section
-              className="household-section"
-              key={section.title ?? "essentials"}
-              aria-labelledby={section.title ? `household-section-${index}` : undefined}
-              aria-label={section.title ? undefined : "Essentials"}
-            >
-              {section.title && (
-                <h3 className="household-section-title" id={`household-section-${index}`}>
-                  {section.title}
-                </h3>
-              )}
-              <ul className="household-list">{section.fields.map(renderRow)}</ul>
-            </section>
-          ))}
-        </div>
+          {FORM_SECTIONS.map(renderSection)}
+        </form>
 
-        <div className="household-results" role="region" aria-label="Results">
+        <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           <SingleYearHeadline
             result={householdResult}
-            year={year}
+            year={submitted?.year ?? year}
             policies={policies}
             noPolicies={noneSelected}
-            renting={isRenting(inputs.tenure)}
+            renting={isRenting((submitted?.inputs ?? inputs).tenure)}
+            submitted={submitted !== null}
+            changed={changed}
+            policyCount={submitted?.policies.length ?? householdPolicies.length}
+            startedAt={submitted?.at ?? null}
           />
         </div>
       </div>
 
-      {/* The results' sections, below the form and headline */}
-      {!noneSelected && (
+      {/* The results' sections, below the form and headline, once asked */}
+      {submitted !== null && !noneSelected && (
         <div role="region" aria-label="Your household's results">
-          <SingleYearDetails result={householdResult} year={year} policies={policies} />
+          <SingleYearDetails
+            result={householdResult}
+            year={submitted.year}
+            policies={policies}
+            changed={changed}
+            startedAt={submitted.at}
+          />
         </div>
       )}
     </div>

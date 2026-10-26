@@ -152,9 +152,9 @@ def national_route(answers, measures, year):
     )
 
 
-def calculate(answers, measures, year=YEAR, include=()):
+def calculate(answers, measures, year=YEAR, include=(), **kwargs):
     return household_impact.calculate_household_impact(
-        answers, measures, year, include=include
+        answers, measures, year, include=include, **kwargs
     )
 
 
@@ -213,7 +213,10 @@ def test_a_modifier_that_isnt_module_level_is_refused():
     name = household_impact.modifier_name(
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
-    assert name == "uk_budget_data.budget_measures:road_fuel_vat_cut"
+    assert (
+        name
+        == "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut"
+    )
     assert household_impact.resolve_modifier(name) is (
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
@@ -256,7 +259,7 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": {},
         "modifiers": [
             student_loans,
-            "uk_budget_data.budget_measures:road_fuel_vat_cut",
+            "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut",
         ],
     }
 
@@ -417,13 +420,21 @@ def test_the_programme_table_adds_up_to_net_income(name):
 
 def test_the_runs_it_asks_for(monkeypatch):
     """Headline: two runs. By policy: one more per measure. Sweep: two
-    runs with axes over the head's employment income."""
+    runs with axes over the head's employment income, and two with the head
+    earning OWN_RATE_STEP more, for the marginal rate at their income."""
     calls = []
 
     def run_scenario(
         people, benunit, household, year, side, axes=None, only=False
     ):
-        calls.append({"year": year, "side": side, "axes": axes})
+        calls.append(
+            {
+                "year": year,
+                "side": side,
+                "axes": axes,
+                "head_pay": people[0]["employment_income"],
+            }
+        )
         net = 40_000.0 + 100 * len(calls)
         if axes is not None:
             return {"household_net_income": [net] * axes[0]["count"]}
@@ -448,15 +459,29 @@ def test_the_runs_it_asks_for(monkeypatch):
     assert all(call["year"] == YEAR for call in calls)
 
     calls.clear()
-    result = calculate(Answers(), measures, include=("by_policy", "sweep"))
+    # Every measure run (skip_unaffected=False); the skips have their own
+    # test below
+    result = calculate(
+        Answers(),
+        measures,
+        include=("by_policy", "sweep"),
+        skip_unaffected=False,
+    )
     # The headline's two runs are reused (household_impact._RUNS): only the
     # singles and the sweep are asked for
-    assert len(calls) == 4
+    assert len(calls) == 6
     assert [call["side"] for call in calls[0:2]] == [
         sides.singles[id_] for id_ in sides.included
     ]
     assert calls[2]["axes"][0]["name"] == "employment_income"
     assert calls[2]["side"] == sides.before
+    assert [call["side"] for call in calls[4:6]] == [sides.before, sides.after]
+    assert all(call["axes"] is None for call in calls[4:6])
+    assert all(
+        call["head_pay"]
+        == calls[0]["head_pay"] + household_impact.OWN_RATE_STEP
+        for call in calls[4:6]
+    )
     assert result["net_income"] == {
         "baseline": 40_100.0,
         "reform": 40_200.0,
@@ -465,8 +490,13 @@ def test_the_runs_it_asks_for(monkeypatch):
 
     household_impact.clear_runs()
     calls.clear()
-    calculate(Answers(), measures, include=("by_policy", "sweep"))
-    assert len(calls) == 6
+    calculate(
+        Answers(),
+        measures,
+        include=("by_policy", "sweep"),
+        skip_unaffected=False,
+    )
+    assert len(calls) == 8
     assert result["engine"] == runtime_identity()["packages"]
 
 
@@ -865,6 +895,31 @@ def test_the_sweep_runs_from_zero_past_the_heads_income():
     assert result["by_policy"] is None
 
 
+def test_the_rate_at_your_salary_is_not_averaged_across_the_taper_end():
+    """Issue #118: a £110k earner in 2026, grown to £124,353 in 2031-32,
+    is £787 below the end of the Personal Allowance taper. The sweep step
+    holding that salary (about £5k wide) crosses the end of the taper and
+    averaged 60% before and 57% after; at the salary itself the rate is
+    40% + 20% (taper) + 2% National Insurance on both sides."""
+    answers = Answers(employment_income=110_000, salary_year=2026)
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], year=2031, include=("sweep",)
+    )
+    own = result["sweep"]["own_point"]
+    assert 124_000 < own["employment_income"] < 125_140
+    assert own["baseline_marginal_rate"] == pytest.approx(0.62, abs=0.005)
+    assert own["reform_marginal_rate"] == pytest.approx(0.62, abs=0.005)
+
+
+def test_the_rate_at_your_salary_is_over_the_next_step():
+    people = [{"employment_income": 30_000.0}, {"employment_income": 20_000.0}]
+    raised = household_impact.with_pay_rise(people, 100)
+    assert raised[0]["employment_income"] == 30_100
+    assert raised[1]["employment_income"] == 20_000
+    assert people[0]["employment_income"] == 30_000
+    assert household_impact.own_rate(1_000, 1_072, 100) == pytest.approx(0.28)
+
+
 def test_salary_in_the_chosen_year_is_returned():
     answers = household_impact.HouseholdAnswers(employment_income=30_000)
     result = calculate(answers, ["threshold_freeze_2031_32"])
@@ -1121,3 +1176,172 @@ def test_a_young_person_in_school_counts_as_a_child():
     assert school["net_income"]["baseline"] > (
         default["net_income"]["baseline"] + 5_000
     )
+
+
+def test_modal_runner_sends_every_run_to_fan_out_and_keeps_their_order(
+    monkeypatch,
+):
+    """HOUSEHOLD_RUNNER=modal: _run_all hands the runs it has no answer for
+    to modal_household.fan_out, in order, and puts the answers back where
+    each run was asked for (the module's fan-out stands in here)."""
+    import sys
+    import types
+
+    household_impact.clear_runs()
+    sent = []
+
+    def fan_out(jobs):
+        sent.append(list(jobs))
+        return [{"household_net_income": float(i)} for i in range(len(jobs))]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    jobs = [("job", i) for i in range(5)]
+    results = household_impact._run_all(jobs, workers=8)
+    assert sent == [jobs]
+    assert [r["household_net_income"] for r in results] == [0, 1, 2, 3, 4]
+    # Kept like any other run: asked again, nothing is sent
+    assert household_impact._run_all(jobs[:2], workers=8) == results[:2]
+    assert sent == [jobs]
+    household_impact.clear_runs()
+
+
+def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
+    """By policy: a measure provably_unaffected for this household and year
+    is not run, and shows exactly as its run would (£0, not affected)."""
+    calls = []
+
+    def run_scenario(
+        people, benunit, household, year, side, axes=None, only=False
+    ):
+        calls.append(side)
+        net = 40_000.0 + 100 * len(calls)
+        if only:
+            return {"household_net_income": net}
+        return {
+            "household_net_income": net,
+            "rows": {row.id: 0.0 for row in household_impact._all_rows()},
+            "dependants": [
+                {v: True for v in household_impact.DEPENDANT_VARIABLES}
+            ],
+            "brma": "X",
+            "local_authority": "Y",
+        }
+
+    household_impact.clear_runs()
+    monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
+    # In 2029 the freeze (from 2031-32) and the employer NI relief (an
+    # employer cost) cannot move the household; Plan 2 can, for a Plan 2
+    # borrower.
+    measures = [
+        "threshold_freeze_2031_32",
+        "employer_ni_relief_under_25s",
+        "plan_2_threshold_unfreeze",
+    ]
+    sides = household_impact.measure_sides(measures)
+    answers = Answers(student_loan_plan="PLAN_2")
+    result = calculate(answers, measures, include=("by_policy",))
+    assert calls == [
+        sides.before,
+        sides.after,
+        sides.singles["plan_2_threshold_unfreeze"],
+    ]
+    by_id = changes_by_measure(result)
+    for id_ in ("threshold_freeze_2031_32", "employer_ni_relief_under_25s"):
+        assert by_id[id_]["change"] == 0
+        assert by_id[id_]["status"] == "not_affected"
+    assert by_id["plan_2_threshold_unfreeze"]["status"] == "affected"
+    household_impact.clear_runs()
+
+
+@pytest.mark.parametrize(
+    "measure, answers, year, expected",
+    [
+        ("employer_ni_relief_under_25s", {}, 2027, True),
+        ("warm_home_discount_top_up", {}, 2026, False),
+        ("warm_home_discount_top_up", {}, 2027, True),
+        ("threshold_freeze_2031_32", {}, 2030, True),
+        ("threshold_freeze_2031_32", {}, 2031, False),
+        ("plan_2_threshold_unfreeze", {}, 2027, True),
+        (
+            "plan_2_threshold_unfreeze",
+            {"student_loan_plan": "PLAN_2"},
+            2027,
+            False,
+        ),
+        (
+            "plan_2_threshold_unfreeze",
+            {"has_partner": True, "partner_student_loan_plan": "PLAN_2"},
+            2027,
+            False,
+        ),
+        ("state_pension_income_tax_protection", {"age": 40}, 2027, True),
+        ("state_pension_income_tax_protection", {"age": 70}, 2027, False),
+        (
+            "state_pension_income_tax_protection",
+            {"has_partner": True, "partner_age": 70},
+            2027,
+            False,
+        ),
+        ("badr_lifetime_limit_cut", {}, 2027, True),
+        ("fuel_duty_rise_deferral", {}, 2027, True),
+        ("fuel_duty_rise_deferral", {"petrol_spending": 600}, 2030, False),
+        ("road_fuel_vat_cut", {"diesel_spending": 400}, 2027, False),
+        ("road_fuel_vat_cut", {"diesel_spending": 400}, 2028, True),
+        ("domestic_electricity_zero_vat", {}, 2027, False),
+        (
+            "domestic_electricity_zero_vat",
+            {"electricity_spending": 0},
+            2027,
+            True,
+        ),
+        ("domestic_electricity_zero_vat", {}, 2028, True),
+        ("some_future_measure", {}, 2027, False),
+    ],
+)
+def test_provably_unaffected_rules(measure, answers, year, expected):
+    assert (
+        household_impact.provably_unaffected(measure, Answers(**answers), year)
+        is expected
+    )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("year", [2027, 2029, 2031])
+def test_skips_give_the_same_answer_as_running_every_measure(year):
+    """With the engine: the split by policy with skips is identical to the
+    one running every measure, for households the rules treat differently
+    (scratchpad verification ran 40 generated households x every year)."""
+    households = [
+        Answers(salary_year=2026),
+        Answers(
+            salary_year=2026,
+            age=70,
+            private_pension_income=12_000,
+            petrol_spending=600,
+            electricity_spending=0,
+        ),
+        Answers(
+            salary_year=2026,
+            age=24,
+            employment_income=32_000,
+            student_loan_plan="PLAN_2",
+            has_partner=True,
+            partner_age=67,
+            diesel_spending=400,
+        ),
+    ]
+    measures = household_impact.measure_ids()
+    for answers in households:
+        household_impact.clear_runs()
+        full = calculate(
+            answers, measures, year, ("by_policy",), skip_unaffected=False
+        )
+        household_impact.clear_runs()
+        fast = calculate(answers, measures, year, ("by_policy",))
+        assert fast == full
+    household_impact.clear_runs()
