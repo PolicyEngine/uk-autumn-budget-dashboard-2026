@@ -67,7 +67,7 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, layout 
  * (`hintAs="tooltip"`) sits behind an "i" beside the label, shown on hover
  * or focus, and is still the box's description for screen readers.
  */
-function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
+export function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
   if (hidden) {
     return (
       <label className="visually-hidden" htmlFor={htmlFor}>
@@ -100,7 +100,7 @@ function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
 }
 
 /** A hint under the box, unless it is in the label's tooltip. */
-function FieldHint({ hint, hintId, hintAs }) {
+export function FieldHint({ hint, hintId, hintAs }) {
   if (!hint || hintAs === "tooltip") return null;
   return (
     <p className="field-hint" id={hintId}>

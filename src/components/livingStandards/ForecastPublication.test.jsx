@@ -16,8 +16,8 @@ describe("the independent outlook and Budget-day forecast", () => {
     loadOutlook.mockResolvedValue({ data: original, error: null });
     window.history.replaceState({}, "", "/?tab=living");
     render(<LivingStandardsTab />);
-    expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
   });
 
   it("never renders an unverified Budget-day forecast, whatever its figures", async () => {

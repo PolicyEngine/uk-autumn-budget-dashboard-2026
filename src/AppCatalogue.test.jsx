@@ -19,15 +19,20 @@ vi.mock("./components/DistributionalChart", () => ({
 vi.mock("./components/WaterfallChart", () => ({ default: () => null }));
 vi.mock("./components/ConstituencyMap", () => ({ default: () => null }));
 vi.mock("./components/HouseholdScatter", () => ({ default: () => null }));
-vi.mock("./components/EmploymentIncomeChart", () => ({ default: () => null }));
-vi.mock("./components/EmploymentIncomeDiffChart", () => ({ default: () => null }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
-vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
+// #185 added CurrentLawSection, which Population impact's Living standards
+// sub-tab shows beside the decile charts
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({
+  default: () => <div data-testid="living-view" />,
+  CurrentLawSection: () => <div data-testid="current-law" />,
+}));
 
-beforeEach(() => { window.history.replaceState({}, "", "/"); });
+// The decile charts are on Population impact's Living standards sub-tab
+// since #185 (Public finances is the default)
+beforeEach(() => { window.history.replaceState({}, "", "/?sub=living"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("the page's verified publication catalogue", () => {
@@ -84,7 +89,7 @@ describe("the page's verified publication catalogue", () => {
   });
 
   it.each(["epsilon", "never_published"])("does not replace the requested unavailable selection %s with zeros", async (id) => {
-    window.history.replaceState({}, "", `/?policies=${id}`);
+    window.history.replaceState({}, "", `/?sub=living&policies=${id}`);
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     render(<App />);
     expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
@@ -101,7 +106,7 @@ describe("the page's verified publication catalogue", () => {
     render(<App />);
     const view = search.includes("living") ? "living-view" : "methodology-view";
     expect(await screen.findByTestId(view)).toBeInTheDocument();
-    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(4);
+    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(5);
     // The default view is mounted from the first render and kept, hidden,
     // since #128; the open view says nothing about Budget results
     expect(within(screen.getByRole("tabpanel")).queryByText("No Budget results are published yet")).toBeNull();
@@ -120,7 +125,7 @@ describe("an open page follows the publication", () => {
   const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
 
   it("takes a chosen selection's figures away when one of its measures is withdrawn", async () => {
-    window.history.replaceState({}, "", "/?policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -140,7 +145,7 @@ describe("an open page follows the publication", () => {
   it("lets the reader remove a withdrawn measure and keep the rest", async () => {
     // Review of 62febdd, finding 4: the selector cannot offer a withdrawn
     // measure, so the notice must, or a chosen selection never recovers
-    window.history.replaceState({}, "", "/?policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -247,7 +252,7 @@ describe("an open page follows the publication", () => {
       fc.constantFrom("receipt.json", "distributional_impact.csv"),
       fc.constantFrom(500, 503, 404),
       async (file, status) => {
-        window.history.replaceState({}, "", "/?policies=alpha,beta");
+        window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
         const manifest = twoMeasures();
         const unchanged = { "manifest.json": JSON.stringify(manifest) };
         const failing = `${manifest.measures.beta.artifact}/${file}`;

@@ -11,7 +11,10 @@ stops when the command ends.
 The image installs exactly what ``uv.lock`` pins (``uv_sync``), as the
 household app of #97 does, so the containers calculate with the same
 policyengine.py, policyengine-uk and policyengine-core as a local run. The
-container needs the Hugging Face token to download the bundle's Microcosm
+image also carries the working tree's ``data_inputs`` at the container's
+working directory, so ``DataConfig``'s relative ``./data_inputs`` (the
+OBR estimates, the constituency list) reads the same files as a local run.
+The container needs the Hugging Face token to download the bundle's Microcosm
 dataset: it comes from the Modal secret ``HF_SECRET`` alone, and nothing
 else is given to the container. Cold starts restore a memory snapshot
 taken after the engine and its parameters are imported.
@@ -32,16 +35,25 @@ from pathlib import Path
 import modal
 
 APP_NAME = "uk-budget-2026-generate"
-# The Modal secret holding HUGGING_FACE_TOKEN (read-only), and nothing else
-HF_SECRET = "uk-budget-2026-hf-token"
-# One measure over six years peaks at about 20 GB locally; leave headroom.
-MEMORY_MB = 28 * 1024
+# The Modal secret holding HUGGING_FACE_TOKEN (read-only), and nothing else:
+# the policyengine workspace's existing fine-grained read token for
+# policyengine/populace-uk-private, created by Anthony (decision on #119,
+# 25 October). It reads the certified data, so no new secret is needed.
+HF_SECRET = "pe-uk-private-hf-read-token"
+# One measure peaked at 14-20 GB locally; leave headroom.
+MEMORY_MB = 32 * 1024
 CPU = 2.0
 # One measure takes about 3 minutes locally; a cold container also downloads
 # the dataset.
 TIMEOUT_S = 45 * 60
-MAX_CONTAINERS = 20
+# No retries: a failed measure fails the run and is rerun on purpose, never
+# paid for twice silently.
+RETRIES = 0
+# At most 16 containers at once: a ceiling on what a run can cost.
+MAX_CONTAINERS = 16
 PACKAGE_IGNORE = ["**/__pycache__/**"]
+# The container's working directory, where ./data_inputs is found.
+WORKDIR = "/root"
 
 
 def build_image() -> modal.Image:
@@ -55,6 +67,10 @@ def build_image() -> modal.Image:
         modal.Image.debian_slim(python_version=python_version)
         .uv_sync(str(project_root), frozen=True)
         .env({"GIT_SHA": os.environ.get("GIT_SHA", "")})
+        .workdir(WORKDIR)
+        .add_local_dir(
+            str(project_root / "data_inputs"), f"{WORKDIR}/data_inputs"
+        )
         .add_local_python_source("uk_budget_data", ignore=PACKAGE_IGNORE)
     )
 
@@ -66,6 +82,7 @@ app = modal.App(APP_NAME, image=build_image())
     cpu=CPU,
     memory=MEMORY_MB,
     timeout=TIMEOUT_S,
+    retries=RETRIES,
     max_containers=MAX_CONTAINERS,
     enable_memory_snapshot=True,
     secrets=[

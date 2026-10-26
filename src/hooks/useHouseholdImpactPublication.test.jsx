@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import useHouseholdImpact, { clearHouseholdImpactCache } from "./useHouseholdImpact";
-import { EngineMismatchError, normaliseHouseholdImpact } from "../utils/householdImpactApi";
+import useHouseholdImpact, { clearHouseholdImpactCache, peekHouseholdImpact, seedHouseholdImpactCache } from "./useHouseholdImpact";
+import { EngineMismatchError, buildHouseholdRequest, normaliseHouseholdImpact, requestKey } from "../utils/householdImpactApi";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 
@@ -333,5 +333,53 @@ describe("Personal impact's live answers", () => {
     expect(requests).toEqual([]);
     expect(hook.result.current.data).toBeNull();
     expect(hook.result.current.status).not.toBe("ready");
+  });
+});
+
+// #104 review (m23, P1): every read of the session cache checks the engine,
+// whoever wrote the entry. A seeded answer was checked only against the
+// engine its writer had, which may have been none.
+describe("an answer already in the session cache", () => {
+  const ENGINE = { policyengine: HOUSEHOLD_FIXTURE.engine.policyengine, "policyengine-uk": HOUSEHOLD_FIXTURE.engine["policyengine-uk"], "policyengine-core": HOUSEHOLD_FIXTURE.engine["policyengine-core"] };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedEngine: ENGINE };
+  const key = `snapshot-one:${requestKey(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2029, policies: HOUSEHOLD_FIXTURE.included }))}`;
+  const seeded = (engine) => {
+    const answer = structuredClone(householdAnswerFor(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2029, policies: HOUSEHOLD_FIXTURE.included, include: ["by_policy", "sweep"] })));
+    answer.net_income.change = 4242;
+    return normaliseHouseholdImpact({ ...answer, engine });
+  };
+  let requests;
+  beforeEach(() => {
+    requests = 0;
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      requests += 1;
+      return Response.json(householdAnswerFor(JSON.parse(init.body)));
+    });
+  });
+
+  it("is shown at once, asking nothing, when the receipts record its engine", async () => {
+    seedHouseholdImpactCache([[key, seeded(HOUSEHOLD_FIXTURE.engine)]]);
+    const { result } = renderHook(() => useHouseholdImpact(params));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.data.net.change).toBe(4242);
+    expect(requests).toBe(0);
+  });
+
+  it("is a miss under another engine: the API answers, and its answer replaces the entry", async () => {
+    seedHouseholdImpactCache([[key, seeded({ ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "0.0.0-other" })]]);
+    const { result } = renderHook(() => useHouseholdImpact(params));
+    await waitFor(() => expect(result.current.detailStatus).toBe("ready"));
+    expect(requests).toBeGreaterThan(0);
+    expect(result.current.data.net.change).not.toBe(4242);
+    expect(peekHouseholdImpact(key, ENGINE).net.change).toBe(result.current.data.net.change);
+  });
+
+  it("is never returned by a peek under another engine", () => {
+    seedHouseholdImpactCache([[key, seeded({ ...HOUSEHOLD_FIXTURE.engine, policyengine: "0.0.0-other" })]]);
+    expect(peekHouseholdImpact(key, ENGINE)).toBeNull();
+    // A reader that expects no engine sees it (none is shown that way: the
+    // page expects one whenever a measure is selected)
+    expect(peekHouseholdImpact(key)).not.toBeNull();
   });
 });

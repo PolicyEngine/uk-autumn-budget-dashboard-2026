@@ -104,3 +104,13 @@
   border-radius: 50%;
   opacity: 0.8;
 }
+
+/* The reader's household in the key: the plot's dark ring, solid centre */
+.scatter-legend-dot.scatter-legend-you {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  opacity: 1;
+  border: 2px solid var(--c-net);
+  background: radial-gradient(circle, var(--c-net) 0 2.5px, var(--c-surface) 3px);
+}
