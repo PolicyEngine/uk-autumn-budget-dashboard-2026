@@ -225,12 +225,21 @@ def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
         household_scatter=[],
         age_impact=[_age_row(YEAR, "35-49"), _age_row(YEAR, "all")],
     )
-    (warning,) = generate._apply_disclosure_floor(
+    (warning,), record = generate._apply_disclosure_floor(
         "a", job, baseline, reformed, result
     )
     assert "winners_losers 2027 (5, all)" in warning
     # "all" is thin in the age table too, so no age row is left.
     assert result.age_impact == []
+    # The receipt says which cells are thin and that the deciles' are still
+    # in the tables (#208 review, finding 4).
+    assert record["checked"] is True
+    assert record["thin_cells_in_tables"] is True
+    assert {
+        "table": "winners_losers",
+        "year": YEAR,
+        "groups": ["5", "all"],
+    } in (record["thin_cells"])
 
 
 @pytest.mark.parametrize(
@@ -298,11 +307,13 @@ def test_uncertified_data_without_survey_households_is_written_unchecked(
     result = SimpleNamespace(
         household_scatter=[{"household_id": 1_000}], age_impact=list(rows)
     )
-    (warning,) = generate._apply_disclosure_floor(
+    (warning,), record = generate._apply_disclosure_floor(
         "a", job, baseline, reformed, result
     )
     assert "not held to the floor" in warning
     assert "can never be approved" in warning
+    assert record["checked"] is False
+    assert record["not_checked_because"] == "The tables lack the copy flags"
     assert result.age_impact == rows
     assert result.household_scatter == [{"household_id": 1_000}]
 
@@ -389,7 +400,82 @@ def test_stand_in_simulations_are_not_checked():
     baseline, reformed, _ = _population({80, 81})
     result = SimpleNamespace(household_scatter=[], age_impact=[])
     job = _job()
-    assert (
-        generate._apply_disclosure_floor("a", job, baseline, reformed, result)
-        == []
+    assert generate._apply_disclosure_floor(
+        "a", job, baseline, reformed, result
+    ) == ([], None)
+
+
+def test_the_record_names_cells_never_figures_and_flags_decile_ones():
+    found = {
+        ("winners_losers", YEAR): ["5", "all"],
+        (floor.AGE_TABLE, YEAR): ["40"],
+    }
+    record = floor.floor_record(found)
+    assert record == {
+        "survey_households": FLOOR,
+        "checked": True,
+        "thin_cells": [
+            {"table": floor.AGE_TABLE, "year": YEAR, "groups": ["40"]},
+            {"table": "winners_losers", "year": YEAR, "groups": ["5", "all"]},
+        ],
+        "thin_cells_in_tables": True,
+    }
+    # The age table's thin cells are withheld, so none is left in a table.
+    withheld = floor.floor_record({(floor.AGE_TABLE, YEAR): ["40"]})
+    assert withheld["thin_cells_in_tables"] is False
+
+
+def test_a_warned_run_is_recorded_staged_and_never_approved(monkeypatch):
+    """#208 review, finding 4: a run written under "warn" left no trace
+    once written. Its receipt now names the thin cells, it can be staged to
+    be looked at, and the gate refuses to show it; no acknowledgement lifts
+    that."""
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import read_receipt
+    from uk_budget_data.publication.publish import (
+        PublishError,
+        approve,
+        stage,
     )
+
+    found = {("distributional_impact", 2027): ["5", "all"]}
+
+    def floor_finds(subject, job, baseline, reformed, result):
+        assert job.refuse_thin_deciles is False
+        return ["thin"], floor.floor_record(found)
+
+    monkeypatch.setattr(generate, "_apply_disclosure_floor", floor_finds)
+    monkeypatch.setenv(floor.THIN_DECILES_ENV, "warn")
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        values = {"alpha": {2027: -1.0, 2028: -2.0}}
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process(values),
+        ).written
+        dashboard = read_receipt(reference.path)["dashboard"]
+        assert dashboard["disclosure_floor"] == floor.floor_record(found)
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        world.costing("alpha", values["alpha"])
+        world.reconcile(reference)
+        stage(manifest, reference.path, **arguments)
+        with pytest.raises(
+            PublishError,
+            match="fewer than 10 survey households: distributional_impact "
+            "2027",
+        ):
+            approve(manifest, "alpha", "Reviewer", **arguments)
+    finally:
+        world.close()

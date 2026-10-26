@@ -67,6 +67,7 @@ from uk_budget_data.publication.attestations import (
     validate_attestation,
 )
 from uk_budget_data.publication.combine import combined_key
+from uk_budget_data.publication.disclosure_floor import DECILE_TABLES
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
     certificate_problems,
@@ -480,6 +481,7 @@ def gate_problems(
             )
 
     if level in (m.PROVISIONAL, m.APPROVED):
+        problems += _floor_problems(dashboard)
         if dashboard.get("publishable") is not True:
             reasons = dashboard.get("reasons") or ["no reason recorded"]
             problems += [f"not publishable: {r}" for r in reasons]
@@ -555,6 +557,26 @@ def gate_problems(
         ):
             problems.append("no passing household receipt")
     return problems, info
+
+
+def _floor_problems(dashboard: dict) -> list[str]:
+    """Why an artifact whose decile tables still hold cells under the floor
+    of survey households (written under ``UK_BUDGET_THIN_DECILES=warn``,
+    recorded by ``disclosure_floor.floor_record``) may never be shown. No
+    acknowledgement lifts it: such a cell rests on too few cases to
+    publish."""
+    floor = dashboard.get("disclosure_floor") or {}
+    if not floor.get("thin_cells_in_tables"):
+        return []
+    cells = "; ".join(
+        f"{cell['table']} {cell['year']} ({', '.join(cell['groups'])})"
+        for cell in floor.get("thin_cells") or []
+        if cell.get("table") in DECILE_TABLES
+    )
+    return [
+        "its tables hold cells resting on fewer than "
+        f"{floor.get('survey_households')} survey households: {cells}"
+    ]
 
 
 def _year_problems(document: dict, tables: dict) -> list[str]:

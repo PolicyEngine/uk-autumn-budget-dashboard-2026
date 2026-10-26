@@ -21,6 +21,7 @@ thin, for a person to decide before it is published.
 """
 
 import os
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -144,6 +145,34 @@ def thin_cells(
         if thin:
             found[(AGE_TABLE, year)] = thin
     return found
+
+
+def floor_record(
+    found: dict[tuple[str, int], list[str]],
+    *,
+    not_checked_because: Optional[str] = None,
+) -> dict:
+    """What an artifact's receipt records of the floor
+    (``dashboard.disclosure_floor``): the cells found thin, by table, year
+    and group label, never a figure, and whether any is still in the tables
+    (a decile table's, written under "warn"), which the publication gate
+    and the public data check refuse. A run on data whose survey households
+    cannot be told apart records that it was not checked, and why."""
+    cells = [
+        {"table": table, "year": year, "groups": list(labels)}
+        for (table, year), labels in sorted(found.items())
+    ]
+    record = {
+        "survey_households": SURVEY_HOUSEHOLD_FLOOR,
+        "checked": not_checked_because is None,
+        "thin_cells": cells,
+        "thin_cells_in_tables": any(
+            cell["table"] in DECILE_TABLES for cell in cells
+        ),
+    }
+    if not_checked_because is not None:
+        record["not_checked_because"] = not_checked_because
+    return record
 
 
 def thin_cells_reason(found: dict[tuple[str, int], list[str]]) -> str:

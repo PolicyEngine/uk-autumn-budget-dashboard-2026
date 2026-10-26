@@ -462,8 +462,8 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     held = _model_limits(
         baseline, reformed, baseline_scenario, reform_scenario
     )
-    warnings = (
-        []
+    warnings, floor = (
+        ([], None)
         if limits
         else _apply_disclosure_floor(key, job, baseline, reformed, result)
     )
@@ -511,6 +511,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
                 if job.modifier_templates is not None
                 else measure_templates_proof(reform, config, job.revision)
             ),
+            disclosure_floor=floor,
         )
         if job.argv is not None:
             inputs.generator_argv = job.argv
@@ -556,7 +557,7 @@ def _certifiable(dataset_path: Optional[str]) -> bool:
 
 def _apply_disclosure_floor(
     subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
-) -> list[str]:
+) -> tuple[list[str], Optional[dict]]:
     """Hold a run's household tables to the floor of survey households
     (``disclosure_floor``): withhold the age table's thin cells, refuse a run
     with a thin decile cell (or, when the run was planned under
@@ -570,9 +571,12 @@ def _apply_disclosure_floor(
     data could be certified (:func:`_certifiable`). On any other data, such
     as the tests' small enhanced FRS or the Modal smoke test's synthetic
     file, it is written without the floor, with a warning: uncertified data
-    is never approved, so nothing made from it is shown."""
+    is never approved, so nothing made from it is shown.
+
+    Returns the warnings and what the receipt records of the floor
+    (``disclosure_floor.floor_record``), None when it does not apply."""
     if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
-        return []
+        return [], None
     from uk_budget_data.pipeline import scatter_survey_households
 
     try:
@@ -583,7 +587,9 @@ def _apply_disclosure_floor(
                 "not held to the floor of survey households, which cannot "
                 f"be told apart ({error}); the data is not certified, so "
                 "the artifact can never be approved"
-            ]
+            ], disclosure_floor.floor_record(
+                {}, not_checked_because=str(error)
+            )
         raise ReceiptUnavailable(
             subject,
             "the survey households behind the records cannot be told "
@@ -603,7 +609,9 @@ def _apply_disclosure_floor(
             raise ReceiptUnavailable(
                 subject, f"{reason}; a decile table cannot withhold one"
             )
-        warnings.append(f"{reason}; decide before publishing")
+        warnings.append(
+            f"{reason}; recorded in its receipt, so it cannot be shown"
+        )
     result.age_impact = disclosure_floor.withhold_thin_age_rows(
         result.age_impact, found
     )
@@ -613,7 +621,7 @@ def _apply_disclosure_floor(
     result.household_scatter = disclosure_floor.survey_scatter_rows(
         result.household_scatter, household_ids, survey
     )
-    return warnings
+    return warnings, disclosure_floor.floor_record(found)
 
 
 def _refuse_wealth_tax_base(
