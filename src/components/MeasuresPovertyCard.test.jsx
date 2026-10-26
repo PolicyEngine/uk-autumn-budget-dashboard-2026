@@ -145,11 +145,11 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(within(measures).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
     // The card's line is the figure; what it measures is in More info
-    fireEvent.click(within(change).getByRole("button", { name: "More info" }));
+    fireEvent.click(within(change).getByRole("button", { name: "About this chart" }));
     expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
     // More info: the £0 measures and that the parts need not add up
-    fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
+    fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
     expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);

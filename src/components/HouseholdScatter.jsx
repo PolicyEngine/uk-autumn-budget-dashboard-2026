@@ -28,6 +28,8 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { PE_MODEL_SOURCE } from "./InfoSections";
+import { MethodLink } from "../utils/methodLink";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
@@ -35,6 +37,9 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
 import PillSelect from "./PillSelect";
 import { shortNameOf } from "../utils/policyDetails";
+
+// Methodology's Population impact section, where the scatter's bands are set out
+const METHOD_SCATTER_ANCHOR = "method-population";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -85,38 +90,34 @@ const number = (value) =>
 const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
-// One short line; the income basis and how dots follow across years are in More info
+// One short line; the income basis and how dots follow across years are in About this chart
 const describe = (perDot) =>
   `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
 
 /**
- * The card's "More info": how to read a dot and the axes, in a few lines.
- * The subtitle already gives the households per dot, so these say what a
- * dot is, how it follows across years, and what is left out.
+ * The card's "About this chart": how to read a dot and the axes. The
+ * subtitle already gives the households per dot and the side of the line
+ * that gains; how the groups and bands are set is in Methodology.
  */
 function ScatterMoreInfo({ basisLabel }) {
   return (
-    <ChartMoreInfo>
-      <p>
-        A dot is a group of households with similar {basisLabel} income and a similar change. It
-        sits within its group&apos;s {pounds(SCATTER_BINS.income_band_width)} income band and change band, not on any one household.
-      </p>
-      <p>
-        Each row is {basisLabel} net income in every year, before the measures. Dots keep their row
-        across years, so you can follow them: a dot moves only sideways and its row is the same
-        households.
-      </p>
-      <p>
-        The change axis fits most groups across all years (from the 1st to the 99th percentile of
-        changes, never beyond ±{pounds(CHANGE_AXIS_DOMAIN[1])}) and stays put when the year changes. Groups with larger
-        changes sit at the axis edge.
-      </p>
-      <p>A group with no change (less than £1 either way) is drawn as an unfilled ring on £0.</p>
-      <p>
-        The estimates are static: households do not change their behaviour in response. Groups
-        with too few survey households are left out.
-      </p>
-    </ChartMoreInfo>
+    <ChartMoreInfo
+      info={{
+        how: [
+          `Each group's row is its ${basisLabel} net income before the measures, in every year shown, so a dot moves only sideways when the year changes and its row is the same households.`,
+          `A dot sits within its group's ${pounds(SCATTER_BINS.income_band_width)} income band and change band, not on any one household.`,
+          `The change axis covers the 1st to 99th percentile of changes across all years, never beyond ±${pounds(CHANGE_AXIS_DOMAIN[1])}, and stays put when the year changes; larger changes sit at its edge.`,
+          "A group with no change (under £1 either way) is an unfilled ring on £0.",
+          <>
+            How the groups and bands are set:{" "}
+            <MethodLink anchor={METHOD_SCATTER_ANCHOR}>Methodology</MethodLink>.
+          </>,
+        ],
+        definitions: [{ ref: "netIncome" }, { ref: "static" }],
+        caveats: ["Groups with too few survey households are left out."],
+        sources: [PE_MODEL_SOURCE],
+      }}
+    />
   );
 }
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";

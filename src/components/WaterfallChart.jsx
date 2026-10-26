@@ -40,6 +40,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { PE_MODEL_SOURCE } from "./InfoSections";
 import { decileSentence } from "../utils/plainSentences";
 import {
   decileMembership,
@@ -57,6 +58,17 @@ const CHART_DESCRIPTION =
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
+// The card's "About this chart"
+const ABSOLUTE_INFO = {
+  shows: "The average change in household net income per household in each income decile, in £ a year in cash terms.",
+  how: [
+    "Households are ranked into deciles each year by their equivalised income before housing costs under current law.",
+    "Each bar stacks the selected measures' own effects; its total adds them up.",
+  ],
+  definitions: [{ ref: "netIncome" }, { ref: "incomeGroups" }, { ref: "ownRuns" }],
+  sources: [PE_MODEL_SOURCE],
+};
 
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
@@ -375,9 +387,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear}>
-            <p>{CHART_DESCRIPTION}</p>
-          </ChartMoreInfo>
+          <ChartMoreInfo members={members} year={selectedYear} info={ABSOLUTE_INFO} />
         </div>
       )}
     </div>

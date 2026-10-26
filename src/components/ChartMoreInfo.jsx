@@ -1,5 +1,9 @@
 import Disclosure from "./Disclosure";
 import "./ChartMoreInfo.css";
+import InfoSections, { caveatChip, hasInfo, infoPreview } from "./InfoSections";
+
+/** The one name of every chart card's disclosure. */
+export const ABOUT_THIS_CHART = "About this chart";
 import useMeasureRevenue from "../hooks/useMeasureRevenue";
 import { zeroReason } from "../utils/legendMembership";
 import { openPopulationSub, populationSubHref } from "../utils/populationSub";
@@ -35,16 +39,19 @@ function EmployerReason({ id, year, text }) {
 }
 
 /**
- * The selected measures that are £0 for households in the year shown, for a
- * card's "More info": a lead line, then one measure per line with why.
+ * The selected measures that are £0 for households in the year shown, as
+ * one caveat in a card's "About this chart": a lead line, then one measure
+ * per line with why.
  */
 export function ZeroMeasuresDetail({ zero, year, period }) {
-  const count = zero.length === 1 ? "1 measure is" : `${zero.length} measures are`;
+  const count = zero.length === 1 ? "1 selected measure is" : `${zero.length} selected measures are`;
   return (
     <div className="zero-measures">
-      <p className="zero-measures-lead">
-        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}:
-      </p>
+      <span className="zero-measures-lead">
+        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}, so the key folds{" "}
+        {zero.length === 1 ? "it" : "them"} under &ldquo;with no effect&rdquo; and the tooltip leaves{" "}
+        {zero.length === 1 ? "it" : "them"} out:
+      </span>
       <ul className="zero-measures-list">
         {zero.map((member) => {
           const reason = zeroReason(member, year);
@@ -60,32 +67,44 @@ export function ZeroMeasuresDetail({ zero, year, period }) {
           );
         })}
       </ul>
-      <p>They are folded under “with no effect” in the key and left out of the tooltip.</p>
     </div>
   );
 }
 
 /**
- * A chart card's "More info", at the foot of the card: the page's one
- * disclosure (Disclosure, as "About this chart" and the household cards'
- * "More info"), closed by default. It holds the £0 measures (legendMembership)
- * and any other notes on reading the chart (`children`); nothing when it
- * would be empty.
+ * A chart card's "About this chart", at the foot of the card: the page's
+ * one disclosure (Disclosure), closed by default, with a one-line preview
+ * of what is inside and a caveat count. Its content is `info`, in the fixed
+ * sections of InfoSections; the selected measures that are £0 in the year
+ * shown (legendMembership) join the caveats. Nothing when it would be empty.
  *
  * `period` replaces "in 2027-28" for a chart over several years (its £0
  * measures are £0 in all of them).
  *
- * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, period?: string, children?: React.ReactNode}} props
+ * @param {{info?: import("./InfoSections").ChartInfo, members?: Array<{id: string, name: string, muted: boolean}>, year?: number, period?: string}} props
  */
-function ChartMoreInfo({ members = [], year, period, children }) {
+function ChartMoreInfo({ info = {}, members = [], year, period, children }) {
+  // Cards not yet given sections: their notes, as "What it shows"
+  const legacy = (Array.isArray(children) ? children : [children]).filter(Boolean);
   const zero = members.filter((member) => member.muted);
-  const extra = Array.isArray(children) ? children.filter(Boolean) : children;
-  const hasExtra = Array.isArray(extra) ? extra.length > 0 : Boolean(extra);
-  if (!zero.length && !hasExtra) return null;
+  const full = {
+    ...info,
+    shows: info.shows ?? (legacy.length ? <span className="chart-more-info-legacy">{legacy}</span> : null),
+    caveats: [
+      ...(info.caveats || []),
+      zero.length > 0 && <ZeroMeasuresDetail key="zero" zero={zero} year={year} period={period} />,
+    ],
+  };
+  if (!hasInfo(full)) return null;
   return (
-    <Disclosure inCard title="More info" className="chart-more-info" contentClassName="chart-more-info-content">
-      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} period={period} />}
-      {extra}
+    <Disclosure
+      inCard
+      title={ABOUT_THIS_CHART}
+      className="chart-more-info"
+      preview={infoPreview(full)}
+      chip={caveatChip(full)}
+    >
+      <InfoSections info={full} />
     </Disclosure>
   );
 }

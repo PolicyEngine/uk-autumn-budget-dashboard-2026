@@ -40,6 +40,7 @@ import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import { revenueSentence } from "../utils/plainSentences";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { PE_MODEL_SOURCE } from "./InfoSections";
 
 // Net impact labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
@@ -201,6 +202,19 @@ export function measureOrder(data, catalogue) {
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
+
+// The card's "About this chart"
+const REVENUE_INFO = {
+  shows:
+    "How much the selected measures change the government's budget each year, in £ billion in cash terms: above zero they raise money, below zero they cost the Treasury.",
+  how: [
+    "Each measure's figure is taxes collected less benefits and other spending, with the measure and under current law, for the whole UK.",
+    "The Plan 2 student loan measure is costed as the change in loan repayments.",
+    "The net line adds up the selected measures' separate figures.",
+  ],
+  definitions: [{ ref: "ownRuns" }, { ref: "static" }],
+  sources: [PE_MODEL_SOURCE],
+};
 
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
@@ -412,9 +426,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        <ChartMoreInfo year={selectedYear}>
-          <p>{CHART_DESCRIPTION}</p>
-        </ChartMoreInfo>
+        <ChartMoreInfo year={selectedYear} info={REVENUE_INFO} />
       </div>
     </div>
   );

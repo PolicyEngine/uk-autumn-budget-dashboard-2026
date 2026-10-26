@@ -74,7 +74,7 @@ describe("MarginalRateChart", () => {
     expect(screen.queryByRole("button", { name: "About Income tax" })).not.toBeInTheDocument();
     // One sentence: the rate, then the rate as money; its parts in More info
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(screen.getByText(/made up of income tax 40%, PA taper 20%, National Insurance 2%/)).toBeInTheDocument();
   });
 
