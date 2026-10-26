@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Tip from "./Tip";
-import { PanelLeftOpen } from "lucide-react";
+import tealMark from "@/assets/policyengine-teal-square.svg";
 import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
 
@@ -63,13 +63,13 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       // Down through the open view's sub-tab band, when it has one
       const band = [...document.querySelectorAll(".sub-tabs-band")].find((node) => node.offsetParent !== null);
       const bottom = band ? Math.max(box.bottom, band.getBoundingClientRect().bottom) : box.bottom;
-      // Inside the bar's top border and the last row's bottom border
-      own.current.style.top = `${Math.round(box.top) + 1}px`;
-      const height = Math.round(bottom - box.top) - 2;
+      // Flush with the title band above and the last row's foot: over the
+      // bar's top border and the last row's bottom border, so no light
+      // line shows between them
+      const top = Math.floor(box.top);
+      own.current.style.top = `${top}px`;
+      const height = Math.ceil(bottom) - top;
       own.current.style.height = `${height}px`;
-      // The mark over the icon where they fit, else the mark alone
-      // Two rows tall: the mark over the icon; one row: side by side
-      own.current.dataset.short = String(height < 70);
     };
     const later = () => {
       if (!frame) frame = requestAnimationFrame(place);
@@ -117,12 +117,11 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
         aria-controls="overview-drawer"
         onClick={onToggle}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <span className="edge-about-icons">
-          <img src={mark.src ?? mark} alt="" className="edge-about-mark" />
-          <PanelLeftOpen className="edge-about-icon" size={14} strokeWidth={2.2} aria-hidden="true" />
+        <span className="edge-about-pill">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={tealMark.src ?? tealMark} alt="" className="edge-about-mark" />
+          <span className="edge-about-label" aria-hidden="true">About</span>
         </span>
-        <span className="edge-about-label" aria-hidden="true">About</span>
       </button>
     </Tip>
   );

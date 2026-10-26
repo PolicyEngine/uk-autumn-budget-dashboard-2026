@@ -420,20 +420,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
   };
-  // Back to the landing page (the overview drawer's last link), in place: the views
-  // stay mounted, the address goes back to the bare one (the selection
-  // and year stay as chosen) and the page to its top
-  const goHome = () => {
-    if (landing) return;
-    tabScroll.current[activeTab] = window.scrollY;
-    dropSubTab(null);
-    if (window.location.hash) {
-      window.history.replaceState({}, "", window.location.pathname + window.location.search);
-    }
-    setLanding(true);
-    setActiveTab(DEFAULT_VIEW);
-    window.scrollTo({ top: 0 });
-  };
   // A card's link to Methodology (utils/methodLink): switch to it in place,
   // then bring the term or section into view, opening any folded details
   // it sits in
@@ -900,7 +886,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               open={overviewOpen}
               onClose={closeOverview}
               onOpen={handleTabChange}
-              onHome={goHome}
               returnFocus={aboutTabRef}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>

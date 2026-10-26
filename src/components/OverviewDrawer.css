@@ -223,24 +223,6 @@
   transform: translateX(2px);
 }
 
-/* Back to the landing page, small, under the list */
-.overview-home {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 6px;
-  margin-top: clamp(6px, 1.4svh, 14px);
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  text-decoration: none;
-}
-
-.overview-home:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 /* What it is built with: two links, each on one line, clear of the
    window's bottom corner */
 /* Pinned to the foot of the panel */
@@ -328,10 +310,6 @@
 
   .overview-intro .publication-provisional {
     margin-top: 8px;
-  }
-
-  .overview-home {
-    margin-top: 4px;
   }
 }
 

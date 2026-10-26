@@ -257,21 +257,9 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(links.at(-1)).toHaveFocus();
   });
 
-  it("leads back to the start, in place, keeping the selection", async () => {
-    window.history.replaceState({}, "", "/?tab=dashboard&sub=all&policies=alpha");
-    const { container } = await renderApp();
-    fireEvent.click(edge());
-    fireEvent.click(within(drawer()).getByRole("link", { name: "Back to the start" }));
-    expect(drawer()).toBeNull();
-    expect(landing()).not.toBeNull();
-    expect(tabBar()).toBeNull();
-    // The bare address: a reload opens the landing page again
-    expect(window.location.search).toBe("");
-    expect(container.querySelector(".landing-backdrop")).not.toBeNull();
-    expect(screen.queryByRole("tabpanel")).toBeNull();
-    // The selection comes back to the address with a view
-    fireEvent.click(box("household"));
-    expect([search().get("tab"), search().get("policies")]).toEqual(["household", "alpha"]);
+  it("has no way back to the start in it", async () => {
+    await openDrawer();
+    expect(within(drawer()).queryByRole("link", { name: "Back to the start" })).toBeNull();
   });
 
   it("names what it is built with, each link on its own row", async () => {
