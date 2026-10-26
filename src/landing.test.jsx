@@ -182,7 +182,7 @@ describe("the mark beside the title", () => {
   });
 });
 
-describe("the About tab on the window's edge, and its overview drawer", () => {
+describe("the About pill in the tab row, and its overview drawer", () => {
   const edge = () => screen.queryByRole("button", { name: "About this dashboard: open the overview" });
   const drawer = () => screen.queryByRole("dialog", { name: "Autumn Budget 2026: fiscal and distributional analysis" });
   const openDrawer = async () => {
@@ -203,6 +203,11 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
     expect(edge().querySelector("img")).toHaveAttribute("alt", "");
+    // At the start of the view tabs row, before the tabs, outside them
+    const bar = edge().closest(".view-tabs-bar");
+    expect(bar).not.toBeNull();
+    expect(bar.firstElementChild.contains(edge())).toBe(true);
+    expect(edge().closest('[role="tablist"]')).toBeNull();
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
     const tip = await screen.findByRole("tooltip");

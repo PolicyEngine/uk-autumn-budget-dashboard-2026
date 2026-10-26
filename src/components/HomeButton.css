@@ -58,27 +58,27 @@
   }
 }
 
-/* The "About" rail (EdgeAboutTab): the left margin of the view tabs bar
-   and any sub-tab band, white like them, flush to the window's edge and to
-   the title band above, their full height (EdgeAboutTab sets its top and
-   height from them, stuck or not), with a rule on its right. In it, a
-   small "About" pill with the PolicyEngine mark, centred. Over the bar
-   (1090), under the title band (1100) */
-.edge-about {
-  position: fixed;
-  left: 0;
-  top: var(--title-row-height);
-  z-index: 1095;
-  display: inline-flex;
+/* The "About" pill (EdgeAboutTab), at the start of the view tabs row,
+   centred in it, before the first tab; sticky with the bar */
+.view-tabs-bar.has-leading {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 76px;
-  height: var(--view-tabs-height);
+  gap: 12px;
+}
+
+.view-tabs-bar.has-leading > .view-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.edge-about {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
   padding: 0;
   color: var(--pe-teal-700);
-  background: var(--c-surface);
+  background: none;
   border: 0;
-  border-right: 1px solid var(--card-border);
   cursor: pointer;
 }
 
@@ -120,12 +120,6 @@
   line-height: 1;
 }
 
-/* The bar and band make room for it where their margin is narrower */
-.app:has(.edge-about) .view-tabs-bar,
-.app:has(.edge-about) .sub-tabs-band {
-  padding-left: max(84px, calc((100vw - 1120px) / 2));
-}
-
 /* Hidden while the overview drawer is open: the drawer's own close
    button, Esc and the backdrop close it */
 .edge-about[aria-expanded="true"] {
@@ -149,8 +143,8 @@
 
 /* On a phone: a 32px circle with the mark */
 @media (max-width: 768px) {
-  .edge-about {
-    width: 44px;
+  .view-tabs-bar.has-leading {
+    gap: 8px;
   }
 
   .edge-about-pill {
@@ -162,11 +156,6 @@
 
   .edge-about-label {
     display: none;
-  }
-
-  .app:has(.edge-about) .view-tabs-bar,
-  .app:has(.edge-about) .sub-tabs-band {
-    padding-left: 48px;
   }
 }
 
