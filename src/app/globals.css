@@ -1964,12 +1964,6 @@ body {
   flex: none;
 }
 
-.policy-filter-summary {
-  margin: 0 0 0 auto;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-500);
-}
-
 /* Each segment on one line; on a narrow phone the switch scrolls sideways
    rather than wrap "All (9)" */
 .policy-filter .obr-view-switch {
@@ -1987,11 +1981,6 @@ body {
     gap: 4px;
     padding-inline: 8px;
     font-size: var(--fs-caption);
-  }
-
-  .policy-filter-summary {
-    flex-basis: 100%;
-    margin-left: 0;
   }
 
   /* The switch needs the whole line on a phone */

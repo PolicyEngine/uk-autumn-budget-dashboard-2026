@@ -141,7 +141,8 @@ describe("PolicyCards", () => {
     expect(within(filter).getAllByRole("button").map((b) => b.textContent)).toEqual([
       "All 2", "Raises revenue 1", "Costs revenue 1",
     ]);
-    expect(screen.getByText("2 measures: 1 raise revenue, 1 cost revenue")).toBeTruthy();
+    // Each fact once: the badges give the counts, no summary line repeats them
+    expect(document.querySelector(".policy-filter-summary")).toBeNull();
     expect(within(filter).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue 1" }));
     expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);

@@ -47,8 +47,8 @@ import ViewSwitch from "./ViewSwitch";
 // on its cards. Cards carry no icon per measure: a map by measure id would
 // be a measure list of the page's own.
 export const GROUPS = [
-  { heading: "Raises revenue", direction: "revenue", filter: "raises", arrow: "arrowUp", summary: "raise revenue" },
-  { heading: "Costs revenue", direction: "cost", filter: "costs", arrow: "arrowDown", summary: "cost revenue" },
+  { heading: "Raises revenue", direction: "revenue", filter: "raises", arrow: "arrowUp" },
+  { heading: "Costs revenue", direction: "cost", filter: "costs", arrow: "arrowDown" },
   { heading: "Other measures", direction: "neutral", filter: null },
 ];
 const TAGS = Object.fromEntries(GROUPS.filter((group) => group.filter).map((group) => [group.direction, group.heading]));
@@ -417,10 +417,6 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
       ),
     })),
   ];
-  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-  const summary = `${n(shown.length, "measure", "measures")}: ${directions
-    .map((group) => `${count(group.direction)} ${group.summary}`)
-    .join(", ")}`;
   const choose = (value) => {
     setFilter(value);
     if (typeof window === "undefined") return;
@@ -434,7 +430,6 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
       <div className="policy-filter">
         <span className="policy-filter-label" aria-hidden="true">Show</span>
         <ViewSwitch options={options} value={filter} onChange={choose} label="Show measures" />
-        <p className="policy-filter-summary">{summary}</p>
       </div>
       <ul className="policy-cards">
         {items.map((policy) => (
