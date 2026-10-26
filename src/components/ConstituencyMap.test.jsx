@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
@@ -380,7 +381,7 @@ describe("ConstituencyMap", () => {
     expect(drawn).toEqual([]);
     container
       .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
+      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
     expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
   });
 
@@ -435,7 +436,7 @@ describe("ConstituencyMap", () => {
     expect(drawn).toEqual([]);
     container
       .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
+      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
     unmount();
 
     resetGeographyCache();
@@ -531,7 +532,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(container.querySelector("path.constituency-path")).toBeNull();
     expect(container.querySelector('svg[role="img"]')).toBeNull();
     for (const path of container.querySelectorAll(".map-template-svg path")) {
-      expect(path.getAttribute("fill")).toBe("#D1D5DB");
+      expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis);
     }
     expect(
       screen.getByRole("button", { name: /Download chart/ }),

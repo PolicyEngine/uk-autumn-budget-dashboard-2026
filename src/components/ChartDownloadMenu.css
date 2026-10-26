@@ -40,7 +40,7 @@
   background: var(--pe-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 8px 24px var(--shadow-soft);
 }
 
 .chart-download-item {

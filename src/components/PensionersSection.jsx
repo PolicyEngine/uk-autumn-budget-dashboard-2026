@@ -222,7 +222,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               axisLine={false}
               tickLine={false}
             />
-            <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Tooltip
               {...TOOLTIP_PROPS}
               cursor={HOVER_CURSOR}
@@ -401,7 +401,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}

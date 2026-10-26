@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useRef } from "react";
+import { CHART_COLOURS, POLICY_RAMPS } from "../utils/chartTheme";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import PolicyBars from "./personal/PolicyBars";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
@@ -45,7 +46,7 @@ describe("tooltips on hand-drawn charts", () => {
   it("the change-by-policy bars show each policy's change a year, with the year", () => {
     const { container } = render(
       <PolicyBars
-        rows={[{ id: "threshold_freeze_2031_32", name: "Threshold freeze", color: "#78350F", rounded: -250 }]}
+        rows={[{ id: "threshold_freeze_2031_32", name: "Threshold freeze", color: POLICY_RAMPS.raise[0], rounded: -250 }]}
         noEffect={[]}
         yearLabel="2031-32"
       />,
@@ -86,7 +87,7 @@ describe("tooltips on hand-drawn charts", () => {
       const { tip, handlers } = useFloatingTooltip(ref, year);
       return (
         <div ref={ref} style={{ position: "relative" }}>
-          <button type="button" {...handlers("a", <TooltipRows label={`A, ${year}`} rows={[{ key: "v", name: "Value", text: "1", color: "#000" }]} />)}>
+          <button type="button" {...handlers("a", <TooltipRows label={`A, ${year}`} rows={[{ key: "v", name: "Value", text: "1", color: CHART_COLOURS.net }]} />)}>
             point
           </button>
           <FloatingTooltip tip={tip} />

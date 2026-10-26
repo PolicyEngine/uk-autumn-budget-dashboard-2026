@@ -486,7 +486,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}
@@ -531,7 +531,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}

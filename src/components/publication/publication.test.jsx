@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 import { render, screen } from "@testing-library/react";
 import CombinedStats from "./CombinedStats";
 import FiscalSummary from "./FiscalSummary";
@@ -220,12 +221,12 @@ describe("BinnedHouseholdScatter", () => {
       "No combined run is published for this selection",
     );
     expect(container.querySelector(".recharts-wrapper")).toBeNull();
-    expect(colourFor({ changeBand: -150, changeBandUpper: -100 })).toBe("#D97706");
-    expect(colourFor({ changeBand: -10, changeBandUpper: -1 })).toBe("#D97706");
-    expect(colourFor({ changeBand: -1, changeBandUpper: 1 })).toBe("#9CA3AF");
-    expect(colourFor({ changeBand: 1, changeBandUpper: 10 })).toBe("#319795");
-    expect(colourFor({ changeBand: 5000, changeBandUpper: 5000 })).toBe("#319795");
-    expect(colourFor({ changeBand: -5000, changeBandUpper: -5000 })).toBe("#D97706");
+    expect(colourFor({ changeBand: -150, changeBandUpper: -100 })).toBe(CHART_COLOURS.loss);
+    expect(colourFor({ changeBand: -10, changeBandUpper: -1 })).toBe(CHART_COLOURS.loss);
+    expect(colourFor({ changeBand: -1, changeBandUpper: 1 })).toBe(CHART_COLOURS.noChange);
+    expect(colourFor({ changeBand: 1, changeBandUpper: 10 })).toBe(CHART_COLOURS.gain);
+    expect(colourFor({ changeBand: 5000, changeBandUpper: 5000 })).toBe(CHART_COLOURS.gain);
+    expect(colourFor({ changeBand: -5000, changeBandUpper: -5000 })).toBe(CHART_COLOURS.loss);
   });
 
   it("labels a provisional scatter and explains the groups", async () => {

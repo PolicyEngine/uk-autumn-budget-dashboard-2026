@@ -8,7 +8,7 @@
   background: var(--c-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
-  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 4px 16px var(--shadow-soft);
 }
 
 .chart-tooltip p {

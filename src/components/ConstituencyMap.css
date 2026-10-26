@@ -59,7 +59,7 @@
   font-size: var(--fs-caption);
   color: var(--pe-gray-700);
   background: var(--pe-surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+    var(--icon-search)
     no-repeat 14px center;
   border: 1px solid var(--pe-gray-300);
   border-radius: 999px;
@@ -76,7 +76,7 @@
 .constituency-search:focus-visible {
   outline: none;
   border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -90,10 +90,10 @@
   z-index: 10;
   width: 100%;
   margin-top: 4px;
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--pe-gray-300);
   border-radius: 5px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px var(--shadow-soft);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -145,7 +145,7 @@
 /* The SVG fills the width; past 600px tall it shows more on either side
    of the map, and the legend and logo keep to its corners. */
 .map-canvas svg {
-  background: white;
+  background: var(--c-surface);
   border-radius: 4px;
   width: 100%;
   height: auto;
@@ -169,10 +169,10 @@
   display: flex;
   flex-direction: row;
   gap: 4px;
-  background: white;
+  background: var(--c-surface);
   padding: 2px;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--shadow-soft);
 }
 
 .zoom-control-btn {
@@ -211,11 +211,11 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  background: white;
+  background: var(--c-surface);
   border: 2px solid var(--pe-teal-500);
   border-radius: var(--pe-radius-md);
   padding: 12px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-strong);
   pointer-events: auto;
   min-width: 220px;
   max-width: 300px;
@@ -403,7 +403,7 @@
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--pe-gray-400);
-  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.08);
+  box-shadow: 0 4px 16px var(--shadow-soft);
 }
 
 .map-template .constituency-search:disabled {

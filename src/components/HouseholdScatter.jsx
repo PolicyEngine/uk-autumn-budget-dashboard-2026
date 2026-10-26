@@ -563,7 +563,7 @@ function HouseholdScatter({
                 tick={TICK}
                 width={narrow ? 30 + Y_TITLE_GUTTER : 44 + Y_TITLE_GUTTER}
               />
-              <ReferenceLine x={0} stroke={CHART_COLOURS.tick} strokeWidth={2} />
+              <ReferenceLine x={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={2} />
               <Customized component={<DotLayer dots={shown} onHover={onHover} />} />
               {youShown && (
                 <Customized

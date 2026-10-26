@@ -20,7 +20,7 @@
   background: var(--pe-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+  box-shadow: 0 8px 24px var(--shadow-strong);
 }
 
 .pill-select-list:focus {
@@ -124,7 +124,7 @@
 
 .pill-select-light .pill-select-toggle:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+  box-shadow: 0 0 0 3px var(--focus-ring);
   border-color: var(--pe-teal-500);
 }
 

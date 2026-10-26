@@ -46,6 +46,7 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 ## Visual Style Guide
 
 ### Colour palette
+- The template is [`docs/COLOURS.md`](../docs/COLOURS.md): every role, its token, its JS name and its hex. `src/colourGuard.test.js` and ESLint fail on any colour literal (hex, `rgb()`, `white`) outside the token files.
 - Colours are tokens, not hex in components: the `--c-*` tokens in `src/app/globals.css` (on top of `@policyengine/ui-kit/theme.css`) give each colour a meaning (gain, loss, before, after, OBR, grid and so on).
 - Charts take the same colours from `src/utils/chartTheme.js`, the JS mirror of those tokens (SVG and PNG exports need literal values); `chartTheme.test.js` keeps the two equal.
 - Each measure's colour is in `src/utils/policyConfig.js`.
@@ -108,7 +109,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
     data={chartData}
     margin={{ top: 20, right: 30, left: 90, bottom: 20 }}
   >
-    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+    <CartesianGrid {...GRID_PROPS} />
     <XAxis dataKey="year" />
     <YAxis
       label={{
@@ -125,7 +126,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
       labelFormatter={(label) => `Year: ${label}`}
     />
     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-    <Bar dataKey="metric" fill="#319795" name="Display Name" />
+    <Bar dataKey="metric" fill={CHART_COLOURS.gain} name="Display Name" />
   </BarChart>
 </ResponsiveContainer>
 ```
