@@ -4,7 +4,7 @@
 // data_inputs/forecast_vintages/README.md). The file holds only the OBR's
 // forecasts and the ONS's outturn.
 
-import { periodIndex, periodKey } from "./transforms";
+import { ROUNDING, periodIndex, periodKey } from "./transforms";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const FORECAST_VINTAGES_PATH = "/data/obr_forecast_vintages.json";
@@ -46,10 +46,9 @@ export const MAX_VALUE = 1e9;
 // The years a period can fall in
 const YEARS = [1900, 2100];
 // Every figure and largest_gap is written to four decimals, so each is 0
-// or at least this in size; and no tolerance is finer. A figure finer
+// or at least ROUNDING in size; and no tolerance is finer. A figure finer
 // than that is none the build wrote, and one far finer (1e-200) would
 // underflow when a forecast is carried on or set against the outturn
-const ROUNDING = 1e-4;
 // How far a forecast's figure for its launch period may sit from the
 // outturn and still read as its kind (kindProblem). The launch period was
 // over when the forecast was published (the launch rules), so that figure

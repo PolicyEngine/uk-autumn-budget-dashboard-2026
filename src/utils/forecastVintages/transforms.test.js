@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  ROUNDING,
   anchorFor,
   annualSums,
   annualise,
@@ -15,6 +16,7 @@ import {
   splice,
   toIndex,
   toSeries,
+  whole,
 } from "./transforms";
 
 const close = (a, b, rel = 1e-9) => Math.abs(a - b) <= rel * Math.max(1, Math.abs(a), Math.abs(b));
@@ -102,6 +104,20 @@ describe("% change on a year earlier", () => {
   it("is missing where the earlier value is", () => {
     const change = pctChange(new Map([[2000, 100], [2002, 110]]), 1);
     expect(change.size).toBe(0);
+  });
+});
+
+describe("a whole line", () => {
+  it("is the series where it has every period from first to last, otherwise none", () => {
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.integer({ min: 0, max: 30 }), { maxLength: 30 }), fc.integer({ min: 0, max: 30 }), fc.integer({ min: 0, max: 30 }), (keys, a, b) => {
+        const series = new Map([...keys].sort((x, y) => x - y).map((t) => [t, t / 2]));
+        const [first, last] = [Math.min(a, b), Math.max(a, b)];
+        const every = Array.from({ length: last - first + 1 }, (_, i) => first + i).every((t) => series.has(t));
+        expect(whole(series, first, last)).toEqual(every ? series : new Map());
+      }),
+    );
+    expect(whole(new Map([[1, 1]]), null, 1)).toEqual(new Map());
   });
 });
 
@@ -221,6 +237,56 @@ describe("carrying a forecast on from the outturn", () => {
           else expect(newest).toBe(Math.max(launch, Math.min(outturnEnd, forecastEnd)));
         },
       ),
+    );
+  });
+
+  // Found by the eighth review: real GDP falling 99.9999% a year to 2100
+  // was carried on to zero from 2080 (the level is 2.94e-327), and its %
+  // line stopped there
+  it("carries no level below the file's smallest figure: a forecast compounded that far is not carried on", () => {
+    const outturn = new Map([[2025, 2940.195]]);
+    const forecast = new Map(Array.from({ length: 75 }, (_, i) => [2026 + i, -99.9999]));
+    expect(carryForward("growth", forecast, outturn, 2025)).toBeNull();
+    // A level of zero stays zero, as it is
+    expect([...carryForward("growth", new Map([[2026, -50]]), new Map([[2025, 0]]), 2025)]).toEqual([[2025, 0], [2026, 0]]);
+  });
+
+  it("carries a level on, whatever growth the file may hold, only while it stays at or above the smallest figure", () => {
+    // Figures as the file holds them: four decimals, 0.0001 to 1e9 in size;
+    // growth over -100% and under 100%
+    const figure = fc.integer({ min: 1, max: 1e13 }).chain((n) => fc.constantFrom(n / 1e4, -n / 1e4));
+    const growth = fc.oneof(
+      fc.integer({ min: -999999, max: 999999 }).map((n) => n / 1e4),
+      fc.constantFrom(-99.9999, -99, -90, -50),
+    );
+    fc.assert(
+      fc.property(
+        fc.array(figure, { minLength: 4, maxLength: 4 }),
+        fc.array(growth, { minLength: 1, maxLength: 200 }),
+        fc.constantFrom(1, 4),
+        (history, rates, lag) => {
+          const anchor = 8000;
+          const outturn = new Map(history.map((v, i) => [anchor - 3 + i, v]));
+          const forecast = new Map(rates.map((g, i) => [anchor + 1 + i, g]));
+          const levels = carryForward("growth", forecast, outturn, anchor, { lag });
+          // The same chain in logs, which cannot underflow
+          const logs = new Map([...outturn].map(([t, v]) => [t, Math.log(Math.abs(v))]));
+          for (const [t, g] of forecast) logs.set(t, logs.get(t - lag) + Math.log1p(g / 100));
+          const lowest = Math.min(...[...forecast.keys()].map((t) => logs.get(t)));
+          if (Math.abs(lowest - Math.log(ROUNDING)) < 1e-9) return;
+          if (lowest < Math.log(ROUNDING)) {
+            expect(levels).toBeNull();
+            return;
+          }
+          expect(levels.size).toBe(rates.length + 1);
+          for (const [t, g] of forecast) {
+            expect(Math.abs(levels.get(t))).toBeGreaterThanOrEqual(ROUNDING);
+            const prior = t - lag > anchor ? levels.get(t - lag) : outturn.get(t - lag);
+            expect(close(levels.get(t) / prior, 1 + g / 100, 1e-12)).toBe(true);
+          }
+        },
+      ),
+      { numRuns: 500 },
     );
   });
 

@@ -260,13 +260,23 @@ def _page_text(value) -> str:
     return str(value)
 
 
+def _page_float(value) -> float:
+    """A JSON number as the page's JavaScript reads it: the nearest double,
+    and an integer too large for one as infinity (Python's ``float``
+    raises instead)."""
+    try:
+        return float(value)
+    except OverflowError:
+        return math.inf
+
+
 def _is_page_number(value) -> bool:
     """A number the page's loader takes (isNumber in load.js)."""
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
-        and math.isfinite(value)
-        and abs(value) <= MAX_VALUE
+        and math.isfinite(_page_float(value))
+        and abs(_page_float(value)) <= MAX_VALUE
     )
 
 
@@ -283,8 +293,8 @@ def page_period(key, frequency: str):
         (isinstance(key, str) and key)
         or (
             isinstance(key, (int, float))
-            and math.isfinite(key)
-            and float(key).is_integer()
+            and math.isfinite(_page_float(key))
+            and _page_float(key).is_integer()
         )
     ):
         return None

@@ -9,6 +9,7 @@ import {
   annualise,
   anchorFor,
   carryForward,
+  firstIndex,
   from,
   lastIndex,
   lastWholeYear,
@@ -18,6 +19,7 @@ import {
   splice,
   toIndex,
   toSeries,
+  whole,
 } from "./transforms";
 
 const gb = (digits) => new Intl.NumberFormat("en-GB", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -84,9 +86,19 @@ export function inUnit(variable, unit, levels, { annual = false, start } = {}) {
   // published; only a unit marked as growth is a % change
   if (spec.transform !== "growth") return map((s) => s);
   // % change on a year earlier: a forecast's first change is on the
-  // outturn, unless it is a level drawn as published
+  // outturn, unless it is a level drawn as published. Each line has a
+  // change at every period from a year into the values it is taken on
+  // (and, for a forecast carried on from the outturn, from its anchor) to
+  // its last, or none: a value at or below zero, on which no change can
+  // be taken, never cuts a line short
   const lag = levels.frequency === "quarterly" ? 4 : 1;
-  return map((s, v) => (!v ? pctChange(s, lag) : v.own ? pctChange(s, lag) : from(pctChange(splice(outturn, s, v.anchor), lag), v.anchor)));
+  return map((s, v) => {
+    const carried = Boolean(v && !v.own);
+    const on = carried ? splice(outturn, s, v.anchor) : s;
+    if (!on.size) return new Map();
+    const first = Math.max(firstIndex(on) + lag, carried ? v.anchor : -Infinity);
+    return whole(from(pctChange(on, lag), first), first, lastIndex(on));
+  });
 }
 
 /** Formats a value in the unit shown: (value, digits?) -> text. */

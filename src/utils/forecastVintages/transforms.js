@@ -8,6 +8,10 @@
 // is always one more. A period with no value is absent from the Map, never
 // zero.
 
+// Every figure the file holds is written to four decimals, so each is 0
+// or at least this in size (load.js refuses any other)
+export const ROUNDING = 1e-4;
+
 const QUARTER = /^(\d{4})Q([1-4])$/;
 const FISCAL = /^(\d{4})-(\d{2})$/;
 
@@ -66,7 +70,11 @@ export const lastIndex = (series) => (series.size ? Math.max(...series.keys()) :
  * - level: as published, from the anchor on.
  *
  * Returns null where the forecast cannot start (no outturn, or no forecast
- * value, at the anchor), and stops at the first period it cannot fill.
+ * value, at the anchor), or where a level carried on by growth falls
+ * below the smallest figure the file holds (ROUNDING): growth above -100%
+ * never takes a level to zero, but compounded far enough, a double loses
+ * the level's precision and then falls to zero. Stops at the first period
+ * it cannot fill.
  */
 export function carryForward(kind, forecast, outturn, anchor, { lag = 1 } = {}) {
   if (!["growth", "index", "level"].includes(kind)) throw new Error(`Unknown forecast kind: ${kind}`);
@@ -90,7 +98,9 @@ export function carryForward(kind, forecast, outturn, anchor, { lag = 1 } = {}) 
     const back = t - lag;
     const prior = back > anchor ? out.get(back) : outturn.get(back);
     if (prior == null) break;
-    out.set(t, prior * (1 + forecast.get(t) / 100));
+    const level = prior * (1 + forecast.get(t) / 100);
+    if (prior !== 0 && !(Math.abs(level) >= ROUNDING)) return null;
+    out.set(t, level);
   }
   return out;
 }
@@ -170,6 +180,16 @@ export function splice(outturn, levels, anchor) {
   for (const [t, v] of outturn) if (t <= anchor) out.set(t, v);
   for (const [t, v] of levels) if (t > anchor) out.set(t, v);
   return new Map([...out].sort((a, b) => a[0] - b[0]));
+}
+
+/**
+ * `series` where it has a value at every period from `first` to `last`,
+ * otherwise none: a line is drawn whole or not at all.
+ */
+export function whole(series, first, last) {
+  if (first == null || last == null) return new Map();
+  for (let t = first; t <= last; t += 1) if (!series.has(t)) return new Map();
+  return series;
 }
 
 /** Only the periods at or after `from`. */

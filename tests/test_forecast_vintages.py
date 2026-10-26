@@ -905,8 +905,16 @@ def test_every_committed_figure_is_written_to_four_decimals(committed):
 
 @given(st.dictionaries(st.integers(1900, 2100), st.floats(-1e9, 1e9)))
 def test_the_build_writes_no_figure_finer_than_four_decimals(values):
-    for value in B._ordered(values).values():
-        assert value == 0 or abs(value) >= 10**-B.DECIMALS
+    # Every series the file holds is written by _ordered (outturn and
+    # forecasts alike): each figure to four decimals, the nearest to its
+    # value, so 0 or at least 1e-4 in size
+    written = B._ordered(values)
+    assert list(written) == [str(p) for p in sorted(values)]
+    for period, value in values.items():
+        figure = written[str(period)]
+        assert figure == round(figure, B.DECIMALS)
+        assert abs(figure - value) <= 0.5 * 10**-B.DECIMALS + 1e-9 * abs(value)
+        assert figure == 0 or abs(figure) >= 10**-B.DECIMALS
 
 
 # --- An outturn check reads as true -------------------------------------------

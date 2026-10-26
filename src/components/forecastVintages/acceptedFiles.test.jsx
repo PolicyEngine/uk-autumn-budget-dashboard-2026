@@ -31,8 +31,9 @@
  *   a line for each forecast and the outturn, each through its own
  *   series' points on the axes as drawn (each y tick at the value its
  *   label gives, each x tick at its period, every point within the y
- *   ticks), and the view's labelled points with their values, in the
- *   window it opens on (C).
+ *   ticks), and the view's labelled points with their values, each dot
+ *   at its point on those axes, its leader line out from the dot and its
+ *   value past the line, in the window it opens on (C).
  *
  * WHAT_IT_HOLDS names every field the file has. A field it does not name
  * fails the test, so a field added to the file must be added there.
@@ -822,7 +823,7 @@ describe("a forecasts file the loader accepts", () => {
       const hi = pairs.reduce((a, b) => (get(b) > get(a) ? b : a));
       const slope = get(hi) === get(lo) ? 0 : (put(hi) - put(lo)) / (get(hi) - get(lo));
       const fits = pairs.every((q) => Math.abs(put(lo) + slope * (get(q) - get(lo)) - put(q)) < 0.01);
-      return { fits, slope, at: (pixel) => get(lo) + (pixel - put(lo)) / slope };
+      return { fits, slope, at: (pixel) => get(lo) + (pixel - put(lo)) / slope, pixel: (v) => put(lo) + slope * (v - get(lo)) };
     };
     const xs = fitOf((q) => q.x, (q) => q.px);
     const ys = fitOf((q) => q.y, (q) => q.py);
@@ -850,9 +851,28 @@ describe("a forecasts file the loader accepts", () => {
       const named = expected.frequency === "quarterly" ? String(Math.floor(Math.round(period) / 4)) : expected.label(Math.round(period));
       if (Math.abs(period - Math.round(period)) > 1e-6 || named !== t.label) throw new Error(`${where}: the x tick "${t.label}" sits at period ${period}`);
     }
-    const want = pointsIn(expected.points, opened).map((p) => `${p.role} ${expected.format(p.y)}`);
+    const labelled = pointsIn(expected.points, opened);
+    const want = labelled.map((p) => `${p.role} ${expected.format(p.y)}`);
     const got = [...document.querySelectorAll(".fv-point-label")].map((g) => `${g.dataset.role} ${g.querySelector("text").textContent}`);
     if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${where}: labels ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);
+    // Each labelled point on the same axes: its dot at its period and
+    // value, its leader line out from the dot, and its value at the dot's
+    // x, past the line's end on the line's side; one dot for each
+    const near = (a, b) => Math.abs(a - b) < 0.01;
+    const numbers = (el, names) => names.map((name) => Number(el?.getAttribute(name)));
+    if (document.querySelectorAll(".recharts-reference-dot-dot").length !== labelled.length) throw new Error(`${where}: not one dot for each of ${labelled.length} labelled points`);
+    for (const p of labelled) {
+      const [cx, cy] = [xs.pixel(p.x), ys.pixel(p.y)];
+      const line = document.querySelector(`.fv-point-line[data-role="${p.role}"]`);
+      const dot = line?.closest(".recharts-reference-dot")?.querySelector(".recharts-reference-dot-dot");
+      const [dx, dy] = numbers(dot, ["cx", "cy"]);
+      if (!near(dx, cx) || !near(dy, cy)) throw new Error(`${where}: the ${p.role} dot is at (${dx}, ${dy}), not its point's (${cx}, ${cy})`);
+      const [x1, y1, x2, y2] = numbers(line, ["x1", "y1", "x2", "y2"]);
+      const side = Math.sign(y2 - cy);
+      if (!near(x1, cx) || !near(x2, cx) || !near(Math.abs(y1 - cy), 6) || side === 0 || Math.sign(y1 - cy) !== side) throw new Error(`${where}: the ${p.role} leader line is not out from its dot`);
+      const [tx, ty] = numbers(document.querySelector(`.fv-point-label[data-role="${p.role}"] text`), ["x", "y"]);
+      if (!near(tx, cx) || Math.sign(ty - cy) !== side || Math.abs(ty - cy) < Math.abs(y2 - cy)) throw new Error(`${where}: the ${p.role} value is not past its leader line`);
+    }
   }
 
   it("mounts on its default unit, showing the builder's chart (each line through its own series, and the labelled points) or its reason, and nothing else (C)", async () => {

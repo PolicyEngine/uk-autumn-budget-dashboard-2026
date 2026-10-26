@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { MAX_VALUE, NEWEST_SHOWN, earliestForecast, forecastVintagesProblem, launchPeriod } from "./load";
-import { pctChange, periodIndex, toSeries } from "./transforms";
+import { lastIndex, pctChange, periodIndex, toSeries } from "./transforms";
 import {
   DRAW_LIMIT,
   OUTTURN_KEY,
@@ -661,6 +661,64 @@ describe("an index or a % change", () => {
   it("is taken only on values above zero", () => {
     expect([...pctChange(new Map([[2020, -2], [2021, 1], [2022, 2]]), 1)]).toEqual([[2022, 100]]);
     expect([...pctChange(new Map([[2020, 0], [2021, 1]]), 1)]).toEqual([]);
+  });
+
+  // Found by the eighth review: real GDP falling 99.9999% a year to 2100
+  // drew £ and the index at zero from 2079-80, and the % line stopped at
+  // 2080; the level then is 2.94e-327, which no double holds
+  it("leaves a forecast carried on past the smallest figure undrawn in every unit, never at zero or cut short", () => {
+    const data = clone();
+    const v = byId(data, "real_gdp");
+    const newest = v.level.vintages.at(-1);
+    for (let year = 2026; year <= 2100; year += 1) newest.values[String(year)] = -99.9999;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    for (const unit of ["level", "index", "pct"]) {
+      expect(buildView(data, v, { unit }).unavailable).toBe("The March 2026 forecast of this measure cannot be drawn in this unit.");
+    }
+  });
+
+  it("leaves a % line that would need a change on a value at or below zero undrawn, never cut short", () => {
+    // A forecast drawn as published, with a value below zero before its last
+    const data = clone();
+    const gdp = byId(data, "nominal_gdp");
+    gdp.level.vintages.at(-1).values["2029-30"] = -1;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    expect(buildView(data, gdp, { unit: "pct" }).unavailable).toBe("The March 2026 forecast of this measure cannot be drawn in this unit.");
+    for (const unit of ["level", "index"]) expect(buildView(data, gdp, { unit }).unavailable).toBeNull();
+    // The outturn, below zero in its first year, so no change in its second
+    const other = clone();
+    const employment = byId(other, "employment");
+    employment.level.outturn["1971"] = -1;
+    expect(forecastVintagesProblem(other)).toBeNull();
+    expect(buildView(other, employment, { unit: "pct" }).unavailable).toBe("The outturn of this measure cannot be drawn in this unit.");
+    expect(buildView(other, employment, { unit: "level" }).unavailable).toBeNull();
+  });
+
+  it("draws a % line to its series' last period or not at all, whatever value at or below zero a series holds", () => {
+    const changes = VIEWS.filter(({ v, unit, annual }) => v.units[unit].transform === "growth" && !annual);
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...changes),
+        fc.boolean(),
+        fc.nat(),
+        fc.constantFrom(0, -0.0001, -1, -1000),
+        ({ v, unit, showPast }, inOutturn, at, value) => {
+          const data = clone();
+          const variable = byId(data, v.id);
+          const measure = variable[variable.units[unit].from];
+          const series = inOutturn ? measure.outturn : measure.vintages.at(-1).values;
+          const keys = Object.keys(series);
+          series[keys[at % keys.length]] = value;
+          if (forecastVintagesProblem(data) !== null) return;
+          const view = buildView(data, variable, { unit, showPast });
+          if (view.unavailable) return;
+          const lastOf = (values) => lastIndex(toSeries(values, variable.frequency));
+          expect(lastIndex(view.outturn)).toBe(lastOf(measure.outturn));
+          expect(lastIndex(view.vintages.find((x) => x.newest).values)).toBe(lastOf(measure.vintages.at(-1).values));
+        },
+      ),
+      { numRuns: 400 },
+    );
   });
 
   it("leaves an index unavailable where the outturn at the start of the parliament is not above zero", () => {
