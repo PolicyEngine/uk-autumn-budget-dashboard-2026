@@ -20,7 +20,7 @@ import { buildChartCsv } from "../utils/chartCsv";
 import { parseTable } from "../utils/publication/csv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -62,7 +62,6 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import {
   legendMembership,
-  legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
 } from "../utils/legendMembership";
@@ -368,6 +367,8 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     );
   }, [rows, policies, selectedPolicies, selectedYear]);
   const activeNames = drawnNames(members);
+  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
+  const key = useMeasureKey(members, netLabel);
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
@@ -495,7 +496,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter
@@ -550,6 +551,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   dataKey={name}
                   name={name}
                   fill={POLICY_COLORS[name]}
+                  fillOpacity={measureOpacity(key.highlight, name)}
                   stackId="stack"
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
@@ -586,8 +588,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         )}
       </div>
       <div className="chart-legend">
-        {published &&
-          <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
+        {published && !key.shared && (
+          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -862,9 +865,19 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && thin.length > 0 && (
-        <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
-      )}
+      <div className="chart-footer">
+        {published && thin.length > 0 && (
+          <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
+        )}
+        {/* The same foot as the card beside it, so the pair ends level */}
+        <ChartMoreInfo year={Number(selectedYear)}>
+          <p>
+            A person is better or worse off when their household&apos;s net income changes by more than 0.01%. The
+            shares come from one simulation of the selected policies together, so they are shown for a single
+            policy or for all policies.
+          </p>
+        </ChartMoreInfo>
+      </div>
     </div>
   );
 }

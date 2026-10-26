@@ -36,8 +36,10 @@ function publishedRows(file) {
   return lines.map((line) => Object.fromEntries(line.split(",").map((value, i) => [keys[i], value])));
 }
 
-const legendLabels = (container) =>
-  [...container.querySelectorAll(".grouped-legend-groups li:not(.grouped-legend-net-inline) .grouped-legend-label")].map((node) => node.textContent);
+// The measure key's chips (MeasureKey): one per measure, its full name in
+// the title; muted ones folded under "with no effect" but still listed
+const keyChips = (container) => [...container.querySelectorAll(".measure-key [data-measure]")];
+const legendLabels = (container) => keyChips(container).map((node) => node.title);
 
 describe("legendMembership", () => {
   it("lists every selected measure, in the legends' order, muted where it has no effect", () => {
@@ -77,10 +79,14 @@ describe.each([
 
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
-    const item = [...container.querySelectorAll(".grouped-legend-groups li")].find(
-      (node) => node.textContent === "Employer NI relief for under-25s",
-    );
+    const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
     expect(item.className).toContain("is-muted");
+    // Folded away until "+3 with no effect" is opened
+    const more = within(container).getByRole("button", { name: "+3 with no effect" });
+    expect(item.closest("ul")).not.toBeVisible();
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(item.closest("ul")).toBeVisible();
     // The card's own "More info" at its foot, closed until opened
     const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
     const toggle = within(moreInfo).getByRole("button", { name: "More info" });
@@ -101,8 +107,8 @@ describe.each([
     expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).not.toBeNull();
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
-    expect(screen.getAllByText("Fuel duty rises deferred")[0].closest("li").className).not.toContain("is-muted");
-    within(container).getByText("They are greyed out in the key and left out of the tooltip.");
+    expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
+    within(container).getByText("They are folded under “with no effect” in the key and left out of the tooltip.");
   });
 });
 

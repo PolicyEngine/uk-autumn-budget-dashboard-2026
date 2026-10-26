@@ -9,6 +9,7 @@ import ConstituencyMap from "./components/ConstituencyMap";
 import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
+import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import SourceLink from "./components/SourceLink";
 import useScrollReveal from "./hooks/useScrollReveal";
@@ -569,20 +570,26 @@ function App() {
                 title="How the measures change incomes"
                 subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures follow."
               />
-              <section id="deciles" className="report-section distributional-section">
-                <div className="charts-grid">
-                  <WaterfallChart
-                    rawData={results.rawWinnersLosers}
-                    selectedPolicies={selectedPolicies}
-                    selectedYear={distributionalYear}
-                  />
-                  <DistributionalChart
-                    rawData={results.rawDistributional}
-                    selectedPolicies={selectedPolicies}
-                    selectedYear={distributionalYear}
-                  />
-                </div>
-              </section>
+              {/* Both cards colour by measure: one key above the pair
+                  (MeasureKey), and hovering a measure there shows it in
+                  both */}
+              <MeasureKeyProvider>
+                <section id="deciles" className="report-section distributional-section">
+                  <SectionMeasureKey />
+                  <div className="charts-grid">
+                    <WaterfallChart
+                      rawData={results.rawWinnersLosers}
+                      selectedPolicies={selectedPolicies}
+                      selectedYear={distributionalYear}
+                    />
+                    <DistributionalChart
+                      rawData={results.rawDistributional}
+                      selectedPolicies={selectedPolicies}
+                      selectedYear={distributionalYear}
+                    />
+                  </div>
+                </section>
+              </MeasureKeyProvider>
             </>
           )}
           {/* Incomes without the measures, then inequality */}

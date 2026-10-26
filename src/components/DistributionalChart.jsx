@@ -17,7 +17,7 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -43,7 +43,6 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import {
   decileMembership,
-  legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
 } from "../utils/legendMembership";
@@ -128,6 +127,12 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     [rawData, selectedPolicies, selectedYear],
   );
   const activePolicies = drawnNames(members);
+  const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
+  // In a section with a shared key (MeasureKey), the card draws no legend
+  const key = useMeasureKey(members, netLabel);
+  // The legend took about 160px (300 on a phone) of the chart's height;
+  // with the section's key above the pair, the plot keeps its own size
+  const plotHeight = key.shared ? (narrow ? 360 : 380) : narrow ? 620 : 480;
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -251,7 +256,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
       <div ref={chartRef}>
         {published ? (
-          <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
+          <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
               margin={chartMargin(narrow)}
@@ -309,20 +314,25 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                 }
 
               />
-              <Legend
-                wrapperStyle={legendWrapperStyle(narrow)}
-                content={
-                  <GroupedLegend
-                    items={membershipItems(members)}
-                    netLabel={activePolicies.length > 1 ? "Net change" : undefined}
-                  />
-                }
-              />
+              {!key.shared && (
+                <Legend
+                  wrapperStyle={legendWrapperStyle(narrow)}
+                  content={
+                    <MeasureKey
+                      members={members}
+                      netLabel={netLabel}
+                      highlight={key.highlight}
+                      onHighlight={key.setHighlight}
+                    />
+                  }
+                />
+              )}
               {ALL_POLICY_NAMES.map((policyName) => (
                 <Bar
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
+                  fillOpacity={measureOpacity(key.highlight, policyName)}
                   name={policyName}
                   stackId="stack"
                   {...chartMotion()}
@@ -361,7 +371,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           </ResponsiveContainer>
         ) : (
           <UnpublishedPlot
-            height={narrow ? 620 : 480}
+            height={plotHeight}
             yearLabel={formatYearRange(selectedYear)}
           />
         )}

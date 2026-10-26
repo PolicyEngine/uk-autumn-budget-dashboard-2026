@@ -18,7 +18,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -61,7 +61,6 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
 import {
   legendMembership,
-  legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
 } from "../utils/legendMembership";
@@ -104,9 +103,17 @@ function stackEnds(points, policies) {
 }
 
 /** The policy bars, always mounted (a zero series has no height). */
-const policyBars = () =>
+const policyBars = (highlight) =>
   ALL_POLICY_NAMES.map((name) => (
-    <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+    <Bar
+      key={name}
+      dataKey={name}
+      name={name}
+      fill={POLICY_COLORS[name]}
+      fillOpacity={measureOpacity(highlight, name)}
+      stackId="stack"
+      {...chartMotion()}
+    />
   ));
 
 /** The chart's logo row. */
@@ -155,6 +162,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     [rows, policies, selectedPolicies],
   );
   const activeNames = drawnNames(members);
+  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
+  // The section's key lists the measures (MeasureKey); alone, the card's own
+  const key = useMeasureKey(members, netLabel);
   const first = fiscalYearTick(DISPLAY_YEARS[0]);
   const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
   const title = `Change per pensioner by year, ${first} to ${last}`;
@@ -235,7 +245,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 />
               }
             />
-            {policyBars()}
+            {policyBars(key.highlight)}
             <Line
               type="monotone"
               strokeLinejoin="round"
@@ -261,7 +271,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         </ResponsiveContainer>
       </div>
       <div className="chart-legend">
-        <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />
+        {!key.shared && (
+          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <Logo />
       <div className="chart-footer">
@@ -334,6 +346,9 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
     [rows, policies, selectedPolicies, year],
   );
   const activeNames = drawnNames(members);
+  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
+  // The section's key lists the measures (MeasureKey); alone, the card's own
+  const key = useMeasureKey(members, netLabel);
   const missing = data.filter((point) => point.netChange === null);
   const title = `Change by age, ${yearLabel}`;
   const description = `Average change per person, £ a year, by single year of age (${PENSIONER_AGE_FIRST} to 90 and over); pensioners' ages shaded.`;
@@ -414,7 +429,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
                   />
                 }
               />
-              {policyBars()}
+              {policyBars(key.highlight)}
               <Scatter
                 dataKey="netChange"
                 shape={netDot}
@@ -429,8 +444,8 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
         )}
       </div>
       <div className="chart-legend">
-        {published && (
-          <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />
+        {published && !key.shared && (
+          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
         )}
       </div>
       <Logo />
@@ -824,11 +839,19 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         )}
       </div>
       <Logo />
-      {published && thin.length > 0 && (
-        <div className="chart-footer">
+      <div className="chart-footer">
+        {published && thin.length > 0 && (
           <Note>Not shown, as too few survey records: {thin.map((group) => ageLabel(group.label)).join(", ")}.</Note>
-        </div>
-      )}
+        )}
+        {/* The same foot as the card beside it, so the pair ends level */}
+        <ChartMoreInfo year={Number(selectedYear)}>
+          <p>
+            A person is better or worse off when their household&apos;s net income changes by more than 0.01%. The
+            shares come from one simulation of the selected policies together, so they are shown for a single
+            policy or for all policies.
+          </p>
+        </ChartMoreInfo>
+      </div>
     </div>
   );
 }
@@ -863,12 +886,17 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         title="Change for pensioners"
         subtitle="Pensioners here are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28, as State Pension age rises to 67. Each person counts their household's change in net income."
       />
-      <section className="report-section young-people-section" aria-label="Change for pensioners">
-        <div className="charts-grid">
-          <TrendCard {...props} height={narrow ? 340 : 400} />
-          <AgeCard {...props} height={narrow ? 340 : 400} />
-        </div>
-      </section>
+      {/* Both cards colour by measure: one key above the pair, not a long
+          legend in each */}
+      <MeasureKeyProvider>
+        <section className="report-section young-people-section" aria-label="Change for pensioners">
+          <SectionMeasureKey />
+          <div className="charts-grid">
+            <TrendCard {...props} height={narrow ? 340 : 400} />
+            <AgeCard {...props} height={narrow ? 340 : 400} />
+          </div>
+        </section>
+      </MeasureKeyProvider>
       <SectionHeading
         title="Who gains and from what"
         subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
