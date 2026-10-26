@@ -6,7 +6,8 @@ so its commit is that checkout's HEAD, and only when every copied file has
 exactly HEAD's bytes and nothing else is copied (``checkout_commit``). The
 comparison reads the files and HEAD's tree, never git's index or status:
 review of e78fbf4, finding 1. HEAD's tree is its own commit's, never a
-replacement's: review of cc15d50, finding 1.
+replacement's: review of cc15d50, finding 1. The work tree must be the
+checkout itself: review of 80413e4, finding 1.
 """
 
 import os
@@ -307,3 +308,56 @@ def test_a_name_that_is_not_utf8_matches_when_its_bytes_do(checkout):
         pytest.skip("this file system refuses names that aren't UTF-8")
     _commit_raw_name(checkout, raw, b"a,b\n")
     assert checkout_commit(checkout) == _git(checkout, "rev-parse", "HEAD")
+
+
+def _nested_copy(checkout, change: bool):
+    """The checkout's deployed files copied into ``deploy/`` (one changed if
+    ``change``) and committed in the same repository."""
+    import shutil
+
+    nested = checkout / "deploy"
+    nested.mkdir()
+    for name in (".python-version", "pyproject.toml", "uv.lock"):
+        shutil.copy(checkout / name, nested / name)
+    for folder in ("data_inputs", "src"):
+        shutil.copytree(checkout / folder, nested / folder)
+    if change:
+        (nested / "src" / "uk_budget_data" / "reforms.py").write_text(
+            "X = 2\n"
+        )
+    _git(checkout, "add", "-A")
+    _git(checkout, "commit", "-q", "-m", "nested copy")
+    return nested
+
+
+def test_a_folder_inside_a_larger_work_tree_named_by_git_s_environment_reports_no_commit(
+    checkout, monkeypatch
+):
+    # Review of 80413e4, finding 1: with GIT_DIR and GIT_WORK_TREE naming
+    # the outer repository, ls-tree listed deploy/'s committed files under
+    # the top-level names, so the changed copy matched and reported HEAD,
+    # whose top-level reforms.py (what Cloud Run deploys) differs
+    nested = _nested_copy(checkout, change=True)
+    monkeypatch.setenv("GIT_DIR", str(checkout / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(checkout))
+    assert checkout_commit(nested) is None
+    assert checkout_differences(nested) is None
+
+
+@pytest.mark.parametrize("change", [True, False])
+def test_a_folder_inside_a_larger_work_tree_reports_no_commit(
+    checkout, change
+):
+    # Git found from a subfolder: the deploy must run from the checkout's
+    # own top, even when the folder's files equal the top-level ones
+    nested = _nested_copy(checkout, change=change)
+    assert checkout_commit(nested) is None
+
+
+def test_git_s_environment_naming_the_checkout_itself_still_counts(
+    checkout, monkeypatch
+):
+    head = _git(checkout, "rev-parse", "HEAD")
+    monkeypatch.setenv("GIT_DIR", str(checkout / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(checkout))
+    assert checkout_commit(checkout) == head
