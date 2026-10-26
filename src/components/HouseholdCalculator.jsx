@@ -1,6 +1,7 @@
 import TitleIcon from "./TitleIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
+import { UK_NEW_CHILD_AGE, UK_REGIONS, regionalRentMonth } from "policyengine-household-wizard/uk-household";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import HouseholdCards from "./personal/HouseholdCards";
@@ -74,20 +75,8 @@ export const FORM_SECTIONS = [
   },
 ];
 
-export const REGION_OPTIONS = [
-  ["NORTH_EAST", "North East"],
-  ["NORTH_WEST", "North West"],
-  ["YORKSHIRE", "Yorkshire and the Humber"],
-  ["EAST_MIDLANDS", "East Midlands"],
-  ["WEST_MIDLANDS", "West Midlands"],
-  ["EAST_OF_ENGLAND", "East of England"],
-  ["LONDON", "London"],
-  ["SOUTH_EAST", "South East"],
-  ["SOUTH_WEST", "South West"],
-  ["WALES", "Wales"],
-  ["SCOTLAND", "Scotland"],
-  ["NORTHERN_IRELAND", "Northern Ireland"],
-];
+// The regions in policyengine-uk's order, with its names
+export const REGION_OPTIONS = UK_REGIONS.map(({ code, name }) => [code, name]);
 
 // The "region" question asks for a constituency (2024 boundaries), which
 // sets the region the calculation reads; the constituency itself is not sent
@@ -101,10 +90,10 @@ const YES_NO = [
 
 const MAX_CHILDREN = 6;
 // A child's age when added (as Spring Statement's calculator does)
-const NEW_CHILD_AGE = 5;
+const NEW_CHILD_AGE = UK_NEW_CHILD_AGE;
 
 // Choices shown as selects
-const CHOICE_CONFIGS = {
+export const CHOICE_CONFIGS = {
   has_partner: {
     label: "Partner",
     question: "Do you live with a partner?",
@@ -159,7 +148,7 @@ const CHOICE_CONFIGS = {
 };
 
 // Amounts and ages, as number boxes with − and + steppers
-const NUMBER_CONFIGS = {
+export const NUMBER_CONFIGS = {
   current_age: { label: "Age", min: 18, max: 80, step: 1 },
   current_salary: { label: "Salary in 2026", min: 0, max: 500000, step: 1000, money: true, hint: SALARY_SOURCE },
   partner_age: { label: "Partner's age", min: 18, max: 80, step: 1 },
@@ -279,9 +268,9 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${
-      inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
-    } 2026); change it if yours differs.`,
+    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${regionalRentMonth(
+      inputs.region,
+    )}); change it if yours differs.`,
 };
 
 /**
