@@ -46,6 +46,7 @@ import {
   CHART_COLOURS,
   divergingAxis,
   HOVER_CURSOR,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -429,6 +430,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     exportOptions,
     csv: csvText,
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activeNames.length > 0,
   };
   const notShown = single
     ? missingAges.length > 0 && `ages ${missingAges.map((p) => p.label).join(", ")}`
@@ -463,6 +466,12 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
         )}
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : activeNames.length === 0 ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of £0 ticks
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{noHouseholdChange(yearLabel)}</p>
+          </div>
         ) : single ? (
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
