@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { useGeographyData } from "../hooks/useGeographyData";
@@ -186,7 +187,7 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       )}
 
       {view.kind === "loading" && (
-        <p className="geography-loading">Loading results by region…</p>
+        <PlotSkeleton label="Loading results by region…" height={360} />
       )}
 
       {view.kind === "notice" && (

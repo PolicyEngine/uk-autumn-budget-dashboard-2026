@@ -6,6 +6,7 @@ import { act, renderHook as renderHookReact, waitFor } from "@testing-library/re
 import { AREA_ROUTING_CONTENTS } from "../../scripts/check-public-files.mjs";
 import {
   loadAreaRouting,
+  loadBoundaries,
   loadGeographyFile,
   resetGeographyCache,
   useAreaRouting,
@@ -163,13 +164,13 @@ describe("useConstituencyBoundaries", () => {
     const { result } = renderHook(() => useConstituencyBoundaries());
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.features).toHaveLength(8);
-    expect(fetchImpl.calls).toEqual(["/data/uk_constituencies_2024.geojson"]);
+    expect(fetchImpl.calls).toEqual(["/data/uk_constituencies_2024.topo.json"]);
   });
 
   it("reports boundaries that are not a feature collection", async () => {
     vi.stubGlobal(
       "fetch",
-      geographyFetch({ "/data/uk_constituencies_2024.geojson": "{}" }),
+      geographyFetch({ "/data/uk_constituencies_2024.topo.json": "{}" }),
     );
     const { result } = renderHook(() => useConstituencyBoundaries());
     await waitFor(() => expect(result.current.status).toBe("error"));
@@ -324,5 +325,23 @@ describe("useAreaRouting", () => {
     });
     const { result } = renderHook(() => useAreaRouting());
     await waitFor(() => expect(result.current.status).toBe("error"));
+  });
+});
+
+describe("the TopoJSON boundaries", () => {
+  it("decodes the published file to the GeoJSON's seats, with the properties the page reads", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const read = (name) => readFileSync(join(process.cwd(), "public", "data", name), "utf-8");
+    const topo = read("uk_constituencies_2024.topo.json");
+    const geojson = JSON.parse(read("uk_constituencies_2024.geojson"));
+    const fetchImpl = async () => new Response(topo, { status: 200 });
+    const state = await loadBoundaries({ fetchImpl, base: "" });
+    expect(state.status).toBe("ready");
+    expect(state.features.map((f) => f.properties.GSScode)).toEqual(geojson.features.map((f) => f.properties.GSScode));
+    for (const [index, feature] of state.features.entries()) {
+      const source = geojson.features[index].properties;
+      expect(feature.properties).toEqual({ Name: source.Name, CTR_REG: source.CTR_REG, Country: source.Country, GSScode: source.GSScode });
+    }
   });
 });
