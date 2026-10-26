@@ -24,7 +24,7 @@ import LsCard from "../livingStandards/LsCard";
 import { useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { NEWEST_SHOWN, loadForecastVintages } from "../../utils/forecastVintages/load";
+import { NEWEST_SHOWN, earliestForecast, loadForecastVintages, vintageLabel } from "../../utils/forecastVintages/load";
 import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, pointsIn } from "../../utils/forecastVintages/view";
 import "../livingStandards/LivingStandards.css";
 import "./ForecastVintages.css";
@@ -32,21 +32,7 @@ import "./ForecastVintages.css";
 // Shown first: the measure the view was modelled on
 export const DEFAULT_VARIABLE = "rhdi_per_person";
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const NEWEST_LABEL = `${MONTHS[NEWEST_SHOWN.month - 1]} ${NEWEST_SHOWN.year}`;
+const NEWEST_LABEL = vintageLabel(NEWEST_SHOWN);
 
 export const SOURCE_LINE = "ONS (outturn), OBR (forecast)";
 
@@ -56,8 +42,27 @@ const DRAWN = {
     "The OBR forecasts this measure as growth, so each forecast's line starts on the outturn and grows at that forecast's rates.",
   index:
     "The OBR forecasts this measure as an index, so each forecast's line starts on the outturn and moves with that forecast's index.",
-  level: "Each forecast is drawn as the OBR published it.",
 };
+
+// What the unit shown does to the lines (view.shownAs), in order
+const SHOWN_AS = {
+  annual: "as calendar-year totals",
+  annualised: "at an annual rate (times four)",
+  index: "as an index of the outturn at the start of this parliament",
+  growth: "as the % change on a year earlier",
+};
+
+/**
+ * How the forecasts are drawn in the unit shown: as the OBR published them
+ * only where the unit leaves the figures as they are.
+ */
+export function drawnNote(kind, view) {
+  const shown = view.shownAs.map((step) => SHOWN_AS[step]).join(", then ");
+  if (kind === "level") {
+    return shown ? `Each forecast is the OBR's published figures, shown ${shown}.` : "Each forecast is drawn as the OBR published it.";
+  }
+  return shown ? `${DRAWN[kind]} Each line is then shown ${shown}.` : DRAWN[kind];
+}
 
 const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 
@@ -106,15 +111,15 @@ export function cardNotes(variable, view, { showPast }) {
     ...(variable.notes || []),
     `Outturn: ${measure.outturn_source}.`,
     `Forecasts: ${measure.forecast_source}.`,
-    DRAWN[measure.kind],
+    drawnNote(measure.kind, view),
     newest.reanchored &&
       `The ${newest.label} forecast starts from the latest outturn it reaches, ${view.label(newest.anchor)}, and is carried on from there by its own ${measure.kind === "index" ? "index" : "growth"}.`,
     undrawn.length > 0 &&
       `${listOf(undrawn)} ${undrawn.length > 1 ? "forecasts" : "forecast"} cannot be drawn in this view, so ${undrawn.length > 1 ? "they are" : "it is"} left out.`,
     checkSentence(measure.check, variable.frequency),
-    variable.frequency === "quarterly" &&
-      view.unit === "level" &&
-      "In £, each quarter's amount is shown at an annual rate (times four); with A, each calendar year is the total of its four quarters.",
+    view.unit === "level" &&
+      view.spec.annualise === true &&
+      `In ${view.spec.label}, each quarter's amount is shown at an annual rate (times four); with A, each calendar year is the total of its four quarters.`,
   ].filter(Boolean);
 }
 
@@ -186,7 +191,7 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
   const rowCount = view.rows?.length ?? 0;
   const range =
     brush.key === chartKey && brush.range ? brush.range : [history ? 0 : (view.windowStart ?? 0), Math.max(0, rowCount - 1)];
-  const annualised = quarterly && !annualOn && unit === "level" && variable.units.level?.annualise;
+  const annualised = quarterly && !annualOn && unit === "level" && variable.units.level?.annualise === true;
 
   const controls = (
     <>
@@ -360,7 +365,7 @@ function ForecastsView({ data, active, related }) {
     <div className="results-container fv-view">
       <SectionHeading
         title="OBR forecasts beside the outturn"
-        subtitle={`The OBR's forecasts from June 2010 to ${NEWEST_LABEL}, beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.`}
+        subtitle={`The OBR's forecasts from ${earliestForecast(data)} to ${NEWEST_LABEL}, beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.`}
       />
       <section id="forecasts-chart" className="report-section ls-section">
         <div className="charts-grid">

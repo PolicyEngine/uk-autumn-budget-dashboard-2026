@@ -9,9 +9,9 @@ import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import ForecastVintagesView, { pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
-import { resetForecastVintages } from "../../utils/forecastVintages/load";
-import { periodIndex } from "../../utils/forecastVintages/transforms";
+import ForecastVintagesView, { cardNotes, drawnNote, pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
+import { earliestForecast, resetForecastVintages } from "../../utils/forecastVintages/load";
+import { periodIndex, toSeries } from "../../utils/forecastVintages/transforms";
 import { buildView, pointsIn } from "../../utils/forecastVintages/view";
 
 // jsdom lays nothing out, so ResponsiveContainer would draw nothing: give
@@ -265,7 +265,9 @@ describe("the page's text", () => {
   it("names an earlier forecast it cannot draw", async () => {
     const data = JSON.parse(TEXT);
     const gdp = data.variables.find((v) => v.id === "real_gdp");
-    delete gdp.level.outturn["2009"];
+    // No outturn to 2009, the launch period of the two 2010 forecasts (an
+    // outturn that starts later is a file the loader accepts)
+    for (const period of Object.keys(gdp.level.outturn)) if (Number(period) <= 2009) delete gdp.level.outturn[period];
     vi.stubGlobal("fetch", respond(data));
     window.history.replaceState({}, "", "/?tab=forecasts&variable=real_gdp");
     render(<ForecastVintagesView />);
@@ -334,6 +336,102 @@ describe("the chart's sentences", () => {
     expect(pointsSentence(view, pointsIn(view.points, toLatest))).toBe(
       "The labelled points are the outturn at the start of this parliament (Q2 2024) and the latest outturn (Q2 2026).",
     );
+  });
+});
+
+describe("what the notes say of the lines drawn", () => {
+  const byId = (id) => DATA.variables.find((v) => v.id === id);
+  const noteOf = (id, options) => {
+    const view = buildView(DATA, byId(id), options);
+    return drawnNote(view.measure.kind, view);
+  };
+  const GROWTH =
+    "The OBR forecasts this measure as growth, so each forecast's line starts on the outturn and grows at that forecast's rates.";
+  const INDEX =
+    "The OBR forecasts this measure as an index, so each forecast's line starts on the outturn and moves with that forecast's index.";
+
+  it("say a forecast of levels is drawn as the OBR published it only in its own unit", () => {
+    expect(noteOf("employment", { unit: "level" })).toBe("Each forecast is drawn as the OBR published it.");
+    expect(noteOf("employment", { unit: "index" })).toBe(
+      "Each forecast is the OBR's published figures, shown as an index of the outturn at the start of this parliament.",
+    );
+    expect(noteOf("employment", { unit: "pct" })).toBe(
+      "Each forecast is the OBR's published figures, shown as the % change on a year earlier.",
+    );
+    expect(noteOf("psnb", { unit: "pct" })).toBe("Each forecast is drawn as the OBR published it.");
+  });
+
+  it("say how a forecast of growth or an index is carried on, then what the unit does to it", () => {
+    expect(noteOf("real_gdp", { unit: "level" })).toBe(GROWTH);
+    expect(noteOf("real_gdp", { unit: "pct" })).toBe(`${GROWTH} Each line is then shown as the % change on a year earlier.`);
+    expect(noteOf("real_gdp", { unit: "index" })).toBe(
+      `${GROWTH} Each line is then shown as an index of the outturn at the start of this parliament.`,
+    );
+    expect(noteOf("rhdi_per_person", { unit: "level" })).toBe(`${INDEX} Each line is then shown at an annual rate (times four).`);
+    expect(noteOf("rhdi_per_person", { unit: "level", annual: true })).toBe(
+      `${INDEX} Each line is then shown as calendar-year totals.`,
+    );
+    expect(noteOf("rhdi_per_person", { unit: "index", annual: true })).toBe(
+      `${INDEX} Each line is then shown as calendar-year totals, then as an index of the outturn at the start of this parliament.`,
+    );
+  });
+
+  it("are true: 'as the OBR published it' only where every value drawn is the published one", () => {
+    let published = 0;
+    for (const variable of DATA.variables) {
+      for (const unit of Object.keys(variable.units)) {
+        for (const annual of variable.frequency === "quarterly" ? [false, true] : [false]) {
+          for (const showPast of [true, false]) {
+            const view = buildView(DATA, variable, { unit, annual, showPast });
+            expect(view.unavailable).toBeNull();
+            const note = drawnNote(view.measure.kind, view);
+            const asPublished = view.vintages.every((v) => {
+              const file = toSeries(view.measure.vintages.find((x) => x.id === v.id).values, variable.frequency);
+              return [...v.values].every(([t, y]) => file.get(t) === y);
+            });
+            const where = `${variable.id} ${unit}${annual ? " A" : ""}${showPast ? "" : " F off"}`;
+            if (note === "Each forecast is drawn as the OBR published it.") {
+              published += 1;
+              expect(asPublished, where).toBe(true);
+            } else {
+              expect(note, where).not.toMatch(/as the OBR published it/);
+            }
+          }
+        }
+      }
+    }
+    // Every native unit of a forecast of levels says so
+    expect(published).toBeGreaterThan(0);
+  });
+
+  it("put the times-four note on a quarterly £ view only when its unit is annualised", () => {
+    const times4 = /each quarter's amount is shown at an annual rate \(times four\)/;
+    const notesOf = (variable, unit) => cardNotes(variable, buildView(DATA, variable, { unit }), { showPast: true });
+    expect(notesOf(RHDI, "level").some((n) => times4.test(n))).toBe(true);
+    expect(notesOf(RHDI, "index").some((n) => times4.test(n))).toBe(false);
+    const plain = structuredClone(RHDI);
+    delete plain.units.level.annualise;
+    expect(notesOf(plain, "level").some((n) => times4.test(n))).toBe(false);
+    for (const variable of DATA.variables.filter((v) => v.frequency !== "quarterly")) {
+      for (const unit of Object.keys(variable.units)) expect(notesOf(variable, unit).some((n) => times4.test(n))).toBe(false);
+    }
+  });
+
+  it("name the earliest forecast in the file in the subtitle", async () => {
+    await renderView();
+    expect(earliestForecast(DATA)).toBe("June 2010");
+    expect(screen.getByText(/^The OBR's forecasts from June 2010 to March 2026, beside the ONS outturn\./)).toBeInTheDocument();
+    cleanup();
+    resetForecastVintages();
+    const later = JSON.parse(TEXT);
+    for (const variable of later.variables) {
+      for (const measure of [variable.level, variable.share].filter(Boolean)) {
+        measure.vintages = measure.vintages.filter((v) => v.year > 2010);
+      }
+    }
+    vi.stubGlobal("fetch", respond(later));
+    render(<ForecastVintagesView />);
+    expect(await screen.findByText(/^The OBR's forecasts from March 2011 to March 2026/)).toBeInTheDocument();
   });
 });
 
