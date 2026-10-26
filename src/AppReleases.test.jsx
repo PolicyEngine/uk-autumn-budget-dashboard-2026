@@ -248,11 +248,14 @@ describe("the budget selector", () => {
     await open(fetchImpl, { candidates: [AB2025] });
     await waitFor(() => expect(pill()).not.toBeNull());
     const band = document.querySelector(".band-release");
+    const app = document.querySelector(".app");
     expect(band).not.toHaveClass("is-hidden");
+    expect(app).toHaveAttribute("data-release-pill", "shown");
     for (const name of ["Household impact", "Living standards", "Methodology"]) {
       fireEvent.click(screen.getByRole("tab", { name }));
       expect(band).toHaveClass("is-hidden");
       expect(band).toHaveAttribute("aria-hidden", "true");
+      expect(app).not.toHaveAttribute("data-release-pill");
     }
   });
 
@@ -293,10 +296,36 @@ describe("the budget selector", () => {
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
     expect(screen.getByText("Loading published measures…")).toBeInTheDocument();
+    // No years to offer yet, so no year pill; the band still keeps its pill
+    // row, as the release pill is the way back (a compact band hides it on
+    // a narrow screen)
+    expect(document.querySelector(".band-year")).toHaveClass("is-hidden");
+    expect(document.querySelector(".band-release")).not.toHaveClass("is-hidden");
+    expect(document.querySelector(".app")).not.toHaveAttribute("data-band");
+    expect(document.querySelector(".app")).toHaveAttribute("data-release-pill", "shown");
     await act(async () => { release(); });
     await screen.findByTestId("budget-figures");
     expect(shownIds()).toEqual(new Set(["alpha"]));
     expect(rowIds()).toEqual(new Set(["alpha"]));
+  });
+
+  it("stays in the band, leading back, when a past event's figures fail after it is offered", async () => {
+    // Its manifest verifies, so it is offered; its one measure's receipt is
+    // missing, so it has no figures and no years
+    const missing = { [`${FIXTURE_MEASURES.alpha.artifact}/receipt.json`]: 404 };
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(["alpha"]), measures: ["alpha"], overrides: missing } } });
+    await open(fetchImpl, { candidates: [AB2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    fireEvent.click(pill());
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: AB2025.name }));
+    await waitFor(() => expect(screen.queryByText("Loading published measures…")).toBeNull());
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(document.querySelector(".band-year")).toHaveClass("is-hidden");
+    expect(document.querySelector(".app")).not.toHaveAttribute("data-band");
+    expect(document.querySelector(".band-release")).not.toHaveClass("is-hidden");
+    await choose(DEFAULT_RELEASE);
+    expect(param(RELEASE_PARAM)).toBeNull();
   });
 
   it("never shows one release's files or figures under another's, whatever is published and chosen", async () => {
@@ -334,6 +363,8 @@ describe("the budget selector", () => {
           for (const id of rowIds()) expect(expected).toContain(id);
           expect(tabs()).toEqual(viewsFor(target).map((view) => view.label));
           expect(param(RELEASE_PARAM)).toBe(target === DEFAULT_RELEASE ? null : target.id);
+          expect(document.querySelector(".app")).not.toHaveAttribute("data-band");
+          expect(document.querySelector(".app")).toHaveAttribute("data-release-pill", "shown");
         }
       }),
       { numRuns: 6 },

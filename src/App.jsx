@@ -335,6 +335,11 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
   // The release pill applies to Population impact, the one view every
   // release has
   const releaseShown = activeTab === DEFAULT_VIEW;
+  // While the release pill is in the band, the band keeps its pill row,
+  // even for a past event with no years to offer (still loading, or
+  // unavailable): the pill is the way back to another release
+  const releasePill = Boolean(releases) && releaseShown;
+  const compactBand = !yearShown && !releasePill;
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -373,7 +378,7 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className={past ? "app historical-release" : "app"} ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"} data-release={past ? release.id : undefined}>
+    <div className={past ? "app historical-release" : "app"} ref={appRef} data-band={compactBand ? "compact" : undefined} data-release-pill={releasePill ? "shown" : undefined} data-publication={unavailable ? "unavailable" : "verified"} data-release={past ? release.id : undefined}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy

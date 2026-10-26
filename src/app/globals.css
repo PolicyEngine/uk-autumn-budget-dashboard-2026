@@ -288,8 +288,9 @@ body {
 /* The release pill: which Budget or past event the page shows. It is there
    only once more than one is published (App.jsx sets has-releases), so the
    band is unchanged until then. Wide: after the title. Below 900px: beside
-   the year pill, and not on a view without one. 480px and below: between
-   the year and policy pills. */
+   the year pill, and not on a compact band (App.jsx never makes the band
+   compact while the pill shows). 480px and below: a row of its own under
+   the title, as a release's name is too long to share the pill row. */
 .title-row.has-releases {
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   grid-template-areas: "title release year policy";
@@ -323,13 +324,45 @@ body {
   }
 }
 
+/* Four on one row from 900px leave the title too little room until about
+   950px: below 1024px the year and policy pills take their tablet forms */
+@media (min-width: 900px) and (max-width: 1023px) {
+  .title-row.has-releases .policy-selector-label {
+    display: none;
+  }
+
+  .title-row.has-releases .policy-selector-label-short {
+    display: inline;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+  }
+}
+
 @media (max-width: 480px) {
+  /* The phone band, as without the pill, on a view where it is hidden */
   .title-row.has-releases {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
-      "title title title"
-      "year release policy";
-    column-gap: 8px;
+      "title title"
+      "year policy";
+  }
+
+  .title-row .band-release.is-hidden {
+    display: none;
+  }
+
+  /* While it shows (App.jsx sets data-release-pill), the band is one pill
+     row taller, the same height whatever the view's state */
+  .app[data-release-pill="shown"] {
+    --title-row-height: 138px;
+    --sticky-offset: calc(138px + var(--view-tabs-height));
+  }
+
+  .app[data-release-pill="shown"] .title-row {
+    grid-template-areas:
+      "title title"
+      "release release"
+      "year policy";
   }
 
   .band-release {
