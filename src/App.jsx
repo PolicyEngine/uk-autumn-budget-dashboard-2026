@@ -29,7 +29,7 @@ import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton from "./components/HomeButton";
+import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
@@ -878,6 +878,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
+        {/* "About" on the window's edge, on every view but the landing page */}
+        {!landing && <EdgeAboutTab onHome={goHome} />}
         <ReplicationLine />
       </main>
     </div>

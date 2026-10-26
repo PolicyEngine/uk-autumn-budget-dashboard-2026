@@ -95,3 +95,84 @@
     transform: none;
   }
 }
+
+/* The "About" tab on the window's left edge (EdgeAboutTab): teal,
+   rounded on its right side only, under the sticky band and tabs, above
+   the page's content and below its menus and dialogs */
+.edge-about {
+  position: fixed;
+  left: 0;
+  top: calc(var(--sticky-offset) + 72px);
+  z-index: 1080;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* Narrow enough to sit in the page's left margin at 1280px */
+  padding: 6px 10px 6px 7px;
+  font-family: var(--pe-font-family);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--band-ink);
+  background: var(--band-teal);
+  border: 0;
+  border-radius: 0 999px 999px 0;
+  box-shadow: 0 4px 14px var(--shadow-strong);
+  cursor: pointer;
+  transition: background-color var(--landing-motion) ease;
+}
+
+.edge-about:hover {
+  background: var(--pe-teal-700);
+}
+
+.edge-about:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.edge-about-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* Once a session: two soft pulses, so it is seen */
+.edge-about.is-cue {
+  animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
+}
+
+@keyframes edge-about-cue {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 0 var(--focus-ring);
+  }
+  50% {
+    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 8px var(--focus-ring);
+  }
+}
+
+/* On a phone: the mark alone, a slim tab clear of the column */
+@media (max-width: 768px) {
+  .edge-about {
+    padding: 5px 4px 5px 3px;
+  }
+
+  .edge-about-mark {
+    width: 14px;
+    height: 14px;
+  }
+
+  .edge-about-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-about {
+    transition: none;
+  }
+
+  .edge-about.is-cue {
+    animation: none;
+  }
+}
