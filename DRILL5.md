@@ -13,6 +13,34 @@ nine candidates are unchanged. The State Pension protection extension is an
 alternative to the base protection, so the combined run leaves it out (14
 members).
 
+On 26 October the base protection (`state_pension_income_tax_protection`)
+took the design reported that day (BBC; The Times): the allowance of the full
+new State Pension only for people whose only income is the State Pension
+(savings interest aside). Same id; the earlier tapered design stays as a
+switch (`STATE_PENSION_PROTECTION_DESIGNS`), as on #182.
+
+## Engine and data
+
+From 26 October the drill runs on the Budget pair's model and data, ahead of
+their release: `policyengine` 6.11.0 is built from
+PolicyEngine/policyengine.py@c885af31 (branch
+`uk-certify-microcosm-pair-2151`, the draft certification of the pair), which
+pins policyengine-uk 2.151.0 (policyengine-core 3.33.3) and certifies the
+Microcosm national `microcosm-uk-2024-25-national-20261025T091414Z-a6299504`
+as the bundle's default dataset, with constituency and local-authority
+regions routed to the local-area cut
+`microcosm-uk-2024-25-dense-20261026T105309Z-c9df4b86` from the same spine.
+`pe.uk.managed_microsimulation()` resolves them from the bundle, as for a
+release. The wheel is vendored in `vendor/` and installed by its URL
+(`[tool.uv.sources]`), because policyengine certifies a receipt only for an
+index or archive install; from a git source every receipt is uncertified, so
+nothing could be staged provisional or approved.
+
+Until 26 October 13:26 the pin was the national-only commit 324ecad6. Each
+receipt binds the wheel it ran on, so regenerate anything generated on that
+pin before G4. Budget day uses the released bundle instead; this branch never
+merges.
+
 ## Goals
 
 1. Run #104's approval path end to end on fifteen measures: G2

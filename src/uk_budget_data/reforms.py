@@ -38,6 +38,9 @@ from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance_untapered import (
     state_pension_income_tax_allowance_untapered,
 )
+from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
+    state_pension_only_income_tax_allowance,
+)
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
@@ -86,6 +89,23 @@ def _years_dict(value, years: list[int] = None) -> dict[str, any]:
 def _years_from(first_year: int, value) -> dict[str, any]:
     """A {year: value} dict for every policy year from ``first_year``."""
     return _years_dict(value, [y for y in POLICY_YEARS if y >= first_year])
+
+
+# From policyengine-uk 2.134.0 a reform scales realised capital gains by a
+# retention-rate elasticity of 1 by default (2.132.6 had 0). The drill's
+# capital gains measures are static costings, so they set it to 0 in every
+# policy year: the engine's static recipe, with mtr_elasticity 0 and
+# separate_badr_elasticity false, which are its defaults. So does every
+# measure that moves capital gains tax through the bands or taxable income
+# (the threshold freeze and both State Pension protections). The reform
+# side is enough: the engine scales the reformed simulation's gains by its
+# own elasticity. Members of a combined run may each set it, to the same
+# values (``combine.SHARED_SETTINGS``).
+CGT_RESPONSE_ELASTICITY = "gov.simulation.capital_gains_responses.elasticity"
+
+
+def _static_capital_gains() -> dict[str, dict[str, float]]:
+    return rate_change(CGT_RESPONSE_ELASTICITY, _years_dict(0.0))
 
 
 # =============================================================================
@@ -182,19 +202,49 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # =============================================================================
 
 
-def _create_state_pension_income_tax_protection() -> Reform:
+# The design: "sole_income" follows the reporting of 26 October 2026 (BBC;
+# The Times): an allowance of the full new State Pension for pensioners
+# "wholly reliant on the state pension", about a million people, costing
+# about £200m a year by 2030. "tapered", the design modelled until then,
+# gives the allowance to everyone over State Pension age and withdraws it
+# £1 for £1 of income above it. A large other_income_limit in the
+# sole-income module gives it to every pensioner, untapered.
+STATE_PENSION_PROTECTION_DESIGN = "sole_income"
+STATE_PENSION_PROTECTION_DESIGNS = {
+    "sole_income": (
+        state_pension_only_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age whose only income is the State Pension (savings interest "
+        "aside) get an income tax allowance equal to the full new State "
+        "Pension (rounded up to the pound: £13,037 in 2027-28), rising with "
+        "it. Someone whose only income is the full new State Pension pays "
+        "no income tax; £1 of other income takes the allowance away.",
+    ),
+    "tapered": (
+        state_pension_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age get an income tax allowance equal to the full new State "
+        "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
+        "for £1 of income above it, down to the standard personal "
+        "allowance. Someone whose only income is the full new State "
+        "Pension pays no income tax.",
+    ),
+}
+
+
+def _create_state_pension_income_tax_protection(
+    design: str = None,
+) -> Reform:
+    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[
+        design or STATE_PENSION_PROTECTION_DESIGN
+    ]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="State Pension income tax protection",
-        description=(
-            "Candidate measure. From 6 April 2027, people over State Pension "
-            "age get an income tax allowance equal to the full new State "
-            "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
-            "for £1 of income above it, down to the standard personal "
-            "allowance. Someone whose only income is the full new State "
-            "Pension pays no income tax."
-        ),
-        simulation_modifier=state_pension_income_tax_allowance,
+        description=description,
+        simulation_modifier=modifier,
+        # The allowance moves taxable income, so the capital gains rate.
+        parameter_changes=_static_capital_gains(),
     )
 
 
@@ -234,7 +284,8 @@ def _create_domestic_electricity_zero_vat() -> Reform:
             "of 5% from 1 October 2026 to 31 March 2028: the zero rate to "
             "March 2027, not in the model's baseline, scored with a "
             "candidate one-year extension. Applied to electricity spending "
-            "only, day-weighted in 2026-27."
+            "only, in Great Britain (Northern Ireland keeps the 5%), "
+            "day-weighted in 2026-27."
         ),
         simulation_modifier=zero_vat_on_domestic_electricity,
     )
@@ -270,6 +321,8 @@ def _create_employer_ni_relief_under_25s() -> Reform:
 def _create_threshold_freeze_2031_32() -> Reform:
     changes = threshold_change(PERSONAL_ALLOWANCE, {"2031": 12570})
     changes.update(threshold_change(BASIC_RATE_BAND, {"2031": 37700}))
+    # The basic rate band sets which gains pay the lower capital gains rate.
+    changes.update(_static_capital_gains())
     return Reform(
         id=THRESHOLD_FREEZE_ID,
         name="Threshold freeze to 2031-32",
@@ -307,9 +360,12 @@ def _create_badr_lifetime_limit_cut() -> Reform:
             "rate, so the relief's base, and the revenue from restricting "
             "it, are likely 1.5 to 1.7 times too high."
         ),
-        parameter_changes=threshold_change(
-            BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
-        ),
+        parameter_changes={
+            **threshold_change(
+                BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
+            ),
+            **_static_capital_gains(),
+        },
     )
 
 
@@ -427,6 +483,12 @@ UC_CLAIMANT_TYPES = (
 NI_SECONDARY_THRESHOLD = (
     "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold"
 )
+EMPLOYER_NI_INCIDENCE = "gov.contrib.policyengine.employer_ni"
+EMPLOYER_NI_INCIDENCES = (
+    "employee_incidence",
+    "consumer_incidence",
+    "capital_incidence",
+)
 CGT_BASIC_RATE = "gov.hmrc.cgt.basic_rate"
 CGT_HIGHER_RATE = "gov.hmrc.cgt.higher_rate"
 HVCTS_FIRST_THRESHOLD = (
@@ -502,32 +564,63 @@ def _create_state_pension_income_tax_protection_extended() -> Reform:
             "kept whatever their other income or State Pension increments."
         ),
         simulation_modifier=state_pension_income_tax_allowance_untapered,
+        parameter_changes=_static_capital_gains(),
     )
 
 
+def _employer_ni_at_fixed_pay() -> dict:
+    """Every employer NI incidence at 0, so a change to the Class 1
+    employer parameters is scored at fixed pay, as HMRC's ready reckoner
+    and the under-25s relief are (review on #144, point 1).
+
+    policyengine-uk passes a Class 1 employer change through to pay in the
+    same year (``employee_incidence`` is 1), so the figure would be net of
+    the tax and benefits on that pay. With ``employee_incidence`` at 0 the
+    engine instead spreads the employer cost over prices and capital
+    (``consumer_incidence`` and ``capital_incidence``, 0.5 each), which
+    moves household incomes though not revenue, so both are 0 too. The
+    baseline has no employer NI change, so none of the three moves it:
+    the reform's side is enough.
+    """
+    changes = {}
+    for name in EMPLOYER_NI_INCIDENCES:
+        changes.update(
+            rate_change(
+                f"{EMPLOYER_NI_INCIDENCE}.{name}",
+                {str(y): 0 for y in POLICY_YEARS},
+            )
+        )
+    return changes
+
+
 def _create_employer_ni_secondary_threshold_raised() -> Reform:
+    changes = threshold_change(
+        NI_SECONDARY_THRESHOLD,
+        {
+            str(y): _current_law(NI_SECONDARY_THRESHOLD, y) + 1000 / 52
+            for y in POLICY_YEARS
+            if y >= 2027
+        },
+    )
+    changes.update(_employer_ni_at_fixed_pay())
     return Reform(
         id=NI_SECONDARY_THRESHOLD_ID,
         name="Employer NI threshold raised by £1,000",
         description=(
             "Drill 5 mock measure. The employer National Insurance "
             "secondary threshold rises by £1,000 a year from April 2027 "
-            "(£5,000 to £6,000 in 2027-28)."
+            "(£5,000 to £6,000 in 2027-28). Scored at fixed pay, as the "
+            "under-25s relief is: static and gross, with no pass-through "
+            "to wages, prices or profits."
         ),
-        parameter_changes=threshold_change(
-            NI_SECONDARY_THRESHOLD,
-            {
-                str(y): _current_law(NI_SECONDARY_THRESHOLD, y) + 1000 / 52
-                for y in POLICY_YEARS
-                if y >= 2027
-            },
-        ),
+        parameter_changes=changes,
     )
 
 
 def _create_cgt_main_rates_up_2pp() -> Reform:
     changes = rate_change(CGT_BASIC_RATE, _years_from(2027, 0.20))
     changes.update(rate_change(CGT_HIGHER_RATE, _years_from(2027, 0.26)))
+    changes.update(_static_capital_gains())
     return Reform(
         id=CGT_RATES_ID,
         name="Capital gains tax main rates up 2 points",
@@ -602,8 +695,8 @@ def _create_domestic_gas_zero_vat() -> Reform:
         id=GAS_VAT_ID,
         name="Zero VAT on domestic gas",
         description=(
-            "Drill 5 mock measure. No VAT on household gas bills, instead "
-            "of 5%, from 1 April 2027 to 31 March 2028."
+            "Drill 5 mock measure. No VAT on household gas bills in Great "
+            "Britain, instead of 5%, from 1 April 2027 to 31 March 2028."
         ),
         simulation_modifier=zero_vat_on_domestic_gas,
     )

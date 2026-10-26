@@ -49,10 +49,109 @@ def test_secondary_threshold_rises_by_1000_a_year(drill5):
     assert values["2027"] * 52 == pytest.approx(6000)
 
 
+def test_secondary_threshold_is_scored_at_fixed_pay(drill5):
+    """On the under-25s relief's basis (gross, pay fixed), not net of the
+    engine's same-year pass-through to pay (review on #144, point 1)."""
+    changes = drill5[reforms.NI_SECONDARY_THRESHOLD_ID].parameter_changes
+    for name in reforms.EMPLOYER_NI_INCIDENCES:
+        path = f"{reforms.EMPLOYER_NI_INCIDENCE}.{name}"
+        assert changes[path] == {str(y): 0 for y in POLICY_YEARS}
+
+
+def test_secondary_threshold_moves_no_pay():
+    measure = reforms._create_employer_ni_secondary_threshold_raised()
+    situation = {
+        "people": {
+            "p": {"age": {2027: 30}, "employment_income": {2027: 30_000}}
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
+    }
+    baseline = Simulation(situation=situation)
+    reformed = Simulation(situation=situation, scenario=measure.to_scenario())
+    assert reformed.calculate("employment_income", 2027)[0] == pytest.approx(
+        baseline.calculate("employment_income", 2027)[0]
+    )
+    # 15% employer NI on the £1,000 the threshold rises by.
+    assert baseline.calculate("ni_class_1_employer", 2027)[
+        0
+    ] - reformed.calculate("ni_class_1_employer", 2027)[0] == pytest.approx(
+        150, abs=1
+    )
+
+
 def test_cgt_main_rates(drill5):
     changes = drill5[reforms.CGT_RATES_ID].parameter_changes
     assert set(changes[reforms.CGT_BASIC_RATE].values()) == {0.20}
     assert set(changes[reforms.CGT_HIGHER_RATE].values()) == {0.26}
+
+
+RESPONSES = "gov.simulation.capital_gains_responses"
+# The measures that move capital gains tax: its rates, the relief's limit,
+# the basic rate band and the State Pension allowances (taxable income).
+CGT_PINNED = (
+    reforms.CGT_RATES_ID,
+    reforms.BADR_ID,
+    reforms.THRESHOLD_FREEZE_ID,
+    reforms.STATE_PENSION_ALLOWANCE_ID,
+    reforms.STATE_PENSION_EXTENDED_ID,
+)
+STATIC_PIN = {
+    reforms.CGT_RESPONSE_ELASTICITY: {str(y): 0.0 for y in POLICY_YEARS}
+}
+
+
+def _responses(changes):
+    return {
+        path: periods
+        for path, periods in (changes or {}).items()
+        if path.startswith(RESPONSES)
+    }
+
+
+def test_exactly_the_capital_gains_measures_are_static(drill5):
+    for measure_id, measure in drill5.items():
+        expected = STATIC_PIN if measure_id in CGT_PINNED else {}
+        assert _responses(measure.parameter_changes) == expected, measure_id
+        assert _responses(measure.baseline_parameter_changes) == {}
+
+
+def test_drill5_combined_run_shares_the_static_pin(monkeypatch):
+    """Several members set the pin, to the same values; the combined run
+    builds, with the pin set once (it raised CombineConflict before)."""
+    monkeypatch.setenv("UK_BUDGET_MEASURE_SET", "drill5")
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    combined = reforms.get_reform(reforms.AUTUMN_BUDGET_2026_COMBINED_ID)
+    assert _responses(combined.parameter_changes) == STATIC_PIN
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+
+
+def test_cgt_main_rates_are_static_on_the_installed_engine(drill5):
+    """The engine's default main elasticity is 1 (from policyengine-uk
+    2.134.0); the measure's pin sets it to 0 in its own simulation, so
+    realised gains stay as they are (£50,000 on a £100,000 salary)."""
+    year = 2027
+    situation = {
+        "people": {
+            "p": {
+                "age": {year: 50},
+                "employment_income": {year: 100_000},
+                "capital_gains": {year: 50_000},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+    current_law = Simulation(situation=situation)
+    assert current_law.calculate("capital_gains_elasticity", year)[0] == 1
+    reformed = Simulation(
+        situation=situation,
+        scenario=drill5[reforms.CGT_RATES_ID].to_scenario(),
+    )
+    assert reformed.calculate("capital_gains_elasticity", year)[0] == 0
+    assert reformed.calculate("capital_gains", year)[0] == 50_000
 
 
 def test_surcharge_starts_at_three_quarters_of_current_threshold(drill5):
@@ -99,7 +198,7 @@ def test_combined_run_leaves_out_alternatives(monkeypatch):
 
 def test_drill5_modifiers_are_proved_pure_templates():
     """Ported to modules of their own, both stay template-only, so the
-    drill needs no attestation beyond main's two hand-written modifiers."""
+    drill needs no attestation beyond main's hand-written modifiers."""
     revision = CodeRevision("0" * 40, tree_clean=True)
     assert pure_templates(
         state_pension_income_tax_allowance_untapered, revision
@@ -152,4 +251,24 @@ def test_gas_vat_cut_lowers_vat_in_2027_only():
     )
     assert after.calculate("household_net_income", 2028)[0] == pytest.approx(
         before.calculate("household_net_income", 2028)[0], abs=0.01
+    )
+
+
+def test_gas_vat_cut_is_great_britain_only():
+    situation = {
+        "people": {"p": {"age": {2027: 40}}},
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {
+            "h": {
+                "members": ["p"],
+                "region": {2027: "NORTHERN_IRELAND"},
+                "gas_consumption": {2027: 1_050},
+            }
+        },
+    }
+    before = Simulation(situation=situation)
+    after = Simulation(situation=situation)
+    zero_vat_on_domestic_gas(after)
+    assert after.calculate("household_net_income", 2027)[0] == pytest.approx(
+        before.calculate("household_net_income", 2027)[0], abs=0.01
     )

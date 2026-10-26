@@ -14,7 +14,6 @@ nine measures apply to a household, the six with formula modifiers included.
 """
 
 import dataclasses
-import math
 
 import pytest
 from policyengine_uk.system import system
@@ -149,24 +148,21 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
 
 
 @pytest.mark.parametrize("other", [260, 400, 2_000])
-def test_the_allowance_is_withdrawn_pound_for_pound(other):
-    """Allowance £13,040 in 2027-28, less £1 for each £1 of income above
-    it, down to the standard £12,570."""
+def test_any_private_pension_takes_the_allowance_away(other):
+    """The sole-income design: with any private pension the allowance is
+    not given, so the bill is 20% of income above the standard £12,570
+    either way."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
-    # Whole pounds: policyengine-uk rounds the allowance up
-    allowance = max(12_570, math.ceil(13_040 - max(0, income - 13_040)))
-    expected_tax = 0.2 * max(0, income - allowance)
     result = calculate(
         _pensioner(2027, private_pension_income=other),
         2027,
         ["state_pension_income_tax_protection"],
     )
     tax = programme(result, "income_tax")
-    assert tax["reform"] == pytest.approx(expected_tax, abs=0.02)
     assert tax["baseline"] == pytest.approx(0.2 * (income - 12_570), abs=0.02)
-    if income - 13_040 >= 13_040 - 12_570:
-        assert result["net_income"]["change"] == 0
+    assert tax["reform"] == pytest.approx(tax["baseline"], abs=0.02)
+    assert result["net_income"]["change"] == 0
 
 
 # --- Warm Home Discount top-up ----------------------------------------------------
@@ -257,6 +253,17 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     assert -programme(result, "vat_change")["change"] == pytest.approx(
         expected, abs=0.01
     )
+
+
+def test_northern_ireland_keeps_the_electricity_vat():
+    """The temporary zero rate is for domestic electricity in Great
+    Britain only."""
+    result = calculate(
+        Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
+        2027,
+        ["domestic_electricity_zero_vat"],
+    )
+    assert result["net_income"]["change"] == 0
 
 
 def test_no_electricity_spending_no_electricity_vat_change():
