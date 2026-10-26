@@ -86,6 +86,18 @@ def _years_from(first_year: int, value) -> dict[str, any]:
     return _years_dict(value, [y for y in POLICY_YEARS if y >= first_year])
 
 
+# From policyengine-uk 2.134.0 a reform scales realised capital gains by a
+# retention-rate elasticity of 1 by default (2.132.6 had 0). The drill's
+# capital gains measures are static costings, so they set it to 0 in every
+# policy year: the engine's static recipe, with mtr_elasticity 0 and
+# separate_badr_elasticity false, which are its defaults.
+CGT_RESPONSE_ELASTICITY = "gov.simulation.capital_gains_responses.elasticity"
+
+
+def _static_capital_gains() -> dict[str, dict[str, float]]:
+    return rate_change(CGT_RESPONSE_ELASTICITY, _years_dict(0.0))
+
+
 # =============================================================================
 # 1. FUEL DUTY: THE JANUARY AND MARCH 2027 RISES DEFERRED
 # =============================================================================
@@ -328,9 +340,12 @@ def _create_badr_lifetime_limit_cut() -> Reform:
             "above the limit pay the main capital gains tax rates. The "
             "model applies the limit to each year's gains."
         ),
-        parameter_changes=threshold_change(
-            BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
-        ),
+        parameter_changes={
+            **threshold_change(
+                BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
+            ),
+            **_static_capital_gains(),
+        },
     )
 
 
@@ -584,6 +599,7 @@ def _create_employer_ni_secondary_threshold_raised() -> Reform:
 def _create_cgt_main_rates_up_2pp() -> Reform:
     changes = rate_change(CGT_BASIC_RATE, _years_from(2027, 0.20))
     changes.update(rate_change(CGT_HIGHER_RATE, _years_from(2027, 0.26)))
+    changes.update(_static_capital_gains())
     return Reform(
         id=CGT_RATES_ID,
         name="Capital gains tax main rates up 2 points",
