@@ -2374,23 +2374,35 @@ body {
 
 /* The footer: "How it is modelled" and "See its effect" on one line; the
    opened text runs the full width of the card beneath them, in full */
+/* The footer, stacked: "How it is modelled" across the card (the same
+   height on every card, so the rows line up), then the source on the left
+   and "See its effect" on the right */
 .policy-card-foot {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   margin-top: auto;
   padding-top: 14px;
   font-size: var(--fs-small);
   border-top: 1px solid var(--c-grid);
 }
 
+.policy-card-modelling {
+  min-height: 52px;
+}
+
 .policy-card-details {
-  flex: 1 1 auto;
   min-width: 0;
   padding: 0;
+}
+
+.policy-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
 }
 
 .policy-card-details summary {
@@ -2419,7 +2431,7 @@ body {
   border: 0;
 }
 
-.policy-card-foot > .policy-card-source {
+.policy-card-actions .policy-card-source {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2449,10 +2461,8 @@ body {
 }
 
 .policy-card-effect {
-  position: absolute;
-  top: 14px;
-  right: 0;
   display: inline-flex;
+  margin-left: auto;
   align-items: center;
   gap: 8px;
   min-height: 40px;
@@ -2483,23 +2493,13 @@ body {
    One line on the change, then its picture: a step plot of current law
    (grey, dashed) against the measure (its colour), the gap shaded in the
    gain or loss colour; or, for a change that holds, two bars to scale. */
-/* The "What changes" box: one height on every card; a plot fills it, a
-   before-and-after or a short table sits in its middle */
+/* The "What changes" box: as tall as its content, straight under its
+   heading, the card's 16px gap above and below. Cards in a row stretch to
+   the row's height; only the space above the footer grows. */
 .policy-card-spec {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 252px;
-}
-
-.policy-card-spec > .pchg {
-  flex: 1 1 auto;
-}
-
-.pchg > .pchg-ba,
-.pchg > .pchg-table {
-  margin-top: auto;
-  margin-bottom: auto;
 }
 
 .pchg {

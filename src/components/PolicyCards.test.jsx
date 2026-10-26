@@ -419,18 +419,16 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 });
 
 describe("the card's frame", () => {
-  it("puts the source, how it is modelled and the effect on one footer line, and the arrow says no end date", () => {
+  it("stacks the footer: how it is modelled across the card, then the source and the effect; the arrow says no end date", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
+    expect([...foot.children].map((child) => child.className)).toEqual(["policy-card-modelling", "policy-card-actions"]);
+    expect(foot.querySelector(".policy-card-modelling .policy-card-details")).toBeTruthy();
     // A tip's wrapper (display: contents) is looked through
-    const named = ["policy-card-source", "policy-card-details", "policy-card-effect"];
-    expect(
-      [...foot.children].map((child) => {
-        const node = child.classList.contains("tip-anchor") ? child.firstElementChild : child;
-        return named.find((name) => node.classList.contains(name));
-      }),
-    ).toEqual(named);
+    const actions = [...foot.querySelector(".policy-card-actions").children].map((child) =>
+      (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className);
+    expect(actions).toEqual(["policy-card-source", "policy-card-effect"]);
     expect(within(foot).getByRole("link", { name: /^Source: Business Asset Disposal Relief/ })).toBeTruthy();
     const arrow = screen.getByRole("listitem").querySelector(".ptl-arrow");
     fireEvent.mouseEnter(arrow);
