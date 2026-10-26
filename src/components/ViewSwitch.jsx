@@ -1,4 +1,5 @@
 import "./ViewSwitch.css";
+import Tip from "./Tip";
 
 /**
  * An icon switch between a card's views, styled as the OBR comparison's
@@ -23,17 +24,12 @@ function ViewSwitch({ options, value, onChange, label, compact = false }) {
       aria-label={label}
     >
       {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className="obr-view-option"
-          aria-pressed={value === option.value}
-          title={option.title ?? option.label}
-          onClick={() => onChange(option.value)}
-        >
-          {option.icon}
-          <span>{option.label}</span>
-        </button>
+        <Tip key={option.value} content={option.title}>
+          <button type="button" className="obr-view-option" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>
+            {option.icon}
+            <span>{option.label}</span>
+          </button>
+        </Tip>
       ))}
     </div>
   );

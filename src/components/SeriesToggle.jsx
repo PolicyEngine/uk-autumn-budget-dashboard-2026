@@ -1,4 +1,5 @@
 import "./SeriesToggle.css";
+import Tip from "./Tip";
 
 /**
  * Line toggle chips for a multi-line chart: one chip per line, in the
@@ -38,13 +39,12 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
         const active = on.has(s.key);
         const last = active && on.size === 1;
         return (
+          <Tip key={s.key} content={last ? `${s.label}: at least one line stays on` : null}>
           <button
-            key={s.key}
             type="button"
             className={`series-toggle-chip${active ? " is-on" : ""}`}
             aria-pressed={active}
             aria-disabled={last || undefined}
-            title={last ? `${s.label}: at least one line stays on` : s.label}
             onClick={() => toggle(s.key)}
             onMouseEnter={() => onHover?.(active ? s.key : null)}
             onMouseLeave={() => onHover?.(null)}
@@ -65,6 +65,7 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
             </svg>
             <span>{narrow && s.short ? s.short : s.label}</span>
           </button>
+          </Tip>
         );
       })}
     </div>

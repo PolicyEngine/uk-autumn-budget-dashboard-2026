@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import PillChevron from "./PillChevron";
 import "./ControlBar.css";
+import Tip from "./Tip";
 
 /**
  * A card's controls on one row: at most two primary pills (the view, the
@@ -124,7 +125,6 @@ function OptionsButton({ groups, name }) {
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
         aria-label={`Options: ${summary}`}
-        title={summary}
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
         <svg className="control-bar-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
@@ -216,8 +216,8 @@ export function Segmented({ group, inSummary: summarised = true }) {
         {group.options.map((option) => {
           const checked = option.value === group.value;
           return (
+            <Tip key={option.value} content={option.title}>
             <button
-              key={option.value}
               type="button"
               role="radio"
               data-value={option.value}
@@ -226,13 +226,13 @@ export function Segmented({ group, inSummary: summarised = true }) {
               // One tab stop per group: its chosen option
               tabIndex={checked ? 0 : -1}
               disabled={option.disabled}
-              title={option.title}
               aria-label={option.ariaLabel}
               className={`control-bar-segment${checked ? " is-checked" : ""}`}
               onClick={() => group.onChange(option.value)}
             >
               {option.label}
             </button>
+            </Tip>
           );
         })}
       </div>

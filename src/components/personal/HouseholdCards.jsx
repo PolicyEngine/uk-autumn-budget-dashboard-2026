@@ -24,6 +24,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
+import Tip from "../Tip";
 
 /** Each example's icon, by the name it gives (householdExamples.js). */
 export const EXAMPLE_ICONS = {
@@ -131,15 +132,14 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <span
-      className="household-card-position"
-      title={`Where they sit in the UK income distribution, ${yearLabel}: the ${ordinal(percentile)} percentile of household income adjusted for household size, after the measures`}
-    >
+    <Tip content={`Where they sit in the UK income distribution, ${yearLabel}: the ${ordinal(percentile)} percentile of household income adjusted for household size, after the measures`}>
+    <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
       </span>
       <span className="household-card-position-label">{`${ordinal(percentile)} percentile`}</span>
     </span>
+    </Tip>
   );
 }
 
@@ -400,14 +400,12 @@ export default function HouseholdCards({
               <span className="household-card-result">
                 {figures ? (
                   <>
-                    <span
-                      className={`household-card-figure ${tone(figures.change)}`}
-                      id={`household-card-${example.id}-result`}
-                      title={`Change in net income in ${fiscalYearTick(year)} with ${figuresWith}`}
-                    >
+                    <Tip content={`Change in net income in ${fiscalYearTick(year)} with ${figuresWith}`}>
+                    <span className={`household-card-figure ${tone(figures.change)}`} id={`household-card-${example.id}-result`}>
                       {Math.round(figures.change) === 0 ? "No change" : signedMoney(figures.change)}
                       {Math.round(figures.change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
                     </span>
+                    </Tip>
                     <YearBars series={figures.series} year={year} />
                   </>
                 ) : waiting ? (
@@ -436,19 +434,19 @@ export default function HouseholdCards({
                   its part, in its colour; the example's own measure in the
                   chip's title when another gives more */}
               {chip && (
-                <span
-                  className="household-card-tag"
-                  style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}
-                  title={
+                <Tip
+                  content={
                     !chip.own && featured && figures
                       ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
-                      : undefined
+                      : null
                   }
                 >
+                <span className="household-card-tag" style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}>
                   <span className="household-card-dot" aria-hidden="true" />
                   <span className="household-card-tag-name">{chip.name}</span>
                   {chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>}
                 </span>
+                </Tip>
               )}
             </div>
           );

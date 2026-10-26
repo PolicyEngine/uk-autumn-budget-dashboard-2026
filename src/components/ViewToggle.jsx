@@ -1,5 +1,6 @@
 import { ChartLine, Table } from "lucide-react";
 import "./ViewToggle.css";
+import Tip from "./Tip";
 
 const VIEWS = [
   { value: "chart", label: "Show as chart", Icon: ChartLine },
@@ -30,20 +31,20 @@ export default function ViewToggle({ value, onChange, name = "this card" }) {
       {VIEWS.map(({ value: v, label, Icon }) => {
         const checked = v === value;
         return (
+          <Tip key={v} content={label}>
           <button
-            key={v}
             type="button"
             role="radio"
             data-value={v}
             aria-checked={checked}
             aria-label={label}
-            title={label}
             tabIndex={checked ? 0 : -1}
             className={`view-toggle-button${checked ? " is-checked" : ""}`}
             onClick={() => onChange(v)}
           >
             <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
           </button>
+          </Tip>
         );
       })}
     </div>

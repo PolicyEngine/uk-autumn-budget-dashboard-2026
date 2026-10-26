@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PillSelect.css";
 import PillChevron from "./PillChevron";
+import Tip from "./Tip";
 
 /**
  * A pill that opens a short list of options: [badge] label, then a chevron.
@@ -168,7 +169,6 @@ function PillSelect({
               role="option"
               aria-selected={index === current}
               aria-disabled={option.disabled ? "true" : undefined}
-              title={option.title}
               className={`pill-select-option ${index === active ? "is-active" : ""} ${
                 option.disabled ? "is-disabled" : ""
               }`}
@@ -178,7 +178,9 @@ function PillSelect({
               <span className="pill-select-check" aria-hidden="true">
                 {index === current ? "✓" : ""}
               </span>
-              {option.label}
+              <Tip content={option.title}>
+                <span>{option.label}</span>
+              </Tip>
             </li>
           ))}
         </ul>

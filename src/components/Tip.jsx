@@ -79,13 +79,14 @@ export default function Tip({ content, children }) {
       }}
     >
       {child}
+      {/* Rendered only while open, so its words are not on the page twice */}
       {mounted &&
+        open &&
         createPortal(
           <span
             ref={tipRef}
             id={id}
             role="tooltip"
-            hidden={!open}
             className={`tip${pos?.below ? " is-below" : ""}`}
             style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden" }}
           >
