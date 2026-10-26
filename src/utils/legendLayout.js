@@ -26,6 +26,35 @@ export const STACK_BELOW = 400;
 // A label is never wrapped narrower than this
 export const MIN_LABEL_WIDTH = 120;
 
+// A card this narrow or narrower flows its legend's items into rows
+// (GroupedLegend.css, @container (max-width: 640px)), this far apart
+export const FLOW_BELOW = 640;
+export const FLOW_GAP = 16;
+
+/**
+ * The width of items flowed into rows, each row as full as `available`
+ * allows, in order: the widest row. A narrow card's legend takes this
+ * width, so the block is centred under the chart while its rows stay
+ * left-aligned. Never wider than `available`.
+ *
+ * @param {number[]} widths - Each item's width, swatch and "i" included
+ * @param {number} available - The room for a row
+ * @param {number} [gap] - Between two items in a row
+ */
+export function flowWidth(widths, available, gap = FLOW_GAP) {
+  let widest = 0;
+  let row = 0;
+  for (const width of widths) {
+    if (row > 0 && row + gap + width > available) {
+      widest = Math.max(widest, row);
+      row = width;
+    } else {
+      row = row > 0 ? row + gap + width : width;
+    }
+  }
+  return Math.min(available, Math.ceil(Math.max(widest, row)));
+}
+
 /** Word-wrap a label to `width` with `measure`; at least one line. */
 export function wrapLabel(label, width, measure) {
   const lines = [];

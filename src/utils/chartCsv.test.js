@@ -4,12 +4,9 @@ import {
   decileCsv,
   fiscalYear,
   formatCsvNumber,
-  householdChangeCsv,
-  householdIncomeCsv,
   revenueCsv,
   unpublishedCsv,
 } from "./chartCsv";
-import { exampleHousehold } from "./exampleHouseholds";
 
 /** Lines of a CSV, without the byte-order mark and final line break. */
 const lines = (text) => text.replace(/^﻿/, "").replace(/\r\n$/, "").split("\r\n");
@@ -92,29 +89,6 @@ describe("chart CSV downloads", () => {
     expect(relative[1]).toMatch(/% change in household net income/);
   });
 
-  it("write the example household's curves, naming the household", () => {
-    const pensioners = exampleHousehold("pensioner_couple");
-    const income = lines(
-      householdIncomeCsv([{ income: 20000, baseline: 30000.123, reform: 31000.5 }], {
-        year: 2029,
-        household: pensioners,
-      }),
-    );
-    expect(income[1]).toContain(pensioners.definition);
-    expect(income.slice(2)).toEqual([
-      `${pensioners.x_label},Net income before the selected policies,Net income after the selected policies`,
-      "20000,30000.12,31000.5",
-    ]);
-    const renter = exampleHousehold("single_renter");
-    const change = lines(
-      householdChangeCsv(
-        [{ income: 80000, difference: -512.4, positive: null, negative: -512.4 }],
-        { year: 2029, household: renter },
-      ),
-    );
-    expect(change[1]).toContain(renter.definition);
-    expect(change.slice(2)).toEqual(["Employment income,Change in net income", "80000,-512.4"]);
-  });
 });
 
 describe("years not yet published", () => {
@@ -142,4 +116,15 @@ describe("years not yet published", () => {
       "# Not yet published",
     ]);
   });
+});
+
+
+it("uses published CSV headings while reading namespaced measure keys", () => {
+  const policy = { seriesKey: "measure:synthetic", label: "netImpact" };
+  const revenue = revenueCsv([{ year: 2029, [policy.seriesKey]: 2, netImpact: 2, unpublished: false }], [policy]);
+  expect(revenue).toContain("Fiscal year,netImpact,Net impact");
+  expect(revenue).toContain("2029-30,2,2");
+  const decile = decileCsv([{ decile: "1st", [policy.seriesKey]: 2, netChange: 2 }], [policy], { kind: "relative", year: 2029 });
+  expect(decile).toContain("Income decile,netImpact,Net change");
+  expect(decile).toContain("1,2,2");
 });

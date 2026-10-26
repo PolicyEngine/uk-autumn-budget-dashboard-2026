@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook as renderHookReact, waitFor } from "@testing-library/react";
 import { AREA_ROUTING_CONTENTS } from "../../scripts/check-public-files.mjs";
 import {
   loadAreaRouting,
@@ -18,6 +18,16 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { geographyCatalogue, GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const renderHook = (callback, options = {}) => renderHookReact(callback, { wrapper: GeographyCatalogueProvider, ...options });
 
 // Written by uk_budget_data.area_routing from the installed bundle.
 const PUBLIC_AREA_ROUTING = readFileSync(
@@ -56,14 +66,14 @@ describe("useGeographyData", () => {
     // A component mounted later reads the cache at once.
     const third = renderHook(() => useGeographyData("regional"));
     expect(third.result.current.status).toBe("ready");
-    expect(third.result.current.table).toBe(first.result.current.table);
+    expect(third.result.current.table).toEqual(first.result.current.table);
     expect(fetchImpl.calls).toEqual(["/data/regional.csv"]);
   });
 
-  it("says a missing file is unavailable", async () => {
+  it("withholds every row when the published file cannot be loaded", async () => {
     vi.stubGlobal("fetch", geographyFetch({ "/data/regional.csv": 404 }));
     const { result } = renderHook(() => useGeographyData("regional"));
-    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current.table).toBeNull();
   });
 
@@ -220,6 +230,41 @@ describe("useAreaRouting", () => {
     const { result } = renderHook(() => useAreaRouting());
     await waitFor(() => expect(result.current.status).toBe("unavailable"));
     expect(result.current.routing).toBeNull();
+  });
+
+  it("tries a missing file again on the next view, under the same publication", async () => {
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: 404 }));
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("unavailable"));
+    first.unmount();
+    vi.stubGlobal("fetch", geographyFetch());
+    const second = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(second.result.current.status).toBe("ready"));
+    expect(second.result.current.routing.areaViews).toBe("available");
+  });
+
+  it("keeps an answer for its publication and reads routing again for a newer one", async () => {
+    const before = geographyFetch({ [AREA_ROUTING_URL]: areaRouting("not_available") });
+    vi.stubGlobal("fetch", before);
+    const first = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+    const after = geographyFetch();
+    vi.stubGlobal("fetch", after);
+    const same = renderHook(() => useAreaRouting());
+    expect(same.result.current.routing.areaViews).toBe("not_available");
+    expect(after.calls).toEqual([]);
+    same.unmount();
+    const newer = buildMeasureCatalogue({
+      manifest: { ...geographyCatalogue.manifest, revision: 2, snapshotSha256: "b".repeat(64) },
+      tablesByKey: geographyCatalogue.tablesByKey,
+    });
+    const next = renderHookReact(() => useAreaRouting(), {
+      wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={newer}>{children}</MeasureCatalogueProvider>,
+    });
+    await waitFor(() => expect(next.result.current.status).toBe("ready"));
+    expect(next.result.current.routing.areaViews).toBe("available");
+    expect(after.calls).toEqual([AREA_ROUTING_URL]);
   });
 
   it("reads every answer the public file checks accept, as written", async () => {

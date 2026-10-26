@@ -96,6 +96,13 @@ jobs:
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked --extra dev
 
+      # Tests run the build check (scripts/check-public-files.mjs) through
+      # node to hold it to the Python gates. It shares the page's area and
+      # digest code, which imports canonicalize, so it needs the page's
+      # packages.
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
       # Four workers, one per vCPU on GitHub's public-repository runner.
       # loadgroup keeps each xdist_group on one worker, and without the
       # reorder it hands out work in collection order, where tests/conftest.py

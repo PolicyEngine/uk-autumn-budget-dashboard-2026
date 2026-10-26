@@ -5,6 +5,7 @@ import {
 } from "./useGeographyData";
 import { hasReform } from "../utils/geography/rows";
 import { chooseReform } from "../utils/geography/selection";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
 
 /**
@@ -37,10 +38,13 @@ export function useConstituencyView({
     ...(constituency.table?.reforms ?? []),
     ...(regional.table?.reforms ?? []),
   ];
+  const { combinedId } = useMeasureCatalogue();
   const choice = chooseReform({
     selectedIds: selectedPolicies,
-    policyIds: policies.map((policy) => policy.id),
+    // The package is every measure the page can show, held ones excluded
+    policyIds: policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     reforms,
+    packageId: combinedId,
   });
   let view = viewState({
     data: constituency,

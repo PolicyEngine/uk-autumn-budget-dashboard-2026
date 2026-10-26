@@ -1,0 +1,8 @@
+/* The measure pills above a summary chart (poverty, inequality): one
+   compact switch per choice, wrapping onto a second line when narrow. */
+.summary-metric-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
