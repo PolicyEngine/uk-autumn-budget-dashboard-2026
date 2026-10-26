@@ -1726,6 +1726,17 @@ body {
   outline-offset: 2px;
 }
 
+/* A phone: the label on its own line, the two links below it */
+@media (max-width: 599px) {
+  .replication-title {
+    flex-basis: 100%;
+  }
+
+  .replication-links li:first-child::before {
+    content: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .replication-link-arrow {
     transition: none;
