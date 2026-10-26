@@ -1288,7 +1288,9 @@ class IncomeDistributionCalculator(BaseCalculator):
     ) -> list[dict]:
         def household(sim, variable):
             return np.asarray(
-                sim.calculate(variable, period=year, map_to="household").values,
+                sim.calculate(
+                    variable, period=year, map_to="household"
+                ).values,
                 dtype=float,
             )
 
@@ -1336,6 +1338,131 @@ class IncomeDistributionCalculator(BaseCalculator):
                         "side": side,
                         "percentile": percentile,
                         "equivalised_net_income": round(income),
+                    }
+                )
+        return rows
+
+
+# Income mobility: a mover's cell (people moving up, or down, from one
+# starting decile) is published only when its movers come from at least
+# this many distinct survey households, as the binned scatter's floor.
+MOBILITY_MIN_HOUSEHOLDS = 10
+
+
+def person_ranks(income: np.ndarray, people: np.ndarray) -> np.ndarray:
+    """Each household's rank (0 to 100) in a person-weighted distribution:
+    the midpoint of the share of people at its income, households with the
+    same income sharing one rank."""
+    income = np.asarray(income, dtype=float)
+    people = np.asarray(people, dtype=float)
+    total = people.sum()
+    frame = pd.DataFrame({"income": income, "people": people})
+    by = frame.groupby("income", sort=True)["people"].sum()
+    upper = by.cumsum() / total * 100
+    middle = upper - by / total * 100 / 2
+    return middle.reindex(income).to_numpy()
+
+
+@dataclass
+class IncomeMobilityCalculator(BaseCalculator):
+    """Who changes place in the income distribution, by starting decile.
+
+    Each household is ranked by ``comparable_net_income`` (equivalised, as
+    IncomeDistributionCalculator) among everyone before the measure, and
+    again among everyone after it. People move up a percentile (or decile)
+    when the whole percentile (decile) of their rank after is higher than
+    before, and down when it is lower. Rows give the share of people (%)
+    moving up, down or not at all, for each starting decile (by rank
+    before) and for everyone (``all``). A share of movers drawn from fewer
+    than MOBILITY_MIN_HOUSEHOLDS survey households is left blank, and so is
+    the matching share staying put.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        survey_households=None,
+    ) -> list[dict]:
+        def household(sim, variable):
+            return np.asarray(
+                sim.calculate(
+                    variable, period=year, map_to="household"
+                ).values,
+                dtype=float,
+            )
+
+        frame = pd.DataFrame(
+            {
+                "people": household(baseline, "household_weight")
+                * household(baseline, "household_count_people"),
+                "baseline": comparable_net_income(baseline, year)
+                / household(baseline, "household_equivalisation_bhc"),
+                "reform": comparable_net_income(reformed, year)
+                / household(reformed, "household_equivalisation_bhc"),
+            }
+        )
+        if survey_households is not None:
+            frame["survey_household"] = np.asarray(survey_households)
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        frame = frame[frame["people"] > 0]
+        people = frame["people"].to_numpy()
+        ids = (
+            frame["survey_household"].to_numpy()
+            if "survey_household" in frame
+            else np.arange(len(frame))
+        )
+        before = person_ranks(frame["baseline"].to_numpy(), people)
+        after = person_ranks(frame["reform"].to_numpy(), people)
+        start = np.minimum(np.floor(before / 10).astype(int) + 1, 10)
+        groups = [(str(d), start == d) for d in range(1, 11)]
+        groups.append(("all", np.ones(len(frame), dtype=bool)))
+        rows = []
+        for unit, size in (("percentile", 1), ("decile", 10)):
+            b = np.minimum(np.floor(before / size), 100 / size - 1)
+            a = np.minimum(np.floor(after / size), 100 / size - 1)
+            up, down = a > b, a < b
+            for label, members in groups:
+                w = people[members]
+                total = w.sum()
+                if total <= 0:
+                    continue
+
+                def share(flags):
+                    movers = members & flags
+                    if len(np.unique(ids[movers])) < MOBILITY_MIN_HOUSEHOLDS:
+                        return None
+                    return float(people[movers].sum() / total * 100)
+
+                up_share, down_share = share(up), share(down)
+                still = (
+                    100 - up_share - down_share
+                    if up_share is not None and down_share is not None
+                    else None
+                )
+                rows.append(
+                    {
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "unit": unit,
+                        "start_decile": label,
+                        "pct_up": up_share,
+                        "pct_down": down_share,
+                        "pct_same": still,
                     }
                 )
         return rows

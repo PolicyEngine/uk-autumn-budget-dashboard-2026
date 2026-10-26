@@ -20,13 +20,14 @@ from rich.markup import escape
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
     AgeImpactCalculator,
-    IncomeDistributionCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
     DemographicConstituencyCalculator,
     DistributionalImpactCalculator,
     HouseholdScatterCalculator,
     IncomeCurveCalculator,
+    IncomeDistributionCalculator,
+    IncomeMobilityCalculator,
     MetricsCalculator,
     WinnersLosersCalculator,
 )
@@ -574,6 +575,7 @@ class FlatOutcome:
     result: Optional[ReformResult] = None
     age_rows: list = field(default_factory=list)
     distribution_rows: list = field(default_factory=list)
+    mobility_rows: list = field(default_factory=list)
     scatter_cells: list = field(default_factory=list)
     messages: list = field(default_factory=list)
 
@@ -657,9 +659,20 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                 )
         elif "income_distribution" in unit.tables:
             calculator = IncomeDistributionCalculator()
+            mobility = IncomeMobilityCalculator()
             for year in config.years:
                 outcome.distribution_rows.extend(
                     calculator.calculate(
+                        baseline,
+                        reformed,
+                        reform.id,
+                        reform.name,
+                        year,
+                        survey_households=survey,
+                    )
+                )
+                outcome.mobility_rows.extend(
+                    mobility.calculate(
                         baseline,
                         reformed,
                         reform.id,
@@ -807,6 +820,7 @@ def generate_age_impact(
 
 
 INCOME_DISTRIBUTION_FILE = "income_distribution.csv"
+INCOME_MOBILITY_FILE = "income_mobility.csv"
 
 
 def generate_income_distribution(
@@ -814,8 +828,9 @@ def generate_income_distribution(
     config: Optional[DataConfig] = None,
     runner=None,
 ) -> pd.DataFrame:
-    """Write only ``income_distribution.csv``: percentiles of equivalised
-    household net income before and after each measure.
+    """Write only ``income_distribution.csv`` (percentiles of equivalised
+    household net income before and after each measure) and
+    ``income_mobility.csv`` (who changes place, by starting decile).
 
     Builds the same two simulations per reform as the full run, on the same
     baselines, and runs only IncomeDistributionCalculator. ``uk-budget-data
@@ -832,6 +847,10 @@ def generate_income_distribution(
     path = config.output_dir / INCOME_DISTRIBUTION_FILE
     save_csv(frame, path)
     console.print(f"[green]Saved {len(frame)} rows to {path}[/green]")
+    mobility = pd.DataFrame([row for o in outcomes for row in o.mobility_rows])
+    path = config.output_dir / INCOME_MOBILITY_FILE
+    save_csv(mobility, path)
+    console.print(f"[green]Saved {len(mobility)} rows to {path}[/green]")
     return frame
 
 

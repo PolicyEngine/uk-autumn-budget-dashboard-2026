@@ -55,9 +55,12 @@ def test_floor_counts_survey_households_not_records():
     # percentile's ten records: under a floor of three, no point.
     income = np.arange(1, 1001, dtype=float)
     ids = np.arange(1000) // 5
-    assert distribution_points(
-        income, np.ones(1000), ids, percentiles=(50,), min_households=3
-    ) == []
+    assert (
+        distribution_points(
+            income, np.ones(1000), ids, percentiles=(50,), min_households=3
+        )
+        == []
+    )
     assert distribution_points(
         income, np.ones(1000), ids, percentiles=(50,), min_households=2
     ) == [(50, 500.5, 2)]
@@ -126,3 +129,60 @@ def test_comparable_income_leaves_out_what_the_calculator_never_counts():
         )
     )
     assert comparable_net_income(sim, 2027).tolist() == [44_700.0]
+
+
+def test_mobility_counts_people_crossing_a_percentile_or_decile():
+    # 200 one-person households, incomes 1..200, each a survey household:
+    # each sits in its own half-percentile. Household 100 (rank 49.75,
+    # 50th percentile bucket 49) gains 3 and overtakes households 101-103,
+    # which each lose a place: its rank after is 51.25 (bucket 51), up;
+    # 101-103 move from 50.25/50.75/51.25 to 49.75/50.25/50.75: 101
+    # (bucket 50 -> 49) and 103 (51 -> 50) move down, 102 stays in 50.
+    from uk_budget_data.calculators import IncomeMobilityCalculator
+
+    n = 200
+    base = np.arange(1, n + 1, dtype=float)
+    reform = base.copy()
+    reform[99] += 3.5
+    frame = pd.DataFrame(
+        {"people": np.ones(n), "baseline": base, "reform": reform}
+    )
+    calc = IncomeMobilityCalculator()
+    import uk_budget_data.calculators as c
+
+    floor = c.MOBILITY_MIN_HOUSEHOLDS
+    c.MOBILITY_MIN_HOUSEHOLDS = 1
+    try:
+        rows = calc.calculate_from_dataframe("m", "M", 2027, frame)
+    finally:
+        c.MOBILITY_MIN_HOUSEHOLDS = floor
+    by = {(r["unit"], r["start_decile"]): r for r in rows}
+    everyone = by[("percentile", "all")]
+    assert everyone["pct_up"] == 0.5  # 1 in 200
+    assert everyone["pct_down"] == 1.0  # 2 in 200
+    assert everyone["pct_same"] == 98.5
+    # Deciles: household 100 starts in decile 5 (rank 49.75) and ends in
+    # decile 6 (51.25); household 101 (50.25 -> 49.75) moves down to 5
+    assert by[("decile", "5")]["pct_up"] == 5.0  # 1 of 20
+    assert by[("decile", "6")]["pct_down"] == 5.0
+
+
+def test_mobility_cells_under_the_floor_are_blank():
+    from uk_budget_data.calculators import IncomeMobilityCalculator
+
+    n = 200
+    base = np.arange(1, n + 1, dtype=float)
+    reform = base.copy()
+    reform[99] += 3.5
+    frame = pd.DataFrame(
+        {"people": np.ones(n), "baseline": base, "reform": reform}
+    )
+    rows = IncomeMobilityCalculator().calculate_from_dataframe(
+        "m", "M", 2027, frame
+    )
+    everyone = [
+        r
+        for r in rows
+        if r["unit"] == "percentile" and r["start_decile"] == "all"
+    ][0]
+    assert everyone["pct_up"] is None and everyone["pct_same"] is None

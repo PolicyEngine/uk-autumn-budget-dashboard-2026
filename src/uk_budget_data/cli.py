@@ -17,10 +17,10 @@ from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.parallel import add_jobs_arguments
 from uk_budget_data.pipeline import (
     generate_age_impact,
-    generate_income_distribution,
     generate_all_data,
     generate_household_scatter,
     generate_income_curve,
+    generate_income_distribution,
 )
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
