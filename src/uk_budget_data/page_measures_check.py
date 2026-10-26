@@ -18,7 +18,10 @@ manifest, before the page is published:
 
 It exits 1, listing each problem, when an API refuses any of the page's
 measures, or when the presets were computed for other measures or another
-engine than the APIs report.
+engine than the APIs report, or record other measure definitions than
+their receipts approved: the page then asks the API for every card instead,
+with no error to show for it (#136). Measures with no approved definition
+at all are ``publish definitions``' to report.
 """
 
 import argparse
@@ -121,10 +124,15 @@ def api_problems(
 
 
 def preset_problems(
-    presets_file: Path, ids: list[str], packages: Optional[dict]
+    presets_file: Path,
+    ids: list[str],
+    packages: Optional[dict],
+    approved: Optional[dict] = None,
 ) -> list[str]:
-    """How the precomputed examples differ from the page's measures and the
-    API's engine."""
+    """How the precomputed examples differ from the page's measures, the
+    API's engine and, given `approved` (each measure's definition as its
+    receipt approved it, ``definitions.approved_definitions``), the
+    definitions the page checks them against."""
     presets_file = Path(presets_file)
     if not presets_file.exists():
         return []
@@ -148,6 +156,56 @@ def preset_problems(
                     f"{engine.get(name)!r}, but the API runs {packages[name]!r}; "
                     "rerun scripts/precompute_household_presets.py"
                 )
+    if approved:
+        problems += _definition_problems(presets_file, presets, ids, approved)
+    return problems
+
+
+def _definition_problems(
+    presets_file: Path, presets: dict, ids: list[str], approved: dict
+) -> list[str]:
+    """The page uses the file only when it records each measure's approved
+    definition, and leaves out an answer that reports another itself
+    (``src/utils/householdPresets.js``). Only the measures with an approval
+    are checked."""
+    from uk_budget_data import definitions
+
+    rerun = "rerun scripts/precompute_household_presets.py"
+    checked = [key for key in ids if key in approved]
+    recorded = presets.get("definitions")
+    if not isinstance(recorded, dict):
+        return [
+            f"{presets_file} records no measure definitions, so the page "
+            f"will not use it; {rerun}"
+        ]
+    problems = []
+    differ = [
+        key
+        for key in checked
+        if definitions.differences(approved[key], recorded.get(key))
+    ]
+    if differ:
+        problems.append(
+            f"{presets_file} records other definitions than their receipts "
+            f"approved for {', '.join(differ)}, so the page will not use it; "
+            f"{rerun}"
+        )
+
+    def reports_another(entry) -> bool:
+        own = (entry.get("response") or {}).get("definitions")
+        return isinstance(own, dict) and any(
+            key in own and definitions.differences(approved[key], own[key])
+            for key in checked
+        )
+
+    entries = presets.get("entries") or []
+    others = sum(1 for entry in entries if reports_another(entry))
+    if others:
+        problems.append(
+            f"{others} of {presets_file}'s {len(entries)} answers report other "
+            "definitions than their receipts approved, so the page leaves "
+            f"them out; {rerun}"
+        )
     return problems
 
 
@@ -171,7 +229,10 @@ def check(
         found, reported = api_problems(url, ids, year, timeout)
         problems += found
         packages = packages or reported
-    problems += preset_problems(presets_file, ids, packages)
+    from uk_budget_data import definitions
+
+    approved = definitions.approved_definitions(Path(data_root), ids)
+    problems += preset_problems(presets_file, ids, packages, approved)
     return problems
 
 
