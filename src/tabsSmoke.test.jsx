@@ -204,8 +204,13 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         // age, with its default
         fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
-        // Nothing is asked before Calculate
-        expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
+        // Before Calculate the only requests are the example cards' own
+        // figures (the fixture's measures are not the presets file's, so
+        // they are asked in the background): headlines, never your household
+        const yours = (r) => JSON.parse(r.body).household.age === 30;
+        const beforeCalculate = requests.filter((r) => r.url === HOUSEHOLD_API);
+        expect(beforeCalculate.filter(yours)).toEqual([]);
+        expect(beforeCalculate.every((r) => JSON.parse(r.body).include.length === 0)).toBe(true);
         // Every answer has a default: one press asks the household API in
         // two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
@@ -216,7 +221,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
           timeout: 5000,
         });
         const stages = requests
-          .filter((r) => r.url === HOUSEHOLD_API)
+          .filter((r) => r.url === HOUSEHOLD_API && yours(r))
           .map((r) => JSON.parse(r.body).include);
         expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(

@@ -295,9 +295,8 @@ export default function HouseholdCards({
   const distribution = useDataFile(DISTRIBUTION_FILE, parseDistribution);
   // The measures the figures are with: those the API took, when fewer
   const positionPolicies = fill?.reduced ?? figurePolicies;
-  const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
-  // What the figures are with: every measure (the file), the selected ones,
-  // or those of them the calculator supports
+  // What the figures are with, on hover (no line above the cards): every
+  // measure (the file), the selected ones, or those the calculator supports
   const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
@@ -348,12 +347,6 @@ export default function HouseholdCards({
         change={yoursChange}
         onClick={() => choose(onYours)}
       />
-      {/* What the examples' figures are, once they show */}
-      {anyFigures && (
-        <p className="household-cards-note">
-          {`Figures are the change in net income in ${fiscalYearTick(year)} with ${figuresWith}; the bars show each year.`}
-        </p>
-      )}
       <div className="household-cards-grid" id="household-cards-grid" role="group" aria-label="Example households">
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
@@ -396,7 +389,11 @@ export default function HouseholdCards({
               <span className="household-card-result">
                 {figures ? (
                   <>
-                    <span className={`household-card-figure ${tone(figures.change)}`} id={`household-card-${example.id}-result`}>
+                    <span
+                      className={`household-card-figure ${tone(figures.change)}`}
+                      id={`household-card-${example.id}-result`}
+                      title={`Change in net income in ${fiscalYearTick(year)} with ${figuresWith}`}
+                    >
                       {Math.round(figures.change) === 0 ? "No change" : signedMoney(figures.change)}
                       {Math.round(figures.change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
                     </span>
