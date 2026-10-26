@@ -232,7 +232,8 @@ def _create_domestic_electricity_zero_vat() -> Reform:
             "of 5% from 1 October 2026 to 31 March 2028: the zero rate to "
             "March 2027, not in the model's baseline, scored with a "
             "candidate one-year extension. Applied to electricity spending "
-            "only, day-weighted in 2026-27."
+            "only, in Great Britain (Northern Ireland keeps the 5%), "
+            "day-weighted in 2026-27."
         ),
         simulation_modifier=zero_vat_on_domestic_electricity,
     )
