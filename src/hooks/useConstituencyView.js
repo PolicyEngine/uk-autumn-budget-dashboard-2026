@@ -9,6 +9,22 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
 
 /**
+ * The reforms the constituency table has a result for: at least one seat,
+ * in some year, with a reported non-zero change. A reform whose every
+ * published figure is zero, and whose others are all withheld, draws a
+ * blank map in every year, so it is not offered as a measure to show.
+ */
+export function constituencyResultReforms(table) {
+  if (!table) return [];
+  return [...table.byReform.entries()]
+    .filter(([, rows]) =>
+      // A withheld row's value is blank, and Number("") is 0
+      rows.some((row) => row.tier !== "withheld" && Math.abs(Number(row.value)) > 0),
+    )
+    .map(([reform]) => reform);
+}
+
+/**
  * What the constituency views show for a selection, year and outcome: the
  * map and the rankings under it read this one state, so they always agree
  * on whether there are results, and on every figure. The files behind it
@@ -57,7 +73,16 @@ export function useConstituencyView({
       reforms,
       packageId: combinedId,
     }),
-    { selectedIds: selectedPolicies, policyIds, reforms, focusId, size },
+    {
+      selectedIds: selectedPolicies,
+      policyIds,
+      // The Measure picker offers only measures with a constituency result
+      // to show (constituencyResultReforms), not ones published by region
+      // only or with no change reported in any seat
+      reforms: constituencyResultReforms(constituency.table),
+      focusId,
+      size,
+    },
   );
   let view = viewState({
     data: constituency,
