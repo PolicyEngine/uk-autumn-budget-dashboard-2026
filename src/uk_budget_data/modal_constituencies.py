@@ -52,7 +52,9 @@ MOUNT = "/private"
 MEMORY_MB = 64 * 1024
 CPU = 4.0
 UNIT_TIMEOUT_S = 90 * 60
-MAX_CONTAINERS = 11
+# Drill 5's 15 measures and their package in one wave (#144): the cap sets
+# how many run at once, not how much is simulated, so a run costs the same.
+MAX_CONTAINERS = 16
 PACKAGE_IGNORE = ["**/__pycache__/**"]
 WORKDIR = "/root"
 HDF5_ENV = {"HDF5_USE_FILE_LOCKING": "FALSE"}

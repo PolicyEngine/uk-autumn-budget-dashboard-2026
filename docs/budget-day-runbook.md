@@ -1028,8 +1028,16 @@ UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
   uv run --with modal==1.6.2 uk-budget-data constituencies --backend modal
 ```
 
-- **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 11 at once, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends.
-- **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, every unit hitting its timeout, about $11. Check with `uvx --from modal modal billing report --for today` before and after.
+- **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 16 at once, so 15 measures and their package run in one wave, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends. Modal still restarts a container it preempts, with the same input (seen once in drill 5).
+- **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, all 16 units hitting their timeout, about $17. The cap changes how many run at once, not how much is simulated. Check with `uvx --from modal modal billing report --for today` before and after.
+- **Build the image before the day, after every pin change.** A new `uv.lock` (a new policyengine wheel, say) means a new image, built the first time the command runs: 12 minutes in drill 5 (#144), before any container starts. Run both smoke tests once after the pin is set; they need no secret and no data, and leave the images built:
+
+  ```sh
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke badr_lifetime_limit_cut
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py
+  ```
+
+- **Where the time goes** (drill 5, 26 October, 10 measures on policyengine-uk 2.132.6): 3:36–5:22 per measure, all at once, then **15:25 for the release in one container**, 21:18 in all. The release is serial, so more containers don't shorten it. On policyengine-uk 2.151.0 each simulation takes about twice as long (#144).
 - **No reuse:** every Modal run simulates every measure again. The refusal message's "run again … the measures already simulated are reused" holds for a local run only: on Modal the units' records stay on the Volume, so the rerun simulates them again (about 5 min).
 - **Smoke test (no secret, no data):** `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. On 25 October: ten units fanned out in 23 s end to end (1–2 s in each container), the release read them all back in 8 s, 53 s in all including the image build.
 - **Measured on the real cut, 25 October** (`main` at 63c61a1 with #138 merged in; cut `…-ee5c2dbe`; a timing-only scratch manifest and a scratch `--out-dir`, nothing published):
