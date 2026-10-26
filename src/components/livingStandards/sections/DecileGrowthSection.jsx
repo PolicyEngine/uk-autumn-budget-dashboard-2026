@@ -5,7 +5,7 @@
 // file without it falls back to income_by_decile's quintiles and deciles
 // (all people). The view of the Growth across the distribution card.
 
-import { housingOption } from "../controlOptions";
+import { housingOption, yearsOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
 import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
@@ -270,6 +270,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     // One Options pill: the view first, then the groups, housing costs and
     // population ("Year by year · Vigintiles · Before housing costs · All people")
     options: [
+      yearsOption(twinRows?.map((r) => r.year) ?? [], range, setRange),
       {
         label: "View",
         value: view,
