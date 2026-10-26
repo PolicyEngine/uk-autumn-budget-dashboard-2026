@@ -33,7 +33,7 @@ const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
 const pickSeat = (name) => {
   fireEvent.focus(seatBox());
   fireEvent.change(seatBox(), { target: { value: name } });
-  fireEvent.click(within(screen.getByRole("listbox", { name: (label) => label !== "Example households" })).getByRole("option", { name }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: (label) => label !== "Households" })).getByRole("option", { name }));
 };
 /** The region the constituency sets, as shown under it. */
 const regionShown = () => document.getElementById("region-constituency").textContent;
@@ -48,10 +48,15 @@ const exampleItem = (label) => {
 /** Whether an example's card (aria-pressed) or chip (aria-selected) is the one chosen. */
 const isChosen = (item) => (item.getAttribute("aria-pressed") ?? item.getAttribute("aria-selected")) === "true";
 const applyExample = (label) => fireEvent.click(exampleItem(label));
-const yoursCard = () => within(cards()).getByRole("button", { name: /^Your household/ });
+// Your household's card, or its chip once the cards fold
+const yoursCard = () =>
+  within(cards()).queryByRole("button", { name: /^Your household/ }) ??
+  within(cards()).getByRole("option", { name: /^Your household/ });
+/** Whether the form below the cards is open (its panel, which Your household controls). */
+const formIsOpen = () => document.getElementById(yoursCard().getAttribute("aria-controls"))?.dataset.open === "true";
 /** Open the form below the cards ("Your household"), unless it is open. */
 const openForm = () => {
-  if (yoursCard().getAttribute("aria-expanded") !== "true") fireEvent.click(yoursCard());
+  if (!formIsOpen()) fireEvent.click(yoursCard());
 };
 /** The view, with its form open. */
 const renderForm = (ui = <HouseholdCalculator />) => {
@@ -244,12 +249,13 @@ describe("the personal impact form", () => {
     ]);
     expect(buttons.every((item) => item.querySelector(".household-card-description").textContent.length > 0)).toBe(true);
     expect(buttons.slice(1).every((item) => item.querySelector(".household-card-tag").textContent.length > 0)).toBe(true);
-    // The examples are toggles; your household opens the form
-    expect(buttons.slice(1).every((item) => item.getAttribute("aria-pressed") === "false")).toBe(true);
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "false");
+    // Every card is chosen the same way (aria-pressed); your household
+    // also opens the form it controls
+    expect(buttons.every((item) => item.getAttribute("aria-pressed") === "false")).toBe(true);
     expect(screen.queryByRole("form", { name: "Your household" })).not.toBeInTheDocument();
     fireEvent.click(yoursCard());
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
+    expect(isChosen(yoursCard())).toBe(true);
+    expect(formIsOpen()).toBe(true);
     expect(document.getElementById(yoursCard().getAttribute("aria-controls"))).toBeInTheDocument();
     expect(screen.getByRole("form", { name: "Your household" })).toBeInTheDocument();
   });
@@ -262,35 +268,44 @@ describe("the personal impact form", () => {
     expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(true);
     expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
-    // Its answers, in the form once opened from Your household
+    // Your household, chosen from it: the example's answers, named at the
+    // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());
+    expect(isChosen(yoursCard())).toBe(true);
+    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
+    expect(screen.getByText("Renter, 22", { selector: ".household-start-from strong" })).toBeInTheDocument();
     expect(box("Age")).toHaveValue(22);
     expect(box("Salary in 2026")).toHaveValue(25000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
-    // Edited: no longer the example as given
-    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
-    expect(yoursCard()).toHaveClass("is-selected");
+    expect(isChosen(yoursCard())).toBe(true);
+    // Another example: the note goes
+    applyExample("A 19-year-old apprentice");
+    expect(document.querySelector(".household-start-from")).toBeNull();
   });
 
   it("opens the form with an example's answers from Your household, Calculate there to change one and calculate again", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
     applyExample("A pensioner on the State Pension");
     fireEvent.click(yoursCard());
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+    expect(formIsOpen()).toBe(true);
+    expect(isChosen(yoursCard())).toBe(true);
+    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(false);
+    expect(screen.getByText(/Starting from:/)).toHaveTextContent("Starting from: Pensioner. Change anything, then Calculate.");
     expect(box("Age")).toHaveValue(70);
     // Calculate is there, as for your own answers
     expect(screen.getByRole("button", { name: /^Calcul/ })).toBeVisible();
   });
 
-  it("closes the form again from Your household, the example still chosen", () => {
+  it("closes the form again from Your household once it is chosen", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
     applyExample("A pensioner on the State Pension");
     fireEvent.click(yoursCard());
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
+    expect(formIsOpen()).toBe(true);
     fireEvent.click(yoursCard());
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "false");
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+    expect(formIsOpen()).toBe(false);
+    // Nothing calculated for it: nothing chosen, the full grid again
+    expect(isChosen(yoursCard())).toBe(false);
+    expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("folds the cards into a strip of chips once a household is chosen, and opens them again from Show all households", () => {
@@ -299,10 +314,11 @@ describe("the personal impact form", () => {
     expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
     applyExample("A 22-year-old renting");
-    // Folded: the grid's cards are hidden; Your household and seven chips
-    const strip = within(cards()).getByRole("listbox", { name: "Example households" });
-    const chips = within(strip).getAllByRole("option");
-    expect(chips).toHaveLength(7);
+    // Folded: the grid's cards are hidden; eight chips, Your household first
+    const strip = within(cards()).getByRole("listbox", { name: "Households" });
+    const chips = within(strip).getAllByRole("option").slice(1);
+    expect(within(strip).getAllByRole("option")).toHaveLength(8);
+    expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Renter, 22",
       "Apprentice",
@@ -318,10 +334,11 @@ describe("the personal impact form", () => {
     expect(chips[0]).toHaveAttribute("tabindex", "0");
     expect(within(cards()).queryByRole("button", { name: /^A 19-year-old apprentice/ })).not.toBeInTheDocument();
     expect(yoursCard()).toHaveClass("household-chip");
+    expect(yoursCard()).toHaveAttribute("aria-selected", "false");
     // Another chip: switches, still folded
     fireEvent.click(chips[2]);
     expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
-    expect(within(cards()).getByRole("listbox", { name: "Example households" })).toBeInTheDocument();
+    expect(within(cards()).getByRole("listbox", { name: "Households" })).toBeInTheDocument();
     // The arrow keys move between chips; Enter chooses
     const pensioner = exampleItem("A pensioner on the State Pension");
     fireEvent.keyDown(pensioner, { key: "ArrowRight" });
@@ -330,6 +347,13 @@ describe("the personal impact form", () => {
     expect(document.activeElement).toBe(exampleItem("A higher earner on £110,000"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(true);
+    // Home and Enter: Your household, chosen with its tick, the form open
+    fireEvent.keyDown(document.activeElement, { key: "Home" });
+    expect(document.activeElement).toBe(yoursCard());
+    fireEvent.keyDown(document.activeElement, { key: "Enter" });
+    expect(yoursCard()).toHaveAttribute("aria-selected", "true");
+    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(false);
+    expect(formIsOpen()).toBe(true);
     // Show all households: the grid again; a card there folds it
     const toggle = within(cards()).getByRole("button", { name: "Show all households" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -339,14 +363,14 @@ describe("the personal impact form", () => {
     expect(exampleItem("A graduate on £35,000")).toHaveAttribute("aria-pressed", "false");
     applyExample("A graduate on £35,000");
     expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
-    expect(within(cards()).getByRole("listbox", { name: "Example households" })).toBeInTheDocument();
+    expect(within(cards()).getByRole("listbox", { name: "Households" })).toBeInTheDocument();
   });
 
   it("closes the form when an example card is chosen", () => {
     renderForm();
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
+    expect(formIsOpen()).toBe(true);
     applyExample("A driver with a long commute");
-    expect(yoursCard()).toHaveAttribute("aria-expanded", "false");
+    expect(formIsOpen()).toBe(false);
   });
 
   it("fills the household answers from each example", () => {

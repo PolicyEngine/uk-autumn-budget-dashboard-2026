@@ -297,11 +297,11 @@ export function spendingAssumed(answers, presetId) {
 }
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, startFrom: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, startFrom: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -325,6 +325,8 @@ function HouseholdCalculator({
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
   // The form, below the cards: closed at first, opened by "Your household"
   const [formOpen, setFormOpen] = useState(() => savedWizard.formOpen);
+  // The example Your household started from, named at the top of the form
+  const [startFrom, setStartFrom] = useState(() => savedWizard.startFrom);
   const form = useCollapse(formOpen);
   // More details, closed at first; kept between tab switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
@@ -347,10 +349,11 @@ function HouseholdCalculator({
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
+    savedWizard.startFrom = startFrom;
     savedWizard.formOpen = formOpen;
     savedWizard.moreOpen = moreOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, formOpen, moreOpen, submitted]);
+  }, [inputs, presetId, startFrom, formOpen, moreOpen, submitted]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
@@ -391,6 +394,7 @@ function HouseholdCalculator({
     if (!preset) return;
     const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
     setInputs(next);
+    setStartFrom(null);
     setPresetId(preset.id);
     // The form closes; the result (or, for an answer not precomputed, its
     // progress) is scrolled to once shown
@@ -446,10 +450,23 @@ function HouseholdCalculator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
 
-  // "Your household" opens or closes the form with the answers shown: your
-  // own, or, under an example, the example's, to change one and press
-  // Calculate. The example stays chosen until an answer is changed.
-  const chooseYours = () => setFormOpen((open) => !open);
+  // "Your household" is chosen as the examples are, and opens the form.
+  // From an example it starts from that example's answers (named at the
+  // top of the form): the example's result goes at once, and Calculate
+  // gives Your household's own. Otherwise it is your last answers, or the
+  // typical ones. Chosen already, it opens or closes the form.
+  const chooseYours = () => {
+    if (presetId === null) {
+      setFormOpen((open) => !open);
+      return;
+    }
+    setStartFrom(activePreset?.short ?? activePreset?.label ?? null);
+    setPresetId(null);
+    setSubmitted(null);
+    setFormOpen(true);
+  };
+  // Your household is the one chosen: its form open, or its result shown
+  const yoursSelected = presetId === null && (formOpen || submitted !== null);
   // Your own household's change, on its card, once calculated and unedited
   const yoursChange =
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
@@ -778,12 +795,13 @@ function HouseholdCalculator({
         yoursChange={yoursChange}
         year={year}
         chosen={presetId !== null || formOpen || submitted !== null}
+        yoursSelected={yoursSelected}
       />
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a
             header, then the questions in sections */}
         {form.mounted && (
-        <div id={FORM_PANEL_ID} className={`expander-body household-form-panel ${form.expanded ? "is-expanded" : ""}`}>
+        <div id={FORM_PANEL_ID} className={`expander-body household-form-panel ${form.expanded ? "is-expanded" : ""}`} data-open={formOpen}>
         <div className="expander-inner">
         <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
@@ -793,6 +811,11 @@ function HouseholdCalculator({
                 Your household
               </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
+              {startFrom && (
+                <p className="household-start-from">
+                  Starting from: <strong>{startFrom}</strong>. Change anything, then Calculate.
+                </p>
+              )}
             </div>
             {/* Always there: with an example's answers unedited it
                 calculates them again */}

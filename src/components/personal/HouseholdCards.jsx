@@ -11,7 +11,7 @@ import {
   KeyRound,
   UsersRound,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { POLICIES } from "../../utils/policies";
 import { POLICY_COLORS_BY_KEY } from "../../utils/policyConfig";
 import { fiscalYearTick } from "../../utils/chartTheme";
@@ -131,6 +131,8 @@ function Sparkline({ series, year }) {
  * @param {Object|null} props.presets - presetChanges' map, or null to show no figures
  * @param {number|null} props.yoursChange - Your household's change, once calculated
  * @param {number} props.year
+ * @param {boolean} [props.yoursSelected] - Your household is the one chosen
+ *   (its form open, or its result shown)
  * @param {boolean} [props.chosen] - A household has been chosen: the cards
  *   fold into a strip of chips, the full grid a "Show all households" away
  */
@@ -145,8 +147,8 @@ export default function HouseholdCards({
   yoursChange = null,
   year,
   chosen = false,
+  yoursSelected = false,
 }) {
-  const yoursSelected = value === null && formOpen;
   const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
@@ -180,7 +182,7 @@ export default function HouseholdCards({
         value={value}
         presets={presets}
         yoursChange={yoursChange}
-        yoursSelected={value === null}
+        yoursSelected={yoursSelected}
         formOpen={formOpen}
         formId={formId}
         year={year}
@@ -198,9 +200,9 @@ export default function HouseholdCards({
       <div className="household-cards-grid" id="household-cards-grid">
         <button
           type="button"
-          className={`household-card is-yours ${yoursSelected ? "is-selected" : ""}`.trim()}
+          className={`household-card is-yours ${yoursSelected ? "is-selected" : ""} ${formOpen ? "is-open" : ""}`.replace(/\s+/g, " ").trim()}
           style={{ "--i": 0 }}
-          aria-expanded={formOpen}
+          aria-pressed={yoursSelected}
           aria-controls={formId}
           onClick={() => choose(onYours)}
         >
@@ -208,8 +210,15 @@ export default function HouseholdCards({
             <House size={22} strokeWidth={1.8} />
           </span>
           <span className="household-card-name">Your household</span>
-          {/* After the name, so the card's name starts with it */}
-          <span className="household-card-badge">Start here</span>
+          {/* After the name, so the card's name starts with it: a tick once
+              chosen, as on the examples, else "Start here" */}
+          {yoursSelected ? (
+            <span className="household-card-check" aria-hidden="true">
+              <Check size={14} strokeWidth={2.6} />
+            </span>
+          ) : (
+            <span className="household-card-badge">Start here</span>
+          )}
           {Number.isFinite(yoursChange) ? (
             <span className="household-card-result">
               <span className={`household-card-figure ${tone(yoursChange)}`}>
@@ -285,40 +294,32 @@ export default function HouseholdCards({
 
 /**
  * The cards folded: a chip for each card, in the cards' order and grid,
- * each its icon, a short name and its change, the chosen one in its measure's colour with a tick. "Your
- * household" comes first, a button that opens or closes the form as its
- * card does; the examples are a listbox: the arrow keys (and Home, End)
- * move between them, Enter or Space chooses one, a click chooses it at
- * once. Scrolls sideways on a phone, a chip at a time.
+ * each its icon, a short name and its change, the chosen one in its
+ * colour with a tick. One listbox, Your household first (choosing it
+ * opens the form, which it controls; choosing it again while chosen
+ * closes or reopens the form): the arrow keys (and Home, End) move between
+ * chips, Enter or Space chooses one, a click chooses it at once.
  */
-function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formOpen, formId, year, shown, onYours, onChoose }) {
-  const items = examples.map((example) => ({
-    id: example.id,
-    label: example.label,
-    short: example.short ?? example.label,
-    Icon: EXAMPLE_ICONS[example.icon] ?? House,
-    change: presets ? (cardFigures(example, presets[example.id], year)?.change ?? null) : null,
-    accent: POLICY_COLORS_BY_KEY[example.measure],
-  }));
-  const selected = items.findIndex((item) => item.id === value);
+function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
+  const items = [
+    { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
+    ...examples.map((example) => ({
+      id: example.id,
+      label: example.label,
+      short: example.short ?? example.label,
+      Icon: EXAMPLE_ICONS[example.icon] ?? House,
+      change: presets ? (cardFigures(example, presets[example.id], year)?.change ?? null) : null,
+      accent: POLICY_COLORS_BY_KEY[example.measure],
+    })),
+  ];
+  const selected = yoursSelected ? 0 : items.findIndex((item) => item.id !== null && item.id === value);
   // The chip Tab lands on: the chosen one, until the arrow keys move on
   // (a new choice starts from it again)
   const [moved, setMoved] = useState({ from: selected, index: null });
   const focus = moved.from === selected && moved.index !== null ? moved.index : Math.max(0, selected);
   const setFocus = (index) => setMoved({ from: selected, index });
   const refs = useRef([]);
-  // The chosen chip is brought into the strip when it scrolls sideways (the
-  // strip only: never the page)
-  useEffect(() => {
-    if (selected < 0) return;
-    const chip = refs.current[selected];
-    const strip = chip?.closest(".household-strip");
-    if (!shown || !strip || strip.scrollWidth <= strip.clientWidth) return;
-    const left = chip.offsetLeft - strip.offsetLeft;
-    if (left < strip.scrollLeft || left + chip.offsetWidth > strip.scrollLeft + strip.clientWidth) {
-      strip.scrollLeft = Math.max(0, left - 24);
-    }
-  }, [selected, shown]);
+  const activate = (item) => (item.id === null ? onYours() : onChoose(item.id));
   const onKeyDown = (event) => {
     const last = items.length - 1;
     const next = {
@@ -335,63 +336,55 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       refs.current[next]?.focus();
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onChoose(items[focus].id);
+      activate(items[focus]);
     }
   };
   const figureText = (change) =>
     Number.isFinite(change) ? (Math.round(change) === 0 ? "No change" : signedMoney(change)) : null;
-  const yoursFigure = figureText(yoursChange);
   return (
     <div className={`household-strip-fold ${shown ? "is-open" : ""}`.trim()} aria-hidden={!shown || undefined} inert={!shown || undefined}>
       <div className="household-strip-fold-inner">
-        <div className="household-strip">
-          <button
-            type="button"
-            className={`household-chip is-yours ${yoursSelected ? "is-selected" : ""}`.trim()}
-            aria-expanded={formOpen}
-            aria-controls={formId}
-            title="Your household"
-            style={{ "--i": 0 }}
-            onClick={onYours}
-          >
-            <span className="household-chip-icon" aria-hidden="true">
-              {yoursSelected ? <Check size={13} strokeWidth={2.6} /> : <House size={14} strokeWidth={1.9} />}
-            </span>
-            <span className="household-chip-name">Your household</span>
-            {yoursFigure && <span className={`household-chip-figure ${tone(yoursChange)}`}>{yoursFigure}</span>}
-          </button>
-          <ul className="household-strip-list" role="listbox" aria-label="Example households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
-            {items.map((item, index) => {
-              const isSelected = index === selected;
-              const figure = figureText(item.change);
-              return (
-                <li
-                  key={item.id}
-                  ref={(node) => {
-                    refs.current[index] = node;
-                  }}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-label={figure ? `${item.label}, ${figure}${figure === "No change" ? "" : " a year"}` : item.label}
-                  tabIndex={index === focus ? 0 : -1}
-                  className="household-chip"
-                  title={item.label}
-                  style={{ "--card-accent": item.accent, "--i": index + 1 }}
-                  onClick={() => {
-                    setFocus(index);
-                    onChoose(item.id);
-                  }}
-                >
-                  <span className="household-chip-icon" aria-hidden="true">
-                    {isSelected ? <Check size={13} strokeWidth={2.6} /> : <item.Icon size={14} strokeWidth={1.9} />}
-                  </span>
-                  <span className="household-chip-name">{item.short}</span>
-                  {figure && <span className={`household-chip-figure ${tone(item.change)}`}>{figure}</span>}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <ul className="household-strip" role="listbox" aria-label="Households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
+          {items.map((item, index) => {
+            const isSelected = index === selected;
+            const figure = figureText(item.change);
+            return (
+              <li
+                key={item.id ?? "yours"}
+                ref={(node) => {
+                  refs.current[index] = node;
+                }}
+                role="option"
+                aria-selected={isSelected}
+                aria-controls={item.id === null ? formId : undefined}
+                aria-label={figure ? `${item.label}, ${figure}${figure === "No change" ? "" : " a year"}` : item.label}
+                tabIndex={index === focus ? 0 : -1}
+                className={`household-chip ${item.id === null ? "is-yours" : ""}`.trim()}
+                title={item.label}
+                style={item.accent ? { "--card-accent": item.accent, "--i": index } : { "--i": index }}
+                onClick={() => {
+                  setFocus(index);
+                  activate(item);
+                }}
+              >
+                <span className="household-chip-icon" aria-hidden="true">
+                  {isSelected ? <Check size={13} strokeWidth={2.6} /> : <item.Icon size={14} strokeWidth={1.9} />}
+                </span>
+                <span className="household-chip-name">
+                  {item.id === null ? (
+                    <>
+                      <span className="household-chip-long">Your household</span>
+                      <span className="household-chip-short">Yours</span>
+                    </>
+                  ) : (
+                    item.short
+                  )}
+                </span>
+                {figure && <span className={`household-chip-figure ${tone(item.change)}`}>{figure}</span>}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
