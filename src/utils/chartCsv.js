@@ -116,38 +116,6 @@ export function decileCsv(data, policyNames, { kind, year }) {
   });
 }
 
-/** The units line of an example household's CSV: what it holds and who. */
-function householdUnits(household) {
-  return `£ per year. ${household.label}: ${household.definition}`;
-}
-
-/** An example household's net income before and after, by its income. */
-export function householdIncomeCsv(data, { year, household }) {
-  return buildChartCsv({
-    title: `Household net income, ${fiscalYear(year)}`,
-    units: householdUnits(household),
-    columns: [
-      { key: "income", label: household.x_label, decimals: 0 },
-      { key: "baseline", label: "Net income before the selected policies", decimals: 2 },
-      { key: "reform", label: "Net income after the selected policies", decimals: 2 },
-    ],
-    rows: data,
-  });
-}
-
-/** An example household's change in net income, by its income. */
-export function householdChangeCsv(data, { year, household }) {
-  return buildChartCsv({
-    title: `Net income change, ${fiscalYear(year)}`,
-    units: householdUnits(household),
-    columns: [
-      { key: "income", label: household.x_label, decimals: 0 },
-      { key: "difference", label: "Change in net income", decimals: 2 },
-    ],
-    rows: data,
-  });
-}
-
 /**
  * A year-specific chart's CSV for a year not yet published: the title,
  * units and header, then a "# Not yet published" line, and no rows.

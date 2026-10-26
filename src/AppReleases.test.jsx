@@ -29,13 +29,17 @@ vi.mock("./components/WaterfallChart", () => ({
 }));
 vi.mock("./components/ConstituencyMap", () => ({ default: () => <div data-testid="constituency-view" /> }));
 vi.mock("./components/HouseholdScatter", () => ({ default: () => <div data-testid="scatter-view" /> }));
-vi.mock("./components/EmploymentIncomeChart", () => ({ default: () => <div data-testid="income-curve-view" /> }));
-vi.mock("./components/EmploymentIncomeDiffChart", () => ({ default: () => <div data-testid="income-change-view" /> }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => <div data-testid="household-view" /> }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => <div data-testid="obr-foot-2026" /> }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => <div data-testid="young-view" />, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
-vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
+vi.mock("./components/PolicyCards", () => ({ default: () => <div data-testid="policies-view" /> }));
+// The Pre-measures forecast, and CurrentLawSection, which Population
+// impact's Living standards sub-tab shows beside the decile charts (#185)
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({
+  default: () => <div data-testid="outlook-view" />,
+  CurrentLawSection: () => <div data-testid="current-law" />,
+}));
 
 /** A fetch stand-in serving this Budget's fixture, recording every URL. */
 function recordingFetch(options) {
@@ -215,14 +219,14 @@ describe("the budget selector", () => {
     expect(document.getElementById("coverage")).toHaveTextContent("The scorecard sorts each of the event's");
     expect(screen.getByRole("button", { name: "Compare with the OBR's costing" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Measures not modelled" })).toBeInTheDocument();
-    for (const id of ["household-view", "living-view", "methodology-view", "young-view", "constituency-view", "scatter-view", "income-curve-view", "income-change-view", "obr-foot-2026"]) {
+    for (const id of ["household-view", "outlook-view", "policies-view", "methodology-view", "young-view", "constituency-view", "scatter-view", "current-law", "obr-foot-2026"]) {
       expect(screen.queryByTestId(id)).toBeNull();
     }
     expect(container.querySelector(".app")).toHaveClass("historical-release");
     expect(within(screen.getByRole("link", { name: "PolicyEngine scorecard" }).parentElement).getByRole("link")).toHaveAttribute("href", SCORECARD_URL);
     await choose(DEFAULT_RELEASE);
     expect(param(RELEASE_PARAM)).toBeNull();
-    expect(tabs()).toEqual(["Population impact", "Household impact", "Living standards", "Methodology"]);
+    expect(tabs()).toEqual(["Population impact", "Household impact", "Pre-measures forecast", "Policies", "Methodology"]);
     // The same page, but for the ids React generates afresh on a new mount
     const ids = (html) => html.replace(/_r_[0-9a-z]+_/g, "_r_");
     expect(ids(container.innerHTML)).toBe(ids(before));
@@ -251,7 +255,7 @@ describe("the budget selector", () => {
     const app = document.querySelector(".app");
     expect(band).not.toHaveClass("is-hidden");
     expect(app).toHaveAttribute("data-release-pill", "shown");
-    for (const name of ["Household impact", "Living standards", "Methodology"]) {
+    for (const name of ["Household impact", "Pre-measures forecast", "Policies", "Methodology"]) {
       fireEvent.click(screen.getByRole("tab", { name }));
       expect(band).toHaveClass("is-hidden");
       expect(band).toHaveAttribute("aria-hidden", "true");
@@ -382,6 +386,12 @@ describe("the budget selector", () => {
             expect(calls.every((url) => url.startsWith("/data/") && !url.startsWith("/data/releases/"))).toBe(true);
           } else {
             expect(calls.every((url) => url.startsWith(`${dataRoot("", target)}/`))).toBe(true);
+          }
+          // This Budget's decile charts are on Population impact's Living
+          // standards sub-tab (#185); a past event's are on its one view
+          if (target === DEFAULT_RELEASE) {
+            fireEvent.click(within(screen.getByRole("tablist", { name: "Population impact sections" })).getByRole("tab", { name: "Living standards" }));
+            await screen.findByTestId("distributional-figures");
           }
           const expected = target === DEFAULT_RELEASE ? DISPLAYABLE_IDS : events.find(({ id }) => id === target.id).ids;
           expect(shownIds()).toEqual(new Set(expected));

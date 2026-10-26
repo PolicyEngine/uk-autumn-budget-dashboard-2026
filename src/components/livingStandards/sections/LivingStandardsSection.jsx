@@ -57,6 +57,9 @@ function describeMetric(id, label) {
 }
 
 /** The Median income view: card parts for the Incomes over time card. */
+// "median", "ahc" -> "median_equivalised_income_ahc"
+const metricId = (avg, housing) => `${avg}_equivalised_income${housing === "ahc" ? "_ahc" : ""}`;
+
 export default function useHouseholdIncomeView(data, range = null, setRange = null) {
   const living = data.living_standards;
   const meta = data.meta;
@@ -162,18 +165,29 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
         {range && setRange && rangeYears(data).length > 2 && (
           <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
         )}
+        {/* The metric as two choices, the average then housing costs (worded
+            as every housing-costs pill on the dashboard) */}
         <PillSelect
           variant="light"
-          prefix="Measure"
-          name="Income metric"
-          value={metric}
-          onChange={setMetric}
-          options={metricIds.map((id) => ({
-            value: id,
-            label: living.metrics[id],
-            // The pill shows "Median (BHC)"; the list keeps the full name
-            badge: shortLabel(living.metrics[id]),
-          }))}
+          prefix="Average"
+          name="Average"
+          value={metric.startsWith("mean") ? "mean" : "median"}
+          onChange={(avg) => setMetric(metricId(avg, metric.endsWith("_ahc") ? "ahc" : "bhc"))}
+          options={[
+            { value: "median", label: "Median" },
+            { value: "mean", label: "Mean" },
+          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(o.value, metric.endsWith("_ahc") ? "ahc" : "bhc")) }))}
+        />
+        <PillSelect
+          variant="light"
+          prefix="Housing costs"
+          name="Housing costs"
+          value={metric.endsWith("_ahc") ? "ahc" : "bhc"}
+          onChange={(h) => setMetric(metricId(metric.startsWith("mean") ? "mean" : "median", h))}
+          options={[
+            { value: "bhc", label: "Before housing costs", badge: "Before" },
+            { value: "ahc", label: "After housing costs", badge: "After" },
+          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(metric.startsWith("mean") ? "mean" : "median", o.value)) }))}
         />
         <PillSelect
           variant="light"

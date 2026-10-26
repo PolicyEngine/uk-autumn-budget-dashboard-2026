@@ -117,14 +117,15 @@ export function changeByYear(rows, policies, selected, years) {
 
 /**
  * Ticks from a nice step covering [min, max] and zero: steps of 25, 50,
- * 100, 200, 250, 500, 1,000 or 2,500, about four to six of them.
+ * 100, 200, 250, 500, 1,000 or 2,500, at most `maxSteps` intervals (five
+ * by default, so up to six ticks).
  */
-export function niceRange(min, max) {
+export function niceRange(min, max, { maxSteps = 5 } = {}) {
   const low = Math.min(0, min);
   const high = Math.max(0, max);
   const span = Math.max(high - low, 1);
   const steps = [25, 50, 100, 200, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => span / candidate <= 5) ?? 5000;
+  const step = steps.find((candidate) => span / candidate <= maxSteps) ?? 5000;
   const bottom = Math.floor(low / step) * step;
   const top = Math.ceil(high / step) * step;
   const ticks = [];
@@ -149,24 +150,27 @@ export const SINGLE_AGE_FIRST = 10;
 export const SINGLE_AGE_LAST = 40;
 
 /**
- * One bar per single year of age, SINGLE_AGE_FIRST to SINGLE_AGE_LAST: the
- * selected policies' mean changes added up (`netChange`). A bar is null
- * where any selected policy has no row for the age (the generator leaves
- * out an age with too few survey records) or a thin one.
+ * One bar per single year of age, `first` to `last` (SINGLE_AGE_FIRST to
+ * SINGLE_AGE_LAST unless given; the Pensioners sub-tab asks for older
+ * ages): the selected policies' mean changes added up (`netChange`). A bar
+ * is null where any selected policy has no row for the age (the generator
+ * leaves out an age with too few survey records) or a thin one.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string}>} policies - Every policy
  * @param {Array<string>} selected - Selected policy ids
  * @param {number} year
+ * @param {number} [first]
+ * @param {number} [last]
  */
-export function singleAgeBars(rows, policies, selected, year) {
+export function singleAgeBars(rows, policies, selected, year, first = SINGLE_AGE_FIRST, last = SINGLE_AGE_LAST) {
   const byKey = new Map();
   for (const row of rows ?? []) {
     if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
   }
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const bars = [];
-  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+  for (let age = first; age <= last; age += 1) {
     let net = 0;
     let complete = chosen.length > 0 && chosen.length === selected.length;
     const parts = [];
@@ -188,7 +192,7 @@ export function singleAgeBars(rows, policies, selected, year) {
     parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     // Each policy's own change under its series key too, for the stacked bars
     const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
-    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
+    bars.push({ age, label: singleAgeKey(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
   }
   return bars;
 }

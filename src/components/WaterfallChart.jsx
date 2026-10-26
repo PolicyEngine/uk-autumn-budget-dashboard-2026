@@ -33,12 +33,19 @@ import {
   legendWrapperStyle,
   axisWidth,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import ChartMoreInfo from "./ChartMoreInfo";
+import {
+  decileMembership,
+  legendItems as membershipItems,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
 // The published catalogue supplies the shared measure order and colours.
 
@@ -51,9 +58,9 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
-// `years`, when given, is a past event's own: the legend counts its rows
-// in place of the dashboard's years (isDisplayYear)
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, years }) {
+// `pastEvent`: the chart is a past fiscal event's (#107), so its "More info"
+// gives no £0 measure a reason written for this Budget's (zeroReason)
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, pastEvent = false }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -103,26 +110,15 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
 
-  // The measures with a non-zero effect in any shown year, not just this
-  // one: the legend (and so the plot's height) stays the same from year to
-  // year, so a year change or Play tweens the bars instead of rescaling
-  const activePolicies = useMemo(() => {
-    const ids = new Set(
-      (rawData ?? [])
-        .filter(
-          (row) =>
-            row.decile !== "all" &&
-            (years ? years.includes(Number(row.year)) : isDisplayYear(row.year)) &&
-            selectedPolicies.includes(row.reform_id) &&
-            isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
-            Math.abs(parseFloat(row.avg_change)) > 0.01,
-        )
-        .map((row) => row.reform_id),
-    );
-    return ALL_POLICY_NAMES.filter((name) =>
-      ids.has(POLICIES.find((policy) => policy.seriesKey === name)?.id),
-    );
-  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue, years]);
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect on any household this year is greyed out, and the note under
+  // the chart says why (legendMembership)
+  const members = useMemo(
+    () => decileMembership(catalogue, rawData, "avg_change", selectedPolicies, selectedYear),
+    [catalogue, rawData, selectedPolicies, selectedYear],
+  );
+  const activePolicies = drawnNames(members);
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -163,7 +159,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       });
     });
 
-    return zeroBasedAxis([minValue, maxValue]);
+    // Symmetric about zero when deciles gain and lose (divergingAxis)
+    return divergingAxis([minValue, maxValue]);
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
@@ -203,12 +200,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...activePolicies.map((name) => ({
-      color: POLICY_COLORS[name],
-      label: bySeriesKey.get(name)?.label ?? name,
-      type: "rect",
-      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
-    })),
+    ...exportLegendItems(members, catalogue),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
@@ -319,7 +311,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 wrapperStyle={legendWrapperStyle(narrow)}
                 content={
                   <GroupedLegend
-                    names={activePolicies}
+                    items={membershipItems(members, catalogue)}
                     netLabel={activePolicies.length > 1 ? "Net change" : undefined}
                   />
                 }
@@ -372,6 +364,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           />
         )}
       </div>
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} pastEvent={pastEvent} />
+        </div>
+      )}
     </div>
   );
 }

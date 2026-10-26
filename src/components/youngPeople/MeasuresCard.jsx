@@ -29,19 +29,33 @@ export const groupsFor = (band) => [
 /** £ a year with a sign, the minus a true minus: "+£6", "−£4". */
 const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(value)}`);
 
+/** £ a year, the minus a true minus and no plus: "£22", "−£196". */
+export const money = (value) => (Math.round(value) < 0 ? `\u2212${pounds(-value)}` : pounds(value));
+
+/**
+ * At most four intervals on the £ axis (−£200, −£100, £0, £100), so the
+ * tick labels never run together in the card's narrow plot.
+ */
+export const DUMBBELL_MAX_STEPS = 4;
+
 /**
  * Each policy as a row: a hollow ring for all ages and a filled dot for the
  * chosen group on one £ axis (zero line drawn), joined by a thin line
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
-function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
+export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height }) {
   const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
   return (
-    <div className="measure-dumbbell" role="table" aria-label={`Effect of each policy, ${yearLabel}`}>
+    <div
+      className="measure-dumbbell"
+      role="table"
+      aria-label={`Effect of each policy, ${yearLabel}`}
+      style={height ? { "--md-height": `${height}px` } : undefined}
+    >
       {rows.map((row) => {
         const gap = row.group - row.all;
         const close = Math.abs(gap) < 1;
@@ -70,9 +84,9 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
             onBlur={() => setActive(null)}
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
-            <span className="measure-dumbbell-name" role="rowheader">
+            <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
               <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
-              {row.name}
+              <span className="measure-dumbbell-label">{row.name}</span>
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
@@ -85,7 +99,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
               <span className="measure-dumbbell-dot" style={{ left: pos(row.group) }} />
             </span>
             <span className="measure-dumbbell-values" role="cell">
-              <strong>{signedPounds(row.group)}</strong>
+              <strong>{money(row.group)}</strong>
               <span className={`measure-dumbbell-gap ${tone}`}>
                 {close ? "≈ all ages" : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs all ages`}
               </span>
@@ -96,27 +110,31 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
                   {row.name}, {yearLabel}
                 </strong>
                 <span>
-                  {groupName}: {signedPounds(row.group)} a year
+                  {groupName}: {money(row.group)} a year
                 </span>
-                <span>All ages: {signedPounds(row.all)} a year</span>
+                <span>All ages: {money(row.all)} a year</span>
                 {ratioText && <span>{ratioText}</span>}
               </span>
             )}
           </div>
         );
       })}
-      <div className="measure-dumbbell-row measure-dumbbell-axis" aria-hidden="true">
-        <span className="measure-dumbbell-name" />
-        <span className="measure-dumbbell-plot">
-          {ticks.map((tick) => (
-            <span key={tick} className="measure-dumbbell-tick" style={{ left: pos(tick) }}>
-              {signedPounds(tick)}
-            </span>
-          ))}
-        </span>
-        <span className="measure-dumbbell-values" />
+      {/* The ticks, then the unit: the same height as a Recharts x axis
+          (X_AXIS_HEIGHT), so in a pair the axis titles line up */}
+      <div className="measure-dumbbell-axis" aria-hidden="true">
+        <div className="measure-dumbbell-row">
+          <span className="measure-dumbbell-name" />
+          <span className="measure-dumbbell-plot">
+            {ticks.map((tick) => (
+              <span key={tick} className="measure-dumbbell-tick" style={{ left: pos(tick) }}>
+                {money(tick)}
+              </span>
+            ))}
+          </span>
+          <span className="measure-dumbbell-values" />
+        </div>
+        <p className="measure-dumbbell-unit">{UNIT}</p>
       </div>
-      <p className="measure-dumbbell-unit">{UNIT}</p>
     </div>
   );
 }
@@ -151,7 +169,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     band,
   );
   const values = shown.flatMap((point) => [point.group, point.all]);
-  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
+  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values), {
+    maxSteps: DUMBBELL_MAX_STEPS,
+  });
 
   const title = `Effect of each policy, ${yearLabel}`;
   const exportOptions = {
@@ -225,6 +245,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             ticks={ticks}
             groupName={GROUPS[0].label.replace(/^Aged /, "")}
             yearLabel={yearLabel}
+            height={height}
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
@@ -250,9 +271,12 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-      {published && noEffectItems.length > 0 && (
-        <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />
+      {/* Notes and More info in the card's footer row, level across a pair */}
+      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+        <div className="chart-footer">
+          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
+          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+        </div>
       )}
     </div>
   );

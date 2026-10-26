@@ -735,12 +735,39 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
     assert reformed == pytest.approx(1_325.97, abs=PENNY)
 
 
+# The blocks of page source that may name more than one candidate measure,
+# until the publication carries their text (#185 on #104). None decides which
+# measures exist or how they are named, ordered or coloured, and each steps
+# aside for the published measure when its words may no longer fit it. The
+# frontend guard (src/utils/measureCatalogue.test.jsx) lists the same blocks
+# with the tests that hold each:
+# - POLICY_DETAILS: card text, used only for a measure described exactly as
+#   its entry was written for;
+# - an example's measure and measures: its card names them only while every
+#   one is published;
+# - SPENDING_MEASURES: those whose gain scales with fuel and electricity
+#   spending, for one line of text, which a measure not published can only
+#   make show less often.
+CARD_TEXT_BLOCKS = {
+    "utils/policyDetails.js": [
+        r"(?s)export const POLICY_DETAILS = \[.*?\n\];"
+    ],
+    "utils/householdExamples.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
+    "utils/youngPersonPresets.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
+    "components/personal/SingleYearResults.jsx": [
+        r"export const SPENDING_MEASURES = \[.*\];"
+    ],
+}
+
+
 def test_the_page_keeps_no_measure_list_of_its_own():
     """The page lists, names and describes the measures from the published
     receipts (#104), which generation writes from this registry
     (test_generated_receipts_carry_the_registry_metadata). A second list in
     the page's source could disagree with them, so there is none: no page
-    file outside the tests names more than one candidate measure."""
+    file outside the tests names more than one candidate measure, outside
+    the blocks in CARD_TEXT_BLOCKS."""
+    import re
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1] / "src"
@@ -752,10 +779,25 @@ def test_the_page_keeps_no_measure_list_of_its_own():
         if "test" in relative.parts or ".test." in path.name:
             continue
         text = path.read_text()
+        for block in CARD_TEXT_BLOCKS.get(relative.as_posix(), []):
+            text = re.sub(block, "", text)
         named = [m for m in CANDIDATES if f'"{m}"' in text]
         if len(named) > 1:
             lists[relative.as_posix()] = named
     assert lists == {}
+
+
+def test_each_card_text_block_is_still_there():
+    """An exemption names a block that exists, so it cannot outlive its
+    block or quietly cover another."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src"
+    for relative, blocks in CARD_TEXT_BLOCKS.items():
+        text = (root / relative).read_text()
+        for block in blocks:
+            assert re.search(block, text), (relative, block)
 
 
 def test_the_methodology_note_is_for_a_registered_measure():

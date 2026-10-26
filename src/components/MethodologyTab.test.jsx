@@ -3,7 +3,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
 import { measureModelling, MODELLING_NOTE, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -79,7 +78,7 @@ describe("MethodologyTab", () => {
     });
   });
 
-  it("shows each measure's modelling and the example households", () => {
+  it("shows each measure's modelling", () => {
     renderTab();
 
     const [table, unavailable] = screen.getAllByRole("table");
@@ -96,11 +95,6 @@ describe("MethodologyTab", () => {
       // Every measure is one the charts colour, by the same name
       expect(POLICY_COLORS[measure.seriesKey]).toBeDefined();
       expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
-    }
-
-    const panel = document.getElementById(METHOD_SECTIONS.population);
-    for (const household of EXAMPLE_HOUSEHOLDS) {
-      expect(panel).toHaveTextContent(household.definition);
     }
   });
 
@@ -186,11 +180,13 @@ describe("MethodologyTab", () => {
   it("switches views from its links, in place", () => {
     const onShowTab = vi.fn();
     renderTab(onShowTab);
-    fireEvent.click(screen.getByRole("link", { name: "policy notes on Population impact" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard");
+    const notes = screen.getByRole("link", { name: "Policies tab" });
+    expect(notes).toHaveAttribute("href", "?tab=policies");
+    fireEvent.click(notes);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("living");
+    fireEvent.click(within(living).getByRole("link", { name: "Pre-measures forecast" }));
+    expect(onShowTab).toHaveBeenLastCalledWith("outlook");
     const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
