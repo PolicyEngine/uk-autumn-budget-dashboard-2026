@@ -786,6 +786,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
+          leading={!landing && (
+            // "About": opens the overview drawer (below)
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+          )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
           onChange={handleTabChange}
@@ -882,11 +886,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
-        {/* "About" on the window's edge, on every view but the landing
-            page: it opens the overview drawer */}
+        {/* The overview drawer, opened by the "About" pill in the tab row */}
         {!landing && (
           <>
-            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
             <OverviewDrawer
               open={overviewOpen}
               onClose={closeOverview}

@@ -30,8 +30,10 @@ export const TAB_ICONS = {
  *   page, whose boxes are the navigation there)
  * @param {boolean} [props.notch] - The chosen view has sub-tabs: its tab
  *   opens into their band below (SubTabs), with no rule between
+ * @param {React.ReactNode} [props.leading] - Before the tabs, at the row's
+ *   start, outside its scrolling (App's "About" pill)
  */
-function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden: barHidden = false }) {
+function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden: barHidden = false, leading = null }) {
   const refs = useRef({});
   const rowRef = useRef(null);
   // The chosen tab's tint and underline, sliding from tab to tab
@@ -39,9 +41,16 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
   // The chosen tab's left edge in the page column, for the sub-tab band
   // below to start under it (SubTabs.css, --view-tab-x)
   useEffect(() => {
-    const scrollLeft = rowRef.current?.scrollLeft ?? 0;
-    document.documentElement.style.setProperty("--view-tab-x", `${Math.max(0, indicator.x - scrollLeft)}px`);
-  }, [indicator.x]);
+    const row = rowRef.current;
+    const scrollLeft = row?.scrollLeft ?? 0;
+    // The row starts after anything leading it: its distance from the
+    // start of the bar's content
+    const bar = row?.parentElement;
+    const lead = row && bar
+      ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
+      : 0;
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.max(0, lead + indicator.x - scrollLeft)}px`);
+  }, [indicator.x, leading]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
 
@@ -95,7 +104,8 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
   };
 
   return (
-    <div className={`view-tabs-bar${notch ? " has-notch" : ""}`} hidden={barHidden}>
+    <div className={`view-tabs-bar${notch ? " has-notch" : ""}${leading ? " has-leading" : ""}`} hidden={barHidden}>
+      {leading}
       <div
         ref={rowRef}
         className={`view-tabs${hidden.start ? " fade-start" : ""}${hidden.end ? " fade-end" : ""}`}
