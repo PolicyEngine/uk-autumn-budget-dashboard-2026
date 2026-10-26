@@ -71,30 +71,59 @@ const seatPath = (container, code) =>
 describe("ConstituencyMap views", () => {
   it("offers Hex map, Map and Table, opening on the hex map", async () => {
     const { container } = await renderMap();
-    const switcher = screen.getByRole("group", { name: "Show constituencies as" });
-    const buttons = within(switcher).getAllByRole("button");
-    expect(buttons.map((button) => button.textContent)).toEqual(["Hex map", "Map", "Table"]);
-    expect(within(switcher).getByRole("button", { name: "Hex map" })).toHaveAttribute(
-      "aria-pressed",
+    // The dashboard's shared segmented control
+    const switcher = screen.getByRole("radiogroup", { name: "Show constituencies as" });
+    const radios = within(switcher).getAllByRole("radio");
+    expect(radios.map((radio) => radio.textContent)).toEqual(["Hex map", "Map", "Table"]);
+    expect(within(switcher).getByRole("radio", { name: "Hex map" })).toHaveAttribute(
+      "aria-checked",
       "true",
     );
     expect(mapSvg(container)).toHaveAttribute("data-view", "hex");
     expect(window.location.search).toBe("");
 
-    fireEvent.click(within(switcher).getByRole("button", { name: "Map" }));
+    fireEvent.click(within(switcher).getByRole("radio", { name: "Map" }));
     await waitFor(() => expect(mapSvg(container)).toHaveAttribute("data-view", "map"));
     expect(window.location.search).toBe("?map=map");
 
-    fireEvent.click(within(switcher).getByRole("button", { name: "Table" }));
+    fireEvent.click(within(switcher).getByRole("radio", { name: "Table" }));
     expect(window.location.search).toBe("?map=table");
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(container.querySelector(".map-content")).toHaveAttribute("hidden");
   });
 
+  it("keeps the same controls, in the same places, in every view", async () => {
+    const { container } = await renderMap();
+    const row = () =>
+      [...container.querySelector(".map-top-bar").children].map((child) => child.className);
+    const hex = row();
+    expect(hex).toEqual(["map-view-switch", "control-bar", "map-search-section"]);
+    for (const view of ["Map", "Table", "Hex map"]) {
+      fireEvent.click(screen.getByRole("radio", { name: view }));
+      expect(row()).toEqual(hex);
+      expect(screen.getAllByRole("searchbox")).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: /^Options:/ })).toHaveLength(1);
+    }
+  });
+
+  it("highlights the seats a key entry covers, and says how many", async () => {
+    const { container } = await renderMap();
+    const key = screen.getByRole("group", { name: "Key" });
+    const segment = key.querySelector('[data-key="cat:large_gain"]');
+    fireEvent.mouseEnter(segment);
+    const dimmed = CODES.filter((code) => seatPath(container, code).getAttribute("data-dim") === "true");
+    const lit = CODES.filter((code) => !dimmed.includes(code));
+    expect(lit.length).toBeGreaterThan(0);
+    expect(dimmed.length).toBeGreaterThan(0);
+    expect(within(key).getByText(`${lit.length} ${lit.length === 1 ? "seat" : "seats"}`)).toBeInTheDocument();
+    fireEvent.mouseLeave(segment);
+    expect(container.querySelector('path[data-dim="true"]')).toBeNull();
+  });
+
   it("opens the Table view from a link made for the old Rankings view", async () => {
     window.history.replaceState({}, "", "/?map=rankings");
     await renderMap();
-    expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Table" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
 
@@ -107,7 +136,7 @@ describe("ConstituencyMap views", () => {
     }
     // The same states as the boundary map draws
     const states = CODES.map((code) => seatPath(container, code).getAttribute("data-state"));
-    fireEvent.click(screen.getByRole("button", { name: "Map" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Map" }));
     await waitFor(() => expect(mapSvg(container)).toHaveAttribute("data-view", "map"));
     await waitFor(() =>
       expect(CODES.map((code) => seatPath(container, code).getAttribute("data-state"))).toEqual(
@@ -170,5 +199,24 @@ describe("ConstituencyMap views", () => {
     fireEvent.click(within(table).getByRole("button", { name: /Constituency/ }));
     const names = rows().map((row) => within(row).getByRole("rowheader").firstChild.textContent);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "en-GB")));
+  });
+});
+
+describe("constituencyInfo", () => {
+  it("says which dataset the seats come from, and the disclosure rules the generator applies", async () => {
+    const { constituencyInfo } = await import("./ConstituencyMap");
+    const base = { label: "Rail fares freeze", yearLabel: "2029-30", outcome: "relative_change" };
+    const local = constituencyInfo({ ...base, releaseKind: "local_area" });
+    const national = constituencyInfo({ ...base, releaseKind: "area_coded_national" });
+    expect(local.how[0]).toMatch(/local-area dataset/);
+    expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
+    const how = local.how.join(" ");
+    expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
+    expect(how).toMatch(/fewer than 30 effective survey households is approximate/);
+    expect(how).toMatch(/fewer than 10 survey households/);
+    expect(how).toMatch(/under 0.1% either way, a small change 0.1% to 1%, a large change 1% or more/);
+    expect(local.definitions.map((d) => d.term ?? d.ref)).toContain("Hex map");
+    // A release that routes nothing by area: what it shows, no method
+    expect(constituencyInfo({ ...base, notRouted: true }).how).toBeUndefined();
   });
 });

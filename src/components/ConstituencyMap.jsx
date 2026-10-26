@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
-import ControlBar from "./ControlBar";
-import PillSelect from "./PillSelect";
-import ViewSwitch from "./ViewSwitch";
+import ControlBar, { Segmented } from "./ControlBar";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { PE_MODEL_SOURCE } from "./InfoSections";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
 import {
@@ -28,19 +29,28 @@ import {
   formatGenerated,
 } from "../utils/geography/exportTable";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import { OUTCOME_LABELS } from "../utils/geography/format";
+import { OUTCOME_LABELS, formatFigure } from "../utils/geography/format";
 import {
   LEGEND_INSET,
   MAP_LEGEND_CLASS,
   appendStatusPatterns,
   drawMapLegend,
-  legendEntries,
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
   CATEGORY_COLOURS,
   DIRECTION_TEXT_COLOURS,
+  NO_DATA_FILL,
+  NO_DATA_STROKE,
+  WITHHELD_FILL,
+  approximateFill,
 } from "../utils/geography/palette";
+import {
+  CATEGORY_BREAKS,
+  CATEGORY_LABELS,
+  TOO_UNCERTAIN,
+  categoryRanges,
+} from "../utils/geography/classify";
 import { rowsFor } from "../utils/geography/rows";
 import {
   describeSeat,
@@ -61,10 +71,10 @@ import {
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
-import { CHART_COLOURS, useNarrowViewport } from "../utils/chartTheme";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
-import Tip from "./Tip";
+import Tip, { InfoTip } from "./Tip";
 
 /**
  * A hovered seat's tooltip rows from describeSeat's lines: the figure under
@@ -171,6 +181,59 @@ const exportDescription = (label, outcome) =>
   "few survey households; hatched ones are not published, to protect " +
   "survey respondents' confidentiality.";
 
+/**
+ * The card's "About this chart". Each rule is the generator's: the
+ * disclosure layer's defaults (policyengine.disclosure DisclosureSettings,
+ * which uk_budget_data.geography uses unchanged: min_sources 10,
+ * max_top_share 0.5, min_rest_share 0.1, approximate_below_n_eff 30,
+ * 1,000 bootstrap replicates, a 90% interval) and classify.js's breaks.
+ * `releaseKind` is the area routing's: which dataset the seats come from.
+ */
+export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted }) {
+  const shows =
+    `The average change in household net income in each of the 650 Westminster ` +
+    `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}. ` +
+    `Shown: ${label}.`;
+  if (notRouted) return { shows, sources: [PE_MODEL_SOURCE] };
+  const show = (text) => formatFigure(outcome, text, { signed: false });
+  const { small, large } = CATEGORY_BREAKS[outcome];
+  return {
+    shows,
+    how: [
+      releaseKind === "area_coded_national"
+        ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with constituency weights estimated for 2025; later years keep each household's 2025 split, scaled to that year's weights."
+        : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure averages its households, by weight.",
+      "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households, with their weights held fixed.",
+      `The colours use breaks fixed in advance: little change is under ${show(small)} either way, a small change ${show(small)} to ${show(large)}, a large change ${show(large)} or more. A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify, and drawn light grey.`,
+      "A figure resting on fewer than 30 effective survey households is approximate, and dotted.",
+      "A figure is not published, and hatched, when fewer than 10 survey households lie behind it, or when one or two households would make up too much of it.",
+    ],
+    definitions: [
+      { ref: "netIncome" },
+      {
+        term: "Hex map",
+        meaning:
+          "Each constituency drawn as one hexagon of the same size, placed roughly where it lies. It shows every seat equally, cities included; sizes and shapes are not geographic.",
+      },
+      { term: "Map", meaning: "Each constituency drawn with its own boundary, so large rural seats take up most of the map." },
+      { ref: "static" },
+    ],
+    caveats: [
+      "Holding the survey weights fixed leaves out some of the uncertainty, so the intervals understate it.",
+      "Constituency figures do not add up exactly to the regional ones, and may come from a different dataset.",
+    ],
+    sources: [
+      PE_MODEL_SOURCE,
+      { label: "2024 Westminster constituency boundaries (650 seats)" },
+      {
+        label: "Hex layout: Open Innovations, UK constituencies 2024 HexJSON (CC BY 4.0)",
+        href: "https://github.com/open-innovations/constituencies",
+      },
+    ],
+    method: { anchor: METHOD_ANCHORS.area, label: "How the figures by area are estimated" },
+  };
+}
+
 // The map's drawing area, in SVG units.
 const WIDTH = 800;
 const HEIGHT = 600;
@@ -272,54 +335,138 @@ export function seatGeometry(features, mode) {
   };
 }
 
+// The map key's entries that highlight seats on hover: the five
+// categories (a diverging ramp), too uncertain, and three statuses. Solid,
+// the reported status, is the default, so it has no entry.
+const RAMP = ["large_loss", "small_loss", "little_change", "small_gain", "large_gain"];
+const STATUS_ENTRIES = [
+  {
+    key: "kind:approximate",
+    label: "Approximate (few survey households)",
+    halves: [approximateFill("large_gain"), approximateFill("large_loss")],
+  },
+  { key: "kind:withheld", label: "Not published (confidential)", fill: WITHHELD_FILL },
+  { key: "kind:no-data", label: "No data", fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
+];
+
+/** Whether a seat's state matches a key entry ("cat:small_gain", "kind:withheld"). */
+export function matchesKey(state, key) {
+  const [type, value] = key.split(":");
+  if (type === "cat") return state?.category === value;
+  return (state?.kind ?? "no-data") === value;
+}
+
+/** How many seats match each key entry. */
+export function keyCounts(states) {
+  const counts = {};
+  const keys = [
+    ...RAMP.map((category) => `cat:${category}`),
+    `cat:${TOO_UNCERTAIN}`,
+    ...STATUS_ENTRIES.map((entry) => entry.key),
+  ];
+  for (const key of keys) counts[key] = 0;
+  for (const state of states?.values() ?? []) {
+    for (const key of keys) if (matchesKey(state, key)) counts[key] += 1;
+  }
+  return counts;
+}
+
+const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "seats"}`;
+
 /**
- * The map's key, beside the map on a wide card and under it on a narrow
- * one, never over it: the categories, then the status textures, from the
- * entries the exported map's own legend draws (legendEntries). The
- * textures are the map SVG's own patterns.
+ * The map's key, under the map: one diverging ramp from a large loss to a
+ * large gain with the fixed breaks under its joins, a grey swatch for too
+ * uncertain, and a row of the three status textures. Hovering or focusing
+ * an entry highlights the seats it covers (`onHighlight`) and gives their
+ * number. The textures are the map SVG's own patterns.
  */
-function MapKey({ outcome }) {
-  const { categories, tiers } = legendEntries(outcome);
+function MapKey({ outcome, counts, highlight, onHighlight }) {
+  const { small, large } = CATEGORY_BREAKS[outcome];
+  const show = (text) => formatFigure(outcome, text, { signed: false });
+  const ticks = [`\u2212${show(large)}`, `\u2212${show(small)}`, `+${show(small)}`, `+${show(large)}`];
+  const ranges = categoryRanges(outcome);
+  const hovered = highlight ? counts[highlight] : null;
+  const entryProps = (key, label) => ({
+    type: "button",
+    "data-key": key,
+    "aria-label": `${label}: ${seatCount(counts[key] ?? 0)}`,
+    "aria-pressed": highlight === key,
+    onMouseEnter: () => onHighlight(key),
+    onMouseLeave: () => onHighlight(null),
+    onFocus: () => onHighlight(key),
+    onBlur: () => onHighlight(null),
+  });
   const swatch = (entry) => (
     <svg className="map-key-swatch" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
       {entry.halves ? (
-        entry.halves.map((fill, half) => (
-          <rect key={half} x={half * 6} y="0" width="6" height="12" fill={fill} />
-        ))
+        entry.halves.map((fill, half) => <rect key={half} x={half * 6} y="0" width="6" height="12" fill={fill} />)
       ) : (
         <rect width="12" height="12" fill={entry.fill} />
       )}
-      <rect
-        x="0.25"
-        y="0.25"
-        width="11.5"
-        height="11.5"
-        fill="none"
-        stroke={entry.stroke ?? CHART_COLOURS.axis}
-        strokeWidth="0.5"
-      />
+      <rect x="0.25" y="0.25" width="11.5" height="11.5" fill="none" stroke={entry.stroke ?? CHART_COLOURS.axis} strokeWidth="0.5" />
     </svg>
   );
-  const list = (entries) => (
-    <ul>
-      {entries.map((entry) => (
-        <li key={entry.label}>
-          {swatch(entry)}
-          <span>{entry.label}</span>
-        </li>
-      ))}
-    </ul>
-  );
   return (
-    <div className="map-key" role="group" aria-label="Key">
-      <div className="map-key-group">
-        <p className="map-key-title">Change in household net income</p>
-        <p className="map-key-subtitle">Size of the change, in {OUTCOME_LABELS[outcome]}</p>
-        {list(categories)}
+    <div className={`map-key${highlight ? " is-highlighting" : ""}`} role="group" aria-label="Key">
+      <div className="map-key-head">
+        <p className="map-key-title">
+          Change in household net income, {OUTCOME_LABELS[outcome]}
+        </p>
+        <InfoTip
+          label="How to read the key"
+          content={
+            <>
+              Little change is under {show(small)} either way, a small change {show(small)} to {show(large)}, and a
+              large change {show(large)} or more; the breaks are fixed in advance. A constituency is coloured only
+              when its 90% interval lies within one category or two neighbouring ones; otherwise it is too
+              uncertain to classify. Dotted: approximate, few survey households. Hatched: not published, to
+              protect survey respondents&apos; confidentiality. Solid: reported.
+            </>
+          }
+        />
+        <span className="map-key-count" aria-live="polite">
+          {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
+        </span>
       </div>
-      <div className="map-key-group">
-        <p className="map-key-title">Status, shown by texture</p>
-        {list(tiers)}
+      <div className="map-key-rows">
+        <div className="map-key-scale">
+          <span className="map-key-end">Loss</span>
+          <div className="map-key-ramp">
+            {RAMP.map((category) => (
+              <button
+                key={category}
+                className={`map-key-segment${highlight === `cat:${category}` ? " is-active" : ""}`}
+                style={{ background: CATEGORY_COLOURS[category] }}
+                {...entryProps(`cat:${category}`, `${CATEGORY_LABELS[category]}, ${ranges[category]}`)}
+              />
+            ))}
+            {ticks.map((tick, index) => (
+              <span key={tick} className="map-key-tick" style={{ left: `${((index + 1) * 100) / RAMP.length}%` }}>
+                {tick}
+              </span>
+            ))}
+          </div>
+          <span className="map-key-end">Gain</span>
+          <button
+            className={`map-key-item${highlight === `cat:${TOO_UNCERTAIN}` ? " is-active" : ""}`}
+            {...entryProps(`cat:${TOO_UNCERTAIN}`, "Too uncertain")}
+          >
+            {swatch({ fill: CATEGORY_COLOURS[TOO_UNCERTAIN] })}
+            <span>Too uncertain</span>
+          </button>
+        </div>
+        <div className="map-key-statuses">
+          {STATUS_ENTRIES.map((entry) => (
+            <button
+              key={entry.key}
+              className={`map-key-item${highlight === entry.key ? " is-active" : ""}`}
+              {...entryProps(entry.key, entry.label)}
+            >
+              {swatch(entry)}
+              <span>{entry.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -449,7 +596,6 @@ export default function ConstituencyMap({
     },
     [setPanelParam],
   );
-  const narrow = useNarrowViewport();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
@@ -691,6 +837,20 @@ export default function ConstituencyMap({
       });
   }, [svgNode, features, geometry, states, outcome, applyStrokes, selectSeat]);
 
+  // The key entry hovered: the seats it covers stand out, the rest fade
+  // (a style on the page only; the exported file never carries it)
+  const [keyHighlight, setKeyHighlight] = useState(null);
+  const counts = useMemo(() => keyCounts(states), [states]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.layer.selectAll("path.constituency-path").each(function (feature) {
+      const dim = keyHighlight !== null && !matchesKey(states?.get(seatCode(feature)), keyHighlight);
+      if (dim) this.setAttribute("data-dim", "true");
+      else this.removeAttribute("data-dim");
+    });
+  }, [keyHighlight, states, geometry, svgNode]);
+
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query || !features || !states) return [];
@@ -835,25 +995,29 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The view switch: segmented on a wide screen, a pill on a phone
-  const viewChooser = narrow ? (
-    <PillSelect
-      variant="light"
-      name="Show constituencies as"
-      prefix="Show"
-      value={panel}
-      onChange={setPanel}
-      options={PANEL_OPTIONS}
-    />
-  ) : (
-    <ViewSwitch
-      options={PANEL_OPTIONS}
-      value={panel}
-      onChange={setPanel}
-      label="Show constituencies as"
-      compact
-    />
-  );
+  // The card's choices besides the view, in its one Options pill: the
+  // measure shown (when several are selected) and how the change is shown
+  const optionGroups = [
+    choice.focus && {
+      label: "Measure",
+      value: choice.reform,
+      onChange: setFocusId,
+      options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
+    },
+    {
+      label: "Show the change as",
+      value: outcome,
+      onChange: setOutcome,
+      options: ["relative_change", "average_change"].map((value) => ({
+        value,
+        label: OUTCOME_LABELS[value],
+      })),
+    },
+  ];
+  const searchReady = view.kind === "rows";
+  const searchPlaceholder = onMap
+    ? "Search or select a constituency"
+    : "Search by constituency or region";
 
   return (
     <div className="constituency-map-wrapper">
@@ -868,12 +1032,7 @@ export default function ConstituencyMap({
               </span>
             </h3>
             <p className="chart-description">
-              {/* What the map shows is in the section's subtitle */}
-              {notRouted
-                ? "Average change in household net income by constituency."
-                : onMap
-                  ? "Uncoloured where the estimate is too uncertain."
-                  : `Every constituency, ranked by ${OUTCOME_LABELS[outcome]}.`}
+              Average change in household net income by constituency.
             </p>
           </div>
           {downloadsReady ? (
@@ -895,83 +1054,54 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
+        {/* The same row in every view: the view switch, the Options pill
+            and the search box, which picks a seat on a map and filters
+            the table */}
         <div className="map-top-bar">
-          <ControlBar
-            name={CHART_TITLE}
-            options={[
-              view.kind === "rows" && {
-                label: "Show the change as",
-                value: outcome,
-                onChange: setOutcome,
-                options: ["relative_change", "average_change"].map((value) => ({
-                  value,
-                  label: OUTCOME_LABELS[value],
-                })),
-              },
-            ]}
-          >
-            {viewChooser}
-            {/* Several measures, no single published reform: one at a time */}
-            {choice.focus && (
-              <PillSelect
-                variant="light"
-                name="Measure shown"
-                prefix="Measure"
-                value={choice.reform}
-                onChange={setFocusId}
-                options={choice.focus.options.map((id) => ({ value: id, label: focusName(id) }))}
+          <div className="map-view-switch">
+            <Segmented
+              group={{
+                label: "Show constituencies as",
+                value: panel,
+                onChange: setPanel,
+                options: PANEL_OPTIONS,
+              }}
+            />
+          </div>
+          <ControlBar name={CHART_TITLE} options={optionGroups} />
+          <div className="map-search-section">
+            <div className="search-container">
+              <input
+                id="constituency-search"
+                type="search"
+                aria-label={searchPlaceholder}
+                value={searchReady ? searchQuery : ""}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="constituency-search"
+                autoComplete="off"
+                disabled={!searchReady}
               />
-            )}
-          </ControlBar>
-          {/* The map views' search, on the same line as the view switch;
-              the Table view has its own */}
-          {onMap && view.kind !== "loading" && (
-            <div className="map-search-section">
-              <div className="search-container">
-                {view.kind === "rows" ? (
-                  <input
-                    key="search"
-                    id="constituency-search"
-                    type="search"
-                    aria-label="Search constituency"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search or select a constituency"
-                    className="constituency-search"
-                    autoComplete="off"
-                  />
-                ) : (
-                  <input
-                    key="search-disabled"
-                    id="constituency-search"
-                    type="search"
-                    aria-label="Search constituency"
-                    placeholder="Search or select a constituency"
-                    className="constituency-search"
-                    disabled
-                  />
-                )}
-                {view.kind === "rows" && searchResults.length > 0 && (
-                  <div className="search-results">
-                    {searchResults.map((result) => (
-                      <button
-                        key={result.code}
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery("");
-                          selectSeat(result.code);
-                        }}
-                        className="search-result-item"
-                      >
-                        <div className="result-name">{result.name}</div>
-                        <div className="result-value">{result.summary}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {onMap && searchReady && searchResults.length > 0 && (
+                <div className="search-results">
+                  {searchResults.map((result) => (
+                    <button
+                      key={result.code}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        selectSeat(result.code);
+                      }}
+                      className="search-result-item"
+                    >
+                      <div className="result-name">{result.name}</div>
+                      <div className="result-value">{result.summary}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -992,6 +1122,7 @@ export default function ConstituencyMap({
             <ConstituencyTable
               entries={view.kind === "rows" ? rankingEntriesForView : []}
               metric={metric}
+              query={searchQuery}
             />
             {notice && <div className="map-template-overlay">{notice}</div>}
           </div>
@@ -1000,7 +1131,12 @@ export default function ConstituencyMap({
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
           <div className="map-content" hidden={!onMap}>
-            <MapKey outcome={outcome} />
+            <MapKey
+              outcome={outcome}
+              counts={counts}
+              highlight={keyHighlight}
+              onHighlight={setKeyHighlight}
+            />
             <div className="map-canvas" ref={canvasRef}>
               <svg
                 ref={setSvgNode}
@@ -1108,6 +1244,19 @@ export default function ConstituencyMap({
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+
+      <div className="chart-footer">
+        <ChartMoreInfo
+          year={selectedYear}
+          info={constituencyInfo({
+            label,
+            yearLabel,
+            outcome,
+            releaseKind: routing?.routing?.regionalReleaseKind,
+            notRouted,
+          })}
+        />
       </div>
 
     </div>
