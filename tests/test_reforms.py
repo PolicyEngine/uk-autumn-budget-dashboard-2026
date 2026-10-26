@@ -495,9 +495,10 @@ def test_receipt_rates_come_in_pairs():
 
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: 182 of 365
-    # days from 1 October, £24.93; 2027-28: all of it; 2028-29: none.
-    [(2026, 24.93), (2027, 50.00), (2028, 0.0)],
+    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
+    # October to March share of a year's use (WINTER_SHARE), £28.34;
+    # 2027-28: all of it; 2028-29: none.
+    [(2026, 28.34), (2027, 50.00), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(

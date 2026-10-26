@@ -51,7 +51,7 @@ export const MEASURE_MODELLING = [
     name: "Zero VAT on domestic electricity",
     how: [
       "Removes the 5% VAT from electricity spending.",
-      "For 182 days of 2026-27 and all of 2027-28.",
+      "For October to March of 2026-27 (about 57% of a year's electricity use) and all of 2027-28.",
       "Gas and other reduced-rate goods are unchanged.",
       "Great Britain only: Northern Ireland's households keep the 5%.",
     ],
