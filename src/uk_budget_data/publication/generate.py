@@ -17,7 +17,10 @@ wealth-tax scale (a modifier that edits it) is refused once they are built,
 before any figure is made. A measure or combined run the certified data
 cannot cost (its run records a data limit) is still processed, since the
 limits are observed while it runs, but its artifact is receipt-only: it is
-listed as not computable and binds no figure, so no table is written.
+listed as not computable and binds no figure, so no table is written. A run
+whose decile tables have a cell resting on fewer than the floor of survey
+households (``disclosure_floor``) is refused once its figures are made,
+before anything is written; the age table's thin cells are withheld.
 """
 
 import atexit
@@ -41,6 +44,7 @@ from uk_budget_data.parameter_companions import (
     companion_gaps,
     companion_refusal,
 )
+from uk_budget_data.publication import disclosure_floor
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
@@ -389,7 +393,7 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
     be receipted is refused, not raised; any other failure raises."""
     outcome = ArtifactOutcome(key=job.key)
     try:
-        reference, limited = _write_run(job)
+        reference, limited, warnings = _write_run(job)
     except ReceiptUnavailable as error:
         outcome.refused = error.reason
         outcome.progress.append(f"{job.key}: REFUSED: {error.reason}")
@@ -400,10 +404,11 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
         f"{job.key}: {'wrote' if reference.created else 'unchanged'} "
         f"{reference.path}{note if limited else ''}"
     )
+    outcome.progress.extend(f"{job.key}: WARNING: {w}" for w in warnings)
     return outcome
 
 
-def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
+def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     config = job.config
     reform, members = _run_reform(job)
     key = job.key
@@ -441,6 +446,11 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     # A measure the installed model mis-costs is held at provisional.
     held = _model_limits(
         baseline, reformed, baseline_scenario, reform_scenario
+    )
+    warnings = (
+        []
+        if limits
+        else _apply_disclosure_floor(key, job, baseline, reformed, result)
     )
     configured_identity: list = []
 
@@ -499,7 +509,63 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
         build_receipt,
         job.artifacts_root,
     )
-    return reference, bool(limits)
+    return reference, bool(limits), warnings
+
+
+def _built_from_a_dataset(simulation) -> bool:
+    """Whether ``simulation`` was built from a dataset with tables by year,
+    as ``geography.dataset_tables`` reads them."""
+    dataset = getattr(simulation, "dataset", None)
+    return hasattr(dataset, "years") and hasattr(dataset, "__getitem__")
+
+
+def _apply_disclosure_floor(
+    subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
+) -> list[str]:
+    """Hold a run's household tables to the floor of survey households
+    (``disclosure_floor``): withhold the age table's thin cells, refuse a run
+    with a thin decile cell (or, under ``UK_BUDGET_THIN_DECILES=warn``,
+    return a warning naming them), and make the binned scatter count survey
+    households rather than records. Only for simulations built from a
+    dataset, whose household and person tables name the survey households
+    (a household situation, or a stand-in in tests, has none)."""
+    if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
+        return []
+    from uk_budget_data.pipeline import scatter_survey_households
+
+    try:
+        survey = scatter_survey_households(baseline, job.dataset_path)
+    except ValueError as error:
+        raise ReceiptUnavailable(
+            subject,
+            "the survey households behind the records cannot be told "
+            f"apart, so no table can be checked against the floor: {error}",
+        ) from error
+    years = list(job.config.years)
+    found = disclosure_floor.thin_cells(baseline, reformed, years, survey)
+    warnings = []
+    deciles = {
+        cell: labels
+        for cell, labels in found.items()
+        if cell[0] in disclosure_floor.DECILE_TABLES
+    }
+    if deciles:
+        reason = disclosure_floor.thin_cells_reason(deciles)
+        if disclosure_floor.refuses_thin_deciles():
+            raise ReceiptUnavailable(
+                subject, f"{reason}; a decile table cannot withhold one"
+            )
+        warnings.append(f"{reason}; decide before publishing")
+    result.age_impact = disclosure_floor.withhold_thin_age_rows(
+        result.age_impact, found
+    )
+    household_ids = baseline.calculate(
+        "household_id", period=years[0], map_to="household"
+    ).values
+    result.household_scatter = disclosure_floor.survey_scatter_rows(
+        result.household_scatter, household_ids, survey
+    )
+    return warnings
 
 
 def _refuse_wealth_tax_base(
