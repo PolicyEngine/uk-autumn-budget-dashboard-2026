@@ -17,36 +17,6 @@
   object-fit: contain;
 }
 
-/* The edge tab's tip, as a mini card */
-.tip:has(> .home-tip) {
-  z-index: 1200;
-  max-width: 260px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px var(--shadow-strong);
-}
-
-.home-tip {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: var(--fs-caption);
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--pe-gray-700);
-}
-
-.home-tip-title {
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.home-tip-hint {
-  color: var(--c-gain-text);
-  font-weight: 500;
-}
-
 @media (max-width: 768px) {
   .title-head {
     gap: 10px;
@@ -58,9 +28,15 @@
   }
 }
 
-/* "About" (EdgeAboutTab), at the start of the view tabs row: a .view-tab
-   like the rest (globals.css), the row's height, then a subtle divider
-   before the first tab; sticky with the bar */
+/* "About" (EdgeAboutTab), a .view-tab like the rest (globals.css), the
+   row's height, sticky with the bar.
+
+   Where the page's margin has room for it, it sits in the margin, left of
+   the row, and the row is pulled 16px (a tab's padding) into the margin so
+   the first tab's icon, and the first sub-tab's, line up with the page
+   content's left edge: in full from 1392px wide, as its icon alone (the
+   card names it) from 1268px. Narrower, it comes first in the row, with a
+   divider before the first tab, and the tabs start after it. */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
@@ -83,8 +59,51 @@
   right: -5px;
   width: 1px;
   height: 22px;
-  background: var(--card-border);
+  background: var(--c-grid);
   transform: translateY(-50%);
+}
+
+@media (min-width: 1268px) {
+  .view-tabs-bar.has-leading > .view-tabs {
+    margin-left: -16px;
+  }
+
+  /* In the margin: its right edge 8px short of the row's start */
+  .view-tabs-bar.has-leading .edge-about {
+    position: absolute;
+    top: 0;
+    right: calc(100% - max(40px, calc((100vw - 1120px) / 2)) + 16px + 8px);
+    margin-right: 0;
+    padding: 0 12px;
+  }
+
+  /* The divider, midway across the 8px to the first tab */
+  .view-tabs-bar.has-leading .edge-about::after {
+    right: -4px;
+  }
+
+  .view-tabs-bar.has-leading .edge-about .view-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 1392px) {
+  .view-tabs-bar.has-leading .edge-about {
+    padding: 0 16px;
+  }
+
+  .view-tabs-bar.has-leading .edge-about .view-tab-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
 }
 
 /* Hidden while the overview drawer is open: the drawer's own close

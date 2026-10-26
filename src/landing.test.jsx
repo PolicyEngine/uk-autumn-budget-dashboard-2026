@@ -183,7 +183,7 @@ describe("the mark beside the title", () => {
 });
 
 describe("the About pill in the tab row, and its overview drawer", () => {
-  const edge = () => screen.queryByRole("button", { name: "About this dashboard: open the overview" });
+  const edge = () => screen.queryByRole("button", { name: "About this dashboard" });
   const drawer = () => screen.queryByRole("dialog", { name: "Autumn Budget 2026: fiscal and distributional analysis" });
   const openDrawer = async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
@@ -199,7 +199,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(drawer()).toBeNull();
   });
 
-  it("says what the dashboard is on hover or focus", async () => {
+  it("is a tab-styled button with no hover card", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
     // Styled as the tabs are, with no logo; a button, never a chosen tab
@@ -215,8 +215,8 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(edge().closest('[role="tablist"]')).toBeNull();
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
-    const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/^About this dashboard.*Click to open the overview\.$/);
+    fireEvent.mouseEnter(edge());
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("opens a modal drawer with the overview, focus inside and the page locked", async () => {
@@ -231,7 +231,12 @@ describe("the About pill in the tab row, and its overview drawer", () => {
       "The Budget and societyPublic finances, and who gains and loses",
       "Your householdSee how your income changes",
       "What's in the BudgetEvery measure, and how we model it",
+      "PolicyEngineMore research, the model and the API (opens in a new tab)",
     ]);
+    const site = rows.at(-1);
+    expect(site).toHaveAttribute("href", "https://policyengine.org/uk");
+    expect(site).toHaveAttribute("target", "_blank");
+    expect(site).toHaveAttribute("rel", "noopener noreferrer");
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was

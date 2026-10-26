@@ -343,6 +343,39 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => observer.disconnect();
   }, []);
 
+  // Once scrolled past its place, the title band hides while the reader
+  // scrolls down and slides back in when they scroll up (globals.css,
+  // data-band-hidden); at the top it sits in its place
+  const [bandHidden, setBandHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const sentinel = titleSentinelRef.current;
+      const past = sentinel ? sentinel.getBoundingClientRect().top < 0 : y > 0;
+      if (!past) {
+        setBandHidden(false);
+        last = y;
+      } else if (y > last + 6) {
+        setBandHidden(true);
+        last = y;
+      } else if (y < last - 6) {
+        setBandHidden(false);
+        last = y;
+      }
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // globals.css un-sticks the ui-kit site nav with a selector written
   // against the shell's markup. Say so in development if it stops matching.
   useEffect(() => {
@@ -737,7 +770,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       className="app"
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
-      data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
+      data-tabs-stuck={tabsStuck ? "" : undefined}
+      data-band-hidden={bandHidden && titleStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy

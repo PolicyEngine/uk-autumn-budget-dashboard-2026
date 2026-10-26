@@ -35,6 +35,9 @@ import {
   axisWidth,
   CHART_COLOURS,
   divergingAxis,
+  tickDecimals,
+  fixedNoNegativeZero,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -94,7 +97,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     (id) => !POLICIES.some((policy) => policy.id === id),
   );
 
-  const formatPercent = (value) => `${value.toFixed(1)}%`;
 
   // Remove "st", "nd", "rd", "th" from decile labels
   const formatDecile = (value) => {
@@ -196,6 +198,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
+  // Enough decimals that no two ticks read alike (0.02% steps need two)
+  const percentDecimals = tickDecimals(yAxisTicks, 1);
+  const formatPercent = (value) => `${fixedNoNegativeZero(value, percentDecimals)}%`;
   const hasIncompleteResults = data.some((point) => point.incomplete);
 
   if (!rawData || rawData.length === 0) {
@@ -253,6 +258,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     exportOptions,
     csv: () => decileCsv(data, selectedMeasures, { kind: "relative", year: selectedYear }),
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -277,7 +284,13 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published ? (
+        {published && activePolicies.length === 0 ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of zero ticks
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
+          </div>
+        ) : published ? (
           <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}

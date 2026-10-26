@@ -354,6 +354,24 @@ body {
   box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
+/* Scrolling down, the band hides and the tab rows close up under the top
+   of the window; scrolling up, it slides back in (App.jsx,
+   data-band-hidden; --motion-slide is 0 under reduced motion) */
+.title-row,
+.view-tabs-bar,
+.sub-tabs-band {
+  transition: transform var(--motion-slide) ease;
+}
+
+.app[data-band-hidden] .title-row.is-stuck {
+  transform: translateY(-100%);
+}
+
+.app[data-band-hidden][data-tabs-stuck] .view-tabs-bar,
+.app[data-band-hidden][data-tabs-stuck] .sub-tabs-band {
+  transform: translateY(calc(-1 * var(--title-row-height)));
+}
+
 .title-row h1 {
   grid-area: title;
   min-width: 0;

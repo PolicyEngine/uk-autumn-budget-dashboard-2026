@@ -459,6 +459,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         notes,
       }),
     published: published && shown.length > 0,
+    // The dumbbell is HTML, not a Recharts SVG: the CSV only
+    image: false,
   };
 
   return (
