@@ -1,1 +1,16 @@
 measure_id,direction,from_year,to_year,reviewer,note
+badr_lifetime_limit_cut,positive,2027,,vahid-ahmadi,"Lifetime limit cut to £500,000 from 6 April 2027 raises CGT on qualifying disposals; no effect before 2027-28"
+cgt_main_rates_up_2pp,positive,2027,,rehearsal-coordinator-mock,"MOCK (Drill 5): main CGT rates 18% and 24% to 20% and 26% from 6 April 2027: CGT receipts rise, static"
+council_tax_surcharge_from_1_5m,positive,2028,,rehearsal-coordinator-mock,"MOCK (Drill 5): the surcharge's first band starts at £1.5m from April 2028: receipts rise from 2028-29"
+dividend_rates_up_1pp,positive,2027,,rehearsal-coordinator-mock,"MOCK (Drill 5): each dividend rate up 1 point from 6 April 2027: income tax rises"
+domestic_electricity_zero_vat,negative,2026,2027,vahid-ahmadi,"Zero VAT on domestic electricity, 1 October 2026 to 31 March 2028: VAT receipts fall in 2026-27 (182 days) and 2027-28; nothing after"
+domestic_gas_zero_vat,negative,2027,2027,rehearsal-coordinator-mock,"MOCK (Drill 5): VAT on domestic gas 5% to 0% for 2027-28 only: VAT receipts fall in 2027-28; nothing after"
+employer_ni_relief_under_25s,negative,2027,,vahid-ahmadi,Zero employer Class 1 rate for employees aged 21 to 24 up to the upper secondary threshold from April 2027: employer NI receipts fall
+employer_ni_secondary_threshold_raised,negative,2027,,rehearsal-coordinator-mock,"MOCK (Drill 5): employer secondary threshold £5,000 to £6,000 from April 2027: employer NI receipts fall"
+fuel_duty_rise_deferral,negative,2026,,vahid-ahmadi,"Deferred fuel duty rises keep duty, and the VAT on it, lower than current law in every year from 2026-27"
+lha_reset_april_2027,negative,2027,,rehearsal-coordinator-mock,"Drill 5: Local Housing Allowance reset to the 30th percentile in April 2027, then frozen: housing support spending rises"
+state_pension_income_tax_protection,negative,2027,,vahid-ahmadi,Personal allowance raised to the full new State Pension for people over State Pension age from 2027-28: income tax falls
+state_pension_income_tax_protection_extended,negative,2027,,rehearsal-coordinator-mock,"MOCK (Drill 5): as the base protection from 2027-28 but never withdrawn: income tax falls by more"
+threshold_freeze_2031_32,positive,2031,2031,vahid-ahmadi,Personal allowance and basic rate band held at 2030-31 values in 2031-32 instead of uprated: income tax and NI rise in 2031-32 only (the last model year)
+uc_standard_allowance_below_cpi,positive,2027,,rehearsal-coordinator-mock,"MOCK (Drill 5): UC standard allowance uprated one point below CPI in April 2027, so 1% below current law from 2027-28: UC spending falls"
+warm_home_discount_top_up,negative,2026,2026,vahid-ahmadi,"£100 top-up paid once, winter 2026-27, to receiving UC and Pension Credit households: spending rises in 2026-27 only"
