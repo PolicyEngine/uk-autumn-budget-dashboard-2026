@@ -12,6 +12,7 @@ import {
 } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import Disclosure from "../Disclosure";
+import { HOUSEHOLD_ABOUT_ID } from "../methodology/anchors";
 import { downloadFile } from "../../utils/downloadFile";
 import TitleIcon from "../TitleIcon";
 
@@ -193,7 +194,7 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           </tbody>
         </table>
       </div>
-      <Disclosure inCard title="About these figures" contentClassName="breakdown-about">
+      <Disclosure inCard id={HOUSEHOLD_ABOUT_ID} title="About these figures" contentClassName="breakdown-about">
         {notes.length > 0 && (
           <>
             <h4 className="breakdown-about-heading">Rows in the table</h4>

@@ -2,6 +2,7 @@ import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
 import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
 import FactList from "./methodology/FactList";
+import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
 
 export const METHOD_NOTE_URL =
@@ -106,9 +107,7 @@ function GeographyMethodology() {
         ]}
       />
       <p className="method-more">
-        <a href={METHOD_NOTE_URL} target="_blank" rel="noopener noreferrer">
-          Read the method note for constituency figures
-        </a>
+        <ExternalLink href={METHOD_NOTE_URL}>Read the method note for constituency figures</ExternalLink>
         .
       </p>
     </div>
