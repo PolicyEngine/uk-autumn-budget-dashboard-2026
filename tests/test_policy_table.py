@@ -142,3 +142,37 @@ def test_badr_and_plan_2(document):
     assert {year: after for year, (_, after) in plan_2.items() if year != "2026"} == {
         year: value for year, value in registry.plan_2_unfrozen_thresholds().items()
     }
+
+
+def test_each_measure_gets_the_display_its_shape_calls_for(document):
+    assert {measure_id: table["display"] for measure_id, table in document["measures"].items()} == {
+        "fuel_duty_rise_deferral": "schedule",
+        "state_pension_income_tax_protection": "path",
+        "warm_home_discount_top_up": "switch",
+        "domestic_electricity_zero_vat": "switch",
+        "employer_ni_relief_under_25s": "before-after",
+        "threshold_freeze_2031_32": "table",
+        "badr_lifetime_limit_cut": "before-after",
+        "road_fuel_vat_cut": "switch",
+        "plan_2_threshold_unfreeze": "path",
+    }
+
+
+def test_the_display_follows_the_shape_not_the_measure():
+    from uk_budget_data.policy_table import display_for
+
+    def row(points, primary=True):
+        return {"primary": primary, "points": points}
+
+    def yearly(pairs):
+        return [
+            {"key": str(2026 + i), "year": 2026 + i, "before": b, "after": a}
+            for i, (b, a) in enumerate(pairs)
+        ]
+
+    assert display_for([row(yearly([(1, 1), (1, 2), (1, 2)]))]) == "before-after"
+    assert display_for([row(yearly([(1, 1), (1, 2), (1, 3)]))]) == "path"
+    assert display_for([row(yearly([(1, 1), (2, 1)]))]) == "path"
+    assert (
+        display_for([row(yearly([(1, 1), (2, 1)]))] * 3) == "table"
+    )

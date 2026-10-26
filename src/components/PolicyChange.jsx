@@ -7,8 +7,8 @@ import {
   formatChange,
   formatValue,
   loadPolicyParameters,
-  summaryFor,
-  visualFor,
+  mainRow,
+  segmentsFor,
 } from "../utils/policyParameters";
 
 /**
@@ -176,100 +176,173 @@ function StepPlot({ row, segments, tone, onHighlight, label }) {
   );
 }
 
-/** One change that holds: before and after as two bars to scale. */
-function Pair({ row, visual, tone }) {
+/** A permanent change: the two values, large, and the change. */
+function BeforeAfter({ row, tone }) {
   const { unit } = row;
-  const top = Math.max(Math.abs(visual.before ?? 0), Math.abs(visual.after ?? 0)) || 1;
-  const share = (value) => `${(Math.abs(value ?? 0) / top) * 100}%`;
-  const rate = unit === "percent";
+  const points = row.points.filter(differs);
+  const point = points[0];
+  const when = row.points.length === 1 ? point.label : `from ${point.label}`;
   return (
-    <div className="pchg-pair">
-      <div className="pchg-pair-row is-before">
-        <span className="pchg-pair-name">Current law</span>
-        <span className="pchg-bar-track"><span className="pchg-bar" style={{ width: share(visual.before) }} /></span>
-        <span className="pchg-pair-value">{formatValue(visual.before, unit)}</span>
-      </div>
-      <div className="pchg-pair-row is-after">
-        <span className="pchg-pair-name">With the measure</span>
-        <span className="pchg-bar-track"><span className="pchg-bar" style={{ width: share(visual.after) }} /></span>
-        <span className="pchg-pair-value">
-          {formatValue(visual.after, unit)}
-          {!rate && <span className={`pchg-chip is-${tone}`}>{formatChange(visual.before, visual.after, unit)}</span>}
-        </span>
-      </div>
+    <div className="pchg-ba">
+      <p className="pchg-caption">{`${row.label}, ${when}`}</p>
+      <p className="pchg-ba-values">
+        <span className="pchg-ba-before">{formatValue(point.before, unit)}</span>
+        <span className="pchg-ba-arrow">{" \u2192 "}</span>
+        <span className="pchg-ba-after">{formatValue(point.after, unit)}</span>
+        {unit !== "percent" && (
+          <span className={`pchg-chip is-${tone}`}>{formatChange(point.before, point.after, unit)}</span>
+        )}
+      </p>
     </div>
   );
 }
 
-/** Every row and value as a table, for screen readers. */
-function HiddenTable({ rows }) {
+/** Values side by side: only the lines where the measure differs. */
+function ChangeTable({ lines, unit, tone, caption, first }) {
   return (
-    <table className="policy-sr-only">
-      <caption>What changes, current law beside the measure</caption>
+    <table className="pchg-table">
+      {caption && <caption className="pchg-caption">{caption}</caption>}
       <thead>
         <tr>
-          <th scope="col">Parameter and when</th>
+          <th scope="col">{first}</th>
           <th scope="col">Current law</th>
           <th scope="col">With the measure</th>
+          <th scope="col"><span className="policy-sr-only">Change</span></th>
         </tr>
       </thead>
       <tbody>
-        {rows.flatMap((row) =>
-          row.points.map((point) => (
-            <tr key={`${row.label}|${point.key}`}>
-              <th scope="row">{`${row.label}, ${point.label}`}</th>
-              <td>{formatValue(point.before, row.unit)}</td>
-              <td>{formatValue(point.after, row.unit)}</td>
-            </tr>
-          )),
-        )}
+        {lines.map((line) => (
+          <tr key={line.key}>
+            <th scope="row">{line.label}</th>
+            <td>{formatValue(line.before, line.unit ?? unit)}</td>
+            <td className="pchg-table-after">{formatValue(line.after, line.unit ?? unit)}</td>
+            <td>
+              <span className={`pchg-chip is-${tone}`}>{formatChange(line.before, line.after, line.unit ?? unit)}</span>
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
 }
 
+/** A plot's values for screen readers, hidden from view. */
+function HiddenValues({ row }) {
+  return (
+    <div className="policy-sr-only">
+      <table>
+        <caption>{`${row.label}: current law and with the measure`}</caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Current law</th>
+            <th scope="col">With the measure</th>
+          </tr>
+        </thead>
+        <tbody>
+          {row.points.map((point) => (
+            <tr key={point.key}>
+              <th scope="row">{point.label}</th>
+              <td>{formatValue(point.before, row.unit)}</td>
+              <td>{formatValue(point.after, row.unit)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const plotCaption = (row) => (row.unit_words ? `${row.label}, ${row.unit_words}` : row.label);
+
+/** The plot's key: current law dashed grey, the measure in its colour. */
+const Key = () => (
+  <p className="pchg-key" aria-hidden="true">
+    <span className="pchg-key-before">Current law</span>
+    <span className="pchg-key-after">With the measure</span>
+  </p>
+);
+
 /**
- * A card's "What changes": one line on the change, then its picture. A
- * change that moves over the years is a step plot of current law against
- * the measure; one that holds from when it starts is a before-and-after
- * pair to scale. The first primary row is drawn; the others are a line of
- * words each. Every value is also in a table for screen readers.
+ * A card's "What changes", drawn the way the file's `display` says the
+ * measure's data reads best (chosen in policy_table.py from its shape):
+ * - "path": a step plot of current law against the measure over the years;
+ * - "schedule": the same on the dates the rates change, with the yearly
+ *   averages behind a button;
+ * - "before-after": a permanent change as the two values and the change;
+ * - "table": several parameters changing together, a short table;
+ * - "switch": nothing here: the card's timeline carries the change.
+ * Each fact once: no line repeats what the plot labels, and lines where
+ * the measure equals current law are left out.
  */
-export default function PolicyChange({ rows, direction, onHighlight }) {
+export default function PolicyChange({ entry, direction, onHighlight }) {
   const id = useId();
+  const [averages, setAverages] = useState(false);
   const tone = TONES[direction] ?? "neutral";
-  const drawn = rows.filter((row) => row.primary && visualFor(row));
-  if (!drawn.length) return null;
-  const [main, ...others] = drawn;
-  const visual = visualFor(main);
-  const summary = summaryFor(main);
-  const alternative = visual.kind === "plot"
-    ? `${summary} ${visual.segments.map((s) => describeSegment(s, main.unit)).join("; ")}.`
-    : summary;
+  const main = mainRow(entry);
+  if (!main || entry.display === "switch") return null;
+  const title = (
+    <div className="pchg-head">
+      <p className="pchg-title" id={`${id}-title`}>What changes</p>
+      {(entry.display === "path" || entry.display === "schedule") && <Key />}
+    </div>
+  );
+  let body = null;
+  if (entry.display === "path" || entry.display === "schedule") {
+    const segments = segmentsFor(main);
+    const label = `${plotCaption(main)}. ${segments.map((s) => describeSegment(s, main.unit)).join("; ")}.`;
+    const yearly = entry.display === "schedule" ? entry.rows.find((row) => !row.primary && row.unit === main.unit) : null;
+    body = (
+      <>
+        <p className="pchg-caption">{plotCaption(main)}</p>
+        <StepPlot row={main} segments={segments} tone={tone} onHighlight={onHighlight} label={label} />
+        <HiddenValues row={main} />
+        {yearly && (
+          <>
+            <button
+              type="button"
+              className="pchg-more"
+              aria-expanded={averages}
+              aria-controls={`${id}-averages`}
+              onClick={() => setAverages((open) => !open)}
+            >
+              {averages ? "Hide the yearly averages" : "Show the yearly averages"}
+            </button>
+            <div id={`${id}-averages`} hidden={!averages}>
+              {averages && (
+                <ChangeTable
+                  lines={yearly.points.filter(differs)}
+                  unit={yearly.unit}
+                  tone={tone}
+                  first="Year"
+                  caption={yearly.note}
+                />
+              )}
+            </div>
+          </>
+        )}
+      </>
+    );
+  } else if (entry.display === "before-after") {
+    body = <BeforeAfter row={main} tone={tone} />;
+  } else if (entry.display === "table") {
+    const lines = entry.rows.flatMap((row) =>
+      row.points.filter(differs).map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label })),
+    );
+    const periods = [...new Set(lines.map((line) => line.period))];
+    body = (
+      <ChangeTable
+        lines={periods.length === 1 ? lines : lines.map((line) => ({ ...line, label: `${line.label}, ${line.period}` }))}
+        unit={main.unit}
+        tone={tone}
+        first={periods.length === 1 ? periods[0] : "Parameter"}
+      />
+    );
+  }
   return (
     <section className="pchg" aria-labelledby={`${id}-title`}>
-      <div className="pchg-head">
-        <p className="pchg-title" id={`${id}-title`}>What changes</p>
-        {visual.kind === "plot" && (
-          <p className="pchg-key" aria-hidden="true">
-            <span className="pchg-key-before">Current law</span>
-            <span className="pchg-key-after">With the measure</span>
-          </p>
-        )}
-      </div>
-      <p className="pchg-summary">
-        {summary}
-        {main.unit_words && <span className="pchg-unit"> ({main.unit_words})</span>}
-      </p>
-      {visual.kind === "plot" ? (
-        <StepPlot row={main} segments={visual.segments} tone={tone} onHighlight={onHighlight} label={alternative} />
-      ) : (
-        <Pair row={main} visual={visual} tone={tone} />
-      )}
-      {others.map((row) => (
-        <p key={row.label} className="pchg-also">{summaryFor(row)}</p>
-      ))}
-      <HiddenTable rows={rows} />
+      {title}
+      {body}
     </section>
   );
 }
