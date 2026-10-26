@@ -34,8 +34,8 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. Pre-measures forecast is the outlook before the Budget's
 // measures, Policies describes every measure and Methodology is text: no
-// pill applies to them. Population impact's sub-tabs (All households, Young
-// people, Living standards, Poverty, Public finances) are in
+// pill applies to them. Population impact's sub-tabs (Public finances, All
+// households, Young people, Living standards, Poverty) are in
 // PopulationImpactView.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },

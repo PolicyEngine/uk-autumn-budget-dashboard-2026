@@ -128,11 +128,12 @@ afterEach(() => {
 // Each tab by its address, and Population impact's Young people sub-tab:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
-  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/" : `/?tab=${v.value}`, v.label]),
+  // Population impact opens on Public finances; All households is ?sub=all
+  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
-  ["Population impact: Public finances", "finances", "/?sub=finances", "Public finances"],
+  ["Population impact: Public finances", "finances", "/", "Public finances"],
 ];
 
 describe("each of the five tabs and Population impact's sub-tabs, on the real data", () => {

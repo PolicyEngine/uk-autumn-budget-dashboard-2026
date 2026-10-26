@@ -125,7 +125,7 @@ describe("the view tabs", () => {
   });
 
   it("describe every measure on Policies, whatever the selection, and link there from Population impact", async () => {
-    window.history.replaceState({}, "", "/?policies=fuel_duty_rise_deferral");
+    window.history.replaceState({}, "", "/?sub=all&policies=fuel_duty_rise_deferral");
     render(<App />);
     const link = await screen.findByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
@@ -152,25 +152,25 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Methodology" })).toBeInTheDocument();
   });
 
-  it("split Population impact into five sub-tabs, Public finances last", async () => {
+  it("split Population impact into five sub-tabs, Public finances first", async () => {
     render(<App />);
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The pill sits directly under the view tabs, inside the view's panel
     expect(panel.firstElementChild).toBe(subList());
     expect(subTabs().map((tab) => tab.textContent)).toEqual([
+      "Public finances",
       "All households",
       "Young people",
       "Living standards",
       "Poverty",
-      "Public finances",
     ]);
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Change by age" })).toBeNull();
     // The default sub-tab has no ?sub=
     expect(window.location.search).not.toContain("sub=");
 
-    fireEvent.click(subTabs()[1]);
-    expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(subTabs()[2]);
+    expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
     // The year and policy pills drive both sub-tabs
@@ -183,7 +183,7 @@ describe("the view tabs", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(window.location.search).not.toContain("sub=");
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
-    expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
+    expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
   });
 
@@ -226,8 +226,8 @@ describe("the view tabs", () => {
       "aria-selected",
       "true",
     );
-    // Back to All households: the hash goes with the sub-tab
-    fireEvent.click(screen.getByRole("tab", { name: "All households" }));
+    // Back to Public finances, the default: the hash goes with the sub-tab
+    fireEvent.click(screen.getByRole("tab", { name: "Public finances" }));
     expect(window.location.hash).toBe("");
     expect(window.location.search).not.toContain("sub=");
   });
