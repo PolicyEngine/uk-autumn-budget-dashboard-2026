@@ -29,7 +29,8 @@ import {
 import { periodOption, yearsOption } from "../controlOptions";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource } from "../sources";
+import { CSV_SOURCES, HBAI_SOURCE, HbaiSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 /** meta.units[metric] may be a string or an object with a label/unit field. */
 function unitFor(meta, metric) {
@@ -158,6 +159,19 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     ],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
+    info: {
+      how: [
+        units && "Equivalised: incomes are adjusted for household size, shown as for a couple with no children.",
+        adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, not adjusted for prices.",
+      ],
+      caveats: [
+        noOutturn &&
+          (realOnlyOutturn ? "Official incomes after housing costs are shown in real terms only." : `${NO_OFFICIAL_SERIES}.`),
+        /_ahc$/.test(metric) && "Real incomes after housing costs use a PolicyEngine CPI after housing costs, not an OBR series.",
+      ],
+      sources: [HBAI_SOURCE],
+      method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the OBR forecast feeds these incomes" },
+    },
     download: chartData.length
       ? { filename: `living-standards-${metric}-${adjustment}`, legendItems: lineLegendItems(series), csv }
       : null,

@@ -126,7 +126,8 @@ function LoadedCard({ data, rows, run, twinLink }) {
     <ViewCard
       id={WITH_MEASURES_ANCHOR}
       title={WITH_MEASURES_TITLE}
-      moreNotes={[packageNote, twinLink && <span key="twin">{twinLink}</span>]}
+      moreNotes={[twinLink && <span key="twin">{twinLink}</span>]}
+      moreCaveats={[packageNote]}
       icon="bars"
       name="Growth with measures view"
       value={show}

@@ -12,7 +12,7 @@ import ControlBar from "../ControlBar";
  *
  * views: [{ value, label, view }], where a null view is left out.
  */
-export default function ViewCard({ id, title, subtitle, icon, views, value, onChange, moreNotes = [] }) {
+export default function ViewCard({ id, title, subtitle, icon, views, value, onChange, moreNotes = [], moreCaveats = [] }) {
   const available = views.filter((v) => v.view);
   if (!available.length) return null;
   const current = available.find((v) => v.value === value) || available[0];
@@ -27,6 +27,14 @@ export default function ViewCard({ id, title, subtitle, icon, views, value, onCh
       summary={view.summary}
       about={view.about}
       notes={[...(view.notes || []), ...moreNotes]}
+      // A link to the card's twin (moreNotes) closes How it's calculated
+      info={
+        view.info && {
+          ...view.info,
+          how: [...(view.info.how || []), ...moreNotes],
+          caveats: [...moreCaveats, ...(view.info.caveats || [])],
+        }
+      }
       source={view.source}
       sourceText={view.sourceText}
       download={view.download}

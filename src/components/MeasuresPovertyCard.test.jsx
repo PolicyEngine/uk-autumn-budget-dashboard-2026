@@ -148,12 +148,14 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(change).getByRole("button", { name: "About this chart" }));
     expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
-    // More info: the £0 measures and that the parts need not add up
+    // About this chart: the £0 measures and that the parts need not add up
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
     expect(none).toHaveTextContent(/^No effect on poverty: .*BADR restricted/);
     expect(none).toHaveTextContent(/change prices/);
+    // The card says each fact once: the people rule is in Methodology
+    expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
   });
 });

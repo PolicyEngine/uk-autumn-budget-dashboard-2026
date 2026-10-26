@@ -16,6 +16,7 @@ import MeasureRowLabel from "./MeasureRowLabel";
 import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
@@ -33,7 +34,7 @@ import "./MeasuresPovertyCard.css";
 // Why the measures with no effect move no one: one sentence, true of every
 // such measure, not a reason per measure
 const NO_EFFECT_TEXT =
-  "These measures change prices (VAT, fuel duty), capital gains or employers' costs, which the income used to measure poverty (household net income before or after housing costs) doesn't include, or they move no one across the poverty line in this year.";
+  "They change prices, capital gains or employers' costs, which the income poverty is measured on leaves out, or move no one across the line this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -208,7 +209,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       icon="bars"
       className="mp-card"
       period={year}
-      // One short line; what the steps measure is in More info
+      // One short line; what the steps measure is in About this chart
       summary={summary}
       download={{
         filename: `${metric.file}-by-measure-${selectedYear}`,
@@ -232,25 +233,28 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       // With the choice above the pair (PovertyMeasuresRow), none in the card
       controls={!choiceAbove && wide && <ControlBar name={metric.title} options={controls} />}
       footer={
-        <ChartMoreInfo members={members} year={selectedYear}>
-          {/* The measures that move no one, and why, here rather than under
-              the chart */}
-          {zero.length > 0 && (
-            <p className="wf-none">
-              <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
-            </p>
-          )}
-          <p>
-            Each step is a selected measure modelled on its own, largest first, and the package bar all of them together,
-            in {year}: the change in {metric.phrase}.{metric.detail ? ` ${metric.detail}` : ""}
-            {peopleMode && ` People are that change times the ${who === "children" ? "children" : "population"} in ${year}, from the current-law projection, to the nearest 1,000.`}
-          </p>
-          <p>
-            Measures can reach the same households, so their separate effects need not add up to the package&apos;s.
-            {interaction &&
-              ` Here they miss it by ${main(interaction)}, shown as the interaction step.`}
-          </p>
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          members={members}
+          year={selectedYear}
+          info={{
+            how: [
+              `Each step is one selected measure modelled on its own, largest first; the package bar is all of them together.`,
+              <>
+                Measures can reach the same households, so their separate effects need not add up to the package&apos;s
+                {interaction ? `: here they miss it by ${main(interaction)}, shown as the interaction step.` : "."}
+              </>,
+            ],
+            // The measures that move no one, and why, here rather than under the chart
+            caveats: [
+              zero.length > 0 && (
+                <span className="wf-none">
+                  <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
+                </span>
+              ),
+            ],
+            method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty" },
+          }}
+        />
       }
     >
       <div className="chart-plot">

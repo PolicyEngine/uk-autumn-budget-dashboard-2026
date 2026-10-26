@@ -20,7 +20,8 @@ import {
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource } from "../sources";
+import { CSV_SOURCES, HBAI_SOURCE, HbaiSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const GROUP_SUFFIX = {
   all: "",
@@ -107,6 +108,19 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     ],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
+    info: {
+      how: [
+        isAbsolute
+          ? "The absolute line is 60% of the 2024-25 median income, held fixed in real terms."
+          : "The relative line is 60% of each year's median income.",
+      ],
+      caveats: [
+        !visibleEmpty && noOutturn && viewMode === "both" && `No official series for ${groupName} on this measure; projection only.`,
+        "Our 2024-25 incomes sit above official ones, so rates are below official figures: read changes, not levels.",
+      ],
+      sources: [HBAI_SOURCE],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+    },
     download: visibleEmpty
       ? null
       : {
