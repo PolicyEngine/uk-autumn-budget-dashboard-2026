@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
@@ -9,23 +9,48 @@ import {
   wholeSelectionRun,
   MIN_SAMPLE_SIZE,
 } from "../utils/ageImpact";
-import { COMBINED_REFORM_ID } from "../utils/policyConfig";
+import { changeByYear } from "./youngPeople/youngPeopleData";
+// TEST DATA ONLY: the package run's id in these synthetic rows
+const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
-vi.mock("recharts", async () => {
-  const actual = await vi.importActual("recharts");
+// Multiple chart cards and accessible queries need room in the shared jsdom runner.
+vi.setConfig({ testTimeout: 30000 });
+
+// The receipt route itself is tested in src/utils/publication/flat.test.js
+// and src/hooks/useIncomeCurve.test.js; here the age table is served as the
+// verified rows that route returns.
+vi.mock("../utils/loadDashboard", async (importOriginal) => {
+  const actual = await importOriginal();
+  const { parseTable } = await import("../utils/publication/csv");
+  const { isCatalogueRowDisplayable } = await import("../utils/measureCatalogue");
   return {
     ...actual,
-    ResponsiveContainer: ({ children }) => (
-      <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
-        {children}
-      </div>
-    ),
+    loadVerifiedTable: async (catalogue, table) => {
+      const response = await fetch(`/data/${table}.csv`);
+      if (!response.ok) throw new Error(`${table} is unavailable`);
+      return parseTable(table, await response.text()).filter((row) =>
+        isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+      );
+    },
+  };
+});
+
+vi.mock("recharts", () => {
+  const Empty = () => null;
+  const Chart = ({ children }) => <div>{children}</div>;
+  return {
+    ComposedChart: Chart, BarChart: Chart,
+    ResponsiveContainer: ({ children }) => <div data-testid="recharts-responsive-container">{children}</div>,
+    Bar: Empty, Cell: Empty, Scatter: Empty, CartesianGrid: Empty, Customized: Empty, LabelList: Empty,
+    Legend: Empty, Line: Empty, ReferenceArea: Empty, ReferenceLine: Empty,
+    Tooltip: Empty, XAxis: Empty, YAxis: Empty,
   };
 });
 
 const POLICIES = [
-  { id: "two_child_limit", name: "2 child limit repeal" },
-  { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
+  { id: "two_child_limit", seriesKey: "measure:two_child_limit", name: "2 child limit repeal" },
+  { id: "threshold_freeze_extension", seriesKey: "measure:threshold_freeze_extension", name: "Threshold freeze extension" },
 ];
 const ALL = POLICIES.map((policy) => policy.id);
 
@@ -52,6 +77,22 @@ const CSV = [
   row(COMBINED_REFORM_ID, "all", { people: 70_000_000, mean: -80, better: 5, worse: 38, direct: 30_000_000 }),
 ].join("\n");
 
+const catalogue = buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(POLICIES.map((policy) => [policy.id, { name: policy.name, status: "approved", years: [2029, 2031], unsupported_years: [], outputs_sha256: "a".repeat(64) }])),
+    combined: { [COMBINED_REFORM_ID]: { name: "All measures", status: "approved", years: [2029, 2031], unsupported_years: [], measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) } },
+  },
+  budgetary: [
+    ...POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, year: 2029, value: index === 0 ? -1 : 1 })),
+    { reform_id: COMBINED_REFORM_ID, reform_name: "All measures", value: 0 },
+  ],
+  // Every key here stands for an artifact that verified
+  tablesByKey: Object.fromEntries([...ALL, COMBINED_REFORM_ID].map((id) => [id, {}])),
+});
+const render = (element) => renderReact(
+  <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
+);
+
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
@@ -69,8 +110,8 @@ describe("results by age", () => {
     ];
     const points = meanChangeByBand(rows, POLICIES, ALL, 2029);
     const young = points.find((point) => point.band === "16-24");
-    expect(young["2 child limit repeal"]).toBe(100);
-    expect(young["Threshold freeze extension"]).toBe(-60);
+    expect(young["measure:two_child_limit"]).toBe(100);
+    expect(young["measure:threshold_freeze_extension"]).toBe(-60);
     expect(young.netChange).toBe(40);
     const oldest = points.find((point) => point.band === "65+");
     expect(oldest.suppressed).toBe(true);
@@ -79,7 +120,8 @@ describe("results by age", () => {
 
   it("reads shares from one policy's run or the combined run only", () => {
     expect(wholeSelectionRun(POLICIES, ["two_child_limit"])).toBe("two_child_limit");
-    expect(wholeSelectionRun(POLICIES, ALL)).toBe(COMBINED_REFORM_ID);
+    expect(wholeSelectionRun(POLICIES, ALL, COMBINED_REFORM_ID)).toBe(COMBINED_REFORM_ID);
+    expect(wholeSelectionRun(POLICIES, ALL)).toBeNull();
     const three = [...POLICIES, { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" }];
     expect(wholeSelectionRun(three, ALL)).toBeNull();
     expect(sharesByGroup([], three, ALL, 2029)).toBeNull();
@@ -91,7 +133,7 @@ describe("results by age", () => {
       { reform_id: COMBINED_REFORM_ID, year: 2029, age_band: "65+", sample_size: MIN_SAMPLE_SIZE - 1 },
       { reform_id: COMBINED_REFORM_ID, year: 2029, age_band: "all", sample_size: 50000, pct_better_off: 5 },
     ];
-    const { run, groups } = sharesByGroup(rows, POLICIES, ALL, 2029);
+    const { run, groups } = sharesByGroup(rows, POLICIES, ALL, 2029, COMBINED_REFORM_ID);
     expect(run).toBe(COMBINED_REFORM_ID);
     expect(groups.map((group) => group.key)).toEqual(["0-15", "16-24", "25-34", "35-49", "50-64", "65+", "all"]);
     expect(groups.find((group) => group.key === "16-24").row.pct_better_off).toBe(4);
@@ -124,26 +166,33 @@ describe("YoungPeopleSection", () => {
   it("has a linkable heading, no headline tiles and every card", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
     const heading = await screen.findByRole("heading", { level: 2, name: "Change by age" });
-    expect(heading.parentElement).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
+    expect(heading.closest(".section-heading")).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
     expect(
       await screen.findByRole("heading", { level: 3, name: /Average change by age, 2029-30/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
-    // Three Recharts charts; Effect of each policy is a dot plot of rows
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
+    // Two Recharts charts; Effect of each policy is a dot plot of rows, and
+    // Better and worse off the shared rows chart: age groups, 16 to 24 in
+    // bold (no background band), ▲/▼ in two fixed columns
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
+    const shares = document.querySelector(".young-people-shares .msc");
+    expect(shares.querySelectorAll("[role='rowheader']").length).toBeGreaterThan(1);
+    expect(shares.querySelector(".msc-label.is-focus")).toHaveTextContent(/16 to 24/);
+    expect(shares.querySelectorAll("[role='columnheader']")).toHaveLength(2);
   });
 
   it("switches average change by age to single years of age", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
-    const pill = await screen.findByRole("button", { name: /Average change by age shown/ });
-    fireEvent.click(pill);
-    fireEvent.click(screen.getByRole("option", { name: /By single year of age/ }));
+    // The view is the first choice in the card's one Options pill
+    const card = (await screen.findByRole("heading", { level: 3, name: /^Average change by age/ })).closest(".young-people-mean");
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(card).getByRole("radiogroup", { name: "Show" })).getByRole("radio", { name: /By single year of age/ }));
     expect(screen.getByText(/by single year of age \(10 to 40\)/)).toBeInTheDocument();
   });
 
-  it("says when the selection has no whole run, never showing zero", async () => {
+  it("shows each measure's own shares when the selection has no whole run, never adding up", async () => {
     const three = [...POLICIES, { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" }];
     render(
       <YoungPeopleSection
@@ -152,13 +201,26 @@ describe("YoungPeopleSection", () => {
         policies={three}
       />,
     );
-    expect(await screen.findByText(/shown for a single policy or for all policies\./)).toBeInTheDocument();
-    // Every chart but the shares is drawn (Effect of each policy as rows)
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
+    // One row per measure for the 16 to 24 group, no blocking message
+    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(screen.queryByText(/shown for a single policy or for all policies/)).toBeNull();
+    // The shares as the shared per-measure chart, one row per measure
+    expect(document.querySelectorAll(".msc [role='rowheader']").length).toBeGreaterThan(0);
   });
 
   it("shows a year with no rows as not yet published", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2031} policies={POLICIES} />);
     expect(await screen.findAllByText("Results for 2031-32 are not yet published.")).toHaveLength(3);
   });
+});
+
+
+it("keeps the age trend unavailable when a selected measure has no supported rows", () => {
+  const rows = [
+    { reform_id: "two_child_limit", year: 2029, age_band: "16-24", mean_change: 100, sample_size: 5000 },
+    { reform_id: "two_child_limit", year: 2029, age_band: "all", mean_change: 120, sample_size: 5000 },
+  ];
+  expect(changeByYear(rows, POLICIES, ALL, [2029])[0]).toMatchObject({ year: 2029, published: false, suppressed: [], "16-24": null, all: null });
+  const unknownSelection = meanChangeByBand(rows, [POLICIES[0]], [POLICIES[0].id, "unpublished_measure"], 2029);
+  expect(unknownSelection.find((point) => point.band === "16-24").netChange).toBeNull();
 });

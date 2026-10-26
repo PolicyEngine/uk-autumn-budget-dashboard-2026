@@ -1,8 +1,8 @@
 // Small presentational pieces of the Methodology view: an icon in a tinted
 // chip, a tag (a pill, optionally a link), a callout and a back-to-top link.
 
-import { ArrowUp } from "lucide-react";
-import { goToSection } from "./MethodContents";
+import { ArrowUp, CircleSlash } from "lucide-react";
+import { goToSection, OPEN_SECTION_EVENT } from "./MethodContents";
 import { EXTERNAL, SOURCES } from "../../utils/sources";
 
 /** An icon in a tinted square chip; decorative, so hidden from assistive tech. */
@@ -73,12 +73,60 @@ export function BackToTop({ targetId }) {
   );
 }
 
+/** A link to another site, in a new tab, saying so to screen readers. */
+export function ExternalLink({ href, children }) {
+  return (
+    <a href={href} {...EXTERNAL}>
+      {children}
+      <span className="policy-sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
 /** A link to a named external source (src/utils/sources.js), in a new tab. */
 export function SourceLink({ id, children }) {
   const source = SOURCES[id];
+  return <ExternalLink href={source.url}>{children ?? source.label}</ExternalLink>;
+}
+
+/**
+ * A link to an anchor in this view: a section, a heading inside a folded
+ * "Technical details" (opened first) or a term.
+ */
+export function AnchorLink({ id, children }) {
   return (
-    <a href={source.url} {...EXTERNAL}>
-      {children ?? source.label}
+    <a
+      href={`#${id}`}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+        event.preventDefault();
+        const target = document.getElementById(id);
+        if (!target) return;
+        const folded = target.closest("details");
+        if (folded) folded.open = true;
+        window.dispatchEvent(new CustomEvent(OPEN_SECTION_EVENT, { detail: target.closest("section")?.id ?? id }));
+        target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
+      }}
+    >
+      {children}
     </a>
+  );
+}
+
+/** A compact list of measures and a reason each ("Unavailable", "Not modelled"). */
+export function ReasonList({ items, icon = false }) {
+  return (
+    <ul className="mm-reasons">
+      {items.map((item) => (
+        <li key={item.name}>
+          <span className="mm-reason-name">
+            {icon && <CircleSlash className="method-row-icon" aria-hidden="true" strokeWidth={1.75} />}
+            {item.name}
+          </span>
+          <span className="mm-reason-why">{item.why}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

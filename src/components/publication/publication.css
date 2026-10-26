@@ -17,6 +17,22 @@
   color: var(--pe-gray-700);
 }
 
+.publication-unavailable-action {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+}
+
+.publication-unavailable-action:hover {
+  background: var(--pe-gray-100);
+}
+
 .publication-provisional {
   margin: 0 0 12px;
   padding: 6px 10px;
@@ -123,7 +139,7 @@
 
 .publication-tooltip {
   padding: 8px 10px;
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--c-grid);
   border-radius: 4px;
   font-size: var(--fs-small);
@@ -138,4 +154,81 @@
   font-weight: 400;
   color: var(--c-notice-text);
   font-size: 0.85em;
+}
+
+/* Loading placeholders (LoadingSkeleton.jsx): the cards' shape, shimmering */
+.skeleton-view {
+  padding: 8px 0 24px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--pe-surface);
+}
+
+.skeleton-line,
+.skeleton-plot {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--c-muted-fill) 0%,
+    color-mix(in srgb, var(--c-muted-fill) 40%, var(--pe-surface)) 50%,
+    var(--c-muted-fill) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+.skeleton-line.is-title {
+  width: 45%;
+  height: 18px;
+}
+
+.skeleton-line.is-subtitle {
+  width: 70%;
+  height: 12px;
+}
+
+.skeleton-plot {
+  width: 100%;
+  margin-top: 6px;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line,
+  .skeleton-plot {
+    animation: none;
+  }
+}
+
+/* A link to a view, before the page's code has opened it: placeholders
+   rather than an empty page under the header (utils/landing.js) */
+.deep-link-skeleton {
+  display: none;
+}
+
+html[data-deep-link] .deep-link-skeleton {
+  display: block;
 }

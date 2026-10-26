@@ -4,9 +4,11 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import Disclosure from "../Disclosure";
+import InfoSections, { hasInfo, infoPreview } from "../InfoSections";
+import { ABOUT_THIS_CHART } from "../ChartMoreInfo";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { BAR_RADIUS, CHART_COLOURS } from "../../utils/chartTheme";
 import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
@@ -139,7 +141,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
                     <text x={plotLeft} y={y + 13} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
-                    <rect x={x0} y={barY} width={w} height={barHeight} rx={2} fill={row.color} />
+                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
                     <text
                       className="policy-bar-value"
                       x={width}
@@ -199,16 +201,17 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
 }
 
 /**
- * The measures that leave the household where it was, in the card's "More
- * info" row (closed at first, as "Compare with OBR estimates"): each on its
- * own row with its colour and, for an employer cost, why.
+ * A card's "About this chart" that also lists the measures that leave the
+ * household (or the group) where it was, as one caveat: each on its own row
+ * with its colour and, for an employer cost, why. `info` is the rest of the
+ * card's About this chart (InfoSections).
  */
-export function NoEffectList({ items, title }) {
-  return (
-    <Disclosure inCard title="More info" contentClassName="no-effect">
-      <p className="no-effect-title">
+export function NoEffectList({ items, title, info = {} }) {
+  const list = items.length > 0 && (
+    <div key="no-effect" className="no-effect">
+      <span className="no-effect-title">
         {title} ({items.length})
-      </p>
+      </span>
       <ul className="no-effect-list">
         {items.map((item) => (
           <li key={item.id} className="no-effect-item" data-policy={item.id}>
@@ -218,6 +221,13 @@ export function NoEffectList({ items, title }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+  const full = { ...info, caveats: [...(info.caveats || []), list] };
+  if (!hasInfo(full)) return null;
+  return (
+    <Disclosure inCard title={ABOUT_THIS_CHART} preview={infoPreview(full)}>
+      <InfoSections info={full} />
     </Disclosure>
   );
 }

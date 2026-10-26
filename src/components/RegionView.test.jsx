@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import RegionView from "./RegionView";
 import { downloadFile } from "../utils/downloadFile";
 import { resetGeographyCache } from "../hooks/useGeographyData";
@@ -10,6 +10,15 @@ import {
   areaRouting,
   geographyFetch,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),

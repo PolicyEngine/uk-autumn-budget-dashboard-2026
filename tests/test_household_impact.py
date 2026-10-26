@@ -509,6 +509,14 @@ def test_the_runs_it_asks_for(monkeypatch):
     )
     assert len(calls) == 8
     assert result["engine"] == runtime_identity()["packages"]
+    assert result["git_sha"] == runtime_identity()["git_sha"]
+
+    # Each answer carries the build's commit, which the page compares
+    # between the headline and a breakdown from another deployment
+    monkeypatch.setenv("GIT_SHA", "b" * 40)
+    assert calculate(Answers(), measures)["git_sha"] == "b" * 40
+    monkeypatch.delenv("GIT_SHA")
+    assert calculate(Answers(), measures)["git_sha"] is None
 
 
 def test_parameter_change_measures_match_policyengine_py_household_calc():
@@ -936,6 +944,107 @@ def test_the_rate_parts_add_up_and_split_the_allowance_taper():
     assert parts[1]["income_tax"] == pytest.approx(0.40)
     assert parts[1]["universal_credit"] == pytest.approx(0.55)
     assert parts[1]["other_benefits"] == pytest.approx(0.10)
+
+
+def test_the_net_income_parts_add_up_to_net_income():
+    """At each sweep point net income splits into its parts, in pounds with
+    taxes negative: income tax without the Child Benefit charge, the charge
+    on its own, the rest of market income and of the benefits as "other",
+    and "other_taxes" the rest, so they add up to net income."""
+    grid = [0.0, 50_000.0]
+    components = {
+        "income_tax": [0.0, 8_000.0],
+        "CB_HITC": [0.0, 500.0],
+        "personal_allowance": [12_570.0, 12_570.0],
+        "national_insurance": [0.0, 3_000.0],
+        "student_loan_repayments": [0.0, 1_000.0],
+        "universal_credit": [9_000.0, 0.0],
+        "household_benefits": [12_000.0, 2_500.0],
+        "household_market_income": [1_000.0, 51_000.0],
+        "household_tax": [2_000.0, 14_200.0],
+        "pension_contributions": [0.0, 1_500.0],
+        "child_benefit": [2_500.0, 2_500.0],
+        "council_tax": [2_000.0, 2_000.0],
+        "state_pension": [0.0, 0.0],
+        "cost_of_living_support_payment": [150.0, 0.0],
+        "fuel_duty": [0.0, 300.0],
+        "vat_change": [0.0, -50.0],
+    }
+    net = [
+        market + benefits - tax - pension
+        for market, benefits, tax, pension in zip(
+            components["household_market_income"],
+            components["household_benefits"],
+            components["household_tax"],
+            components["pension_contributions"],
+        )
+    ]
+    parts = household_impact.sweep_net_income_parts(grid, net, components)
+    for step, total in zip(parts, net):
+        assert list(step) == list(household_impact.NET_INCOME_PARTS)
+        assert sum(step.values()) == pytest.approx(total, abs=0.005)
+    high = parts[1]
+    assert high["employment_income"] == 50_000
+    assert high["other_income"] == 1_000
+    assert high["universal_credit"] == 0
+    assert high["child_benefit"] == 2_500
+    assert high["other_benefits"] == 0
+    assert high["income_tax"] == -7_500
+    assert high["child_benefit_charge"] == -500
+    assert high["national_insurance"] == -3_000
+    assert high["student_loan"] == -1_000
+    assert high["council_tax"] == -2_000
+    assert high["pension_contributions"] == -1_500
+    assert high["fuel_duty"] == -300
+    assert high["vat_change"] == 50
+    # £14,200 of tax less the £14,250 listed (income tax with its charge,
+    # National Insurance, student loan, Council Tax, fuel duty and VAT)
+    assert high["other_taxes"] == 50
+    assert parts[0]["warm_home_discount"] == 150
+    assert parts[0]["other_benefits"] == 350
+    # A run kept from before the levels were read has no parts
+    old = {k: v for k, v in components.items() if k != "council_tax"}
+    assert household_impact.sweep_net_income_parts(grid, net, old) is None
+
+
+def test_the_sweep_splits_net_income_into_its_parts():
+    """A family on Universal Credit: at every point, before and after, the
+    parts add up to the point's net income; at £0 of salary there is no
+    income tax, and the parts carry Universal Credit and Child Benefit."""
+    answers = Answers(
+        employment_income=20_000,
+        claims_universal_credit=True,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=900,
+        children=(household_impact.Child(age=4), household_impact.Child(8)),
+        petrol_spending=1_500,
+    )
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], include=("sweep",)
+    )
+    sweep = result["sweep"]
+    split = sweep["net_income_parts"]
+    # Fuel duty, from the petrol entered, is its own part at every salary,
+    # as in the programme table
+    fuel_duty = programme(result, "fuel_duty")["baseline"]
+    assert fuel_duty > 0
+    for step in split["baseline"]:
+        assert step["fuel_duty"] == pytest.approx(-fuel_duty, abs=0.01)
+    assert split["parts"] == list(household_impact.NET_INCOME_PARTS)
+    for side in ("baseline", "reform"):
+        assert len(split[side]) == len(sweep["points"])
+        for step, point in zip(split[side], sweep["points"]):
+            assert sum(step.values()) == pytest.approx(point[side], abs=0.02)
+            assert step["employment_income"] == point["employment_income"]
+    zero = split["baseline"][0]
+    assert zero["income_tax"] == 0
+    assert zero["universal_credit"] > 5_000
+    assert zero["child_benefit"] > 2_000
+    assert zero["council_tax"] < 0
+    # Taxes are negative at every point
+    for step in split["reform"]:
+        for name in ("income_tax", "national_insurance", "council_tax"):
+            assert step[name] <= 0
 
 
 def _own_parts(result):

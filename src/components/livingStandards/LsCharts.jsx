@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -19,6 +20,7 @@ import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import useElementWidth from "../../hooks/useElementWidth";
 import {
+  barShape,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   GRID_PROPS,
@@ -81,20 +83,106 @@ const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
  * is at least `height` tall and fills its row, so beside a taller plot
  * (a dot plot with many rows) its x axis still sits on the same line.
  */
-function ChartRows({ plotRef, children, legendItems, height }) {
+/**
+ * A light-to-dark key for many ordered groups ("Lowest income → Highest
+ * income"), in place of a swatch per group.
+ */
+function RampLegend({ ramp }) {
+  return (
+    <div className="ls-ramp-legend">
+      <span>{ramp.from}</span>
+      <span
+        className="ls-ramp-bar"
+        aria-hidden="true"
+        style={{ background: `linear-gradient(to right, ${ramp.colours.join(", ")})` }}
+      />
+      <span>{ramp.to}</span>
+    </div>
+  );
+}
+
+/** One bar's tooltip: "2031-32 · 15th of 20 (70th–75th percentile)" and its value. */
+function BarTooltip({ active, payload, describe }) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const { label, value, colour } = describe(String(entry.dataKey), entry.payload);
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
+      <div className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: colour ?? entry.color }} />
+        <span className="chart-tooltip-value">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
         <div className="ls-plot-canvas">{children}</div>
       </div>
-      <div className="chart-legend">
-        <GroupedLegend items={legendItems} />
-      </div>
+      {/* A chart whose lines are labelled on the plot has no key */}
+      {legend && (
+        <div className="chart-legend">
+          {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
+          {/* A line on what the chart leaves out, under the key */}
+          {legendNote && <p className="ls-legend-note">{legendNote}</p>}
+        </div>
+      )}
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
     </>
+  );
+}
+
+// Room right of the plot for direct labels, and their least spacing
+const END_LABEL_WIDTH = 150;
+const END_LABEL_GAP = 14;
+
+/**
+ * Each line's name at its last point, right of the plot, nudged apart so
+ * close lines' labels never overlap (a thin leader joins a moved label to
+ * its line). Drawn in the chart's SVG, so the downloads carry it.
+ */
+function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis?.scale) return null;
+  const labels = series
+    .map((s) => {
+      const last = [...data].reverse().find((d) => d[s.key] != null);
+      if (!last) return null;
+      const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
+      const y = yAxis.scale(last[s.key]);
+      return { key: s.key, name: s.name, colour: s.colour, x, y, at: y };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.y - b.y);
+  // Push each label down clear of the one above, then back up from the
+  // bottom so the stack stays inside the plot
+  for (let i = 1; i < labels.length; i += 1) labels[i].at = Math.max(labels[i].at, labels[i - 1].at + END_LABEL_GAP);
+  const bottom = yAxis.y + yAxis.height;
+  for (let i = labels.length - 1; i >= 0; i -= 1) {
+    const limit = i === labels.length - 1 ? bottom : labels[i + 1].at - END_LABEL_GAP;
+    labels[i].at = Math.min(labels[i].at, limit);
+  }
+  return (
+    <g className="ls-end-labels">
+      {labels.map((l) => (
+        <g key={l.key}>
+          {Math.abs(l.at - l.y) > 2 && (
+            <path d={`M${l.x + 5},${l.y} L${l.x + 12},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
+          )}
+          <text x={l.x + 14} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
+            {l.name}
+          </text>
+        </g>
+      ))}
+    </g>
   );
 }
 
@@ -120,10 +208,19 @@ export function LsLineChart({
   baseYear = BASE_YEAR,
   // [from, to]: the years a card's sentence compares, shaded on the chart
   highlight = null,
+  // Name each line at its end, right of the plot (wide screens only; the
+  // legend names them on a phone)
+  endLabels = false,
+  // False where the card's own chips (SeriesToggle) are the key
+  legend = true,
+  // The key of a line to bring forward (a hovered chip); the others fade
+  focusKey = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
+  const labelled = endLabels && !narrow && width >= 560;
+  const margin = labelled ? { ...MARGIN, right: END_LABEL_WIDTH } : MARGIN;
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
   const band = highlight ? highlight.map(asKey) : null;
@@ -132,9 +229,9 @@ export function LsLineChart({
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
-    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={MARGIN}>
+        <LineChart data={data} margin={margin}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -178,15 +275,17 @@ export function LsLineChart({
               dataKey={s.key}
               name={s.name}
               stroke={s.colour}
-              strokeWidth={2.5}
+              strokeWidth={focusKey === s.key ? 3.5 : 2.5}
+              strokeOpacity={focusKey && focusKey !== s.key ? 0.2 : 1}
               strokeDasharray={dashOf(s)}
-              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1 }}
+              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 }}
               activeDot={{ r: 5 }}
               connectNulls={false}
               isAnimationActive={false}
             />
           ))}
           <Customized component={<ChartUnitLabel text={yLabel} horizontal />} />
+          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} />} />}
         </LineChart>
       </ResponsiveContainer>
     </ChartRows>
@@ -195,8 +294,10 @@ export function LsLineChart({
 
 /**
  * Bar chart in the same theme. Bars stack when `stacked`; with
- * `signColours` a single series is coloured by sign, and `legendItems`
- * names the colours.
+ * `signColours` a single series is coloured by sign, with `cellColours`
+ * (one per row) a single series is coloured by category, and
+ * `legendItems` names the colours. Several series side by side are
+ * grouped bars; `barGap` and `maxBarSize` set their spacing.
  */
 export function LsBarChart({
   data,
@@ -214,17 +315,32 @@ export function LsBarChart({
   signColours = null,
   legendItems,
   baseYear = BASE_YEAR,
+  cellColours = null,
+  barGap = 4,
+  barCategoryGap = "20%",
+  maxBarSize = 56,
+  tooltipLabelFormat = null,
+  legendNote = null,
+  // { colours, from, to }: a light-to-dark key in place of the swatches
+  ramp = null,
+  // (seriesKey, row) => { label, value, colour? }: a tooltip for the one
+  // bar hovered (its series dimmed others), in place of the year's list
+  describeBar = null,
+  // A faint band behind every other category, so each year's cluster of
+  // bars reads as its own group
+  categoryBands = false,
 }) {
   const narrow = useNarrowViewport();
+  const [hovered, setHovered] = useState(null);
   const [ref, width] = useElementWidth();
   const yWidth = tickWidth(yTicks, yFormat);
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
 
   return (
-    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote} ramp={ramp}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={MARGIN} barCategoryGap="20%">
+        <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -245,22 +361,58 @@ export function LsBarChart({
             width={yWidth}
             allowDecimals
           />
+          {categoryBands &&
+            data
+              .filter((_, i) => i % 2 === 0)
+              .map((d) => (
+                <ReferenceArea
+                  key={`band-${d[xKey]}`}
+                  x1={d[xKey]}
+                  x2={d[xKey]}
+                  fill={CHART_COLOURS.mutedFill}
+                  fillOpacity={0.8}
+                  stroke="none"
+                />
+              ))}
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-          <Tooltip
-            {...TOOLTIP_PROPS}
-            cursor={HOVER_CURSOR}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
-          />
+          {describeBar ? (
+            // Beside the bar, never over the year's other bars
+            <Tooltip
+              {...TOOLTIP_PROPS}
+              shared={false}
+              cursor={false}
+              offset={16}
+              // On a phone, under the plot, so it never covers the bars
+              {...(narrow ? { position: { x: 0, y: plotHeight(narrow) - 8 }, allowEscapeViewBox: { x: false, y: true } } : {})}
+              content={<BarTooltip describe={describeBar} />}
+            />
+          ) : (
+            <Tooltip
+              {...TOOLTIP_PROPS}
+              cursor={HOVER_CURSOR}
+              content={<ChartTooltip format={tooltipFormat} labelFormat={tooltipLabelFormat ?? xFormat} grouped={false} showPlus={showPlus} />}
+            />
+          )}
           {series.map((s) => (
             <Bar
               key={s.key}
               dataKey={s.key}
               name={s.name}
               fill={s.colour}
+              onMouseEnter={describeBar ? (_, index) => setHovered({ key: s.key, index }) : undefined}
+              onMouseLeave={describeBar ? () => setHovered(null) : undefined}
               stackId={stacked ? "stack" : undefined}
-              maxBarSize={56}
+              shape={barShape(stacked ? series.map((item) => item.key) : [s.key])}
+              maxBarSize={maxBarSize}
               isAnimationActive={false}
             >
+              {cellColours && data.map((d, i) => <Cell key={i} fill={cellColours[i]} />)}
+              {/* The hovered bar stays full, every other bar dims */}
+              {describeBar &&
+                !cellColours &&
+                data.map((d, i) => (
+                  <Cell key={i} fill={s.colour} fillOpacity={hovered && (hovered.key !== s.key || hovered.index !== i) ? 0.3 : 1} />
+                ))}
               {signColours &&
                 data.map((d, i) => (
                   <Cell key={i} fill={(d[s.key] ?? 0) < 0 ? signColours.negative : signColours.positive} />

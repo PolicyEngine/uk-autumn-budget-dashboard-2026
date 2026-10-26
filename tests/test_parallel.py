@@ -7,13 +7,18 @@ what it cannot run. These tests use stand-ins: the real determinism check,
 serial against ``--jobs auto`` on the certified data, is in the PR.
 """
 
+import dataclasses
+import functools
 import hashlib
+import json
 import multiprocessing
 import pickle
 from pathlib import Path
 
+import hypothesis.strategies as st
 import pandas as pd
 import pytest
+from hypothesis import HealthCheck, example, given, settings
 
 from tests import parallel_helpers
 from uk_budget_data import parallel
@@ -465,6 +470,384 @@ def test_artifacts_are_the_same_whatever_order_they_run_in(world, tmp_path):
     assert tables(tmp_path / "serial") == tables(tmp_path / "parallel")
 
 
+# --- receipted artifacts in worker processes (#173) ------------------------
+
+
+class TwiceRunner:
+    """Runs each unit in this process twice: as it is, and from a pickled
+    copy, as a worker process is sent it, writing under ``copy_root``. The
+    copies' outcomes are kept in ``copies``; the generation is given the
+    first. Planned once, so a combined run's consistency check, on real
+    parameter trees, is paid once. The test's build and process, closures
+    over its World, are put back after the copy (the generator's own are
+    module-level functions)."""
+
+    jobs = 2
+
+    def __init__(self, copy_root: Path):
+        self.copy_root = copy_root
+        self.copies = []
+
+    def map(self, function, units, on_result=lambda i, r: None):
+        results = []
+        for index, unit in enumerate(units):
+            result = function(unit)
+            sent = pickle.loads(
+                pickle.dumps(
+                    dataclasses.replace(
+                        unit,
+                        build=None,
+                        process=None,
+                        artifacts_root=self.copy_root,
+                    )
+                )
+            )
+            self.copies.append(
+                function(
+                    dataclasses.replace(
+                        sent, build=unit.build, process=unit.process
+                    )
+                )
+            )
+            results.append(result)
+            on_result(index, result)
+        return results
+
+
+class SwappingRunner:
+    """Runs units in this process, with one measure swapped under its id
+    for ``swapped`` after the generation computed its identities."""
+
+    jobs = 2
+
+    def __init__(self, swapped: Reform):
+        self.swapped = swapped
+
+    def map(self, function, units, on_result=lambda i, r: None):
+        results = []
+        for index, unit in enumerate(units):
+            if unit.key == self.swapped.id:
+                unit = dataclasses.replace(unit, reform=self.swapped)
+            result = function(unit)
+            results.append(result)
+            on_result(index, result)
+        return results
+
+
+def _worker_runner() -> ProcessRunner:
+    return ProcessRunner(
+        2, 1.0, available=lambda: 512 * GB, poll_s=0.01, context=_context()
+    )
+
+
+def _artifacts(references) -> dict:
+    """Each written artifact by key: its digest without the generation id
+    and its tables' bytes. A run with a hand-written modifier records a
+    fresh generation id each time (``receipt.build_receipt_document``), so
+    its digest is never repeated, serially or not."""
+    from uk_budget_data.publication.artifacts import RECEIPT_FILE, read_receipt
+    from uk_budget_data.publication.receipt import artifact_sha256
+
+    artifacts = {}
+    for reference in references:
+        document = read_receipt(reference.path)
+        document["dashboard"].pop("generation_id", None)
+        artifacts[reference.key] = (
+            artifact_sha256(document),
+            {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in sorted(Path(reference.path).iterdir())
+                if path.name != RECEIPT_FILE
+            },
+        )
+    return artifacts
+
+
+@pytest.mark.slow
+def test_artifacts_run_in_worker_processes_with_real_identities(
+    world, tmp_path
+):
+    """``--jobs 2`` on the process runner: every run, policyengine's
+    identities included, is pickled to a worker process, which builds its
+    receipt with identities of its own. The artifacts are a serial run's
+    (:func:`_artifacts`)."""
+    from tests.fixed_shape_measures import module_level_modifier
+    from tests.test_publication_flow import (
+        HIGHER_RATE_PATH,
+        YEARS,
+        fake_process,
+        reform,
+    )
+    from uk_budget_data.publication.generate import generate_artifacts
+
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "beta": {2027: -0.5, 2028: -0.6},
+        "structural": {2027: -0.2, 2028: -0.3},
+        "combined--alpha+beta": {2027: -1.4, 2028: -2.5},
+    }
+    beta = Reform(
+        id="beta",
+        name="Beta",
+        parameter_changes={HIGHER_RATE_PATH: {str(y): 0.41 for y in YEARS}},
+    )
+    # Bound by its code revision: its reform identity carries policyengine's
+    # re-check handle, which cannot be pickled.
+    structural = Reform(
+        id="structural",
+        name="Structural",
+        simulation_modifier=module_level_modifier,
+    )
+    alpha = reform("alpha")
+
+    def run(root, runner, build, process):
+        return generate_artifacts(
+            [alpha, beta, structural],
+            DataConfig(years=YEARS),
+            combined_sets=[[alpha, beta]],
+            artifacts_root=root,
+            generator_argv=["test"],
+            build=build,
+            process=process,
+            runner=runner,
+        )
+
+    serial = run(
+        tmp_path / "serial",
+        SerialRunner(),
+        lambda dataset, scenario=None: world.sim(),
+        fake_process(values),
+    )
+    workers = run(
+        tmp_path / "workers",
+        _worker_runner(),
+        functools.partial(parallel_helpers.world_sim, str(world.root)),
+        functools.partial(parallel_helpers.fake_process, values),
+    )
+    assert serial.refused == {}, serial.refused
+    assert workers.refused == {}, workers.refused
+    assert [r.key for r in workers.written] == [
+        "alpha",
+        "beta",
+        "structural",
+        "combined--alpha+beta",
+    ]
+    assert _artifacts(workers.written) == _artifacts(serial.written)
+    # Those without a hand-written modifier are the same bytes.
+    assert [
+        r.artifact_sha256 for r in workers.written if r.key != "structural"
+    ] == [r.artifact_sha256 for r in serial.written if r.key != "structural"]
+
+
+def test_a_worker_s_receipt_still_refuses_a_modifier_changed_since(
+    world, tmp_path
+):
+    """policyengine's re-check, that a modifier has not changed since its
+    identity was computed, still runs in the worker that builds the
+    receipt: one that changes the measure's modifier after computing its
+    identities is refused, and the others are written."""
+    from tests.fixed_shape_measures import module_level_modifier
+    from tests.test_publication_flow import YEARS, reform
+    from uk_budget_data.publication.generate import generate_artifacts
+
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "retuned": {2027: -0.2, 2028: -0.3},
+    }
+    report = generate_artifacts(
+        [
+            reform("alpha"),
+            Reform(
+                id="retuned",
+                name="Retuned",
+                simulation_modifier=module_level_modifier,
+            ),
+        ],
+        DataConfig(years=YEARS),
+        artifacts_root=tmp_path / "artifacts",
+        generator_argv=["test"],
+        build=functools.partial(parallel_helpers.world_sim, str(world.root)),
+        process=functools.partial(
+            parallel_helpers.retune_then_process, values
+        ),
+        runner=_worker_runner(),
+    )
+    assert [r.key for r in report.written] == ["alpha"]
+    assert (
+        "The modifier changed after its identity was computed"
+        in report.refused["retuned"]
+    )
+    assert not (tmp_path / "artifacts" / "retuned").exists()
+    # The change stayed in the worker.
+    assert module_level_modifier.__defaults__ == (0.21,)
+
+
+@pytest.mark.parametrize("side", ["baseline", "reform"])
+def test_a_run_whose_measure_changed_since_its_identities_is_refused(
+    world, tmp_path, side
+):
+    """A run computes its identities where it runs and refuses to write
+    when they differ from those the generation computed: the measure it
+    resolved is not the one the generation bound."""
+    from tests.publication_support import RATE_PATH
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.publication.generate import generate_artifacts
+
+    swapped = (
+        reform("alpha", rate=0.3)
+        if side == "reform"
+        else reform(
+            "alpha",
+            baseline_parameter_changes={
+                RATE_PATH: {str(y): 0.2 for y in YEARS}
+            },
+        )
+    )
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "beta": {2027: -0.5, 2028: -0.6},
+    }
+    report = generate_artifacts(
+        [reform("alpha"), reform("beta")],
+        DataConfig(years=YEARS),
+        artifacts_root=tmp_path / "artifacts",
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+        runner=SwappingRunner(swapped),
+    )
+    assert [r.key for r in report.written] == ["beta"]
+    assert report.refused["alpha"] == (
+        "the measure changed after its identity was computed: its "
+        f"{side} identity where it ran differs from the one computed when "
+        "the run was planned"
+    )
+    assert not (tmp_path / "artifacts" / "alpha").exists()
+
+
+# Disjoint parameters, as members of a combined run must change
+# (combine._merge): each member's own, the first member's own baseline and
+# the configured baseline. None is uprated, so no scored year is refused.
+_MEMBER_PATHS = (
+    "gov.hmrc.income_tax.rates.uk[0].rate",
+    "gov.hmrc.income_tax.rates.uk[1].rate",
+)
+_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.uk[2].rate"
+_CONFIGURED_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[0].rate"
+
+
+@pytest.mark.slow
+@settings(
+    # A combined run checks its members' consistency on real parameter
+    # trees, about 10 s a case here, so few cases beyond the examples.
+    max_examples=5,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+@given(
+    rates=st.lists(
+        st.floats(0.0, 0.6, allow_nan=False), min_size=1, max_size=2
+    ),
+    own_baseline=st.booleans(),
+    configured_baseline=st.booleans(),
+    structural=st.booleans(),
+)
+# Combined runs always among them: members mixing an own baseline with a
+# configured one, and a member with a module-level modifier.
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=True,
+    configured_baseline=True,
+    structural=False,
+)
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=False,
+    configured_baseline=True,
+    structural=True,
+)
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=True,
+    configured_baseline=False,
+    structural=True,
+)
+def test_any_measure_s_runs_survive_pickling_unchanged(
+    world,
+    tmp_path_factory,
+    rates,
+    own_baseline,
+    configured_baseline,
+    structural,
+):
+    """Every run the generation plans, single and combined, whatever its
+    measures' parameter changes, own or configured baseline and
+    module-level modifier, is written, and the same from a copy pickled to
+    a worker as in this process."""
+    from tests.fixed_shape_measures import module_level_modifier
+    from tests.test_publication_flow import YEARS, fake_process
+    from uk_budget_data.publication import combine
+    from uk_budget_data.publication.generate import generate_artifacts
+
+    measures = [
+        Reform(
+            id=f"m{index}",
+            name=f"M{index}",
+            parameter_changes={
+                _MEMBER_PATHS[index]: {str(y): rate for y in YEARS}
+            },
+            baseline_parameter_changes=(
+                {_OWN_BASELINE_PATH: {str(y): 0.4 for y in YEARS}}
+                if own_baseline and index == 0
+                else None
+            ),
+            simulation_modifier=(
+                module_level_modifier
+                if structural and index == len(rates) - 1
+                else None
+            ),
+        )
+        for index, rate in enumerate(rates)
+    ]
+    config = DataConfig(
+        years=YEARS,
+        baseline_parameter_changes=(
+            {_CONFIGURED_BASELINE_PATH: {str(y): 0.1 for y in YEARS}}
+            if configured_baseline
+            else None
+        ),
+    )
+    combined_sets = [measures] if len(measures) > 1 else []
+    keys = [m.id for m in measures] + [
+        combine.combined_key([m.id for m in members])
+        for members in combined_sets
+    ]
+    values = {key: {2027: -1.0, 2028: -2.0} for key in keys}
+
+    runner = TwiceRunner(tmp_path_factory.mktemp("copies") / "artifacts")
+    report = generate_artifacts(
+        measures,
+        config,
+        combined_sets=combined_sets,
+        artifacts_root=tmp_path_factory.mktemp("serial") / "artifacts",
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+        runner=runner,
+    )
+    assert report.refused == {}, report.refused
+    assert [r.key for r in report.written] == keys
+    assert [copy.refused for copy in runner.copies] == [None] * len(keys)
+    copies = [copy.reference for copy in runner.copies]
+    assert [r.key for r in copies] == keys
+    # The copies wrote their own artifacts, under the copy root.
+    assert all(
+        Path(r.path).resolve().is_relative_to(runner.copy_root.resolve())
+        for r in copies
+    )
+    assert _artifacts(copies) == _artifacts(report.written)
+
+
 # --- results by area: the same tables whatever the order ------------------
 
 
@@ -473,17 +856,34 @@ def test_area_tables_are_the_same_whatever_order_measures_run_in(
 ):
     from tests.test_geography import run_cli
     from uk_budget_data import geography as g
+    from uk_budget_data.publication.release_index import AREA_PROVENANCE_FILE
 
     outputs = []
+    provenances = []
     for name, runner in (("serial", None), ("parallel", ReversingRunner())):
         directory = tmp_path / name
         directory.mkdir()
         monkeypatch.setattr(g, "_geography_runner", lambda parsed: runner)
         code, out, _ = run_cli(monkeypatch, directory)
         assert code == 0
-        outputs.append(snapshot(out))
+        tables = snapshot(out)
+        # Each run makes its own fixture manifest, stamped with the time it
+        # was approved, so the manifest digest the provenance records is
+        # that run's own; everything else in it must match.
+        provenance = json.loads((out / AREA_PROVENANCE_FILE).read_bytes())
+        manifest = next(directory.glob("publication.json")).read_bytes()
+        assert provenance.pop("manifest_sha256") == (
+            hashlib.sha256(manifest).hexdigest()
+        )
+        del tables[AREA_PROVENANCE_FILE]
+        outputs.append(tables)
+        provenances.append(provenance)
     assert outputs[0] == outputs[1]
     assert outputs[0]
+    assert provenances[0] == provenances[1]
+    assert provenances[0]["files"] == {
+        name: digest for name, digest in outputs[0].items()
+    }
 
 
 # --- Modal ----------------------------------------------------------------

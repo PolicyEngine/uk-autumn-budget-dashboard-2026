@@ -2,9 +2,23 @@ import { useCallback, useEffect, useState } from "react";
 
 // The years two-year comparisons on Living standards run between, kept in
 // the address (?ls_from=2027&ls_to=2031) and shared by every card that
-// compares two years, so choosing a range in one changes it in all
+// compares two years, so choosing a range in one changes it in all (the
+// Living standards and Poverty sub-tabs of Population impact)
 const EVENT = "ls-year-range";
 const startOf = (fy) => Number(String(fy).slice(0, 4));
+
+/**
+ * The years every two-year comparison opens on (Vahid, 26 October): the
+ * Budget's first full year to the last forecast year, on every card.
+ */
+export const DEFAULT_YEAR_RANGE = ["2027-28", "2031-32"];
+
+/** DEFAULT_YEAR_RANGE where a card offers both years, else its first and last. */
+export function defaultRange(years) {
+  const [from, to] = DEFAULT_YEAR_RANGE;
+  if (years.includes(from) && years.includes(to)) return [from, to];
+  return [years.includes(from) ? from : years[0], years.includes(to) ? to : years[years.length - 1]];
+}
 
 function readRange(years, fallback) {
   const known = new Set(years.map(startOf));

@@ -1,4 +1,4 @@
-import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./ChartTooltip.css";
 
 /** A signed value with a true minus, for tooltips. */
@@ -36,7 +36,11 @@ function ChartTooltip({
   single,
   showPlus = false,
   showZero = false,
+  // A line under the rows from the hovered point (e.g. the people a
+  // poverty change is), or nothing
+  note,
 }) {
+  const { bySeriesKey } = useMeasureCatalogue();
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
   const singleRows = single
@@ -54,21 +58,24 @@ function ChartTooltip({
     .filter((entry) => showZero || Math.abs(Number(entry.value)) > 1e-9)
     .map((entry) => ({
       key: String(entry.dataKey),
-      name: entry.name,
+      name: bySeriesKey.get(String(entry.dataKey))?.label ?? entry.name,
       value: Number(entry.value),
-      // A value already written out (FloatingTooltip's TooltipRows)
       text: entry.text,
-      color: POLICY_COLORS[entry.name] ?? entry.color ?? entry.fill ?? entry.stroke,
-    }));
+      color: bySeriesKey.get(String(entry.dataKey))?.color ?? entry.color ?? entry.fill ?? entry.stroke,
+      direction: bySeriesKey.get(String(entry.dataKey))?.direction,
+    }))
+    .sort((a, b) => (bySeriesKey.get(a.key)?.order ?? Infinity) - (bySeriesKey.get(b.key)?.order ?? Infinity));
   const net = netKey ? payload.find((entry) => entry.dataKey === netKey) : null;
   const sections =
-    grouped && rows.some((row) => POLICY_COLORS[row.name])
+    grouped && rows.some((row) => bySeriesKey.has(row.key))
       ? [
-          ["Raise revenue", rows.filter((row) => REVENUE_RAISING_NAMES.has(row.name))],
-          ["Cost revenue", rows.filter((row) => !REVENUE_RAISING_NAMES.has(row.name))],
+          ["Raise revenue", rows.filter((row) => row.direction === "revenue")],
+          ["Cost revenue", rows.filter((row) => row.direction === "cost")],
+          ["Other measures", rows.filter((row) => row.direction !== "revenue" && row.direction !== "cost")],
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 
+  const noteText = note ? note(payload[0]?.payload) : null;
   const valueText = (value) =>
     showPlus && value > 0 ? `+${format(value)}` : signed(format(Math.abs(value)), value);
 
@@ -94,6 +101,7 @@ function ChartTooltip({
           <span className="chart-tooltip-value">{valueText(Number(net.value))}</span>
         </div>
       )}
+      {noteText && <p className="chart-tooltip-note">{noteText}</p>}
     </div>
   );
 }
@@ -106,6 +114,50 @@ function ChartTooltip({
 // On a touch screen (no hover) a chart's tooltip opens on a tap
 const TOUCH =
   typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches;
+
+/**
+ * One stacked segment's tooltip, for a chart whose Tooltip has
+ * shared={false}: the bar's label, the hovered measure and its value, then
+ * the bar's net under a hairline. Beside the cursor, so it never covers the
+ * whole bar (Vahid, 26 October).
+ *
+ * @param {Object} props
+ * @param {(row: Object) => string} props.labelOf - The bar's label from its row
+ * @param {(value: number) => string} props.format - Absolute value text
+ * @param {string} [props.netKey] - The row's net, shown under the measure
+ * @param {string} [props.netLabel]
+ * @param {string|null} [props.activeKey] - The hovered series, where the chart passes all of them
+ */
+export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change", activeKey }) {
+  if (!active || !payload?.length) return null;
+  // A composed chart passes every series: show the one the pointer is on
+  // (activeKey, from the bars' mouse events), nothing between segments
+  const entry = activeKey === undefined
+    ? payload.find((item) => item.dataKey !== netKey) ?? payload[0]
+    : payload.find((item) => item.dataKey === activeKey);
+  if (!entry) return null;
+  const row = entry.payload ?? {};
+  const value = Number(entry.value);
+  const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);
+  const net = netKey ? Number(row[netKey]) : NaN;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{labelOf(row)}</p>
+      <div className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
+        <span className="chart-tooltip-name">{entry.name}</span>
+        <span className="chart-tooltip-value">{text(value)}</span>
+      </div>
+      {Number.isFinite(net) && (
+        <div className="chart-tooltip-row chart-tooltip-net">
+          <span className="chart-tooltip-swatch chart-tooltip-swatch-line" />
+          <span className="chart-tooltip-name">{netLabel}</span>
+          <span className="chart-tooltip-value">{text(net)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export const TOOLTIP_PROPS = {
   trigger: TOUCH ? "click" : "hover",
