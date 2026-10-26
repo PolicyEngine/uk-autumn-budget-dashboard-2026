@@ -85,7 +85,7 @@ export function povertyWaterfall(measures, total, millions) {
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
     const x = toX(total);
-    steps.push({ id: "package", name: "Package", pp: total, x, start: 0, end: x, colour: CHART_COLOURS.reference, kind: "total" });
+    steps.push({ id: "package", name: "Package", pp: total, x, start: 0, end: x, colour: CHART_COLOURS.net, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
