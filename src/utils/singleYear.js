@@ -424,15 +424,25 @@ export function rateAt(rates, income) {
  * Null without both rates.
  */
 export function keepSentence(before, after) {
+  const clause = keepClause(before, after);
+  return clause && `${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
+}
+
+/**
+ * keepSentence's words without the capital or full stop, to follow the
+ * marginal rate in one sentence: "of your next £1,000 of earnings, you
+ * keep £720". Null without both rates.
+ */
+export function keepClause(before, after) {
   if (before === null || before === undefined || after === null || after === undefined) return null;
   const unit = before > 2 || after > 2 ? 100 : 1000;
   const kept = (rate) => Math.round(unit * (1 - rate));
   const say = (amount) =>
     amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
-  const lead = `Of your next ${money(unit)} of earnings, you`;
+  const lead = `of your next ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
-  if (was === now) return `${lead} ${say(was)}.`;
-  return `${lead} ${say(was)} before and ${say(now)} after.`;
+  if (was === now) return `${lead} ${say(was)}`;
+  return `${lead} ${say(was)} before and ${say(now)} after`;
 }
 
 /**

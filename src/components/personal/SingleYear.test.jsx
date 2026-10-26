@@ -312,11 +312,10 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
     expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
-    // The rate, then on a line of its own the rate as money, said once
-    // when before and after round the same
-    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68% before and 68% after\./);
-    expect(sentence).toHaveTextContent(/after\.Of your next £1,000 of earnings, you keep £324\.$/);
-    expect(sentence.querySelector("br")).not.toBeNull();
+    // One sentence: the rate, said once when before and after round the
+    // same, then the rate as money
+    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68%/);
+    expect(sentence).toHaveTextContent(/68%, so of your next £1,000 of earnings, you keep £324\.$/);
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
