@@ -30,6 +30,7 @@ import {
   axisWidth,
   useNarrowViewport,
 } from "../../utils/chartTheme";
+import UnavailableNotice from "../publication/UnavailableNotice";
 import { OUTTURN_KEY, niceAxis, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
 
 // The lines differ in pattern and weight as well as colour
@@ -157,14 +158,23 @@ export function xTicks(rows, frequency, { plotWidth = 0, label = String, edge = 
 /**
  * The y axis over the rows shown: round steps, from 0 for a % view, with
  * `headroom` and `footroom` (shares of the range) kept free above and
- * below the data.
+ * below the data. Null where none can be stepped. The lowest and highest
+ * values are found in a loop, not by spreading them into Math.min, so
+ * however many points a view has the call stack holds.
  */
 export function yAxisFor(view, rows, { headroom = 0, footroom = 0 } = {}) {
   const keys = [OUTTURN_KEY, ...view.vintages.map((v) => v.key)];
-  const values = rows.flatMap((row) => keys.map((key) => row[key]).filter((v) => v != null));
-  if (!values.length) return null;
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const row of rows) {
+    for (const key of keys) {
+      const v = row[key];
+      if (v == null) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+  }
+  if (lo > hi) return null;
   return niceAxis(lo - (hi - lo) * footroom, hi + (hi - lo) * headroom, {
     zero: view.unit === "pct",
   });
@@ -389,7 +399,10 @@ const yWidthFor = (view, axis) =>
  * under the plot's foot), room is made above or below the data and the
  * labels laid out again; where a label has a conflict it could not avoid
  * (its text on another dot, say), room above or below is tried, and kept
- * if it leaves fewer. At most ROOM_ROUNDS rounds either way.
+ * if it leaves fewer. At most ROOM_ROUNDS rounds either way. Null where
+ * no y axis can be stepped over the rows, which a view buildView can draw
+ * never is (its values are within DRAW_LIMIT): the chart then says so
+ * rather than drawing them on an axis that does not cover them.
  */
 export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
   const plotHeight = PLOT_HEIGHT[narrow ? "narrow" : "wide"];
@@ -397,7 +410,8 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
   const last = rows[rows.length - 1]?.x;
   const points = pointsIn(view.points, rows);
   const layoutOn = (room) => {
-    const axis = yAxisFor(view, rows, room) ?? niceAxis(0, 1);
+    const axis = yAxisFor(view, rows, room);
+    if (!axis) return null;
     const yWidth = yWidthFor(view, axis);
     const plotWidth = canvasWidth - yWidth - MARGIN.left - MARGIN.right;
     const px = plotWidth > 0 && last > first ? (x) => ((x - first) / (last - first)) * plotWidth : null;
@@ -437,13 +451,16 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
   const unavoided = (layout) => layout.labels.reduce((n, l) => n + (l.conflicts ?? 0), 0);
   const fits = (layout) => !layout.overflow.top && !layout.overflow.bottom;
   let layout = layoutOn({ headroom: 0, footroom: 0 });
+  if (!layout) return null;
   for (let round = 0; round < ROOM_ROUNDS; round += 1) {
     const { headroom, footroom } = layout.room;
     if (!fits(layout)) {
-      layout = layoutOn({
+      const roomier = layoutOn({
         headroom: headroom + (layout.overflow.top ? ROOM_STEP : 0),
         footroom: footroom + (layout.overflow.bottom ? ROOM_STEP : 0),
       });
+      if (!roomier) break;
+      layout = roomier;
       continue;
     }
     if (!unavoided(layout)) break;
@@ -451,7 +468,7 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
       layoutOn({ headroom: headroom + ROOM_STEP, footroom }),
       layoutOn({ headroom, footroom: footroom + ROOM_STEP }),
     ]
-      .filter((l) => fits(l) && unavoided(l) < unavoided(layout))
+      .filter((l) => l && fits(l) && unavoided(l) < unavoided(layout))
       .sort((a, b) => unavoided(a) - unavoided(b))[0];
     if (!better) break;
     layout = better;
@@ -560,10 +577,15 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
   const [canvasRef, canvasWidth] = useElementWidth();
   const [lo, hi] = range;
   const shownRows = view.rows.slice(lo, hi + 1);
-  const { axis, yWidth, plotWidth, labels } = chartLayout(view, shownRows, {
-    canvasWidth,
-    narrow,
-  });
+  const layout = chartLayout(view, shownRows, { canvasWidth, narrow });
+  if (!layout) {
+    return (
+      <div className="chart-plot fv-plot">
+        <UnavailableNotice reason="This range of the chart cannot be drawn." />
+      </div>
+    );
+  }
+  const { axis, yWidth, plotWidth, labels } = layout;
   const decimals = stepDecimals(axis.step);
   const tickFormat = (v) => view.format(v, decimals);
   const brushWidth = plotWidth > 3 * BRUSH_END_LABEL ? plotWidth - BRUSH_END_LABEL : undefined;

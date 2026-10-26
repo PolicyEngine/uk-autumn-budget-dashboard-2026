@@ -5,9 +5,10 @@
  * ForecastVintagesView.test.jsx.
  */
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import fc from "fast-check";
-import {
+import VintageChart, {
   MARGIN,
   boxesMeet,
   chartLayout,
@@ -19,7 +20,9 @@ import {
   xTicks,
   yAxisFor,
 } from "./VintageChart";
-import { buildView, pointsIn } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, buildView, pointsIn } from "../../utils/forecastVintages/view";
+
+afterEach(cleanup);
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
 const variable = (id) => DATA.variables.find((v) => v.id === id);
@@ -369,6 +372,43 @@ describe("the axes", () => {
     const pct = buildView(DATA, variable("cpi"), { unit: "pct" });
     expect(yAxisFor(pct, pct.rows).ticks).toContain(0);
     expect(yAxisFor(view, [])).toBeNull();
+  });
+
+  // Found by the field audit: spreading every value into Math.min ran out
+  // of stack past about 300,000 points
+  it("find the lowest and highest values however many points there are", () => {
+    const view = buildView(DATA, variable("employment"), { unit: "level" });
+    const rows = Array.from({ length: 2_000_000 }, (_, i) => ({ x: i, [OUTTURN_KEY]: 30 + (i % 7) }));
+    const axis = yAxisFor(view, rows);
+    expect(axis.domain[0]).toBeLessThanOrEqual(30);
+    expect(axis.domain[1]).toBeGreaterThanOrEqual(36);
+  });
+});
+
+describe("a range with no axis", () => {
+  // Values the loader would refuse (it holds every figure to 1e9), so
+  // this is the chart's own guard: an axis that cannot be stepped is
+  // said to be undrawable, never swapped for a 0 to 1 axis
+  const huge = () => {
+    const view = buildView(DATA, variable("unemployment"), { unit: "pct" });
+    const rows = view.rows.map((r, i) => ({ ...r, [OUTTURN_KEY]: i % 2 ? 1e308 : -1e308 }));
+    return { ...view, rows };
+  };
+
+  it("has no layout", () => {
+    const view = huge();
+    expect(yAxisFor(view, view.rows)).toBeNull();
+    expect(chartLayout(view, view.rows, { canvasWidth: 900 })).toBeNull();
+    expect(chartLayout(view, view.rows, { canvasWidth: 0 })).toBeNull();
+  });
+
+  it("says this range cannot be drawn, and draws no chart", () => {
+    const view = huge();
+    const { container } = render(
+      <VintageChart view={view} showPast range={[0, view.rows.length - 1]} onRange={() => {}} chartKey="huge" />,
+    );
+    expect(screen.getByText("This range of the chart cannot be drawn.")).toBeInTheDocument();
+    expect(container.querySelector(".recharts-surface")).toBeNull();
   });
 });
 
