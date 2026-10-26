@@ -65,7 +65,7 @@
       },
       "name": "Combined: Business Asset Disposal Relief restricted, Capital gains tax main rates up 2 points, Council tax surcharge from \u00a31.5m, Dividend tax rates up 1 point, Zero VAT on domestic electricity, Zero VAT on domestic gas, Employer NI relief for under-25s, Employer NI threshold raised by \u00a31,000, Fuel duty rises deferred, Local Housing Allowance reset in April 2027, State Pension income tax protection, Threshold freeze to 2031-32, UC standard allowance uprated below CPI, Warm Home Discount top-up",
       "outputs_sha256": "3790fd99ab886d9280cb52620e19b17a3fe0809978bd0eb05ab5edc58907dc60",
-      "reason": "member warm_home_discount_top_up changed",
+      "reason": "member state_pension_income_tax_protection changed",
       "receipt_sha256": "24187c123b81d461a85175d0ac6f33cbda66eefeb2a820fef04c473dc97fd55b",
       "status": "stale",
       "unsupported_years": [],
@@ -125,6 +125,12 @@
   "flat_files": {},
   "measures": {
     "badr_lifetime_limit_cut": {
+      "approval": {
+        "artifact_sha256": "61fe08e5db1856a7f9de3020483ad638d34c61cd171a526ac4f32c672a8d868c",
+        "at": "2026-10-26T13:44:16.498713+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "c6cf127e0544208c876a7cf34f493849df4044c8fa890669ff7e4dc3cb889d26"
+      },
       "artifact": "artifacts/badr_lifetime_limit_cut/61fe08e5db1856a7",
       "artifact_sha256": "61fe08e5db1856a7f9de3020483ad638d34c61cd171a526ac4f32c672a8d868c",
       "data_limits": [],
@@ -137,7 +143,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -173,6 +179,12 @@
       ]
     },
     "council_tax_surcharge_from_1_5m": {
+      "approval": {
+        "artifact_sha256": "04d16a89279cd0d170fa6ad248746bd612a78877718f55dd606884dbf93b0f34",
+        "at": "2026-10-26T13:44:06.943375+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "9024913d43d34511e327924e3a14a0c186ee5c50cf9b35c0abfe4748efaea696"
+      },
       "artifact": "artifacts/council_tax_surcharge_from_1_5m/04d16a89279cd0d1",
       "artifact_sha256": "04d16a89279cd0d170fa6ad248746bd612a78877718f55dd606884dbf93b0f34",
       "data_limits": [],
@@ -185,7 +197,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -197,6 +209,12 @@
       ]
     },
     "dividend_rates_up_1pp": {
+      "approval": {
+        "artifact_sha256": "8ba35ac53af8c6df576ea6dc3165edfd62746a06f23c858b2fcec32fb751167e",
+        "at": "2026-10-26T13:44:10.769740+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "2a8492fe22c113c7cf74ea52c5230d6c7f88ead73b0faa3557825eb020d24c11"
+      },
       "artifact": "artifacts/dividend_rates_up_1pp/8ba35ac53af8c6df",
       "artifact_sha256": "8ba35ac53af8c6df576ea6dc3165edfd62746a06f23c858b2fcec32fb751167e",
       "data_limits": [],
@@ -209,7 +227,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -221,6 +239,12 @@
       ]
     },
     "domestic_electricity_zero_vat": {
+      "approval": {
+        "artifact_sha256": "5f27b7cbbd2a22cffc7dc186777d3bf3624c3974ef68c7e94c88fd200fee5908",
+        "at": "2026-10-26T13:43:59.182283+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "50955173ba8b0cee9f6677a02617eafc4b4bbbbff16fc0be357d7451a58e007b"
+      },
       "artifact": "artifacts/domestic_electricity_zero_vat/5f27b7cbbd2a22cf",
       "artifact_sha256": "5f27b7cbbd2a22cffc7dc186777d3bf3624c3974ef68c7e94c88fd200fee5908",
       "data_limits": [],
@@ -233,7 +257,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -245,6 +269,12 @@
       ]
     },
     "domestic_gas_zero_vat": {
+      "approval": {
+        "artifact_sha256": "60152b779bce0faa99d86b14ddebf604397c105fcf8af58db2b482e21ed44f40",
+        "at": "2026-10-26T13:44:12.641514+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "27f92801308a69e6a3ebce831cb1ce06076f60000f46e154b0734c6602dca645"
+      },
       "artifact": "artifacts/domestic_gas_zero_vat/60152b779bce0faa",
       "artifact_sha256": "60152b779bce0faa99d86b14ddebf604397c105fcf8af58db2b482e21ed44f40",
       "data_limits": [],
@@ -257,7 +287,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -269,28 +299,33 @@
       ]
     },
     "employer_ni_relief_under_25s": {
-      "artifact": "artifacts/employer_ni_relief_under_25s/21217d8e9f2c2265",
-      "artifact_sha256": "21217d8e9f2c2265edf58817aad030b0969d4b64cad34e2c6a981157248253d2",
+      "approval": {
+        "artifact_sha256": "3d12e11798bb4b1a95af3494893e129432111088833e7dc83c146f3c333b918f",
+        "at": "2026-10-26T13:44:03.160497+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "5f35bb37b5caa4a39207badb97301c43723b72429a4cd101286070db40279b6b"
+      },
+      "artifact": "artifacts/employer_ni_relief_under_25s/3d12e11798bb4b1a",
+      "artifact_sha256": "3d12e11798bb4b1a95af3494893e129432111088833e7dc83c146f3c333b918f",
       "attestation": {
         "checker": "DRILL 5 MOCK checker (Budget coordinator)",
         "measure_id": "employer_ni_relief_under_25s",
-        "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated receipt on drill5-wednesday-path only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
-        "receipt_sha256": "3499e572098af7c0399924d9eb6541c609209532057b0418583a2f413c6ed081",
-        "released_at": "2026-10-26T13:00:00+00:00",
+        "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated receipt (new pair, policyengine-uk 2.151.0) on drill5-wednesday-path-newpair only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+        "receipt_sha256": "33ec772dd68b782d9d38b3e6d67cb4754952cb2ccf161c1bf51c5e14fe9a874b",
+        "released_at": "2026-10-26T14:10:00+00:00",
         "second": "DRILL 5 MOCK second (Budget coordinator)"
       },
       "data_limits": [],
       "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (\u00a350,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
-      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
       "name": "Employer NI relief for under-25s",
-      "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
-      "reason": "the execution identity changed",
-      "receipt_sha256": "012210795d4b8bf5971cb984a27724312b2274d2659ae4edee53112e70533997",
+      "outputs_sha256": "5f35bb37b5caa4a39207badb97301c43723b72429a4cd101286070db40279b6b",
+      "receipt_sha256": "90815cc7c233639f959a836314af211ac337a5f4671176b590d1cd78a3edd572",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "stale",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -326,6 +361,12 @@
       ]
     },
     "fuel_duty_rise_deferral": {
+      "approval": {
+        "artifact_sha256": "0507d7b1df63689ac165389c3fe9682b5f38b73361b0881ff8b7ebb600eec0b8",
+        "at": "2026-10-26T13:43:49.680840+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "843770721c4f9bfa44911369d709355fad442201235d516e38aaf4f373956b92"
+      },
       "artifact": "artifacts/fuel_duty_rise_deferral/0507d7b1df63689a",
       "artifact_sha256": "0507d7b1df63689ac165389c3fe9682b5f38b73361b0881ff8b7ebb600eec0b8",
       "data_limits": [],
@@ -338,7 +379,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -350,6 +391,12 @@
       ]
     },
     "lha_reset_april_2027": {
+      "approval": {
+        "artifact_sha256": "314b78527413d87466bed36fda4933205061e7a01878a30002bb27f99daa744a",
+        "at": "2026-10-26T13:44:08.849856+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "b9edf67cfea0202c589482a2990c4bf32fbd9b5e31511e937970ff5eb8819587"
+      },
       "artifact": "artifacts/lha_reset_april_2027/314b78527413d874",
       "artifact_sha256": "314b78527413d87466bed36fda4933205061e7a01878a30002bb27f99daa744a",
       "data_limits": [],
@@ -362,7 +409,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -374,20 +421,27 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "artifact": "artifacts/state_pension_income_tax_protection/1982c68361c9bad1",
-      "artifact_sha256": "1982c68361c9bad124b3f10771dbd8180d722ba34919a5d72b844f29951d49bf",
+      "artifact": "artifacts/state_pension_income_tax_protection/8735fe12cd2e6338",
+      "artifact_sha256": "8735fe12cd2e6338cea84aff6e960d6bb4fac16f0840ad85fdec967fa3378b7e",
+      "attestation": {
+        "checker": "DRILL 5 MOCK checker (Budget coordinator)",
+        "measure_id": "state_pension_income_tax_protection",
+        "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated receipt (new pair, policyengine-uk 2.151.0) on drill5-wednesday-path-newpair only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+        "receipt_sha256": "589975dd670e44e626e7b49e304fa3acaefb16d3ad66b11b56e7fdac11b0be35",
+        "released_at": "2026-10-26T14:10:00+00:00",
+        "second": "DRILL 5 MOCK second (Budget coordinator)"
+      },
       "data_limits": [],
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to \u00a310: \u00a313,040 in 2027-28), withdrawn \u00a31 for \u00a31 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
-      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: \u00a313,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; \u00a31 of other income takes the allowance away.",
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
       "name": "State Pension income tax protection",
-      "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
-      "reason": "the execution identity changed",
-      "receipt_sha256": "2baac7d0e8f4bff17f5c0c3ac225a53c752bda94b38180a5c17ba51a7d57c4ca",
+      "outputs_sha256": "9ae6274f4e2e7031bdee9b5e03c41b021a788907d4873dba38f1a5d2a8745789",
+      "receipt_sha256": "fff6ec0023ffa9dfb1ef358307a31015aa8f173ddd1b82d1092043a30dae1fa1",
       "reconciliation": {
         "responsiveness_status": "responsive",
-        "summary_status": "pass"
+        "summary_status": "failed"
       },
-      "status": "stale",
+      "status": "staged",
       "unsupported_years": [],
       "years": [
         2026,
@@ -399,6 +453,12 @@
       ]
     },
     "state_pension_income_tax_protection_extended": {
+      "approval": {
+        "artifact_sha256": "f59ed64cfaa89f34683c3c871aa51f3f5d8dd336fb8daf12c904e02e27eee6a1",
+        "at": "2026-10-26T13:43:57.269232+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "d8fc8fc354ab8fe3b2bbf2401237c4584d823e67bfd8f4df487cba398f47959c"
+      },
       "artifact": "artifacts/state_pension_income_tax_protection_extended/f59ed64cfaa89f34",
       "artifact_sha256": "f59ed64cfaa89f34683c3c871aa51f3f5d8dd336fb8daf12c904e02e27eee6a1",
       "data_limits": [],
@@ -411,7 +471,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -423,6 +483,12 @@
       ]
     },
     "threshold_freeze_2031_32": {
+      "approval": {
+        "artifact_sha256": "44931ca8d33ec1d8d171d383a39664a938d0ab1e095e59a406f60bbacaa7ebb5",
+        "at": "2026-10-26T13:44:14.525182+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "6fa90e946f123e2aafb7f4bc2d548a2c9b969a812df694a22394bac0d419ee5c"
+      },
       "artifact": "artifacts/threshold_freeze_2031_32/44931ca8d33ec1d8",
       "artifact_sha256": "44931ca8d33ec1d8d171d383a39664a938d0ab1e095e59a406f60bbacaa7ebb5",
       "data_limits": [],
@@ -435,7 +501,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -471,6 +537,12 @@
       ]
     },
     "warm_home_discount_top_up": {
+      "approval": {
+        "artifact_sha256": "9a51d62403d93a029a2a56e5dd5ed0cf3979d3f20865f25be54d0f71370e337f",
+        "at": "2026-10-26T13:43:51.573231+00:00",
+        "by": "DRILL 5 MOCK approver (Budget coordinator)",
+        "outputs_sha256": "b907ab348280272c9b39006ac8c8a88669933b3d0faca3986c6a1e07157d3944"
+      },
       "artifact": "artifacts/warm_home_discount_top_up/9a51d62403d93a02",
       "artifact_sha256": "9a51d62403d93a029a2a56e5dd5ed0cf3979d3f20865f25be54d0f71370e337f",
       "data_limits": [],
@@ -483,7 +555,7 @@
         "responsiveness_status": "responsive",
         "summary_status": "pass"
       },
-      "status": "staged",
+      "status": "approved",
       "unsupported_years": [],
       "years": [
         2026,
@@ -496,7 +568,7 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 70,
+  "revision": 83,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [
     {
@@ -1662,7 +1734,73 @@
       },
       "key": "warm_home_discount_top_up",
       "superseded_at": "2026-10-26T13:43:23.502071+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/employer_ni_relief_under_25s/21217d8e9f2c2265",
+        "artifact_sha256": "21217d8e9f2c2265edf58817aad030b0969d4b64cad34e2c6a981157248253d2",
+        "attestation": {
+          "checker": "DRILL 5 MOCK checker (Budget coordinator)",
+          "measure_id": "employer_ni_relief_under_25s",
+          "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated receipt on drill5-wednesday-path only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+          "receipt_sha256": "3499e572098af7c0399924d9eb6541c609209532057b0418583a2f413c6ed081",
+          "released_at": "2026-10-26T13:00:00+00:00",
+          "second": "DRILL 5 MOCK second (Budget coordinator)"
+        },
+        "data_limits": [],
+        "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (\u00a350,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "Employer NI relief for under-25s",
+        "outputs_sha256": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+        "reason": "the execution identity changed",
+        "receipt_sha256": "012210795d4b8bf5971cb984a27724312b2274d2659ae4edee53112e70533997",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "stale",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "employer_ni_relief_under_25s",
+      "superseded_at": "2026-10-26T13:43:37.205460+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/state_pension_income_tax_protection/1982c68361c9bad1",
+        "artifact_sha256": "1982c68361c9bad124b3f10771dbd8180d722ba34919a5d72b844f29951d49bf",
+        "data_limits": [],
+        "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to \u00a310: \u00a313,040 in 2027-28), withdrawn \u00a31 for \u00a31 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "name": "State Pension income tax protection",
+        "outputs_sha256": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+        "reason": "the execution identity changed",
+        "receipt_sha256": "2baac7d0e8f4bff17f5c0c3ac225a53c752bda94b38180a5c17ba51a7d57c4ca",
+        "reconciliation": {
+          "responsiveness_status": "responsive",
+          "summary_status": "pass"
+        },
+        "status": "stale",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "state_pension_income_tax_protection",
+      "superseded_at": "2026-10-26T13:43:39.297875+00:00"
     }
   ],
-  "updated_at": "2026-10-26T13:43:23.502440+00:00"
+  "updated_at": "2026-10-26T13:44:16.499036+00:00"
 }
