@@ -38,12 +38,10 @@ export function presetRequests() {
 }
 
 /**
- * The file's answers as [requestKey, page-shaped result] pairs. Each key is
- * rebuilt from today's example and form, not read from the file: if either
- * has changed since the file was written, its entry no longer matches any
- * request and the live API answers instead.
+ * The file's entries that still answer today's examples, each with its
+ * request key rebuilt from the example and form, not read from the file.
  */
-export function presetCacheEntries(file) {
+function currentEntries(file) {
   if (!file || !Array.isArray(file.entries)) return [];
   const byId = new Map(HOUSEHOLD_EXAMPLES.map((preset) => [preset.id, preset]));
   return file.entries.flatMap((entry) => {
@@ -52,7 +50,33 @@ export function presetCacheEntries(file) {
     const key = requestKey(
       buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: PRESET_POLICIES }),
     );
-    if (key !== requestKey(entry.request)) return [];
+    return key === requestKey(entry.request) ? [{ key, entry }] : [];
+  });
+}
+
+/**
+ * Each example's change in net income by year, with every measure, from
+ * the file: { [presetId]: { [year]: change } }, for the cards' figures.
+ * An entry that no longer matches its example is left out, as above.
+ */
+export function presetChanges(file) {
+  const changes = {};
+  for (const { entry } of currentEntries(file)) {
+    const change = Number(entry.response.net_income?.change);
+    if (!Number.isFinite(change)) continue;
+    (changes[entry.preset_id] ??= {})[entry.year] = change;
+  }
+  return changes;
+}
+
+/**
+ * The file's answers as [requestKey, page-shaped result] pairs. Each key is
+ * rebuilt from today's example and form, not read from the file: if either
+ * has changed since the file was written, its entry no longer matches any
+ * request and the live API answers instead.
+ */
+export function presetCacheEntries(file) {
+  return currentEntries(file).flatMap(({ key, entry }) => {
     // The file keeps the engine once, at its top; each answer gets it back,
     // so the breakdown's "Versions" line shows as for a live answer
     const data = normaliseHouseholdImpact({ ...entry.response, engine: entry.response.engine ?? file.engine });
@@ -64,20 +88,33 @@ export function presetCacheEntries(file) {
 // One load per session, shared by every mount of the view
 let loading = null;
 
-/**
- * The precomputed answers, fetched once: [requestKey, result] pairs, or
- * none when the file is missing or unreadable (the live API answers then).
- */
-export function loadPresetResults(fetchImpl = globalThis.fetch) {
+/** The file, fetched once; null when it is missing or unreadable. */
+function loadPresetFile(fetchImpl) {
   if (!loading) {
     const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/${PRESETS_FILE}`;
     loading = Promise.resolve()
       .then(() => fetchImpl(url))
       .then((response) => (response?.ok ? response.json() : null))
-      .then(presetCacheEntries)
-      .catch(() => []);
+      .catch(() => null);
   }
   return loading;
+}
+
+/**
+ * The precomputed answers, fetched once: [requestKey, result] pairs, or
+ * none when the file is missing or unreadable (the live API answers then).
+ */
+export function loadPresetResults(fetchImpl = globalThis.fetch) {
+  return loadPresetFile(fetchImpl)
+    .then(presetCacheEntries)
+    .catch(() => []);
+}
+
+/** The examples' changes in net income (presetChanges), from the same load. */
+export function loadPresetChanges(fetchImpl = globalThis.fetch) {
+  return loadPresetFile(fetchImpl)
+    .then(presetChanges)
+    .catch(() => ({}));
 }
 
 /** Forget the loaded file (for tests). */

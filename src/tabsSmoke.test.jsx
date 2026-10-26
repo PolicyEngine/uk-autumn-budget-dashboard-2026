@@ -50,9 +50,9 @@ const FAILURE_TEXT = [
 const LOADED = {
   // App.jsx renders the Public finances section only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The form's card: its More details section; the results are checked
+  // The cards, "Your household" first; the form and results are checked
   // below.
-  household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
+  household: (panel) => within(panel).findAllByRole("heading", { name: "Choose a household" }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
@@ -150,7 +150,9 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
       );
       expect(missing).toEqual([]);
       if (value === "household") {
-        // The form's first box is the head's age, with its default
+        // "Your household" opens the form; its first box is the head's
+        // age, with its default
+        fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
         // Nothing is asked before Calculate
         expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
@@ -183,6 +185,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
@@ -209,6 +212,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
     const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(within(personal).getByRole("button", { name: /^Your household/ }));
     fireEvent.click(within(personal).getByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
 
@@ -269,6 +273,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     window.history.replaceState({}, "", "/?tab=household");
     render(<App />);
     const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(within(household).getByRole("button", { name: /^Your household/ }));
     fireEvent.click(within(household).getByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));

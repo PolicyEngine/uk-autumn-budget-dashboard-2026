@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { buildHouseholdRequest, requestKey } from "./householdImpactApi";
-import { PRESET_POLICIES, presetCacheEntries, presetInputs, presetRequests } from "./householdPresets";
+import { PRESET_POLICIES, presetCacheEntries, presetChanges, presetInputs, presetRequests } from "./householdPresets";
 
 const file = JSON.parse(readFileSync("public/data/household_presets.json", "utf8"));
 const lock = readFileSync("uv.lock", "utf8");
@@ -43,5 +43,17 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const [first] = file.entries;
     const edited = { ...first, request: { ...first.request, household: { ...first.request.household, age: 99 } } };
     expect(presetCacheEntries({ entries: [edited] })).toEqual([]);
+  });
+
+  it("give each example's change in net income by year, for its card", () => {
+    const changes = presetChanges(file);
+    expect(Object.keys(changes).sort()).toEqual(HOUSEHOLD_EXAMPLES.map((example) => example.id).sort());
+    for (const entry of file.entries) {
+      expect(changes[entry.preset_id][entry.year]).toBe(entry.response.net_income.change);
+    }
+    // An entry whose example has changed gives no figure
+    const [first] = file.entries;
+    const edited = { ...first, request: { ...first.request, household: { ...first.request.household, age: 99 } } };
+    expect(presetChanges({ entries: [edited] })).toEqual({});
   });
 });

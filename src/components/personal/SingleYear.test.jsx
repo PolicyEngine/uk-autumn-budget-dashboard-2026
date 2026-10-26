@@ -64,7 +64,13 @@ function renderTab(props = {}) {
 // Nothing is asked until Calculate: every answer has a default, so one
 // press gives the results
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
+/** Open the form below the cards ("Your household"), unless it is open. */
+function openForm() {
+  const yours = screen.getByRole("button", { name: /^Your household/ });
+  if (yours.getAttribute("aria-expanded") !== "true") fireEvent.click(yours);
+}
 function toResults() {
+  openForm();
   fireEvent.click(calculateButton());
 }
 
@@ -308,10 +314,12 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example card shows its result without Calculate, and hides it
-    fireEvent.click(within(screen.getByRole("region", { name: "Start from an example" })).getAllByRole("button")[0]);
-    expect(screen.queryByRole("button", { name: /^Calcul/ })).toBeNull();
+    fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
+    // Its answers open in the form, with no Calculate while unedited
+    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
+    expect(screen.queryByRole("button", { name: /^Calcul/ })).toBeNull();
     // An edit brings Calculate back, and asks nothing on its own
     const before = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });

@@ -28,13 +28,25 @@ const chosen = (name) => {
   return box.options[box.selectedIndex].textContent;
 };
 const box = (name) => screen.getByRole("spinbutton", { name });
-const examples = () => screen.getByRole("region", { name: "Start from an example" });
+const cards = () => screen.getByRole("region", { name: "Choose a household" });
+const examples = cards;
 const exampleItem = (label) => within(examples()).getByRole("button", { name: new RegExp(`^${label}`) });
 const applyExample = (label) => fireEvent.click(exampleItem(label));
+const yoursCard = () => within(cards()).getByRole("button", { name: /^Your household/ });
+/** Open the form below the cards ("Your household"), unless it is open. */
+const openForm = () => {
+  if (yoursCard().getAttribute("aria-expanded") !== "true") fireEvent.click(yoursCard());
+};
+/** The view, with its form open. */
+const renderForm = (ui = <HouseholdCalculator />) => {
+  const view = render(ui);
+  openForm();
+  return view;
+};
 
 describe("the personal impact form", () => {
   it("is one card of boxes in sections, the essentials first and the rest in More details, with the results below it", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     // No steps and no "See results": the results are always there
     expect(screen.queryByRole("navigation", { name: "Steps" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "See results" })).not.toBeInTheDocument();
@@ -79,7 +91,7 @@ describe("the personal impact form", () => {
   });
 
   it("changes an answer in its box, with steppers for amounts", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
     expect(box("Age")).toHaveValue(31);
     choose("Region", "London");
@@ -96,7 +108,7 @@ describe("the personal impact form", () => {
   });
 
   it("starts every answer at its default, with the sources said", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
     expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
     expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
@@ -117,7 +129,7 @@ describe("the personal impact form", () => {
   });
 
   it("asks rent only of renters, and the partner's answers only with a partner", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     choose("Housing", "Own outright");
     expect(field("monthly_rent")).toBeNull();
     expect(field("partner_salary")).toBeNull();
@@ -129,7 +141,7 @@ describe("the personal impact form", () => {
   });
 
   it("asks one age per child, their education from 16, and childcare only with children", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     openMore();
     expect(field("monthly_childcare")).toBeNull();
     choose("Children", "2");
@@ -147,7 +159,7 @@ describe("the personal impact form", () => {
   });
 
   it("says why a child of 20 or over is not taken, never dropping them silently", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     choose("Children", "1");
     fireEvent.change(box("Child 1's age"), { target: { value: "21" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Children are 0 to 19.");
@@ -157,7 +169,7 @@ describe("the personal impact form", () => {
   });
 
   it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     openMore();
     expect(box("Private or workplace pension")).toHaveValue(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
@@ -167,7 +179,7 @@ describe("the personal impact form", () => {
   });
 
   it("asks the loan plan, never the balance, with the chosen plan's note", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     openMore();
     const plans = within(select("Student loan plan"))
       .getAllByRole("option")
@@ -179,7 +191,7 @@ describe("the personal impact form", () => {
   });
 
   it("asks for the State Pension only at State Pension age, prefilled with the full rate", () => {
-    render(<HouseholdCalculator year={2029} />);
+    renderForm(<HouseholdCalculator year={2029} />);
     openMore();
     expect(field("state_pension_per_year")).toBeNull();
     fireEvent.change(box("Age"), { target: { value: "72" } });
@@ -189,41 +201,66 @@ describe("the personal impact form", () => {
     expect(box("Your State Pension")).toHaveValue(9000);
   });
 
-  it("fills the form from an example card, still editable", () => {
+  it("shows eight cards: your household first, then seven examples, each a name, who they are and its measure", () => {
     render(<HouseholdCalculator />);
-    // Two groups of cards, each a name and one line on what it shows
-    expect(within(examples()).getAllByRole("group").map((group) => group.getAttribute("aria-label"))).toEqual([
-      "Young people",
-      "Other households",
-    ]);
-    const young = within(within(examples()).getByRole("group", { name: "Young people" })).getAllByRole("button");
-    expect(young.map((item) => item.querySelector(".example-card-name").textContent)).toEqual([
+    const buttons = within(cards()).getAllByRole("button");
+    expect(buttons.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([
+      "Your household",
       "A 22-year-old renting",
       "A 19-year-old apprentice",
-      "A 23-year-old graduate",
+      "A pensioner on the State Pension",
+      "A family on Universal Credit",
+      "A graduate on £35,000",
+      "A driver with a long commute",
+      "A higher earner on £110,000",
     ]);
-    expect(young.every((item) => item.querySelector(".example-card-description").textContent.length > 0)).toBe(true);
+    expect(buttons.every((item) => item.querySelector(".household-card-description").textContent.length > 0)).toBe(true);
+    expect(buttons.slice(1).every((item) => item.querySelector(".household-card-tag").textContent.length > 0)).toBe(true);
+    // The examples are toggles; your household opens the form
+    expect(buttons.slice(1).every((item) => item.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(yoursCard()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("form", { name: "Your household" })).not.toBeInTheDocument();
+    fireEvent.click(yoursCard());
+    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(yoursCard().getAttribute("aria-controls"))).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Your household" })).toBeInTheDocument();
+  });
+
+  it("fills the form from an example card, still editable", () => {
+    render(<HouseholdCalculator />);
     applyExample("A 22-year-old renting");
-    // Chosen: the card is marked
+    // Chosen: the card is marked, its note shown under the cards
     expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Rents privately at £900 a month, an illustrative figure\./)).toBeInTheDocument();
+    // Its answers, in the form once opened
+    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
     expect(box("Age")).toHaveValue(22);
     expect(box("Salary in 2026")).toHaveValue(25000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     // Edited: no longer the example as given
     expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
     expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-pressed", "false");
+    expect(yoursCard()).toHaveClass("is-selected");
+  });
+
+  it("starts your household again at its typical values when chosen after an example", () => {
+    render(<HouseholdCalculator />);
+    applyExample("A pensioner on the State Pension");
+    fireEvent.click(yoursCard());
+    expect(exampleItem("A pensioner on the State Pension")).toHaveAttribute("aria-pressed", "false");
+    expect(box("Age")).toHaveValue(WIZARD_DEFAULTS.current_age);
+    expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
   });
 
   it("fills the household answers from each example", () => {
     const cases = [
       ["A 22-year-old renting", { plan: "No loan", rent: 900 }],
       ["A 19-year-old apprentice", { plan: "No loan", rent: 600 }],
-      ["A 23-year-old graduate", { plan: "Plan 2", rent: 900 }],
+      ["A graduate on £35,000", { plan: "Plan 2", rent: REGIONAL_RENT.NORTH_WEST }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();
-      const { unmount } = render(<HouseholdCalculator />);
+      const { unmount } = renderForm();
       // Start from answers the example must overwrite
       choose("Partner", "Yes");
       choose("Children", "2");
@@ -240,15 +277,15 @@ describe("the personal impact form", () => {
   });
 
   it("keeps More details open across a remount in the session", () => {
-    const { unmount } = render(<HouseholdCalculator />);
+    const { unmount } = renderForm();
     openMore();
     unmount();
-    render(<HouseholdCalculator />);
+    renderForm();
     expect(moreToggle()).toHaveAttribute("aria-expanded", "true");
   });
 
   it("shows More details' boxes when opened, focusable, in a container no utility class hides", () => {
-    render(<HouseholdCalculator />);
+    renderForm();
     openMore();
     for (const name of ["Savings interest", "Petrol"]) {
       const input = box(name);

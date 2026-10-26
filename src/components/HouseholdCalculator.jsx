@@ -2,11 +2,11 @@ import TitleIcon from "./TitleIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
-import ExampleCards from "./personal/ExampleCards";
+import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
+import HouseholdCards from "./personal/HouseholdCards";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
-import { loadPresetResults } from "../utils/householdPresets";
+import { PRESET_POLICIES, loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -280,12 +280,15 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, moreOpen: false, submitted: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false, submitted: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null });
 }
+
+// The form's panel, opened by the "Your household" card
+const FORM_PANEL_ID = "household-form-panel";
 
 /**
  * The Household impact view: one list of questions about a household, each
@@ -303,6 +306,9 @@ function HouseholdCalculator({
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
+  // The form, below the cards: closed at first, opened by "Your household"
+  const [formOpen, setFormOpen] = useState(() => savedWizard.formOpen);
+  const form = useCollapse(formOpen);
   // More details, closed at first; kept between tab switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
   const more = useCollapse(moreOpen);
@@ -324,19 +330,25 @@ function HouseholdCalculator({
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
+    savedWizard.formOpen = formOpen;
     savedWizard.moreOpen = moreOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, moreOpen, submitted]);
+  }, [inputs, presetId, formOpen, moreOpen, submitted]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
   const [seeded, setSeeded] = useState(0);
+  // and each example's change in net income, for its card
+  const [presetChanges, setPresetChanges] = useState({});
   useEffect(() => {
     let live = true;
     loadPresetResults().then((entries) => {
       if (!live || entries.length === 0) return;
       seedHouseholdImpactCache(entries);
       setSeeded((n) => n + 1);
+    });
+    loadPresetChanges().then((changes) => {
+      if (live) setPresetChanges(changes);
     });
     return () => {
       live = false;
@@ -350,9 +362,22 @@ function HouseholdCalculator({
     [selectionKey],
   );
   const noneSelected = householdPolicies.length === 0;
+  // The cards' figures are for every measure: shown only while every
+  // measure is selected
+  const allSelected =
+    householdPolicies.length === PRESET_POLICIES.length &&
+    PRESET_POLICIES.every((id) => householdPolicies.includes(id));
+  const cardChanges = useMemo(() => {
+    if (!allSelected) return null;
+    const changes = Object.fromEntries(
+      Object.entries(presetChanges).flatMap(([id, byYear]) => (byYear[year] === undefined ? [] : [[id, byYear[year]]])),
+    );
+    return Object.keys(changes).length > 0 ? changes : null;
+  }, [allSelected, presetChanges, year]);
   // Fill the form from an example and show its result at once (no
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
+    if (!preset) return;
     const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
     setInputs(next);
     setPresetId(preset.id);
@@ -402,6 +427,24 @@ function HouseholdCalculator({
     // Only the bar's year and policies (and coming back to the view) rerun it
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
+
+  // "Your household": from an example, the form starts again at its
+  // typical values, opened; from your own answers, it opens or closes
+  const chooseYours = () => {
+    if (presetId !== null) {
+      setInputs({ ...WIZARD_DEFAULTS });
+      setPresetId(null);
+      setSubmitted(null);
+      setFormOpen(true);
+      return;
+    }
+    setFormOpen((open) => !open);
+  };
+  // Your own household's change, on its card, once calculated and unedited
+  const yoursChange =
+    presetId === null && submitted !== null && !changed && householdResult.status === "ready"
+      ? (householdResult.data?.net?.change ?? null)
+      : null;
 
   const resultsRef = useRef(null);
   const calculate = (event) => {
@@ -619,14 +662,33 @@ function HouseholdCalculator({
 
   return (
     <div className="household-calculator">
-      <ExampleCards
-        groups={EXAMPLE_GROUPS}
+      <HouseholdCards
+        examples={HOUSEHOLD_EXAMPLES}
         value={presetId}
+        formOpen={formOpen}
+        formId={FORM_PANEL_ID}
+        onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
+        changes={cardChanges}
+        yoursChange={yoursChange}
+        year={year}
       />
+      {activePreset && (
+        <p className="household-examples-note" role="status">
+          <span>{activePreset.note}</span>
+          {!formOpen && (
+            <button type="button" className="text-button" onClick={() => setFormOpen(true)}>
+              Change these answers
+            </button>
+          )}
+        </p>
+      )}
       <div className="household-layout">
-        {/* The whole form in one card: a header with the examples, then
-            the questions in sections */}
+        {/* The whole form in one card, opened from "Your household": a
+            header, then the questions in sections */}
+        {form.mounted && (
+        <div id={FORM_PANEL_ID} className={`expander-body household-form-panel ${form.expanded ? "is-expanded" : ""}`}>
+        <div className="expander-inner">
         <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
             <div className="household-form-title">
@@ -661,13 +723,11 @@ function HouseholdCalculator({
             </div>
             )}
           </div>
-          {activePreset && (
-            <p className="household-examples-note" role="status">
-              {activePreset.note}
-            </p>
-          )}
           {FORM_SECTIONS.map(renderSection)}
         </form>
+        </div>
+        </div>
+        )}
 
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           <SingleYearHeadline
