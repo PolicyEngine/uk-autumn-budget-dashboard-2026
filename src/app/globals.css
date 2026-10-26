@@ -732,8 +732,11 @@ body {
      rule under it: spacing alone sets it off. */
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 14px;
+  /* The circle is exactly the title's line box (--section-line), so its
+     top and bottom line up with the title's first line */
+  align-items: start;
+  column-gap: 12px;
+  --section-line: 32px;
   margin: 0 0 20px;
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
@@ -757,8 +760,8 @@ body {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--section-line, 32px);
+  height: var(--section-line, 32px);
   border-radius: 50%;
   background: var(--pe-teal-50);
   box-shadow: inset 0 0 0 1px var(--pe-teal-100);
@@ -800,7 +803,7 @@ body {
   margin: 0;
   font-size: var(--fs-section);
   font-weight: 600;
-  line-height: 1.3;
+  line-height: var(--section-line, 32px);
   color: var(--pe-gray-800);
 }
 
@@ -857,17 +860,13 @@ body {
 
 @media (max-width: 640px) {
   .section-heading {
-    column-gap: 12px;
-  }
-
-  .section-icon {
-    width: 34px;
-    height: 34px;
+    column-gap: 10px;
+    --section-line: 28px;
   }
 
   .section-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
 }
@@ -1617,12 +1616,18 @@ body {
   flex-shrink: 0;
 }
 
-/* Replication line above the footer: a thin rule across the column,
-   small muted centred text. It owns its spacing on every tab and sub-tab
-   (hidden panels stay mounted, so no sibling rule can find the last
-   visible section): 48px above the rule, 24px below the text. The auto
-   top margin keeps it at the bottom of a short page. */
+/* "Reproduce these results" above the footer: a thin rule across the
+   column, then, centred on one line (wrapping on a phone), a muted label
+   and a chip for each link with its icon. It owns its spacing on every tab
+   and sub-tab (hidden panels stay mounted, so no sibling rule can find the
+   last visible section): 48px above the rule, 24px below the chips. The
+   auto top margin keeps it at the bottom of a short page. */
 .replication-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
   margin: auto 0 0;
   padding: 48px 0 24px;
   font-size: var(--fs-caption);
@@ -1633,15 +1638,70 @@ body {
 
 .replication-line::before {
   content: "";
-  display: block;
+  flex: 0 0 100%;
   height: 1px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   background: var(--card-border);
 }
 
-.replication-line a {
+.replication-title {
+  font-weight: 500;
+}
+
+.replication-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replication-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 10px;
+  font-weight: 500;
+  color: var(--pe-gray-600);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.replication-chip svg {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: color 0.15s ease;
+}
+
+.replication-chip:hover {
   color: var(--pe-teal-700);
-  text-decoration: underline;
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
+}
+
+.replication-chip:hover svg {
+  color: var(--pe-teal-700);
+}
+
+.replication-chip:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .replication-chip,
+  .replication-chip svg {
+    transition: none;
+  }
 }
 
 /* Compact site footer (see SiteFooter.jsx): one row on desktop, in place of
@@ -1770,19 +1830,17 @@ body {
   color: var(--pe-gray-500);
 }
 
-/* Cards flow down two columns, each as tall as its content, so a short
-   card never leaves a gap beside a tall one (no shared rows) */
+/* One size and structure for every card, two to a row: fixed slots
+   (type, title, a two-line summary, a fixed "What changes" box, the
+   timeline, the footer pinned to the bottom), so the rows line up. An
+   opened disclosure may make its card, and so its row, taller. */
 .policy-cards {
-  columns: 2;
-  column-gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.policy-cards > .policy-card {
-  break-inside: avoid;
-  margin-bottom: 20px;
 }
 
 /* Each card is a flex column: head, summary, what changes, when, source,
@@ -1880,10 +1938,16 @@ body {
 }
 
 .policy-card-summary {
+  display: -webkit-box;
+  min-height: calc(2 * 1.6em);
   margin: 0;
+  overflow: hidden;
   font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--pe-gray-700);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* When: start and end in words, then the timeline */
@@ -2121,6 +2185,7 @@ body {
 .policy-card-foot {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -2150,13 +2215,6 @@ body {
   color: var(--pe-gray-600);
 }
 
-/* The source: one line in the same slot on every card, empty when none */
-.policy-card-source-line {
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
 .policy-sr-only {
   position: absolute;
   width: 1px;
@@ -2167,6 +2225,14 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.policy-card-foot > .policy-card-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 40px;
+  white-space: nowrap;
 }
 
 .policy-card-source {
@@ -2225,18 +2291,23 @@ body {
    One line on the change, then its picture: a step plot of current law
    (grey, dashed) against the measure (its colour), the gap shaded in the
    gain or loss colour; or, for a change that holds, two bars to scale. */
+/* The "What changes" box: one height on every card; a plot fills it, a
+   before-and-after or a short table sits in its middle */
 .policy-card-spec {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 252px;
 }
 
-/* No shared rows across cards now, so an empty slot takes no room */
-.policy-card-spec:empty,
-.policy-card-source-line:empty {
-  display: none;
+.policy-card-spec > .pchg {
+  flex: 1 1 auto;
 }
 
-.policies-more-info {
-  margin: -8px 0 16px;
+.pchg > .pchg-ba,
+.pchg > .pchg-table {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .pchg {
@@ -2406,27 +2477,71 @@ body {
   transform: translate(-50%, -2px);
 }
 
-/* A permanent change: the two values, large, and the change */
+/* A change, before and after: a label row with the parameter's icon, then
+   two tiles, current law muted and the measure in its colour */
 .pchg-ba {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
 }
 
-.pchg-ba-values {
-  display: flex;
-  flex-wrap: wrap;
+.pchg-ba-label {
+  display: inline-flex;
   align-items: center;
-  gap: 4px 10px;
+  gap: 8px;
   margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-600);
+}
+
+.pchg-ba-label svg {
+  flex: none;
+  color: var(--pe-gray-500);
+}
+
+.pchg-ba-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.pchg-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pchg-tile.is-before {
+  background: var(--pe-gray-50);
+  border: 1px solid var(--c-grid);
+}
+
+.pchg-tile.is-after {
+  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 10%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 45%, var(--c-surface));
+}
+
+.pchg-tile-name {
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.pchg-tile-value {
   font-size: var(--fs-xl);
   font-weight: 700;
   line-height: 1.2;
-  font-variant-numeric: tabular-nums;
   color: var(--pe-gray-900);
 }
 
-.pchg-ba-before {
+.pchg-tile.is-before .pchg-tile-value {
   font-weight: 500;
   color: var(--pe-gray-500);
   text-decoration: line-through;
@@ -2435,8 +2550,8 @@ body {
 }
 
 .pchg-ba-arrow {
-  font-weight: 400;
-  color: var(--pe-gray-400, var(--c-tick));
+  align-self: center;
+  color: var(--pe-gray-400);
 }
 
 /* Several values side by side, only where the measure differs */
@@ -2549,7 +2664,11 @@ body {
 }
 
 @media (max-width: 768px) {
-  .pchg-ba-values {
+  .pchg-tile {
+    padding: 8px 10px 10px;
+  }
+
+  .pchg-tile-value {
     font-size: var(--fs-section);
   }
 
@@ -2557,11 +2676,8 @@ body {
 
 @media (max-width: 768px) {
   .policy-cards {
-    columns: 1;
-  }
-
-  .policy-cards > .policy-card {
-    margin-bottom: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
 
   /* One column: nothing to line up across, so a plain column with no
@@ -2572,16 +2688,15 @@ body {
     padding: 22px 16px 16px;
   }
 
-  .policy-card-source-line {
-    align-self: auto;
-  }
-
   .policy-card > .policy-card-foot {
     align-self: stretch;
     margin-top: auto;
   }
 
-  .policy-card-source-line:empty,
+  .policy-card-spec {
+    min-height: 0;
+  }
+
   .policy-card-spec:empty,
   .ptl-chips:empty {
     display: none;

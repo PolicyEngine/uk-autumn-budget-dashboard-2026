@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createElement, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { ArrowRight, Coins, Flame, Fuel, Percent, Zap } from "lucide-react";
 import {
   FIRST_YEAR,
   MONTHS,
@@ -36,7 +37,7 @@ export function usePolicyParameters(override) {
 // worse off
 const TONES = { cost: "gain", revenue: "loss" };
 
-const HEIGHT = 160;
+const HEIGHT = 140;
 const MARGIN = { top: 22, right: 10, bottom: 24, left: 58 };
 const DEFAULT_WIDTH = 520;
 
@@ -176,23 +177,54 @@ function StepPlot({ row, segments, tone, onHighlight, label }) {
   );
 }
 
-/** A permanent change: the two values, large, and the change. */
+// A before-and-after's icon, from what the parameter is: its unit, and
+// words in its name (a kind of thing, never a measure's name)
+const ICONS = [
+  [/petrol|diesel|fuel/i, Fuel],
+  [/electric/i, Zap],
+  [/gas|heat|warm/i, Flame],
+];
+export function iconFor(row) {
+  const match = ICONS.find(([words]) => words.test(row.label));
+  if (match) return match[1];
+  return row.unit === "percent" ? Percent : Coins;
+}
+
+/** A change in a rate's points, or in an amount: "−5 points", "+£100". */
+export function tileChange(before, after, unit) {
+  if (unit !== "percent") return formatChange(before, after, unit);
+  const points = Math.round((after - before) * 10000) / 100;
+  const size = Math.abs(points).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+  return `${points > 0 ? "+" : "\u2212"}${size} ${Math.abs(points) === 1 ? "point" : "points"}`;
+}
+
+/**
+ * One change, before and after: a label row with the parameter's icon,
+ * then a "Current law" tile (muted, struck through) and a "With the
+ * measure" tile (the measure's colour, bold), an arrow between, and the
+ * change under the second. When it applies is on the card's timeline.
+ */
 function BeforeAfter({ row, tone }) {
   const { unit } = row;
-  const points = row.points.filter(differs);
-  const point = points[0];
-  const when = row.points.length === 1 ? point.label : `from ${point.label}`;
+  const point = row.points.find(differs);
   return (
     <div className="pchg-ba">
-      <p className="pchg-caption">{`${row.label}, ${when}`}</p>
-      <p className="pchg-ba-values">
-        <span className="pchg-ba-before">{formatValue(point.before, unit)}</span>
-        <span className="pchg-ba-arrow">{" \u2192 "}</span>
-        <span className="pchg-ba-after">{formatValue(point.after, unit)}</span>
-        {unit !== "percent" && (
-          <span className={`pchg-chip is-${tone}`}>{formatChange(point.before, point.after, unit)}</span>
-        )}
+      <p className="pchg-ba-label">
+        {createElement(iconFor(row), { size: 16, "aria-hidden": "true" })}
+        {row.label}
       </p>
+      <div className="pchg-ba-tiles">
+        <div className="pchg-tile is-before">
+          <span className="pchg-tile-name">Current law</span>
+          <span className="pchg-tile-value">{formatValue(point.before, unit)}</span>
+        </div>
+        <ArrowRight className="pchg-ba-arrow" size={20} aria-label="becomes" />
+        <div className="pchg-tile is-after">
+          <span className="pchg-tile-name">With the measure</span>
+          <span className="pchg-tile-value">{formatValue(point.after, unit)}</span>
+          <span className={`pchg-chip is-${tone}`}>{tileChange(point.before, point.after, unit)}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -223,33 +255,6 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
         ))}
       </tbody>
     </table>
-  );
-}
-
-/** A plot's values for screen readers, hidden from view. */
-function HiddenValues({ row }) {
-  return (
-    <div className="policy-sr-only">
-      <table>
-        <caption>{`${row.label}: current law and with the measure`}</caption>
-        <thead>
-          <tr>
-            <th scope="col">When</th>
-            <th scope="col">Current law</th>
-            <th scope="col">With the measure</th>
-          </tr>
-        </thead>
-        <tbody>
-          {row.points.map((point) => (
-            <tr key={point.key}>
-              <th scope="row">{point.label}</th>
-              <td>{formatValue(point.before, row.unit)}</td>
-              <td>{formatValue(point.after, row.unit)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -330,7 +335,11 @@ export default function PolicyChange({ entry, direction, onHighlight }) {
             )}
           </div>
         ) : (
-          <HiddenValues row={main} />
+          <div className="pchg-reveals">
+            <Reveal show="Show the years" hide="Hide the years">
+              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first="Year" />
+            </Reveal>
+          </div>
         )}
       </>
     );

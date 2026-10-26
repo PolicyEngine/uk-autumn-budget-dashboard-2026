@@ -12,6 +12,7 @@ import SectionHeading from "../SectionHeading";
 import TwinLink from "../TwinLink";
 import { GrowthCard, IncomesOverTimeCard, InequalityOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
+import PovertyTiles from "./sections/PovertyTiles";
 import { OutlookStatus } from "./useOutlook";
 import "./LivingStandards.css";
 
@@ -34,7 +35,10 @@ const SECTIONS = {
     title: "Poverty under current law",
     icon: "lifebuoy",
     subtitle: "Current law, before any Budget measure.",
-    rows: [[PovertyOverTimeCard, WhoIsInPovertySection]],
+    // The age groups at a glance, then one card a row: both open on
+    // absolute poverty before housing costs, and the bars need the width
+    lead: PovertyTiles,
+    rows: [[PovertyOverTimeCard], [WhoIsInPovertySection]],
   },
 };
 
@@ -74,6 +78,7 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
             }
           />
           <section id={SECTION_IDS[id]} className="report-section ls-section">
+            {section.lead && <section.lead data={data} />}
             {rows.map((row, i) => (
               <div key={i} className="charts-grid">
                 {row.map((S, j) => (

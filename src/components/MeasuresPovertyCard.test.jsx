@@ -135,7 +135,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
+    expect(headline).toHaveTextContent(/^Of the measures, Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's

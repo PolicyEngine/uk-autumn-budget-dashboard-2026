@@ -802,14 +802,15 @@ def test_each_card_text_block_is_still_there():
 
 def test_the_methodology_note_is_for_a_registered_measure():
     """The one modelling note the page keeps by hand (MODELLING_NOTE in
-    measures.js, #113's scope note) names a registered measure, so renaming
-    the measure can't leave its note unshown without a failure here."""
+    src/utils/measureModelling.js, #113's scope note) names a registered
+    measure, so renaming the measure can't leave its note unshown without a
+    failure here."""
     import re
     from pathlib import Path
 
     source = (
         Path(__file__).resolve().parents[1]
-        / "src/components/methodology/measures.js"
+        / "src/utils/measureModelling.js"
     ).read_text()
     (measure_id,) = re.findall(
         r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source

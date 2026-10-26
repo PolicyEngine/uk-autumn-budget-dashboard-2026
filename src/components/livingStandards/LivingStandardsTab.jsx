@@ -15,9 +15,9 @@ import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import CurrentLawSection from "./CurrentLawSection";
-import { ForecastSource } from "./sources";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
+import ForecastFeedNote from "./sections/ForecastFeedNote";
 import { forecastName } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
 import "./LivingStandards.css";
@@ -41,17 +41,20 @@ function ForecastPanel({ forecast, data }) {
   }
   return (
     <>
+      {/* Named for the forecast, so it is not the sub-tab's label again */}
       <SectionHeading
-        icon="refresh"
-        title="Forecast changes"
+        icon="trend"
+        id="forecast-changes"
+        title={`${forecastName(forecast.pre_label) || "OBR"} economic forecast`}
         subtitle={
-          forecast.post_published
-            ? <>The OBR economic forecast behind the baseline: calendar-year growth in the annual average. This compares the {forecastName(forecast.pre_label)} forecast with the {forecastName(forecast.post_label)} forecast. <ForecastSource forecast={forecast} /></>
-            : <>The OBR forecast behind the baseline: calendar-year growth, from the <SourceLink source="obr_efo_current" />.</>
+          <>
+            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.
+          </>
         }
       />
       <section id="living-forecast" className="report-section">
         <ForecastHeadlineSection data={data} />
+        <ForecastFeedNote forecast={forecast} />
       </section>
       <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} />
     </>

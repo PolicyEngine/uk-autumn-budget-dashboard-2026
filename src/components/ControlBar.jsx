@@ -20,13 +20,17 @@ import "./ControlBar.css";
  *   | {label: string, summary: string, control: React.ReactNode}>} [props.options] - A
  *   group with `control` shows that control in place of segments (the years compared)
  * @param {string} [props.name] - What the options are for, for the dialog's name
+ * @param {string[]} [props.face] - Labels of the groups whose choices the
+ *   button's face shows (compact, e.g. just the poverty measure); its
+ *   accessible name and hover title keep every choice. All groups if unset,
+ *   or if none of these is offered.
  */
-export default function ControlBar({ children, options = [], name = "Chart" }) {
+export default function ControlBar({ children, options = [], name = "Chart", face }) {
   const groups = options.filter(Boolean);
   return (
     <div className="control-bar">
       {children}
-      {groups.length > 0 && <OptionsButton groups={groups} name={name} />}
+      {groups.length > 0 && <OptionsButton groups={groups} name={name} face={face} />}
     </div>
   );
 }
@@ -39,7 +43,7 @@ function chosenText(group) {
   return option?.summary ?? option?.label ?? "";
 }
 
-function OptionsButton({ groups, name }) {
+function OptionsButton({ groups, name, face }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
@@ -47,6 +51,8 @@ function OptionsButton({ groups, name }) {
   const dialogId = useId();
   const titleId = useId();
   const summary = groups.map(chosenText).join(" · ");
+  const faceGroups = face ? groups.filter((group) => face.includes(group.label)) : [];
+  const faceText = faceGroups.length ? faceGroups.map(chosenText).join(" · ") : summary;
 
   const close = (returnFocus = true) => {
     setOpen(false);
@@ -115,7 +121,7 @@ function OptionsButton({ groups, name }) {
           <circle cx="10" cy="12" r="2" />
           <circle cx="18" cy="18" r="2" />
         </svg>
-        <span className="control-bar-summary">{summary}</span>
+        <span className="control-bar-summary">{faceText}</span>
         <PillChevron />
       </button>
       {open && (
