@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -9,15 +9,23 @@ const OUTLOOK = readFileSync(
   "utf8",
 );
 
+const PUBLIC = join(__dirname, "..", "..", "..", "public");
+
 beforeEach(() => {
-  // The outlook JSON for the Pre-measures forecast view; an empty CSV for the rest
+  // The outlook JSON, and the published CSVs so Population impact's
+  // Living standards and Poverty sub-tabs (where the outlook's cards are)
+  // render; an empty CSV for anything else
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url) =>
-      String(url).endsWith("living_standards_outlook.json")
-        ? new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } })
-        : new Response("reform_id,year,value\n", { status: 200 }),
-    ),
+    vi.fn(async (url) => {
+      if (String(url).endsWith("living_standards_outlook.json")) {
+        return new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      const path = join(PUBLIC, new URL(String(url), "http://localhost").pathname);
+      return existsSync(path) && path.endsWith(".csv")
+        ? new Response(readFileSync(path), { status: 200 })
+        : new Response("reform_id,year,value\n", { status: 200 });
+    }),
   );
   window.history.replaceState({}, "", "/");
 });
@@ -40,40 +48,50 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.click(tabs[2]);
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel", { name: "Pre-measures forecast" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
-    // Baseline outlook is the sub-tab it opens on
-    expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByRole("heading", { name: "Forecast changes" })).toBeNull();
+    const panel = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
+    // The OBR forecast only: no sub-tabs, and the current-law cards are on
+    // Population impact
+    expect(await within(panel).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(screen.queryByRole("tablist", { name: "Pre-measures forecast sections" })).toBeNull();
+    for (const name of ["Incomes under current law", "Poverty under current law"]) {
+      expect(within(panel).queryByRole("heading", { name })).toBeNull();
+    }
+    expect(within(panel).queryByRole("heading", { level: 3, name: /^Incomes over time$/ })).toBeNull();
     // Its engine and data are said in Methodology, not on this view
     expect(screen.queryByText(/policyengine 6\.8\.0/)).toBeNull();
     expect(screen.queryByText("Demo")).toBeNull();
     expect(window.location.search).toBe("?tab=outlook");
   });
 
-  it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro shared", async () => {
-    window.history.replaceState({}, "", "/?tab=outlook");
+  it("puts the current-law cards on Living standards and Poverty, in rows of two", async () => {
+    window.history.replaceState({}, "", "/?sub=living");
     render(<App />);
-    const subTabs = await screen.findByRole("tablist", { name: "Pre-measures forecast sections" });
-    const [baseline, forecast] = within(subTabs).getAllByRole("tab");
-    expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
-    // No tab-level intro: the sections start straight under the sub-tabs
-    expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
-
-    const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
-    expect(panel()).toHaveAccessibleName("Baseline outlook");
-    for (const name of ["Incomes under current law", "Poverty under current law"]) {
-      expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
+    const living = await screen.findByRole("tabpanel", { name: "Living standards" });
+    const card = (panel, name) => within(panel).getByRole("heading", { level: 3, name }).closest(".ls-card");
+    // How the measures change incomes, then incomes under current law, then
+    // inequality: the measures' effect beside its level under current law
+    const order = ["How the measures change incomes", "Incomes under current law", "Inequality"];
+    const headings = await Promise.all(order.map((name) => within(living).findByRole("heading", { level: 2, name }, { timeout: 5000 })));
+    for (let i = 1; i < headings.length; i += 1) {
+      expect(headings[i - 1].compareDocumentPosition(headings[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    // Each section is one row of two cards that line up: Incomes over time
-    // beside Growth across the distribution, Poverty over time beside Who is
-    // in poverty. The period is in each title.
-    const card = (name) => within(panel()).getByRole("heading", { level: 3, name }).closest(".ls-card");
-    const incomes = card(/^Incomes over time$/);
-    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution$/).closest(".charts-grid"));
-    const poverty = card(/^Poverty over time$/);
-    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty$/).closest(".charts-grid"));
-    expect(panel().querySelectorAll(".ls-card")).toHaveLength(4);
+    const incomes = card(living, /^Incomes over time$/);
+    expect(incomes.closest(".charts-grid")).toBe(card(living, /^Growth across the distribution$/).closest(".charts-grid"));
+    // Household income only: inequality is its own card
+    expect(within(incomes).queryByRole("button", { name: /^Income view:/ })).toBeNull();
+    expect(within(incomes).queryByRole("button", { name: /^Inequality measure:/ })).toBeNull();
+    const inequality = card(living, /^Inequality over time \(current law\)$/);
+    expect(inequality.closest("#inequality")).not.toBeNull();
+    expect(inequality.closest(".charts-grid")).toBe(
+      within(living).getByRole("heading", { level: 3, name: /^Change in income inequality/ }).closest(".charts-grid"),
+    );
+    // Its measures named as on the measures' chart, in the same order
+    fireEvent.click(within(inequality).getByRole("button", { name: /^Inequality measure:/ }));
+    expect(within(inequality).getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""))).toEqual(["Gini", "90/10 ratio"]);
+    expect(within(inequality).getByText(/^The Gini \(BHC\)/)).toBeInTheDocument();
+    expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
+
+    const panel = () => living;
     for (const name of ["Child poverty", "What the baseline leaves out", "Data"]) {
       expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
     }
@@ -94,31 +112,25 @@ describe("the Pre-measures forecast view", () => {
     expect(about.lastElementChild).toHaveTextContent(/^Source: DWP, Households Below Average Income/);
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
 
-    fireEvent.click(forecast);
-    expect(forecast).toHaveAttribute("aria-selected", "true");
-    expect(panel()).toHaveAccessibleName("Forecast changes");
-    expect(within(panel()).getByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
-    // The OBR's household income per person card is gone
-    expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
-    expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
-    expect(within(panel()).queryByRole("heading", { name: "Incomes under current law" })).toBeNull();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
-    expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
-    fireEvent.click(baseline);
-    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    expect(window.location.search).toBe("?tab=outlook");
+    fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
+    const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
+    await within(poverty).findByRole("heading", { name: "Poverty under current law" });
+    expect(card(poverty, /^Poverty over time$/).closest(".charts-grid")).toBe(card(poverty, /^Who is in poverty$/).closest(".charts-grid"));
+    expect(poverty.querySelectorAll(".ls-card")).toHaveLength(2);
   });
 
   it("compares the years chosen in the range pill on Incomes and Poverty over time", async () => {
-    window.history.replaceState({}, "", "/?tab=living&ls_from=2028&ls_to=2030");
+    window.history.replaceState({}, "", "/?sub=living&ls_from=2028&ls_to=2030");
     render(<App />);
-    const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
+    const heading = (re) => screen.findByRole("heading", { level: 3, name: re }, { timeout: 5000 });
     const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
+    const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
+    fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
     const poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    for (const card of [incomes, poverty]) {
+    for (const card of [incomes, inequality, poverty]) {
       // The shared pill shows the chosen years, and the sentence compares them
-      expect(within(card).getByRole("group", { name: "Years compared" })).toHaveTextContent(/2028-29.*2030-31/);
+      expect(within(card).getByRole("group", { name: "Years compared", hidden: true })).toHaveTextContent(/2028-29.*2030-31/);
       expect(card).toHaveTextContent(/2028-29/);
       expect(card).toHaveTextContent(/2030-31/);
       expect(card.querySelector(".ls-summary, p")).not.toHaveTextContent(/from 2027-28 to 2031-32/);
@@ -126,9 +138,9 @@ describe("the Pre-measures forecast view", () => {
   });
 
   it("switches each card's view with its switch, and never shows a signed zero", async () => {
-    window.history.replaceState({}, "", "/?tab=outlook");
+    window.history.replaceState({}, "", "/?sub=poverty");
     render(<App />);
-    const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
+    const heading = (re) => screen.findByRole("heading", { level: 3, name: re }, { timeout: 5000 });
     const choose = (card, pill, option) => {
       fireEvent.click(within(card).getByRole("button", { name: new RegExp(`^${pill}:`) }));
       fireEvent.click(within(card).getByRole("option", { name: option }));
@@ -178,10 +190,11 @@ describe("the Pre-measures forecast view", () => {
     choose(who, "Poverty line", "Absolute");
     expect(within(who).getByText(/absolute child poverty rate/)).toBeInTheDocument();
 
-    // Incomes over time and Growth across the distribution
-    const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
-    choose(incomes, "Income view", "Inequality");
-    expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
+    // On Living standards: Inequality over time and Growth across the distribution
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
+    choose(inequality, "Inequality measure", "90/10 ratio");
+    expect(within(inequality).getByText(/^The 90\/10 ratio \(BHC\)/)).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
     // Year by year by default (Vahid, 26 October): quintiles, the sentence by fifths
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
@@ -218,7 +231,8 @@ describe("the Pre-measures forecast view", () => {
     }
 
     // The two years compared: chosen in one card, kept in the address and
-    // followed by every card comparing two years
+    // followed by every card comparing two years, on either sub-tab
+    fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
     choose(who, "Compare from", "2029-30");
     expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
     // Titles carry no years (the pill, axes and sentence do): the sentences follow
@@ -231,32 +245,37 @@ describe("the Pre-measures forecast view", () => {
     expect(document.body.textContent).not.toMatch(/(rises|falls) 0\.0/);
   });
 
-  it("opens the sub-tab a link names, and drops it on another view", async () => {
-    // An old link (?tab=living): the view at its new address, its sub-tab kept
+  it("opens the view for an old Forecast changes link, its ?sub= dropped", async () => {
+    // An old link (?tab=living): the view at its new address
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("tab")).toBe("outlook");
-    expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
-
-    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
-    const params = new URLSearchParams(window.location.search);
-    expect(params.get("tab")).toBe("methodology");
-    expect(params.has("sub")).toBe(false);
-
-    // Back on Pre-measures forecast (kept mounted), the sub-tab left open stays,
-    // with its ?sub= again
-    fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
-    expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
+    const panel = await screen.findByRole("tabpanel", { name: "Pre-measures forecast" });
+    expect(await within(panel).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(window.location.search).toBe("?tab=outlook");
+    // The OBR's household income per person card is gone
+    expect(within(panel).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
+    expect(within(panel).queryByText(/disposable income per person/)).toBeNull();
+    expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
   });
 
-  it("opens Baseline outlook for an unknown ?sub=", async () => {
-    window.history.replaceState({}, "", "/?tab=living&sub=nonsense");
+  it("opens the view for an unknown ?sub=, dropping it", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=nonsense");
     render(<App />);
-    expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
     expect(window.location.search).toBe("?tab=outlook");
+  });
+
+  it("opens Population impact's Living standards for an old Baseline outlook link", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=baseline&ls_from=2028");
+    render(<App />);
+    expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute("aria-selected", "true");
+    const living = await screen.findByRole("tabpanel", { name: "Living standards" });
+    expect(await within(living).findByRole("heading", { name: "Incomes under current law" }, { timeout: 5000 })).toBeInTheDocument();
+    const params = new URLSearchParams(window.location.search);
+    expect(params.has("tab")).toBe(false);
+    expect(params.get("sub")).toBe("living");
+    // The cards' own choices carry over
+    expect(params.get("ls_from")).toBe("2028");
   });
 
   it("states its engine, data, status, notes and gaps once, in Methodology", async () => {

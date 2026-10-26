@@ -1,5 +1,7 @@
-// Inequality: the Inequality view of the Incomes over time card. Gini and
-// 90:10, BHC or AHC; HBAI outturn solid, projection dashed. Ported from
+// Inequality over time under current law (its own card, beside the
+// measures' effect on inequality on Population impact's Living standards
+// sub-tab). Gini and 90/10 ratio, named and ordered as that chart's pills
+// (SummaryMetricChart INEQUALITY_METRICS); BHC or AHC; HBAI outturn solid, projection dashed. Ported from
 // PolicyEngine/uk-living-standards-outlook.
 
 import { useMemo, useState } from "react";
@@ -13,12 +15,14 @@ import {
   lineSeries,
   mergeSeries,
   rangeAxis,
-  shortLabel,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
+
+// Named as on the measures' inequality chart; the data's own name otherwise
+const LABELS = { gini: "Gini", p90_p10: "90/10 ratio" };
 
 const FORMAT = {
   gini: (v) => v.toFixed(3),
@@ -34,6 +38,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
   const outturn = ineq.outturn?.[measure]?.[basis] || EMPTY;
   const projection = ineq.projection?.[measure]?.[basis] || EMPTY;
   const fmt = FORMAT[measure] || ((v) => v.toFixed(2));
+  const label = (id) => LABELS[id] ?? ineq.measures[id];
 
   const rows = useMemo(
     () => visibleRows(mergeSeries(outturn, projection, (d) => d.value), viewMode),
@@ -50,7 +55,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     const same = fmt(a.value) === fmt(b.value);
     summary = (
       <>
-        The {ineq.measures[measure].replace(/ coefficient/, "")} ({basis.toUpperCase()}){" "}
+        The {label(measure)} ({basis.toUpperCase()}){" "}
         {same ? (
           <>
             <strong>stays flat</strong> at {fmt(a.value)} from {fyDash(a.year)} to {fyDash(b.year)}
@@ -70,7 +75,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     period: rowsPeriod(rows),
     summary,
     about:
-      "Gini: 0 is perfect equality, 1 is one person holding all income. 90:10: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
+      "Gini: 0 is perfect equality, 1 is one person holding all income. 90/10 ratio: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
@@ -80,8 +85,8 @@ export default function useInequalityView(data, range = null, setRange = null) {
           legendItems: lineLegendItems(series),
           csv: () =>
             seriesCsv({
-              title: `Inequality: ${ineq.measures[measure]} (${basis.toUpperCase()})`,
-              units: ineq.measures[measure],
+              title: `Inequality: ${label(measure)} (${basis.toUpperCase()})`,
+              units: label(measure),
               source: CSV_SOURCES.hbai,
               rows,
               series,
@@ -101,8 +106,8 @@ export default function useInequalityView(data, range = null, setRange = null) {
           onChange={setMeasure}
           options={Object.keys(ineq.measures).map((id) => ({
             value: id,
-            label: ineq.measures[id],
-            badge: shortLabel(ineq.measures[id]),
+            label: label(id),
+            badge: label(id),
           }))}
         />
         <PillSelect
@@ -123,7 +128,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}
         tooltipFormat={fmt}
-        yLabel={ineq.measures[measure]}
+        yLabel={label(measure)}
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />

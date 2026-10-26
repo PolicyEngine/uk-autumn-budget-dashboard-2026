@@ -573,12 +573,20 @@ function MethodologyTab({ onShowTab }) {
             title="Pre-measures forecast"
             summary={
               <p>
-                The{" "}
+                Incomes and poverty under current law, with no measures applied, are projected on
+                the engine and data below: they are the last section of the{" "}
+                <ViewLink tab="dashboard" sub="living" onShowTab={onShowTab}>
+                  Living standards
+                </ViewLink>{" "}
+                and{" "}
+                <ViewLink tab="dashboard" sub="poverty" onShowTab={onShowTab}>
+                  Poverty
+                </ViewLink>{" "}
+                tabs of Population impact. The{" "}
                 <ViewLink tab="outlook" onShowTab={onShowTab}>
                   Pre-measures forecast
                 </ViewLink>{" "}
-                view projects incomes and poverty under current law, with no measures applied, on
-                the engine and data below.
+                view shows the OBR forecast they are built on.
               </p>
             }
             details={<LivingStandardsMethod />}
