@@ -1,0 +1,161 @@
+name: Results on Modal
+
+# When a pull request changes a measure, regenerate the flat CSVs
+# (`uk-budget-data generate --backend modal`) on Modal, one container per
+# measure, and upload them as a workflow artifact with a summary of which
+# files differ from the branch's public/data.
+#
+# It never writes to the branch. Nothing enters public/data without a human
+# commit, and the review row in data_inputs/public_data_review.csv goes in
+# the same commit, signed by the person who reviewed those bytes. Public
+# data check and Publication gate (ci.yml) enforce that as before.
+#
+# Why an artifact and not a commit back to the branch:
+# - this workflow needs read access only (permissions: contents: read);
+# - a commit pushed with GITHUB_TOKEN starts no workflow, so pushed-back
+#   data would sit on the branch without CI's Public data check ever
+#   running on it;
+# - no bot commit races a person's pushes to the same branch.
+#
+# Cost guards: one run per PR at a time (a newer push cancels the older
+# run, and the ephemeral Modal app stops with it), a 50-minute job limit,
+# and in modal_generate.py no retries, at most 16 containers and a 45-minute
+# limit per container. About $0.40 a run (10 units, 25 October).
+#
+# Secrets: the organisation secrets MODAL_TOKEN_ID and MODAL_TOKEN_SECRET
+# (shared with this repository). No Hugging Face token is given to this
+# workflow: the containers read the certified data with the Modal
+# workspace secret pe-uk-private-hf-read-token. Fork PRs receive no
+# secrets and are skipped. Never run this on pull_request_target.
+on:
+  pull_request:
+    paths:
+      - src/uk_budget_data/reforms.py
+      - src/uk_budget_data/budget_measures/**
+      - src/uk_budget_data/measure_templates.py
+      - src/uk_budget_data/budget_years.json
+      - src/uk_budget_data/modal_generate.py
+      - src/uk_budget_data/modal_runner.py
+      - .github/workflows/results-on-modal.yml
+  workflow_dispatch:
+    inputs:
+      reforms:
+        description: Measure ids to run, separated by spaces (empty for all)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: results-on-modal-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Flat CSVs on Modal
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      # The dispatch input reaches the shell only through this variable.
+      REFORMS: ${{ inputs.reforms }}
+      OUT: ${{ runner.temp }}/modal-results
+    steps:
+      - name: Modal credentials present
+        run: |
+          missing=""
+          test -n "$MODAL_TOKEN_ID" || missing="$missing MODAL_TOKEN_ID"
+          test -n "$MODAL_TOKEN_SECRET" || missing="$missing MODAL_TOKEN_SECRET"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing Actions secret(s):$missing. A PolicyEngine organisation admin must add them (organisation secrets shared with this repository, or repository secrets), from a Modal token for the policyengine workspace. Nothing ran on Modal."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v6
+        with:
+          # The branch head, so the results are those of the code pushed.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          save-cache: false
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      # Names only: `modal secret list` never shows a secret's value.
+      - name: Modal workspace secret present
+        run: |
+          names=$(uv run --with modal==1.6.2 modal secret list --json \
+            | python3 -c 'import json, sys; print("\n".join(s.get("Name", s.get("name", "")) for s in json.load(sys.stdin)))')
+          if ! printf '%s\n' "$names" | grep -qx 'pe-uk-private-hf-read-token'; then
+            echo "::error::Modal secret missing: the Modal workspace these tokens open has no secret 'pe-uk-private-hf-read-token' (key HUGGING_FACE_TOKEN, a read-only token for populace-uk-private). Owner: Anthony. Nothing ran on Modal."
+            exit 1
+          fi
+
+      - name: Generate the flat CSVs on Modal
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$REFORMS" ]; then
+            for id in $REFORMS; do
+              [[ "$id" =~ ^[a-z0-9_]+$ ]] || { echo "::error::Not a measure id: $id"; exit 1; }
+            done
+            # shellcheck disable=SC2206
+            args=(--reforms $REFORMS)
+          fi
+          mkdir -p "$OUT"
+          export GIT_SHA=$(git rev-parse HEAD)
+          start=$(date +%s)
+          uv run --with modal==1.6.2 uk-budget-data generate \
+            --backend modal --output-dir "$OUT" "${args[@]}"
+          echo "SECONDS_ON_MODAL=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Compare with the branch's public/data
+        run: |
+          set -euo pipefail
+          {
+            echo "## Flat CSVs on Modal"
+            echo
+            echo "Commit \`$(git rev-parse --short HEAD)\`, ${SECONDS_ON_MODAL} s on Modal. Nothing was committed or signed."
+            echo
+            echo "| File | Compared with public/data | SHA-256 of the new file | Review row |"
+            echo "|---|---|---|---|"
+            for path in "$OUT"/*; do
+              name=$(basename "$path")
+              sha=$(shasum -a 256 "$path" | cut -d' ' -f1)
+              if [ ! -f "public/data/$name" ]; then
+                state="new file"
+              elif cmp -s "$path" "public/data/$name"; then
+                state="identical"
+              else
+                state="**differs**"
+              fi
+              if grep -q "^public/data/$name,[^,]*,$sha," data_inputs/public_data_review.csv; then
+                row="matches"
+              else
+                row="needs a person's review"
+              fi
+              echo "| \`$name\` | $state | \`$sha\` | $row |"
+            done
+            echo
+            echo "To publish: download the artifact, copy in the files you accept, review them and sign their rows in data_inputs/public_data_review.csv, in the same commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the results
+        uses: actions/upload-artifact@v4
+        with:
+          name: modal-results-${{ github.event.pull_request.number || github.run_id }}
+          path: ${{ env.OUT }}
+          retention-days: 14
+          if-no-files-found: error
