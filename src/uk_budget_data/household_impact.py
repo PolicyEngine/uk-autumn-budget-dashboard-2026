@@ -641,8 +641,10 @@ def measure_ids() -> list[str]:
 # including VAT: ONS, Family spending in the UK, April 2024 to March 2025,
 # Workbook 1, Table A1, line 4.4.1 (Electricity): £20.00 a week.
 # https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
-# policyengine-uk reads it (``electricity_consumption``) only for the zero
-# VAT on domestic electricity, so it changes no pre-Budget figure.
+# No policyengine-uk formula reads it (``electricity_consumption`` is an
+# input): the VAT base template (``measure_templates.apply_vat_base_change``)
+# reads it for the zero VAT on domestic electricity, so it changes no
+# pre-Budget figure.
 ELECTRICITY_SPENDING = round(20.00 * 52)
 
 
@@ -692,9 +694,10 @@ class HouseholdAnswers:
     diesel_spending: float = 0
     # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
     electricity_spending: float = ELECTRICITY_SPENDING
-    # Domestic mains gas, £ a year including VAT, none unless given.
-    # policyengine-uk reads it (``gas_consumption``) only for a measure that
-    # changes the VAT on domestic gas; the form does not ask for it yet.
+    # Domestic mains gas, £ a year including VAT, none unless given. No
+    # policyengine-uk formula reads it (``gas_consumption`` is an input):
+    # the VAT base template would, for a measure that changes the VAT on
+    # domestic gas. The form does not ask for it yet.
     gas_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
