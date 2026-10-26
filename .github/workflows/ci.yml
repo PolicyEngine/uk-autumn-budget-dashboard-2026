@@ -36,7 +36,12 @@ jobs:
     # "household routes" (the all-measures parity file and the four route
     # files, about 4,100). A test file named in no part runs in "the rest",
     # and tests/test_ci_parts.py checks that the parts partition the suite.
-    timeout-minutes: 30
+    # The limit is 45 minutes, not 30: the same 238 tests took 1.45 times as
+    # long on one runner as on another that day, and on the split's own run
+    # "the rest" took 22:11 and "model limits and templates" 19:50, so a slow
+    # runner could cancel either at 30 with every test passing. A part that
+    # needs more than about 30 minutes on a normal runner should still be split.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
