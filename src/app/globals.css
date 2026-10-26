@@ -1368,27 +1368,29 @@ body {
 .chart-logo {
   display: flex;
   justify-content: flex-end;
+  /* Never stretch the logo to the row: WebKit squashed it to the row's
+     content height once the 16px clear space came out of a 25px row */
+  align-items: flex-start;
   padding-top: 16px;
-  min-height: 25px;
+  min-height: 33px;
 }
 
-.chart-logo img {
+/* The logo at its own aspect ratio (996:207), 80px wide, in every row */
+.chart-logo img,
+.card-logo img {
   display: block;
+  flex: none;
   width: 80px;
   height: auto;
+  aspect-ratio: 996 / 207;
 }
 
 /* PolicyEngine logo under a table or chart drawn outside Recharts */
 .card-logo {
   display: flex;
   justify-content: flex-end;
+  align-items: flex-start;
   margin-top: 16px;
-}
-
-.card-logo img {
-  display: block;
-  width: 80px;
-  height: auto;
 }
 
 /* Responsive */
