@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -127,11 +127,13 @@ describe("Forecast changes once the Budget forecast is published", () => {
   });
 
   it("keeps the independent baseline available beside the held forecast", async () => {
-    // As App renders it while Population impact (the baseline's usual home)
-    // is unavailable
-    await renderForecast(publishedOutlook(), { withCurrentLaw: true });
-    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    // The held forecast's notice, then the Living standards and Poverty
+    // sub-tabs, which read only the independent outlook
+    await renderForecast(publishedOutlook());
     expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
+    expect(await screen.findByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
   });
 });
