@@ -38,8 +38,11 @@ else:
     }
 out = {}
 for label, scenario in scenarios.items():
-    # Parameter changes only: drop the pump-VAT modifier for this probe.
-    scenario.simulation_modifier = None
+    # Keep the scenario's simulation_modifier: _build_scenario puts the dated
+    # fuel duty keys there, next to the pump-VAT modifier. The pump-VAT
+    # modifier changes vat, not fuel_duty, so fuel_duty shows the duty alone.
+    # (The first version set the modifier to None, which removed the dated
+    # keys as well and printed current law on both sides for drills 1-3.)
     sim = Simulation(situation=situation, scenario=scenario)
     out[label] = [
         float(sim.calculate("fuel_duty", int(y)).sum()) for y in years

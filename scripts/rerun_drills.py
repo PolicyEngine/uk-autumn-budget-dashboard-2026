@@ -223,13 +223,17 @@ DRILLS = {
     },
 }
 
-# Measures whose rerun figure is not a valid score on the new engine. The
-# drills 1-3 fuel measures set the duty rate with month-dated ranges
-# ("2027-01-01.2027-01-31": rate); on policyengine-uk 2.132.6 these leave the
-# baseline and reform rates identical (see
-# docs/drill-reruns/2026-10-24/probe_monthly_fuel_duty.py), so only the
-# pump-VAT modifier is scored. Drill 4 uses open-ended dated steps, which
-# still apply.
+# Measures whose rerun figure is not a valid score on the new engine. Drills 2
+# and 3 set the fuel duty rate with month-dated ranges
+# ("2027-01-01.2027-01-31": rate); on policyengine-uk 2.132.6 the rerun is
+# 0.17095 of the drill-day figure in every year, the VAT-only share, so only
+# the pump-VAT modifier is scored. Drill 1 keys single first-of-month dates;
+# its rerun is a constant 0.525 of the drill-day figure in every year, which
+# points to the data change (enhanced FRS to Microcosm), not a dropped duty.
+# It stays excluded until the fixed probe
+# (docs/drill-reruns/2026-10-24/probe_monthly_fuel_duty.py) is run on it; the
+# first version of the probe removed the dated keys itself. Drill 4 uses
+# open-ended dated steps, which still apply.
 # Like-for-like official benchmarks (large-gap benchmark audit, 24 October
 # 2026). The filled sheets' static figure is cash for drills 3 and 4, and
 # stacked or gross in a few cells, while the rerun is a standalone tax-year
@@ -268,7 +272,7 @@ MODEL_LIMITATION = {
 }
 
 RERUN_INVALID = {
-    "mock_fuel_duty_freeze": "duty change dropped by engine (month-dated ranges); VAT modifier only",
+    "mock_fuel_duty_freeze": "unconfirmed: constant 0.525 ratio points to the data change, not a dropped duty; excluded until the fixed probe is run",
     "mock2_fuel_duty_hold": "duty change dropped by engine (month-dated ranges); VAT modifier only",
     "mock3_fuel_duty_phasing": "duty change dropped by engine (month-dated ranges); VAT modifier only",
 }

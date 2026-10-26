@@ -503,6 +503,7 @@ function labourTab(){
    <li>Hours only: the participation response is off, so nobody starts or stops work.</li>
    <li>The OBR method ignores indirect taxes (VAT, fuel duty, fares) and CGT; the PolicyEngine method sees them only through net income.</li>
    <li>CGT already responds by default from policyengine-uk 2.134.0; here every CGT response is set to zero so the no-behaviour-change figures compare.</li>
+   <li>CGT equalisation's drill figure (+4.11) already included a CGT response (the drill 1 measure set the elasticity to 1). Like for like, the move is +4.11 to +6.93, not +4.11 to +19.01.</li>
    <li>These are the drills' mock measures, two years each: the patterns matter more than the levels.</li></ul></div>`;
   const expl=`<p class="cl" style="max-width:85ch;margin:0 0 14px">Each row: how much a measure's cost or yield changes once people adjust their working hours, against the figure with no behaviour change. OBR method: the OBR's labour-supply elasticities. PolicyEngine method: PolicyEngine's own labour-supply settings. <span class="tiny">n/r: not reliable or not rerun.</span></p>`;
   const tog=`<label class="ltog"><input type="checkbox" id="lzero"${st.lzero?' checked':''}> Show measures with no response with either method</label>`;

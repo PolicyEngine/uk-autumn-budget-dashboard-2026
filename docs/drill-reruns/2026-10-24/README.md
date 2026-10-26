@@ -8,7 +8,7 @@ Every `mock*_` measure from the four mock-Budget drills was rerun on today's lat
 - `summary.csv`: the per-drill headline numbers.
 - `runs.json`: the commands, timings, peak RSS and dataset hash for each run.
 - `drill2-minimal-fix.diff`, `drill3-minimal-fix.diff`: the only code changes needed to run.
-- `probe_monthly_fuel_duty.py`: the check behind the fuel duty finding below.
+- `probe_monthly_fuel_duty.py`: the household check for the fuel duty finding below (fixed on 26 October; not yet rerun).
 
 The sealed folders and answer keys were not opened. Drill-day figures come from `public/data/*.csv` on each drill branch. The drills' mock costings come from the filled national scoring sheets committed there. The dashboard's benchmarks are real published costings instead (see "External benchmarks" below).
 
@@ -44,11 +44,15 @@ Drill 3's drill-day CSV is itself mixed. Per its run-2 receipt, 6 measures were 
 
 No reform code was changed. The fuel duty issue below was **not** fixed, because a fix would change the measures rather than let them run.
 
-## Finding: the drills 1–3 fuel duty measures lose their duty change on pe-uk 2.132.6
+## Finding: the drills 2 and 3 fuel duty measures lose their duty change on pe-uk 2.132.6
 
-Drills 1–3 set the fuel duty rate with **month-dated ranges** (`"2027-01-01.2027-01-31": rate`, one per month). On pe-uk 2.132.6 these ranges leave the baseline and reform rates identical, so the duty part of each measure disappears and only the drills' pump-VAT modifier is scored.
+Drills 2 and 3 set the fuel duty rate with **month-dated ranges** (`"2027-01-01.2027-01-31": rate`, one per month). On pe-uk 2.132.6 the rerun is exactly 0.17095 of the drill-day figure in every year, the VAT-only share of a duty-plus-VAT measure, so only the drills' pump-VAT modifier is scored.
 
-`probe_monthly_fuel_duty.py` shows this directly. It builds a one-household simulation under each measure's baseline and reform scenarios, with the modifier removed:
+Drill 1 keys single first-of-month dates (`"2027-01-01": rate`). Its rerun is a constant 0.525 of the drill-day figure in every year, although the years carry different duty gaps. A constant ratio points to the data change (enhanced FRS to Microcosm household fuel spending), not a dropped duty. Drill 1 stays flagged and out of the medians until the fixed probe is run on it.
+
+**Correction (26 October):** the first version of `probe_monthly_fuel_duty.py` set the scenario's `simulation_modifier` to `None`. `_build_scenario` puts the dated keys in that modifier, so the probe removed the measure itself and printed current law on both sides for drills 1–3. The table below came from that version and does not show what it claimed. The probe now keeps the modifier; it has not been rerun.
+
+Output of the first (broken) probe, kept for the record:
 
 | Measure | 2027 fuel duty, baseline vs reform |
 |---|---|
@@ -62,9 +66,9 @@ The effect on the scores:
 - Drills 2 and 3 fall by exactly 82.9% in every year. That is the VAT-only share of a duty-plus-20%-VAT measure (about 1/6), plus the litres change.
 - Drill 1 falls by 47.5%. Its gap also includes the move from enhanced FRS to Microcosm litres.
 
-These rows are marked in `comparison.csv` (`rerun_note`) and left out of the medians below. **They are not valid rerun scores.**
+These rows are marked in `comparison.csv` (`rerun_note`) and left out of the medians below. **Drills 2 and 3 are not valid rerun scores; drill 1 is unconfirmed.**
 
-The drills ran on pe-uk 2.90.2, 2.120.0 and 2.125.1, where the ranges applied. Drill 4, already on 2.130.1, used open-ended steps and is unaffected. Two pe-uk changes are candidate causes:
+Drills 2 and 3 ran on pe-uk 2.120.0 and 2.125.1, where the ranges applied. Drill 4, already on 2.130.1, used open-ended steps and is unaffected. Two pe-uk changes are candidate causes:
 
 - 2.126.12: "Every reform route now writes dated changes onto the statutory parameter timeline and reprocesses it."
 - 2.109.6: model-year day-weighting of fuel duty.
@@ -78,7 +82,7 @@ The median and maximum are taken over "material" cells: those where the drill-da
 | Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Closer / further vs the external costing (year cells) | Closer / further vs the drill mock costing |
 |---|---|---|---|---|---|
 | 1 | 17 (4) | 9.98% | 20.3% | 2 / 2 | n/a: no filled national sheet |
-| 2 | 23 (4) | 2.95% | 17.4% | 0 / 2 | 7 / 7 |
+| 2 | 23 (4) | 2.95% | 17.4% | none compared (employer NI is on a different basis) | 7 / 7 |
 | 3 | 41 (5) | 1.95% | 14.6% | 1 / 0 (1 unchanged) | 23 / 10 |
 | 4 | 51 (0) | 0.00% | 0.36% | none compared | 6 / 0 (all moves under 0.4%) |
 
@@ -100,19 +104,19 @@ Every figure links to its source outside this repository. Each source URL was ch
 
 | Drill | Measure | Shown | External figure (£bn, + = revenue) | Source |
 |---|---|---|---|---|
-| 1 | Child Benefit £30/£20 | Official, rescaled | −1.19 (2027-28), −1.18 (2028-29) | [HMRC ready reckoner, June 2025](https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes): CB first and subsequent child £1/week |
+| 1 | Child Benefit £30/£20 | Official, rescaled | −1.12 (2027-28), −1.15 (2028-29), from the measure's own £27.80/£18.40 counterfactual | [HMRC ready reckoner, June 2025](https://www.gov.uk/government/statistics/direct-effects-of-illustrative-tax-changes): CB first and subsequent child £1/week |
 | 1 | NI threshold to £13,000 | Official, rescaled | −1.01, −1.12 | Ready reckoner: employee entry threshold £2/week; lower profits limit £104 |
 | 1 | VAT zero rate on household energy | up to (official); think tank | up to −2.40 (2027-28); Nesta −2.5 a year | Ready reckoner: VAT reduced rate × 5; [Nesta, Sept 2025](https://www.nesta.org.uk/blog/is-removing-vat-really-the-best-way-to-cut-energy-bills/): "it will cost £2.5 billion per year" |
 | 1 | Council tax surcharge from £1.5m | think tank, rescaled; related policy | +0.41 (2028-29) | [Tax Policy Associates, updated 19 Sept 2026](https://taxpolicy.org.uk/2026/07/07/mansion-tax-1-5m-burnham/): £1,500 band adds £850m − £605m = £245m static; × 2,500/1,500 |
 | 1–4 | Fuel duty measures | related policy | Real measure −2.37 (2026-27), about −0.85 a year after | [Budget 2025 policy costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=14), p. 14 |
 | 2 | Electricity VAT zero rate | up to (official) | up to −1.70 (2027-28) | [HM Treasury, 21 July 2026](https://www.gov.uk/government/news/new-pm-cuts-tax-on-household-electricity-bills-to-give-breathing-space-on-cost-of-living): about £850m for October–March, doubled |
-| 2 | Employer NI threshold +£500 | Official, rescaled | −2.07, −2.26 | Ready reckoner: employer threshold £2/week |
+| 2 | Employer NI threshold +£500 | Different basis (not compared) | −2.07, −2.26 | Ready reckoner: employer threshold £2/week. HMRC's row is at fixed pay; our figure assumes full same-year pass-through to pay |
 | 2 | CGT 18→20%, 24→28% | after behaviour (official) | −0.14, −0.66 | Ready reckoner: CGT rate rows, interpolated |
 | 2 | £150 energy payment | at least (official) | at least −1.01 (2026-27) | [DWP Universal Credit statistics, Feb 2026](https://www.gov.uk/government/statistics/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026/universal-credit-quarterly-statistics-29-april-2013-to-12-february-2026): 6.7m households × £150 |
 | 2 | £1.5m–£2m surcharge band at £1,500 | think tank, same change | +0.245 static (2028-29); dynamic about +0.12 | Tax Policy Associates (as above) |
 | 2, 3, 4 | State Pension personal allowance; Pensioner Allowance; Top-up Allowance | think tank, related policy | −2.0 (2029-30) | [Resolution Foundation, May 2024](https://resolutionfoundation.org/app/uploads/2024/05/Under-triple-lock-and-key.pdf): "triple lock plus", "a cost of just over £2 billion" |
 | 3 | LHA relinked to 30th percentile from April 2027 | think tank, same change; related policy | −2.0 (2029-30, current prices); related −1.66, −1.70 | [Resolution Foundation, Saving private renters, 19 Sept 2026](https://www.resolutionfoundation.org/publications/saving-private-renters/); [Autumn Statement 2023 costings](https://assets.publishing.service.gov.uk/media/6560c3ef3d77410012420197/Autumn_Statement_2023_Policy_Costings_-_Final.pdf#page=16), p. 16 |
-| 3 | Class 4 main rate +1 point | Official, same change | +0.53, +0.45 | Ready reckoner |
+| 3 | Class 4 main rate +1 point | Official, same change | +0.445, +0.445 (steady level; the row's £525m 2027-28 peak is self-assessment timing) | Ready reckoner |
 | 3 | CGT 28% and exempt amount £2,000 | after behaviour (official) | −0.09, −0.60 | Ready reckoner |
 | 3, 4 | Warm Home Discount top-ups | up to / about (official) | up to −0.67 a winter; about −0.83 | [DESNZ consultation](https://www.gov.uk/government/consultations/expanding-the-warm-home-discount-scheme-2025-to-2026/expanding-the-warm-home-discount-scheme-2025-to-2026-consultation-document-accessible-webpage): £1bn for £150 in Great Britain |
 | 3 | Salary sacrifice cap £1,000 | related policy | Real £2,000 cap +4.85 (2029-30), +2.59 | [Budget 2025 costings](https://assets.publishing.service.gov.uk/media/692872fd2a37784b16ecf676/Budget_2025-Policy_Costings.pdf#page=47), p. 47 |
@@ -161,7 +165,7 @@ These cells have a **model limitation**, so they are not compared:
 - **Drill 4 Carer's Allowance earnings limit:** take-up is set from current receipt, so people newly entitled by the higher limit cannot appear.
 - **Drill 4 savings starting band:** policyengine-uk defect #1799, about 2.5 times too high.
 - **Drill 3 salary sacrifice cap:** the engine doesn't take the sacrificed pay out of adjusted net income, which adds income tax through the allowance taper and the child benefit charge.
-- **Drill 2 electricity VAT:** the cost is split across calendar years. The fiscal 2027-28 total is −1.38 against −1.76.
+- **Drill 2 electricity VAT:** the cost is split across calendar years (9/12 and 3/12). The fiscal 2027-28 total is −1.38 against the mock costing's −1.76 (not an HM Treasury figure).
 
 ### Largest movers and their causes
 
@@ -173,11 +177,11 @@ These cells have a **model limitation**, so they are not compared:
 | 1 | HVCTS from £1.5m, 2028–30 | 0.269 → 0.249 | −7.4% | pe-uk 2.123.1 charges the surcharge only on owner-occupiers. Decile 1's average loss falls from £27 to £9 and decile 10's rises from £8 to £41, the pattern expected when renters drop out. The dataset change also applies |
 | 2 | Employer NI ST £5,000 → £5,500 | −1.31 → −1.08 (2030) | −3.6 to −17.4% | Engine and dataset together (`aa31bdf6` → `810ba980`). Not decomposed |
 | 2 | Electricity VAT zero | −0.94 → −1.04 (2027) | +10.5% | Engine and dataset together. Not decomposed |
-| 2 | State Pension personal allowance | −0.35 → −0.39 (2027) | +0.9 to +11.2% | Engine and dataset. The rerun also shows −£0.024bn in 2026, where the drill day had £0. pe-uk 2.131.1 changed how bare-year and 1-January keys on uprated household parameters are dated, which could account for that. Not confirmed |
+| 2 | State Pension personal allowance | −0.35 → −0.39 (2027) | +0.9 to +11.2% | Engine and dataset. The rerun also shows −£0.024bn in 2026, where the drill day had £0. The cause is a Gift Aid double deduction: the measure's allowance (drill 2 `mock_drill2_structural.py:111`) subtracts `gift_aid_grossed_up` from `adjusted_net_income`, which from pe-uk 2.132.6 already deducts it (on 2.120.0 it did not). This affects every year, not only 2026 |
 | 3 | LHA to 30th percentile, 2031 | −0.99 → −1.14 | +14.6% | pe-uk 2.128.0 projects datasets to 2032. On 2.125.1 (drill day), 2031 was served from 2030 data, which is why the drill-day 2031 figure fell below 2030's. Other years move −0.1% to −5.8% (engine and dataset) |
-| 3 | Threshold freeze to 2032, 2031 | 4.455 → 4.332 | −2.8% | 2031 is now a real dataset year (2.128.0). pe-uk 2.126.2 also changed the 2031-32 indexation of PA/BRL, which moves the counterfactual |
+| 3 | Threshold freeze to 2032, 2031 | 4.455 → 4.332 | −2.8% | 2031 is now a real dataset year (2.128.0). Both sides pin the 2031-32 Annex A thresholds, so indexation changes do not enter |
 | 3 | Pensioner Allowance | −2.99 → −3.09 (2031) | +2 to +3.5% | Engine and dataset together. Not decomposed |
-| 4 | All 13 measures | | at most 0.36% | Same dataset; engine only. Revenue is unchanged to the third decimal for 10 of 13 measures. The State Pension Top-up Allowance moves 0.3%, which is not attributed |
+| 4 | All 13 measures | | at most 0.36% | Same dataset; engine only. Revenue is unchanged to the third decimal for 10 of 13 measures. The State Pension Top-up Allowance moves 0.3%, consistent with the trade loss relief added in pe-uk 2.131.0 (not bisected) |
 
 ### Decile changes
 
@@ -204,6 +208,7 @@ The dashboard's "Labour supply" tab shows María Juaristi's labour supply check 
 
 - The issue publishes no data file. `labour_supply/issue-120.md` keeps the issue text as fetched on 25 October 2026, and `scripts/parse_labour_supply_issue.py` copies its tables value by value into `labour_supply/labour_supply.csv` and `dashboard/labour_supply.json`. Cells marked n/r, withheld or not rerun stay so.
 - The headline "2.5%" and "28 of 29" are the issue's own overview figures; "−52 to −57%" and "+9 to +22%" are computed from its tables.
+- CGT equalisation's drill figure (+4.11) already included a CGT response (the drill 1 measure sets the realisation elasticity to 1). Like for like, the move is +4.11 → +6.93 (the issue's own default-response row), not +4.11 → +19.01.
 
 ## How to rerun
 

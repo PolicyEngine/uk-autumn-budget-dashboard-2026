@@ -47,7 +47,7 @@ DESCRIPTIONS = {
     # Drill 2
     "mock2_fuel_duty_hold": "The 3p (1 January 2027) and 2p (1 March 2027) rises do not go ahead; 52.95p a litre to 31 August 2027, then 55.95p.",
     "mock2_electricity_vat_zero": "Zero VAT on domestic electricity in Great Britain continues from 1 April 2027 to 31 March 2028; gas stays at 5%.",
-    "mock2_employer_ni_threshold": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+    "mock2_employer_ni_threshold": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31. Scored with full same-year pass-through to pay: the figure is net of the employer NI, income tax, employee NI and benefit changes on that extra pay.",
     "mock2_cgt_rates": "Capital Gains Tax rates rise from 18% to 20% and from 24% to 28% from 6 April 2027, including residential property.",
     "mock2_hvcts_band": "New £1,500 High Value Council Tax Surcharge band for homes in England worth £1.5 million to £2 million from April 2028.",
     "mock2_state_pension_uprating": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; average earnings leave the triple lock.",
@@ -58,7 +58,7 @@ DESCRIPTIONS = {
     "mock3_whd_top_up": "Extra £100 per Warm Home Discount household in England and Wales in winters 2026-27 and 2027-28.",
     "mock3_lha_30th_percentile": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
     "mock3_pensioner_allowance": "Allowance equal to the State Pension where above the Personal Allowance, from April 2027, withdrawn above £30,000 of income.",
-    "mock3_employer_ni_under_22": "No employer National Insurance on earnings of employees aged under 22, up to the upper earnings limit, from April 2027.",
+    "mock3_employer_ni_under_22": "No employer National Insurance on earnings of employees aged under 22, up to the upper earnings limit, from April 2027. Gross employer NI with pay held fixed (no pass-through), so households show £0.",
     "mock3_additional_rate_threshold": "The 45p additional rate starts at £100,000 of taxable income instead of £125,140 from April 2027.",
     "mock3_cgt_higher_rate_aea": "Capital Gains Tax higher rate from 24% to 28% and annual exempt amount from £3,000 to £2,000, from 6 April 2027.",
     "mock3_salary_sacrifice_cap": "Pension salary sacrifice exempt from National Insurance falls from £2,000 to £1,000 a year from 6 April 2029.",
@@ -69,7 +69,7 @@ DESCRIPTIONS = {
     "mock4_cb_early_years_addition": "Child Benefit Early Years Addition of £10 a week for each child under 1 from April 2027.",
     "mock4_state_pension_topup_allowance": "Income tax allowance for State Pension recipients equal to the amount their State Pension exceeds their personal allowance, from April 2027.",
     "mock4_fuel_vat_cut": "VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027.",
-    "mock4_employer_ni_under23": "No employer Class 1 National Insurance on earnings up to £25,000 a year for employees under 23, from April 2027.",
+    "mock4_employer_ni_under23": "No employer Class 1 National Insurance on earnings up to £25,000 a year for employees under 23, from April 2027. Gross employer NI with pay held fixed (no pass-through), so households show £0.",
     "mock4_fuel_duty": "Fuel duty stays at 52.95p to 22 February 2027, 54.95p from 23 February 2027 and 56.95p from 1 October 2027.",
     "mock4_uc_child_element": "Universal Credit child element up £12.50 a month per child from April 2027.",
     "mock4_lha_reset": "Local Housing Allowance rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
@@ -145,7 +145,6 @@ def peuk(v: str, date: str) -> str:
 # 2.130.1).
 L1878 = "https://github.com/PolicyEngine/policyengine-uk/issues/1878"
 L21231 = peuk("2.123.1", "2026-10-07")
-L21262 = peuk("2.126.2", "2026-10-10")
 L21280 = peuk("2.128.0", "2026-10-12")
 L21311 = peuk("2.131.1", "2026-10-14")
 L21324 = peuk("2.132.4", "2026-10-15")
@@ -168,20 +167,19 @@ def cause(drill: str, mid: str, year: int):
         return ("The surcharge now falls on owners only, not tenants; the new data adds to it",
                 [["details", L21231, "policyengine-uk 2.123.1 changelog: the High Value Council Tax Surcharge is charged only on owner-occupiers."]])
     if mid == "mock2_state_pension_personal_allowance" and year == 2026:
-        return ("A small new cost in 2026-27 where the drill day had £0; possibly how the engine now dates parameters; not confirmed",
-                [["details", L21311, "policyengine-uk 2.131.1 changelog: bare-year and 1 January reform keys now name the calendar year."]])
+        return ("A small new cost in 2026-27 where the drill day had £0: the measure's allowance deducts Gift Aid from adjusted net income, which the engine now does too",
+                [["details", L21311, "Drill 2 mock_drill2_structural.py:111 subtracts gift_aid_grossed_up from adjusted_net_income; from policyengine-uk 2.132.6 adjusted_net_income already deducts it, so Gift Aid donors get a double deduction in every year, including 2026-27."]])
     if drill == "3" and year == 2031:
         if mid == "mock3_threshold_freeze_2032":
-            return ("2031-32 now has its own data, and the 2031-32 allowance uprating rule changed",
-                    [["details", L21280, "policyengine-uk 2.128.0 changelog: data projected to 2032, so 2031-32 is a data year."],
-                     ["rule", L21262, "policyengine-uk 2.126.2 changelog: from 2031-32 the personal allowance and basic rate limit follow September CPI with statutory rounding."]])
+            return ("2031-32 now has its own data; on the drill day it reused 2030's",
+                    [["details", L21280, "policyengine-uk 2.128.0 changelog: data projected to 2032, so 2031-32 is a data year. Both sides pin the 2031-32 Annex A thresholds, so indexation rules do not enter."]])
         return ("2031-32 now has its own data; on the drill day it reused 2030's",
                 [["details", L21280, "policyengine-uk 2.128.0 changelog: data projected to 2032, so 2031-32 is a data year. First published in 2.130.1."]])
     if mid in ("mock4_cgt_higher_rate", "mock4_savings_starting_band"):
         return ("Revenue unchanged; the decile 1 figure moves because negative incomes are now counted there",
                 [["details", L21324, "policyengine-uk 2.132.4 changelog: negative household income is reset to zero and counted in decile 1."]])
     if mid == "mock4_state_pension_topup_allowance":
-        return ("Small move (about 0.3%); cause not found", [])
+        return ("Small move (about 0.3%); consistent with the new trade loss relief in policyengine-uk 2.131.0; not bisected", [])
     if drill == "4":
         return ("Only the engine changed; same data", [])
     return ("Engine and data both changed; not split", [])
@@ -209,8 +207,8 @@ GAPS = [
      "detail": "Against the tax-year liability; the income tax leg is £4.5bn against £3.0bn."},
     {"label": "Employer NI threshold", "cell": ("2", "mock2_employer_ni_threshold", 2030),
      "related": [("2", "mock2_employer_ni_threshold"), ("4", "mock4_employer_ni_under23")],
-     "reason": "unexplained; employment counts",
-     "detail": "Against the net post-behavioural figure; full pay pass-through and no corporation tax in the model. Drill 4 under-23s: more 21–22 employments in the data."},
+     "reason": "full same-year pass-through to pay; the later-year fall is unexplained",
+     "detail": "Against the net post-behavioural figure; full pay pass-through and no corporation tax in the model. The rerun falls 12% in 2028-29 and 17% in 2030-31 but 4–5% in 2027-28 and 2029-30; not yet explained. Drill 4 under-23s: more 21–22 employments in the data."},
 ]
 
 
@@ -316,9 +314,10 @@ EXTERNAL = {
     # Drill 1
     "mock_child_benefit_increase": _rr(
         "Child Benefit: increase first child rate by £1 a week (cost); increase subsequent child rate by £1 a week (cost)",
-        "Rise over the April 2027 baseline (£27.67 / £18.31, policyengine-uk): +£2.33 eldest, +£1.69 others. "
-        "2027-28: 2.33 × £335m + 1.69 × £240m = £1.19bn; 2028-29: 2.33 × £330m + 1.69 × £245m = £1.18bn. Includes the HICBC offset.",
-        {2027: -1.186, 2028: -1.183}),
+        "Rise over the measure's own counterfactual (Annex A £27.80 / £18.40 in 2027-28, both sides uprated by mock CPI and "
+        "rounded to 5p): +£2.20 / +£1.60 in 2027-28, +£2.25 / +£1.65 in 2028-29. "
+        "2027-28: 2.20 × £335m + 1.60 × £240m = £1.12bn; 2028-29: 2.25 × £330m + 1.65 × £245m = £1.15bn. Includes the HICBC offset.",
+        {2027: -1.121, 2028: -1.147}),
     "mock_nics_threshold_rise": _rr(
         "Change employee entry threshold by £2 per week; change lower profits limit by £104 per year",
         "£430 a year = 4.13 × £104. 2027-28: 4.13 × (£230m + £15m) = £1.01bn; 2028-29: 4.13 × (£250m + £20m) = £1.12bn.",
@@ -340,8 +339,11 @@ EXTERNAL = {
         "values": {2027: -1.70}, "bound": "upper"},
     "mock2_employer_ni_threshold": _rr(
         "Change employer threshold by £2 per week",
-        "£500 a year = 4.81 × £104. 2027-28: 4.81 × £430m = £2.07bn; 2028-29: 4.81 × £470m = £2.26bn.",
-        {2027: -2.067, 2028: -2.260}),
+        "£500 a year = 4.81 × £104. 2027-28: 4.81 × £430m = £2.07bn; 2028-29: 4.81 × £470m = £2.26bn. "
+        "Different basis, so not compared: HMRC's row is the direct effect at fixed pay; policyengine-uk passes the whole "
+        "employer NI change through to pay in the same year (employee_incidence = 1), so our figure is net of the tax and "
+        "benefit effects on that pay.",
+        {2027: -2.067, 2028: -2.260}, match="basis"),
     "mock2_cgt_rates": _rr(
         "Increase lower / higher Capital Gains Tax rate by 1 and 5 percentage points",
         "Lower rate +2 points: +£13m (2027-28), +£1m (2028-29); higher rate +4 points: −£156m, −£660m. Total −£0.14bn and −£0.66bn: "
@@ -382,8 +384,10 @@ EXTERNAL = {
     "mock3_threshold_freeze_2032": FREEZE_REL,
     "mock3_class4_main_rate": _rr(
         "Change Class 4 main rate by 1 percentage point",
-        "Exactly this change: +£525m (2027-28), +£445m (2028-29). Self-assessment timing: part of the first year's yield is paid later.",
-        {2027: 0.525, 2028: 0.445}, match="direct"),
+        "Exactly this change. The row runs £440m (2026-27), £525m (2027-28), £445m (2028-29): the second-year peak appears "
+        "in the self-assessment rows only, so it reads as payment timing. Our figure is a tax-year liability from April 2027, "
+        "so both years are scored against the steady level, £445m.",
+        {2027: 0.445, 2028: 0.445}, match="direct"),
     # Drill 4
     "mock4_cb_early_years_addition": NONE,
     "mock4_state_pension_topup_allowance": NONE,
