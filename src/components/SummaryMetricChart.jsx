@@ -65,6 +65,9 @@ export const SUMMARY_METRICS = {
     description:
       "Change in the share of people in absolute poverty before housing costs, each year, in percentage points.",
     unit: "Change in poverty rate (percentage points)",
+    // The headline measure's people and line, for the sentence in people
+    group: "all",
+    line: "absolute poverty (before housing costs)",
     icon: "users",
     // One formatter for every poverty card (formatPp): 3 decimals under 0.1pp
     decimals: 3,
