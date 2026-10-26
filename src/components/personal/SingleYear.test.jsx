@@ -119,6 +119,14 @@ const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
 const changeValue = () => headlineCard().querySelector(".result-value").textContent;
 
+// The waterfall, once the split by policy is in (optionally for one year)
+const splitShown = (year) =>
+  waitFor(() =>
+    expect(
+      document.querySelector(`.net-income-waterfall[data-split="ready"]${year ? `[data-year="${year}"]` : ""}`),
+    ).not.toBeNull(),
+  );
+
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
 
@@ -162,7 +170,7 @@ describe("the household calculation, from the fixture", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    await splitShown();
     expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
     const [first] = household;
     expect(first.year).toBe(2029);
@@ -216,7 +224,7 @@ describe("the household calculation, from the fixture", () => {
     await waitFor(() => expect(asked).toHaveLength(1));
     expect(asked).toEqual([[HOUSEHOLD_API, []]]);
     release();
-    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    await splitShown();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
     expect(asked).toHaveLength(3);
@@ -262,9 +270,11 @@ describe("the household calculation, from the fixture", () => {
     toResults();
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(document.querySelector("#household-breakdown")).not.toBeNull();
-    // The split by policy and the sweep wait in their own cards
-    await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(2));
-    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(2);
+    // The sweep waits in its own card; the waterfall shows one step for
+    // every policy until the split arrives
+    await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(1));
+    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(1);
+    expect(document.querySelector('.net-income-waterfall[data-split="pending"]')).not.toBeNull();
     // Changed answers can be sent without waiting for the slower parts
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
     expect(calculateButton()).not.toBeDisabled();
@@ -286,10 +296,10 @@ describe("the household calculation, from the fixture", () => {
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
     expect(card.querySelector(".result-figure")).toHaveTextContent(/^\+£3,765 a year$/);
-    // Its share as a chip, and net income before and after as bars
+    // Its share as a chip, and the waterfall from net income before to after
     expect(card.querySelector(".result-chip")).toHaveTextContent("Up 5.8% of net income");
-    const bars = [...card.querySelectorAll(".result-bar-row")].map((row) => row.textContent);
-    expect(bars).toEqual(["Before£65,371", "After£69,136"]);
+    const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
+    expect(ends).toEqual(["Net income before£65,371", "Net income after£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
@@ -323,13 +333,15 @@ describe("the household calculation, from the fixture", () => {
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
 
-  it("draws one bar per policy that changes the household, adding up to the change", async () => {
+  it("steps from net income before to after, one step per policy that changes the household", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ });
-    const bars = [...container.querySelectorAll(".policy-bar")];
-    expect(bars.map((bar) => bar.dataset.policy)).toEqual([
+    await splitShown();
+    // No separate chart of the same figures: each policy's change is said once
+    expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
+    const bars = [...container.querySelectorAll(".waterfall-row.is-step")];
+    expect(bars.map((bar) => bar.dataset.row)).toEqual([
       "two_child_limit",
       "threshold_freeze_extension",
       "salary_sacrifice_cap",
@@ -337,13 +349,13 @@ describe("the household calculation, from the fixture", () => {
     ]);
     const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
     const sum = bars
-      .map((bar) => parse(bar.querySelector(".policy-bar-value").textContent))
+      .map((bar) => parse(bar.querySelectorAll("text")[1].textContent))
       .reduce((a, b) => a + b, 0);
     expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
     // The measures that leave the household where it was: one expander
     // under the chart, closed at first, each on its own row with its colour
-    const chart = container.querySelector("#change-by-policy");
+    const chart = container.querySelector(".result-card-notes");
     const noEffect = within(chart).getByRole("button", { name: "More info" });
     expect(noEffect).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".no-effect-item")).toBeNull();
@@ -367,7 +379,12 @@ describe("the household calculation, from the fixture", () => {
       within(table)
         .getAllByRole("rowheader")
         .map((cell) => cell.textContent.replace(/[▸▾]/g, ""));
-    expect(rowNames()).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
+    const topNames = [...table.querySelectorAll(".programme-row.depth-0 th, .breakdown-net-row th")].map((cell) =>
+      cell.textContent.replace(/[▸▾]/g, ""),
+    );
+    expect(topNames).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
+    // Open at first: the programmes show under their groups
+    expect(rowNames()).toContain("Income tax");
     for (const name of ["Before", "After", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
@@ -376,9 +393,8 @@ describe("the household calculation, from the fixture", () => {
     expect(net).toHaveTextContent("£65,371£69,136");
     expect(net).not.toHaveTextContent("£3,765");
 
-    // Each top row opens to its taxes or benefits, closed at first
-    expect(within(table).queryByText("Income tax")).not.toBeInTheDocument();
-    fireEvent.click(within(table).getByRole("button", { name: /Taxes/ }));
+    // Each top row shows its taxes or benefits, open at first
+    expect(within(table).getByRole("button", { name: /Taxes/ })).toHaveAttribute("aria-expanded", "true");
     const incomeTax = within(table).getByRole("row", { name: /Income tax/ });
     expect(incomeTax).toHaveTextContent("−£4,164−£4,360−£196");
     expect(within(incomeTax).getByText("−£196")).toHaveClass("is-loss");
@@ -694,7 +710,7 @@ describe("the examples' precomputed results", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     fireEvent.click(householdItem(/^A graduate on £35,000/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    await splitShown();
   }
 
   it("show an example's result from the published file, with no request to the API", async () => {
@@ -791,7 +807,7 @@ describe("while a new answer loads", () => {
     const server = serveSlowly();
     const { rerender, container } = renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    await splitShown();
     expect(headlineCard()).toHaveTextContent("2029-30");
     server.slowDown();
     const ids = SUPPORTED_POLICY_IDS;
@@ -804,7 +820,7 @@ describe("while a new answer loads", () => {
       await new Promise((resolve) => setTimeout(resolve, wait));
       expect(headlineCard()).toBeNull();
       expect(container.querySelector(".single-year-details")).toBeNull();
-      expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
+      expect(document.querySelector(".net-income-waterfall")).toBeNull();
     }
     expect(container.querySelector(".processing-panel")).toHaveTextContent("Calculating your household");
     expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually around 60 seconds");
@@ -814,9 +830,9 @@ describe("while a new answer loads", () => {
     expect(container.querySelector(".processing-panel")).toBeNull();
     // The breakdown stage: its cards wait with one message each
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
-    expect(container.querySelectorAll(".waiting-card")).toHaveLength(2);
+    expect(container.querySelectorAll(".waiting-card")).toHaveLength(1);
     server.releaseAll();
-    await screen.findByRole("heading", { name: /Change in net income by policy, 2030-31/ });
+    await splitShown("2030-31");
   });
 });
 
@@ -908,9 +924,9 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
-    expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
+    expect(await screen.findByText(/Splitting the change by policy/)).toBeInTheDocument();
     finishByPolicy();
-    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    await splitShown();
   });
 
   it("keeps the earnings charts when only the split by policy fails", async () => {
@@ -922,6 +938,9 @@ describe("the household calculation's errors", () => {
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
+    // The waterfall keeps one step for every policy, and stops saying it is splitting
+    expect(document.querySelector('.net-income-waterfall[data-split="unavailable"]')).not.toBeNull();
+    expect(screen.queryByText(/Splitting the change by policy/)).toBeNull();
   });
 
   it("keeps the headline when only the breakdown fails", async () => {

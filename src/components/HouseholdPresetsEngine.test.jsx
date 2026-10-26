@@ -106,7 +106,7 @@ describe("the examples' precomputed answers and the receipts' engine", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     fireEvent.click(householdItem(/^A graduate on £35,000/));
     await waitFor(() => expect(headlineCard()).not.toBeNull(), { timeout: 3000 });
-    await screen.findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 3000 });
+    await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
     expect(household.length).toBeGreaterThan(0);
     expect(headlineCard().textContent).not.toContain("4,242");
   });
@@ -114,7 +114,7 @@ describe("the examples' precomputed answers and the receipts' engine", () => {
   it("refuses it too when it loaded while no measure was selected", async () => {
     servePresets(STALE_ENGINE);
     await chooseExampleAfterClearing();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 3000 });
+    await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
     expect(household.length).toBeGreaterThan(0);
     expect(headlineCard().textContent).not.toContain("4,242");
   });
@@ -136,7 +136,7 @@ describe("the examples' precomputed answers and the receipts' definitions (#136)
   ])("refuses a file that %s, however the selection got there, and asks the API", async (_, definitions) => {
     servePresets(PUBLISHED_ENGINE, definitions);
     await chooseExampleAfterClearing();
-    await screen.findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 3000 });
+    await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
     expect(household.length).toBeGreaterThan(0);
     expect(headlineCard().textContent).not.toContain("4,242");
   });
