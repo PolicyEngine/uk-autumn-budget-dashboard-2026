@@ -3,6 +3,7 @@ import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import SummaryMetricChart, {
   SUMMARY_METRICS,
   metricByYear,
+  metricValue,
   parsePovertyChoice,
   povertyMetric,
 } from "./SummaryMetricChart";
@@ -37,6 +38,17 @@ describe("metricByYear", () => {
 
   it("has nothing without a run", () => {
     expect(metricByYear(ROWS, null, SUMMARY_METRICS.poverty)).toEqual([]);
+  });
+
+  it("reads a row without the metric, or with an empty or null cell, as not published, never 0", () => {
+    const run = "fuel_duty_rise_deferral";
+    const at2027 = (rows) => metricByYear(rows, run, SUMMARY_METRICS.inequality).find((point) => point.year === 2027).value;
+    expect(at2027([{ reform_id: run, year: "2027", poverty_change_pp: "-0.001" }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: "" }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: null }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: "0" }])).toBe(0);
+    expect(metricValue({ x: 0 }, "x")).toBe(0);
+    expect([metricValue(undefined, "x"), metricValue({}, "x"), metricValue({ x: "n/a" }, "x")]).toEqual([null, null, null]);
   });
 });
 
