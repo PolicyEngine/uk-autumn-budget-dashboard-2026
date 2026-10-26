@@ -13,6 +13,7 @@ import { Inter } from 'next/font/google';
 import SiteFooter from '@/components/SiteFooter';
 import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
+import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
@@ -48,6 +49,9 @@ export default function RootLayout({
         {/* Before the first paint: a link to a view (?tab=, ?sub=, ...)
             keeps the server's landing page hidden (utils/landing.js) */}
         <script dangerouslySetInnerHTML={{ __html: DEEP_LINK_SCRIPT }} />
+        {/* ...and which view it opens, for that view's placeholder
+            (utils/bootView.js) */}
+        <script dangerouslySetInnerHTML={{ __html: BOOT_VIEW_SCRIPT }} />
         {/* The manifest request starts here, not after the page's code has
             loaded (utils/publication/early.js) */}
         <script dangerouslySetInnerHTML={{ __html: earlyManifestScript(process.env.NEXT_PUBLIC_BASE_PATH || '') }} />
