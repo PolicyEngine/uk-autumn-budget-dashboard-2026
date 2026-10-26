@@ -422,6 +422,12 @@ UC_CLAIMANT_TYPES = (
 NI_SECONDARY_THRESHOLD = (
     "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold"
 )
+EMPLOYER_NI_INCIDENCE = "gov.contrib.policyengine.employer_ni"
+EMPLOYER_NI_INCIDENCES = (
+    "employee_incidence",
+    "consumer_incidence",
+    "capital_incidence",
+)
 CGT_BASIC_RATE = "gov.hmrc.cgt.basic_rate"
 CGT_HIGHER_RATE = "gov.hmrc.cgt.higher_rate"
 HVCTS_FIRST_THRESHOLD = (
@@ -520,23 +526,52 @@ def _create_state_pension_income_tax_protection_sole_income() -> Reform:
     )
 
 
+def _employer_ni_at_fixed_pay() -> dict:
+    """Every employer NI incidence at 0, so a change to the Class 1
+    employer parameters is scored at fixed pay, as HMRC's ready reckoner
+    and the under-25s relief are (review on #144, point 1).
+
+    policyengine-uk passes a Class 1 employer change through to pay in the
+    same year (``employee_incidence`` is 1), so the figure would be net of
+    the tax and benefits on that pay. With ``employee_incidence`` at 0 the
+    engine instead spreads the employer cost over prices and capital
+    (``consumer_incidence`` and ``capital_incidence``, 0.5 each), which
+    moves household incomes though not revenue, so both are 0 too. The
+    baseline has no employer NI change, so none of the three moves it:
+    the reform's side is enough.
+    """
+    changes = {}
+    for name in EMPLOYER_NI_INCIDENCES:
+        changes.update(
+            rate_change(
+                f"{EMPLOYER_NI_INCIDENCE}.{name}",
+                {str(y): 0 for y in POLICY_YEARS},
+            )
+        )
+    return changes
+
+
 def _create_employer_ni_secondary_threshold_raised() -> Reform:
+    changes = threshold_change(
+        NI_SECONDARY_THRESHOLD,
+        {
+            str(y): _current_law(NI_SECONDARY_THRESHOLD, y) + 1000 / 52
+            for y in POLICY_YEARS
+            if y >= 2027
+        },
+    )
+    changes.update(_employer_ni_at_fixed_pay())
     return Reform(
         id=NI_SECONDARY_THRESHOLD_ID,
         name="Employer NI threshold raised by £1,000",
         description=(
             "Drill 5 mock measure. The employer National Insurance "
             "secondary threshold rises by £1,000 a year from April 2027 "
-            "(£5,000 to £6,000 in 2027-28)."
+            "(£5,000 to £6,000 in 2027-28). Scored at fixed pay, as the "
+            "under-25s relief is: static and gross, with no pass-through "
+            "to wages, prices or profits."
         ),
-        parameter_changes=threshold_change(
-            NI_SECONDARY_THRESHOLD,
-            {
-                str(y): _current_law(NI_SECONDARY_THRESHOLD, y) + 1000 / 52
-                for y in POLICY_YEARS
-                if y >= 2027
-            },
-        ),
+        parameter_changes=changes,
     )
 
 

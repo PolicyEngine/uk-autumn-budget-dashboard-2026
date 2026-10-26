@@ -49,6 +49,35 @@ def test_secondary_threshold_rises_by_1000_a_year(drill5):
     assert values["2027"] * 52 == pytest.approx(6000)
 
 
+def test_secondary_threshold_is_scored_at_fixed_pay(drill5):
+    """On the under-25s relief's basis (gross, pay fixed), not net of the
+    engine's same-year pass-through to pay (review on #144, point 1)."""
+    changes = drill5[reforms.NI_SECONDARY_THRESHOLD_ID].parameter_changes
+    for name in reforms.EMPLOYER_NI_INCIDENCES:
+        path = f"{reforms.EMPLOYER_NI_INCIDENCE}.{name}"
+        assert changes[path] == {str(y): 0 for y in POLICY_YEARS}
+
+
+def test_secondary_threshold_moves_no_pay():
+    measure = reforms._create_employer_ni_secondary_threshold_raised()
+    situation = {
+        "people": {"p": {"age": {2027: 30}, "employment_income": {2027: 30_000}}},
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
+    }
+    baseline = Simulation(situation=situation)
+    reformed = Simulation(situation=situation, scenario=measure.to_scenario())
+    assert reformed.calculate("employment_income", 2027)[0] == pytest.approx(
+        baseline.calculate("employment_income", 2027)[0]
+    )
+    # 15% employer NI on the £1,000 the threshold rises by.
+    assert baseline.calculate("ni_class_1_employer", 2027)[
+        0
+    ] - reformed.calculate("ni_class_1_employer", 2027)[0] == pytest.approx(
+        150, abs=1
+    )
+
+
 def test_cgt_main_rates(drill5):
     changes = drill5[reforms.CGT_RATES_ID].parameter_changes
     assert set(changes[reforms.CGT_BASIC_RATE].values()) == {0.20}
