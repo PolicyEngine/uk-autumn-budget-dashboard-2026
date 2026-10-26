@@ -116,7 +116,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "employer_ni_relief_under_25s",
-    shortName: "Employer NI relief, under-25s",
+    shortName: "Employer National Insurance relief, under-25s",
     name: "Employer NI relief for under-25s",
     description: "No employer National Insurance for employees under 25",
     writtenFor: "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
@@ -144,7 +144,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "badr_lifetime_limit_cut",
-    shortName: "BADR restricted",
+    shortName: "Business sale relief limit halved",
     name: "Business Asset Disposal Relief restricted",
     description: "Halve the Business Asset Disposal Relief lifetime limit",
     writtenFor: "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
@@ -177,7 +177,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "plan_2_threshold_unfreeze",
-    shortName: "Plan 2 threshold unfrozen",
+    shortName: "Student loan threshold unfrozen",
     name: "Plan 2 student loan threshold unfrozen",
     description: "Uprate the Plan 2 repayment threshold with RPI again",
     writtenFor: "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to £30,267 in 2027-28), reversing the freeze at £29,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",

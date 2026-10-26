@@ -355,7 +355,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
                 stroke={CHART_COLOURS.highlight}
                 strokeDasharray="4 3"
                 label={{
-                  value: narrow ? `SPA ${from}` : `State Pension age, ${from}`,
+                  value: narrow ? `Pension age ${from}` : `State Pension age, ${from}`,
                   position: "insideTopRight",
                   fill: CHART_COLOURS.highlight,
                   fontSize: TICK_STYLE.fontSize,
