@@ -72,15 +72,6 @@ export function parameterTableFor(tables, policy) {
 /** The main row: the first the file marks primary. */
 export const mainRow = (entry) => entry?.rows?.find((row) => row.primary) ?? null;
 
-/** A switch's change, for the card's timeline: "5% → 0%", "£150 → £250". */
-export function switchChange(entry) {
-  if (entry?.display !== "switch") return null;
-  const point = mainRow(entry)?.points?.[0];
-  if (!point || !differs(point)) return null;
-  const { unit } = mainRow(entry);
-  return `${formatValue(point.before, unit)} \u2192 ${formatValue(point.after, unit)}`;
-}
-
 // --- Time ------------------------------------------------------------------
 
 /** "2027-01-01" as months since 1 April 2026, with days as a fraction. */

@@ -11,7 +11,6 @@ import {
   parameterTableFor,
   resetPolicyParameters,
   segmentsFor,
-  switchChange,
 } from "./policyParameters";
 
 const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
@@ -24,9 +23,6 @@ describe("policy_parameters.json, as the page reads it", () => {
       expect(parameterTableFor(file, { id, description: table.description }), id).toBeTruthy();
       for (const row of table.rows) expect(row.unit_words, `${id} ${row.label}`).not.toBe("pounds");
     }
-    expect(switchChange(file.measures.road_fuel_vat_cut)).toBe("20% → 15%");
-    expect(switchChange(file.measures.warm_home_discount_top_up)).toBe("£150 → £250");
-    expect(switchChange(file.measures.badr_lifetime_limit_cut)).toBeNull();
   });
 
   it("draws fuel duty on a time axis, stepping on each date", () => {

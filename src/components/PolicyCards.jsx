@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { withPolicyDetails } from "../utils/policyDetails";
-import { parameterTableFor, switchChange } from "../utils/policyParameters";
+import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
 import { policyCardId } from "./methodology/MeasureDescriptions";
@@ -87,7 +87,7 @@ const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => mon
  * back in two stages, are small diamonds labelled below the axis. One
  * image, described in words for screen readers.
  */
-function PolicyTimeline({ policy, highlight, change }) {
+function PolicyTimeline({ policy, highlight }) {
   const { from, to } = policy.inForce;
   const start = timelineMonth(from);
   const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
@@ -95,7 +95,7 @@ function PolicyTimeline({ policy, highlight, change }) {
   const stepLabel = steps.length ? policy.stepsLabel : null;
   const stepStart = steps.length ? timelineMonth(steps[0].month) : null;
   return (
-    <div className="ptl" role="img" aria-label={change ? `${timelineDescription(policy)} While in force: ${change}.` : timelineDescription(policy)}>
+    <div className="ptl" role="img" aria-label={timelineDescription(policy)}>
       <div className="ptl-plot">
         <div className="ptl-notes">
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
@@ -155,9 +155,7 @@ function PolicyTimeline({ policy, highlight, change }) {
         {/* Always there, empty when unused, so the years line up across a row */}
         <div className="ptl-chips">
           {to && (
-            <span className={`ptl-chip${change ? " has-change" : ""}`} style={{ left: share(start) }}>
-              {/* A switch measure's change, on its span: "5% → 0%" */}
-              {change && <strong className="ptl-change">{change}</strong>}
+            <span className="ptl-chip" style={{ left: share(start) }}>
               {durationLabel(policy)}
             </span>
           )}
@@ -250,7 +248,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
           </div>
         </dl>
         {policy.inForce && (
-          <PolicyTimeline policy={policy} highlight={highlight} change={switchChange(parameters)} />
+          <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>
 

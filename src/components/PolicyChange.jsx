@@ -263,24 +263,45 @@ const Key = () => (
   </p>
 );
 
+/** A table behind a button, closed until asked for. */
+function Reveal({ show, hide, children }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <>
+      <button
+        type="button"
+        className="pchg-more"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open ? hide : show}
+      </button>
+      <div id={id} hidden={!open}>
+        {open && children}
+      </div>
+    </>
+  );
+}
+
 /**
  * A card's "What changes", drawn the way the file's `display` says the
  * measure's data reads best (chosen in policy_table.py from its shape):
  * - "path": a step plot of current law against the measure over the years;
- * - "schedule": the same on the dates the rates change, with the yearly
- *   averages behind a button;
- * - "before-after": a permanent change as the two values and the change;
- * - "table": several parameters changing together, a short table;
- * - "switch": nothing here: the card's timeline carries the change.
+ * - "schedule": the same on the dates the rates change; the dates and the
+ *   yearly averages behind buttons, so the plot leads;
+ * - "before-after" and "switch": the two values large, and the change (a
+ *   switch's window is drawn on the card's timeline);
+ * - "table": several parameters changing together, a short table.
  * Each fact once: no line repeats what the plot labels, and lines where
  * the measure equals current law are left out.
  */
 export default function PolicyChange({ entry, direction, onHighlight }) {
   const id = useId();
-  const [averages, setAverages] = useState(false);
   const tone = TONES[direction] ?? "neutral";
   const main = mainRow(entry);
-  if (!main || entry.display === "switch") return null;
+  if (!main) return null;
   const title = (
     <div className="pchg-head">
       <p className="pchg-title" id={`${id}-title`}>What changes</p>
@@ -291,39 +312,29 @@ export default function PolicyChange({ entry, direction, onHighlight }) {
   if (entry.display === "path" || entry.display === "schedule") {
     const segments = segmentsFor(main);
     const label = `${plotCaption(main)}. ${segments.map((s) => describeSegment(s, main.unit)).join("; ")}.`;
-    const yearly = entry.display === "schedule" ? entry.rows.find((row) => !row.primary && row.unit === main.unit) : null;
+    const schedule = entry.display === "schedule";
+    const yearly = schedule ? entry.rows.find((row) => !row.primary && row.unit === main.unit) : null;
     body = (
       <>
         <p className="pchg-caption">{plotCaption(main)}</p>
         <StepPlot row={main} segments={segments} tone={tone} onHighlight={onHighlight} label={label} />
-        <HiddenValues row={main} />
-        {yearly && (
-          <>
-            <button
-              type="button"
-              className="pchg-more"
-              aria-expanded={averages}
-              aria-controls={`${id}-averages`}
-              onClick={() => setAverages((open) => !open)}
-            >
-              {averages ? "Hide the yearly averages" : "Show the yearly averages"}
-            </button>
-            <div id={`${id}-averages`} hidden={!averages}>
-              {averages && (
-                <ChangeTable
-                  lines={yearly.points.filter(differs)}
-                  unit={yearly.unit}
-                  tone={tone}
-                  first="Year"
-                  caption={yearly.note}
-                />
-              )}
-            </div>
-          </>
+        {schedule ? (
+          <div className="pchg-reveals">
+            <Reveal show="Show the dates" hide="Hide the dates">
+              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first="From" />
+            </Reveal>
+            {yearly && (
+              <Reveal show="Show the yearly averages" hide="Hide the yearly averages">
+                <ChangeTable lines={yearly.points.filter(differs)} unit={yearly.unit} tone={tone} first="Year" caption={yearly.note} />
+              </Reveal>
+            )}
+          </div>
+        ) : (
+          <HiddenValues row={main} />
         )}
       </>
     );
-  } else if (entry.display === "before-after") {
+  } else if (entry.display === "before-after" || entry.display === "switch") {
     body = <BeforeAfter row={main} tone={tone} />;
   } else if (entry.display === "table") {
     const lines = entry.rows.flatMap((row) =>
