@@ -15,7 +15,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { measureOpacity } from "./MeasureKey";
+import MeasureKey, { measureOpacity, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
@@ -382,6 +382,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               strokeLinejoin="round"
               strokeLinecap="round"
               dataKey="netImpact"
+              strokeOpacity={netOpacity(highlight)}
               stroke={CHART_COLOURS.net}
               strokeWidth={1.75}
               dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: DOT_RADIUS }}

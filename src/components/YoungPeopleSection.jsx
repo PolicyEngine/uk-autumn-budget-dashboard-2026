@@ -21,7 +21,7 @@ import { buildChartCsv } from "../utils/chartCsv";
 import { loadVerifiedTable } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -486,6 +486,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* The net change: a dark dot per age */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
@@ -550,6 +551,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 name="netChange"
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
@@ -562,6 +564,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"

@@ -56,8 +56,10 @@ describe("BudgetaryImpactChart", () => {
         <BudgetaryImpactChart data={mockData} selectedYear={YEAR} />
       </MeasureCatalogueProvider>,
     );
-    const chips = [...container.querySelectorAll("button.measure-key-chip")];
+    const chips = [...container.querySelectorAll("button.measure-key-chip:not(.is-net)")];
     expect(chips).toHaveLength(catalogue.displayable.length);
+    // The net line has a chip of its own, chosen the same way
+    expect(container.querySelector("button.measure-key-chip.is-net")).toHaveAttribute("aria-pressed", "false");
     const [first, second] = chips;
     // None selected: every chip as normal
     for (const chip of chips) expect(chip).toHaveAttribute("aria-pressed", "false");

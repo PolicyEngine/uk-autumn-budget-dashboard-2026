@@ -1,4 +1,4 @@
-// The headline tile shared by Before the Budget's sub-tabs (Forecast
+// The headline tile shared by Pre-measures forecast's sub-tabs (Forecast
 // changes: CPI, RPI, earnings; Poverty: children, working-age adults,
 // pensioners): an icon and name (with an info tip when given), a big
 // figure and what it is, a small trend, and one line on what it means.

@@ -17,7 +17,7 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -351,6 +351,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
@@ -363,6 +364,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
