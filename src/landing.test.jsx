@@ -3,15 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import App, { DECILES_ANCHOR } from "./App";
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import { resetPresetResults } from "./utils/householdPresets";
-import {
-  DEEP_LINK_HASHES,
-  DEEP_LINK_SCRIPT,
-  householdFigure,
-  measureCountFigure,
-  netRevenueFigure,
-  opensLanding,
-} from "./utils/landing";
-import { yearLabel } from "./utils/displayYears";
+import { DEEP_LINK_HASHES, DEEP_LINK_SCRIPT, opensLanding } from "./utils/landing";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
@@ -19,9 +11,9 @@ const INTRO =
   /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the outlook before the Budget\. Costings are our own; forecast: OBR, Economic and fiscal outlook – March 2026\.$/;
 
 const BOXES = {
-  society: /^What this Budget means for society/,
-  household: /^What it means for your household/,
-  policies: /^What is in this Budget/,
+  society: /^The Budget and society/,
+  household: /^Your household/,
+  policies: /^What's in the Budget/,
 };
 
 beforeEach(() => {
@@ -39,63 +31,58 @@ afterEach(() => {
 
 async function renderApp() {
   const rendered = render(<App />);
-  await screen.findByRole("tablist", { name: "Views" });
   await waitFor(() => expect(rendered.container.querySelector('.app[data-publication="verified"]')).not.toBeNull());
   return rendered;
 }
 
 const landing = () => screen.queryByRole("region", { name: "What Autumn Budget 2026 means" });
 const box = (name) => screen.getByRole("link", { name: BOXES[name] });
-const viewTab = (name) => within(screen.getByRole("tablist", { name: "Views" })).getByRole("tab", { name });
+const tabBar = () => screen.queryByRole("tablist", { name: "Views" });
+const viewTab = (name) => within(tabBar()).getByRole("tab", { name });
 const selectedViewTabs = () =>
-  within(screen.getByRole("tablist", { name: "Views" }))
+  within(tabBar())
     .getAllByRole("tab")
     .filter((tab) => tab.getAttribute("aria-selected") === "true");
+const home = () => screen.getByRole("button", { name: "Back to the start: about this dashboard" });
 const search = () => new URLSearchParams(window.location.search);
 
 describe("the landing page", () => {
-  it("shows at the bare address: the paragraph, then three boxes, with the tab bar and band above", async () => {
+  it("shows at the bare address: a heading and paragraph, then three boxes, under the band, with no tab bar", async () => {
     const { container } = await renderApp();
     const page = landing();
     expect(page).not.toBeNull();
+    expect(within(page).getByRole("heading", { level: 2 })).toHaveTextContent("What Autumn Budget 2026 means");
     expect(within(page).getByText(/^This dashboard uses/)).toHaveTextContent(INTRO);
-    // The controls line is not repeated: the band shows them
     expect(container).not.toHaveTextContent("Choose a year and policies");
-    expect(within(page).getAllByRole("link", { name: /^What/ }).map((link) => link.getAttribute("href"))).toEqual([
-      "?tab=dashboard&sub=finances",
-      "?tab=household",
-      "?tab=policies",
+    // Each box: a title, one short line and "Explore", and no figure
+    expect(within(page).getAllByRole("link", { name: /Explore$/ }).map((link) => [link.getAttribute("href"), link.textContent])).toEqual([
+      ["?tab=dashboard&sub=finances", "The Budget and societyPublic finances, and who gains and losesExplore→"],
+      ["?tab=household", "Your householdSee how your income changesExplore→"],
+      ["?tab=policies", "What's in the BudgetEvery measure, and how we model itExplore→"],
     ]);
-    // The tab bar stays, with no view chosen (no notch into a sub-tab
-    // band); its first tab is the Tab stop
-    expect(selectedViewTabs()).toEqual([]);
-    expect(container.querySelector(".view-tabs-bar")).not.toHaveClass("has-notch");
+    expect(page.querySelector(".landing-box-figure")).toBeNull();
+    expect(page.querySelector(".landing-boxes")).not.toHaveTextContent(/£|\d/);
+    // No tab bar: the boxes are the navigation, reached by the keyboard
+    // straight after the band and the paragraph's two links
+    expect(tabBar()).toBeNull();
+    expect(container.querySelector(".view-tabs-bar")).toHaveAttribute("hidden");
     expect(container.querySelector(".app")).not.toHaveAttribute("data-sub-band");
-    expect(viewTab("Population impact")).toHaveAttribute("tabindex", "0");
-    // Both pills apply: the boxes' figures follow them
+    const tabbable = [...container.querySelectorAll(".main-content a[href], .main-content button, .main-content [tabindex]")]
+      .filter((node) => !node.closest(".title-row, [hidden], [inert]") && node.tabIndex >= 0);
+    expect(tabbable.slice(0, 5).map((node) => node.textContent)).toEqual([
+      "PolicyEngine UK",
+      "OBR, Economic and fiscal outlook – March 2026",
+      expect.stringMatching(BOXES.society),
+      expect.stringMatching(BOXES.household),
+      expect.stringMatching(BOXES.policies),
+    ]);
+    // The band keeps both pills
     const band = container.querySelector(".title-row");
     for (const pill of [".band-year", ".band-policy"]) {
       expect(band.querySelector(pill)).not.toHaveClass("is-hidden");
       expect(band.querySelector(pill)).not.toHaveAttribute("inert");
     }
-    // Nothing is written to the address
     expect(window.location.search).toBe("");
-  });
-
-  it("shows each box's live figure from the publication, and none it cannot read", async () => {
-    await renderApp();
-    // The fixture publishes one measure
-    expect(box("policies").querySelector(".landing-box-figure")).toHaveTextContent(/^1 measure$/);
-    expect(box("policies").querySelector(".landing-box-figure-value")).toHaveTextContent(/^1$/);
-    // Each box ends in a clear way in
-    for (const name of Object.keys(BOXES)) expect(box(name)).toHaveTextContent(/Explore→$/);
-    // The fixture has no household_presets.json: no figure, the box still shows
-    expect(box("household").querySelector(".landing-box-figure")).toBeNull();
-    // Public finances: the selection's net change in the band's year, and
-    // nothing when that year is not published (the fixture's measure has
-    // no 2027-28 figure; netRevenueFigure's own test covers the wording)
-    expect(box("society").querySelector(".landing-box-figure")).toBeNull();
-    expect(box("society")).toHaveTextContent(/^What this Budget means for society/);
   });
 
   it("keeps the provisional caveat in one place: a small badge on the landing page, none over the views", async () => {
@@ -109,11 +96,9 @@ describe("the landing page", () => {
     vi.stubGlobal("fetch", (url, init) => serve(`${BASE_PATH}${url}`, init));
     const { container } = await renderApp();
     const notes = () => container.querySelectorAll(".publication-provisional");
-    // Once, on the landing page, under the paragraph, in the manifest's
-    // own wording (provisionalLabel)
+    // Once, under the paragraph, in the manifest's own wording
     expect(notes()).toHaveLength(1);
     expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
-    // Not over any view
     fireEvent.click(box("policies"));
     expect(notes()).toHaveLength(0);
   });
@@ -124,60 +109,45 @@ describe("the landing page", () => {
     expect(container.querySelector(".view-stage")).toHaveClass("is-landing");
     expect(behind).toHaveAttribute("inert");
     expect(behind).toHaveAttribute("aria-hidden", "true");
-    // The real view: its sub-tabs at Public finances, hidden from the
-    // accessibility tree
     expect(within(behind).getByText("Public finances", { selector: ".sub-tab, .sub-tab *" })).toBeInTheDocument();
     expect(screen.queryByRole("tabpanel")).toBeNull();
     expect(screen.queryByRole("tablist", { name: "Population impact sections" })).toBeNull();
-    // Leaving the landing page brings it forward
     fireEvent.click(box("society"));
     expect(container.querySelector(".view-stage")).not.toHaveClass("is-landing");
     expect(behind).not.toHaveAttribute("inert");
     expect(behind).not.toHaveAttribute("aria-hidden");
   });
 
-  it("opens Population impact at Public finances from the first box", async () => {
-    await renderApp();
+  it("opens Population impact at Public finances from the first box, and brings the tab bar", async () => {
+    const { container } = await renderApp();
     fireEvent.click(box("society"));
     expect(landing()).toBeNull();
-    expect(viewTab("Population impact")).toHaveAttribute("aria-selected", "true");
+    expect(container.querySelector(".view-tabs-bar")).not.toHaveAttribute("hidden");
+    expect(selectedViewTabs().map((tab) => tab.textContent)).toEqual(["Population impact"]);
     expect(screen.getByRole("tab", { name: "Public finances" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: "Public finances" })).toBeInTheDocument();
-    expect([search().get("tab"), search().get("sub")]).toEqual(["dashboard", "finances"]);
+    // Public finances is the default sub-tab, so ?sub= is left out
+    expect([search().get("tab"), search().get("sub")]).toEqual(["dashboard", null]);
   });
 
   it("opens Household impact from the second box", async () => {
     await renderApp();
     fireEvent.click(box("household"));
     expect(landing()).toBeNull();
-    expect(viewTab("Household impact")).toHaveAttribute("aria-selected", "true");
+    expect(selectedViewTabs().map((tab) => tab.textContent)).toEqual(["Household impact"]);
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBeInTheDocument();
     expect([search().get("tab"), search().get("sub")]).toEqual(["household", null]);
   });
 
-  it("opens Policies from the third box", async () => {
+  it("opens Policies from the third box, and any view from the tab bar after", async () => {
     await renderApp();
     fireEvent.click(box("policies"));
     expect(landing()).toBeNull();
-    expect(viewTab("Policies")).toHaveAttribute("aria-selected", "true");
+    expect(selectedViewTabs().map((tab) => tab.textContent)).toEqual(["Policies"]);
     expect(screen.getByRole("tabpanel", { name: "Policies" })).toBeInTheDocument();
     expect(search().get("tab")).toBe("policies");
-  });
-
-  it("leaves for whichever view the tab bar chooses", async () => {
-    await renderApp();
-    fireEvent.click(viewTab("Before the Budget"));
-    expect(landing()).toBeNull();
-    expect(viewTab("Before the Budget")).toHaveAttribute("aria-selected", "true");
-    expect(search().get("tab")).toBe("outlook");
-  });
-
-  it("leaves by the keyboard from the tab bar's first tab", async () => {
-    await renderApp();
-    fireEvent.keyDown(screen.getByRole("tablist", { name: "Views" }), { key: "ArrowRight" });
-    expect(landing()).toBeNull();
-    expect(viewTab("Population impact")).toHaveAttribute("aria-selected", "true");
-    expect(search().get("tab")).toBe("dashboard");
+    fireEvent.click(viewTab("Methodology"));
+    expect(search().get("tab")).toBe("methodology");
   });
 
   it.each([
@@ -193,8 +163,46 @@ describe("the landing page", () => {
     window.history.replaceState({}, "", url);
     const { container } = await renderApp();
     expect(landing()).toBeNull();
+    expect(container.querySelector(".view-tabs-bar")).not.toHaveAttribute("hidden");
     expect(container.querySelector(".view-panels")).not.toHaveAttribute("inert");
     expect(viewTab(view)).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("the band's home button", () => {
+  it("is marked current on the landing page, where it does nothing", async () => {
+    await renderApp();
+    expect(home()).toHaveAttribute("aria-current", "page");
+    fireEvent.click(home());
+    expect(landing()).not.toBeNull();
+    expect(window.location.search).toBe("");
+  });
+
+  it("says what the dashboard is on hover or focus", async () => {
+    await renderApp();
+    fireEvent.focus(home());
+    const tip = await screen.findByRole("tooltip");
+    expect(tip).toHaveTextContent(/^About this dashboard/);
+    expect(home()).toHaveAttribute("aria-describedby", tip.id);
+  });
+
+  it("goes back to the landing page from any view, in place, with Public finances behind it", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard&sub=all&policies=alpha");
+    const { container } = await renderApp();
+    expect(home()).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("tab", { name: "All households" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(home());
+    expect(landing()).not.toBeNull();
+    expect(tabBar()).toBeNull();
+    expect(home()).toHaveAttribute("aria-current", "page");
+    // The bare address: a reload opens the landing page again
+    expect(window.location.search).toBe("");
+    // Behind it, Public finances
+    const behind = container.querySelector(".view-panels");
+    expect(behind.querySelector('.sub-tab[aria-selected="true"]')).toHaveTextContent("Public finances");
+    // The selection is kept, and comes back to the address with a view
+    fireEvent.click(box("household"));
+    expect([search().get("tab"), search().get("policies")]).toEqual(["household", "alpha"]);
   });
 });
 
@@ -221,34 +229,5 @@ describe("the landing page's rules", () => {
     for (const [search, hash] of [["", ""], ["?tab=policies", ""], ["?year=2028", ""], ["", "#deciles"], ["?x=1", "#other"]]) {
       expect(run(search, hash)).toBe(!opensLanding({ search, hash }));
     }
-  });
-
-  it("writes the Public finances figure from the published net change only", () => {
-    const data = [
-      { year: 2026, netImpact: 0.04 },
-      { year: 2027, netImpact: -8.84 },
-      { year: 2028, netImpact: 2.25 },
-      { year: 2029, netImpact: null },
-    ];
-    expect(netRevenueFigure(data, 2027, yearLabel)).toEqual({
-      value: "−£8.8bn", context: "change in government revenue, 2027-28", tone: "loss",
-    });
-    expect(netRevenueFigure(data, 2028, yearLabel)).toMatchObject({ value: "+£2.3bn", tone: "gain" });
-    expect(netRevenueFigure(data, 2026, yearLabel)).toMatchObject({ value: "£0.0bn", tone: "neutral" });
-    // Not fully published, or not there: no figure
-    expect(netRevenueFigure(data, 2029, yearLabel)).toBeNull();
-    expect(netRevenueFigure(data, 2031, yearLabel)).toBeNull();
-    expect(netRevenueFigure(undefined, 2027, yearLabel)).toBeNull();
-  });
-
-  it("writes the household figure from the example's change, and counts the measures", () => {
-    const who = "a 22-year-old renting";
-    expect(householdFigure(88.4, who)).toEqual({ value: "+£88", context: `a year for ${who}`, tone: "gain" });
-    expect(householdFigure(-1234, who)).toMatchObject({ value: "−£1,234", tone: "loss" });
-    expect(householdFigure(0.3, who)).toEqual({ value: "No change", context: `for ${who}`, tone: "neutral" });
-    expect(householdFigure(undefined, who)).toBeNull();
-    expect(measureCountFigure(9)).toEqual({ value: "9", context: "measures", tone: "neutral" });
-    expect(measureCountFigure(1)).toMatchObject({ value: "1", context: "measure" });
-    expect(measureCountFigure(0)).toBeNull();
   });
 });

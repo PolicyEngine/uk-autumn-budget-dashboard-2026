@@ -53,21 +53,26 @@ html[data-deep-link] .view-stage.is-landing {
   visibility: hidden;
 }
 
+/* ...and its tab bar shows from the first paint, as the view will */
+html[data-deep-link] .view-tabs-bar[hidden] {
+  display: block;
+}
+
 .landing {
   position: relative;
   z-index: 1;
   padding: 20px 0 40px;
 }
 
-/* The hero: heading, lead and caveat, centred on a soft glass panel so
-   the text reads over the view behind */
+/* The hero: heading, lead and caveat, centred on a soft glass panel as
+   wide as the row of boxes, so the text reads over the view behind */
 .landing-hero {
-  max-width: 50rem;
-  margin: 0 auto 20px;
+  margin: 0 0 20px;
   padding: 20px 32px 18px;
   text-align: center;
   background: color-mix(in srgb, var(--c-surface) 78%, transparent);
   backdrop-filter: blur(var(--landing-glass-blur));
+  border: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent);
   border-radius: var(--pe-radius-lg);
 }
 
@@ -81,7 +86,7 @@ html[data-deep-link] .view-stage.is-landing {
 }
 
 .landing-intro {
-  max-width: 65ch;
+  max-width: 75ch;
   margin: 0 auto;
   font-size: var(--fs-lead);
   line-height: 1.6;
@@ -178,31 +183,6 @@ html[data-deep-link] .view-stage.is-landing {
   color: var(--pe-gray-600);
 }
 
-/* The live figure: a big number, then what it is */
-.landing-box-figure {
-  margin-top: 2px;
-  font-size: var(--fs-small);
-  line-height: 1.4;
-  color: var(--pe-gray-600);
-}
-
-.landing-box-figure-value {
-  display: block;
-  font-size: var(--fs-stat);
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-900);
-}
-
-.landing-box-figure-value.is-gain {
-  color: var(--c-gain-text);
-}
-
-.landing-box-figure-value.is-loss {
-  color: var(--c-loss-text);
-}
-
 .landing-box-explore {
   margin-top: auto;
   padding-top: 8px;
@@ -253,7 +233,7 @@ html[data-deep-link] .view-stage.is-landing {
   }
 
   .landing-box-icon {
-    grid-row: 1 / span 5;
+    grid-row: 1 / span 3;
     width: 44px;
     height: 44px;
     margin: 0;
@@ -261,7 +241,6 @@ html[data-deep-link] .view-stage.is-landing {
 
   .landing-box-title,
   .landing-box-description,
-  .landing-box-figure,
   .landing-box-explore {
     grid-column: 2;
   }
@@ -270,9 +249,6 @@ html[data-deep-link] .view-stage.is-landing {
     font-size: var(--fs-card-title);
   }
 
-  .landing-box-figure-value {
-    font-size: var(--fs-xl);
-  }
 
   .landing-box-explore {
     padding-top: 6px;

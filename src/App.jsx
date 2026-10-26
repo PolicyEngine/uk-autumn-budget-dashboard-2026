@@ -26,8 +26,9 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, yearLabel } from "./utils/displayYears";
-import { measureCountFigure, netRevenueFigure, opensLanding } from "./utils/landing";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
+import { opensLanding } from "./utils/landing";
+import HomeButton from "./components/HomeButton";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
@@ -214,7 +215,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       // and a newly published one is not added unasked. The default stays
       // out of the address, so a remount shows every measure then
       // displayable, a newly published one included.
-      if (selectionChosen) params.set("policies", selectedPolicies.join(","));
+      // (not on the landing page, whose address is the bare one; the
+      // selection comes back to the address with the next view)
+      if (selectionChosen && !landing) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
@@ -343,6 +346,20 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
   };
+  // Back to the landing page (the band's home button), in place: the views
+  // stay mounted, the address goes back to the bare one (the selection
+  // and year stay as chosen) and the page to its top
+  const goHome = () => {
+    if (landing) return;
+    tabScroll.current[activeTab] = window.scrollY;
+    dropSubTab(null);
+    if (window.location.hash) {
+      window.history.replaceState({}, "", window.location.pathname + window.location.search);
+    }
+    setLanding(true);
+    setActiveTab(DEFAULT_VIEW);
+    window.scrollTo({ top: 0 });
+  };
   // A card's link to Methodology (utils/methodLink): switch to it in place,
   // then bring the term or section into view, opening any folded details
   // it sits in
@@ -407,8 +424,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const hasSubTabs = !landing && (activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard")));
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
-  // The landing page's figures follow the band's year and selection, so
-  // both pills show there
+  // Both pills show on the landing page: the band stays the same from the
+  // start, and they drive the view behind it
   const yearShown = landing || yearPillShown(activeTab);
   const policiesShown = landing || view.policies;
 
@@ -657,7 +674,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             selector still in reach. The sentinel tells it when it is stuck. */}
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
-          <h1>UK Autumn Budget 2026</h1>
+          <div className="title-head">
+            <HomeButton current={landing} onHome={goHome} />
+            <h1>UK Autumn Budget 2026</h1>
+          </div>
 
           {/* The year applies to every chart on Population impact (both
               sub-tabs) and to Household impact, and
@@ -709,16 +729,15 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           tabId={tabId}
           panelId={panelId}
           notch={hasSubTabs}
+          // On the landing page its three boxes are the navigation; the
+          // tabs appear once a view opens
+          hidden={landing}
         />
 
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
             onOpen={handleTabChange}
-            year={distributionalYear}
-            allSelected={!selectionChosen}
-            financesFigure={unavailable || selectedPolicies.length === 0 ? null : netRevenueFigure(results.budgetData, distributionalYear, yearLabel)}
-            measuresFigure={unavailable ? null : measureCountFigure(catalogue.displayable.length)}
             provisional={provisional && (
               <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
             )}
@@ -783,7 +802,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
         ) : (
           // Population impact and its sub-tabs (populationPanel)
-          <PopulationImpactView note={showingLine} active={activeTab === value}>
+          // Behind the landing page it shows Public finances, and leaves
+          // the address alone
+          <PopulationImpactView note={showingLine} active={activeTab === value && !landing} preview={landing}>
             {populationPanel}
           </PopulationImpactView>
         )}
