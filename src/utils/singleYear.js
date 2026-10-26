@@ -494,7 +494,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
   ],
   [
     "Every policy applied",

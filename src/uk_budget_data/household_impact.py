@@ -589,8 +589,13 @@ SWEEP_MIN_MAX = 150_000
 # the head earns this much more. The sweep's points are several thousand
 # pounds apart, so a rate over the sweep interval holding the income can
 # average across a kink (the end of the Personal Allowance taper) that the
-# head has not reached.
-OWN_RATE_STEP = 100
+# head has not reached. £200, not less: from £60,000 to £80,000 the High
+# Income Child Benefit Charge rises one percentage point per whole £200 of
+# income, so a window under £200 usually sees no rise (a rate of 51% where
+# the charge makes it about 67% with three children) or, across a step, a
+# doubled one. Any £200 window crosses exactly one step, so it reads the
+# charge's true average; at the other kinks it changes nothing.
+OWN_RATE_STEP = 200
 
 # The variables read to split the marginal rate into its parts, summed over
 # the household. income_tax includes the Child Benefit charge (CB_HITC, one of
