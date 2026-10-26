@@ -152,8 +152,14 @@ export const BEFORE_DASH = "6 4";
 /** A reference line or series (all people, all ages, "You"): one dashed style */
 export const REFERENCE_DASH = "4 3";
 
+/**
+ * The selected year (or group) is drawn at full strength, the others at
+ * this opacity, in the same colour: a tint, not a different colour.
+ */
+export const UNSELECTED_OPACITY = 0.5;
+
 /** The hover cursor behind a bar or row, on every chart */
-export const HOVER_CURSOR = { fill: "#EEF6F6" };
+export const HOVER_CURSOR = { fill: CHART_COLOURS.hover };
 
 export const GRID_PROPS = {
   vertical: false,
@@ -220,10 +226,10 @@ export function legendLabelStyle(narrow) {
 }
 
 export const TOOLTIP_CONTENT_STYLE = {
-  background: "white",
+  background: CHART_COLOURS.surface,
   border: `1px solid ${CHART_COLOURS.grid}`,
   borderRadius: "6px",
-  boxShadow: "0 4px 12px rgba(17, 24, 39, 0.08)",
+  boxShadow: "0 4px 12px var(--shadow-soft)",
   fontSize: "13px",
 };
 

@@ -6,7 +6,7 @@
  */
 
 import { POLICIES } from "./policies";
-import { POLICY_RAMPS } from "./chartTheme";
+import { CHART_COLOURS, POLICY_RAMPS } from "./chartTheme";
 
 // Measures that raise revenue (the rest of ALL_POLICY_NAMES cost revenue),
 // for the legends' two groups
@@ -104,5 +104,5 @@ export const PERSONAL_IMPACT_POLICY_ORDER = [
 
 // Helper to get color by policy key
 export function getPolicyColor(key) {
-  return POLICY_COLORS_BY_KEY[key] || POLICY_COLORS[key] || "#9CA3AF";
+  return POLICY_COLORS_BY_KEY[key] || POLICY_COLORS[key] || CHART_COLOURS.noChange;
 }

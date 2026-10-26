@@ -25,6 +25,7 @@ import {
   GRID_PROPS,
   HOVER_CURSOR,
   TICK_STYLE,
+  UNSELECTED_OPACITY,
   axisWidth,
   chartMargin,
   fiscalYearTick,
@@ -423,7 +424,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     <Cell
                       key={point.year}
                       fill={colour}
-                      fillOpacity={point.year === selectedYear ? 1 : 0.45}
+                      fillOpacity={point.year === selectedYear ? 1 : UNSELECTED_OPACITY}
                     />
                   );
                 })}

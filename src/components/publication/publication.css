@@ -123,7 +123,7 @@
 
 .publication-tooltip {
   padding: 8px 10px;
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--c-grid);
   border-radius: 4px;
   font-size: var(--fs-small);
