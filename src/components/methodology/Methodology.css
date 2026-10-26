@@ -192,7 +192,6 @@
 }
 
 .method-fact dd {
-  max-width: 75ch;
   margin: 0;
   font-size: var(--fs-body);
   line-height: 1.6;
@@ -230,11 +229,6 @@
   letter-spacing: 0;
   font-size: var(--fs-small);
   color: var(--pe-gray-800);
-}
-
-.method-card .method-lead,
-.method-card > p {
-  max-width: 75ch;
 }
 
 /* How each measure is modelled */
@@ -634,7 +628,6 @@
 }
 
 .method-callout-text {
-  max-width: 75ch;
   font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--pe-gray-700);
@@ -649,7 +642,6 @@
 .method-card .method-list-caveats li {
   position: relative;
   padding-left: 18px;
-  max-width: 75ch;
 }
 
 .method-card .method-list-caveats li::before {
@@ -745,7 +737,6 @@
 
 .method-points > li {
   position: relative;
-  max-width: 75ch;
   line-height: 1.6;
 }
 
@@ -838,7 +829,6 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  max-width: 75ch;
   padding-left: 0;
 }
 
@@ -908,11 +898,11 @@
   background: var(--pe-surface);
 }
 
+/* Intros and text run the card's full width, like the cards below them */
 .method-summary > p {
-  max-width: 70ch;
   margin: 0;
   font-size: var(--fs-body-lg);
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--pe-gray-700);
 }
 

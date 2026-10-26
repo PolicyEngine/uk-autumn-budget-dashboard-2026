@@ -288,7 +288,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
+        <ResponsiveContainer width="100%" height={narrow ? 620 : 520}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { top: 24 })}

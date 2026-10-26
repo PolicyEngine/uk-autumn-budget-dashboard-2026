@@ -65,6 +65,43 @@ describe("POLICY_RAMPS", () => {
   });
 });
 
+describe("INCOME_RAMP", () => {
+  const luminance = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  it("mirrors the --income-ramp-* tokens in globals.css, one for one", async () => {
+    const { INCOME_RAMP } = await import("./chartTheme");
+    const fromCss = [...css.matchAll(/--income-ramp-(\d+):\s*(#[0-9a-fA-F]{6})/g)].map(([, step, value]) => [
+      Number(step),
+      value.toLowerCase(),
+    ]);
+    expect(fromCss).toEqual(INCOME_RAMP.map((colour, index) => [index + 1, colour.toLowerCase()]));
+  });
+
+  it("diverges: each arm lightens towards the grey midpoint", async () => {
+    const { INCOME_RAMP } = await import("./chartTheme");
+    const mid = (INCOME_RAMP.length - 1) / 2;
+    const low = INCOME_RAMP.slice(0, mid + 1).map(luminance);
+    const high = INCOME_RAMP.slice(mid).map(luminance).reverse();
+    expect(low).toEqual([...low].sort((a, b) => a - b));
+    expect(high).toEqual([...high].sort((a, b) => a - b));
+  });
+
+  it("samples the ramp end to end for any number of groups", async () => {
+    const { INCOME_RAMP, incomeGroupColours } = await import("./chartTheme");
+    for (const n of [5, 10, 20]) {
+      const colours = incomeGroupColours(n);
+      expect(colours).toHaveLength(n);
+      expect(colours[0]).toBe(INCOME_RAMP[0]);
+      expect(colours[n - 1]).toBe(INCOME_RAMP[INCOME_RAMP.length - 1]);
+    }
+    // An odd count puts the middle group on the grey midpoint
+    expect(incomeGroupColours(5)[2]).toBe(INCOME_RAMP[3]);
+  });
+});
+
 describe("orderBySize", () => {
   it("orders by mean absolute value over the published points, largest first", async () => {
     const { orderBySize } = await import("./chartTheme");

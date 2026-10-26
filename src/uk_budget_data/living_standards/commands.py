@@ -72,6 +72,18 @@ def add_living_standards_parsers(subparsers) -> None:
         ),
     )
     ls.add_argument(
+        "--backend",
+        choices=("local", "modal"),
+        default="local",
+        help=(
+            "Where the baseline runs: here, or on Modal "
+            "(living_standards/modal_run.py; run with "
+            "uv run --with modal==1.6.2). Modal runs the projections and "
+            "builds the file from the committed inputs; the file and its "
+            "review row are written here"
+        ),
+    )
+    ls.add_argument(
         "--save-projections",
         type=Path,
         default=None,
@@ -146,7 +158,50 @@ def _mark_pending(parsed, text: str, basis: str) -> None:
     )
 
 
+def run_living_standards_modal(parsed: argparse.Namespace) -> int:
+    """The projections and the file built on Modal; written here."""
+    if parsed.hbai_ods or parsed.rhdi_efo or parsed.projections:
+        console.print(
+            "[red]--backend modal builds from the committed extracts and "
+            "runs the projections: re-extract or rebuild locally[/red]"
+        )
+        return 1
+    if parsed.inputs_dir != INPUTS_DIR:
+        console.print("[red]--backend modal reads the committed inputs only[/red]")
+        return 1
+    from uk_budget_data.living_standards.modal_run import run_remote
+
+    result = run_remote()
+    if parsed.save_projections:
+        parsed.save_projections.write_text(
+            json.dumps(result["projections"], indent=2)
+        )
+        console.print(f"Wrote {parsed.save_projections}")
+    text = result["text"]
+    parsed.output.parent.mkdir(parents=True, exist_ok=True)
+    parsed.output.write_text(text)
+    console.print(f"Wrote {parsed.output}")
+    _mark_pending(parsed, text, _pending_basis(json.loads(text)["meta"]))
+    return 0
+
+
+def _pending_basis(meta: dict) -> str:
+    return (
+        "Living standards view data: UK-level baseline projections and "
+        "OBR forecast series, from uk-budget-data living-standards on "
+        f"policyengine {meta['policyengine']} (policyengine-uk "
+        f"{meta['policyengine_uk']}) with the bundle's certified "
+        f"Microcosm {meta['dataset']['tag']} "
+        f"({meta['dataset']['sha256'][:8]}), "
+        f"{meta['headline_start_year']} base year and prices, to "
+        f"{meta['headline_end_year']}. Unvalidated. No "
+        "area below the UK."
+    )
+
+
 def run_living_standards(parsed: argparse.Namespace) -> int:
+    if getattr(parsed, "backend", "local") == "modal":
+        return run_living_standards_modal(parsed)
     from uk_budget_data.living_standards.build import (
         build_outlook,
         outlook_text,
@@ -185,22 +240,7 @@ def run_living_standards(parsed: argparse.Namespace) -> int:
     parsed.output.parent.mkdir(parents=True, exist_ok=True)
     parsed.output.write_text(text)
     console.print(f"Wrote {parsed.output}")
-    meta = outlook["meta"]
-    _mark_pending(
-        parsed,
-        text,
-        (
-            "Living standards view data: UK-level baseline projections and "
-            "OBR forecast series, from uk-budget-data living-standards on "
-            f"policyengine {meta['policyengine']} (policyengine-uk "
-            f"{meta['policyengine_uk']}) with the bundle's certified "
-            f"Microcosm {meta['dataset']['tag']} "
-            f"({meta['dataset']['sha256'][:8]}), "
-            f"{meta['headline_start_year']} base year and prices, to "
-            f"{meta['headline_end_year']}. Unvalidated. No "
-            "area below the UK."
-        ),
-    )
+    _mark_pending(parsed, text, _pending_basis(outlook["meta"]))
     return 0
 
 

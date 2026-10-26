@@ -172,6 +172,15 @@ code {
   --ramp-cost-5: #2dd4bf;
   --ramp-cost-6: #5eead4;
   --ramp-cost-7: #99f6e4;
+  /* Income groups, lowest to highest income: amber through a grey
+     midpoint to teal (chartTheme.js INCOME_RAMP) */
+  --income-ramp-1: #8a3a0c;
+  --income-ramp-2: #b8641c;
+  --income-ramp-3: #e0954a;
+  --income-ramp-4: #9ca3af;
+  --income-ramp-5: #5fb3aa;
+  --income-ramp-6: #2a8c84;
+  --income-ramp-7: #0f5f59;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;
@@ -1416,28 +1425,33 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: 20px;
+  padding-bottom: 0;
 }
 
 .app > .main-content > * {
   flex-shrink: 0;
 }
 
-/* At least 40px between the last section and the replication line */
-.app > .main-content > :nth-last-child(2) {
-  margin-bottom: 40px;
-}
-
 /* Replication line above the footer: a thin rule across the column,
-   small muted centred text */
+   small muted centred text. It owns its spacing on every tab and sub-tab
+   (hidden panels stay mounted, so no sibling rule can find the last
+   visible section): 48px above the rule, 24px below the text. The auto
+   top margin keeps it at the bottom of a short page. */
 .replication-line {
   margin: auto 0 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--card-border);
+  padding: 48px 0 24px;
   font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-500);
   text-align: center;
+}
+
+.replication-line::before {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-bottom: 16px;
+  background: var(--card-border);
 }
 
 .replication-line a {
@@ -1524,7 +1538,6 @@ body {
 }
 
 .policy-timeline-key {
-  max-width: 68ch;
   margin: 0 0 24px;
   font-size: var(--fs-small);
   line-height: 1.55;
