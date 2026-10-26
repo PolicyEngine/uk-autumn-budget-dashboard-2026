@@ -865,11 +865,35 @@
   }
 }
 
-/* Section icons are circles on every tab (SectionHeading's .section-icon) */
+/* Section icons are circles on every tab (SectionHeading's .section-icon):
+   the title's line box tall, level with its first line */
+.method-section-heading {
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .method-section-heading .method-icon {
+  width: var(--section-line, 32px);
+  height: var(--section-line, 32px);
   border: none;
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+}
+
+.method-section-heading .method-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .method-section-heading {
+    gap: 10px;
+  }
+
+  .method-section-heading .method-icon svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 /* Published measure descriptions: grouped rows that open to the full text */

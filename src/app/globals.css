@@ -732,8 +732,11 @@ body {
      rule under it: spacing alone sets it off. */
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 14px;
+  /* The circle is exactly the title's line box (--section-line), so its
+     top and bottom line up with the title's first line */
+  align-items: start;
+  column-gap: 12px;
+  --section-line: 32px;
   margin: 0 0 20px;
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
@@ -757,8 +760,8 @@ body {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--section-line, 32px);
+  height: var(--section-line, 32px);
   border-radius: 50%;
   background: var(--pe-teal-50);
   box-shadow: inset 0 0 0 1px var(--pe-teal-100);
@@ -800,7 +803,7 @@ body {
   margin: 0;
   font-size: var(--fs-section);
   font-weight: 600;
-  line-height: 1.3;
+  line-height: var(--section-line, 32px);
   color: var(--pe-gray-800);
 }
 
@@ -857,17 +860,13 @@ body {
 
 @media (max-width: 640px) {
   .section-heading {
-    column-gap: 12px;
-  }
-
-  .section-icon {
-    width: 34px;
-    height: 34px;
+    column-gap: 10px;
+    --section-line: 28px;
   }
 
   .section-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
 }

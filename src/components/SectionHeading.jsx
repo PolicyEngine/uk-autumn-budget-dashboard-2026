@@ -60,7 +60,7 @@ function SectionHeading({ title, subtitle, id, icon, className = "" }) {
     >
       {icon && (
         <span className="section-icon" aria-hidden="true">
-          <TitleIcon name={icon} bare size={20} />
+          <TitleIcon name={icon} bare size={18} />
         </span>
       )}
       <div className="section-heading-text">
