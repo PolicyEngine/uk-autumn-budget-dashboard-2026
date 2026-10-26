@@ -320,8 +320,7 @@ export function LsBarChart({
               dataKey={s.key}
               name={s.name}
               fill={s.colour}
-              fillOpacity={describeBar && hovered && hovered !== s.key ? 0.3 : 1}
-              onMouseEnter={describeBar ? () => setHovered(s.key) : undefined}
+              onMouseEnter={describeBar ? (_, index) => setHovered({ key: s.key, index }) : undefined}
               onMouseLeave={describeBar ? () => setHovered(null) : undefined}
               stackId={stacked ? "stack" : undefined}
               shape={barShape(stacked ? series.map((item) => item.key) : [s.key])}
@@ -329,6 +328,12 @@ export function LsBarChart({
               isAnimationActive={false}
             >
               {cellColours && data.map((d, i) => <Cell key={i} fill={cellColours[i]} />)}
+              {/* The hovered bar stays full, every other bar dims */}
+              {describeBar &&
+                !cellColours &&
+                data.map((d, i) => (
+                  <Cell key={i} fill={s.colour} fillOpacity={hovered && (hovered.key !== s.key || hovered.index !== i) ? 0.3 : 1} />
+                ))}
               {signColours &&
                 data.map((d, i) => (
                   <Cell key={i} fill={(d[s.key] ?? 0) < 0 ? signColours.negative : signColours.positive} />
