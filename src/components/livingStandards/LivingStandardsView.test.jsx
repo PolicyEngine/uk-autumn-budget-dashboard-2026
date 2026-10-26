@@ -212,7 +212,9 @@ describe("the Pre-measures forecast view", () => {
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here
     expect(within(panel).queryByRole("heading", { name: /under current law|^Inequality over time|^Incomes over time$|^Poverty over time$/ })).toBeNull();
-    expect(panel).not.toHaveTextContent(/Without the measures/);
+    // (Living standards' growth card with the measures links to its twin
+    // as "Without the measures"; no current-law card says it is one)
+    expect(panel).not.toHaveTextContent(/Without the measures \(current law\)|Without the measures:/);
     // The link opens the twin in place, the address following
     fireEvent.click(link);
     expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");

@@ -81,7 +81,7 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
             {rows.map((row, i) => (
               <div key={i} className="charts-grid">
                 {row.map((S, j) => (
-                  <S key={j} data={data} />
+                  <S key={j} data={data} onShowTab={onShowTab} />
                 ))}
               </div>
             ))}

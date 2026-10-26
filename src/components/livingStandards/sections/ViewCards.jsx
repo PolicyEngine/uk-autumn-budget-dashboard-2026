@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import ViewCard from "../ViewCard";
+import TwinLink from "../../TwinLink";
 import useHouseholdIncomeView from "./LivingStandardsSection";
 import useInequalityView from "./InequalitySection";
 import useQuintileGrowthView from "./DecileGrowthSection";
@@ -52,15 +53,26 @@ export function InequalityOverTimeCard({ data }) {
 }
 InequalityOverTimeCard.requires = "inequality";
 
-export function GrowthCard({ data }) {
+// The id of this card, which its twin with the measures links to
+export const GROWTH_CURRENT_LAW_ANCHOR = "growth-current-law";
+
+export function GrowthCard({ data, onShowTab }) {
   // One year range for the card (and every card comparing two years)
   const years = (data.income_by_decile?.bhc?.quintile_by_year || []).map((row) => row.year);
   const [range, setRange] = useYearRange(years, [headlineStartYear(data), headlineYear(data)]);
   const quintile = useQuintileGrowthView(data, range, setRange);
-  // A single view: ViewCard shows no Show pill
+  // A single view: ViewCard shows no Show pill. Its twin with the measures
+  // is on Population impact's Living standards (GrowthWithMeasuresCard).
   return (
     <ViewCard
+      id={GROWTH_CURRENT_LAW_ANCHOR}
       title="Growth across the distribution"
+      subtitle={
+        <>
+          Without the measures (current law): real growth of each group&apos;s median income.{" "}
+          <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
+        </>
+      }
       icon="bars"
       name="Distribution view"
       value="quintile"

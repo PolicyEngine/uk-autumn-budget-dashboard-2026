@@ -21,6 +21,8 @@ import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
+import GrowthWithMeasuresCard from "./components/livingStandards/GrowthWithMeasuresCard";
+import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections/ViewCards";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -394,6 +396,19 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               </div>
             </section>
           </MeasureKeyProvider>
+          {/* Growth across the distribution with the measures: the twin of
+              the Pre-measures forecast's chart (current law), which links
+              back here */}
+          <section className="report-section ls-section">
+            <div className="charts-grid">
+              <GrowthWithMeasuresCard
+                selectedPolicies={selectedPolicies}
+                twinLink={
+                  <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the measures" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
+                }
+              />
+            </div>
+          </section>
           <SectionHeading
             title="Inequality"
             subtitle={<>With the selected measures: the change in inequality each year. {twin("living")}</>}

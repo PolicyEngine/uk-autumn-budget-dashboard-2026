@@ -12,13 +12,14 @@ import ControlBar from "../ControlBar";
  *
  * views: [{ value, label, view }], where a null view is left out.
  */
-export default function ViewCard({ title, subtitle, icon, name, views, value, onChange }) {
+export default function ViewCard({ id, title, subtitle, icon, name, views, value, onChange }) {
   const available = views.filter((v) => v.view);
   if (!available.length) return null;
   const current = available.find((v) => v.value === value) || available[0];
   const { view } = current;
   return (
     <LsCard
+      id={id}
       title={title}
       subtitle={subtitle}
       icon={icon}

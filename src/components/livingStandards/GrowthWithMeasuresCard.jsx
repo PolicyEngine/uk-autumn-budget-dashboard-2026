@@ -119,16 +119,15 @@ function LoadedCard({ data, rows, run, twinLink }) {
     );
   }
   return (
-    <div id={WITH_MEASURES_ANCHOR} className="ls-card-anchor">
-      <ViewCard
-        title={WITH_MEASURES_TITLE}
-        subtitle={subtitle}
-        icon="bars"
-        name="Growth with measures view"
-        value={show}
-        onChange={setShow}
-        views={SHOWS.map((s) => ({ ...s, view }))}
-      />
-    </div>
+    <ViewCard
+      id={WITH_MEASURES_ANCHOR}
+      title={WITH_MEASURES_TITLE}
+      subtitle={subtitle}
+      icon="bars"
+      name="Growth with measures view"
+      value={show}
+      onChange={setShow}
+      views={SHOWS.map((s) => ({ ...s, view }))}
+    />
   );
 }
