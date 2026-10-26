@@ -40,6 +40,7 @@ import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import SelectedYearShade from "./SelectedYearShade";
 import { revenueSentence } from "../utils/plainSentences";
+import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
@@ -226,6 +227,19 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     return { id: measure?.id ?? key, key, name: measure?.label ?? key, description: measure?.description, muted: false };
   });
   const netLabel = activePolicies.length > 1 ? "Net impact" : undefined;
+  // No selected measure moves revenue in any year shown (the Warm Home
+  // Discount top-up alone, in force only in winter 2026-27): a note with
+  // the reason, not five "£0.0bn" tags on an empty £0-£0.05bn axis
+  const noRevenue = activePolicies.length === 0 && data.every((point) => !point.unpublished && point.netImpact != null);
+  const outOfYears = noRevenue
+    ? orderedPolicies
+        .map((key) => bySeriesKey.get(key))
+        .filter(Boolean)
+        .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear) }))
+        .filter(({ reason }) => reason.kind === "not_in_force")
+        .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
+    : [];
+  const yearSpan = `${fiscalYearTick(data[0].year)} to ${fiscalYearTick(data[data.length - 1].year)}`;
 
   // Y axis: symmetric about zero when the year's stacks go both ways
   // (divergingAxis), with about 5% room past the tallest stack; from zero
@@ -286,13 +300,21 @@ function BudgetaryImpactChart({ data, selectedYear }) {
           {/* One plain sentence for the selected year; what the chart
               measures is in More info */}
           <p className="chart-description">
-            {revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear)) ?? CHART_DESCRIPTION}
+            {(noRevenue ? null : revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear))) ?? CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
       <div ref={chartRef}>
+        {noRevenue ? (
+          <div className="plot-empty" style={{ minHeight: 240 }} role="status">
+            <p>
+              None of the selected policies changes revenue in {yearSpan}.
+              {outOfYears.length > 0 && ` ${outOfYears.join("; ")}.`}
+            </p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
             data={data}
@@ -383,10 +405,12 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* The measures' key under the plot (MeasureKey), unboxed in the card: click
           chips to highlight several together. The logo below it. */}
+      {!noRevenue && (
       <div className="revenue-key">
         <MeasureKey
           members={keyMembers}
@@ -397,6 +421,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
           label="Measures"
         />
       </div>
+      )}
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />

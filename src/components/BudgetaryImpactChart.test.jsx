@@ -44,6 +44,22 @@ describe("BudgetaryImpactChart", () => {
     ).toBeInTheDocument();
   });
 
+  it("says so in place of an empty plot when no selected measure moves revenue in any year shown", () => {
+    const zero = [YEAR, YEAR + 1].map((year) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, 0])),
+      netImpact: 0,
+    }));
+    const { container } = render(
+      <MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={zero} selectedYear={YEAR} /></MeasureCatalogueProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes revenue in");
+    expect(screen.queryByTestId("recharts-responsive-container")).not.toBeInTheDocument();
+    // Said once, and no empty key
+    expect(container.querySelector(".chart-description").textContent).not.toMatch(/roughly balance|no revenue/);
+    expect(container.querySelector(".revenue-key")).toBeNull();
+  });
+
   it("orders raisers before costs, each group by size (the catalogue's groups)", () => {
     const keyOf = (id) => catalogue.byId.get(id).seriesKey;
     const order = measureOrder(mockData, catalogue);

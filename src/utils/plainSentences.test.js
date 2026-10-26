@@ -18,5 +18,8 @@ describe("plain card sentences", () => {
     expect(revenueSentence(4.26, "2027-28")).toBe("In 2027-28, the selected measures raise £4.3 billion for the government.");
     expect(revenueSentence(-0.42, "2027-28")).toBe("In 2027-28, the selected measures cost the government £420 million.");
     expect(revenueSentence(null, "2027-28")).toBeNull();
+    // A measure not in force that year changes nothing: not "roughly balance"
+    expect(revenueSentence(0, "2027-28")).toBe("In 2027-28, the selected measures change no revenue.");
+    expect(revenueSentence(0.02, "2027-28")).toMatch(/roughly balance/);
   });
 });
