@@ -1,6 +1,7 @@
 import TitleIcon from "../TitleIcon";
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
+import Disclosure from "../Disclosure";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
@@ -256,20 +257,84 @@ function scrollToSection(event, id) {
  * on a policy's figure (an employer cost's says why it is £0). The
  * policies with no effect are one line in the waterfall itself.
  */
-function PolicyNotes({ bars }) {
-  const notes = bars.notes;
-  if (bars.underAPound.length === 0 && notes.length === 0) return null;
+/** An employer cost's note, shortened for one bullet (the API's leads with a label). */
+const shortReason = (text) => (text ?? "").replace(/^No household effect \(employer cost\):\s*/i, "");
+
+/**
+ * The result card's "About this result": what the figure rests on and
+ * what does not move it, each said once. The caution on assumed spending,
+ * what the figure is based on (each detail behind an "i"), the measures
+ * with no effect (an employer cost with its one-line reason), and any
+ * measure's own note or one worth less than £1 a year.
+ */
+function AboutResult({ items, caution, bars }) {
+  const noEffect = bars?.noEffectItems ?? [];
+  // Employer costs are said with their measure under "No effect on you"
+  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
+  const under = bars?.underAPound ?? [];
+  const parts = [
+    items.length > 0 && "Based on",
+    noEffect.length > 0 && "No effect on you",
+    (notes.length > 0 || under.length > 0) && "Notes",
+  ].filter(Boolean);
+  if (!caution && parts.length === 0) return null;
   return (
-    <div className="result-card-notes">
-      {bars.underAPound.length > 0 && (
-        <p className="single-year-quiet">Less than £1 a year: {bars.underAPound.join(", ")}.</p>
+    <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
+      {caution && <p className="result-caution">Most of this comes from assumed fuel and electricity spending.</p>}
+      {items.length > 0 && (
+        <div className="result-card-basis">
+          <span className="result-foot-title">Based on</span>
+          <dl className="result-foot-items" aria-label="Based on">
+            {items.map((item) => (
+              <div key={item.id} className="result-foot-item">
+                <dt>{item.label}</dt>
+                <dd>
+                  {item.value}
+                  {item.detail && (
+                    <span className="info-icon-wrapper">
+                      <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
+                        i
+                      </button>
+                      <span className="info-tooltip" role="tooltip">
+                        {item.detail}
+                      </span>
+                    </span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       )}
-      {notes.map((note) => (
-        <p key={note.id} className="single-year-quiet" data-note={note.kind}>
-          <strong>{note.name}</strong>: {note.text}
-        </p>
-      ))}
-    </div>
+      {noEffect.length > 0 && (
+        <div className="result-card-no-effect">
+          <span className="result-foot-title">No effect on you</span>
+          <ul>
+            {noEffect.map((item) => (
+              <li key={item.id} title={item.name}>
+                {item.reason ? (
+                  <>
+                    {item.name}: {shortReason(item.reason)}
+                  </>
+                ) : (
+                  item.label ?? item.name
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(notes.length > 0 || under.length > 0) && (
+        <div className="result-card-notes">
+          {under.length > 0 && <p className="single-year-quiet">Less than £1 a year: {under.join(", ")}.</p>}
+          {notes.map((note) => (
+            <p key={note.id} className="single-year-quiet" data-note={note.kind}>
+              <strong>{note.name}</strong>: {note.text}
+            </p>
+          ))}
+        </div>
+      )}
+    </Disclosure>
   );
 }
 
@@ -303,8 +368,9 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
         </div>
       </div>
       <div className="result-card-body">
-        {/* The left column: the figure, then what it is based on; the
-            right: net income before and after */}
+        {/* The left column: the figure; the right: net income before,
+            each measure with an effect, and after. The rest is under
+            "About this result" */}
         <div className="result-card-side">
           <div className="result-card-hero">
             <p className="result-figure">
@@ -321,44 +387,15 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
               </p>
             )}
           </div>
-          {caution && (
-            <p className="result-caution">Most of this comes from assumed fuel and electricity spending.</p>
-          )}
-          {items.length > 0 && (
-            <div className="result-card-basis">
-              <span className="result-foot-title">Based on</span>
-              <dl className="result-foot-items" aria-label="Based on">
-                {items.map((item) => (
-                  <div key={item.id} className="result-foot-item">
-                    <dt>{item.label}</dt>
-                    <dd>
-                      {item.value}
-                      {item.detail && (
-                        <span className="info-icon-wrapper">
-                          <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
-                            i
-                          </button>
-                          <span className="info-tooltip" role="tooltip">
-                            {item.detail}
-                          </span>
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
         </div>
         <NetIncomeWaterfall
           totals={totals}
           steps={bars ? bars.rows : null}
-          noEffect={bars ? bars.noEffectItems : []}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
         />
       </div>
-      {bars && <PolicyNotes bars={bars} />}
+      <AboutResult items={items} caution={caution} bars={bars} />
     </section>
   );
 }

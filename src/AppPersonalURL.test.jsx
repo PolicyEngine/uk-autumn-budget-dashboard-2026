@@ -176,7 +176,8 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("writes a selection to the address only once the reader chooses one", async () => {
     const calls = [];
-    open("/", await serve(), calls);
+    // A view: the landing page keeps the bare address whatever is chosen
+    open("/?tab=dashboard", await serve(), calls);
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const all = selectedCount();
     expect(policies()).toBeNull();

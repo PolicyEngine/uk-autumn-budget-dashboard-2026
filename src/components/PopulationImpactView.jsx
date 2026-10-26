@@ -45,11 +45,8 @@ function dropYoungHash() {
   window.history.replaceState({}, "", window.location.pathname + window.location.search);
 }
 
-function PopulationSubTabs({ note, active = true, preview = false, children }) {
-  const [chosen, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
-  // Behind the landing page: Public finances, whichever sub-tab was left
-  // open, which shows again with the view
-  const sub = preview ? SUB_TAB_VALUES[0] : chosen;
+function PopulationSubTabs({ note, active = true, children }) {
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
   // Sub-tabs opened so far stay mounted, hidden while another is shown
   const [visited, setVisited] = useState([sub]);
   if (!visited.includes(sub)) setVisited([...visited, sub]);
@@ -129,7 +126,6 @@ function PopulationSubTabs({ note, active = true, preview = false, children }) {
  * @param {Object} props
  * @param {React.ReactNode} [props.note] - A line under the sub-tabs, over every panel
  * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
- * @param {boolean} [props.preview] - Behind the landing page: shows Public finances
  * @param {(sub: string) => React.ReactNode} props.children - A sub-tab's content
  */
 export default function PopulationImpactView(props) {

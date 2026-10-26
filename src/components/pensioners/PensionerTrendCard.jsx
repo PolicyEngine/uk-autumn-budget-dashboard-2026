@@ -291,6 +291,24 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
                   isAnimationActive={false}
                 />
               ))}
+            {/* A wide invisible stroke over each line takes the hover */}
+            {!byMeasure &&
+              LINES.filter((line) => shown.includes(line.key)).map((line) => (
+                <Line
+                  key={`hit-${line.key}`}
+                  type="monotoneX"
+                  dataKey={line.key}
+                  stroke="transparent"
+                  strokeWidth={12}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                  tooltipType="none"
+                  isAnimationActive={false}
+                  onMouseEnter={() => setHovered(line.key)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              ))}
             {!byMeasure && (
               <Customized component={<EndLabels data={data} lines={LINES.filter((line) => shown.includes(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
             )}

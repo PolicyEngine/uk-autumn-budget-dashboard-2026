@@ -11,6 +11,7 @@
 // beside it (usePovertyChoice, ?poverty=).
 
 import { useRef } from "react";
+import MeasureRowLabel from "./MeasureRowLabel";
 import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -259,8 +260,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             return (
               <div className={`wf-row wf-${step.kind}`} role="row" key={step.id}>
                 <span className="wf-label" role="rowheader">
-                  {step.kind === "measure" && <i className="wf-key" style={{ background: step.colour }} />}
-                  {step.name}
+                  {step.kind === "measure" ? (
+                    <MeasureRowLabel measure={catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name, color: step.colour }} name={step.name} colour={step.colour} />
+                  ) : (
+                    step.name
+                  )}
                 </span>
                 <span
                   className="wf-track has-tooltip"
