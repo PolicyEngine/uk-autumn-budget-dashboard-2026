@@ -84,7 +84,16 @@ def build_image() -> modal.Image:
     return (
         modal.Image.debian_slim(python_version=python_version)
         .uv_sync(str(project_root), frozen=True)
-        .env({"GIT_SHA": os.environ.get("GIT_SHA", "")})
+        # The measure set the registry reads (unset: main's): a measure with
+        # a modifier is sent by id and looked up again in the container.
+        .env(
+            {
+                "GIT_SHA": os.environ.get("GIT_SHA", ""),
+                "UK_BUDGET_MEASURE_SET": os.environ.get(
+                    "UK_BUDGET_MEASURE_SET", ""
+                ),
+            }
+        )
         .workdir(WORKDIR)
         .add_local_dir(
             str(project_root / "data_inputs"), f"{WORKDIR}/data_inputs"

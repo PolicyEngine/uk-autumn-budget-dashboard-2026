@@ -68,7 +68,15 @@ def build_image() -> modal.Image:
     return (
         modal.Image.debian_slim(python_version=python_version)
         .uv_sync(str(project_root), frozen=True)
-        .env(HDF5_ENV)
+        # The measure set the registry reads, as the generate image does
+        .env(
+            {
+                **HDF5_ENV,
+                "UK_BUDGET_MEASURE_SET": os.environ.get(
+                    "UK_BUDGET_MEASURE_SET", ""
+                ),
+            }
+        )
         .workdir(WORKDIR)
         .add_local_dir(
             str(project_root / "data_inputs"), f"{WORKDIR}/data_inputs"
