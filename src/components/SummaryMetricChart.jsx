@@ -17,8 +17,10 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import TitleIcon from "./TitleIcon";
-import ViewSwitch from "./ViewSwitch";
+import PillSelect from "./PillSelect";
 import "./SummaryMetricChart.css";
+// The in-card pill styles (.ls-controls), shared with the current-law cards
+import "./livingStandards/LivingStandards.css";
 import {
   AXIS_LINE,
   CHART_COLOURS,
@@ -94,8 +96,8 @@ export const POVERTY_CHOICES = [
     name: "housing",
     label: "Housing costs",
     options: [
-      { value: "bhc", label: "Before housing costs" },
-      { value: "ahc", label: "After housing costs" },
+      { value: "bhc", label: "Before housing costs", badge: "Before" },
+      { value: "ahc", label: "After housing costs", badge: "After" },
     ],
   },
   {
@@ -344,13 +346,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         </div>
         <ChartDownloadMenu download={download} chartTitle={metric.title} />
       </div>
+      {/* The measure, as the cards beside it choose theirs: one pill per
+          choice ("Inequality measure: Gini ▾") under the description, in
+          the card's controls row */}
       {controls.length > 0 && (
-        <div className="summary-metric-choices">
+        <div className="chart-controls ls-controls summary-metric-choices">
           {controls.map((control) => (
-            <ViewSwitch
+            <PillSelect
               key={control.label}
-              compact
-              label={control.label}
+              variant="light"
+              prefix={control.label}
+              name={control.label}
               options={control.options}
               value={control.value}
               onChange={control.onChange}
@@ -358,7 +364,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           ))}
         </div>
       )}
-      <div ref={chartRef}>
+      <div ref={chartRef} className={controls.length > 0 ? "summary-metric-plot" : undefined}>
         {!run ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>Choose one policy or all policies</p>

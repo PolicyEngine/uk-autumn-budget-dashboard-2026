@@ -90,17 +90,25 @@ describe("measure choices", () => {
 
   it("hides the pills when the file has only the headline columns", () => {
     render(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={ROWS} {...props} />);
-    expect(screen.queryByRole("group", { name: "Poverty line" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={ROWS} {...props} />);
-    expect(screen.queryByRole("group", { name: "Inequality measure" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Inequality measure:/ })).toBeNull();
   });
 
   it("names the poverty measure chosen and puts it in the address", () => {
     window.history.replaceState(null, "", "/?tab=dashboard&sub=poverty");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={WIDE} {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Relative" }));
-    fireEvent.click(screen.getByRole("button", { name: "After housing costs" }));
-    fireEvent.click(screen.getByRole("button", { name: "Children" }));
+    // One pill per choice, under the description
+    const choose = (pill, option) => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${pill}:`) }));
+      fireEvent.click(screen.getByRole("option", { name: option }));
+    };
+    const choices = document.querySelector(".summary-metric-choices");
+    expect(choices.previousElementSibling).toHaveClass("chart-header");
+    choose("Poverty line", "Relative");
+    choose("Housing costs", "After housing costs");
+    choose("People", "Children");
+    expect(screen.getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
     expect(screen.getByRole("heading")).toHaveTextContent("Change in the child poverty rate");
     expect(screen.getByText(/relative poverty after housing costs/)).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
@@ -111,9 +119,16 @@ describe("measure choices", () => {
   it("reads the inequality measure from the address", () => {
     window.history.replaceState(null, "", "/?sub=living&inequality=top-10");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={WIDE} {...props} />);
-    expect(screen.getByRole("button", { name: "Top 10% share" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Inequality measure:/ })).toHaveTextContent("Top 10% share");
     expect(screen.getByText(/top 10% of people|10% of people with the highest incomes/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Gini" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Inequality measure:/ }));
+    expect(screen.getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""))).toEqual([
+      "Gini",
+      "Top 10% share",
+      "Top 1% share",
+      "90/10 ratio",
+    ]);
+    fireEvent.click(screen.getByRole("option", { name: "Gini" }));
     expect(new URLSearchParams(window.location.search).get("inequality")).toBeNull();
   });
 });
