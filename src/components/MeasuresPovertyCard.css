@@ -130,6 +130,7 @@
 
 .wf-caption .wf-track {
   justify-content: flex-end;
+  white-space: nowrap;
   color: var(--pe-gray-500);
   font-size: var(--fs-micro);
 }
@@ -155,6 +156,20 @@
 
   .wf-key {
     display: none;
+  }
+
+  /* A narrow track: the axis's ends only, and the caption across the
+     label column */
+  .wf-tick:not(:first-child):not(:last-child) {
+    display: none;
+  }
+
+  .wf-caption > .wf-label {
+    display: none;
+  }
+
+  .wf-caption > .wf-track {
+    grid-column: 1 / 3;
   }
 }
 
