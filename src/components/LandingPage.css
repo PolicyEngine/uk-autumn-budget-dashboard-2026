@@ -28,6 +28,10 @@
   content: "";
   position: absolute;
   inset: 0;
+  /* Over the view's own sticky layers (the sub-tab band's z-index is in
+     the thousands); the filter above makes .view-panels a stacking
+     context, so this stays inside it */
+  z-index: 100000;
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--page-bg) var(--landing-fade-top), transparent) 0,
