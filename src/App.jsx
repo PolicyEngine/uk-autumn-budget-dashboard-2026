@@ -705,6 +705,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
+              loading={Boolean(unavailable?.loading)}
+              noneReason={unavailable?.reason}
             />
           </div>
         </div>
