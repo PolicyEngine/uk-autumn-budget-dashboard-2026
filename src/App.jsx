@@ -408,7 +408,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="inequality-heading"
             icon="scale"
             title="Inequality"
-            subtitle={<>With the selected measures, each year. {twin("living")}</>}
+            subtitle={<>With the selected measures. {twin("living")}</>}
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
@@ -431,7 +431,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <SectionHeading
             icon="lifebuoy"
             title="How the measures change poverty"
-            subtitle={<>With the selected measures, each year and by measure. {twin("poverty")}</>}
+            subtitle={<>With the selected measures. {twin("poverty")}</>}
           />
           {/* The change by year beside which measures move it */}
           <section id="poverty" className="report-section">

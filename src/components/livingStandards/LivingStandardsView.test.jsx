@@ -216,8 +216,8 @@ describe("the OBR forecast view", () => {
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: label });
     const heading = await within(panel).findByRole("heading", { level: 2, name: measures }, { timeout: 5000 });
-    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures[:,]/);
-    const link = within(panel).getByRole("link", { name: "See without the measures →" });
+    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures[.:,]/);
+    const link = within(panel).getByRole("link", { name: "See without them →" });
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here
     expect(within(panel).queryByRole("heading", { name: /under current law|^Inequality over time|^Incomes over time$|^Poverty over time$/ })).toBeNull();
