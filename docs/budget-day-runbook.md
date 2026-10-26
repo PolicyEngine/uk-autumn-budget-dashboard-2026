@@ -559,7 +559,7 @@ uv run uk-budget-data publish check
 
   A browser download works: on 25 October each workbook took under a second.
 - **What:** three of the EFO's *detailed forecast tables* workbooks, each its own link on the EFO page (each appears twice there, as an "xlsx" icon and as its title):
-  - **economy**, for the Living standards tab (next section);
+  - **economy**, for the Pre-measures forecast tab's Forecast changes (next section);
   - **receipts** and **expenditure**, for the OBR targets in policyengine-uk-data.
 
   The page also offers aggregates, policy, debt interest and a zip of all of them; none is needed. Take the single workbooks, not the zip: an unzipped file's modification time is not its download time.
@@ -599,9 +599,9 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 
 Check each URL loads, then deploy. A test fails if a view other than Methodology says "pre-Budget", "28 October" or "candidate".
 
-## Budget day: OBR forecast (Living standards tab, from 13:40)
+## Budget day: OBR forecast (Pre-measures forecast tab, from 13:40)
 
-The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026 forecast as "pre-Budget". Once the OBR publishes the Budget EFO, import its economy tables as a reviewable "post" series. Importing and committing them does not publish post-Budget figures: the page withholds those figures until a dedicated verified publication route exists. The import sets `post_published`, and from then on the Forecast changes sub-tab shows only an unavailable notice: the March 2026 forecast's lines and tiles go too (`ForecastPanel` in `src/components/livingStandards/LivingStandardsTab.jsx`). The Baseline outlook stays available. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
+The Pre-measures forecast tab's **Forecast changes** sub-tab (`?tab=outlook&sub=forecast`) shows the OBR March 2026 forecast as "pre-Budget". Once the OBR publishes the Budget EFO, import its economy tables as a reviewable "post" series. Importing and committing them does not publish post-Budget figures: the page withholds those figures until a dedicated verified publication route exists. The import sets `post_published`, and from then on the Forecast changes sub-tab shows only an unavailable notice: the March 2026 forecast's lines and tiles go too (`ForecastPanel` in `src/components/livingStandards/LivingStandardsTab.jsx`). The tab's Living standards and Poverty sub-tabs stay available. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
 
 1. **Download** the EFO's *detailed forecast tables: economy* (.xlsx) in a browser, as above, and record its SHA-256.
 2. **Load it** (Vahid):
@@ -620,11 +620,11 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
    - any "kept at the pre-Budget value" line. Only mortgage interest 2030 may say this, and on the March 2026 tables it does, because the OBR stops forecasting it after 2030 Q1. That line is expected; any other series saying it is not.
 
    If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
-4. **Commit for review** both files and the review row in a pull request. The stored source and label can then be reviewed, but the post-Budget lines, changes and tiles remain unavailable until their dedicated verified publication route is implemented and approved. Once merged, the Forecast changes sub-tab shows an unavailable notice in place of the March 2026 forecast as well. The Baseline outlook is unaffected. If the March forecast must stay visible on the day, hold the import's pull request.
+4. **Commit for review** both files and the review row in a pull request. The stored source and label can then be reviewed, but the post-Budget lines, changes and tiles remain unavailable until their dedicated verified publication route is implemented and approved. Once merged, the Forecast changes sub-tab shows an unavailable notice in place of the March 2026 forecast as well. The Living standards and Poverty sub-tabs are unaffected. If the March forecast must stay visible on the day, hold the import's pull request.
 
 **Rehearsing with the March tables.** Loading the March 2026 economy workbook (SHA-256 `fde1de4b…`, the same bytes as `data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx`) under a test `--label` gives post equal to pre: on 25 October all 40 values of the 10 series matched. On `main` as it was then, the Forecast changes sub-tab showed the test label, "no change" on each headline and the post line drawn over the pre line; the page now shows its unavailable notice in their place (step 4). Don't commit a rehearsal. Undo it with `git checkout -- public/data/living_standards_outlook.json data_inputs/public_data_review.csv` and `rm data_inputs/living_standards/obr_forecast_post.json`.
 
-**This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
+**This does not change the model.** The national results, and every projection on the Pre-measures forecast tab's Living standards and Poverty sub-tabs, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
 
 **To regenerate the baseline projections** (any time the bundle changes): `export HUGGING_FACE_TOKEN=…`, then `uv run uk-budget-data living-standards`. About 40 s and 8 GB. A new HBAI release: add `--hbai-ods <summary tables .ods>`; OBR household income per person from a new EFO: `--rhdi-efo <economy tables .xlsx>`. Sources and hashes are in `data_inputs/living_standards/README.md`.
 
