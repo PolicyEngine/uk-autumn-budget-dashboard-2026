@@ -85,7 +85,7 @@ export function povertyWaterfall(measures, total, millions) {
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
     const x = toX(total);
-    steps.push({ id: "package", name: "Package", pp: total, x, start: 0, end: x, colour: CHART_COLOURS.net, kind: "total" });
+    steps.push({ id: "package", name: "All measures together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
@@ -108,7 +108,12 @@ function niceTicks(lo, hi) {
 export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const plotRef = useRef(null);
   const catalogue = useMeasureCatalogue();
-  const { poverty, controls } = usePovertyChoice();
+  const { poverty: chosen, controls } = usePovertyChoice();
+  // A file with only the headline column (absolute, before housing costs,
+  // all people) offers no choice: the card shows that measure, whatever
+  // ?poverty= says, as Change in the poverty rate does, never nothing
+  const wide = hasColumn(rows, "child_poverty_rel_ahc_change_pp");
+  const poverty = wide ? chosen : { basis: "absolute", housing: "bhc", group: "all" };
   const metric = povertyMetric(poverty);
   const { tip, handlers } = useFloatingTooltip(plotRef, `${metric.key}-${selectedYear}`);
   if (!hasColumn(rows, metric.key)) return null;
@@ -119,20 +124,41 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const { steps, zero, peopleMode } = povertyWaterfall(measures, total, millions);
   const who = poverty.group === "children" ? "children" : "people";
 
-  // "≈4,000 fewer" (people) or "−0.005pp" (no population)
-  const main = (step, noun = false) => {
-    if (!peopleMode) return formatPp(step.pp);
+  // The rate's change in words: "down 0.005 percentage points"
+  const rateWords = (pp) =>
+    `${pp < 0 ? "down" : pp > 0 ? "up" : "no change,"} ${formatPp(Math.abs(pp)).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}`;
+  // "about 4,000 fewer people" (people) or the rate in words (no population)
+  const main = (step) => {
+    if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
-    const count = n < 1000 ? "<1,000" : `≈${thousands.format(Math.round(n / 1000) * 1000)}`;
-    return `${count} ${way}${noun ? ` ${who}` : ""}`;
+    const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    return `${count} ${way} ${who}`;
   };
+  // Thousands with a thin space ("4 000"), so neighbouring ticks never read
+  // as one number
+  const thin = (n) => thousands.format(n).replace(/,/g, "\u2009");
   const tickText = (t) =>
-    peopleMode ? (t === 0 ? "0" : `${t < 0 ? "−" : ""}${thousands.format(Math.abs(t))}`) : t === 0 ? "0" : formatPp(-t).replace("pp", "");
+    peopleMode ? (t === 0 ? "0" : `${t < 0 ? "−" : ""}${thin(Math.abs(t))}`) : t === 0 ? "0" : formatPp(-t).replace("pp", "");
 
   const ends = steps.flatMap((s) => [s.start, s.end]).concat(0);
-  const ticks = niceTicks(Math.min(...ends), Math.max(...ends));
-  const [x0, x1] = [ticks[0], ticks.at(-1)];
+  const allTicks = niceTicks(Math.min(...ends), Math.max(...ends));
+  const [x0, x1] = [allTicks[0], allTicks.at(-1)];
+  // Three ticks at most: the ends and one between
+  const ticks = allTicks.length > 3 ? [x0, allTicks[Math.floor(allTicks.length / 2)], x1] : allTicks;
+  // Bars by direction only: fewer in poverty in the gain colour, more in the
+  // loss colour, the total a darker shade of the same; each measure's own
+  // colour is the dot by its name
+  const fillOf = (step) =>
+    step.kind === "interaction"
+      ? CHART_COLOURS.noChange
+      : step.kind === "total"
+        ? step.x >= 0
+          ? CHART_COLOURS.gainText
+          : CHART_COLOURS.lossText
+        : step.x >= 0
+          ? CHART_COLOURS.gain
+          : CHART_COLOURS.loss;
   const pos = (v) => (x1 === x0 ? 50 : ((v - x0) / (x1 - x0)) * 100);
 
   const measureSteps = steps.filter((s) => s.kind === "measure");
@@ -202,7 +228,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           }),
       }}
       // With the choice above the pair (PovertyMeasuresRow), none in the card
-      controls={!choiceAbove && <ControlBar name={metric.title} options={controls} />}
+      controls={!choiceAbove && wide && <ControlBar name={metric.title} options={controls} />}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
           {/* The measures that move no one, and why, here rather than under
@@ -220,7 +246,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           <p>
             Measures can reach the same households, so their separate effects need not add up to the package&apos;s.
             {interaction &&
-              ` Here they miss it by ${main(interaction, true).replace(/^≈/, "about ")}, shown as the interaction step.`}
+              ` Here they miss it by ${main(interaction)}, shown as the interaction step.`}
           </p>
         </ChartMoreInfo>
       }
@@ -240,14 +266,14 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   className="wf-track has-tooltip"
                   role="cell"
                   tabIndex={0}
-                  aria-label={`${main(step, true)}, ${formatPp(step.pp)}`}
+                  aria-label={`${main(step)}; poverty rate ${rateWords(step.pp)}`}
                   {...handlers(
                     step.id,
                     <TooltipRows
                       label={`${step.name}, ${year}`}
                       rows={[
-                        ...(peopleMode ? [{ key: "people", name: `${who[0].toUpperCase()}${who.slice(1)} in poverty`, text: main(step), color: step.colour }] : []),
-                        { key: "pp", name: "Rate", text: formatPp(step.pp), color: peopleMode ? "transparent" : step.colour },
+                        ...(peopleMode ? [{ key: "people", name: `${who[0].toUpperCase()}${who.slice(1)} in poverty`, text: main(step), color: fillOf(step) }] : []),
+                        { key: "pp", name: "Poverty rate", text: rateWords(step.pp), color: peopleMode ? "transparent" : fillOf(step) },
                       ]}
                     />,
                   )}
@@ -257,11 +283,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   ))}
                   {/* The step's start, joined to the step before */}
                   {i > 0 && step.kind !== "total" && <span className="wf-join" style={{ left: `${pos(step.start)}%` }} />}
-                  <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: step.colour }} />
+                  <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: fillOf(step) }} />
                 </span>
                 <span className="wf-value" role="cell">
                   <span className="wf-main">{main(step)}</span>
-                  {peopleMode && <span className="wf-pp">{formatPp(step.pp)}</span>}
                 </span>
               </div>
             );

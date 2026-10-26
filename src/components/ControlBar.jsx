@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import useSegmentThumb from "../hooks/useSegmentThumb";
 import PillChevron from "./PillChevron";
@@ -58,6 +58,11 @@ function chosenText(group) {
   return option?.summary ?? option?.label ?? "";
 }
 
+// The open popover's "a choice was made" hook: a click on a single choice
+// applies it and closes the popover after the segment's slide (PICK_CLOSE_MS)
+const PickContext = createContext(null);
+const PICK_CLOSE_MS = 150;
+
 function OptionsButton({ groups, name }) {
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
@@ -72,6 +77,16 @@ function OptionsButton({ groups, name }) {
     setOpen(false);
     if (returnFocus) buttonRef.current?.focus();
   };
+  const pickTimer = useRef(null);
+  useEffect(() => () => clearTimeout(pickTimer.current), []);
+  // A single choice clicked: apply it (done by the group), then close and
+  // hand focus back to the pill
+  const picked = () => {
+    clearTimeout(pickTimer.current);
+    pickTimer.current = setTimeout(() => close(), PICK_CLOSE_MS);
+  };
+  // Done stays only where a choice takes several clicks (a multi-select)
+  const needsDone = groups.some((group) => group.multi);
 
   // A click outside closes it (the backdrop on a phone is outside too)
   useEffect(() => {
@@ -154,13 +169,17 @@ function OptionsButton({ groups, name }) {
               <p id={titleId} className="control-bar-dialog-title">
                 {name} options
               </p>
-              <button type="button" className="control-bar-done" onClick={() => close()}>
-                Done
-              </button>
+              {needsDone && (
+                <button type="button" className="control-bar-done" onClick={() => close()}>
+                  Done
+                </button>
+              )}
             </div>
-            {groups.map((group) => (
-              group.control ? <CustomGroup key={group.label} group={group} /> : <Segmented key={group.label} group={group} inSummary={inSummary(group)} />
-            ))}
+            <PickContext.Provider value={picked}>
+              {groups.map((group) => (
+                group.control ? <CustomGroup key={group.label} group={group} /> : <Segmented key={group.label} group={group} inSummary={inSummary(group)} />
+              ))}
+            </PickContext.Provider>
           </div>
         </>
       )}
@@ -186,6 +205,7 @@ function CustomGroup({ group }) {
  * by side; the arrow keys move between them and choose, as radios do.
  */
 export function Segmented({ group, inSummary: summarised = true }) {
+  const pick = useContext(PickContext);
   const labelId = useId();
   const { containerRef: thumbContainer, itemRef: thumbItem, ready: thumbReady, thumbStyle } = useSegmentThumb(group.value);
   const enabled = group.options.filter((option) => !option.disabled);
@@ -234,7 +254,12 @@ export function Segmented({ group, inSummary: summarised = true }) {
               disabled={option.disabled}
               aria-label={option.ariaLabel}
               className={`control-bar-segment${checked ? " is-checked" : ""}`}
-              onClick={() => group.onChange(option.value)}
+              onClick={() => {
+                group.onChange(option.value);
+                // Closes the popover, unless the group waits for a second
+                // choice (the From year waits for To) or takes several
+                if (!group.keepOpen && !group.multi) pick?.();
+              }}
             >
               {option.label}
             </button>

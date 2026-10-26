@@ -43,8 +43,11 @@ function markHintSeen() {
  * @param {(key: string|null) => void} [props.onHover]
  * @param {string} [props.label] - What the chips are, for screen readers ("Lines")
  * @param {boolean} [props.narrow] - Short labels (`short`) where given
+ * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
+ *   items that are not lines (the selected year's shading), after the chips,
+ *   as a swatch and a label, not a button
  */
-export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false }) {
+export default function SeriesToggle({ series, shown, onChange, onHover, label = "Lines", narrow = false, extras = [] }) {
   // Read after mount, so the server and first render agree
   const [hint, setHint] = useState(false);
   useEffect(() => {
@@ -108,6 +111,12 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
             </Tip>
           );
         })}
+        {extras.map((item) => (
+          <span key={item.key} className="series-toggle-extra">
+            <span className="series-toggle-band" style={{ background: item.fill }} aria-hidden="true" />
+            {item.label}
+          </span>
+        ))}
       </div>
       {hint && <p className="series-toggle-hint">Click to show or hide</p>}
     </div>
