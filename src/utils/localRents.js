@@ -1,9 +1,9 @@
 /**
  * Local rents for the Household impact form: the Local Housing Allowance
  * (LHA) rate for the household's Broad Rental Market Area (BRMA) and the
- * bedrooms the LHA size rules allow it, for 2026-27. LHA rates are the 30th
- * percentile of private rents in each area (DWP, Universal Credit monthly
- * rates). The table is localRents.json, written from policyengine-uk's own
+ * bedrooms the LHA size rules allow it, for 2026-27. LHA rates were set in
+ * April 2024 at the 30th percentile of private rents in each area and have
+ * been frozen since (DWP, Universal Credit monthly rates). The table is localRents.json, written from policyengine-uk's own
  * tables by scripts/build_local_rents.py; its BRMA names are the ones the
  * household API takes as `brma`.
  */

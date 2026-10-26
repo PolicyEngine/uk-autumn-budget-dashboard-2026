@@ -324,7 +324,7 @@ const PREFILL_HINTS = {
     `Prefilled with the Local Housing Allowance rate for ${homeSize(
       inputs,
       parseChildrenAges(inputs.children_ages).length,
-    )} in ${areaLabel(householdArea(inputs))} (DWP, ${fiscalYearTick(LOCAL_RENT_YEAR)}), the 30th percentile of local private rents; change it if yours differs.`,
+    )} in ${areaLabel(householdArea(inputs))} (DWP, ${fiscalYearTick(LOCAL_RENT_YEAR)}), set in April 2024 at the 30th percentile of local rents and frozen since; change it if yours differs.`,
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
