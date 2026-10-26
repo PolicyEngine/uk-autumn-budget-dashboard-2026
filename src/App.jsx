@@ -122,6 +122,21 @@ export function releaseAddress({ pathname, search, hash }, release, own = DEFAUL
   return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
 }
 
+/**
+ * A past event's address, from the one a link opened it at. A past event
+ * has no sub-tabs and no Young people section, so a link's ?sub= and
+ * #young-people (this Budget's) go, as releaseAddress drops them on a
+ * switch. Everything else stays as it was, unchanged when neither is there.
+ */
+export function pastEventAddress({ pathname, search, hash }) {
+  const params = new URLSearchParams(search);
+  const young = hash === `#${YOUNG_PEOPLE_ANCHOR}`;
+  if (!params.has(SUB_TAB_PARAM) && !young) return `${pathname}${search}${hash}`;
+  params.delete(SUB_TAB_PARAM);
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ""}${young ? "" : hash}`;
+}
+
 
 // The ui-kit shell's sticky site nav, as globals.css selects it to make it
 // scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
@@ -196,7 +211,11 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
   useLayoutEffect(() => {
-    if (!past && opensYoungPeople(window.location)) dropSubTab("young");
+    if (past) {
+      const { pathname, search, hash } = window.location;
+      const address = pastEventAddress(window.location);
+      if (address !== `${pathname}${search}${hash}`) window.history.replaceState({}, "", address);
+    } else if (opensYoungPeople(window.location)) dropSubTab("young");
     setActiveTab(viewFromLocation(window.location, views));
     setLocationReady(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the address is read once, at mount; a release is its own mount

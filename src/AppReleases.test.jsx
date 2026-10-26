@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import fc from "fast-check";
-import App, { RELEASE_PARAM, viewsFor } from "./App";
+import App, { pastEventAddress, RELEASE_PARAM, viewsFor } from "./App";
 import HistoricalRelease from "./app/budgets/[release]/page";
 import { HISTORICAL_PROVISIONAL_LABEL, SCORECARD_URL } from "./components/historical/PastEvent";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
@@ -277,6 +277,20 @@ describe("the budget selector", () => {
     // Not offered: no build lists it, so the pill does not show
     expect(pill()).toBeNull();
     expect(fetchImpl.calls.every((url) => url.startsWith(`${dataRoot("", AB2025)}/`))).toBe(true);
+  });
+
+  it("drops this Budget's sub-tab and Young people hash from a link that opens a past event", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&tab=living&sub=baseline&policies=alpha#young-people`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    await waitFor(() => expect(param("tab")).toBeNull());
+    expect(param("sub")).toBeNull();
+    expect(window.location.hash).toBe("");
+    expect(param("policies")).toBe("alpha");
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
   });
 
   it("names the release a link opens, but lets only a verified one be chosen", async () => {
@@ -597,5 +611,43 @@ describe("a past event in the dashboard", () => {
     render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026"));
     expect(param(RELEASE_PARAM)).toBe(DEFAULT_RELEASE.id);
+  });
+});
+
+// A link's address, in its parts, as window.location gives them
+const addressParts = (address) => {
+  const at = address.indexOf("#");
+  const beforeHash = at < 0 ? address : address.slice(0, at);
+  const query = beforeHash.indexOf("?");
+  return {
+    pathname: query < 0 ? beforeHash : beforeHash.slice(0, query),
+    search: query < 0 ? "" : beforeHash.slice(query),
+    hash: at < 0 ? "" : address.slice(at),
+  };
+};
+
+describe("a past event's address from a link", () => {
+  // A link's query as written, not as URLSearchParams would write it: a
+  // value can hold a comma or a plus, which writing it again would encode
+  const pairs = fc.array(
+    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "policies", "year", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
+    { maxLength: 6 },
+  );
+  const hashes = fc.constantFrom("", "#young-people", "#coverage", "#young-people-2");
+
+  it("loses only ?sub= and #young-people, keeps the rest in order, and is unchanged with neither", () => {
+    fc.assert(
+      fc.property(pairs, hashes, (link, hash) => {
+        const search = link.length ? `?${link.map(([key, value]) => `${key}=${value}`).join("&")}` : "";
+        const address = pastEventAddress({ pathname: "/budgets/x", search, hash });
+        const parts = addressParts(address);
+        expect(parts.pathname).toBe("/budgets/x");
+        expect([...new URLSearchParams(parts.search)]).toEqual([...new URLSearchParams(search)].filter(([key]) => key !== "sub"));
+        expect(parts.hash).toBe(hash === "#young-people" ? "" : hash);
+        if (!link.some(([key]) => key === "sub") && hash !== "#young-people") expect(address).toBe(`/budgets/x${search}${hash}`);
+        expect(pastEventAddress(parts)).toBe(address);
+      }),
+      { numRuns: 300 },
+    );
   });
 });
