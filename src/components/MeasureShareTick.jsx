@@ -29,3 +29,24 @@ export default function MeasureShareTick({ x, y, payload, narrow, size = 12 }) {
     </text>
   );
 }
+
+/**
+ * A row of a measure's group of rows: the group's name, with the measure's
+ * name above its first row (labels: rowKey -> {name, group, first}).
+ */
+export function MeasureGroupTick({ x, y, payload, labels, narrow, size = 12 }) {
+  const label = labels[payload.value];
+  if (!label) return null;
+  return (
+    <g>
+      {label.first && (
+        <text x={x - 6} y={y - size - 2} textAnchor="end" dominantBaseline="middle" fontSize={size} fontWeight={600} fill={TICK_STYLE.fill}>
+          {narrow && label.name.length > 18 ? `${label.name.slice(0, 17)}…` : label.name}
+        </text>
+      )}
+      <text x={x - 6} y={y} textAnchor="end" dominantBaseline="middle" fontSize={size} fill={TICK_STYLE.fill}>
+        {label.group}
+      </text>
+    </g>
+  );
+}

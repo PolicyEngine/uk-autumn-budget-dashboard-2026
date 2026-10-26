@@ -35,3 +35,30 @@ export function sharesByMeasure(sharesFn, rows, policies, selected, year, combin
   }
   return { groups, rows: out, missing };
 }
+
+/**
+ * Every group of each selected measure's own shares, one row group per
+ * measure (e.g. pensioners, under State Pension age, all ages), or null
+ * when the selection has its own run. Rows: {id, name, groupKey,
+ * groupLabel, first, row}; `first` marks a measure's first group.
+ */
+export function sharesByMeasureAllGroups(sharesFn, rows, policies, selected, year, combinedId) {
+  if (selected.length < 2) return null;
+  if (wholeSelectionRun(policies, selected, combinedId)) return null;
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
+  const out = [];
+  const missing = [];
+  for (const policy of chosen) {
+    const shares = sharesFn(rows, policies, [policy.id], year);
+    const name = shortNameOf(policy);
+    const usable = (shares?.groups ?? []).filter((group) => group.row && !group.suppressed);
+    if (!usable.length) {
+      missing.push(name);
+      continue;
+    }
+    usable.forEach((group, i) =>
+      out.push({ id: policy.id, name, groupKey: group.key, groupLabel: group.label, first: i === 0, row: group.row }),
+    );
+  }
+  return { rows: out, missing };
+}
