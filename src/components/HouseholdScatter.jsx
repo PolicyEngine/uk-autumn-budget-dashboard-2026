@@ -28,7 +28,6 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { PE_MODEL_SOURCE } from "./InfoSections";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
@@ -107,7 +106,6 @@ function ScatterMoreInfo({ basisLabel }) {
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
         caveats: ["Groups with too few survey households are left out."],
-        sources: [PE_MODEL_SOURCE],
         method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
       }}
     />

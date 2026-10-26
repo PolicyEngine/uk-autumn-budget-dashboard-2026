@@ -140,8 +140,9 @@ describe.each([
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
-    // The £0 measures count as one caveat
-    expect(toggle).toHaveTextContent("1 caveat");
+    // Closed, the title and a preview of what is inside; the £0 measures are a caveat
+    expect(moreInfo.querySelector(".disclosure-preview")).toHaveTextContent("How it's calculated · Caveats");
+    expect(moreInfo.querySelector(".disclosure-chip")).toBeNull();
   });
 });
 

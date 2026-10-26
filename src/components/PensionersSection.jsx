@@ -28,6 +28,7 @@ import SectionHeading from "./SectionHeading";
 import Note from "./Note";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { AGE_METHOD } from "./methodology/anchors";
 import PensionerTrendCard from "./pensioners/PensionerTrendCard";
 import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
@@ -73,6 +74,12 @@ import {
 } from "../utils/legendMembership";
 import "./YoungPeopleSection.css";
 import "./PensionersSection.css";
+
+
+// The measures card's About this chart (the measures with no effect join its caveats)
+const PENSIONER_MEASURES_INFO = {
+  method: AGE_METHOD,
+};
 
 /** The section's anchor: link to it as #pensioners. */
 export const PENSIONERS_ANCHOR = "pensioners";
@@ -384,15 +391,18 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
           {missing.length > 0 && (
             <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
           )}
-          <ChartMoreInfo members={members} year={year}>
-            <p>
-              Each bar is the average change in household net income per person at that single year of age (
-              {PENSIONER_AGE_FIRST} to 90 and over), from all the selected policies together; each person counts
-              their household&apos;s change. The line is the average over the five ages centred on each one, as
-              single years of age rest on few survey records. The dashed line marks State Pension age ({from} in{" "}
-              {yearLabel}); pensioners are the ages from it.
-            </p>
-          </ChartMoreInfo>
+          <ChartMoreInfo
+            members={members}
+            year={year}
+            info={{
+              how: [
+                `One bar per single year of age, ${PENSIONER_AGE_FIRST} to 90 and over: the sum of each selected policy's own effect.`,
+                "The line averages the five ages centred on each one, as single ages rest on few survey records.",
+                `The dashed line marks State Pension age (${from} in ${yearLabel}); pensioners are the ages from it.`,
+              ],
+              method: AGE_METHOD,
+            }}
+          />
         </div>
       )}
     </div>
@@ -484,11 +494,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         )}
       </div>
       <Logo />
-      {/* Notes and More info in the card's footer row, level across a pair */}
-      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+      {/* Notes and About this chart in the card's footer row, level across a pair */}
+      {published && (
         <div className="chart-footer">
           {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={PENSIONER_MEASURES_INFO} />
         </div>
       )}
     </div>
@@ -768,16 +778,21 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
-        <ChartMoreInfo year={Number(selectedYear)}>
-          <p>Each person counts their household&apos;s change in net income.</p>
-          {perMeasure && (
-            <p>
-              Each row is one measure simulated on its own. The shares can&apos;t be added up across measures, and no
-              published run covers this selection together.
-              {perMeasure.missing.length > 0 && ` Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`}
-            </p>
-          )}
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          year={Number(selectedYear)}
+          info={{
+            how: perMeasure
+              ? [
+                  "No published run covers this selection together, so each row is one measure simulated on its own.",
+                  "The rows' shares can't be added up across measures.",
+                ]
+              : ["Shares come from one run of the whole selection, so they include how the measures interact."],
+            caveats: [
+              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
+            ],
+            method: AGE_METHOD,
+          }}
+        />
       </div>
     </div>
   );

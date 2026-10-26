@@ -16,7 +16,7 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
-import { measureOpacity, useMeasureKey } from "../MeasureKey";
+import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
 import Note from "../Note";
@@ -37,7 +37,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
-import { EndLabels, SELECTED_YEAR_KEY, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
+import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
 import SeriesToggle from "../SeriesToggle";
 import { pensionerMeasureSeries } from "./pensionersData";
 
@@ -267,6 +267,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
               <Line
                 type="monotoneX"
                 dataKey="net"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={{ r: 3.5, fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5 }}
@@ -298,8 +299,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
         </ResponsiveContainer>
       </div>
       <div className="chart-legend">
-        {/* The key, which also shows or hides each line, then the selected
-            year's shading */}
+        {/* The key, which also shows or hides each line; the shaded year is
+            explained in the tooltip */}
         {!byMeasure && (
           <SeriesToggle
             series={[...LINES].reverse().map((line) => ({ key: line.key, label: line.label, colour: line.colour, dash: line.dash }))}
@@ -308,7 +309,6 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
             onHover={setHovered}
             label="Lines"
             narrow={narrow}
-            extras={[SELECTED_YEAR_KEY]}
           />
         )}
       </div>

@@ -17,7 +17,7 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -40,7 +40,6 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { PE_MODEL_SOURCE } from "./InfoSections";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { decileSentence } from "../utils/plainSentences";
 import {
@@ -62,12 +61,7 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 // The card's "About this chart"
 const ABSOLUTE_INFO = {
-  shows: "Average change in household net income per household in each income decile, £ a year, cash terms.",
-  how: [
-    "Deciles rank households each year by equivalised income before housing costs, under current law.",
-    "Each bar stacks the selected measures' own effects.",
-  ],
-  sources: [PE_MODEL_SOURCE],
+  how: ["Each bar stacks the selected measures' own effects; the line marks their total."],
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
@@ -357,6 +351,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
@@ -369,6 +364,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
