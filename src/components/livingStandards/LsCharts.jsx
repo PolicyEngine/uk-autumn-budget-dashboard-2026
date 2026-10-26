@@ -195,8 +195,10 @@ export function LsLineChart({
 
 /**
  * Bar chart in the same theme. Bars stack when `stacked`; with
- * `signColours` a single series is coloured by sign, and `legendItems`
- * names the colours.
+ * `signColours` a single series is coloured by sign, with `cellColours`
+ * (one per row) a single series is coloured by category, and
+ * `legendItems` names the colours. Several series side by side are
+ * grouped bars; `barGap` and `maxBarSize` set their spacing.
  */
 export function LsBarChart({
   data,
@@ -214,6 +216,10 @@ export function LsBarChart({
   signColours = null,
   legendItems,
   baseYear = BASE_YEAR,
+  cellColours = null,
+  barGap = 4,
+  maxBarSize = 56,
+  tooltipLabelFormat = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -224,7 +230,7 @@ export function LsBarChart({
   return (
     <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={MARGIN} barCategoryGap="20%">
+        <BarChart data={data} margin={MARGIN} barCategoryGap="20%" barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -249,7 +255,7 @@ export function LsBarChart({
           <Tooltip
             {...TOOLTIP_PROPS}
             cursor={HOVER_CURSOR}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+            content={<ChartTooltip format={tooltipFormat} labelFormat={tooltipLabelFormat ?? xFormat} grouped={false} showPlus={showPlus} />}
           />
           {series.map((s) => (
             <Bar
@@ -258,9 +264,10 @@ export function LsBarChart({
               name={s.name}
               fill={s.colour}
               stackId={stacked ? "stack" : undefined}
-              maxBarSize={56}
+              maxBarSize={maxBarSize}
               isAnimationActive={false}
             >
+              {cellColours && data.map((d, i) => <Cell key={i} fill={cellColours[i]} />)}
               {signColours &&
                 data.map((d, i) => (
                   <Cell key={i} fill={(d[s.key] ?? 0) < 0 ? signColours.negative : signColours.positive} />

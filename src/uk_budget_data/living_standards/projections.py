@@ -17,6 +17,9 @@ its survey weight x number of members).
 - income deciles      = person-weighted deciles of the equivalised income,
                         re-ranked within each year and on each basis (BHC on
                         BHC income, AHC on AHC income); decile medians
+- income groups       = quintile, decile and vigintile medians, as the
+                        deciles, for all people and for non-pensioners (ranked
+                        among themselves), with unweighted household counts
 - non-pensioner split = people in benefit units with no pensioner, split at
                         the median AHC income of that population
 - child poverty by family = children (hbai_person_type CHILD) by number of
@@ -108,6 +111,49 @@ def decile_medians(values, weights, groups=10):
     cw = np.cumsum(w) / w.sum()
     group = np.minimum((cw * groups - 1e-12).astype(int), groups - 1)
     return [wmedian(v[group == d], w[group == d]) for d in range(groups)]
+
+
+# Income groups for growth across the distribution, each population ranked
+# on its own: quintiles, deciles and vigintiles.
+INCOME_GROUPINGS = {"quintile": 5, "decile": 10, "vigintile": 20}
+
+
+def group_medians_and_households(values, weights, hh_ids, groups):
+    """The groups of :func:`decile_medians` (same ranking and cut points),
+    with the median of each and the distinct unweighted households in it
+    (a household whose members straddle a cut counts in both groups)."""
+    order = np.argsort(values, kind="stable")
+    v, w, h = values[order], weights[order].astype(np.float64), hh_ids[order]
+    cw = np.cumsum(w) / w.sum()
+    group = np.minimum((cw * groups - 1e-12).astype(int), groups - 1)
+    return {
+        "medians": [wmedian(v[group == d], w[group == d]) for d in range(groups)],
+        "unweighted_households": [
+            int(len(np.unique(h[group == d]))) for d in range(groups)
+        ],
+    }
+
+
+def income_groups(a):
+    """Group medians for all people and for non-pensioners (people in benefit
+    units with no pensioner, as the non-pensioner split), BHC and AHC, each
+    population and basis ranked on its own income."""
+    populations = {
+        "all": np.ones(len(a["weight"]), dtype=bool),
+        "non_pensioners": ~a["bu_has_pensioner"],
+    }
+    return {
+        pop: {
+            basis: {
+                name: group_medians_and_households(
+                    a[f"eq_{basis}"][mask], a["weight"][mask], a["hh_id"][mask], n
+                )
+                for name, n in INCOME_GROUPINGS.items()
+            }
+            for basis in ("bhc", "ahc")
+        }
+        for pop, mask in populations.items()
+    }
 
 
 def rate(flag, weight, mask):
@@ -296,6 +342,7 @@ def baseline_year(sim, year, snapshot_years=()):
         "check_in_relative_poverty_ahc": res["poverty"]["relative_ahc"]["all"],
     }
     res["child_poverty_by_family"] = child_poverty(a)
+    res["income_groups"] = income_groups(a)
     if year in snapshot_years:
         res["poverty_by_group"] = poverty_by_group(a)
     res["diagnostics"] = {
