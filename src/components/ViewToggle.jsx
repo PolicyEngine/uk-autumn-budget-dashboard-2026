@@ -1,6 +1,7 @@
 import { ChartLine, Table } from "lucide-react";
 import "./ViewToggle.css";
 import Tip from "./Tip";
+import useSegmentThumb from "../hooks/useSegmentThumb";
 
 const VIEWS = [
   { value: "chart", label: "Show as chart", Icon: ChartLine },
@@ -19,6 +20,7 @@ const VIEWS = [
  * @param {string} [props.name] - What is shown, for the group's name
  */
 export default function ViewToggle({ value, onChange, name = "this card" }) {
+  const { containerRef: thumbContainer, itemRef: thumbItem, ready: thumbReady, thumbStyle } = useSegmentThumb(value);
   const move = (event) => {
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
     event.preventDefault();
@@ -27,12 +29,20 @@ export default function ViewToggle({ value, onChange, name = "this card" }) {
     requestAnimationFrame(() => event.currentTarget?.querySelector(`[data-value="${next}"]`)?.focus());
   };
   return (
-    <div className="view-toggle" role="radiogroup" aria-label={`Show ${name} as`} onKeyDown={move}>
+    <div
+      ref={thumbContainer}
+      className={`view-toggle${thumbReady ? " has-thumb" : ""}`}
+      role="radiogroup"
+      aria-label={`Show ${name} as`}
+      onKeyDown={move}
+    >
+      <span className={`segment-thumb${thumbReady ? " is-ready" : ""}`} style={thumbStyle} aria-hidden="true" />
       {VIEWS.map(({ value: v, label, Icon }) => {
         const checked = v === value;
         return (
           <Tip key={v} content={label}>
           <button
+            ref={thumbItem(v)}
             type="button"
             role="radio"
             data-value={v}
