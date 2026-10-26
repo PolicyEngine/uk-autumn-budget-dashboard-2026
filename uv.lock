@@ -1021,7 +1021,7 @@ wheels = [
 [[package]]
 name = "policyengine"
 version = "6.11.0"
-source = { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/f8c263fbc96adf343a1fb236c4e97a498c693932/vendor/policyengine-6.11.0-py3-none-any.whl" }
+source = { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/2ac032d97c926fab681c364b250be3cdba322660/vendor/policyengine-6.11.0-py3-none-any.whl" }
 dependencies = [
     { name = "h5py" },
     { name = "jsonschema" },
@@ -1033,7 +1033,7 @@ dependencies = [
     { name = "requests" },
 ]
 wheels = [
-    { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/f8c263fbc96adf343a1fb236c4e97a498c693932/vendor/policyengine-6.11.0-py3-none-any.whl", hash = "sha256:31fb0556b891793b54e3ffc4d8d23fbd437c0193861f66c801d9e1d0b61ea22b" },
+    { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/2ac032d97c926fab681c364b250be3cdba322660/vendor/policyengine-6.11.0-py3-none-any.whl", hash = "sha256:9def1e38f0282a8c196ffdb7c329b0d2f18690be3bcf5d7751327648e422db23" },
 ]
 
 [package.optional-dependencies]
@@ -1745,7 +1745,7 @@ requires-dist = [
     { name = "odfpy", specifier = ">=1.4.1" },
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pandas", specifier = ">=2.0.0" },
-    { name = "policyengine", extras = ["uk"], url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/f8c263fbc96adf343a1fb236c4e97a498c693932/vendor/policyengine-6.11.0-py3-none-any.whl" },
+    { name = "policyengine", extras = ["uk"], url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/2ac032d97c926fab681c364b250be3cdba322660/vendor/policyengine-6.11.0-py3-none-any.whl" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },

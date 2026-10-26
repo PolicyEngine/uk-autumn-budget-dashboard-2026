@@ -21,22 +21,25 @@ switch (`STATE_PENSION_PROTECTION_DESIGNS`), as on #182.
 
 ## Engine and data
 
-From 26 October the drill runs on the Budget pair's model and national data,
-ahead of their release: `policyengine` 6.11.0 is built from
-PolicyEngine/policyengine.py@324ecad6 (branch
+From 26 October the drill runs on the Budget pair's model and data, ahead of
+their release: `policyengine` 6.11.0 is built from
+PolicyEngine/policyengine.py@c885af31 (branch
 `uk-certify-microcosm-pair-2151`, the draft certification of the pair), which
 pins policyengine-uk 2.151.0 (policyengine-core 3.33.3) and certifies the
 Microcosm national `microcosm-uk-2024-25-national-20261025T091414Z-a6299504`
-as the bundle's default dataset. `pe.uk.managed_microsimulation()` resolves
-it from the bundle, as for a release. The wheel is vendored in `vendor/` and
-installed from there (`[tool.uv.sources]`), because policyengine certifies a
-receipt only for an index or archive install; from a git source every
-receipt is uncertified, so nothing could be staged provisional or approved.
+as the bundle's default dataset, with constituency and local-authority
+regions routed to the local-area cut
+`microcosm-uk-2024-25-dense-20261026T105309Z-c9df4b86` from the same spine.
+`pe.uk.managed_microsimulation()` resolves them from the bundle, as for a
+release. The wheel is vendored in `vendor/` and installed by its URL
+(`[tool.uv.sources]`), because policyengine certifies a receipt only for an
+index or archive install; from a git source every receipt is uncertified, so
+nothing could be staged provisional or approved.
 
-That commit is national-only: it routes no constituency or local-authority
-regions. When the local-area cut from the same spine is published (around
-13:30), the certification adds it and this branch re-pins to that commit for
-G4. Budget day uses the released bundle instead; this branch never merges.
+Until 26 October 13:50 the pin was the national-only commit 324ecad6. Each
+receipt binds the wheel it ran on, so regenerate anything generated on that
+pin before G4. Budget day uses the released bundle instead; this branch never
+merges.
 
 ## Goals
 

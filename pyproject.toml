@@ -49,13 +49,14 @@ uk-budget-api = "uk_budget_data.api:main"
 
 [tool.uv.sources]
 # Drill 5 only (this branch never merges): policyengine built from
-# PolicyEngine/policyengine.py@324ecad6, the draft certification of the
-# Budget pair (policyengine-uk 2.151.0, Microcosm national a6299504). It is
-# installed from a wheel, not from git, because policyengine certifies a
-# receipt only for an index or archive install, never a VCS one. The wheel
-# is vendor/'s, by its URL at the commit that added it, so an image that
-# copies only pyproject.toml and uv.lock (Modal's uv_sync) installs it too.
-policyengine = { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/f8c263fbc96adf343a1fb236c4e97a498c693932/vendor/policyengine-6.11.0-py3-none-any.whl" }
+# PolicyEngine/policyengine.py@c885af31, the draft certification of the
+# Budget pair (policyengine-uk 2.151.0, Microcosm national a6299504 and
+# local-area c9df4b86). It is installed from a wheel, not from git, because
+# policyengine certifies a receipt only for an index or archive install,
+# never a VCS one. The wheel is vendor/'s, by its URL at the commit that
+# added it, so an image that copies only pyproject.toml and uv.lock (Modal's
+# uv_sync) installs it too.
+policyengine = { url = "https://raw.githubusercontent.com/PolicyEngine/uk-autumn-budget-dashboard-2026/2ac032d97c926fab681c364b250be3cdba322660/vendor/policyengine-6.11.0-py3-none-any.whl" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
