@@ -68,10 +68,9 @@ export function GrowthCard({ data, onShowTab }) {
       id={GROWTH_CURRENT_LAW_ANCHOR}
       title="Growth across the distribution"
       subtitle={
-        <>
-          Without the measures (current law): real growth of each group&apos;s median income.{" "}
-          <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
-        </>
+        // Only the link to the twin; "without the measures" is said in
+        // About this chart
+        <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
       }
       icon="bars"
       name="Distribution view"
