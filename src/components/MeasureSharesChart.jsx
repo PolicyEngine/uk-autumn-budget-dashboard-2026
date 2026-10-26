@@ -2,7 +2,10 @@
 // shares; never added up): the measure's name, wrapped to two lines and
 // never clipped, a 100% bar (better off, unchanged, worse off) and the
 // ▲ better off and ▼ worse off shares in two fixed right-aligned columns.
-// The one chart for this view on every card (Young people, Pensioners).
+// The one chart for better and worse off by row on every card (Young
+// people, Pensioners): rows are measures (each its own run) or, for one
+// run, age groups; `emphasis` marks a focus row (16 to 24) by a bold name,
+// never a background band.
 
 import { useRef } from "react";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
@@ -21,7 +24,7 @@ const KEYS = OUTCOMES.map((outcome) => outcome.key);
  * @param {{rows: Array<{id: string, name: string, fullName?: string, row: Object}>,
  *   groupLabel: string, yearLabel: string}} props - rows as drawn, in order
  */
-export default function MeasureSharesChart({ rows, groupLabel, yearLabel }) {
+export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphasis = null, labelFor = null }) {
   const ref = useRef(null);
   const { tip, handlers } = useFloatingTooltip(ref, `${groupLabel}-${yearLabel}-${rows.length}`);
   return (
@@ -41,7 +44,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel }) {
         const drawn = visibleSegments(Object.fromEntries(KEYS.map((key) => [key, row[key] ?? 0])), KEYS);
         return (
           <div className="msc-row" role="row" key={id}>
-            <span className="msc-label" role="rowheader" title={fullName ?? name}>
+            <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" title={fullName ?? name}>
               {name}
             </span>
             <span
@@ -52,7 +55,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel }) {
               {...handlers(
                 id,
                 <TooltipRows
-                  label={`${fullName ?? name}: ${groupLabel.toLowerCase()}, ${yearLabel}`}
+                  label={labelFor ? labelFor({ id, name, fullName }) : `${fullName ?? name}: ${groupLabel.toLowerCase()}, ${yearLabel}`}
                   rows={OUTCOMES.map((o) => ({ key: o.key, name: o.label, text: formatShare(drawn.real[o.key]), color: o.color }))}
                 />,
               )}

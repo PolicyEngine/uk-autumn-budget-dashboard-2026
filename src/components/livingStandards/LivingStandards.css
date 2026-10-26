@@ -972,3 +972,20 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* A light-to-dark key for many ordered groups (Growth across the
+   distribution by twentieths): "Lowest income [ramp] Highest income" */
+.ls-ramp-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+}
+
+.ls-ramp-bar {
+  width: 120px;
+  height: 10px;
+  border-radius: 2px;
+}

@@ -119,7 +119,7 @@ describe("the OBR forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook");
   });
 
-  it("puts the current-law cards on its Living standards and Poverty, in rows of two", async () => {
+  it("puts the current-law cards on its Living standards (one a row) and Poverty (a pair)", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     await renderVerified();
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
@@ -127,11 +127,15 @@ describe("the OBR forecast view", () => {
     // One heading, without the measures, linking to its twin with them
     const heading = await within(living).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 });
     const intro = heading.closest(".section-heading");
-    expect(intro).toHaveTextContent(/^Living standards under current lawWithout the measures \(current law\):/);
-    expect(within(intro).getByRole("link", { name: "See this with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
+    expect(intro).toHaveTextContent(/^Living standards under current lawCurrent law, before any Budget measure\. See with the measures →$/);
+    expect(within(intro).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
     await within(living).findByRole("heading", { level: 3, name: /^Incomes over time$/ });
     const incomes = card(living, /^Incomes over time$/);
-    expect(incomes.closest(".charts-grid")).toBe(card(living, /^Growth across the distribution$/).closest(".charts-grid"));
+    // One card a row, full width: growth first, then incomes, then inequality
+    const growthCard = card(living, /^Growth across the distribution$/);
+    expect(growthCard.closest(".charts-grid").children).toHaveLength(1);
+    expect(incomes.closest(".charts-grid").children).toHaveLength(1);
+    expect(growthCard.compareDocumentPosition(incomes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Household income only: inequality is its own card
     expect(within(incomes).queryByRole("button", { name: /^Income view:/ })).toBeNull();
     expect(within(incomes).queryByRole("button", { name: /^Inequality measure:/ })).toBeNull();
@@ -179,8 +183,8 @@ describe("the OBR forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook&sub=poverty");
     const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
     const povertyHeading = await within(poverty).findByRole("heading", { name: "Poverty under current law" });
-    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Without the measures \(current law\):/);
-    expect(within(poverty).getByRole("link", { name: "See this with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
+    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget measure\./);
+    expect(within(poverty).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ });
     expect(card(poverty, /^Poverty over time$/).closest(".charts-grid")).toBe(card(poverty, /^Who is in poverty$/).closest(".charts-grid"));
     // The two current-law cards only: Which measures move poverty is on
@@ -212,8 +216,8 @@ describe("the OBR forecast view", () => {
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: label });
     const heading = await within(panel).findByRole("heading", { level: 2, name: measures }, { timeout: 5000 });
-    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures:/);
-    const link = within(panel).getByRole("link", { name: "See this without the measures →" });
+    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures[.:,]/);
+    const link = within(panel).getByRole("link", { name: "See without them →" });
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here
     expect(within(panel).queryByRole("heading", { name: /under current law|^Inequality over time|^Incomes over time$|^Poverty over time$/ })).toBeNull();
@@ -229,7 +233,7 @@ describe("the OBR forecast view", () => {
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", sub === "living" ? null : sub]);
     // And back
-    fireEvent.click(within(twin).getByRole("link", { name: "See this with the measures →" }));
+    fireEvent.click(within(twin).getByRole("link", { name: "See with the measures →" }));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: label })).toBe(panel);
     expect(new URLSearchParams(window.location.search).get("sub")).toBe(sub);
@@ -341,7 +345,7 @@ describe("the OBR forecast view", () => {
     // Year by year and vigintiles by default (Vahid, 26 October): one short
     // line, from the second-lowest twentieth (vigintile 1 left out)
     const headline = () => growth.querySelector(".chart-description").textContent;
-    expect(headline()).toMatch(/^Under current law, real incomes grow (about as fast at the bottom as at the top|faster at the (top|bottom) than at the (bottom|top)) \(\S+% a year at the bottom, \S+% at the top\)\.$/);
+    expect(headline()).toMatch(/^Under current law, real incomes (grow|fall|barely) .+ \(\S+% a year at the bottom, \S+% at the top\)\.$/);
     // The full sentence and the vigintile note are in About this chart
     expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
@@ -350,14 +354,14 @@ describe("the OBR forecast view", () => {
     expect(new URLSearchParams(window.location.search).has("ls_groups")).toBe(false);
     // One Options pill, the view first: no separate View pill
     expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
-    expect(optionsSummary(growth)).toBe("Options: 2027-28 → 2031-32 · Year by year · Vigintiles · Before housing costs · All people");
+    expect(optionsSummary(growth)).toBe("Options: 2027-28 → 2031-32 · Year by year · Twentieths · Before housing costs · All people");
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth|fifth/)).not.toBeInTheDocument();
     expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     // Year by year, deciles, after housing costs, non-pensioners: each
     // choice in the address, the sentence following
     choose(growth, "View", "Year by year");
-    choose(growth, "Income groups", "Deciles");
+    choose(growth, "Income groups", "Tenths");
     choose(growth, "Housing costs", "After housing costs");
     choose(growth, "Population", "Non-pensioners");
     const chosen = new URLSearchParams(window.location.search);
@@ -368,32 +372,32 @@ describe("the OBR forecast view", () => {
       "non_pensioners",
     ]);
     expect(within(growth).getByText(/^Bottom is the lowest-income tenth, top the highest-income tenth among non-pensioners\. Each year from 2028-29 to 2031-32/)).toBeInTheDocument();
-    expect(within(growth).getByText(/^Decile 1 \(lowest income\)/)).toBeInTheDocument();
+    expect(within(growth).getByText("Highest income")).toBeInTheDocument();
     // Decile 1 after housing costs: kept, with a short caution under the
     // key and the fuller line in About this chart
     expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
     expect(within(growth).getByText(/Decile 1 after housing costs, the lowest-income tenth, is shown/)).toBeInTheDocument();
     // Vigintiles clear the household floor, so they are offered
-    choose(growth, "Income groups", "Vigintiles");
+    choose(growth, "Income groups", "Twentieths");
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
     // the second-lowest twentieth, the key at vigintile 2, the note in About
-    expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
+    expect(within(growth).getByText("Lowest income")).toBeInTheDocument();
     expect(within(growth).getByText(/^Bottom is the second-lowest-income twentieth/)).toBeInTheDocument();
     expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
-    expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
-    expect(within(growth).queryByText(/^Vigintile 1\b/)).toBeNull();
+    expect(within(growth).getByText("Lowest income")).toBeInTheDocument();
+    expect(within(growth).queryByText(/^Vigintile/)).toBeNull();
     expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     // Deciles and quintiles keep their bottom group; only deciles after
     // housing costs carry the caution
-    choose(growth, "Income groups", "Deciles");
+    choose(growth, "Income groups", "Tenths");
     expect(within(growth).getByText(/^The lowest-income tenth after housing costs/)).toBeInTheDocument();
-    choose(growth, "Income groups", "Quintiles");
-    expect(within(growth).getByText(/^Quintile 1 \(lowest income\)/)).toBeInTheDocument();
+    choose(growth, "Income groups", "Fifths");
+    expect(within(growth).getByText(/^1st fifth \(lowest income\)/)).toBeInTheDocument();
     expect(within(growth).getAllByText(/lowest-income fifth/).length).toBeGreaterThan(0);
     expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     expect(new URLSearchParams(window.location.search).get("ls_groups")).toBe("quintile");
     // Back to vigintiles, the default, leaves ?ls_groups out
-    choose(growth, "Income groups", "Vigintiles");
+    choose(growth, "Income groups", "Twentieths");
     // Whole period goes in the address; back to the defaults leaves nothing
     choose(growth, "View", "Whole period");
     expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");

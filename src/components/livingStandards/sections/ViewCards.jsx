@@ -13,12 +13,11 @@ import useInequalityView from "./InequalitySection";
 import useQuintileGrowthView from "./DecileGrowthSection";
 import usePovertyRateView from "./PovertySection";
 import useDepthView from "./DeepPovertySection";
-import { rangeYears, useYearRange } from "../../../utils/livingStandards/yearRange";
-import { headlineStartYear, headlineYear } from "../../../utils/livingStandards/outlook";
+import { defaultRange, rangeYears, useYearRange } from "../../../utils/livingStandards/yearRange";
 
 export function IncomesOverTimeCard({ data }) {
   // The shared two-year range (?ls_from, ?ls_to) drives each view's sentence
-  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   const income = useHouseholdIncomeView(data, range, setRange);
   // A single view: household income (inequality is its own card, beside
   // the measures' effect on it); ViewCard shows no Show pill
@@ -37,7 +36,7 @@ IncomesOverTimeCard.requires = "living_standards";
 
 export function InequalityOverTimeCard({ data }) {
   // The years compared are the first choice in the card's Options pill
-  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   const inequality = useInequalityView(data, range, setRange);
   return (
     <ViewCard
@@ -58,7 +57,7 @@ export const GROWTH_CURRENT_LAW_ANCHOR = "growth-current-law";
 export function GrowthCard({ data, onShowTab }) {
   // One year range for the card (and every card comparing two years)
   const years = (data.income_by_decile?.bhc?.quintile_by_year || []).map((row) => row.year);
-  const [range, setRange] = useYearRange(years, [headlineStartYear(data), headlineYear(data)]);
+  const [range, setRange] = useYearRange(years, defaultRange(years));
   const quintile = useQuintileGrowthView(data, range, setRange);
   // A single view: ViewCard shows no Show pill. Its twin with the measures
   // is on Population impact's Living standards (GrowthWithMeasuresCard).
@@ -80,7 +79,7 @@ GrowthCard.requires = "income_by_decile";
 
 export function PovertyOverTimeCard({ data }) {
   const [show, setShow] = useState("rate");
-  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   const rate = usePovertyRateView(data, range, setRange);
   const depth = useDepthView(data);
   return (
