@@ -18,15 +18,15 @@
   },
   "combined": {
     "combined--a9ec07ba5efaef19": {
-      "artifact": "artifacts/combined--a9ec07ba5efaef19/8411be48a1d64e4e",
-      "artifact_sha256": "8411be48a1d64e4e6a857bdeb65a632c4d37ee43fdbb282fba15ddf17fa1af12",
+      "artifact": "artifacts/combined--a9ec07ba5efaef19/ed81f8d17313727d",
+      "artifact_sha256": "ed81f8d17313727dbe057783c5d989cc0940831ed746f187ded5c792c744fc7c",
       "attestation": {
-        "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+        "checker": "DRILL 5 MOCK checker (Budget coordinator)",
         "measure_id": "combined--a9ec07ba5efaef19",
-        "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch combined run (14 Drill 5 measures, including the hand-written employer NI relief) so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
-        "receipt_sha256": "430adefc5c2d0fbd25fc7abcf2edf5d366904ecee211f8828de5b5244b68727e",
-        "released_at": "2026-10-26T10:00:00+00:00",
-        "second": "REHEARSAL MOCK second (Budget coordinator)"
+        "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated combined run (14 Drill 5 measures, including the hand-written employer NI relief) on drill5-wednesday-path only so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
+        "receipt_sha256": "21fd272f6a036250778879f798be36111f2998b98395fe9980d3592548c3b47e",
+        "released_at": "2026-10-26T13:15:00+00:00",
+        "second": "DRILL 5 MOCK second (Budget coordinator)"
       },
       "data_limits": [],
       "description": "One simulation of: badr_lifetime_limit_cut, cgt_main_rates_up_2pp, council_tax_surcharge_from_1_5m, dividend_rates_up_1pp, domestic_electricity_zero_vat, domestic_gas_zero_vat, employer_ni_relief_under_25s, employer_ni_secondary_threshold_raised, fuel_duty_rise_deferral, lha_reset_april_2027, state_pension_income_tax_protection, threshold_freeze_2031_32, uc_standard_allowance_below_cpi, warm_home_discount_top_up",
@@ -52,22 +52,21 @@
         "cgt_main_rates_up_2pp": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
         "council_tax_surcharge_from_1_5m": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
         "dividend_rates_up_1pp": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
-        "domestic_electricity_zero_vat": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+        "domestic_electricity_zero_vat": "90ab1de9be074c0d12441a08545fd42585dd6069bbebfacc45889d7954683c5d",
         "domestic_gas_zero_vat": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
         "employer_ni_relief_under_25s": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
         "employer_ni_secondary_threshold_raised": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
-        "fuel_duty_rise_deferral": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+        "fuel_duty_rise_deferral": "a380e4b2b488a2bbf46f27d3c857ff3566fefc377c2d4f37e544e1f9d12b1828",
         "lha_reset_april_2027": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
         "state_pension_income_tax_protection": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
         "threshold_freeze_2031_32": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
         "uc_standard_allowance_below_cpi": "2439937922eb078f0e98996e85852b550a58fb87be5cb8c8e7c4ef9528b27cc7",
-        "warm_home_discount_top_up": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+        "warm_home_discount_top_up": "873030b281673a1724093f6fc82fe3d1efc2d426acabd941725eeaf5718cc18d"
       },
       "name": "Combined: Business Asset Disposal Relief restricted, Capital gains tax main rates up 2 points, Council tax surcharge from \u00a31.5m, Dividend tax rates up 1 point, Zero VAT on domestic electricity, Zero VAT on domestic gas, Employer NI relief for under-25s, Employer NI threshold raised by \u00a31,000, Fuel duty rises deferred, Local Housing Allowance reset in April 2027, State Pension income tax protection, Threshold freeze to 2031-32, UC standard allowance uprated below CPI, Warm Home Discount top-up",
-      "outputs_sha256": "deaee7a18e25f9a3bf9730b1a7abd7ed361b9df061f947166822578c6fb120d4",
-      "reason": "member fuel_duty_rise_deferral changed",
-      "receipt_sha256": "106216e1a84aa913d827af29f9f00fdf49de7c6ca270e144d77c69bdfe397647",
-      "status": "stale",
+      "outputs_sha256": "3790fd99ab886d9280cb52620e19b17a3fe0809978bd0eb05ab5edc58907dc60",
+      "receipt_sha256": "24187c123b81d461a85175d0ac6f33cbda66eefeb2a820fef04c473dc97fd55b",
+      "status": "provisional",
       "unsupported_years": [],
       "years": [
         2026,
@@ -562,7 +561,7 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 55,
+  "revision": 57,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [
     {
@@ -1280,7 +1279,72 @@
       },
       "key": "employer_ni_relief_under_25s",
       "superseded_at": "2026-10-26T12:54:49.918238+00:00"
+    },
+    {
+      "entry": {
+        "artifact": "artifacts/combined--a9ec07ba5efaef19/8411be48a1d64e4e",
+        "artifact_sha256": "8411be48a1d64e4e6a857bdeb65a632c4d37ee43fdbb282fba15ddf17fa1af12",
+        "attestation": {
+          "checker": "REHEARSAL MOCK checker (Budget coordinator)",
+          "measure_id": "combined--a9ec07ba5efaef19",
+          "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch combined run (14 Drill 5 measures, including the hand-written employer NI relief) so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
+          "receipt_sha256": "430adefc5c2d0fbd25fc7abcf2edf5d366904ecee211f8828de5b5244b68727e",
+          "released_at": "2026-10-26T10:00:00+00:00",
+          "second": "REHEARSAL MOCK second (Budget coordinator)"
+        },
+        "data_limits": [],
+        "description": "One simulation of: badr_lifetime_limit_cut, cgt_main_rates_up_2pp, council_tax_surcharge_from_1_5m, dividend_rates_up_1pp, domestic_electricity_zero_vat, domestic_gas_zero_vat, employer_ni_relief_under_25s, employer_ni_secondary_threshold_raised, fuel_duty_rise_deferral, lha_reset_april_2027, state_pension_income_tax_protection, threshold_freeze_2031_32, uc_standard_allowance_below_cpi, warm_home_discount_top_up",
+        "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+        "measures": [
+          "badr_lifetime_limit_cut",
+          "cgt_main_rates_up_2pp",
+          "council_tax_surcharge_from_1_5m",
+          "dividend_rates_up_1pp",
+          "domestic_electricity_zero_vat",
+          "domestic_gas_zero_vat",
+          "employer_ni_relief_under_25s",
+          "employer_ni_secondary_threshold_raised",
+          "fuel_duty_rise_deferral",
+          "lha_reset_april_2027",
+          "state_pension_income_tax_protection",
+          "threshold_freeze_2031_32",
+          "uc_standard_allowance_below_cpi",
+          "warm_home_discount_top_up"
+        ],
+        "member_outputs_sha256": {
+          "badr_lifetime_limit_cut": "9b5928de0b2e3dccf974845d9f63c26937116d07d2e32c54ff3c753bc4d6ddf5",
+          "cgt_main_rates_up_2pp": "46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480",
+          "council_tax_surcharge_from_1_5m": "3a95b7b84d1659c6a820545dfbbd3c28806b8ccd655a0cd30a13f41b8ec1db9a",
+          "dividend_rates_up_1pp": "64c93699b9b2cef0bdca463b80b123ffd63601b930b4b1f39b8216b16338835c",
+          "domestic_electricity_zero_vat": "bf476004fbd698df1531b8f07a9a59ecc9b61c6f352bac2e5c94090ed6926205",
+          "domestic_gas_zero_vat": "b94353531089b285a7bfd42f3e9b8c21ef89e6babac46d1acdf7a5daf3983881",
+          "employer_ni_relief_under_25s": "f0fd1282990a0cbb2f91cbe017c64388baadc7cf3d62808baf92eed5422a89c8",
+          "employer_ni_secondary_threshold_raised": "0962cc6aa675b33b773b21cb355bc4893cc20f04ac4db644b9cbd693b394af68",
+          "fuel_duty_rise_deferral": "f4359bacb46c85a46fbadcb032226faecc49bba7affb6902cde41cf95b66cd04",
+          "lha_reset_april_2027": "ca459a58070a15042d4751cd0dbeb65f5cb349810e1495a5148e9bf838e81294",
+          "state_pension_income_tax_protection": "ace25232f47c8d4074c6ef66e16cbe50279678f68e2cde298f345ac242af9719",
+          "threshold_freeze_2031_32": "d2e99890268e7d4d38340e48947ba3526e27ca7f03e6b3df17641d7e212de4e6",
+          "uc_standard_allowance_below_cpi": "2439937922eb078f0e98996e85852b550a58fb87be5cb8c8e7c4ef9528b27cc7",
+          "warm_home_discount_top_up": "c84580478d47420be69800bce1b84144dd88bc3d37b1afc3eb31b15ed8bb69c5"
+        },
+        "name": "Combined: Business Asset Disposal Relief restricted, Capital gains tax main rates up 2 points, Council tax surcharge from \u00a31.5m, Dividend tax rates up 1 point, Zero VAT on domestic electricity, Zero VAT on domestic gas, Employer NI relief for under-25s, Employer NI threshold raised by \u00a31,000, Fuel duty rises deferred, Local Housing Allowance reset in April 2027, State Pension income tax protection, Threshold freeze to 2031-32, UC standard allowance uprated below CPI, Warm Home Discount top-up",
+        "outputs_sha256": "deaee7a18e25f9a3bf9730b1a7abd7ed361b9df061f947166822578c6fb120d4",
+        "reason": "member fuel_duty_rise_deferral changed",
+        "receipt_sha256": "106216e1a84aa913d827af29f9f00fdf49de7c6ca270e144d77c69bdfe397647",
+        "status": "stale",
+        "unsupported_years": [],
+        "years": [
+          2026,
+          2027,
+          2028,
+          2029,
+          2030,
+          2031
+        ]
+      },
+      "key": "combined--a9ec07ba5efaef19",
+      "superseded_at": "2026-10-26T13:02:03.683459+00:00"
     }
   ],
-  "updated_at": "2026-10-26T12:55:22.192795+00:00"
+  "updated_at": "2026-10-26T13:02:17.625843+00:00"
 }
