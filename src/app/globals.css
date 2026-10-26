@@ -165,13 +165,13 @@ code {
   --ramp-raise-1: #78350f;
   --ramp-raise-2: #b45309;
   --ramp-raise-3: #f59e0b;
-  --ramp-cost-1: #092438;
-  --ramp-cost-2: #003e4c;
-  --ramp-cost-3: #055457;
-  --ramp-cost-4: #026962;
-  --ramp-cost-5: #047e67;
-  --ramp-cost-6: #0a9367;
-  --ramp-cost-7: #40a85e;
+  --ramp-cost-1: #0d4359;
+  --ramp-cost-2: #016768;
+  --ramp-cost-3: #088075;
+  --ramp-cost-4: #00997f;
+  --ramp-cost-5: #28b084;
+  --ramp-cost-6: #4ac685;
+  --ramp-cost-7: #75d987;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;
