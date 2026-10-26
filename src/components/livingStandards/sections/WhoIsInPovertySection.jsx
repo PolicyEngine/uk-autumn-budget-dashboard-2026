@@ -164,6 +164,14 @@ export default function WhoIsInPovertySection({ data }) {
 
   const top = rows[0];
   const noun = b.children ? m.noun.replace(/ poverty rate$/, " child poverty rate") : m.noun;
+  // One short line on the card; the full sentence in About this chart
+  const change = top?.d == null ? "" : flat(top.d) ? ", unchanged" : `, ${top.d > 0 ? "up" : "down"} ${signedChange(Math.abs(top.d), "pp").slice(1)}`;
+  const short = top && (
+    <>
+      Highest: {top.subject.toLowerCase()}, <strong>{formatPct(top.z ?? top.a)}</strong>
+      {change}.
+    </>
+  );
   const lead = top && (
     <>
       {top.subject} have the highest {noun} ({formatPct(top.z ?? top.a)} in {fyDash(to)})
@@ -193,8 +201,8 @@ export default function WhoIsInPovertySection({ data }) {
       icon="users"
       period={periodLabel(from, to)}
       about={about}
-      summary={lead}
-      notes={groupNotes}
+      summary={short}
+      notes={[lead, ...groupNotes]}
       source={<PeSource />}
       sourceText={CSV_SOURCES.pe}
       download={{

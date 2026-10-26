@@ -60,7 +60,10 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const isAHC = measure.endsWith("ahc");
   const groupName = poverty.groups[group].toLowerCase();
 
+  // One short line on the card; the full sentence (line, housing costs,
+  // years) in About this chart
   let summary = null;
+  let sentence = null;
   const span = headlineSpan(projection, data, range);
   if (span && span[0].rate != null && span[1].rate != null) {
     const [first, last] = span;
@@ -69,7 +72,16 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     const verb = changeVerb(b - a, "pp");
     const kind = isAbsolute ? "Absolute" : "Relative";
     const line = isAbsolute ? "fixed real-terms line" : "60% of current median";
-    summary = (
+    summary = verb ? (
+      <>
+        {kind} poverty{GROUP_SUFFIX[group] ?? ""} <strong>{verb}</strong>, from {formatPct(a)} to {formatPct(b)}.
+      </>
+    ) : (
+      <>
+        {kind} poverty{GROUP_SUFFIX[group] ?? ""} <strong>stays flat</strong> at {formatPct(a)}.
+      </>
+    );
+    sentence = (
       <>
         {kind} poverty{GROUP_SUFFIX[group] ?? ""} ({isAHC ? "AHC" : "BHC"}, {line}){" "}
         {verb ? (
@@ -103,6 +115,7 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     summary,
     about: description,
     notes: [
+      sentence,
       !visibleEmpty &&
         noOutturn &&
         viewMode === "both" &&

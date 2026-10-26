@@ -79,3 +79,20 @@ describe("a card's year bars", () => {
     expect(tip).not.toHaveClass("is-shown");
   });
 });
+
+describe("where an example sits", () => {
+  it("is its percentile after the measures, on the published curves, with the household's equivalisation", async () => {
+    const { examplePercentile } = await import("./HouseholdCards");
+    const example = HOUSEHOLD_EXAMPLES[0];
+    // A straight curve: percentile p at £p,000 a year, adjusted
+    const rows = ["baseline", "reform"].flatMap((side) =>
+      Array.from({ length: 99 }, (_, i) => ({ reformId: "alpha", year: 2027, side, percentile: i + 1, income: (i + 1) * 1000 })),
+    );
+    const point = { change: 100, before: 18000, after: 18100 };
+    // One adult: £18,100 adjusted to a couple's (÷ 0.67) is £27,015, the 27th
+    expect(examplePercentile(example, point, { year: 2027, policies: ["alpha"], rows, catalogue: null })).toBe(27);
+    // No curve for the measures, or no net income: none
+    expect(examplePercentile(example, point, { year: 2027, policies: ["beta"], rows, catalogue: null })).toBeNull();
+    expect(examplePercentile(example, { change: 1 }, { year: 2027, policies: ["alpha"], rows, catalogue: null })).toBeNull();
+  });
+});

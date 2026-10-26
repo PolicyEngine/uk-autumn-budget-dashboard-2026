@@ -29,9 +29,10 @@ function LimitChip({ limit, open, onToggle, controls }) {
 
 /**
  * One measure: its name (the toggle), a one-line summary and chips for its
- * modelling facts, then, when opened, the full published description and
- * any modelling note as bullets, with links to its Policies card and its
- * effect.
+ * modelling facts, then, when opened, the rest of the published
+ * description and any modelling note as bullets (each sentence said once:
+ * nothing already in the summary or a chip), with links to its Policies
+ * card and its effect.
  */
 function MeasureRow({ measure, color, showFrom, onShowTab, onShowEffect }) {
   const [open, setOpen] = useState(false);
@@ -91,14 +92,18 @@ function MeasureRow({ measure, color, showFrom, onShowTab, onShowEffect }) {
         </p>
       ))}
       <div id={bodyId} className="mm-body" hidden={!open}>
-        <p className="mm-label">Published description</p>
-        <ul className="mm-points">
-          {measure.points.map((point) => (
-            <li key={point}>{point}</li>
-          ))}
-        </ul>
+        {measure.points.length > 0 && (
+          <>
+            <p className="mm-label">More from the published description</p>
+            <ul className="mm-points">
+              {measure.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          </>
+        )}
         {measure.notePoints.length > 0 && (
-          <div className="mm-note">
+          <div className={measure.points.length > 0 ? "mm-note" : "mm-note mm-note-first"}>
             <p className="mm-label">Modelling note</p>
             <ul className="mm-points">
               {measure.notePoints.map((point) => (

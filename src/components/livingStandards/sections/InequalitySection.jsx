@@ -47,11 +47,23 @@ export default function useInequalityView(data, range = null, setRange = null) {
   const series = lineSeries(viewMode, !noOutturn);
 
   const span = headlineSpan(projection, data, range);
+  // One short line on the card; the full sentence in About this chart
   let summary = null;
+  let sentence = null;
   if (span) {
     const [a, b] = span;
     const same = fmt(a.value) === fmt(b.value);
-    summary = (
+    const name = label(measure);
+    summary = same ? (
+      <>
+        The {name} <strong>stays flat</strong> at {fmt(a.value)}.
+      </>
+    ) : (
+      <>
+        The {name} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} to {fmt(b.value)}.
+      </>
+    );
+    sentence = (
       <>
         The {label(measure)} ({basis.toUpperCase()}){" "}
         {same ? (
@@ -74,7 +86,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     summary,
     about:
       "Gini: 0 is perfect equality, 1 is one person holding all income. 90/10 ratio: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
-    notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
+    notes: [sentence, ...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
     download: rows.length

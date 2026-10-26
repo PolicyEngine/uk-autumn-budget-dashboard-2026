@@ -1016,6 +1016,10 @@
   margin-top: 8px;
 }
 
+.mm-note-first {
+  margin-top: 0;
+}
+
 .mm-points {
   margin: 0;
   padding-left: 18px;
@@ -1031,6 +1035,10 @@
   flex-wrap: wrap;
   gap: 16px;
   margin: 10px 0 0;
+}
+
+.mm-links:first-child {
+  margin-top: 0;
 }
 
 .mm-links a,

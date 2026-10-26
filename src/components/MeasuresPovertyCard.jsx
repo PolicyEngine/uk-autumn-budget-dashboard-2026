@@ -160,11 +160,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       icon="bars"
       className="mp-card"
       period={year}
-      summary={
-        <>
-          {peopleMode ? `${metric.short.replace(/, pp$/, "")}, people` : metric.short}, by measure. {summary}
-        </>
-      }
+      // One short line; what the steps measure is in More info
+      summary={summary}
       download={{
         filename: `${metric.file}-by-measure-${selectedYear}`,
         image: false,

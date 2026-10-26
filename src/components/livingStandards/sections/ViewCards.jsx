@@ -66,11 +66,8 @@ export function GrowthCard({ data, onShowTab }) {
     <ViewCard
       id={GROWTH_CURRENT_LAW_ANCHOR}
       title="Growth across the distribution"
-      subtitle={
-        // Only the link to the twin; "without the measures" is said in
-        // About this chart
-        <TwinLink tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />
-      }
+      // The link to its twin with the measures sits in About this chart
+      moreNotes={[<TwinLink key="twin" tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />]}
       icon="bars"
       name="Distribution view"
       value="quintile"

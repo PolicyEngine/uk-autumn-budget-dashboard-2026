@@ -419,21 +419,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <TitleIcon name={metric.icon} />
             <span className="title-text">{metric.title}</span>
           </h3>
+          {/* One short line: the selected year's figure; what the chart
+              measures is in More info */}
           <p className="chart-description">
-            {metric.short ? (
+            {selected?.value != null ? (
               <>
-                {metric.short}, by year{byMeasure ? ", each selected measure on its own" : ""}.
-                {selected?.value != null && (
-                  <>
-                    {" "}
-                    {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
-                    {selectedPeople && <> ({selectedPeople})</>}.
-                  </>
-                )}
+                {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
+                {selectedPeople && <> ({selectedPeople})</>}.
               </>
             ) : (
               <>
-                {metric.description}
+                {metric.short ?? metric.description}
                 {byMeasure && " Each selected measure on its own."}
               </>
             )}
@@ -581,12 +577,12 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </ResponsiveContainer>
         )}
       </div>
-      {/* The short subtitle's full wording, in More info */}
-      {(metric.short || byMeasure) && (
+      {/* What the chart measures, in More info */}
+      {(
         <div className="chart-footer">
           <ChartMoreInfo>
-            {metric.short && <p>{metric.description}</p>}
-            {metric.short && population && !byMeasure && (
+            <p>{metric.description}</p>
+            {population && !byMeasure && (
               <p>People are the change in the rate times the population in that year, from the current-law projection.</p>
             )}
             {byMeasure && (

@@ -127,7 +127,10 @@ describe("measure choices", () => {
     choose("People", "Children");
     expect(screen.getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Relative · After housing costs · Children");
     expect(screen.getByRole("heading")).toHaveTextContent("Change in the child poverty rate");
-    expect(screen.getByText(/Change in relative child poverty \(AHC\), pp, by year/)).toBeInTheDocument();
+    // The line is the selected year's figure; what it measures, in More info
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    expect(document.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
+    expect(document.querySelector(".chart-footer")).toHaveTextContent(/child/i);
     const params = new URLSearchParams(window.location.search);
     expect(params.get("poverty")).toBe("relative-ahc-children");
     expect(params.get("sub")).toBe("poverty");
@@ -137,6 +140,7 @@ describe("measure choices", () => {
     window.history.replaceState(null, "", "/?sub=living&inequality=top-10");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={WIDE} {...props} />);
     expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent("Top 10% share");
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
     expect(screen.getByText(/top 10% of people|10% of people with the highest incomes/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     const group = screen.getByRole("radiogroup", { name: "Inequality measure" });
