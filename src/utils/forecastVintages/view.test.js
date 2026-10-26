@@ -8,6 +8,7 @@ import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, formatterFor, niceAx
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
 const variable = (id) => DATA.variables.find((v) => v.id === id);
 const clone = () => JSON.parse(JSON.stringify(DATA));
+const byId = (data, id) => data.variables.find((v) => v.id === id);
 
 // Every view the page can show: each variable in each of its units, with
 // and without earlier forecasts, and annual for a quarterly variable
@@ -63,6 +64,27 @@ describe("the committed file", () => {
     ["the newest forecast", (d) => d.variables[3].level.vintages.pop(), /newest forecast is not/],
     ["the forecasts' order", (d) => d.variables[4].level.vintages.reverse(), /order/],
     ["notes as text", (d) => (d.variables[0].notes = [1]), /notes/],
+    // Found by the second review: these passed and then broke the drawing
+    ["a check period that is a period", (d) => (byId(d, "rhdi_per_person").level.check.periods[0] = "garbage"), /check/],
+    ["the largest gap's period", (d) => (byId(d, "cpi").level.check.largest_gap_period = "2021Q1"), /check/],
+    ["decimals of at least 0", (d) => (byId(d, "psnb").level.decimals = -1), /decimals/],
+    ["decimals of at most 6", (d) => (byId(d, "psnb").level.decimals = 7), /decimals/],
+    ["whole decimals", (d) => (byId(d, "psnb").level.decimals = 1.5), /decimals/],
+    ["a launch that is a period", (d) => (byId(d, "rhdi_per_person").level.vintages[0].launch = "2009Q5"), /date/],
+    ["a launch written as the data writes it", (d) => (byId(d, "psnd").level.vintages[0].launch = "2009-99"), /date/],
+    ["a month in the year", (d) => (byId(d, "cpi").level.vintages[0].month = 0), /date/],
+    ["an outturn period that is a period", (d) => (byId(d, "cpi").level.outturn.garbage = 1), /outturn/],
+    ["a forecast's period that is a period", (d) => (byId(d, "cpi").level.vintages[0].values["2011.0"] = 1), /values/],
+    ["each forecast once", (d) => (byId(d, "cpi").level.vintages[1].id = byId(d, "cpi").level.vintages[0].id), /twice/],
+    ["a parliament period written as the data writes it", (d) => (d.meta.parliament.start.fiscal = "2024-99"), /parliament/],
+    [
+      "the calendar parliament a quarterly measure's annual totals need",
+      (d) => {
+        d.variables = [byId(d, "rhdi_per_person")];
+        delete d.meta.parliament.end.calendar;
+      },
+      /parliament/,
+    ],
   ])("is refused without %s", (_, mutate, problem) => {
     const data = clone();
     mutate(data);
@@ -176,6 +198,52 @@ describe("a forecast that cannot be drawn", () => {
     );
   });
 
+  // Found by the second review: cut after its anchor, the newest forecast
+  // was one point, a line with nothing to draw, and the view stayed up
+  it("is drawn as a line of at least two points, or the view is unavailable", () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...VIEWS), fc.nat(), ({ v, unit, annual, showPast }, keep) => {
+        const data = clone();
+        const variable = data.variables.find((x) => x.id === v.id);
+        const measure = variable[variable.units[unit].from];
+        const newest = measure.vintages[measure.vintages.length - 1];
+        const keys = Object.keys(newest.values);
+        newest.values = Object.fromEntries(keys.slice(0, 1 + (keep % keys.length)).map((k) => [k, newest.values[k]]));
+        expect(forecastVintagesProblem(data)).toBeNull();
+        const view = buildView(data, variable, { unit, annual, showPast });
+        if (view.unavailable) {
+          expect(view.unavailable).toMatch(/March 2026 forecast/);
+          return;
+        }
+        const drawn = view.vintages.find((x) => x.newest);
+        expect(drawn.label).toBe("March 2026");
+        expect(view.rows.filter((row) => row[drawn.key] != null).length).toBeGreaterThanOrEqual(2);
+        for (const x of view.vintages) expect(x.values.size).toBeGreaterThanOrEqual(2);
+      }),
+    );
+  });
+
+  it("is unavailable as the newest when it stops at its anchor", () => {
+    const data = clone();
+    const v = data.variables.find((x) => x.id === "rhdi_per_person");
+    delete v.level.vintages.at(-1).values["2026Q3"];
+    expect(forecastVintagesProblem(data)).toBeNull();
+    for (const showPast of [true, false]) {
+      expect(buildView(data, v, { unit: "level", showPast }).unavailable).toBe(
+        "The March 2026 forecast of this measure cannot be drawn in this unit.",
+      );
+    }
+  });
+
+  it("leaves a view whose sums are too large to hold unavailable, never an empty chart", () => {
+    const data = clone();
+    const v = data.variables.find((x) => x.id === "rhdi_per_person");
+    for (const key of Object.keys(v.level.outturn)) v.level.outturn[key] = 1e308;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    const view = buildView(data, v, { unit: "level" });
+    expect(view.unavailable).toMatch(/cannot be drawn|too little outturn/);
+  });
+
   it("makes the view unavailable when it is the newest", () => {
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
@@ -213,7 +281,7 @@ describe("a forecast that cannot be drawn", () => {
     for (const vintage of v.level.vintages) vintage.values = last(vintage.values);
     expect(forecastVintagesProblem(data)).toBeNull();
     const view = buildView(data, v, { unit: "pct" });
-    expect(view.unavailable).toMatch(/cannot be drawn|no outturn/);
+    expect(view.unavailable).toMatch(/cannot be drawn|too little outturn/);
     expect(view.rows).toBeUndefined();
   });
 });

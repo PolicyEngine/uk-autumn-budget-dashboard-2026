@@ -209,20 +209,25 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
   // The newest forecast in the file is the one drawn bold and labelled at
   // the end: if it cannot be drawn, no older one takes its place
   const newestLabel = measure.vintages[measure.vintages.length - 1].label;
-  // A forecast with no values in this unit (a % change needs the period a
-  // year before) cannot be drawn either
-  const undrawn = [...levels.undrawn, ...transformed.vintages.filter((v) => !v.values.size).map((v) => v.label)];
-  const shown = { ...transformed, vintages: transformed.vintages.filter((v) => v.values.size) };
+  // Each series is drawn as a line, so it needs two points; a value that
+  // is not finite (a sum too large to hold) is no point. A forecast with
+  // fewer in this unit (a % change needs the period a year before; one
+  // that stops at its anchor has only that) cannot be drawn either
+  const finite = (series) => new Map([...series].filter(([, v]) => Number.isFinite(v)));
+  const drawable = (series) => series.size >= 2;
+  const outturn = finite(transformed.outturn);
+  const forecasts = transformed.vintages.map((v) => ({ ...v, values: finite(v.values) }));
+  const undrawn = [...levels.undrawn, ...forecasts.filter((v) => !drawable(v.values)).map((v) => v.label)];
+  const shown = { outturn, vintages: forecasts.filter((v) => drawable(v.values)) };
   if (undrawn.includes(newestLabel) || !shown.vintages.length) {
     return { unavailable: `The ${newestLabel} forecast of this measure cannot be drawn in this unit.` };
   }
-  if (!shown.outturn.size) return { unavailable: "There is no outturn of this measure in this unit." };
+  if (!drawable(shown.outturn)) return { unavailable: "There is too little outturn of this measure to draw in this unit." };
 
   const newest = shown.vintages[shown.vintages.length - 1];
   const drawn = showPast ? shown.vintages : [newest];
   const byPeriod = new Map();
   const put = (t, key, v) => {
-    if (v == null || !Number.isFinite(v)) return;
     if (!byPeriod.has(t)) byPeriod.set(t, { x: t });
     byPeriod.get(t)[key] = v;
   };

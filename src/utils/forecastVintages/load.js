@@ -4,6 +4,8 @@
 // data_inputs/forecast_vintages/README.md). The file holds only the OBR's
 // forecasts and the ONS's outturn.
 
+import { periodIndex, periodKey } from "./transforms";
+
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const FORECAST_VINTAGES_PATH = "/data/obr_forecast_vintages.json";
 
@@ -16,46 +18,76 @@ const KINDS = new Set(["growth", "index", "level"]);
 const UNITS = new Set(["level", "index", "pct"]);
 const MEASURES = new Set(["level", "share"]);
 
+// The most decimals a measure's figures are written with
+const MAX_DECIMALS = 6;
+
 const isNumber = (v) => typeof v === "number" && Number.isFinite(v);
 const isText = (v) => typeof v === "string" && v.length > 0;
-const isPeriod = (v) => isText(v) || Number.isInteger(v);
 const textList = (v) => Array.isArray(v) && v.every(isText);
-const numbers = (values) =>
-  values && typeof values === "object" && Object.keys(values).length > 0 && Object.values(values).every(isNumber);
+const isObject = (v) => v != null && typeof v === "object" && !Array.isArray(v);
+
+/** Whether `key` is a period at `frequency`, written as the data writes it. */
+function isPeriod(key, frequency) {
+  if (!(isText(key) || Number.isInteger(key))) return false;
+  try {
+    return periodKey(periodIndex(key, frequency), frequency) === String(key);
+  } catch {
+    return false;
+  }
+}
+
+// {period: value}, with at least one period and every value a finite number
+const numbers = (values, frequency) =>
+  isObject(values) &&
+  Object.keys(values).length > 0 &&
+  Object.entries(values).every(([k, v]) => isPeriod(k, frequency) && isNumber(v));
 const after = (a, b) => a.year > b.year || (a.year === b.year && a.month > b.month);
 const same = (a, b) => a.year === b.year && a.month === b.month;
 
 // What the page reads from a measure's outturn check (checkSentence)
-function checkProblem(check) {
+function checkProblem(check, frequency) {
   if (check == null) return null;
   const ok =
+    isObject(check) &&
     isText(check.against) &&
     isText(check.in) &&
     Array.isArray(check.periods) &&
-    check.periods.every(isPeriod) &&
+    check.periods.every((p) => isPeriod(p, frequency)) &&
     isNumber(check.tolerance) &&
     isNumber(check.largest_gap) &&
-    isPeriod(check.largest_gap_period);
+    isPeriod(check.largest_gap_period, frequency);
   return ok ? null : "its outturn check is incomplete";
 }
 
-function measureProblem(id, name, measure) {
-  if (!measure || typeof measure !== "object") return `${id}: no ${name} measure`;
+function measureProblem(id, name, measure, frequency) {
+  if (!isObject(measure)) return `${id}: no ${name} measure`;
   if (!KINDS.has(measure.kind)) return `${id}: unknown kind of forecast`;
   if (!isText(measure.unit) || !isText(measure.outturn_source) || !isText(measure.forecast_source)) {
     return `${id}: no unit or sources`;
   }
-  if (!Number.isInteger(measure.decimals)) return `${id}: no decimals`;
-  const check = checkProblem(measure.check);
+  if (!(Number.isInteger(measure.decimals) && measure.decimals >= 0 && measure.decimals <= MAX_DECIMALS)) {
+    return `${id}: no decimals`;
+  }
+  const check = checkProblem(measure.check, frequency);
   if (check) return `${id}: ${check}`;
-  if (!numbers(measure.outturn)) return `${id}: no outturn`;
+  if (!numbers(measure.outturn, frequency)) return `${id}: no outturn`;
   if (!Array.isArray(measure.vintages) || !measure.vintages.length) return `${id}: no forecasts`;
   let previous = null;
+  const ids = new Set();
   for (const v of measure.vintages) {
-    if (!(Number.isInteger(v.year) && Number.isInteger(v.month) && isPeriod(v.launch) && isText(v.id) && isText(v.label))) {
-      return `${id}: a forecast without its date`;
-    }
-    if (!numbers(v.values)) return `${id}: the ${v.label} forecast has no values`;
+    const dated =
+      isObject(v) &&
+      Number.isInteger(v.year) &&
+      Number.isInteger(v.month) &&
+      v.month >= 1 &&
+      v.month <= 12 &&
+      isPeriod(v.launch, frequency) &&
+      isText(v.id) &&
+      isText(v.label);
+    if (!dated) return `${id}: a forecast without its date`;
+    if (ids.has(v.id)) return `${id}: the ${v.label} forecast twice`;
+    ids.add(v.id);
+    if (!numbers(v.values, frequency)) return `${id}: the ${v.label} forecast has no values`;
     if (after(v, NEWEST_SHOWN)) return "newer";
     if (previous && !after(v, previous)) return `${id}: forecasts out of date order`;
     previous = v;
@@ -67,11 +99,15 @@ function measureProblem(id, name, measure) {
 
 // What the page reads from the file's meta, besides the forecasts
 function metaProblem(meta, frequencies) {
-  if (!meta || typeof meta !== "object") return "no meta";
+  if (!isObject(meta)) return "no meta";
   const { parliament, launch_rules: rules, left_out: leftOut, gaps, sources } = meta;
   for (const f of frequencies) {
-    if (!isPeriod(parliament?.start?.[f]) || !isPeriod(parliament?.end?.[f])) return "no parliament dates";
     if (!isText(rules?.[f])) return "no launch rules";
+  }
+  // A quarterly measure's annual totals are calendar years
+  const dated = frequencies.has("quarterly") ? new Set([...frequencies, "calendar"]) : frequencies;
+  for (const f of dated) {
+    if (!isPeriod(parliament?.start?.[f], f) || !isPeriod(parliament?.end?.[f], f)) return "no parliament dates";
   }
   if (!Array.isArray(leftOut) || !leftOut.every((item) => isText(item?.what) && isText(item?.why))) {
     return "no list of what is left out";
@@ -109,7 +145,7 @@ function variableProblem(variable) {
   }
   if (!variable.units[variable.default_unit]) return `${id}: no default unit`;
   for (const name of new Set(units.map(([, spec]) => spec.from))) {
-    const problem = measureProblem(id, name, variable[name]);
+    const problem = measureProblem(id, name, variable[name], variable.frequency);
     if (problem) return problem;
   }
   return null;

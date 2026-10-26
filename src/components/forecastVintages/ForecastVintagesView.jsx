@@ -94,6 +94,31 @@ export function pointsSentence(view, points = view.points) {
 }
 
 /**
+ * The card's notes for a view that can be drawn: the measure's own notes,
+ * its sources, how its forecasts are drawn, what cannot be drawn, what the
+ * outturn was checked against, and what £ means for a quarterly measure.
+ */
+export function cardNotes(variable, view, { showPast }) {
+  const measure = view.measure;
+  const newest = view.vintages[view.vintages.length - 1];
+  const undrawn = showPast ? view.undrawn : [];
+  return [
+    ...(variable.notes || []),
+    `Outturn: ${measure.outturn_source}.`,
+    `Forecasts: ${measure.forecast_source}.`,
+    DRAWN[measure.kind],
+    newest.reanchored &&
+      `The ${newest.label} forecast starts from the latest outturn it reaches, ${view.label(newest.anchor)}, and is carried on from there by its own ${measure.kind === "index" ? "index" : "growth"}.`,
+    undrawn.length > 0 &&
+      `${listOf(undrawn)} ${undrawn.length > 1 ? "forecasts" : "forecast"} cannot be drawn in this view, so ${undrawn.length > 1 ? "they are" : "it is"} left out.`,
+    checkSentence(measure.check, variable.frequency),
+    variable.frequency === "quarterly" &&
+      view.unit === "level" &&
+      "In £, each quarter's amount is shown at an annual rate (times four); with A, each calendar year is the total of its four quarters.",
+  ].filter(Boolean);
+}
+
+/**
  * The CSV download: a row per period shown, the outturn and each forecast
  * drawn as columns; a period a series does not cover is blank, never zero.
  */
@@ -146,11 +171,14 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
   const unit = units.includes(unitBy[variable.id]) ? unitBy[variable.id] : variable.default_unit;
   const quarterly = variable.frequency === "quarterly";
   const annualOn = quarterly && annual;
-  const view = useMemo(() => {
+  // Everything drawn from the file, so whatever cannot be drawn leaves
+  // this measure unavailable rather than the view broken
+  const { view, notes } = useMemo(() => {
     try {
-      return buildView(data, variable, { unit, annual: annualOn, showPast });
+      const built = buildView(data, variable, { unit, annual: annualOn, showPast });
+      return { view: built, notes: built.unavailable ? [] : cardNotes(variable, built, { showPast }) };
     } catch (error) {
-      return { unavailable: `This measure cannot be drawn: ${error.message}` };
+      return { view: { unavailable: `This measure cannot be drawn: ${error.message}` }, notes: [] };
     }
   }, [data, variable, unit, annualOn, showPast]);
 
@@ -207,26 +235,10 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
     );
   }
 
-  const measure = view.measure;
   const shownRows = view.rows.slice(range[0], range[1] + 1);
   const newest = view.vintages[view.vintages.length - 1];
   const earlier = view.vintages.length > 1;
   const csvUnits = `${view.axisLabel}${annualised ? ", quarterly annualised (×4)" : ""}`;
-  const notes = [
-    ...(variable.notes || []),
-    `Outturn: ${measure.outturn_source}.`,
-    `Forecasts: ${measure.forecast_source}.`,
-    DRAWN[measure.kind],
-    newest.reanchored &&
-      `The ${newest.label} forecast starts from the latest outturn it reaches, ${view.label(newest.anchor)}, and is carried on from there by its own ${measure.kind === "index" ? "index" : "growth"}.`,
-    showPast &&
-      view.undrawn.length > 0 &&
-      `${listOf(view.undrawn)} ${view.undrawn.length > 1 ? "forecasts" : "forecast"} cannot be drawn in this view, so ${view.undrawn.length > 1 ? "they are" : "it is"} left out.`,
-    checkSentence(measure.check, variable.frequency),
-    quarterly &&
-      unit === "level" &&
-      "In £, each quarter's amount is shown at an annual rate (times four); with A, each calendar year is the total of its four quarters.",
-  ].filter(Boolean);
   const about = [
     startsSentence(data.meta.launch_rules, variable.frequency, annualOn, { reanchored: newest.reanchored, earlier }),
     pointsSentence(view, pointsIn(view.points, shownRows)),
