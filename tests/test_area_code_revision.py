@@ -7,9 +7,11 @@ recomputes identities at the approved commit, but only when HEAD descends
 from it and nothing committed since could change a calculation.
 """
 
+import functools
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -482,6 +484,75 @@ def test_a_package_generated_after_the_attestation_commit_stages(documented):
         for key, entry in documented.manifest.entries().items()
     }
     assert statuses == {key: m.APPROVED for key in ("alpha", "beta", PACKAGE)}
+
+
+@pytest.mark.slow
+def test_a_package_whose_member_is_bound_earlier_runs_in_worker_processes(
+    documented_state, tmp_path
+):
+    """``--jobs 2`` (#173) on the forkserver process runner, at a later
+    commit than alpha's receipt. The package's run carries the commit each
+    staged member is bound at to the worker, which recomputes its
+    identities there: without them it would refuse the run. The worker's
+    package binds alpha as alpha's own receipt does, so staging's member
+    check accepts it, and its artifact is a serial run's."""
+    from tests import parallel_helpers
+    from tests.test_parallel import _artifacts, _worker_runner
+    from uk_budget_data.parallel import SerialRunner
+    from uk_budget_data.publication.publish import _members_problems
+
+    world = documented_state.world
+    values = {PACKAGE: VALUES[PACKAGE]}
+
+    def run(name, runner, build):
+        # A copy of the data root each, so the fixture's stays as it was.
+        data_root = tmp_path / name / "data"
+        shutil.copytree(world.data_root, data_root)
+        report = generate_artifacts(
+            [],
+            DataConfig(years=YEARS),
+            combined_sets=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+            artifacts_root=data_root
+            / world.artifacts.relative_to(world.data_root),
+            repo_root=documented_state.repo,
+            generator_argv=["test"],
+            build=build,
+            process=functools.partial(parallel_helpers.fake_process, values),
+            runner=runner,
+        )
+        assert report.refused == {}, report.refused
+        assert [reference.key for reference in report.written] == [PACKAGE]
+        return report, data_root
+
+    serial, _ = run(
+        "serial", SerialRunner(), lambda dataset, scenario=None: world.sim()
+    )
+    workers, data_root = run(
+        "workers",
+        _worker_runner(),
+        functools.partial(parallel_helpers.world_sim, str(world.root)),
+    )
+    document = read_receipt(workers.written[0].path)
+    assert document["dashboard"]["git_sha"] == documented_state.head
+    assert documented_state.alpha["dashboard"]["git_sha"] == (
+        documented_state.generated
+    )
+    (member,) = [
+        record
+        for record in document["dashboard"]["members"]
+        if record["id"] == "alpha"
+    ]
+    own = documented_state.alpha["execution_receipt"]["reform"]
+    assert member["reform"]["binding"] == "code_revision"
+    for field in ("kind", "representation", "reform_sha256", "binding"):
+        assert member["reform"][field] == own[field]
+    assert (
+        _members_problems(
+            document, documented_state.manifest, data_root, (m.APPROVED,)
+        )
+        == []
+    )
+    assert _artifacts(workers.written) == _artifacts(serial.written)
 
 
 def test_the_documented_order_reaches_results_by_area(

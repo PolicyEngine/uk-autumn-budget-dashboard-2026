@@ -22,8 +22,11 @@ const AFTER_COLOUR = CHART_COLOURS.after;
  * @param {string} props.yearLabel - "2029-30"
  * @param {boolean} [props.splitFailed] - The split by policy failed: one step
  *   for all of them, with no "Splitting…" line (the error is shown below)
+ * @param {Array<{id, name, label}>} [props.noEffect] - The measures that
+ *   leave the household's net income where it was (policyRows(...).noEffectItems):
+ *   one muted line under the steps, by short name, not a row each
  */
-export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false }) {
+export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false, noEffect = [] }) {
   const [wrapperRef, measured] = useElementWidth();
   const width = measured > 0 ? measured : 520;
   const pending = steps === null;
@@ -103,7 +106,8 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
               >
                 <rect x={0} y={y - 20} width={width} height={rowHeight} fill="transparent" />
                 <text x={plotLeft} y={y - 6} fontSize={fontSize} fontWeight={row.total ? 600 : 400} fill={TEXT}>
-                  {row.name}
+                  {/* The short name on the bar; the full one in the tooltip */}
+                  {row.label ?? row.name}
                 </text>
                 <rect x={x0} y={y} width={Math.max(x1 - x0, 2)} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
                 {row.total && (
@@ -145,6 +149,17 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         </svg>
         <FloatingTooltip tip={tip} />
       </div>
+      {!pending && noEffect.length > 0 && (
+        <p className="single-year-quiet waterfall-no-effect">
+          No effect on you:{" "}
+          {noEffect.map((item, index) => (
+            <span key={item.id} title={item.name}>
+              {index > 0 && ", "}
+              {item.label ?? item.name}
+            </span>
+          ))}
+        </p>
+      )}
       {pending && !splitFailed && (
         <p className="single-year-quiet waterfall-pending" role="status">
           Splitting the change by policy…

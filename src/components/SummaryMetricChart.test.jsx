@@ -41,7 +41,7 @@ describe("metricByYear", () => {
 });
 
 describe("SummaryMetricChart", () => {
-  it("asks for one policy or all when the selection has no single run, never adding up", () => {
+  it("draws each measure's own series when the selection has no single run, never adding up", () => {
     render(
       <SummaryMetricChart
         metric={SUMMARY_METRICS.poverty}
@@ -51,7 +51,10 @@ describe("SummaryMetricChart", () => {
         selectedYear={2027}
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Choose one policy or all policies");
+    // No blocking message: one series per measure, with its key
+    expect(screen.queryByText(/Choose one policy or all policies/)).toBeNull();
+    expect(document.querySelectorAll(".summary-metric-key li")).toHaveLength(2);
+    expect(document.querySelector(".chart-description")).toHaveTextContent(/each selected measure on its own/i);
   });
 
   it("says a run is not yet published rather than drawing zeros", () => {
@@ -124,7 +127,10 @@ describe("measure choices", () => {
     choose("People", "Children");
     expect(screen.getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Relative · After housing costs · Children");
     expect(screen.getByRole("heading")).toHaveTextContent("Change in the child poverty rate");
-    expect(screen.getByText(/Change in relative child poverty \(AHC\), pp, by year/)).toBeInTheDocument();
+    // The line is the selected year's figure; what it measures, in More info
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    expect(document.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
+    expect(document.querySelector(".chart-footer")).toHaveTextContent(/child/i);
     const params = new URLSearchParams(window.location.search);
     expect(params.get("poverty")).toBe("relative-ahc-children");
     expect(params.get("sub")).toBe("poverty");
@@ -134,6 +140,7 @@ describe("measure choices", () => {
     window.history.replaceState(null, "", "/?sub=living&inequality=top-10");
     render(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={WIDE} {...props} />);
     expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent("Top 10% share");
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
     expect(screen.getByText(/top 10% of people|10% of people with the highest incomes/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     const group = screen.getByRole("radiogroup", { name: "Inequality measure" });

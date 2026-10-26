@@ -5,6 +5,7 @@
  * touches the data a chart plots.
  */
 import { createElement, useEffect, useState } from "react";
+import { CHART_LOGO } from "./chartLogo";
 
 // At or below this width (the page's phone breakpoint) a chart tightens its
 // margins and puts the PolicyEngine logo under the legend, not beside it.
@@ -405,10 +406,16 @@ export function axisWidth(ticks, format = String, { title = true } = {}) {
   return Math.ceil(longest * 7) + 10 + (title ? Y_TITLE_GUTTER : 0);
 }
 
+/** Height kept free under a legend: the logo, its padding and its clear space above. */
+export function logoClearance() {
+  return (CHART_LOGO.gap ?? 16) + CHART_LOGO.height + (CHART_LOGO.padding ?? 8);
+}
+
 /**
  * Legend wrapper: the full chart width, centred, with a row kept free below
  * it for the PolicyEngine logo (drawn at the bottom right), so the logo
- * never pushes the legend off centre.
+ * never pushes the legend off centre, with CHART_LOGO.gap of clear space
+ * between the legend's last row and the logo.
  */
 export function legendWrapperStyle(narrow) {
   return {
@@ -416,7 +423,8 @@ export function legendWrapperStyle(narrow) {
     width: "100%",
     boxSizing: "border-box",
     paddingTop: narrow ? 12 : 16,
-    paddingBottom: 30,
+    // The logo row, with clear space above it (CHART_LOGO.gap)
+    paddingBottom: logoClearance(),
     lineHeight: narrow ? "20px" : "22px",
   };
 }

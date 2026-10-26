@@ -1362,10 +1362,11 @@ body {
   color: var(--pe-gray-400);
 }
 
+/* The logo's clear space under a legend is CHART_LOGO.gap (chartLogo.jsx) */
 .chart-logo {
   display: flex;
   justify-content: flex-end;
-  padding-top: 8px;
+  padding-top: 16px;
   min-height: 25px;
 }
 
@@ -1379,7 +1380,7 @@ body {
 .card-logo {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .card-logo img {

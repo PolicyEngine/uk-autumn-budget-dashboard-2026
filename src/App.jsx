@@ -658,7 +658,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             </section>
           </div>
         ) : value === "methodology" ? (
-          <MethodologyTab onShowTab={handleTabChange} />
+          <MethodologyTab onShowTab={handleTabChange} onShowEffect={handleShowEffect} />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
@@ -758,7 +758,7 @@ function App() {
     };
   }, []);
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…" }
+    ? { reason: "Loading published measures…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"

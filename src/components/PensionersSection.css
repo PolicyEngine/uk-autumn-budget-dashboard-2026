@@ -3,3 +3,27 @@
 #pensioners {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
+
+/* Change by age's key: gain and loss bars, the five-year average line */
+.age-change-legend i.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  opacity: 0.55;
+}
+
+.age-change-legend i.gain {
+  background: var(--c-gain);
+}
+
+.age-change-legend i.loss {
+  background: var(--c-loss);
+}
+
+.age-change-legend i.line {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  vertical-align: 3px;
+  background: var(--c-highlight);
+}

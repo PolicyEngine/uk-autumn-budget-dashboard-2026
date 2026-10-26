@@ -166,11 +166,19 @@
   }
 }
 
-/* Beside a taller card the plot sits in the middle of its row and the
-   logo keeps its size at the foot */
+/* Beside a taller card the plot starts level with its neighbour's (the
+   top of its first row on the neighbour's top gridline, which Recharts
+   draws 16px into its plot), and the logo keeps its size at the foot */
 @media (min-width: 1025px) {
   .charts-grid > .mp-card:not(:only-child) > .ls-chart-rows > .chart-plot {
-    align-self: center;
+    align-self: start;
+    padding-top: 16px;
+  }
+
+  /* With the poverty choice above the pair, the card has no controls: the
+     plot takes that row too, as the neighbour's does */
+  .charts-grid > .mp-card:not(:only-child):has(> .ls-controls:empty) > .ls-chart-rows > .chart-plot {
+    grid-row: 3 / span 2;
   }
 }
 

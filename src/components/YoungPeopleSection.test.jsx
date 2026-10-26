@@ -186,7 +186,7 @@ describe("YoungPeopleSection", () => {
     expect(screen.getByText(/by single year of age \(10 to 40\)/)).toBeInTheDocument();
   });
 
-  it("says when the selection has no whole run, never showing zero", async () => {
+  it("shows each measure's own shares when the selection has no whole run, never adding up", async () => {
     const three = [...POLICIES, { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" }];
     render(
       <YoungPeopleSection
@@ -195,9 +195,10 @@ describe("YoungPeopleSection", () => {
         policies={three}
       />,
     );
-    expect(await screen.findByText(/shown for a single policy or for all policies\./)).toBeInTheDocument();
-    // Every chart but the shares is drawn (Effect of each policy as rows)
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
+    // One row per measure for the 16 to 24 group, no blocking message
+    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(screen.queryByText(/shown for a single policy or for all policies/)).toBeNull();
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
   });
 
   it("shows a year with no rows as not yet published", async () => {

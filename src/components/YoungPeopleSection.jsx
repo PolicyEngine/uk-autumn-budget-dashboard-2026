@@ -58,6 +58,8 @@ import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import MeasureShareTick from "./MeasureShareTick";
+import { sharesByMeasure } from "../utils/measureShares";
 import {
   legendMembership,
   exportLegendItems,
@@ -646,12 +648,23 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const chartRef = useRef(null);
   // By age group or by single year of age, as "Average change by age"
   const [view, setView] = useState("band");
-  const single = view === "single";
-  const description = single ? SHARES_SINGLE_DESCRIPTION : SHARES_DESCRIPTION;
+  // With no run for the whole selection: one row per measure, for one age
+  // group (16 to 24 first)
+  const [groupKey, setGroupKey] = useState(YOUNG_BAND);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const shares = (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
-  const data = shares
+  const perMeasure = sharesByMeasure(sharesByGroup, rows, policies, selectedPolicies, selectedYear, combinedId, groupKey);
+  const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "";
+  const single = !perMeasure && view === "single";
+  const description = perMeasure
+    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} better or worse off (a change over 0.01%), each selected measure on its own.`
+    : single
+      ? SHARES_SINGLE_DESCRIPTION
+      : SHARES_DESCRIPTION;
+  const shares = perMeasure ? null : (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
+  const data = perMeasure
+    ? perMeasure.rows.map((row) => visibleSegments({ group: row.name, key: row.id, ...pick(row.row) }, OUTCOME_KEYS))
+    : shares
     ? shares.groups
         .filter((group) => !group.suppressed)
         // Real shares kept on the row; a tiny non-zero share drawn at a
@@ -675,10 +688,12 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   };
   const csvText = () =>
     buildChartCsv({
-      title: `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
+      title: perMeasure
+        ? `People aged ${groupLabel} better off, unchanged and worse off, by measure on its own, ${yearLabel}`
+        : `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
-        { key: "group", label: single ? "Age" : "Age group" },
+        { key: "group", label: perMeasure ? "Measure" : single ? "Age" : "Age group" },
         ...OUTCOMES.map((outcome) => ({
           key: outcome.key,
           label: `${outcome.label} (%)`,
@@ -715,13 +730,24 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         <ChartDownloadMenu
           download={download}
           chartTitle={title}
-          disabledReason={
-            shares || !published ? undefined : "Choose one policy or all policies"
-          }
         />
       </div>
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        {perMeasure ? (
+          <ControlBar
+            name={title}
+            options={[
+              {
+                label: "Age group",
+                value: groupKey,
+                onChange: setGroupKey,
+                options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
+              },
+            ]}
+          />
+        ) : (
+          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        )}
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
@@ -779,7 +805,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             </BarChart>
           </ResponsiveContainer>
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={height}>
+          <ResponsiveContainer width="100%" height={perMeasure ? Math.max(height, data.length * 36 + 60) : height}>
             <BarChart
               data={data}
               layout="vertical"
@@ -788,14 +814,16 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               {/* The 16 to 24 row's highlight, as in "Average change by age" */}
-              <ReferenceArea
-                y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                fill={YOUNG_FILL}
-                fillOpacity={0.6}
-                radius={6}
-                ifOverflow="visible"
-              />
+              {!perMeasure && (
+                <ReferenceArea
+                  y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
+                  y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
+                  fill={YOUNG_FILL}
+                  fillOpacity={0.6}
+                  radius={6}
+                  ifOverflow="visible"
+                />
+              )}
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -815,8 +843,8 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               <YAxis
                 type="category"
                 dataKey="group"
-                tick={<GroupTick narrow={narrow} />}
-                width={narrow ? 52 : 96}
+                tick={perMeasure ? <MeasureShareTick narrow={narrow} size={ROW_LABEL_SIZE} /> : <GroupTick narrow={narrow} />}
+                width={perMeasure ? (narrow ? 104 : 190) : narrow ? 52 : 96}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -854,11 +882,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           </ResponsiveContainer>
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>
-              These shares come from one simulation of the selected policies
-              together, so they are shown for a single policy or for all
-              policies.
-            </p>
+            <p>No shares are published for this selection in {yearLabel}.</p>
           </div>
         )}
       </div>
@@ -873,10 +897,14 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
         <ChartMoreInfo year={Number(selectedYear)}>
-          <p>
-            Each person counts their household&apos;s change in net income. The shares come from one simulation of
-            the selected policies together, so they are shown for a single policy or for all policies.
-          </p>
+          <p>Each person counts their household&apos;s change in net income.</p>
+          {perMeasure && (
+            <p>
+              Each row is one measure simulated on its own. The shares can&apos;t be added up across measures, and no
+              published run covers this selection together.
+              {perMeasure.missing.length > 0 && ` Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`}
+            </p>
+          )}
         </ChartMoreInfo>
       </div>
     </div>

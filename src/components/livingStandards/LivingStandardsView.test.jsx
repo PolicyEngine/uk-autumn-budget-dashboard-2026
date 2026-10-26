@@ -146,7 +146,8 @@ describe("the OBR forecast view", () => {
     const measureGroup = within(inequality).getByRole("radiogroup", { name: "Inequality measure" });
     expect(within(measureGroup).getAllByRole("radio").map((o) => o.textContent)).toEqual(["Gini", "90/10 ratio"]);
     fireEvent.keyDown(within(inequality).getByRole("dialog"), { key: "Escape" });
-    expect(within(inequality).getByText(/^The Gini \(BHC\)/)).toBeInTheDocument();
+    // One short line on the card; the basis and years in About this chart
+    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^The Gini (rises|falls|stays flat)/);
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
     // Nothing with the measures here
     expect(living).not.toHaveTextContent(/With the selected measures/);
@@ -296,11 +297,14 @@ describe("the OBR forecast view", () => {
     // Depth has no choices of its own: the pill holds the view alone
     expect(optionsSummary(poverty)).toBe("Options: Depth");
     fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
-    expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
+    expect(within(poverty).getByText(/^Very deep poverty:/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the
     // start year, for every breakdown, with its reference group
     const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
+    // One short line on the card; the full sentence in About this chart
+    expect(who.querySelector(".chart-description").textContent).toMatch(/^Highest: [a-z].*, \d+\.\d%/);
+    fireEvent.click(within(who).getByRole("button", { name: "About this chart" }));
     // Couples with children: 19.8% in both years, said once on the bar
     const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
     expect(couples).toHaveTextContent("Couples with children19.8%no change");
@@ -332,12 +336,12 @@ describe("the OBR forecast view", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
     const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
     choose(inequality, "Inequality measure", "90/10 ratio");
-    expect(within(inequality).getByText(/^The 90\/10 ratio \(BHC\)/)).toBeInTheDocument();
+    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^The 90\/10 ratio (rises|falls|stays flat)/);
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
     // Year by year and vigintiles by default (Vahid, 26 October): one short
     // line, from the second-lowest twentieth (vigintile 1 left out)
-    const headline = () => growth.querySelector(".chart-description > p:not(.ls-card-subtitle)").textContent;
-    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: \S+% to \S+% vs \S+% to \S+% a year\.$/);
+    const headline = () => growth.querySelector(".chart-description").textContent;
+    expect(headline()).toMatch(/^Bottom: \S+% to \S+% a year; top: \S+% to \S+%\.$/);
     // The full sentence and the vigintile note are in About this chart
     expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
@@ -365,7 +369,7 @@ describe("the OBR forecast view", () => {
       "non_pensioners",
     ]);
     expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32, real median income \(AHC\) among non-pensioners/)).toBeInTheDocument();
-    expect(headline()).toMatch(/^Lowest vs highest tenth: /);
+    expect(within(growth).getByText(/^Decile 1 \(lowest income\)/)).toBeInTheDocument();
     // Decile 1 after housing costs: kept, with a short caution under the
     // key and the fuller line in About this chart
     expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
@@ -374,7 +378,7 @@ describe("the OBR forecast view", () => {
     choose(growth, "Income groups", "Vigintiles");
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
     // the second-lowest twentieth, the key at vigintile 2, the note in About
-    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: /);
+    expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
     expect(within(growth).getByText(/second-lowest-income twentieth \(5th–10th percentile\)/)).toBeInTheDocument();
     expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
     expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
@@ -385,7 +389,7 @@ describe("the OBR forecast view", () => {
     choose(growth, "Income groups", "Deciles");
     expect(within(growth).getByText(/^The lowest-income tenth after housing costs/)).toBeInTheDocument();
     choose(growth, "Income groups", "Quintiles");
-    expect(headline()).toMatch(/^Lowest vs highest fifth: /);
+    expect(within(growth).getByText(/^Quintile 1 \(lowest income\)/)).toBeInTheDocument();
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
     expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     expect(new URLSearchParams(window.location.search).get("ls_groups")).toBe("quintile");

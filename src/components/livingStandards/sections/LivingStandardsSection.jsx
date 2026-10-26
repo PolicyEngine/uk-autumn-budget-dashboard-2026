@@ -99,7 +99,10 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
 
   // One sentence: what the measure is (a few words) and how it moves to the
   // headline year. Units live in the unit label.
+  // The card shows one short line; the full sentence (measure, prices,
+  // years) is in About this chart
   let summary = null;
+  let sentence = null;
   const span = headlineSpan(projection, data, range);
   if (span) {
     const [first, last] = span;
@@ -107,7 +110,17 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     const b = last[adjustment];
     if (a != null && b != null && a !== 0) {
       const verb = changeVerb(((b - a) / a) * 100, "%");
-      summary = (
+      const average = metric.startsWith("mean") ? "Mean" : "Median";
+      summary = verb ? (
+        <>
+          {average} income <strong>{verb}</strong>, from {formatPounds(a)} to {formatPounds(b)}.
+        </>
+      ) : (
+        <>
+          {average} income <strong>stays flat</strong> at {formatPounds(a)}.
+        </>
+      );
+      sentence = (
         <>
           {plainMetric(label)}
           {adjustment === "real" ? ` in ${priceBase} prices` : " in cash terms"}{" "}
@@ -144,6 +157,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     summary,
     about: description,
     notes: [
+      sentence,
       noOutturn &&
         (realOnlyOutturn
           ? "Official incomes after housing costs are shown in real terms only."
