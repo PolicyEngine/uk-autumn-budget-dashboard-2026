@@ -186,103 +186,108 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"),
   );
   const alpha = catalogue.byId.get(ALPHA);
-  const mock = {
-    measures: {
-      [ALPHA]: {
-        description: alpha.description,
-        rows: [
-          {
-            label: "A threshold",
-            unit: "gbp",
-            primary: true,
-            points: [2026, 2027, 2028, 2029, 2030, 2031].map((year) => ({
-              key: String(year),
-              label: `${year}-${String((year + 1) % 100).padStart(2, "0")}`,
-              year,
-              before: 1000,
-              after: year >= 2027 ? 1200 : 1000,
-            })),
-            source: { before: { kind: "engine_parameter" }, after: { kind: "measure_parameter_change" } },
-          },
-          {
-            label: "A rate",
-            unit: "percent",
-            primary: false,
-            points: [{ key: "2027", label: "2027-28", year: 2027, before: 0.2, after: 0.15 }],
-            source: { before: { kind: "engine_parameter" }, after: { kind: "modifier_constant" } },
-          },
-        ],
-      },
-    },
-  };
+  const yearly = (before, after) =>
+    [2026, 2027, 2028, 2029, 2030, 2031].map((year) => ({
+      key: String(year),
+      label: `${year}-${String((year + 1) % 100).padStart(2, "0")}`,
+      year,
+      before: before(year),
+      after: after(year),
+    }));
+  const tables = (rows) => ({ measures: { [ALPHA]: { description: alpha.description, rows } } });
+  const source = { before: { kind: "engine_parameter" }, after: { kind: "modifier_constant" } };
+  const rising = tables([
+    { label: "A threshold", unit: "gbp", unit_words: "£ a year", primary: true, source,
+      points: yearly(() => 1000, (year) => (year >= 2027 ? 1000 + 100 * (year - 2026) : 1000)) },
+  ]);
+  const held = tables([
+    { label: "A rate", unit: "percent", unit_words: null, primary: true, source,
+      points: yearly(() => 0.15, (year) => (year >= 2027 ? 0 : 0.15)) },
+  ]);
 
-  it("shows each card's table from the file, the years that differ first", () => {
-    const id = "badr_lifetime_limit_cut";
-    render(
-      <PolicyCards
-        policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]}
-        selectedPolicies={[id]}
-        parameterTables={file}
-      />,
+  it("draws a change over the years as a step plot, with one line saying it", () => {
+    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={rising} />);
+    const block = screen.getByRole("region", { name: "What changes" });
+    expect(block).toHaveTextContent(
+      "A threshold is £100 higher than under current law in 2027-28, and £500 higher by 2031-32. (£ a year)",
     );
-    const table = screen.getByRole("region", { name: "What changes" });
-    const lines = within(table).getAllByRole("row").filter((row) => row.classList.contains("pspec-line"));
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toHaveTextContent("2027-28 to 2031-32£1,000,000£500,000−£500,000");
-    expect(lines[0].querySelector(".pspec-chip")).toHaveClass("is-loss");
+    const plot = within(block).getByRole("img");
+    expect(plot.getAttribute("aria-label")).toContain("2029-30: £1,000 → £1,300 (+£300)");
+    expect(plot.querySelector(".pchg-before")).toBeTruthy();
+    expect(plot.querySelector(".pchg-after")).toBeTruthy();
+    expect(plot.querySelector(".pchg-gap").getAttribute("d")).not.toBe("");
+    // The gap labelled where it is largest, which is also the latest
+    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["+£500"]);
+    expect(plot).toHaveClass("is-gain");
+    // No table on show; every value in one for screen readers
+    expect(within(block).getByRole("table", { hidden: true })).toHaveClass("policy-sr-only");
+    expect(within(block).getAllByRole("row", { hidden: true })).toHaveLength(7);
   });
 
-  it("puts a card's table between its summary and its timing", () => {
-    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const card = screen.getByRole("listitem");
-    const order = [...card.children].map((child) => child.className);
+  it("puts the block between the card's summary and its timing", () => {
+    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={rising} />);
+    const order = [...screen.getByRole("listitem").children].map((child) => child.className);
     expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-summary") + 1);
     expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-spec") + 1);
   });
 
-  it("collapses to the primary rows' changes, and opens every year and row", () => {
-    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const table = screen.getByRole("region", { name: "What changes" });
-    const lines = () => table.querySelectorAll(".pspec-line");
-    expect(lines()).toHaveLength(1);
-    expect(lines()[0]).toHaveTextContent("2027-28 to 2031-32£1,000£1,200+£200");
-    expect(lines()[0].querySelector(".pspec-chip")).toHaveClass("is-gain");
-    expect(table).not.toHaveTextContent("A rate");
-    const button = within(table).getByRole("button", { name: "Show all years" });
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(button);
-    expect(lines()).toHaveLength(7);
-    expect(lines()[0]).toHaveTextContent("2026-27£1,000£1,000No change");
-    expect(table).toHaveTextContent("A rate");
-    expect(lines()[6]).toHaveTextContent("2027-2820%15%−5pp");
-    expect(within(table).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
+  it("shows a change that holds as before and after, a rate as two rates, never points", () => {
+    render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={held} />);
+    const block = screen.getByRole("region", { name: "What changes" });
+    expect(block).toHaveTextContent("A rate falls from 15% to 0% from 2027-28.");
+    expect(block.querySelector(".pchg-pair")).toHaveTextContent("Current law15%With the measure0%");
+    expect(block.textContent).not.toMatch(/pp\b/);
+    expect(block.querySelector(".pchg-svg")).toBeNull();
   });
 
-  it("marks a hovered line's years on the timeline", () => {
+  it("marks a hovered step on the card's timeline, and says it in words", () => {
     const policy = { ...alpha, inForce: { from: "2027-04" } };
-    render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
+    render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} parameterTables={rising} />);
     const card = screen.getByRole("listitem");
+    const plot = card.querySelector(".pchg-svg");
     expect(card.querySelector(".ptl-year-band")).toBeNull();
-    fireEvent.mouseEnter(card.querySelector(".pspec-line"));
+    plot.focus();
+    for (let i = 0; i < 4; i += 1) fireEvent.keyDown(plot, { key: "ArrowRight" });
+    expect(card.querySelector(".pchg-tip")).toHaveTextContent("2029-30: £1,000 → £1,300 (+£300)");
     const band = card.querySelector(".ptl-year-band");
-    expect(parseFloat(band.style.left)).toBeCloseTo(100 / 6);
-    expect(parseFloat(band.style.width)).toBeCloseTo(500 / 6);
-    expect([...card.querySelectorAll(".policy-timeline-labels > .is-lit")].map((label) => label.textContent.trim().slice(0, 7))).toEqual([
-      "2027-28", "2028-29", "2029-30", "2030-31", "2031-32",
-    ]);
-    fireEvent.mouseLeave(card.querySelector(".pspec-line"));
+    expect(parseFloat(band.style.left)).toBeCloseTo(300 / 6);
+    expect(parseFloat(band.style.width)).toBeCloseTo(100 / 6);
+    expect(card.querySelector(".policy-timeline-labels > .is-lit").textContent).toContain("2029-30");
+    fireEvent.keyDown(plot, { key: "Escape" });
     expect(card.querySelector(".ptl-year-band")).toBeNull();
+    expect(card.querySelector(".pchg-tip")).toBeNull();
   });
 
-  it("shows no table for a measure described otherwise than when the file was built, keeping the empty slot", () => {
+  it("draws the real file: State Pension, fuel duty by date, BADR and the Warm Home Discount", () => {
+    const cases = [
+      ["state_pension_income_tax_protection", "State Pension income tax protection", "cost", "plot",
+        "Income tax allowance over State Pension age is £470 higher than under current law in 2027-28, and £1,570 higher by 2031-32."],
+      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "cost", "plot",
+        "Fuel duty is 3p lower than under current law from 1 January 2027, up to 6.8p lower from 1 April 2027, and 2.01p lower from 1 April 2031."],
+      ["badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue", "pair",
+        "Business Asset Disposal Relief lifetime limit falls from £1,000,000 to £500,000 from 2027-28."],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", "pair",
+        "Warm Home Discount rises from £150 to £250 for winter 2026-27."],
+    ];
+    for (const [id, name, direction, kind, summary] of cases) {
+      const { unmount } = render(
+        <PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />,
+      );
+      const block = screen.getByRole("region", { name: "What changes" });
+      expect(block.querySelector(".pchg-summary").textContent.startsWith(summary), id).toBe(true);
+      expect(Boolean(block.querySelector(kind === "plot" ? ".pchg-svg" : ".pchg-pair")), id).toBe(true);
+      unmount();
+    }
+  });
+
+  it("shows nothing for a measure described otherwise than when the file was built, keeping the empty slot", () => {
     const changed = { ...alpha, description: "Changed on Budget day." };
-    render(<PolicyCards policies={[changed]} selectedPolicies={[ALPHA]} parameterTables={mock} />);
-    const card = screen.getByRole("listitem");
+    render(<PolicyCards policies={[changed]} selectedPolicies={[ALPHA]} parameterTables={rising} />);
     expect(screen.queryByRole("region", { name: "What changes" })).toBeNull();
-    expect(card.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
+    expect(screen.getByRole("listitem").querySelector(".policy-card-spec")).toBeEmptyDOMElement();
   });
 
-  it("shows no table without the file", () => {
+  it("shows nothing without the file", () => {
     render(<PolicyCards policies={[alpha]} selectedPolicies={[ALPHA]} parameterTables={null} />);
     expect(screen.queryByRole("region", { name: "What changes" })).toBeNull();
   });

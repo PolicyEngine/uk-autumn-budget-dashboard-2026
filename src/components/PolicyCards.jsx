@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
-import PolicySpecTable, { usePolicyParameters } from "./PolicySpecTable";
+import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
@@ -124,7 +124,7 @@ function PolicyTimeline({ policy, highlight }) {
               );
             })}
           </svg>
-          {/* The years a "What changes" line covers, while it is hovered */}
+          {/* The years a hovered step of "What changes" covers */}
           {highlight && (
             <span
               className="ptl-year-band"
@@ -197,7 +197,7 @@ function PolicyTimeline({ policy, highlight }) {
  */
 function PolicyCard({ policy, onShowEffect, parameterRows }) {
   const temporary = Boolean(policy.inForce?.to);
-  // The years a hovered "What changes" line covers, marked on the timeline
+  // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
   return (
     <li
@@ -220,10 +220,9 @@ function PolicyCard({ policy, onShowEffect, parameterRows }) {
 
       <div className="policy-card-spec">
         {parameterRows && (
-          <PolicySpecTable
+          <PolicyChange
             rows={parameterRows}
             direction={policy.direction}
-            highlight={highlight}
             onHighlight={setHighlight}
           />
         )}
