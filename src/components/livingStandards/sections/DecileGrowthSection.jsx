@@ -167,7 +167,7 @@ export function annualRange(values) {
  * "difference" (the effect itself, in percentage points). The choices are
  * the same pills, kept in the same address parameters.
  */
-export default function useQuintileGrowthView(data, range = null, setRange = null, measures = null) {
+export default function useQuintileGrowthView(data, range = null, setRange = null, measures = null, selectedYear = null) {
   const own = available(data);
   const run = measures && offerFor(measures.rows, measures.reformId);
   const offer = run
@@ -432,12 +432,12 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         yLabel={diff ? "Effect on real growth (pp)" : "Real change on the year before (%)"}
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        // Each year's cluster fills most of its band (bars touching), the
-        // years kept apart by a faint band behind every other year
+        // Each year's cluster fills most of its band (bars touching); only
+        // the header-selected year is shaded
         barGap={n > 10 ? 0 : 1}
         maxBarSize={n > 10 ? 18 : n > 5 ? 30 : 44}
         barCategoryGap={n > 10 ? "12%" : "16%"}
-        categoryBands
+        selectedX={selectedYear == null ? null : Number(selectedYear)}
         legendNote={legendNote}
         ramp={ramp}
         describeBar={describeBar}

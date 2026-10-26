@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
+import SelectedYearShade from "../SelectedYearShade";
 import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import useElementWidth from "../../hooks/useElementWidth";
@@ -326,9 +327,8 @@ export function LsBarChart({
   // (seriesKey, row) => { label, value, colour? }: a tooltip for the one
   // bar hovered (its series dimmed others), in place of the year's list
   describeBar = null,
-  // A faint band behind every other category, so each year's cluster of
-  // bars reads as its own group
-  categoryBands = false,
+  // The x value of the header-selected year's category, shaded (SelectedYearShade)
+  selectedX = null,
 }) {
   const narrow = useNarrowViewport();
   const [hovered, setHovered] = useState(null);
@@ -361,19 +361,8 @@ export function LsBarChart({
             width={yWidth}
             allowDecimals
           />
-          {categoryBands &&
-            data
-              .filter((_, i) => i % 2 === 0)
-              .map((d) => (
-                <ReferenceArea
-                  key={`band-${d[xKey]}`}
-                  x1={d[xKey]}
-                  x2={d[xKey]}
-                  fill={CHART_COLOURS.mutedFill}
-                  fillOpacity={0.8}
-                  stroke="none"
-                />
-              ))}
+          {/* The header-selected year, shaded; nothing when it is not a category here */}
+          {selectedX != null && <Customized component={<SelectedYearShade value={selectedX} />} />}
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
           {describeBar ? (
             // Beside the bar, never over the year's other bars
