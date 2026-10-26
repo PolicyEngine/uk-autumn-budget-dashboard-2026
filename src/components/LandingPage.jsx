@@ -1,4 +1,5 @@
 import SourceLink from "./SourceLink";
+import { ChevronRight } from "lucide-react";
 import TitleIcon from "./TitleIcon";
 import "./LandingPage.css";
 
@@ -39,14 +40,13 @@ const BOXES = [
 ];
 
 /**
- * What the dashboard is: the eyebrow, the heading (its id given, as the
+ * What the dashboard is: the heading (its id given, as the
  * landing page and the overview drawer each name themselves by it), the
  * paragraph and the provisional notice. One source for both.
  */
 export function LandingIntro({ headingId, provisional, className = "landing-hero" }) {
   return (
     <div className={className}>
-      <p className="landing-eyebrow">PolicyEngine UK</p>
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
@@ -61,10 +61,47 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
   );
 }
 
-/** The three boxes, side by side (the landing page) or stacked (`compact`). */
-export function LandingBoxes({ onOpen, compact = false }) {
+/** A way in as a row of a list (the overview drawer): the whole row is the link. */
+function LandingRow({ tab, sub, icon, title, description, onOpen }) {
+  const href = `?${new URLSearchParams({ tab, ...(sub ? { sub } : {}) })}`;
   return (
-    <ul className={`landing-boxes${compact ? " is-compact" : ""}`}>
+    <li>
+      <a
+        className="landing-row"
+        href={href}
+        onClick={(event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+          event.preventDefault();
+          onOpen(tab, sub);
+        }}
+      >
+        <TitleIcon name={icon} size={18} className="landing-row-icon" />
+        <span className="landing-row-text">
+          <span className="landing-row-title">{title}</span>
+          <span className="landing-row-description">{description}</span>
+        </span>
+        <ChevronRight className="landing-row-chevron" size={18} strokeWidth={2} aria-hidden="true" />
+      </a>
+    </li>
+  );
+}
+
+/**
+ * The three ways in: boxes side by side (the landing page), or a list of
+ * rows (`list`, the overview drawer), labelled by `labelledBy`.
+ */
+export function LandingBoxes({ onOpen, list = false, labelledBy }) {
+  if (list) {
+    return (
+      <ul className="landing-rows" aria-labelledby={labelledBy}>
+        {BOXES.map(([tab, sub, icon, title, description]) => (
+          <LandingRow key={tab} tab={tab} sub={sub} icon={icon} title={title} description={description} onOpen={onOpen} />
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <ul className="landing-boxes">
       {BOXES.map(([tab, sub, icon, title, description]) => (
         <LandingBox key={tab} tab={tab} sub={sub} icon={icon} title={title} description={description} onOpen={onOpen} />
       ))}

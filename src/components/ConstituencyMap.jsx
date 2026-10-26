@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
@@ -1124,7 +1125,7 @@ export default function ConstituencyMap({
 
       <SwapTransition swapKey={panel} className="chart-plot constituency-body">
         {view.kind === "loading" && (
-          <p className="constituency-loading">Loading map…</p>
+          <PlotSkeleton className="constituency-loading" label="Loading map…" height={400} />
         )}
 
         {/* The one notice, over whichever view is shown */}

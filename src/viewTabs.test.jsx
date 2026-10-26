@@ -89,11 +89,24 @@ describe("the view tabs", () => {
         expect(year.querySelector(".band-control")).toHaveAttribute("aria-label", expect.stringContaining(YEAR_INACTIVE));
         fireEvent.click(year.querySelector(".band-control"));
         expect(year.querySelector('[role="listbox"]')).toBeNull();
+        // No visible tip: the reason is in the name only
+        fireEvent.mouseEnter(year.querySelector(".band-control"));
+        fireEvent.pointerEnter(year.querySelector(".band-control"));
+        fireEvent.focus(year.querySelector(".band-control"));
+        fireEvent.mouseOver(year.querySelector(".band-control"));
+        fireEvent.focusIn(year.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
       }
       if (!expected[view.value][1]) {
         expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", `Select policies: ${POLICIES_INACTIVE}`);
         fireEvent.click(policy.querySelector(".band-control"));
         expect(policy.querySelector(".policy-selector-dropdown")).toBeNull();
+        fireEvent.mouseEnter(policy.querySelector(".band-control"));
+        fireEvent.pointerEnter(policy.querySelector(".band-control"));
+        fireEvent.focus(policy.querySelector(".band-control"));
+        fireEvent.mouseOver(policy.querySelector(".band-control"));
+        fireEvent.focusIn(policy.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
       }
     });
   });

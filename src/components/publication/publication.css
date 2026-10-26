@@ -232,3 +232,69 @@
 html[data-deep-link] .deep-link-skeleton {
   display: block;
 }
+
+.skeleton-plot-block {
+  width: 100%;
+}
+
+/* UpdateToast.jsx: a note in the bottom corner, fading out on its own */
+.update-toast-region {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+.update-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-md);
+  pointer-events: auto;
+  animation: update-toast-life 4s ease-in-out forwards;
+}
+
+.update-toast-close {
+  display: inline-flex;
+  padding: 4px;
+  color: var(--pe-gray-500);
+  background: none;
+  border: 0;
+  border-radius: var(--pe-radius-sm);
+  cursor: pointer;
+}
+
+.update-toast-close:hover,
+.update-toast-close:focus-visible {
+  color: var(--pe-gray-700);
+}
+
+@keyframes update-toast-life {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  8%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-toast {
+    animation: none;
+  }
+}

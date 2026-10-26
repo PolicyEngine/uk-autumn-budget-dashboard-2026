@@ -29,7 +29,7 @@ import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
+import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
@@ -41,6 +41,7 @@ import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import LoadingSkeleton from "./components/publication/LoadingSkeleton";
+import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -49,7 +50,7 @@ import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
-// inactive, with a Tip saying they do not change it. Pre-measures forecast is current law (incomes and poverty
+// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
@@ -67,7 +68,8 @@ export const VIEWS = [
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 
-// The Tips on a band pill that does not change the view shown
+// The accessible names' reason on a band pill that does not change the
+// view shown (no visible tip)
 export const YEAR_INACTIVE = "The year doesn't change this tab";
 export const POLICIES_INACTIVE = "Policy choices don't change this tab";
 
@@ -418,7 +420,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
   };
-  // Back to the landing page (the band's home button), in place: the views
+  // Back to the landing page (the overview drawer's last link), in place: the views
   // stay mounted, the address goes back to the bare one (the selection
   // and year stay as chosen) and the page to its top
   const goHome = () => {
@@ -747,7 +749,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <div className="title-head">
-            <HomeButton current={landing} onHome={goHome} />
+            <TitleMark />
             <h1>UK Autumn Budget 2026</h1>
           </div>
 
@@ -756,8 +758,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Household impact. A pill that does
-              not apply stays in its place, faded, and says so in a Tip; it
-              does not open. Both are on every view, so the band never moves. */}
+              not apply stays in its place, faded, and does not open; its
+              reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
               selectedYear={distributionalYear}
@@ -777,11 +779,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </div>
         </div>
 
-        {updated && (
-          <p className="publication-updated" role="status">
-            Newer results were published while this page was open; it now shows them.
-          </p>
-        )}
+        {/* A newer publication replaced the figures: a passing note, once */}
+        <UpdateToast show={updated} />
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
             <p>{measure.description}</p>
@@ -900,6 +899,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               open={overviewOpen}
               onClose={closeOverview}
               onOpen={handleTabChange}
+              onHome={goHome}
               returnFocus={aboutTabRef}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>

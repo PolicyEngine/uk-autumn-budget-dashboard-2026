@@ -1,5 +1,5 @@
-/* The band's home button (HomeButton.jsx): PolicyEngine's white mark,
-   left of the title */
+/* PolicyEngine's white mark left of the title (TitleMark), and the
+   overview's rail button (EdgeAboutTab), in HomeButton.jsx */
 .title-head {
   grid-area: title;
   display: flex;
@@ -8,44 +8,16 @@
   min-width: 0;
 }
 
-/* Just the mark: no box, tint or border */
-.title-row .home-button {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity var(--landing-motion) ease, transform var(--landing-motion) ease;
-}
-
-.title-row .home-button:hover {
-  opacity: 0.85;
-  transform: scale(1.06);
-}
-
-.title-row .home-button[aria-current="page"] {
-  cursor: default;
-}
-
-/* The ring goes round the mark only */
-.title-row .home-button:focus-visible {
-  outline: 2px solid var(--band-ink);
-  outline-offset: 3px;
-}
-
-/* The square mark, whole and undistorted */
-.home-button-mark {
+/* The mark, decoration only */
+.title-mark {
   display: block;
+  flex: none;
   width: 28px;
   height: 28px;
   object-fit: contain;
 }
 
-/* Its tip, as a mini card above the band */
+/* The edge tab's tip, as a mini card */
 .tip:has(> .home-tip) {
   z-index: 1200;
   max-width: 260px;
@@ -80,58 +52,44 @@
     gap: 10px;
   }
 
-  .home-button-mark {
+  .title-mark {
     width: 24px;
     height: 24px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .title-row .home-button {
-    transition: none;
-  }
-
-  .title-row .home-button:hover {
-    transform: none;
-  }
-}
-
-/* The "About" tab on the window's left edge (EdgeAboutTab): teal,
-   rounded on its right side only, level with the view tabs bar, below
-   the page's menus and dialogs */
+/* The "About" rail button (EdgeAboutTab): in the view tabs bar's left
+   margin, flush to the window's edge, the bar's own height and surface,
+   with a crisp rule on its right; EdgeAboutTab sets its top and height
+   from the bar. Over the bar (1090), under the title band (1100) */
 .edge-about {
   position: fixed;
   left: 0;
-  /* Centred on the view tabs bar (EdgeAboutTab sets top from it); this is
-     where the bar sits once stuck */
-  top: calc(var(--title-row-height) + var(--view-tabs-height) / 2);
-  transform: translateY(-50%);
-  /* Over the view tabs bar it sits on (1090), under the title band (1100) */
+  top: var(--title-row-height);
   z-index: 1095;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  /* Narrow enough to sit in the page's left margin at 1280px */
-  padding: 6px 10px 6px 7px;
-  font-family: var(--pe-font-family);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--band-ink);
-  background: var(--band-teal);
+  justify-content: center;
+  gap: 4px;
+  width: 48px;
+  height: var(--view-tabs-height);
+  padding: 0;
+  color: var(--pe-gray-500);
+  background: var(--c-surface);
   border: 0;
-  border-radius: 0 999px 999px 0;
-  box-shadow: 0 4px 14px var(--shadow-strong);
+  border-right: 1px solid var(--card-border);
   cursor: pointer;
-  transition: background-color var(--landing-motion) ease, transform var(--motion-slide) ease;
+  transition: background-color var(--landing-motion) ease, color var(--landing-motion) ease;
 }
 
 .edge-about:hover {
-  background: var(--pe-teal-700);
+  color: var(--c-gain-text);
+  background: var(--pe-teal-50);
 }
 
 .edge-about:focus-visible {
   outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .edge-about-mark {
@@ -140,22 +98,23 @@
   height: 18px;
 }
 
-/* While the overview drawer is open the tab rides on its edge, above it,
-   so it closes it too (OverviewDrawer.css: 380px wide) */
+.edge-about-icon {
+  flex: none;
+}
+
+/* The bar and band make room for it where their margin is narrower */
+.app:has(.edge-about) .view-tabs-bar,
+.app:has(.edge-about) .sub-tabs-band {
+  padding-left: max(52px, calc((100vw - 1120px) / 2));
+}
+
+/* Hidden while the overview drawer is open: the drawer's own close
+   button, Esc and the backdrop close it */
 .edge-about[aria-expanded="true"] {
-  z-index: 1310;
-  transform: translate(380px, -50%);
+  visibility: hidden;
 }
 
-/* On a phone the drawer takes the screen; its close button closes it */
-@media (max-width: 600px) {
-  .edge-about[aria-expanded="true"] {
-    z-index: 1095;
-    transform: translateY(-50%);
-  }
-}
-
-/* Once a session: two soft pulses, so it is seen */
+/* Once a session: two soft pulses of tint, so it is seen */
 .edge-about.is-cue {
   animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
 }
@@ -163,26 +122,26 @@
 @keyframes edge-about-cue {
   0%,
   100% {
-    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 0 var(--focus-ring);
+    background: var(--c-surface);
   }
   50% {
-    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 8px var(--focus-ring);
+    background: var(--pe-teal-100);
   }
 }
 
-/* On a phone: the mark alone, a slim tab clear of the column */
+/* On a narrow screen: the mark alone */
 @media (max-width: 768px) {
   .edge-about {
-    padding: 5px 4px 5px 3px;
+    width: 40px;
   }
 
-  .edge-about-mark {
-    width: 14px;
-    height: 14px;
-  }
-
-  .edge-about-label {
+  .edge-about-icon {
     display: none;
+  }
+
+  .app:has(.edge-about) .view-tabs-bar,
+  .app:has(.edge-about) .sub-tabs-band {
+    padding-left: 44px;
   }
 }
 
