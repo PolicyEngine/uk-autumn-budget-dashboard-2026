@@ -91,7 +91,15 @@ export function presetChanges(file, { policies, expectedEngine = null } = {}) {
         .filter((measure) => Number.isFinite(Number(measure.change)))
         .map((measure) => [measure.id, Number(measure.change)]),
     );
-    (changes[entry.preset_id] ??= {})[entry.year] = { change, byPolicy };
+    // Net income before and after too, for where the household sits
+    const before = Number(entry.response.net_income?.baseline);
+    const after = Number(entry.response.net_income?.reform);
+    (changes[entry.preset_id] ??= {})[entry.year] = {
+      change,
+      byPolicy,
+      before: Number.isFinite(before) ? before : null,
+      after: Number.isFinite(after) ? after : null,
+    };
   }
   return changes;
 }

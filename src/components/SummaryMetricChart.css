@@ -18,3 +18,28 @@
     min-width: 0;
   }
 }
+
+/* One measure per bar (a selection with no run of its own): the measures'
+   key under the chart */
+.summary-metric-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--pe-gray-700);
+  font-size: var(--fs-micro);
+}
+
+.summary-metric-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-metric-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}

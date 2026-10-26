@@ -139,7 +139,9 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(within(choice).getByRole("radiogroup", { name: "Poverty line" })).getByRole("radio", { name: "Relative" }));
     expect(within(choice).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
-    expect(change.querySelector(".chart-description")).toHaveTextContent(/relative/i);
+    // The card's line is the figure; what it measures is in More info
+    fireEvent.click(within(change).getByRole("button", { name: "More info" }));
+    expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
     // More info: the £0 measures and that the parts need not add up
     fireEvent.click(within(measures).getByRole("button", { name: "More info" }));

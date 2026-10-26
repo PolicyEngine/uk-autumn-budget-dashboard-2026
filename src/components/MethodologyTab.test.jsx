@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { measureModelling, MODELLING_NOTE, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { measureModelling, measureSummary, modellingFacts, MODELLING_NOTE, NOT_MODELLED, remainingPoints, sentences, unavailableMeasures, usualFirstYear } from "./methodology/measures";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -78,90 +78,171 @@ describe("MethodologyTab", () => {
     });
   });
 
-  it("shows each measure's modelling", () => {
-    renderTab();
+  const descriptionsCard = () => screen.getByRole("heading", { name: "Published measure descriptions" }).closest(".method-card");
 
-    const [table, unavailable] = screen.getAllByRole("table");
-    const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(MEASURE_MODELLING.length);
-    // The catalogue's measures without verified results, each with its reason
-    const unavailableRows = within(unavailable).getAllByRole("row").slice(1);
-    expect(unavailableRows).toHaveLength(UNAVAILABLE.length);
-    for (const measure of UNAVAILABLE) {
-      expect(within(unavailable).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
-      expect(unavailable).toHaveTextContent(measure.why);
-    }
+  it("shows each measure as a row grouped as the Policies tab groups them", () => {
+    renderTab();
+    const card = descriptionsCard();
+    expect(within(card).queryByRole("table")).toBeNull();
+    const toggles = within(card).getAllByRole("button", { expanded: false }).filter((button) => button.classList.contains("mm-toggle"));
+    expect(toggles).toHaveLength(MEASURE_MODELLING.length);
     for (const measure of MEASURE_MODELLING) {
       // Every measure is one the charts colour, by the same name
       expect(POLICY_COLORS[measure.seriesKey]).toBeDefined();
-      expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+      const toggle = within(card).getByRole("button", { name: measure.name });
+      const group = toggle.closest(".mm-group");
+      expect(group).toHaveClass(`is-${measure.direction}`);
+      expect(toggle.closest(".mm-item")).toHaveTextContent(measure.summary);
     }
+    // The group headings are the Policies tab's
+    const headings = within(card).getAllByRole("heading", { level: 4 }).map((heading) => heading.firstChild.textContent);
+    expect(headings).toEqual(expect.arrayContaining(["Raises revenue", "Costs revenue"]));
   });
 
-  it("labels the first year with results as that, not as when a policy starts", () => {
-    // Review of 62febdd, finding 6: results cover every scored year, so a
-    // measure that starts in 2031-32 can have results from 2026-27
+  it("opens a row to the rest of its published description, with links to its card and effect", () => {
+    const onShowTab = vi.fn();
+    const onShowEffect = vi.fn();
+    render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} onShowEffect={onShowEffect} /></MeasureCatalogueProvider>);
+    const [measure] = MEASURE_MODELLING;
+    const toggle = within(descriptionsCard()).getByRole("button", { name: measure.name });
+    const body = document.getElementById(toggle.getAttribute("aria-controls"));
+    expect(body).not.toBeVisible();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(body).toBeVisible();
+    // Each sentence once: the summary line is not repeated inside
+    expect(body).not.toHaveTextContent(measure.summary);
+    const link = within(body).getByRole("link", { name: "What it does" });
+    expect(link).toHaveAttribute("href", `?tab=policies#policy-card-${measure.id}`);
+    fireEvent.click(link);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
+    fireEvent.click(within(body).getByRole("button", { name: `See the effect of ${measure.name} on Population impact` }));
+    expect(onShowEffect).toHaveBeenLastCalledWith(measure.id);
+  });
+
+  it("lists the unavailable measures only when there are any", () => {
     renderTab();
-    const [table] = screen.getAllByRole("table");
-    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Measure", "Published description", "Results from"]);
-    for (const measure of MEASURE_MODELLING) {
-      const row = within(table).getByRole("rowheader", { name: measure.name }).closest("tr");
-      expect(row.querySelector(".method-measure-year")).toHaveTextContent(`Results from ${fiscalYearTick(2026)}`);
+    const heading = screen.queryByRole("heading", { name: "Unavailable measures" });
+    if (UNAVAILABLE.length === 0) {
+      expect(heading).toBeNull();
+    } else {
+      const card = heading.closest(".method-card");
+      expect(within(card).getAllByRole("listitem")).toHaveLength(UNAVAILABLE.length);
+      for (const measure of UNAVAILABLE) expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
     }
+    const empty = { ...catalogue, measures: catalogue.measures.filter((measure) => measure.displayable) };
+    cleanup();
+    render(<MeasureCatalogueProvider catalogue={empty}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
+    expect(screen.queryByRole("heading", { name: "Unavailable measures" })).toBeNull();
+  });
+
+  it("labels the first year with results only for a measure that differs from the rest", () => {
+    // Review of 62febdd, finding 6: results cover every scored year, so a
+    // measure that starts in 2031-32 can have results from 2026-27. A label
+    // the same on every row says nothing, so only a different year shows.
+    renderTab();
+    expect(descriptionsCard()).not.toHaveTextContent("Results from");
+    const later = { ...catalogue, displayable: catalogue.displayable.map((measure, index) => (index === 0 ? { ...measure, unsupported_years: [2026] } : measure)) };
+    const twin = { ...later, displayable: [...later.displayable, { ...catalogue.displayable[1], id: "twin", name: "Twin", seriesKey: "measure:twin" }] };
+    cleanup();
+    render(<MeasureCatalogueProvider catalogue={twin}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
+    const row = within(descriptionsCard()).getByRole("button", { name: later.displayable[0].name }).closest(".mm-item");
+    expect(row).toHaveTextContent(`Results from ${fiscalYearTick(2027)}`);
+    expect(descriptionsCard().textContent.match(/Results from/g)).toHaveLength(1);
     // The first supported year: an unsupported year has no results
     const partly = { displayable: [{ description: "From 6 April 2031", years: [2028, 2026, 2027], unsupported_years: [2026] }] };
     expect(measureModelling(partly)[0].from).toBe(2027);
+    expect(usualFirstYear([{ from: 2026 }, { from: 2027 }, { from: 2026 }])).toBe(2026);
   });
 
-  it("shows the one modelling note under its measure's published description", () => {
+  it("shows the one modelling note, as bullets, in its measure's row", () => {
     // #113's scope note: independent text, not part of the receipt
     const noted = { ...catalogue, displayable: catalogue.displayable.map((measure, index) => (index === 0 ? { ...measure, id: MODELLING_NOTE.id } : measure)) };
     render(<MeasureCatalogueProvider catalogue={noted}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
-    const [table] = screen.getAllByRole("table");
-    const notes = table.querySelectorAll(".method-measure-note");
+    const notes = document.querySelectorAll(".mm-note");
     expect(notes).toHaveLength(1);
-    const row = within(table).getByRole("rowheader", { name: noted.displayable[0].name }).closest("tr");
+    const row = within(descriptionsCard()).getByRole("button", { name: noted.displayable[0].name }).closest(".mm-item");
     expect(row).toContainElement(notes[0]);
     expect(row).toHaveTextContent(noted.displayable[0].description);
-    expect(notes[0]).toHaveTextContent(`Modelling note: ${MODELLING_NOTE.note}`);
+    expect(within(notes[0]).getAllByRole("listitem", { hidden: true }).map((item) => item.textContent)).toEqual(sentences(MODELLING_NOTE.note));
   });
 
   it("shows no modelling note while its measure is not displayed", () => {
     renderTab();
-    expect(document.querySelectorAll(".method-measure-note")).toHaveLength(0);
+    expect(document.querySelectorAll(".mm-note")).toHaveLength(0);
     const other = { description: "Published.", years: [2027], unsupported_years: [] };
     expect(measureModelling({ displayable: [{ ...other, id: "another_measure" }] })[0].note).toBeNull();
     expect(measureModelling({ displayable: [{ ...other, id: MODELLING_NOTE.id }] })[0].note).toBe(MODELLING_NOTE.note);
   });
 
-  it("keeps every figure in the modelling note attributed to its outside source", () => {
-    // Review of 3d52cff, finding 3: a figure of ours needs a receipt, so the
-    // hand-written note may carry only dated estimates from named sources
-    const sentences = MODELLING_NOTE.note.split(/(?<=\.)\s+/);
-    const priced = sentences.filter((sentence) => sentence.includes("£"));
+  it("keeps the modelling note neutral: no outside organisation, and only a government figure", () => {
+    // Dashboard text names no think tank or outside analyst and compares
+    // with no outside estimate. A figure of ours needs a receipt (review of
+    // 3d52cff, finding 3), so the note's one figure is HMRC's, dated.
+    expect(MODELLING_NOTE.note).not.toMatch(/Resolution Foundation|Tax Policy Associates|Institute|Foundation|Associates|think tank/i);
+    const priced = sentences(MODELLING_NOTE.note).filter((sentence) => sentence.includes("£"));
     expect(priced.length).toBeGreaterThan(0);
     for (const sentence of priced) {
-      expect(sentence).toMatch(/Resolution Foundation|Tax Policy Associates|HMRC/);
+      expect(sentence).toMatch(/\bHMRC\b/);
+      expect(sentence).toMatch(/2025-26/);
     }
     expect(MODELLING_NOTE.note).not.toMatch(/\bthe model\b|PolicyEngine/i);
-    expect(MODELLING_NOTE.note).toMatch(/2025-26/);
+  });
+
+  it("reads a summary and modelling chips from the published wording alone", () => {
+    const text = "Candidate measure. VAT falls to 15%, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years. Applied in Great Britain, so households in Scotland are approximate. The data identify no apprentices, so the cost includes them. Gains are imputed, so the base is likely 1.5 to 1.7 times too high.";
+    expect(measureSummary(text)).toBe("VAT falls to 15%, fully passed through to pump prices; spending on fuel is held fixed.");
+    expect(measureSummary("Drill 5 mock measure. It does one thing.")).toBe("It does one thing.");
+    const { facts, limits } = modellingFacts(text);
+    expect(facts).toEqual(["Day-weighted", "Spending held fixed", "Full pass-through", "Great Britain only", "Imputed data"]);
+    expect(limits.map((limit) => limit.label)).toEqual(["Approximate for Scotland", "Data limit: no apprentices flagged", "Known limitation"]);
+    expect(limits[2].sentence).toBe("Gains are imputed, so the base is likely 1.5 to 1.7 times too high.");
+    expect(modellingFacts("Wages are held fixed.").facts).toEqual(["Wages held fixed"]);
+    expect(modellingFacts("A plain measure.")).toEqual({ facts: [], limits: [] });
+  });
+
+  it("says each published sentence once: an opened row leaves out the label, the summary and chip sentences", () => {
+    const text = "Candidate measure. Employers pay no NI for under-25s. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes them. Costs follow the Treasury's 2027-28 rates and are rounded to the nearest £10 million for every year shown here.";
+    const summary = measureSummary(text);
+    const { limits } = modellingFacts(text);
+    expect(remainingPoints(text, summary, limits)).toEqual([
+      "Costs follow the Treasury's 2027-28 rates and are rounded to the nearest £10 million for every year shown here.",
+    ]);
+    // A longer sentence a fact chip comes from says more than the chip, so it stays
+    const long = "Day-weighted to fiscal years, with each rate applied from the day it takes effect to the day the next one does.";
+    expect(remainingPoints(`A label here. First sentence of it. ${long}`, "First sentence of it.", [])).toEqual([long]);
+    expect(remainingPoints("Only one sentence here.", "Only one sentence here.", [])).toEqual([]);
+  });
+
+  it("keeps a stated limitation in view: its chip opens to the sentence without opening the row", () => {
+    const caveat = "The base is likely 1.5 to 1.7 times too high.";
+    const limited = { ...catalogue, displayable: catalogue.displayable.map((measure, index) => (index === 0 ? { ...measure, description: `${measure.description} ${caveat}` } : measure)) };
+    render(<MeasureCatalogueProvider catalogue={limited}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
+    const row = within(descriptionsCard()).getByRole("button", { name: limited.displayable[0].name }).closest(".mm-item");
+    const chip = within(row).getByRole("button", { name: "Known limitation" });
+    const sentence = document.getElementById(chip.getAttribute("aria-controls"));
+    expect(sentence).not.toBeVisible();
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute("aria-expanded", "true");
+    expect(sentence).toBeVisible();
+    expect(sentence).toHaveTextContent(caveat);
+    expect(row.querySelector(".mm-body")).not.toBeVisible();
   });
 
   it("lists the measures the model cannot cost", () => {
     renderTab();
     const card = screen.getByRole("heading", { name: "Not modelled" }).closest(".method-card");
-    const table = within(card).getByRole("table");
-    expect(within(table).getAllByRole("row").slice(1)).toHaveLength(NOT_MODELLED.length);
+    const items = within(card).getAllByRole("listitem");
+    expect(items).toHaveLength(NOT_MODELLED.length);
     expect(NOT_MODELLED.length).toBeGreaterThan(0);
     for (const measure of NOT_MODELLED) {
-      expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
-      expect(table).toHaveTextContent(measure.why);
+      expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
     }
     // Text only: no measure the catalogue publishes, and no figure
     for (const measure of catalogue.measures) {
-      expect(within(table).queryByRole("rowheader", { name: measure.name })).toBeNull();
+      expect(items.some((item) => item.querySelector(".mm-reason-name").textContent === measure.name)).toBe(false);
     }
-    expect(table.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
+    expect(within(card).getByRole("list").textContent).not.toMatch(/£|\d+(\.\d+)?%/);
   });
 
   it("points to the household calculation from its slot", () => {

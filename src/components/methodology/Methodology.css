@@ -231,64 +231,6 @@
   color: var(--pe-gray-800);
 }
 
-/* How each measure is modelled */
-.method-measures {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
-.method-measures thead th {
-  padding: 0 12px 8px 0;
-  border-bottom: 1px solid var(--card-border);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  text-align: left;
-  color: var(--pe-gray-500);
-}
-
-.method-measures tbody th,
-.method-measures td {
-  padding: 10px 12px 10px 0;
-  vertical-align: top;
-  text-align: left;
-}
-
-.method-measures tbody tr + tr th,
-.method-measures tbody tr + tr td {
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.method-measures tbody th {
-  width: 30%;
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-measures td {
-  color: var(--pe-gray-700);
-}
-
-.method-measure-note {
-  margin: 6px 0 0;
-  color: var(--pe-gray-600);
-}
-
-.method-measure-note-label {
-  font-weight: 600;
-}
-
-.method-measure-year {
-  width: 96px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.method-cell-label {
-  display: none;
-}
-
 .method-swatch {
   display: inline-block;
   width: 10px;
@@ -351,46 +293,6 @@
   .method-facts-wide .method-fact {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 2px;
-  }
-
-  /* The measures table as one block per measure */
-  .method-measures thead {
-    display: none;
-  }
-
-  .method-measures,
-  .method-measures tbody,
-  .method-measures tr,
-  .method-measures tbody th,
-  .method-measures td {
-    display: block;
-    width: auto;
-  }
-
-  .method-measures tbody th,
-  .method-measures td {
-    padding: 0;
-    border: 0 !important;
-  }
-
-  .method-measures tr {
-    padding: 12px 0;
-  }
-
-  .method-measures tbody tr + tr {
-    border-top: 1px solid var(--pe-gray-100);
-  }
-
-  .method-measures td {
-    margin-top: 4px;
-  }
-
-  .method-measure-year {
-    color: var(--pe-gray-500);
-  }
-
-  .method-cell-label {
-    display: inline;
   }
 }
 
@@ -503,41 +405,6 @@
   color: var(--band-teal);
 }
 
-/* Long text in the measures table: two lines, then "Show more" */
-.method-clamp {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.method-clamp-open {
-  display: block;
-  -webkit-line-clamp: unset;
-}
-
-.method-clamp-toggle {
-  margin-top: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  cursor: pointer;
-}
-
-.method-clamp-toggle:hover {
-  text-decoration: underline;
-}
-
-.method-clamp-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
 /* Not modelled: a quieter table */
 .method-muted-card {
   background: var(--pe-gray-50);
@@ -545,16 +412,6 @@
 
 .method-card.method-muted-card .method-more {
   margin: 0 0 12px;
-}
-
-.method-measures-muted tbody th {
-  font-weight: 500;
-  color: var(--pe-gray-700);
-}
-
-.method-row-name {
-  display: block;
-  margin-bottom: 4px;
 }
 
 /* Limitations: callouts */
@@ -674,14 +531,6 @@
     width: 34px;
     height: 34px;
   }
-
-  .method-measure-year {
-    width: auto;
-  }
-
-  .method-measures td.method-measure-year {
-    margin-top: 6px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -750,23 +599,6 @@
 
 .method-chips .method-tag {
   font-variant-numeric: tabular-nums;
-}
-
-/* Measure notes: a summary line, the rest as bullets on demand */
-.method-clamp-summary {
-  display: block;
-}
-
-.method-points-more {
-  margin-top: 6px;
-  font-size: var(--fs-small);
-}
-
-/* Not modelled: an icon before each name */
-.method-row-name {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
 }
 
 .method-row-icon {
@@ -843,15 +675,12 @@
   }
 
   /* 40px tap areas */
-  .method-clamp-toggle,
+  .mm-links a,
+  .mm-effect,
   .method-back a {
     display: inline-flex;
     align-items: center;
     min-height: 40px;
-  }
-
-  .method-clamp-toggle {
-    margin-top: 0;
   }
 
   .method-back {
@@ -974,13 +803,6 @@
   margin-top: 0;
 }
 
-/* Not modelled: a compact table */
-.method-measures-compact tbody th,
-.method-measures-compact td {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
 @media (max-width: 899px) {
   .method-summary,
   .method-details-body {
@@ -1048,4 +870,242 @@
   border: none;
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+}
+
+/* Published measure descriptions: grouped rows that open to the full text */
+.mm-group + .mm-group {
+  margin-top: 20px;
+}
+
+.mm-group-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--card-border);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pe-gray-700);
+}
+
+.mm-group-count {
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.mm-list,
+.mm-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-item {
+  padding: 10px 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mm-item + .mm-item {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.mm-item .method-swatch {
+  flex: none;
+  margin: 0;
+  background: var(--mm-accent);
+}
+
+.mm-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  color: var(--pe-gray-900);
+  cursor: pointer;
+}
+
+.mm-toggle:hover .mm-name {
+  color: var(--pe-teal-700);
+}
+
+.mm-toggle:focus-visible,
+.mm-limit-chip:focus-visible,
+.mm-effect:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+.mm-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.mm-chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--pe-gray-400);
+  transition: transform var(--pe-transition-fast);
+}
+
+.mm-toggle[aria-expanded="true"] .mm-chevron {
+  transform: rotate(180deg);
+}
+
+.mm-summary {
+  margin: 2px 0 0 18px;
+  color: var(--pe-gray-700);
+}
+
+.mm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0 18px;
+}
+
+.mm-limit-chip {
+  font: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mm-limit-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mm-limit-chip[aria-expanded="true"] {
+  border-color: var(--c-loss);
+}
+
+.mm-limit {
+  margin: 6px 0 0 18px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--c-loss-border);
+  background: var(--c-notice-bg);
+  color: var(--pe-gray-800);
+}
+
+.mm-body {
+  margin: 8px 0 0 18px;
+  padding: 10px 12px;
+  border-radius: var(--pe-radius-md);
+  background: var(--pe-gray-50);
+}
+
+.mm-label {
+  margin: 0 0 2px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.mm-note {
+  margin-top: 8px;
+}
+
+.mm-note-first {
+  margin-top: 0;
+}
+
+.mm-points {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--pe-gray-700);
+}
+
+.mm-points li + li {
+  margin-top: 2px;
+}
+
+.mm-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 10px 0 0;
+}
+
+.mm-links:first-child {
+  margin-top: 0;
+}
+
+.mm-links a,
+.mm-effect {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mm-links a:hover,
+.mm-effect:hover {
+  text-decoration: underline;
+}
+
+.mm-links svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Unavailable and not modelled: a name and its reason per line */
+.mm-reasons li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 6px 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mm-reasons li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.mm-reason-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.mm-reason-why {
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 899px) {
+  .mm-reasons li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .mm-toggle {
+    min-height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-chevron {
+    transition: none;
+  }
 }

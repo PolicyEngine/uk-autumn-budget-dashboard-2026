@@ -33,6 +33,8 @@ import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/yo
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
 import ControlBar from "./ControlBar";
+import { MeasureGroupTick } from "./MeasureShareTick";
+import { sharesByMeasureAllGroups } from "../utils/measureShares";
 import {
   PENSIONER_AGE_FIRST,
   PENSIONER_AGE_LAST,
@@ -714,7 +716,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
-        {ageLabel(label)}, {yearLabel}
+        {row.measure ? `${row.measure}: ${row.groupLabel}` : ageLabel(label)}, {yearLabel}
       </p>
       {OUTCOMES.map((outcome) => (
         <p key={outcome.key} className="chart-tooltip-row">
@@ -739,10 +741,29 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
   // By group (pensioners, under State Pension age, all ages) or by single
   // year of age from State Pension age, as Young people's card
   const [view, setView] = useState("band");
-  const single = view === "single";
+  // With no run for the whole selection: one row group per measure, its own
+  // shares for pensioners, people under State Pension age and all ages
+  const perMeasure = sharesByMeasureAllGroups(pensionerShares, rows, policies, selectedPolicies, year, catalogue.combinedId);
+  const labels = perMeasure
+    ? Object.fromEntries(perMeasure.rows.map((r) => [`${r.id}|${r.groupKey}`, { name: r.name, group: r.groupLabel, first: r.first }]))
+    : {};
+  const single = !perMeasure && view === "single";
   const from = pensionerAge(year);
-  const shares = (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year, catalogue.combinedId);
-  const data = shares
+  const shares = perMeasure ? null : (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year, catalogue.combinedId);
+  const data = perMeasure
+    ? perMeasure.rows.map((row) =>
+        visibleSegments(
+          {
+            group: `${row.id}|${row.groupKey}`,
+            key: `${row.id}|${row.groupKey}`,
+            measure: row.name,
+            groupLabel: row.groupLabel,
+            ...Object.fromEntries(OUTCOME_KEYS.map((key) => [key, row.row[key]])),
+          },
+          OUTCOME_KEYS,
+        ),
+      )
+    : shares
     ? shares.groups
         .filter((group) => !group.suppressed)
         .map((group) =>
@@ -754,7 +775,9 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
     : [];
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
   const title = `Better and worse off, ${yearLabel}`;
-  const description = single
+  const description = perMeasure
+    ? "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages, each selected measure on its own."
+    : single
     ? `Share of people better or worse off (a change over 0.01%), by single year of age from State Pension age (${from}) to 90 and over, then all pensioners.`
     : "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
   const download = {
@@ -769,15 +792,18 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
     },
     csv: () =>
       buildChartCsv({
-        title: single
+        title: perMeasure
+          ? `People better off, unchanged and worse off, pensioners and others, each measure on its own, ${yearLabel}`
+          : single
           ? `People better off, unchanged and worse off by single year of age, pensioners, ${yearLabel}`
           : `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
-          { key: "group", label: single ? "Age" : "Group" },
+          ...(perMeasure ? [{ key: "measure", label: "Measure" }] : []),
+          { key: perMeasure ? "groupLabel" : "group", label: single ? "Age" : "Group" },
           ...OUTCOMES.map((outcome) => ({ key: outcome.key, label: `${outcome.label} (%)`, decimals: 2 })),
         ],
-        rows: data.map((row) => ({ group: row.group, ...row.real })),
+        rows: data.map((row) => ({ group: row.group, measure: row.measure, groupLabel: row.groupLabel, ...row.real })),
         notes: thin.length
           ? [`Not shown, too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}`]
           : [],
@@ -792,10 +818,11 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
         title={title}
         description={description}
         download={download}
-        disabledReason={shares || !published ? undefined : "Choose one policy or all policies"}
       />
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        {!perMeasure && (
+          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        )}
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
@@ -844,8 +871,8 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
             </BarChart>
           </ResponsiveContainer>
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap="38%">
+          <ResponsiveContainer width="100%" height={perMeasure ? Math.max(height, data.length * 30 + perMeasure.rows.filter((r) => r.first).length * 18 + 60) : height}>
+            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap={perMeasure ? "18%" : "38%"}>
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               <XAxis
                 type="number"
@@ -861,8 +888,8 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
               <YAxis
                 type="category"
                 dataKey="group"
-                tick={<GroupTick narrow={narrow} />}
-                width={narrow ? 92 : 168}
+                tick={perMeasure ? <MeasureGroupTick labels={labels} narrow={narrow} /> : <GroupTick narrow={narrow} />}
+                width={perMeasure ? (narrow ? 132 : 200) : narrow ? 92 : 168}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -886,10 +913,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
           </ResponsiveContainer>
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>
-              These shares come from one simulation of the selected policies together, so they are shown for a
-              single policy or for all policies.
-            </p>
+            <p>No shares are published for this selection in {yearLabel}.</p>
           </div>
         )}
       </div>
@@ -914,10 +938,14 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
         <ChartMoreInfo year={Number(selectedYear)}>
-          <p>
-            The shares come from one simulation of the selected policies together, so they are shown for a single
-            policy or for all policies.
-          </p>
+          <p>Each person counts their household&apos;s change in net income.</p>
+          {perMeasure && (
+            <p>
+              Each row is one measure simulated on its own. The shares can&apos;t be added up across measures, and no
+              published run covers this selection together.
+              {perMeasure.missing.length > 0 && ` Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`}
+            </p>
+          )}
         </ChartMoreInfo>
       </div>
     </div>

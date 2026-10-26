@@ -658,7 +658,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             </section>
           </div>
         ) : value === "methodology" ? (
-          <MethodologyTab onShowTab={handleTabChange} />
+          <MethodologyTab onShowTab={handleTabChange} onShowEffect={handleShowEffect} />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
