@@ -2820,6 +2820,46 @@ body {
 }
 
 
+/* ---------- Popovers and menus (usePresence.js) ---------- */
+/* In: a fade and a scale from 0.98, from the edge it opens from. Out: a
+   fade, while the hook keeps it mounted for --motion-fast. */
+.popover-motion {
+  transform-origin: top center;
+  animation: popover-in var(--motion-fast) var(--ease-out);
+}
+
+.popover-motion.is-leaving {
+  pointer-events: none;
+  animation: popover-out var(--motion-fast) ease-in forwards;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-motion,
+  .popover-motion.is-leaving {
+    animation: none;
+  }
+}
+
 /* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
 /* The new content of a card whose view changed: a fade and a 6px rise */
 .swap-transition-inner.swap-in {
