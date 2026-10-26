@@ -65,7 +65,7 @@ export const POLICIES = [
     starts: "October 2026",
     type: "VAT",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is the candidate extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%.",
+      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is the candidate extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
