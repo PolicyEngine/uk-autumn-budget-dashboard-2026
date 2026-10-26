@@ -36,6 +36,18 @@ export const GROUPINGS = {
   vigintile: { label: "Vigintiles", noun: "vigintile", share: "twentieth" },
 };
 const POPULATIONS = { all: "All people", non_pensioners: "Non-pensioners" };
+
+// Vigintile 1, the lowest-income 5%, is left out of the chart, sentence and
+// CSV: incomes at the very bottom of the survey are often temporarily low
+// (self-employment losses, students, people living off savings) or
+// under-reported, so they say little about living standards, and with few
+// households their growth swings from year to year. Quintiles and deciles
+// keep their bottom group, which is wider and steadier.
+const SKIPPED = { vigintile: 1 };
+export const VIGINTILE_NOTE =
+  "The lowest-income 5% are left out: incomes at the very bottom of the survey are often temporarily low or under-reported, so they say little about living standards and swing from year to year.";
+const VIGINTILE_ABOUT =
+  "Vigintile 1, the lowest-income 5% of people, is left out. Incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, so they say little about living standards, and with few households behind them their growth swings from year to year. The chart starts at vigintile 2, the 5th to 10th percentile.";
 const VIEWS = { period: "Whole period", annual: "Year by year" };
 
 /**
@@ -112,15 +124,24 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   const g = GROUPINGS[grouping];
   const n = first.real_median.length;
-  const colours = incomeGroupColours(n);
-  const groupName = (i) => `${g.noun[0].toUpperCase()}${g.noun.slice(1)} ${i + 1}${i === 0 ? " (lowest income)" : i === n - 1 ? " (highest income)" : ""}`;
+  // The groups shown: all, or from vigintile 2 (SKIPPED)
+  const skip = SKIPPED[grouping] ?? 0;
+  const shown = Array.from({ length: n - skip }, (_, k) => k + skip);
+  // The ramp's ends stay on the lowest and highest group shown
+  const colours = incomeGroupColours(shown.length);
+  const colourOf = (i) => colours[i - skip];
+  const groupName = (i) =>
+    `${g.noun[0].toUpperCase()}${g.noun.slice(1)} ${i + 1}${
+      i === skip ? (skip ? " (lowest shown, 5th–10th percentile)" : " (lowest income)") : i === n - 1 ? " (highest income)" : ""
+    }`;
+  const lowest = skip ? `second-lowest-income ${g.share} (5th–10th percentile)` : `lowest-income ${g.share}`;
   const basisShort = basis.toUpperCase();
   const who = population === "all" ? "" : " among non-pensioners";
   const say = (v) => changeVerb(v, "%") || "stays flat";
   const axisLabel = `Income ${g.noun} (1 = lowest)`;
 
   // Whole period: one bar per group, the change from the first to the end year
-  const periodRows = first.real_median.map((_, i) => ({
+  const periodRows = shown.map((i) => ({
     group: i + 1,
     growth: ((1 + end.cumulative[i]) / (1 + first.cumulative[i]) - 1) * 100,
   }));
@@ -129,28 +150,28 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const annualYears = byYear.slice(firstIndex + 1, lastIndex + 1);
   const annualRows = annualYears.map((r) => ({
     year: fyStart(r.year),
-    ...Object.fromEntries(r.annual.map((v, i) => [`g${i + 1}`, v * 100])),
+    ...Object.fromEntries(shown.map((i) => [`g${i + 1}`, r.annual[i] * 100])),
   }));
-  const groupSeries = colours.map((colour, i) => ({ key: `g${i + 1}`, name: groupName(i), colour }));
+  const groupSeries = shown.map((i) => ({ key: `g${i + 1}`, name: groupName(i), colour: colourOf(i) }));
   const annual = view === "annual" && annualRows.length > 0;
   // The ramp's ends name it; year by year with five groups, every group
   // (whole period, the axis numbers the groups)
-  const legendItems = (annual && n <= 5 ? groupSeries : [groupSeries[0], groupSeries[n - 1]]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
+  const legendItems = (annual && groupSeries.length <= 5 ? groupSeries : [groupSeries[0], groupSeries.at(-1)]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
 
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
   const axis = divergingAxis(values, { pad: 0.1 });
-  const lowAnnual = annualYears.map((r) => r.annual[0] * 100);
+  const lowAnnual = annualYears.map((r) => r.annual[skip] * 100);
   const highAnnual = annualYears.map((r) => r.annual[n - 1] * 100);
 
   const summary = annual ? (
     <>
-      Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the lowest-income
-      {" "}{g.share} <strong>{annualRange(lowAnnual)}</strong>; in the highest-income {g.share} it <strong>{annualRange(highAnnual)}</strong>.
+      Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the {lowest}{" "}
+      <strong>{annualRange(lowAnnual)}</strong>; in the highest-income {g.share} it <strong>{annualRange(highAnnual)}</strong>.
     </>
   ) : (
     <>
-      From {fyDash(first.year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the lowest-income
-      {" "}{g.share} <strong>{say(periodRows[0].growth)}</strong>; in the highest-income {g.share} it <strong>{say(periodRows[n - 1].growth)}</strong>.
+      From {fyDash(first.year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the {lowest}{" "}
+      <strong>{say(periodRows[0].growth)}</strong>; in the highest-income {g.share} it <strong>{say(periodRows.at(-1).growth)}</strong>.
     </>
   );
 
@@ -200,7 +221,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const block = data.income_growth_by_group?.groupings && Object.keys(data.income_growth_by_group.groupings).length ? data.income_growth_by_group : null;
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
   const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}, ranked among themselves.` : "";
-  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}. Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}`;
+  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}. Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}`;
   const fileStem = `income-growth-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
 
   return {
@@ -210,7 +231,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     notes: [
       basis === "ahc" && data.meta.cpi_ahc_note,
       grouping === "vigintile" &&
-        `The lowest-income twentieth's median is ${formatPounds(first.real_median[0])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,
+        `The second-lowest-income twentieth's median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,
     ],
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
@@ -263,6 +284,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         barGap={n > 10 ? 0 : 1}
         maxBarSize={n > 5 ? 14 : 24}
         barCategoryGap={n > 10 ? "8%" : "20%"}
+        legendNote={skip ? VIGINTILE_NOTE : null}
       />
     ) : (
       <LsBarChart
@@ -270,8 +292,9 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         xKey="group"
         xFormat={String}
         xLabel={axisLabel}
-        series={[{ key: "growth", name: `Real change, ${fyDash(first.year)} to ${fyDash(end.year)}`, colour: colours[n - 1] }]}
+        series={[{ key: "growth", name: `Real change, ${fyDash(first.year)} to ${fyDash(end.year)}`, colour: colours.at(-1) }]}
         cellColours={colours}
+        legendNote={skip ? VIGINTILE_NOTE : null}
         legendItems={legendItems}
         yFormat={pctTick}
         tooltipFormat={pct}

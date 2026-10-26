@@ -37,6 +37,9 @@ export default function LsCard({
   notes,
   source,
   sourceText,
+  // A footer of the card's own in place of "About this chart" (e.g. a
+  // measures chart's "More info")
+  footer,
   className = "",
 }) {
   const plotRef = useRef(null);
@@ -79,7 +82,8 @@ export default function LsCard({
         {children}
       </div>
       <div className="ls-card-footer">
-        {(about || aboutNotes.length > 0 || source) && (
+        {footer}
+        {!footer && (about || aboutNotes.length > 0 || source) && (
           <Disclosure inCard title="About this chart">
             {about && <p>{text(about)}</p>}
             {aboutNotes.length > 0 && (

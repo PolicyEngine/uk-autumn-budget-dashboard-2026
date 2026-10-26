@@ -117,7 +117,8 @@ describe("the Pre-measures forecast view", () => {
     const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
     await within(poverty).findByRole("heading", { name: "Poverty under current law" });
     expect(card(poverty, /^Poverty over time$/).closest(".charts-grid")).toBe(card(poverty, /^Who is in poverty$/).closest(".charts-grid"));
-    expect(poverty.querySelectorAll(".ls-card")).toHaveLength(2);
+    // The two current-law cards, and Which measures move poverty (an ls-card)
+    expect(poverty.querySelectorAll(".ls-card")).toHaveLength(3);
   });
 
   it.each([
@@ -239,7 +240,17 @@ describe("the Pre-measures forecast view", () => {
     expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
     // Vigintiles clear the household floor, so they are offered
     choose(growth, "Income groups", "Vigintiles");
-    expect(within(growth).getByText(/lowest-income twentieth/)).toBeInTheDocument();
+    // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
+    // the second-lowest twentieth, the key at vigintile 2, with a note
+    expect(within(growth).getByText(/second-lowest-income twentieth \(5th–10th percentile\)/)).toBeInTheDocument();
+    expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
+    expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
+    expect(within(growth).queryByText(/^Vigintile 1\b/)).toBeNull();
+    expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
+    // Deciles keep their bottom group, with no note
+    choose(growth, "Income groups", "Deciles");
+    expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
+    choose(growth, "Income groups", "Vigintiles");
     // Whole period goes in the address; back to the defaults leaves nothing
     choose(growth, "Growth view", "Whole period");
     expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");
