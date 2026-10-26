@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
@@ -24,6 +25,15 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -380,7 +390,7 @@ describe("ConstituencyMap", () => {
     expect(drawn).toEqual([]);
     container
       .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
+      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
     expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
   });
 
@@ -435,7 +445,7 @@ describe("ConstituencyMap", () => {
     expect(drawn).toEqual([]);
     container
       .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
+      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
     unmount();
 
     resetGeographyCache();
@@ -531,7 +541,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(container.querySelector("path.constituency-path")).toBeNull();
     expect(container.querySelector('svg[role="img"]')).toBeNull();
     for (const path of container.querySelectorAll(".map-template-svg path")) {
-      expect(path.getAttribute("fill")).toBe("#D1D5DB");
+      expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis);
     }
     expect(
       screen.getByRole("button", { name: /Download chart/ }),

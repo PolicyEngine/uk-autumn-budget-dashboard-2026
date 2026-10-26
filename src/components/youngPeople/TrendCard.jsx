@@ -31,6 +31,7 @@ import { AGE_GROUPS, YOUNG_BAND } from "../../utils/ageImpact";
 import { GROUP_STYLES, changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
 import TitleIcon from "../TitleIcon";
+import ChartMoreInfo from "../ChartMoreInfo";
 
 /** One line per age group, 16 to 24 drawn thicker, all ages dashed. */
 export const SERIES = AGE_GROUPS.map((group) => ({
@@ -254,6 +255,19 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+      {/* The same foot as the card beside it, so the pair ends level */}
+      <div className="chart-footer">
+        <ChartMoreInfo year={Number(selectedYear)}>
+          <p>
+            Each point is the sum of each selected policy&apos;s own effect; each person counts their
+            household&apos;s change in net income (not equivalised). The shaded year is the one chosen in the bar
+            above.
+          </p>
+          {unpublished.length > 0 && (
+            <p>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</p>
+          )}
+        </ChartMoreInfo>
       </div>
     </div>
   );

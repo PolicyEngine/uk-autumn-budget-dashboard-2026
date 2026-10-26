@@ -1,0 +1,3 @@
+reform_id,reform_name,year,household,x_variable,income,baseline_net_income,reform_net_income
+ab2026_mock_alpha,"Mock, ""alpha""
+with a second line, £ and é",2026,single_renter,employment_income,-1.25,-1.25,-1.25

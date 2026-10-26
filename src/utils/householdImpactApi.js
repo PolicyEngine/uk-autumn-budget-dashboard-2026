@@ -291,6 +291,8 @@ export async function postHouseholdImpact(
   }, timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener("abort", onAbort);
+  // A signal aborted before this call never fires its event
+  if (signal?.aborted) controller.abort();
   let response;
   try {
     response = await doFetch(url, {
@@ -388,6 +390,24 @@ function normaliseByPolicy(raw) {
   };
 }
 
+/**
+ * The marginal rate's parts on each sweep step and at your salary, before
+ * and after: {names, before: [{part: rate}], after: [...], own: {before,
+ * after} | null}, or null when the answer has none (an API from before
+ * they were added), so the page draws the totals alone.
+ */
+function rateParts(raw) {
+  if (!raw || !Array.isArray(raw.parts) || !raw.baseline || !raw.reform) return null;
+  const step = (values) => Object.fromEntries(raw.parts.map((name) => [name, num(values?.[name])]));
+  const own = raw.own_point;
+  return {
+    names: raw.parts,
+    before: raw.baseline.map(step),
+    after: raw.reform.map(step),
+    own: own?.baseline && own?.reform ? { before: step(own.baseline), after: step(own.reform) } : null,
+  };
+}
+
 function normaliseSweep(raw) {
   if (!raw || !Array.isArray(raw.points) || raw.points.length < 2) return null;
   const points = raw.points.map((point) => ({
@@ -405,6 +425,7 @@ function normaliseSweep(raw) {
       before: num(rate.baseline),
       after: num(rate.reform),
     })),
+    parts: rateParts(raw.marginal_rate_parts),
     own: own
       ? {
           income: num(own.employment_income),
@@ -466,16 +487,153 @@ export function normaliseHouseholdImpact(raw) {
         }
       : null,
     engine: raw.engine ?? {},
+    // The build's commit, or null when the build reports none (a local run,
+    // a Modal deploy from an edited checkout, or a build older than this)
+    build: buildOf(raw.git_sha),
+    // Every commit this result's stages reported (mergeStages adds each
+    // part's); `build` stays the headline's own
+    builds: buildOf(raw.git_sha) === null ? [] : [buildOf(raw.git_sha)],
   };
 }
 
-/** A later stage's parts added to the first stage's result. */
+const FULL_COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+
+/**
+ * An answer's build commit: the commit, null when the answer reports none,
+ * or for anything else an object that stands for it and equals no build,
+ * not even another copy of itself.
+ */
+function buildOf(value) {
+  if (value === undefined || value === null || value === "") return null;
+  return typeof value === "string" && FULL_COMMIT.test(value) ? value : { malformed: String(value) };
+}
+
+/** Two reported builds are one only as the same well-formed commit. */
+const sameCommit = (a, b) => typeof a === "string" && a === b;
+
+/** A build commit that was reported but isn't one. */
+const malformed = (build) => build != null && typeof build !== "string";
+
+/** Every commit a result's stages have reported so far. */
+const buildsSeen = (result) => result.builds ?? (result.build == null ? [] : [result.build]);
+
+/**
+ * The household API's answer came from other package versions than the
+ * published figures, or than its own other stage. Personal impact is then
+ * unavailable: the figures beside it were not calculated by that model.
+ */
+export class EngineMismatchError extends Error {
+  constructor(packages) {
+    super(`The household calculator runs other model versions (${packages.join(", ")}) than the published figures`);
+    this.name = "EngineMismatchError";
+    this.kind = "engine";
+    this.packages = packages;
+  }
+}
+
+/**
+ * The packages whose versions differ: every package `expected` names that
+ * `reported` lacks or gives another version. Packages only `reported`
+ * names (uk_budget_data, which no receipt records) are not compared.
+ *
+ * @param {Object<string, string>} expected
+ * @param {Object<string, string>} reported
+ * @returns {string[]} sorted package names
+ */
+export function engineDifferences(expected, reported) {
+  const given = reported && typeof reported === "object" ? reported : {};
+  return Object.keys(expected ?? {})
+    .filter((name) => typeof given[name] !== "string" || given[name] !== expected[name])
+    .sort();
+}
+
+/**
+ * The model packages a calculation's stages must share. uk_budget_data is
+ * left out: every build reports the same project version for it, and a build
+ * that doesn't install the project (the Modal image copies it in as a
+ * folder) reports none, so it tells two deployments apart only wrongly.
+ */
+export const STAGE_ENGINE_PACKAGES = ["policyengine", "policyengine-core", "policyengine-uk"];
+
+/** A detail answer's net income may differ from the headline's by this many pennies. */
+const NET_TOLERANCE_PENNIES = 1;
+
+const pennies = (pounds) => Math.round(pounds * 100);
+
+/**
+ * The breakdown came from another deployment than its headline: its model
+ * packages differ, it reports another build commit, or it recomputed another
+ * net income for the same household.
+ */
+export class StageMismatchError extends EngineMismatchError {
+  constructor(packages) {
+    super(packages);
+    this.name = "StageMismatchError";
+    this.message = `The household calculator's breakdown came from another build than its headline (${packages.join(", ")})`;
+  }
+}
+
+/**
+ * Why a detail answer can't sit under this headline, or null if it can.
+ *
+ * Net income alone can't show two answers came from one build: two builds
+ * can agree on this household's net income and still differ elsewhere on
+ * its earnings sweep. Only the build commit can.
+ *
+ * - A part that reports a commit must report the one every stage so far
+ *   has reported (`first.builds`: the headline's and each merged part's),
+ *   so two parts from different builds never meet, even under a headline
+ *   that reports none (review of e78fbf4, finding 2).
+ * - `sameBuild` (the detail service's answers) also needs the headline
+ *   itself to report that commit. A merged part's commit never stands in
+ *   for it.
+ * - A malformed commit from either side refuses the part, even beside
+ *   answers that report none (review of cc15d50, finding 2).
+ *
+ * @param {Object} first - The headline, with any parts merged so far
+ * @param {Object} detail - A later part
+ * @param {{ sameBuild?: boolean }} [options]
+ * @returns {StageMismatchError|null}
+ */
+export function stageMismatch(first, detail, { sameBuild = false } = {}) {
+  const a = first.engine ?? {};
+  const b = detail.engine ?? {};
+  const packages = STAGE_ENGINE_PACKAGES.filter((name) => typeof a[name] !== "string" || a[name] !== b[name]);
+  if (packages.length) return new StageMismatchError(packages);
+  const theirs = detail.build ?? null;
+  const otherBuild =
+    [theirs, first.build, ...buildsSeen(first)].some(malformed) ||
+    (sameBuild && !sameCommit(first.build, theirs)) ||
+    (theirs !== null && buildsSeen(first).some((build) => !sameCommit(build, theirs)));
+  if (otherBuild) return new StageMismatchError(["build"]);
+  const sameNet = ["before", "after"].every(
+    (side) =>
+      Number.isFinite(first.net?.[side]) &&
+      Number.isFinite(detail.net?.[side]) &&
+      Math.abs(pennies(first.net[side]) - pennies(detail.net[side])) <= NET_TOLERANCE_PENNIES,
+  );
+  return sameNet ? null : new StageMismatchError(["net_income"]);
+}
+
+/**
+ * A later stage's parts added to the first stage's result. Both stages must
+ * come from the same build: a breakdown from another deployment never sits
+ * under a headline from this one.
+ *
+ * @throws {StageMismatchError} when the stages' model packages, build
+ *   commits or net income differ
+ */
 export function mergeStages(first, detail) {
+  const mismatch = stageMismatch(first, detail);
+  if (mismatch) throw mismatch;
+  const seen = buildsSeen(first);
   return {
     ...first,
     byPolicy: detail.byPolicy ?? first.byPolicy,
     sweep: detail.sweep ?? first.sweep,
     programmes: first.programmes ?? detail.programmes,
+    // The check above leaves every seen commit equal to the part's
+    builds: detail.build == null || seen.length ? seen : [detail.build],
   };
 }
 
@@ -506,19 +664,83 @@ export function consistentRound(values, total) {
 }
 
 /**
+ * The headline (`include: []`) when the build has a detail URL: asked of
+ * both services at once, the first answer kept and the other request
+ * stopped. A warm Modal answers in a run's time; while it is starting,
+ * Cloud Run answers first, so the headline is never slower than Cloud
+ * Run's. An answer the API refuses as invalid is final; if both fail, the
+ * Cloud Run error is thrown, as without a detail URL.
+ *
+ * Not used by the page for now: its headline is Cloud Run's, the build
+ * the detail service's parts are checked against (useHouseholdImpact). A
+ * Modal headline can be used once it is checked against Cloud Run's
+ * commit, as the parts are.
+ *
+ * @param {Object} body - A request from buildHouseholdRequest
+ * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: Function }} [options]
+ */
+export async function postHouseholdHeadline(body, options = {}) {
+  const detailUrl = householdDetailApiUrl();
+  if (!detailUrl) return postHouseholdImpact(body, options);
+  const loser = new AbortController();
+  const onAbort = () => loser.abort();
+  options.signal?.addEventListener("abort", onAbort);
+  const ask = (url) => postHouseholdImpact(body, { ...options, signal: loser.signal, url });
+  const primary = ask(undefined);
+  const modal = ask(detailUrl);
+  try {
+    return await new Promise((resolve, reject) => {
+      let failures = 0;
+      let primaryError = null;
+      const failed = (error, isPrimary) => {
+        if (error instanceof HouseholdApiError && error.kind === "invalid") {
+          reject(error);
+          return;
+        }
+        if (isPrimary) primaryError = error;
+        failures += 1;
+        if (failures === 2) reject(primaryError ?? error);
+      };
+      primary.then(resolve, (error) => failed(error, true));
+      modal.then(resolve, (error) => failed(error, false));
+    });
+  } finally {
+    // The answer is in (or both failed): stop the other request
+    loser.abort();
+    options.signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+/**
+ * Whether the headline, the sweep and the split by policy can be asked for
+ * all at once: only with a detail URL (Modal), where each run has its own
+ * container. On Cloud Run alone the headline goes first, so it is not
+ * queued behind the slower parts on the instance's worker slots. Not used
+ * by the page for now (see postHouseholdHeadline).
+ */
+export const askAllAtOnce = () => householdDetailApiUrl() !== null;
+
+/**
  * A detail part (sweep or split by policy): from the detail URL when the
  * build has one, falling back to the main API if that service cannot be
- * reached, errs or times out. Answers the page rejects ("invalid") are not
- * retried: the main API would refuse them too.
+ * reached, errs, times out, refuses the request (an older build may not know
+ * a measure) or answers with something `accept` refuses (not the headline's
+ * build). The main API's answer is returned as it is: the caller checks it
+ * again.
+ *
+ * @param {Object} body
+ * @param {Object} [options] - postHouseholdImpact's options, plus
+ *   `accept(raw) => boolean` for the detail URL's answer
  */
-export async function postHouseholdDetail(body, options = {}) {
+export async function postHouseholdDetail(body, { accept = null, ...options } = {}) {
   const detailUrl = householdDetailApiUrl();
   if (!detailUrl) return postHouseholdImpact(body, options);
   try {
-    return await postHouseholdImpact(body, { ...options, url: detailUrl });
+    const raw = await postHouseholdImpact(body, { ...options, url: detailUrl });
+    if (!accept || accept(raw)) return raw;
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    if (!(error instanceof HouseholdApiError) || error.kind === "invalid") throw error;
-    return postHouseholdImpact(body, options);
+    if (!(error instanceof HouseholdApiError)) throw error;
   }
+  return postHouseholdImpact(body, options);
 }

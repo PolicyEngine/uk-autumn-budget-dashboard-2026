@@ -6,8 +6,8 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -60,7 +60,7 @@ function publishedOutlook(base = REAL) {
   return data;
 }
 
-async function renderForecast(data) {
+async function renderForecast(data, props = {}) {
   vi.resetModules();
   vi.stubGlobal(
     "fetch",
@@ -68,15 +68,23 @@ async function renderForecast(data) {
   );
   window.history.replaceState({}, "", "/?tab=living&sub=forecast");
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
-  render(<LivingStandardsTab />);
-  await screen.findByRole("heading", { name: "Forecast changes" });
+  render(<LivingStandardsTab {...props} />);
+  if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
+  else await screen.findByRole("heading", { name: "Forecast changes" });
 }
 
 const card = (name) => screen.getByRole("heading", { level: 3, name }).closest(".ls-card");
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
 const cpiPre = () => REAL.forecast.sections[0].series.find((s) => s.key === "cpi").pre[0].value;
 
+// Warm Vite's real chart dependency tree separately from the assertions.
+// renderForecast still resets modules per case to isolate the outlook cache.
+beforeAll(async () => {
+  await import("./LivingStandardsTab");
+}, 90_000);
+
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
 });
 
@@ -109,45 +117,21 @@ describe("Forecast changes with one forecast", () => {
 });
 
 describe("Forecast changes once the Budget forecast is published", () => {
-  it("draws both forecasts, shows both values and the change, and drops the 'will add' line", async () => {
+  it("holds the Budget-day extract until it has a verified publication route", async () => {
     await renderForecast(publishedOutlook());
-    expect(screen.queryByText(/once the OBR publishes/)).toBeNull();
-    // The basis and both releases, once, in the section's intro
-    const intro = screen.getByText(/compares the OBR March 2026 forecast with the OBR October 2026 forecast/);
-    expect(intro).toHaveTextContent(POST_RELEASE);
-    expect(intro).toHaveTextContent(/earlier forecast: OBR/);
-
-    // Every chart: pre-Budget grey and dashed, the Budget forecast teal and solid
-    const cards = document.querySelectorAll(".ls-card");
-    expect(cards.length).toBe(10);
-    for (const c of cards) {
-      const text = c.querySelector(".chart-legend").textContent;
-      expect(c.querySelectorAll(".grouped-legend .grouped-legend-swatch-line")).toHaveLength(2);
-      expect(text).toMatch(/March 2026/);
-      expect(text).toMatch(/October 2026/);
-    }
-    const legendText = card(/^CPI inflation$/).querySelector(".chart-legend").textContent;
-    expect(legendText).toContain("OBR, March 2026");
-    expect(legendText).toContain("OBR, October 2026");
-
-    // Tiles: "March 2026 2.3% → October 2026 2.6%" and "+0.3pp"; a change that
-    // rounds to zero reads "no change"
-    expect(
-      screen.getByText((_, el) => el?.classList?.contains("forecast-tile-compare") && el.textContent.includes(`${pct(cpiPre())} → October 2026 ${pct(cpiPre() + 0.003)}`)),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/\+0\.3pp/)).toBeInTheDocument();
-    expect(screen.getAllByText("no change").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText(/[−-]0\.0pp/)).toBeNull();
+    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
+    expect(document.querySelector(".ls-card")).toBeNull();
+    expect(screen.queryByText(`${pct(cpiPre())} → ${pct(cpiPre() + 0.003)}`)).toBeNull();
+    expect(screen.queryByText("+0.3pp")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Chart or table/ })).toBeNull();
   });
 
-  it("shows pre, post and difference columns as tables", async () => {
-    await renderForecast(publishedOutlook());
-    fireEvent.click(screen.getByRole("button", { name: /Chart or table/ }));
-    fireEvent.click(screen.getByRole("option", { name: "Tables" }));
-    const cpi = card(/^CPI inflation$/);
-    const headers = within(cpi).getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual(["Year", "OBR, March 2026", "OBR, October 2026", "Difference"]);
-    const first = within(cpi).getAllByRole("row")[1];
-    expect(first).toHaveTextContent(`2027${pct(cpiPre())}${pct(cpiPre() + 0.003)}+0.3pp`);
+  it("keeps the independent baseline available beside the held forecast", async () => {
+    // As App renders it while Population impact (the baseline's usual home)
+    // is unavailable
+    await renderForecast(publishedOutlook(), { withCurrentLaw: true });
+    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
   });
 });

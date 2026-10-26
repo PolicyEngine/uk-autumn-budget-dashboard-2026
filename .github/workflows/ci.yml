@@ -17,7 +17,7 @@ jobs:
   python-test-parts:
     name: Python tests (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # Four parts on four runners at once. Two parts stopped fitting: on 23
+    # Five parts on five runners at once. Two parts stopped fitting: on 23
     # October, after #90 and #96, "the rest" took 29 of its 30 minutes
     # (1,937 tests, 28:25 of pytest at 4473f83), so the next test added
     # crossed the limit. The model-limit and template files, about half of
@@ -25,10 +25,23 @@ jobs:
     # took 12 minutes. On 24 October the household route began applying all
     # ten measures through policyengine-uk Simulation (hh-all-measures), and
     # "the rest" hit 30 minutes at 54%: the household route files took about
-    # 4,100 worker-seconds of it, so they run as a fourth part. A test file
-    # named in no part runs in "the rest", and tests/test_ci_parts.py checks
-    # that the parts partition the suite.
-    timeout-minutes: 30
+    # 4,100 worker-seconds of it, so they run as a fourth part. On 26 October
+    # that part's job ran 21 minutes on #104's last commit and 30:31 on its
+    # merge (5ee4e23; 30:01 of pytest), where the limit cancelled it with all
+    # 238 tests passed. On that slower runner its tests took about 7,090
+    # worker-seconds: the three skip-parity sweeps in test_household_impact.py
+    # 486-539 s each, and the nine all-measures parity runs 201-239 s each.
+    # It now runs as two parts of roughly equal work: "household impact"
+    # (test_household_impact.py, about 3,000 worker-seconds there) and
+    # "household routes" (the all-measures parity file and the four route
+    # files, about 4,100). A test file named in no part runs in "the rest",
+    # and tests/test_ci_parts.py checks that the parts partition the suite.
+    # The limit is 45 minutes, not 30: the same 238 tests took 1.45 times as
+    # long on one runner as on another that day, and "the rest" runs 21 to 22
+    # minutes, so about 32 at that spread, which a 30-minute limit would
+    # cancel with every test passing. A part that needs more than about 30
+    # minutes on a normal runner should still be split.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -50,10 +63,12 @@ jobs:
               tests/test_property_band_index.py
               tests/test_native_measure_regressions.py
               tests/test_measure_keys.py
-          - part: household
+          - part: household impact
+            tests: >-
+              tests/test_household_impact.py
+          - part: household routes
             tests: >-
               tests/test_household_impact_all_measures.py
-              tests/test_household_impact.py
               tests/test_household_calculator_route.py
               tests/test_household_route_parity.py
               tests/test_household_impact_api.py
@@ -95,6 +110,13 @@ jobs:
 
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked --extra dev
+
+      # Tests run the build check (scripts/check-public-files.mjs) through
+      # node to hold it to the Python gates. It shares the page's area and
+      # digest code, which imports canonicalize, so it needs the page's
+      # packages.
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
 
       # Four workers, one per vCPU on GitHub's public-repository runner.
       # loadgroup keeps each xdist_group on one worker, and without the

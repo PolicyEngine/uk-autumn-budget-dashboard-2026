@@ -7,6 +7,10 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.constituencies import (
+    add_constituencies_parser,
+    run_constituencies,
+)
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.living_standards.commands import (
     add_living_standards_parsers,
@@ -20,6 +24,7 @@ from uk_budget_data.pipeline import (
     generate_all_data,
     generate_household_scatter,
     generate_income_curve,
+    generate_income_distribution,
 )
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
@@ -133,13 +138,16 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     generate_parser.add_argument(
         "--only",
-        choices=["age_impact", "household_scatter"],
+        choices=["age_impact", "household_scatter", "income_distribution"],
         default=None,
         help=(
             "Write only this file to --output-dir, leaving the others as "
             "they are. age_impact: results by age band (age_impact.csv). "
             "household_scatter: households by income band and income "
-            "change band, binned (household_scatter_binned.csv)."
+            "change band, binned (household_scatter_binned.csv). "
+            "income_distribution: percentiles of equivalised household net "
+            "income before and after each measure "
+            "(income_distribution.csv)."
         ),
     )
 
@@ -179,6 +187,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_constituencies_parser(subparsers)
     add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
@@ -301,6 +310,10 @@ def run_generate(parsed: argparse.Namespace) -> int:
             generate_household_scatter(
                 reforms=reforms, config=config, runner=runner
             )
+        elif parsed.only == "income_distribution":
+            generate_income_distribution(
+                reforms=reforms, config=config, runner=runner
+            )
         else:
             generate_age_impact(reforms=reforms, config=config, runner=runner)
         return 0
@@ -383,6 +396,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "constituencies":
+        return run_constituencies(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
@@ -401,6 +416,10 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  constituencies - geography's seats pass on the published "
+            "local-area cut, a fresh process per measure"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"

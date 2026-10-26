@@ -11,6 +11,10 @@
       "vintage": "v1"
     }
   },
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
   "combined": {
     "combined--alpha+beta": {
       "approval": {
@@ -295,6 +299,7 @@
       ]
     }
   },
+  "release": "uk-autumn-budget-2026",
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
