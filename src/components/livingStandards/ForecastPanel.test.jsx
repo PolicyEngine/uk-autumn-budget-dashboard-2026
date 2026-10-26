@@ -111,7 +111,7 @@ describe("Forecast changes with one forecast", () => {
     expect(legend).toHaveTextContent("OBR, March 2026");
     expect(legend).not.toHaveTextContent("Budget forecast");
     // The tile shows one value and no change
-    expect(screen.getByText(pct(cpiPre()))).toBeInTheDocument();
+    expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
   });
 });

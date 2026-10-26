@@ -146,27 +146,26 @@
   color: var(--pe-gray-500);
 }
 
-/* The years compared: two compact lists, from → to */
+/* The years compared: a From row and a To row of segments; a phone shows
+   the years short ("27-28") so a row fits */
 .control-bar-years {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.control-bar-select {
-  min-height: 28px;
-  padding: 0 8px;
-  font: inherit;
-  font-size: var(--fs-micro);
-  color: var(--pe-gray-700);
-  background: var(--pe-gray-100);
-  border: none;
-  border-radius: 8px;
+.control-bar-year-short {
+  display: none;
 }
 
-.control-bar-select:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 1px;
+@media (max-width: 480px) {
+  .control-bar-year-full {
+    display: none;
+  }
+
+  .control-bar-year-short {
+    display: inline;
+  }
 }
 
 .control-bar-segments {

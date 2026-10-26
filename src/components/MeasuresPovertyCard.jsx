@@ -287,22 +287,13 @@ export function PovertyMeasuresRow({ rows, policies, selectedPolicies, selectedY
   const props = { rows, policies, selectedPolicies, selectedYear, population };
   return (
     <>
-      {/* The poverty measure both cards show, chosen once above them */}
-      <PovertyChoiceBar />
+      {/* Each card's Options pill holds the poverty measure; the two share
+          it (usePovertyChoice, ?poverty=), so choosing in one changes both */}
       <div className="charts-grid">
-        <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} choiceAbove />
-        <MeasuresPovertyCard {...props} choiceAbove />
+        <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} />
+        <MeasuresPovertyCard {...props} />
       </div>
     </>
   );
 }
 
-/** "Poverty line [Absolute ▾] Housing costs [Before ▾] People [All ▾]", for a pair. */
-export function PovertyChoiceBar() {
-  const { controls } = usePovertyChoice();
-  return (
-    <div className="section-controls" role="group" aria-label="Poverty measure">
-      <ControlBar name="Poverty measure" options={controls} />
-    </div>
-  );
-}
