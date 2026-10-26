@@ -646,18 +646,6 @@ body {
   color: var(--pe-gray-700);
 }
 
-/* Population impact's pointer to the Policies view */
-.policies-link-line {
-  margin: 24px 0 0;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-.policies-link-line a {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-}
-
 .showing-line {
   margin: 0 0 24px;
   font-size: var(--fs-small);
@@ -1555,13 +1543,6 @@ body {
   padding: 4px 0 20px;
 }
 
-.policy-timeline-key {
-  margin: 0 0 24px;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
 .policy-group + .policy-group {
   margin-top: 40px;
 }
@@ -1645,6 +1626,14 @@ body {
     grid-template-rows: subgrid;
     row-gap: 16px;
     align-content: start;
+  }
+
+  /* The footer keeps its place under the source when a neighbour's opened
+     text makes the shared row taller (after the base rule below, so more
+     specific) */
+  .policy-card > .policy-card-foot {
+    align-self: start;
+    margin-top: 0;
   }
 }
 
@@ -1961,7 +1950,10 @@ body {
   display: none;
 }
 
+/* The footer: "How it is modelled" and "See its effect" on one line; the
+   opened text runs the full width of the card beneath them, in full */
 .policy-card-foot {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1975,10 +1967,11 @@ body {
 .policy-card-details {
   flex: 1 1 auto;
   min-width: 0;
-  padding-top: 9px;
+  padding: 0;
 }
 
 .policy-card-details summary {
+  line-height: 40px;
   cursor: pointer;
   width: fit-content;
   font-weight: 500;
@@ -2033,11 +2026,13 @@ body {
 }
 
 .policy-card-effect {
+  position: absolute;
+  top: 14px;
+  right: 0;
   display: inline-flex;
-  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+  min-height: 40px;
   padding: 9px 16px;
   font: inherit;
   font-weight: 600;
@@ -2077,6 +2072,11 @@ body {
 
   .policy-card-source-line {
     align-self: auto;
+  }
+
+  .policy-card > .policy-card-foot {
+    align-self: stretch;
+    margin-top: auto;
   }
 
   .policy-card-source-line:empty,

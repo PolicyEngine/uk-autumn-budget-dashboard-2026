@@ -5,8 +5,6 @@ import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
-import ZeroMeasuresNote from "./components/ZeroMeasuresNote";
-import { decileMembership } from "./utils/legendMembership";
 import ConstituencyMap from "./components/ConstituencyMap";
 import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
@@ -32,6 +30,7 @@ import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
 import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
 
@@ -145,6 +144,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // flight carry on
   const [visited, setVisited] = useState([DEFAULT_VIEW]);
   if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
+
+  // Every "i" tooltip stays inside the screen (a phone's edge columns)
+  useEffect(() => installInfoTooltipClamp(), []);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
@@ -382,27 +384,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
                 rawData={results.rawWinnersLosers}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
-                showZeroNote={false}
               />
               <DistributionalChart
                 rawData={results.rawDistributional}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
-                showZeroNote={false}
               />
             </div>
-            {/* One note for both charts: the measures that are £0 for
-                households this year (greyed out in both keys) */}
-            <ZeroMeasuresNote
-              members={decileMembership(
-                catalogue,
-                results.rawWinnersLosers,
-                "avg_change",
-                selectedPolicies,
-                distributionalYear,
-              )}
-              year={distributionalYear}
-            />
           </section>
           <SectionHeading title="Inequality" />
           <section id="inequality" className="report-section hero-chart">
@@ -489,20 +477,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
         </section>
 
-        {/* The measures are described once, on Policies */}
-        <p className="policies-link-line">
-          What each measure does is on{" "}
-          <a
-            href="?tab=policies"
-            onClick={(event) => {
-              event.preventDefault();
-              handleTabChange("policies");
-            }}
-          >
-            Policies
-          </a>
-          .
-        </p>
       </div>
     );
   };
@@ -614,15 +588,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <div className="results-container">
             <SectionHeading
               title="Policies"
-              subtitle="What each measure does, when it is in force and how it is modelled."
+              subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
             />
             <section id="policy-details" className="report-section policy-details-content">
-              <p className="policy-timeline-key">
-                Each card&apos;s timeline shows when the measure is in force over the years
-                the charts cover, 2026-27 to 2031-32, with Budget day marked; an arrow at the
-                right means it has no end date. &ldquo;See its effect&rdquo; opens Population
-                impact with only that measure selected.
-              </p>
               <PolicyCards
                 policies={POLICIES}
                 selectedPolicies={defaultPolicies}

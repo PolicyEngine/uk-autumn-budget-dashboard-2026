@@ -117,14 +117,15 @@ export function changeByYear(rows, policies, selected, years) {
 
 /**
  * Ticks from a nice step covering [min, max] and zero: steps of 25, 50,
- * 100, 200, 250, 500, 1,000 or 2,500, about four to six of them.
+ * 100, 200, 250, 500, 1,000 or 2,500, at most `maxSteps` intervals (five
+ * by default, so up to six ticks).
  */
-export function niceRange(min, max) {
+export function niceRange(min, max, { maxSteps = 5 } = {}) {
   const low = Math.min(0, min);
   const high = Math.max(0, max);
   const span = Math.max(high - low, 1);
   const steps = [25, 50, 100, 200, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => span / candidate <= 5) ?? 5000;
+  const step = steps.find((candidate) => span / candidate <= maxSteps) ?? 5000;
   const bottom = Math.floor(low / step) * step;
   const top = Math.ceil(high / step) * step;
   const ticks = [];

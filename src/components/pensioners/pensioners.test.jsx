@@ -7,6 +7,7 @@ import {
   pensionerAge,
   pensionerMeasures,
   pensionerShares,
+  pensionerSharesBySingleAge,
   pensionerTrend,
 } from "./pensionersData";
 import { singleAgeBars, SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "../youngPeople/youngPeopleData";
@@ -126,6 +127,28 @@ describe("pensioners data", () => {
     expect(all.row.pct_better_off).toBe(20);
     // No run for part of the selection
     expect(pensionerShares(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027, COMBINED_REFORM_ID)).toBeNull();
+  });
+
+  it("splits better and worse off by single year of age from State Pension age, then the total", () => {
+    const at = (year) => pensionerSharesBySingleAge(fixture(), POLICIES, ALL, year, COMBINED_REFORM_ID).groups;
+    // 67 to 90+ from 2027-28, then Pensioners; 66 to 90+ in 2026-27
+    const groups = at(2027);
+    expect(groups.map((group) => group.label)).toEqual([
+      ...Array.from({ length: SINGLE_AGE_TOP - 67 }, (_, i) => String(67 + i)),
+      "90+",
+      "Pensioners",
+    ]);
+    expect(at(2026)[0].label).toBe("66");
+    expect(groups[0].row.pct_better_off).toBe(40);
+    expect(groups.at(-1).row.pct_worse_off).toBeCloseTo(60);
+    // A thin age is suppressed, and so is the total it belongs to
+    const thin = fixture().map((row) =>
+      row.reform_id === COMBINED_REFORM_ID && row.year === 2027 && row.age_band === "70" ? { ...row, sample_size: 10 } : row,
+    );
+    const thinGroups = pensionerSharesBySingleAge(thin, POLICIES, ALL, 2027, COMBINED_REFORM_ID).groups;
+    expect(thinGroups.find((group) => group.label === "70").suppressed).toBe(true);
+    expect(thinGroups.at(-1).suppressed).toBe(true);
+    expect(pensionerSharesBySingleAge(fixture(), [...POLICIES, { id: "x", name: "X" }], ALL, 2027, COMBINED_REFORM_ID)).toBeNull();
   });
 
   it("leaves Young people's single-age bars as they were", () => {

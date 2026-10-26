@@ -150,6 +150,30 @@ export function pensionerMeasures(rows, policies, selected, year) {
 }
 
 /**
+ * Better off, unchanged and worse off at each single year of age from
+ * State Pension age (pensionerAge) to 90 and over, then the pensioners as
+ * a whole, from the whole selection's run: `{ run, groups: [{ key, label,
+ * age, row, suppressed }] }`, the last group the pensioners' total (null
+ * row, suppressed, when any age is thin), or null when the selection has
+ * no such run or the year no rows.
+ */
+export function pensionerSharesBySingleAge(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
+  if (!run) return null;
+  if (!lookup(rows, run, year, ALL_BAND)) return null;
+  const groups = [];
+  for (let age = pensionerAge(year); age <= SINGLE_AGE_TOP; age += 1) {
+    const key = singleAgeKey(age);
+    const row = lookup(rows, run, year, key) ?? null;
+    const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
+    groups.push({ key, label: key, age, row: usable, suppressed: !usable });
+  }
+  const total = pensionerRow(rows, run, year);
+  groups.push({ key: "pensioners", label: "Pensioners", age: null, row: total, suppressed: !total });
+  return { run, groups };
+}
+
+/**
  * Better off, unchanged and worse off for pensioners, for people under
  * State Pension age (all ages less the pensioners, by people) and for all
  * ages, from the whole selection's run: `{ run, groups: [{ key, label,

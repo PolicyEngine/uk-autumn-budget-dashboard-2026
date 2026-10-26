@@ -205,7 +205,7 @@
 }
 
 /* A measure that is £0 in the year shown (legendMembership): still listed,
-   greyed out, with an outline swatch; ZeroMeasuresNote says why */
+   greyed out, with an outline swatch; the card's "More info" (ChartMoreInfo) says why */
 .grouped-legend .is-muted .grouped-legend-label {
   color: var(--pe-gray-500);
 }

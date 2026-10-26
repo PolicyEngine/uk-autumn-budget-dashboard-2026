@@ -39,7 +39,7 @@ import {
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import {
   decileMembership,
   legendItems as membershipItems,
@@ -58,7 +58,7 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, showZeroNote = true }) {
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -362,7 +362,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           />
         )}
       </div>
-      {published && showZeroNote && <ZeroMeasuresNote members={members} year={selectedYear} />}
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} />
+        </div>
+      )}
     </div>
   );
 }

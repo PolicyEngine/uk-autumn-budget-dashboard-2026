@@ -39,7 +39,7 @@ import {
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import {
   decileMembership,
   legendItems as membershipItems,
@@ -69,7 +69,7 @@ const decileOrder = [
   "10th",
 ];
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, showZeroNote = true }) {
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const catalogue = useMeasureCatalogue();
@@ -373,7 +373,11 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           />
         )}
       </div>
-      {published && showZeroNote && <ZeroMeasuresNote members={members} year={selectedYear} />}
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} />
+        </div>
+      )}
     </div>
   );
 }

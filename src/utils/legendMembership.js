@@ -4,9 +4,9 @@
  * Every selected measure is in the legend, in the catalogue's order
  * (measureCatalogue.jsx), in every year, so no measure silently disappears and
  * the legend holds still when the year changes. A measure that moves no
- * household in the year shown is greyed out (`muted`), and one line under
- * the chart (ZeroMeasuresNote) says why. Tooltips leave out £0 rows; the
- * same line covers them.
+ * household in the year shown is greyed out (`muted`), and the card's
+ * "More info" (ChartMoreInfo) says why. Tooltips leave out £0 rows; the
+ * same panel covers them.
  */
 import { isCatalogueRowDisplayable } from "./measureCatalogue";
 import { policyDetails } from "./policyDetails";

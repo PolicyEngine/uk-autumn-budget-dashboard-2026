@@ -56,8 +56,7 @@ import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
-import CollapsibleNote from "./CollapsibleNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import {
   legendMembership,
   legendItems as membershipItems,
@@ -89,8 +88,8 @@ const SHARES_DESCRIPTION =
 const SHARES_SINGLE_DESCRIPTION =
   "Share of people better or worse off (a change over 0.01%), by single year of age (10 to 40).";
 
-/** The two views of "Average change by age". */
-const AGE_VIEWS = [
+/** The two views of "Average change by age" (and Pensioners' Better and worse off). */
+export const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
 ];
@@ -112,16 +111,26 @@ const signedPounds = (value) =>
 const percent = formatShare;
 const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
 
+/** The split column's width, as the dumbbell's value column, and each half's. */
+const SPLIT_WIDTH = 112;
+const SPLIT_WIDTH_NARROW = 108;
+const SPLIT_COLUMN = 58;
+
 /** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
 function SplitTick({ x, y, payload, data, narrow }) {
   const row = data.find((point) => point.group === payload.value);
   if (!row) return null;
+  // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
+  // (Recharts puts x 8px into the axis), as the dumbbell's value column
+  const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
   return (
-    <text x={x + 4} y={y} dominantBaseline="middle" fontSize={narrow ? 10 : 11} fill={CHART_COLOURS.tick}>
-      <tspan fill={CHART_COLOURS.gain}>▲</tspan>
-      {` ${formatShare(row.real.pct_better_off)}  `}
-      <tspan fill={CHART_COLOURS.loss}>▼</tspan>
-      {` ${formatShare(row.real.pct_worse_off)}`}
+    <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
+      <tspan x={end - SPLIT_COLUMN} textAnchor="end">
+        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
+      </tspan>
+      <tspan x={end} textAnchor="end">
+        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
+      </tspan>
     </text>
   );
 }
@@ -592,19 +601,25 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && <ZeroMeasuresNote members={members} year={selectedYear} />}
-      {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-      {published && single && (
-        <CollapsibleNote lead="Single years of age rest on fewer households.">
-          <p>
-            A few large changes, such as capital gains under Business Asset Disposal Relief, can move one
-            age&apos;s average.
-          </p>
-        </CollapsibleNote>
+      {published && (
+        <div className="chart-footer">
+          {notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
+          <ChartMoreInfo members={members} year={selectedYear}>
+            {single && (
+              <p>
+                Single years of age rest on fewer households; a few large changes, such as capital gains under
+                Business Asset Disposal Relief, can move one age&apos;s average.
+              </p>
+            )}
+          </ChartMoreInfo>
+        </div>
       )}
     </div>
   );
 }
+
+/** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
+const ROW_LABEL_SIZE = 13;
 
 /** The group tick: 16 to 24 in bold, all ages after a gap, as usual. */
 function GroupTick({ x, y, payload, narrow }) {
@@ -617,7 +632,7 @@ function GroupTick({ x, y, payload, narrow }) {
       y={y}
       textAnchor="end"
       dominantBaseline="middle"
-      fontSize={TICK_STYLE.fontSize}
+      fontSize={ROW_LABEL_SIZE}
       fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young || !band ? 600 : 400}
     >
@@ -817,7 +832,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 type="category"
                 dataKey="group"
                 tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? 108 : 112}
+                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
                 axisLine={false}
                 tickLine={false}
                 interval={0}

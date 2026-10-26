@@ -28,7 +28,7 @@ import {
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
-import { keepSentence, marginalRates, rateAt } from "../../utils/singleYear";
+import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
@@ -175,7 +175,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
   const lineStroke = isChange ? CHANGE_COLOUR : parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
   // The rate as money, from the API's own rates only: they are over the
   // next £100, which the sentence scales (a sweep step is too coarse)
-  const keep = own ? keepSentence(own.beforeRate, own.afterRate) : null;
+  const keep = own ? keepClause(own.beforeRate, own.afterRate) : null;
 
   const csvColumns = [
     { key: "income", label: "Your salary (£)", decimals: 0 },
@@ -217,14 +217,14 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
           </h3>
           {yours && (
             <p className="chart-description">
-              At {formatPounds(salary)} your marginal tax rate is {pct(yours.before)} before and{" "}
-              {pct(yours.after)} after{yourParts ? `: ${yourParts}.` : "."}
-              {keep && (
-                <>
-                  <br />
-                  {keep}
-                </>
-              )}
+              {/* One sentence: the rate, its parts, then what it means in
+                  money (Vahid, 26 October) */}
+              At {formatPounds(salary)} your marginal tax rate is{" "}
+              {pct(yours.before) === pct(yours.after)
+                ? pct(yours.after)
+                : `${pct(yours.before)} before and ${pct(yours.after)} after`}
+              {yourParts ? ` (${yourParts})` : ""}
+              {keep ? `, so ${keep}.` : "."}
             </p>
           )}
         </div>

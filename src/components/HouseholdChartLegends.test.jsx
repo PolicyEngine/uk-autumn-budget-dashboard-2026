@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
-import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import ChartMoreInfo from "./ChartMoreInfo";
 import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
 import { policyDetails } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -101,16 +101,16 @@ describe.each([
       (node) => node.textContent === "Employer NI relief for under-25s",
     );
     expect(item.className).toContain("is-muted");
-    // One short line, the detail closed until "More info" is opened
-    const note = container.querySelector(".zero-measures-note");
-    expect(note.querySelector(".note-line").textContent).toBe("3 measures are £0 for households in 2027-28. More info");
-    const toggle = within(note).getByRole("button", { name: "More info" });
+    // The card's own "More info" at its foot, closed until opened
+    const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+    const toggle = within(moreInfo).getByRole("button", { name: "More info" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(note.querySelector(".note-detail")).not.toBeVisible();
+    expect(container.querySelector("[data-zero-measure]")).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(toggle).toHaveTextContent("Less info");
-    expect(note.querySelector(".note-detail")).toBeVisible();
+    within(moreInfo).getByText("3 measures are £0 for households in 2027-28:");
+    // One disclosure per card: no second style
+    expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
     expect(employer.textContent).toMatch(/Wages are held fixed/);
     expect(within(employer).getByRole("link", { name: "Public finances" })).toHaveAttribute(
@@ -122,38 +122,51 @@ describe.each([
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(screen.getAllByText("Fuel duty rises deferred")[0].closest("li").className).not.toContain("is-muted");
-    within(container).getByText("Greyed out in the key and left out of the tooltip.");
+    within(container).getByText("They are greyed out in the key and left out of the tooltip.");
   });
 });
 
-describe("ZeroMeasuresNote", () => {
+describe("ChartMoreInfo", () => {
   const members = [
     { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", muted: true },
     { id: "fuel_duty_rise_deferral", key: "measure:fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
   ];
 
   it("says one measure in the singular, and lists only the £0 ones", () => {
-    const { container } = render(<ZeroMeasuresNote members={members} year={2028} />);
-    expect(container.querySelector(".note-line").textContent).toBe("1 measure is £0 for households in 2028-29. More info");
+    const { container } = render(<ChartMoreInfo members={members} year={2028} />);
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    screen.getByText("1 measure is £0 for households in 2028-29:");
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,
     ]);
   });
 
-  it("renders nothing when every measure has an effect", () => {
-    const { container } = render(<ZeroMeasuresNote members={[members[1]]} year={2028} />);
+  it("renders nothing when every measure has an effect and there is nothing else to say", () => {
+    const { container } = render(<ChartMoreInfo members={[members[1]]} year={2028} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("holds a card's other notes in the same panel", () => {
+    render(
+      <ChartMoreInfo members={members} year={2028}>
+        <p>Single years of age rest on fewer households.</p>
+      </ChartMoreInfo>,
+    );
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    screen.getByText("Single years of age rest on fewer households.");
+    screen.getByText("1 measure is £0 for households in 2028-29:");
   });
 });
 
-describe("ZeroMeasuresNote's employer NI revenue", () => {
+describe("ChartMoreInfo's employer NI revenue", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("quotes the verified revenue for the year shown", async () => {
     // From the catalogue's verified budgetary_impact rows (#104), no fetch
     const value = Number(budget.find((row) => row.reform_id === EMPLOYER_NI && row.year === "2027").value);
     render(
-      <ZeroMeasuresNote
+      <ChartMoreInfo
         members={[{ id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true }]}
         year={2027}
       />,
