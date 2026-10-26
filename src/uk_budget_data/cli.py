@@ -32,6 +32,11 @@ from uk_budget_data.publication.commands import (
     run_generate_artifacts,
     run_publish,
 )
+from uk_budget_data.publish_measure_cli import (
+    PUBLISH_MEASURE_COMMANDS,
+    add_publish_measure_parsers,
+    run_publish_measure_command,
+)
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
     get_reform,
@@ -179,6 +184,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_publish_measure_parsers(subparsers)
     add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
@@ -205,6 +211,35 @@ def runner_for(parsed: argparse.Namespace, units: int, years: int):
         say=console.print,
         unit_gb=parsed.unit_memory_gb,
     )
+
+
+def modal_artifacts_problem(dataset, repo_root: Path = Path(".")) -> str:
+    """Why ``--artifacts --backend modal`` cannot run, or "".
+
+    The containers run the working tree's package, so a run on the bundle's
+    dataset needs the committed tree: its receipts then name the code that
+    ran. A local dataset file is never sent; a ``synthetic:`` dataset (the
+    smoke test) is built in each container instead.
+    """
+    from uk_budget_data import synthetic_dataset
+    from uk_budget_data.publication.receipt import code_revision
+
+    if dataset is not None:
+        if str(dataset).startswith(synthetic_dataset.PREFIX):
+            return ""
+        return (
+            "--backend modal never sends a dataset file; leave out --dataset "
+            "to use the bundle's, or use synthetic:<households>:<seed> to "
+            "test the plumbing"
+        )
+    revision = code_revision(repo_root)
+    if not revision.tree_clean:
+        return (
+            "--artifacts --backend modal needs a clean working tree, so the "
+            "receipts name the code the containers ran: "
+            + ", ".join(revision.dirty_paths[:5])
+        )
+    return ""
 
 
 def get_reforms_from_ids(reform_ids: list[str]) -> list[Reform]:
@@ -308,13 +343,17 @@ def run_generate(parsed: argparse.Namespace) -> int:
     # Receipted artifacts: one write-once directory per measure, and one
     # per combined set. --combined alone generates only the combined runs.
     if parsed.artifacts or parsed.combined:
-        if parsed.backend != "local":
+        if parsed.backend == "modal":
+            problem = modal_artifacts_problem(parsed.dataset)
+            if problem:
+                console.print(f"[red]Error: {problem}[/red]")
+                return 1
             console.print(
-                "[red]Error: --artifacts runs locally only: a receipt binds "
-                "the execution it was made in, and Modal's would differ "
-                "from every other entry's[/red]"
+                "[yellow]Modal: these receipts carry the container's "
+                "execution identity. Make every artifact of this release on "
+                "Modal (measures, combined run, area run), or staging needs "
+                "--adopt-execution.[/yellow]"
             )
-            return 1
         standalone = reforms if (parsed.reforms or not parsed.combined) else []
         units = max(len(standalone), len(parsed.combined or []), 1)
         return run_generate_artifacts(
@@ -383,6 +422,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command in PUBLISH_MEASURE_COMMANDS:
+        return run_publish_measure_command(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
@@ -401,6 +442,13 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  publish-measure  - Budget day: one measure's receipted "
+            "artifact, staged (#105)"
+        )
+        console.print(
+            "  refresh-combined - Budget day: the approved measures combined"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"

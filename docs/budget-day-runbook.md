@@ -768,6 +768,70 @@ A fix that changes a package version (policyengine-uk, say) is a re-cut, not a G
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
+**Which displayed measures a fix changes.** Before deploying the household API with a fix, run `uv run uk-budget-data publish definitions` on the fixed commit (#125). For each displayed measure, it recomputes the measure's receipt identities from this code at the commit its receipt was made at. It lists every measure whose definition differs from its approved receipt, and exits 1 if any does. It takes a few seconds and needs no data.
+- **A fix in a modifier's module lists the measures that use that modifier, and only those.** The receipt binds a modifier's whole module, and each modifier has a module of its own (since 25 October; before, all seven shared `budget_measures.py`, and a fix there listed all seven). A comment counts. `connect_student_loan_repayments` is on both sides of `plan_2_threshold_unfreeze`, so a fix there lists that measure once, with both sides.
+  - **Regenerate or withdraw every listed measure before the deploy.** A listed measure left as it is shows as unavailable in Personal impact once the page compares definitions.
+  - **Two need a fresh two-person attestation when listed:** `employer_ni_relief_under_25s` and `plan_2_threshold_unfreeze` have hand-written modifiers, and while a data limit is active each regenerated receipt is held until attested again (`attestations.py`: an attestation binds the whole receipt document). Budget the reviewers' time, or withdraw them.
+  - **The split itself changed all seven definitions once**, through each modifier's module: its name, its source, and its module defaults, which now hold only that function's own (none, for `connect_student_loan_repayments`). Nothing else changed: `tests/test_budget_measures_split.py` checks that the function sources and defaults are as they were, and that each measure gives the same figures. Receipts made before it differ from it; the next regeneration (Monday's rehearsal, or at the latest the final cut's) absorbs it.
+- **It can't see a fix outside the measures' own module.** A receipt binds everything else only through its commit. List what has changed since each displayed measure's receipt with `git diff --name-only <receipt commit> HEAD -- src pyproject.toml uv.lock data_inputs Dockerfile` (the commit is the one `publish definitions` prints, from the receipt's `dashboard.git_sha`). The image's base layers (`python:3.13-slim` and `uv:latest` in the `Dockerfile`) can change with no commit at all; the deploy smoke checks the served packages' versions, not those layers.
+  - **Code national generation also runs** (`measure_templates.py`, `reforms.py`, `models.py`, the scenario helpers in `personal_impact.py`, or anything else a modifier calls): regenerate every measure it reaches, as for a fix in its own module. The page can't tell these apart.
+  - **Code only the household route runs** (`household_impact.py`, which only `api.py` imports, and the request defaults in `api.py`): no receipt changes. The deploy changes Personal impact's answers for every measure it reaches, and nothing on the page marks it.
+  - **From the page follow-up (stacked on #104, which adds `calculation_changes_since`),** `publish definitions` lists these files itself.
+- **The gap after the merge.** The corrected entry is live on the dashboard about a minute after the merge; the household API runs the fix only once its deploy promotes it, 6 to 7 minutes after dispatch (see "Adopting a release"). For a fix in a measure's own module, the page (once it compares) shows the measure unavailable through that gap. For a fix elsewhere, the tab answers from the previous code with nothing saying so. If that answer can't stand for those minutes, withdraw the measure in the fix's pull request, and approve it again in a second one after the deploy's household check passes.
+
+## Budget day: publish one measure
+
+**Proposed in [#105](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/105); the commands exist once its PR merges.** Each measure is generated and staged on its own when its pull request merges, so a measure ready at 13:30 doesn't wait for the slowest one, and a late fix reruns one measure. It is G2 to G4 above, one measure at a time: the same receipted artifacts, gates and manifest, run by a workflow. The combined run is refreshed in batches.
+
+**A measure moves through** coded → run → staged → approved (live):
+
+1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py`, or only the modifier or template it uses (a module in `budget_measures/`, `measure_templates.py`), and merges to `main` on the usual gates.
+2. **Run (automatic).** The merge starts the "Publish measures (Budget day)" workflow (`.github/workflows/publish-measure.yml`):
+   - it finds the measures the merge added or changed, loading each revision's whole package and comparing `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach in any `uk_budget_data` module), so a change only in a module in `budget_measures/` reruns just the measures whose modifiers reach it, and one in a shared template reruns every measure using it: `uv run uk-budget-data changed-measures`. A change to code every measure runs through (`pipeline.py`, `publication/`, `models.py`, `uv.lock`, `pyproject.toml`) reruns every measure and marks the combined run stale. The output also lists each measure's files;
+   - it generates each one's receipted artifact in parallel, one job per measure on `larger-runner` (or on Modal, below): `uk-budget-data publish-measure <id> --no-stage`, which is `generate --artifacts --reforms <id>`. One measure per job, so a hand-written modifier is always generated alone. Every policy year: there is no `--years`.
+3. **Staged (automatic).** One job collects the new artifacts and runs `uk-budget-data stage-artifacts` on them: `publish reconcile` (status only; `reconciliation.json` goes to the runner's temporary directory, never into the commit), `publish stage` (or `--provisional`, a dispatch choice, for G2's statement figures), `publish index` once results by area are bound, and `publish check`. It marks the new files' review rows **pending**: kind `pending`, the Reconciler named, expiring in 7 days, so the public-file check passes while nothing is signed. It opens **one draft data PR** with the artifacts, the manifest and a summary (each entry's status, reconciliation and revenue by year). A staged entry is the measure "being costed"; the page doesn't show it.
+4. **Approved (María, the Reconciler).** Review the data PR. Then, on its branch:
+
+   ```sh
+   uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
+   # move each reconciliation.json outside the checkout, as at G2
+   uv run uk-budget-data sign-measures --by "María Juaristi" --reviewer juaristi22 \
+     [--household-receipt <id>=receipts/<id>-households.json]
+   git add -A public/data data_inputs/public_data_review.csv
+   git commit -m "Approve and sign" && git push
+   ```
+
+   `sign-measures` is `publish approve` for each staged entry (measures before combined runs), then `publish review-rows`, which replaces the pending rows. Approval is refused, approving nothing further, until every gate passes. Nothing is ever approved or signed automatically.
+5. **Live (Vahid, the Integrator).** Merge the data PR once the required checks pass. Merging deploys. **"Live" means approved in the deployed `public/data/manifest.json`**: the page reads nothing else (#104), so there is no separate status file. `uv run uk-budget-data measure-status` prints the live measures and whether the package is current.
+
+**By hand** (the same steps the workflow takes, in one checkout):
+
+```sh
+export HUGGING_FACE_TOKEN=...   # the read token; never print it
+uv run uk-budget-data publish-measure fuel_duty_freeze       # generate, reconcile and stage, check
+uv run uk-budget-data refresh-combined                       # the approved measures together, staged
+```
+
+Or dispatch the workflow with `measures` (space-separated ids). `publish-measure` refuses a measure the data can't cost (`data_limits`); it writes no results by area, which stay G4's area run.
+
+**The combined run.** Measures interact, so the package total isn't the sum of the measures. The "Refresh the combined run (Budget day)" workflow runs `refresh-combined` on demand, and every 30 minutes on 28 October from 12:30 to 18:00 (London is on GMT that day, so these are UTC times too). It is `generate --combined` over the measures approved in `main`'s manifest, each member bound at the commit its approved receipt was made at, then staged and a draft data PR opened, approved and merged in the same way. Approval needs every member approved. The page shows a package's figures only from a displayable combined run whose members are exactly the displayable measures (#104); until the refreshed run is approved, they show as unavailable. Time the first refresh at Monday's rehearsal: a refresh at 15:30 has to land before a 15:45 cut.
+
+**Two data PRs touching the manifest.** Merge one, then rerun the other's workflow (dispatch with its measures): it regenerates on the new `main`, so the receipts bind its commit.
+
+**Runner.** The compute jobs need more memory than a standard runner has: about 20 GB for one measure over every year (6.4 GB with #112's shared simulations), more with results by area. Their label comes from the dispatch input `runner`, else the repository variable `PUBLISH_MEASURE_RUNNER`, else `larger-runner`, the organisation's GitHub-hosted larger runner (Max, 24 October). Its size and concurrency limit are in the organisation's settings, which need an admin; each compute job prints `nproc` and `free -g`, so the first run records them. publish-measure runs one job per measure with no `max-parallel`, so the larger runner's concurrency limit is the only cap. A label the organisation lacks queues until it times out. The secret is `PE_UK_PRIVATE_HF_READ_TOKEN`, as the Certified data check uses.
+
+**Timing on the runner.** Dispatch "Publish measures (Budget day)" with `timing: true` and one id in `measures`. It generates, reconciles and stages that measure on the runner, runs `publish check`, and writes each step's wall time and peak memory to the run's summary. It opens no pull request and commits nothing. Run it at Monday's rehearsal and record the result in the table below.
+
+**Modal backend.** Dispatch with `backend: modal`, or set the repository variable `PUBLISH_MEASURE_BACKEND=modal`. Each matrix job then runs on a standard runner and calls `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --reforms <id> --backend modal`. It uses the organisation secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`, in that step only, and the Modal workspace secret `pe-uk-private-hf-read-token`, which exists (#119). If `generate` has no `--backend` option on the commit, or the secret is missing, the job stops at "Check the Modal backend is available" with an error saying so; rerun with `backend: runner`. `refresh-combined` has no Modal backend.
+
+**Timings.**
+
+| Run | Wall time | Peak memory | Notes |
+|---|---|---|---|
+| One measure, every year, flat tables (24 October full run, per measure) | about 6–7 min | about 20 GB | From #69's rerun; the artifact path is not yet timed |
+| `publish-measure <id>` on `larger-runner` (timing mode) | not yet measured | | Time it at the rehearsal and record it here |
+| `refresh-combined` | not yet measured | | Time it at the rehearsal and record it here |
+
 ## Rolling re-cuts, and the 07:00 go/no-go (Max, 22 October)
 
 Max, relayed by the UK hub and the coordinator on 22 October: "i think we should keep improving the model as much as we can as long as we can". So there is no single lock. The dashboard adopts each certified re-cut, under d1152 ("latest certified release"). UK time equals UTC from Sunday 25 October.
@@ -890,23 +954,21 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   | Step | Before (serial) | Now, `--jobs 1` | Now, 2 jobs | Modal, about 10 containers |
   |---|---|---|---|---|
   | Flat CSVs, with age_impact and the binned scatter | 33 min, plus 12–23 min (age) and 10–24 min (scatter) | about 17 min | about 9 min | about 5 min |
-  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | local only |
+  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | about 5–7 min (estimate; see "Budget day on Modal") |
   | `geography` (simulation part; the estimate and checks add about 3 min) | about 24 min | about 24 min | about 12 min | local only |
 
   - **How many jobs fit.** On a quiet 64 GB laptop `auto` should pick 2 workers for six years. On 24 October, with other agents' sessions holding memory and 16 GB of swap, it picked 1.
   - **Modal** sends each measure to its own container. Each container downloads the dataset (about 1.5 GB) on its first run. 10 measures need 10 containers, so 20 containers buy nothing over 10.
-- **`--backend modal`** (flat CSVs and `--only` only, opt-in):
+- **`--backend modal`** (flat CSVs, `--only` and, since the Modal PR, `--artifacts`; opt-in):
 
   ```bash
   uv run --with modal==1.6.2 uk-budget-data generate --backend modal
   ```
 
-  - **Who sets it up:** whoever owns the Modal workspace (Anthony):
-    1. create the secret with `modal secret create uk-budget-2026-hf-token HUGGING_FACE_TOKEN=<read-only token>`;
-    2. give the runner a Modal token (`modal token new`), as the person running the command.
+  - **The secret already exists:** `pe-uk-private-hf-read-token` in the `policyengine` workspace (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`, created by Anthony). It was checked on Modal on 25 October and reads the certified data (#119). The person running the command needs only a Modal token (`modal token new`).
   - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential.
   - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
-  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **`--artifacts` runs on Modal too; `geography` stays local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally, so a release's artifacts are made either all on Modal or all locally ("Budget day on Modal" below).
   - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
 
 ## Fast full run
@@ -942,10 +1004,86 @@ git status --short public/data                                  # review the dif
 - **Fallbacks, in order:**
   1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
   2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
-  3. Modal (`--backend modal`) is about 5 min, but it is not runnable yet. The workspace has no `uk-budget-2026-hf-token` secret (see above).
+  3. Modal (`--backend modal`): 8.4 min end to end for the ten flat units on the real data, 25 October, every CSV byte-identical to `main`'s ("Budget day on Modal").
 - **Not covered here:**
   - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
-  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
+  - **Receipted `--artifacts`/`--combined` runs.** Timed on Modal on 25 October ("Budget day on Modal"): 5.4 min for the nine measures, 6.7 min for the combined run.
+
+## Budget day on Modal
+
+Receipted generation (G2, `generate --artifacts`) with one Modal container per measure, so the nine measures run at once instead of one after another on a shared laptop. The publish-measure workflow sends a pushed measure there automatically once `PUBLISH_MEASURE_BACKEND=modal` is set.
+
+```
+push to main (reforms.py)  or  dispatch "Publish measures (Budget day)"
+        │
+        ▼
+detect: changed-measures (registry on HEAD vs HEAD^)       ← GitHub runner
+        │  one matrix job per measure
+        ▼
+compute: generate --artifacts --reforms <id> --backend modal
+        │  checks the Modal secret, then one container (32 GB, 2 CPUs)
+        │  builds both simulations on the bundle's dataset, writes the
+        │  artifact in the container and sends its files back
+        ▼
+data-pr: stage-artifacts (reconcile, stage, pending review rows,
+         publish check) and ONE draft data pull request
+        │
+        ▼
+the Reconciler signs (sign-measures) and merges: nothing here approves
+```
+
+- **Commands by hand** (from a clean checkout of the release commit; the containers run the working tree, so a dirty tree is refused):
+
+  ```bash
+  uv run --with modal==1.6.2 uk-budget-data generate --artifacts --backend modal \
+    --reforms <the nine ids>
+  uv run --with modal==1.6.2 uk-budget-data generate --combined <the nine ids> --backend modal
+  ```
+
+  The files land under `public/data/artifacts/` exactly where a local run puts them, write-once: an artifact already there with the same bytes is "unchanged", one with different bytes is an error.
+- **Every artifact of a release from the same place.** A Modal artifact carries the container's execution identity. Mixing it with local ones makes staging ask for `--adopt-execution`, which marks every other entry stale. So once Modal is used, the measures and the combined run all go there; the area run (`geography`) is local only, which needs a decision before Budget day (see below).
+- **No dataset file is sent.** A container downloads the bundle's dataset itself with the workspace secret. `--dataset <file>` is refused on Modal.
+- **Before it can run on the real data:**
+
+  | Needed | Owner | State on 25 October |
+  |---|---|---|
+  | Modal workspace secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a read-only token for `populace-uk-private`) | Anthony | exists; reads the certified data on Modal (checked 25 October) |
+  | Repository secrets `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` (for the workflow) | Anthony | not checked from here; the job stops with an error if they are absent |
+  | Running the Microcosm data on Modal | Vahid | decided on 25 October ([#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119#issuecomment-6398276075)), as PolicyEngine/uk-cgt-reform already does |
+  | Repository variable `PUBLISH_MEASURE_BACKEND=modal` (Budget day only) | whoever runs Budget day | unset (the workflow defaults to the larger runner) |
+
+- **Smoke test without the licensed data** (no secret, no dataset sent):
+
+  ```bash
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py \
+    --root /tmp/modal-smoke <measure ids>
+  ```
+
+  Each container builds an invented dataset (`synthetic_dataset`, 300 households, fixed seed) and runs the measure's receipted path up to the receipt, which the gate refuses because the invented dataset is not a bundle dataset; that refusal is the expected outcome. A second call sends an artifact-shaped directory back and writes it locally twice (written, then unchanged).
+- **Measured on the real data, 25 October** (bundle's Microcosm dataset, years 2026 to 2031, `main` at 63c61a1 with #104 and #133 merged in; a dry run into scratch directories, nothing published):
+
+  | Run | Modal, end to end | Before |
+  |---|---|---|
+  | Flat CSVs, `generate --backend modal` (ten units: nine measures and the package) | 8.4 min | about 30 min serial, about 14 min with #112 |
+  | Receipted measures, `generate --artifacts --backend modal` (nine containers) | 5.4 min | about 30 min serial |
+  | Combined run, `generate --combined <nine ids> --backend modal` (one container) | 6.7 min | not timed locally |
+
+  - **The numbers match `main`.** Every flat CSV is byte-identical to `main`'s `public/data`, except `obr_comparison.csv`: `main`'s copy still lists the 2025 Budget's measures. Every cell the receipted artifacts share with `main` is identical (the combined run's `age_impact` differs by at most 3e-7). The artifacts' `household_scatter_binned.csv` also keeps cells that `main`'s file leaves out (50, 13 and 61 extra cells for three measures), all low or zero counts. That comes from #104's artifact path, not from Modal.
+  - **Ran with:** `pe-uk-private-hf-read-token`, no retries, at most 16 containers, nothing kept warm, an ephemeral app stopped at the end.
+
+- **Measured on 25 October** (smoke test, synthetic data, years 2026 and 2027):
+
+  | What | Time |
+  |---|---|
+  | First run, including building the image from `uv.lock` (3 measures) | 171 s |
+  | Nine measures, warm image, one container each, at once | 127 s end to end; 67–92 s per container |
+  | Return path (pack, send back, write locally, write again) | 13 s |
+
+  **Switching to the real data** is one change once the secret exists: leave out `--dataset synthetic:…` (the bundle's dataset is the default), or set `PUBLISH_MEASURE_BACKEND=modal` for the workflow. Nothing else in the code changes.
+
+  On the real data a container also downloads the dataset (about 1.5 GB) and each measure runs over every policy year; a local receipted measure takes about 3.3 min, so nine at once should take about 5–7 min end to end. That is an estimate until the secret exists.
+- **Fallback:** locally with `--jobs 1` (about 30 min for the nine, or about 14 min with #112's shared simulations), as in "Fast full run".
+- **Not on Modal yet:** the area run (`geography`, 2 to 3.5 h locally). It is the slowest step on the day; moving it needs the area run split by region and the same execution-identity rule.
 
 ## Adopting a release (each re-cut)
 

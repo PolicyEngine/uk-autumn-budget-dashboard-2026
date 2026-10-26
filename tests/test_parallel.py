@@ -607,16 +607,27 @@ def test_the_modal_app_exposes_no_web_endpoint_and_one_secret():
     assert "asgi_app" not in source and "web_endpoint" not in source
     assert "fastapi_endpoint" not in source and "wsgi_app" not in source
     assert source.count("modal.Secret.from_name(") == 1
+    # The smoke test's app has no secret at all.
+    assert "smoke_app = modal.App(" in source
     assert 'required_keys=["HUGGING_FACE_TOKEN"]' in source
     assert ".uv_sync(" in source and "frozen=True" in source
 
 
-def test_artifacts_refuse_the_modal_backend(capsys):
+def test_artifacts_on_modal_never_send_a_dataset_file(capsys):
     from uk_budget_data import cli
 
-    parsed = cli.parse_args(["generate", "--artifacts", "--backend", "modal"])
+    parsed = cli.parse_args(
+        [
+            "generate",
+            "--artifacts",
+            "--backend",
+            "modal",
+            "--dataset",
+            "local.h5",
+        ]
+    )
     assert cli.run_generate(parsed) == 1
-    assert "runs locally only" in capsys.readouterr().out
+    assert "never sends a dataset file" in capsys.readouterr().out
 
 
 def test_jobs_must_be_a_whole_number_or_auto():
