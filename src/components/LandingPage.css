@@ -155,8 +155,8 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   color: var(--pe-gray-900);
 }
 
+/* The full width of the panel, edge to edge with the heading and boxes */
 .landing-intro {
-  max-width: 80ch;
   margin: 0;
   font-size: clamp(var(--fs-body), 0.8rem + 0.5vw, var(--fs-lead));
   line-height: 1.6;
