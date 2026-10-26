@@ -33,6 +33,10 @@ describe("the examples' precomputed results (public/data/household_presets.json)
   it("come from the engine the live API runs: re-run the precompute after a bundle upgrade", () => {
     expect(file.engine.policyengine).toBe(locked("policyengine"));
     expect(file.engine["policyengine-uk"]).toBe(locked("policyengine-uk"));
+    // Each answer carries it, as a live one does, for the breakdown's Versions line
+    for (const [, data] of presetCacheEntries(file)) {
+      expect(data.engine.policyengine).toBe(locked("policyengine"));
+    }
   });
 
   it("drop an entry whose example has changed, so the live API answers it", () => {

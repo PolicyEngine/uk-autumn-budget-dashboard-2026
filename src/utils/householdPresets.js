@@ -53,7 +53,9 @@ export function presetCacheEntries(file) {
       buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: PRESET_POLICIES }),
     );
     if (key !== requestKey(entry.request)) return [];
-    const data = normaliseHouseholdImpact(entry.response);
+    // The file keeps the engine once, at its top; each answer gets it back,
+    // so the breakdown's "Versions" line shows as for a live answer
+    const data = normaliseHouseholdImpact({ ...entry.response, engine: entry.response.engine ?? file.engine });
     if (data.byPolicy === null || data.sweep === null) return [];
     return [[key, data]];
   });
