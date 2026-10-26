@@ -17,7 +17,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
 import SeriesToggle from "../SeriesToggle";
-import { measureOpacity, useMeasureKey } from "../MeasureKey";
+import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import {
   GRID_PROPS,
   TICK_STYLE,
@@ -70,8 +70,6 @@ const CONTEXT_HOVER = CHART_COLOURS.tick;
 const SELECTED_FILL = CHART_COLOURS.highlightBand;
 // The focus view's one chip for every other age group
 const OTHERS = "others";
-/** The key's swatch for the selected year's shading. */
-export const SELECTED_YEAR_KEY = { key: "selected-year", label: "Selected year", fill: SELECTED_FILL };
 
 const COMPARE_OPTIONS = [
   { value: "focus", label: `${FOCUS_LABEL} vs all ages`, summary: `${FOCUS_LABEL} vs all` },
@@ -297,7 +295,7 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
         {fiscalYearTick(year)}
-        {year === Number(selectedYear) ? " · the year chosen above (shaded)" : ""}
+        {year === Number(selectedYear) ? " · selected year" : ""}
       </p>
       <div className="chart-tooltip-row">
         <span className="chart-tooltip-swatch" style={{ background: FOCUS_COLOUR }} />
@@ -617,6 +615,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               <Line
                 type="monotoneX"
                 dataKey="net"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={{ r: 3.5, fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5 }}
@@ -659,7 +658,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       <div className="chart-legend">
         {/* The key, which also shows or hides each line: all age groups one
             chip each; the focus view 16 to 24, all ages and one chip for the
-            other groups. Then the selected year's shading. */}
+            other groups. The shaded year is explained in the tooltip. */}
         {groupsView && (
           <SeriesToggle
             series={lines.map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
@@ -668,7 +667,6 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             onHover={setHovered}
             label="Age groups"
             narrow={narrow}
-            extras={[SELECTED_YEAR_KEY]}
           />
         )}
         {focusView && (
@@ -683,7 +681,6 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             onHover={setHovered}
             label="Age groups"
             narrow={narrow}
-            extras={[SELECTED_YEAR_KEY]}
           />
         )}
       </div>

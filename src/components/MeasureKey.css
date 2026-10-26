@@ -118,10 +118,9 @@ button.measure-key-chip:focus-visible,
   box-shadow: inset 0 0 0 1px var(--swatch);
 }
 
+/* The net line's chip: a pill like the measures', chosen the same way */
 .measure-key-chip.is-net {
-  border-color: transparent;
-  background: transparent;
-  padding-left: 4px;
+  padding-left: 6px;
 }
 
 .measure-key-net-icon line {
