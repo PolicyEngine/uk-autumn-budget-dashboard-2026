@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./PolicySelector.css";
+import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 
@@ -33,23 +34,24 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   return (
     <div className="policy-selector" ref={dropdownRef}>
       <button
-        className="policy-selector-toggle"
+        className="policy-selector-toggle band-control"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
         aria-label={disabledReason ? `Select policies: ${disabledReason}` : "Select policies"}
         disabled={Boolean(disabledReason)}
         title={disabledReason}
       >
-        <span className="policy-selector-count">{selectedCount}</span>
-        <span className="policy-selector-label">
-          {selectedCount === 0
-            ? "Select policies"
-            : selectedCount === 1
-              ? "policy selected"
-              : "policies selected"}
-        </span>
-        <span className="policy-selector-label-short" aria-hidden="true">
-          selected
+        <ListChecks className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
+        <span className="band-control-text">
+          <span className="band-control-label">Measures</span>
+          {/* "All 9 measures" or "9 of 15 measures"; on a phone "All 9" or
+              "9 of 15" (the unit is hidden) */}
+          <span className="band-control-value">
+            {selectedCount === policies.length && selectedCount > 0 ? "All " : ""}
+            <span className="policy-selector-count">{selectedCount}</span>
+            {selectedCount === policies.length && selectedCount > 0 ? "" : ` of ${policies.length}`}
+            <span className="band-control-unit"> {policies.length === 1 ? "measure" : "measures"}</span>
+          </span>
         </span>
         <PillChevron />
       </button>

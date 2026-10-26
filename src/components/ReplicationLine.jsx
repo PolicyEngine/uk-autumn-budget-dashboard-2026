@@ -1,31 +1,57 @@
+import { ArrowUpRight, Github, Package } from "lucide-react";
+
 /**
- * The replication line above the site footer: the repository, and the
- * policyengine.py version this build's uv.lock pins (read in
- * next.config.ts). A missing version is left out, never guessed.
+ * "Reproduce these results", above the site footer, on one centred line:
+ * a plain link (with its icon) to the repository and one to the
+ * policyengine.py release this build's uv.lock
+ * pins (read in next.config.ts), each opening in a new tab. A missing
+ * version leaves its link out, never guessed.
  */
 const REPO = "PolicyEngine/uk-autumn-budget-dashboard-2026";
 
-export function replicationParts({ policyengine } = {}) {
-  return policyengine ? [`policyengine.py ${policyengine}`] : [];
+/** The chips' links: the code, then the package release when its version is known. */
+export function replicationLinks({ policyengine } = {}) {
+  const links = [
+    {
+      key: "code",
+      label: "Replication code",
+      title: `${REPO} on GitHub`,
+      href: `https://github.com/${REPO}`,
+      Icon: Github,
+    },
+  ];
+  if (policyengine) {
+    links.push({
+      key: "package",
+      label: `policyengine.py ${policyengine}`,
+      title: `policyengine.py ${policyengine} on PyPI`,
+      href: `https://pypi.org/project/policyengine/${encodeURIComponent(policyengine)}/`,
+      Icon: Package,
+    });
+  }
+  return links;
 }
 
 function ReplicationLine() {
-  const parts = replicationParts({
-    policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION,
-  });
+  const links = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
   return (
-    <p id="replication" className="replication-line">
-      Replication code:{" "}
-      <a href={`https://github.com/${REPO}`} target="_blank" rel="noopener noreferrer">
-        {REPO}
-      </a>
-      {parts.map((part) => (
-        <span key={part}>
-          {" · "}
-          {part}
-        </span>
-      ))}
-    </p>
+    <section id="replication" className="replication-line" aria-labelledby="replication-title">
+      <span className="replication-title" id="replication-title">
+        Reproduce these results
+      </span>
+      <ul className="replication-links">
+        {links.map(({ key, label, title, href, Icon }) => (
+          <li key={key}>
+            <a className="replication-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
+              <Icon className="replication-link-icon" size={14} strokeWidth={2} aria-hidden="true" />
+              <span className="replication-link-label">{label}</span>
+              <ArrowUpRight className="replication-link-arrow" size={12} strokeWidth={2.2} aria-hidden="true" />
+              <span className="visually-hidden"> (opens in a new tab)</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

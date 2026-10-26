@@ -508,9 +508,12 @@ function HouseholdCalculator({
   // typical ones. Chosen already, it opens or closes the form.
   const chooseYours = () => {
     if (presetId === null) {
+      // Opening it brings it into view (below)
+      if (!formOpen) scrollToForm.current = true;
       setFormOpen((open) => !open);
       return;
     }
+    scrollToForm.current = true;
     setStartFrom(activePreset?.short ?? activePreset?.label ?? null);
     setPresetId(null);
     setSubmitted(null);
@@ -523,6 +526,25 @@ function HouseholdCalculator({
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
       ? (householdResult.data?.net?.change ?? null)
       : null;
+
+  // After "Your household" opens the form: bring it into view below the
+  // sticky bars (smoothly, or at once with reduced motion) and put the
+  // focus in its first box, without the focus itself jumping the page
+  const scrollToForm = useRef(false);
+  useEffect(() => {
+    if (!scrollToForm.current || !formOpen) return undefined;
+    scrollToForm.current = false;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const panel = document.getElementById(FORM_PANEL_ID);
+        const target = panel?.querySelector("form") ?? panel;
+        if (!target) return;
+        target.querySelector("input, select, textarea")?.focus({ preventScroll: true });
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [formOpen]);
 
   const resultsRef = useRef(null);
   // After an example card: bring its result (or its progress) into view

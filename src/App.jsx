@@ -18,7 +18,6 @@ import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
-import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
@@ -285,6 +284,33 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // The tab bar's place in the page, before it sticks under the band
   const tabsSentinelRef = useRef(null);
+  // Once the reader scrolls past it, the view tabs (and a sub-tab band)
+  // stick under the title row in a compact form (globals.css,
+  // data-tabs-stuck). The sentinel sits above the bar, so the bar's own
+  // change of height never flips this back.
+  const [tabsStuck, setTabsStuck] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const sentinel = tabsSentinelRef.current;
+      const app = appRef.current;
+      if (!sentinel || !app) return;
+      const band = parseFloat(getComputedStyle(app).getPropertyValue("--title-row-height")) || 0;
+      setTabsStuck(sentinel.getBoundingClientRect().top < band - 1);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    check();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   // Switch view. If the reader had scrolled past the tabs, bring the new
   // view's top up under them, so it does not open part way down. The band
@@ -349,6 +375,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
+  // The views with sub-tabs open into their band (SubTabs); not while
+  // Population impact shows its unavailable notice instead, nor on the
+  // landing page, where no view tab is chosen
+  const hasSubTabs = !landing && (activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard")));
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   // The landing page's figures follow the band's year and selection, so
@@ -587,7 +617,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"}>
+    <div
+      className="app"
+      ref={appRef}
+      data-band={yearShown ? undefined : "compact"}
+      data-sub-band={hasSubTabs ? "" : undefined}
+      data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -648,6 +683,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           onChange={handleTabChange}
           tabId={tabId}
           panelId={panelId}
+          notch={hasSubTabs}
         />
 
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
@@ -702,12 +738,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               title="Policies"
               subtitle="What each measure changes, when, and how it is modelled."
             />
-            <Disclosure title="More info" className="policies-more-info">
-              <p>
-                Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end
-                date. “See its effect” shows that measure alone on Population impact.
-              </p>
-            </Disclosure>
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
                 policies={POLICIES}
@@ -717,7 +747,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             </section>
           </div>
         ) : value === "methodology" ? (
-          <MethodologyTab onShowTab={handleTabChange} onShowEffect={handleShowEffect} />
+          <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}

@@ -16,6 +16,7 @@
  * What jsdom cannot show (that the built site serves the page and these
  * files with HTTP 200) the "Built site" CI job checks against `next start`.
  */
+import { expectCompletePills } from "./test/optionsPills";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,7 +82,7 @@ const LOADED = {
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
-  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: "Forecast changes" }),
+  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecast$/ }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -191,6 +192,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.
       await new Promise((resolve) => setTimeout(resolve, 50));
+      // Every Options pill on the tab names every choice its dialog holds
+      expectCompletePills(panel);
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -280,7 +283,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ }, { timeout: 5000 });
     fireEvent.click(screen.getByRole("tab", { name: "Forecast changes" }));
     const forecast = screen.getByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(forecast).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(await within(forecast).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-incomes")).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-poverty")).toHaveLength(1);

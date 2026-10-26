@@ -36,7 +36,7 @@ describe("the independent outlook and Budget-day forecast", () => {
       window.history.replaceState({}, "", "/?tab=living&sub=forecast");
       render(<LivingStandardsTab />);
       expect(await screen.findByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "Forecast changes" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /economic forecast$/ })).not.toBeInTheDocument();
       expect(document.querySelector(".ls-card")).toBeNull();
       cleanup();
     }), { numRuns: 20 });

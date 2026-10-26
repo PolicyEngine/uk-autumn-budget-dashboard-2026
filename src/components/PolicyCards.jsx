@@ -4,7 +4,8 @@ import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
-import { policyCardId } from "./methodology/MeasureDescriptions";
+import ModellingFacts, { limitationCount } from "./ModellingFacts";
+import { measureModellingFacts } from "../utils/measureModelling";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
 // measure's budgetary effect. Cards carry no icon per measure: a map by
@@ -149,7 +150,7 @@ function PolicyTimeline({ policy, highlight }) {
               style={{ left: share(timelineMonth(step.month)) }}
             />
           ))}
-          {!to && <span className="ptl-arrow" />}
+          {!to && <span className="ptl-arrow" title="No end date" />}
         </div>
         {" "}
         {/* Always there, empty when unused, so the years line up across a row */}
@@ -200,9 +201,13 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
   // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
+  // What the published wording says about how it is modelled: fact and
+  // limitation chips, and any modelling note
+  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
+  const hasModelling = Boolean(policy.details) || modelling.facts.length > 0 || modelling.limits.length > 0 || modelling.notePoints.length > 0;
+  const limitations = limitationCount(modelling.limits);
   return (
     <li
-      id={policyCardId(policy.id)}
       className="policy-card"
       style={{ "--policy-accent": policy.color }}
     >
@@ -252,26 +257,30 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
         )}
       </div>
 
-      <p className="policy-card-source-line">
+      {/* The footer, one line: the source, how it is modelled, its effect */}
+      <div className="policy-card-foot">
         {policy.source && (
           <a
             className="policy-card-source"
             href={policy.source.href}
             target="_blank"
             rel="noopener noreferrer"
+            title={policy.source.label}
           >
-            Source: {policy.source.label}
+            Source
+            <span className="policy-sr-only">: {policy.source.label}</span>
             <ExternalLink size={14} aria-hidden="true" />
             <span className="policy-sr-only"> (opens in a new tab)</span>
           </a>
         )}
-      </p>
-
-      <div className="policy-card-foot">
-        {policy.details && (
+        {hasModelling && (
           <details className="policy-card-details">
-            <summary>How it is modelled</summary>
-            <p>{policy.details}</p>
+            <summary>
+              How it is modelled
+              {limitations && <span className="policy-card-limit-count">{limitations}</span>}
+            </summary>
+            {policy.details && <p>{policy.details}</p>}
+            <ModellingFacts modelling={modelling} />
           </details>
         )}
         {onShowEffect && (

@@ -16,6 +16,7 @@ import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
 import { yearsOption } from "../controlOptions";
 import { defaultRange, useYearRange } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
@@ -131,7 +132,9 @@ export default function WhoIsInPovertySection({ data }) {
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
-  const [measureChoice, setMeasure] = useState("relative_ahc");
+  // One measure for the sub-tab's tiles and both cards (usePovertyMeasure);
+  // a breakdown without it (the child ones) falls back to its first
+  const [measureChoice, setMeasure] = usePovertyMeasure();
   const plotRef = useRef(null);
   // Cleared when the breakdown or measure changes, so it never shows a row
   // that has gone
@@ -178,9 +181,14 @@ export default function WhoIsInPovertySection({ data }) {
   const groupNotes = b.children
     ? data.child_poverty_by_family?.notes || []
     : (pbg?.notes || []).filter((n) => !/^Region/.test(n));
+  // The poverty line and housing costs of the measure shown
+  const line = measure.startsWith("absolute")
+    ? "a fixed line (60% of the 2024-25 median income) held constant in real terms"
+    : "60% of current median income";
+  const housing = measure.endsWith("ahc") ? "after housing costs" : "before housing costs";
   const about = b.children
-    ? `Share of children in households below the poverty line, after housing costs. Relative: 60% of current median income; absolute: a fixed real-terms line. Families are benefit units; the dashed line is all children.`
-    : `Share of people in households below 60% of current median income, after housing costs. Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age. The dashed line is all people.`;
+    ? `Share of children in households below ${line}, ${housing}. Families are benefit units; the dashed line is all children.`
+    : `Share of people in households below ${line}, ${housing}. Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age. The dashed line is all people.`;
 
   return (
     <LsCard

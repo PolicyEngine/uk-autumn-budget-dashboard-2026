@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 
@@ -273,6 +273,22 @@ describe("the personal impact form", () => {
     expect(formIsOpen()).toBe(true);
     expect(document.getElementById(yoursCard().getAttribute("aria-controls"))).toBeInTheDocument();
     expect(screen.getByRole("form", { name: "Your household" })).toBeInTheDocument();
+  });
+
+  it("scrolls to the form when Your household opens it, its first box focused", async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(<HouseholdCalculator />);
+      fireEvent.click(yoursCard());
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("form", { name: "Your household" }));
+      expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+      expect(document.activeElement).toBe(box("Age"));
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 
   it("fills the form from an example card, still editable", () => {

@@ -220,3 +220,28 @@ describe("single-year bars", () => {
     expect(fitRange(0, 800).domain[1]).toBeGreaterThan(800);
   });
 });
+
+describe("the change-by-year helpers", () => {
+  const row = (reform_id, year, mean_change) => ({ reform_id, year, age_band: "16-24", mean_change, sample_size: 500, people: 100 });
+  const policies = [
+    { id: "a", seriesKey: "measure:a", name: "A" },
+    { id: "b", seriesKey: "measure:b", name: "B" },
+  ];
+  const rows = [
+    row("a", 2026, 50), row("b", 2026, 10),
+    row("a", 2027, 60), row("b", 2027, 10),
+    row("a", 2028, 60), row("b", 2028, -200),
+  ];
+
+  it("adds each measure's own change for the group, and names the measure behind the big step", async () => {
+    const { groupMeasureSeries, stepAnnotations, topParts, cumulate } = await import("./youngPeopleData");
+    const series = groupMeasureSeries(rows, policies, ["a", "b"], [2026, 2027, 2028, 2029]);
+    expect(series.map((point) => point.net)).toEqual([60, 70, -140, null]);
+    expect(series[2]["measure:b"]).toBe(-200);
+    // 2027-28 to 2028-29 falls by 210, from b alone; the 10 rise is too small to name
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b" }]);
+    expect(topParts(series[2]).map((part) => part.id)).toEqual(["b", "a"]);
+    // A running total stops at a gap, never reading it as zero
+    expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);
+  });
+});

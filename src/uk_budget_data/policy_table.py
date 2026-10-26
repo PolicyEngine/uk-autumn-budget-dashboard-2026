@@ -36,6 +36,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from uk_budget_data import reforms as registry
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
@@ -53,7 +54,6 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
-from uk_budget_data import reforms as registry
 
 SCHEMA = "uk-budget-dashboard/policy-parameters/v1"
 OUTPUT_FILE = "policy_parameters.json"
@@ -63,8 +63,18 @@ POUNDS = "gbp"
 PENCE_A_LITRE = "pence_per_litre"
 
 MONTHS = (
-    "January", "February", "March", "April", "May", "June", "July",
-    "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 )
 
 
@@ -154,7 +164,9 @@ def _row(
     row = {
         "label": label,
         "unit": unit,
-        "unit_words": unit_words if unit_words is not None else UNIT_WORDS[unit],
+        "unit_words": (
+            unit_words if unit_words is not None else UNIT_WORDS[unit]
+        ),
         "primary": primary,
         "points": points,
         "source": source,
@@ -221,9 +233,7 @@ def _days_in_force(year: int, first: date, last: date) -> tuple[int, int]:
     return max((high - low).days, 0), (end - start).days
 
 
-def in_force_rate_change(
-    measure_id: str, changes: dict[int, float]
-) -> float:
+def in_force_rate_change(measure_id: str, changes: dict[int, float]) -> float:
     """The rate change while in force, from the day-weighted constants."""
     first, last = VAT_WINDOWS[measure_id]
     rates = []
@@ -307,7 +317,9 @@ def _fuel_duty(reform) -> list[dict]:
         return [rate for start, rate in schedule if start <= day][-1]
 
     # The dates on the page's timeline, April 2026 to March 2032
-    first, last = date(POLICY_YEARS[0], 4, 1), date(POLICY_YEARS[-1] + 1, 3, 31)
+    first, last = date(POLICY_YEARS[0], 4, 1), date(
+        POLICY_YEARS[-1] + 1, 3, 31
+    )
     # The rates in force on the timeline's first day, then each change
     days = sorted(
         {first} | {d for d, _ in current + deferred if first <= d <= last}
@@ -375,7 +387,8 @@ def _state_pension_allowance(reform) -> list[dict]:
             _source(
                 _engine_source(path),
                 _modifier_source(
-                    state_pension_income_tax_allowance, "allowance_2027 to 2031"
+                    state_pension_income_tax_allowance,
+                    "allowance_2027 to 2031",
                 ),
             ),
             note="With the measure, withdrawn £"
@@ -463,7 +476,9 @@ def _road_fuel_vat(reform) -> list[dict]:
     path = "gov.hmrc.vat.standard_rate"
     base = engine_value(path, POLICY_YEARS[0])
     if base != ROAD_FUEL_VAT_RATE:
-        raise ValueError("the modifier's road fuel VAT rate is not the engine's")
+        raise ValueError(
+            "the modifier's road fuel VAT rate is not the engine's"
+        )
     return _vat_rows(
         registry.FUEL_VAT_ID,
         road_fuel_vat_cut,
@@ -495,9 +510,11 @@ def _employer_ni(reform) -> list[dict]:
             PERCENT,
             _yearly(
                 lambda year: engine_value(path, year),
-                lambda year: 0.0
-                if year >= start and year in limits
-                else engine_value(path, year),
+                lambda year: (
+                    0.0
+                    if year >= start and year in limits
+                    else engine_value(path, year)
+                ),
             ),
             _source(_engine_source(path), modifier),
             note="On earnings from the secondary threshold up to the limit "
@@ -533,7 +550,9 @@ def _threshold_freeze(reform) -> list[dict]:
             "Personal allowance",
             POUNDS,
             _yearly(lambda y: engine_value(allowance, y), after_allowance),
-            _source(_engine_source(allowance), _change_source(allowance, function)),
+            _source(
+                _engine_source(allowance), _change_source(allowance, function)
+            ),
         ),
         _row(
             "Higher rate threshold",
@@ -569,7 +588,8 @@ def _badr(reform) -> list[dict]:
             "Business Asset Disposal Relief lifetime limit",
             POUNDS,
             _yearly(
-                lambda y: engine_value(path, y), _engine_or_change(reform, path)
+                lambda y: engine_value(path, y),
+                _engine_or_change(reform, path),
             ),
             _source(
                 _engine_source(path),
@@ -587,7 +607,8 @@ def _plan_2(reform) -> list[dict]:
             "Plan 2 repayment threshold",
             POUNDS,
             _yearly(
-                lambda y: engine_value(path, y), _engine_or_change(reform, path)
+                lambda y: engine_value(path, y),
+                _engine_or_change(reform, path),
             ),
             _source(
                 _engine_source(path),
@@ -654,7 +675,9 @@ def display_for(rows: list[dict]) -> str:
     if all(re.fullmatch(r"\d{4}-\d{2}-\d{2}", p["key"]) for p in points):
         return SCHEDULE
     changed = [row for row in rows if any(_differs(p) for p in row["points"])]
-    years = {p["year"] for row in changed for p in row["points"] if _differs(p)}
+    years = {
+        p["year"] for row in changed for p in row["points"] if _differs(p)
+    }
     if len(changed) >= 3 and len(years) == 1:
         return TABLE
     moved = [p for p in points if _differs(p)]

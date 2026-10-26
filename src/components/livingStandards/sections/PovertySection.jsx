@@ -5,7 +5,9 @@ import { useMemo, useState } from "react";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import { periodOption, yearsOption } from "../controlOptions";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
@@ -13,7 +15,6 @@ import {
   shortLabel,
   lineSeries,
   mergeSeries,
-  niceAxis,
   projectionStartYear,
   trimProjection,
   visibleRows,
@@ -33,18 +34,16 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
-  // The default, as on Population impact's Poverty sub-tab: absolute,
-  // before housing costs, all people
-  const [measure, setMeasure] = useState(measureIds.includes("absolute_bhc") ? "absolute_bhc" : measureIds[0]);
+  // Absolute, before housing costs, at first, as on Population impact's
+  // Poverty sub-tab; shared with the sub-tab's tiles and Who is in poverty (usePovertyMeasure)
+  const [chosenMeasure, setMeasure] = usePovertyMeasure();
+  const measure = measureIds.includes(chosenMeasure) ? chosenMeasure : measureIds[0];
   const [group, setGroup] = useState(groupIds[0]);
   const [viewMode, setViewMode] = useState("both");
 
   const startYear = useMemo(() => projectionStartYear(data), [data]);
   const outturn = poverty.outturn?.[measure]?.[group] || EMPTY;
-  const projection = useMemo(
-    () => trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data)),
-    [poverty, measure, group, startYear, data],
-  );
+  const projection = trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data));
 
   const chartData = useMemo(
     () =>
@@ -54,7 +53,6 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       ),
     [outturn, projection, viewMode],
   );
-  const axis = niceAxis(Math.max(...chartData.flatMap((d) => [d.historical ?? 0, d.projection ?? 0])));
 
   const isAbsolute = measure.startsWith("absolute");
   const isAHC = measure.endsWith("ahc");
@@ -147,15 +145,13 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         </div>
       </div>
     ) : (
-      <LsLineChart
-          highlight={range}
+      <OverTimeChart
+        compare={range}
         data={chartData}
         series={series}
         yFormat={formatPctAxis}
         tooltipFormat={formatPct}
         yLabel="Poverty rate"
-        yDomain={axis.domain}
-        yTicks={axis.ticks}
       />
     ),
   };

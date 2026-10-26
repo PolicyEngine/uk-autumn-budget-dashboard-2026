@@ -144,11 +144,18 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const n = Math.abs(step.x);
     return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
   };
+  // The measure as a sentence's subject: its own sentence form where the
+  // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
+  // "Of the measures, <its name>"
+  const subjectOf = (step) => {
+    const sentence = catalogue.byId?.get(step.id)?.sentence;
+    return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
+  };
   const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
   const summary = top ? (
     peopleMode ? (
       <>
-        {top.name} does most, {moves(top)}
+        {subjectOf(top)} does most, {moves(top)}
         {totalStep ? (
           <>
             ; all the measures together, {about(totalStep)}

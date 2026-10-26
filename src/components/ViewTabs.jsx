@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
+import { useSlidingIndicator } from "./SubTabs";
 
 // Each view's icon, drawn as the chart titles' are
 const TAB_ICONS = {
@@ -24,10 +25,20 @@ const TAB_ICONS = {
  * @param {(value: string) => void} props.onChange
  * @param {(value: string) => string} props.tabId - The id of a tab's button
  * @param {(value: string) => string} props.panelId - The id of a tab's panel
+ * @param {boolean} [props.notch] - The chosen view has sub-tabs: its tab
+ *   opens into their band below (SubTabs), with no rule between
  */
-function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
+function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
   const refs = useRef({});
   const rowRef = useRef(null);
+  // The chosen tab's tint and underline, sliding from tab to tab
+  const indicator = useSlidingIndicator(rowRef, refs, value);
+  // The chosen tab's left edge in the page column, for the sub-tab band
+  // below to start under it (SubTabs.css, --view-tab-x)
+  useEffect(() => {
+    const scrollLeft = rowRef.current?.scrollLeft ?? 0;
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.max(0, indicator.x - scrollLeft)}px`);
+  }, [indicator.x]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
 
@@ -81,7 +92,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
   };
 
   return (
-    <div className="view-tabs-bar">
+    <div className={`view-tabs-bar${notch ? " has-notch" : ""}`}>
       <div
         ref={rowRef}
         className={`view-tabs${hidden.start ? " fade-start" : ""}${hidden.end ? " fade-end" : ""}`}
@@ -90,6 +101,11 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
         onKeyDown={onKeyDown}
         onScroll={measure}
       >
+        <span
+          className={`view-tabs-indicator${indicator.ready ? " is-ready" : ""}`}
+          aria-hidden="true"
+          style={{ width: indicator.width, transform: `translateX(${indicator.x}px)` }}
+        />
         {tabs.map((tab, index) => {
           const selected = tab.value === value;
           // With none chosen, the first tab is the row's Tab stop
