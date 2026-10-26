@@ -20,6 +20,7 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import TitleIcon from "./TitleIcon";
 import ControlBar from "./ControlBar";
+import SelectedYearShade from "./SelectedYearShade";
 import "./SummaryMetricChart.css";
 // The in-card pill styles (.ls-controls), shared with the current-law cards
 import "./livingStandards/LivingStandards.css";
@@ -595,6 +596,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               margin={{ ...chartMargin(narrow, { top: 16 }), bottom: CHART_LOGO.height + CHART_LOGO.padding + 8 }}
             >
               <CartesianGrid {...GRID_PROPS} />
+              {/* The header-selected year, shaded as on every year chart */}
+              <Customized component={<SelectedYearShade value={selectedYear} />} />
               <XAxis
                 dataKey="year"
                 tick={TICK_STYLE}

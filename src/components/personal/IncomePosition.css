@@ -287,3 +287,16 @@
 .position-pair .position-compare-row {
   grid-template-columns: minmax(110px, 1.1fr) 1fr minmax(80px, auto);
 }
+
+/* The summary card: one sentence in the cards' style, then the tiles */
+.position-summary .position-sentence {
+  margin: 4px 0 14px;
+}
+
+.position-summary .position-sentence strong {
+  color: var(--pe-gray-900);
+}
+
+.position-tiles {
+  margin-bottom: 0;
+}

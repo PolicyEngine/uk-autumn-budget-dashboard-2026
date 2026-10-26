@@ -35,7 +35,9 @@ import ChartMoreInfo from "../ChartMoreInfo";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
-import { InfoTip } from "../Tip";
+import HeadlineTile from "../livingStandards/HeadlineTile";
+import "../livingStandards/LivingStandards.css";
+import { Percent, UsersRound, Wallet } from "lucide-react";
 import "./IncomePosition.css";
 
 const BEFORE = CHART_COLOURS.before;
@@ -500,7 +502,7 @@ function Measured({ narrow, children }) {
  * selected policies. Above: a headline (how many in every 100 people have
  * a lower income than yours) and three tiles (your change, its share of
  * your income, your place before → after, with how you and everyone move in
- * its tip), and one Before | After choice for both cards below:
+ * its tip). Each card has a Before | After switch, one state for both:
  *
  * - "Where you sit": the distribution with you on it, as a spread (how many
  *   people at each income) or a rank (how many have less than each income),
@@ -606,6 +608,22 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     .filter(Boolean)
     .join(" ");
 
+  // The headline's number, for bold ("20 in every 100")
+  const headlineParts = /^(.+? in every 100)(.*)$/.exec(text.headline);
+  // Your place as a tile: the percentile (or top or bottom), and whether it moved
+  const shortPlace = (pos) =>
+    pos.above ? `Top ${100 - (pos.edge ?? HIGHEST_PERCENTILE)}%` : pos.below ? `Bottom ${pos.edge ?? LOWEST_PERCENTILE}%` : ordinal(pos.percentile);
+  const offRange = (pos) => pos.above || pos.below;
+  const placeMoved = text.moved;
+  const placeValue = placeMoved ? `${shortPlace(position.before)} → ${shortPlace(position.after)}` : shortPlace(position.after);
+  const placeCaption = offRange(position.after)
+    ? placeMoved
+      ? "of incomes, before → after"
+      : "of incomes, unchanged"
+    : placeMoved
+      ? "percentile, before → after"
+      : "percentile, unchanged";
+
   const whereCsv = () => {
     if (showAs === "rank") {
       return buildChartCsv({
@@ -689,7 +707,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
 
   return (
     <div className="position-block">
-      {/* The headline and tiles, and the one Before | After for both cards */}
+      {/* The headline and tiles; each card below has the shared Before | After */}
       <div className="card single-year-card position-card position-summary">
         <div className="chart-header">
           <div>
@@ -699,21 +717,28 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             </h3>
           </div>
         </div>
-        <p className="position-headline">{text.headline}</p>
-        <dl className="position-chips">
-          {text.chips.map((chip) => (
-            <div key={chip.key} className={`position-chip is-${chip.key}`}>
-              <dt>
-                {chip.label}
-                {chip.key === "place" && <InfoTip content={placeTip} label={`About your place: ${placeTip}`} />}
-              </dt>
-              <dd>{chip.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="position-controls">
-          <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
-          <span className="position-controls-note">The selected policies, for both charts below</span>
+        {/* One sentence, as every card's, its number in bold */}
+        <p className="chart-description position-sentence">
+          {headlineParts ? (
+            <>
+              <strong>{headlineParts[1]}</strong>
+              {headlineParts[2]}
+            </>
+          ) : (
+            text.headline
+          )}
+        </p>
+        {/* The three tiles, in the dashboard's headline tile style */}
+        <div className="forecast-tiles position-tiles">
+          <HeadlineTile icon={Wallet} name="Your change" value={signedPounds(ownChange)} caption="a year" trend={{ rows: [] }} />
+          <HeadlineTile
+            icon={Percent}
+            name="Share of your income"
+            value={netBefore > 0 ? signedPct(ownPct, 2) : "Not available"}
+            caption="of net income"
+            trend={{ rows: [] }}
+          />
+          <HeadlineTile icon={UsersRound} name="Your place" info={placeTip} value={placeValue} caption={placeCaption} trend={{ rows: [] }} />
         </div>
       </div>
 
@@ -742,6 +767,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
+            {/* Before | After: one state for both cards, a switch on each */}
+            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
             <span className="position-segment-lead">Show as</span>
             <ViewSwitch options={SHOW_AS} value={showAs} onChange={setShowAs} label="Show the distribution as" compact />
           </div>
@@ -801,6 +828,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
+            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
             <ViewSwitch options={COMPARE_BY} value={compareBy} onChange={setCompareBy} label="Compare by" compact />
             <ViewSwitch options={UNIT_OPTIONS.map((o) => ({ ...o, label: o.value === "pct" ? "%" : "£" }))} value={unit} onChange={setUnit} label="Units" compact />
           </div>

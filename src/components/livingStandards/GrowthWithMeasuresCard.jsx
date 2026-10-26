@@ -66,7 +66,7 @@ export function clearGrowthWithMeasuresCache() {
  * @param {string[]} props.selectedPolicies - The selected measures' ids
  * @param {React.ReactNode} props.twinLink - The link to the chart without the measures
  */
-export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink }) {
+export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink, selectedYear = null }) {
   const { data } = useOutlook();
   const file = useGrowthFile();
   // Every measure the catalogue publishes: the package's run is exact only
@@ -79,15 +79,15 @@ export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink }) {
   );
   // The pills read their choices once, so the card waits for both files
   if (!data || file.status !== "ready") return null;
-  return <LoadedCard data={data} rows={file.rows} run={run} twinLink={twinLink} />;
+  return <LoadedCard data={data} rows={file.rows} run={run} twinLink={twinLink} selectedYear={selectedYear} />;
 }
 
-function LoadedCard({ data, rows, run, twinLink }) {
+function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
   // The difference reads best: a measure moves growth by hundredths of a
   // point, too little to see beside growth of a percent or two
   const [show, setShow] = useState("difference");
   const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
-  const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show });
+  const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show }, selectedYear);
   const noEffect = changesNothing(rows, run.reformId);
   const packageNote =
     !run.exact && run.reformId === COMBINED_REFORM_ID
