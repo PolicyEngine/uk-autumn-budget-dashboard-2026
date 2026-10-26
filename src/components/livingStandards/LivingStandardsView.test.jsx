@@ -260,17 +260,17 @@ describe("the Pre-measures forecast view", () => {
     // Poverty over time: Rate (its Poverty line, Housing costs, People and
     // Period under one Options button, worded as on Population impact) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    // The view is a "Show" pill (Rate or Depth); one row of controls
-    expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
-    // The same default as Population impact: absolute, before housing costs, all people
-    expect(optionsSummary(poverty)).toBe("Options: Absolute · Before housing costs · All people · Outturn and projection");
+    // One Options pill: the view first ("Show": Rate or Depth), then the
+    // same default as Population impact: absolute, before housing costs, all people
+    expect(within(poverty).queryByRole("button", { name: /^Poverty view:/ })).toBeNull();
+    expect(optionsSummary(poverty)).toBe("Options: Rate · Absolute · Before housing costs · All people · Outturn and projection");
     // The Options dialog: a radio group per choice, focus inside, Escape closes
     const optionsButton = within(poverty).getByRole("button", { name: /^Options:/ });
     expect(optionsButton).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(optionsButton);
     expect(optionsButton).toHaveAttribute("aria-expanded", "true");
     const dialog = within(poverty).getByRole("dialog", { name: "Poverty over time options" });
-    expect(within(dialog).getAllByRole("radiogroup").map((g) => g.textContent.length > 0)).toHaveLength(4);
+    expect(within(dialog).getAllByRole("radiogroup").map((g) => g.textContent.length > 0)).toHaveLength(5);
     expect(dialog).toContainElement(document.activeElement);
     fireEvent.keyDown(dialog, { key: "Escape" });
     expect(within(poverty).queryByRole("dialog")).toBeNull();
@@ -279,9 +279,11 @@ describe("the Pre-measures forecast view", () => {
     expect(optionsSummary(poverty)).toMatch(/· Children ·/);
     choose(poverty, "People", "All people");
     fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
-    choose(poverty, "Poverty view", "Depth");
+    choose(poverty, "Show", "Depth");
     poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
-    expect(within(poverty).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    // Depth has no choices of its own: the pill holds the view alone
+    expect(optionsSummary(poverty)).toBe("Options: Depth");
+    fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the

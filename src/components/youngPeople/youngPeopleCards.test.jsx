@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
 import {
@@ -156,15 +156,17 @@ describe("young people cards", () => {
 
   it("lets the reader choose the age group compared", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
-    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    // The age group is the card's one Options pill
+    fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
     expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
-    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    // The age group is the card's one Options pill
+    fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
     expect(screen.getByText("Results are unavailable for the selected policies in 2028-29.")).toBeInTheDocument();
     expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
   });

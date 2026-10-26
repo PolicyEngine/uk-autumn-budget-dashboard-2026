@@ -17,7 +17,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import TitleIcon from "./TitleIcon";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import "./SummaryMetricChart.css";
 // The in-card pill styles (.ls-controls), shared with the current-law cards
 import "./livingStandards/LivingStandards.css";
@@ -407,17 +407,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
       {/* With the choice above the pair (PovertyMeasuresRow), none here */}
       {controls.length > 0 && !choiceAbove && (
         <div className="chart-controls ls-controls summary-metric-choices">
-          {controls.map((control) => (
-            <PillSelect
-              key={control.label}
-              variant="light"
-              prefix={control.label}
-              name={control.label}
-              options={control.options}
-              value={control.value}
-              onChange={control.onChange}
-            />
-          ))}
+          <ControlBar name={metric.title} options={controls} />
         </div>
       )}
       <div ref={chartRef} className={controls.length > 0 && !choiceAbove ? "summary-metric-plot" : undefined}>
