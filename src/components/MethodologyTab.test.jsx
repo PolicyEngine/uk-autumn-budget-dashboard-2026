@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
-import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
+const UNAVAILABLE = unavailableMeasures(catalogue);
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
@@ -11,7 +17,7 @@ afterEach(() => {
   delete window.matchMedia;
 });
 
-const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onShowTab} />);
+const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} /></MeasureCatalogueProvider>);
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
@@ -73,29 +79,55 @@ describe("MethodologyTab", () => {
     });
   });
 
-  it("shows each measure's modelling and the example households", () => {
+  it("points to Policies for what each measure does and how it is modelled, listing none itself", () => {
+    // Each fact once: the measures' descriptions and modelling live on the
+    // Policies cards, so Methodology names no published measure
+    const onShowTab = vi.fn();
+    const { container } = renderTab(onShowTab);
+    expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
+    const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
+    const summary = model.querySelector(".method-summary");
+    expect(summary.querySelectorAll("p")).toHaveLength(1);
+    expect(summary).toHaveTextContent("What each measure does and how it is modelled is on Policies");
+    const link = summary.querySelector("a.method-pointer");
+    expect(link).toHaveAccessibleName("Policies");
+    expect(link).toHaveAttribute("href", "?tab=policies");
+    fireEvent.click(link);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
+    for (const measure of catalogue.displayable) expect(container).not.toHaveTextContent(measure.name);
+    expect(within(model).queryByRole("button", { name: /See the effect/ })).toBeNull();
+  });
+
+  it("lists the unavailable measures only when there are any", () => {
     renderTab();
+    const heading = screen.queryByRole("heading", { name: "Unavailable measures" });
+    if (UNAVAILABLE.length === 0) {
+      expect(heading).toBeNull();
+    } else {
+      const card = heading.closest(".method-card");
+      expect(within(card).getAllByRole("listitem")).toHaveLength(UNAVAILABLE.length);
+      for (const measure of UNAVAILABLE) expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
+    }
+    const empty = { ...catalogue, measures: catalogue.measures.filter((measure) => measure.displayable) };
+    cleanup();
+    render(<MeasureCatalogueProvider catalogue={empty}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
+    expect(screen.queryByRole("heading", { name: "Unavailable measures" })).toBeNull();
+  });
 
-    const [table, notModelled] = screen.getAllByRole("table");
-    const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(MEASURE_MODELLING.length);
-    // The likely measures the model cannot cost, each with its reason
-    const notModelledRows = within(notModelled).getAllByRole("row").slice(1);
-    expect(notModelledRows).toHaveLength(NOT_MODELLED.length);
+  it("lists the measures the model cannot cost", () => {
+    renderTab();
+    const card = screen.getByRole("heading", { name: "Not modelled" }).closest(".method-card");
+    const items = within(card).getAllByRole("listitem");
+    expect(items).toHaveLength(NOT_MODELLED.length);
+    expect(NOT_MODELLED.length).toBeGreaterThan(0);
     for (const measure of NOT_MODELLED) {
-      expect(within(notModelled).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
-      expect(notModelled).toHaveTextContent(measure.why);
+      expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
     }
-    for (const measure of MEASURE_MODELLING) {
-      // Every measure is one the charts colour, by the same name
-      expect(POLICY_COLORS[measure.name]).toBeDefined();
-      expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+    // Text only: no measure the catalogue publishes, and no figure
+    for (const measure of catalogue.measures) {
+      expect(items.some((item) => item.querySelector(".mm-reason-name").textContent === measure.name)).toBe(false);
     }
-
-    const panel = document.getElementById(METHOD_SECTIONS.population);
-    for (const household of EXAMPLE_HOUSEHOLDS) {
-      expect(panel).toHaveTextContent(household.definition);
-    }
+    expect(within(card).getByRole("list").textContent).not.toMatch(/£|\d+(\.\d+)?%/);
   });
 
   it("points to the household calculation from its slot", () => {
@@ -104,25 +136,101 @@ describe("MethodologyTab", () => {
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Household calculation",
     );
-    // The calculation is said once, in Household impact's "About these
-    // figures"; this slot points there.
-    expect(slot).toHaveTextContent("About these figures");
+    // The calculation is said once, in this section's technical details;
+    // the slot points there and to the tab
+    expect(slot).toHaveTextContent("Technical details");
     expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
     expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
+    const calc = document.getElementById(METHOD_ANCHORS.householdCalc);
+    expect(calc).toHaveTextContent("How the household calculation works");
+    const terms = [...calc.parentElement.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    expect(terms).toEqual(expect.arrayContaining(["Engine and measures", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
   });
 
   it("switches views from its links, in place", () => {
     const onShowTab = vi.fn();
     renderTab(onShowTab);
-    fireEvent.click(screen.getByRole("link", { name: "policy notes on Population impact" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard");
+    const notes = screen.getByRole("link", { name: "policy notes" });
+    expect(notes).toHaveAttribute("href", "?tab=policies");
+    fireEvent.click(notes);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("living");
-    const young = screen.getByRole("link", { name: "Young people results" });
-    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    // The current-law cards on the Pre-measures forecast's sub-tabs
+    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["Forecast changes", "forecast"]]) {
+      const link = within(living).getAllByRole("link", { name }).find((a) => a.getAttribute("href") === `?tab=outlook&sub=${sub}`);
+      fireEvent.click(link);
+      expect(onShowTab).toHaveBeenLastCalledWith("outlook", sub);
+    }
+    // The twins with the measures, on Population impact
+    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"]]) {
+      const link = within(living).getAllByRole("link", { name }).find((a) => a.getAttribute("href") === `?tab=dashboard&sub=${sub}`);
+      fireEvent.click(link);
+      expect(onShowTab).toHaveBeenLastCalledWith("dashboard", sub);
+    }
+    // Household impact is the "household" view (it was linked as "personal",
+    // a view that does not exist)
+    const household = document.getElementById(METHOD_SECTIONS.singleYear);
+    const tabLink = within(household).getByRole("link", { name: "Household impact tab" });
+    expect(tabLink).toHaveAttribute("href", "?tab=household");
+    fireEvent.click(tabLink);
+    expect(onShowTab).toHaveBeenLastCalledWith("household");
+    // By age, with 16 to 24 chosen (the Young people sub-tab was merged into it)
+    const young = screen.getByRole("link", { name: "results by age" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=age&age=16-24#young-people");
     fireEvent.click(young);
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "age", { age: "16-24" });
+  });
+
+  it("links every external source in a new tab, saying so, and every shared term to its definition", () => {
+    const { container } = renderTab();
+    const external = [...container.querySelectorAll('a[href^="http"]')];
+    expect(external.length).toBeGreaterThan(5);
+    for (const link of external) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      expect(link).toHaveTextContent("(opens in a new tab)");
+    }
+    expect(external.map((link) => link.getAttribute("href"))).toEqual(
+      expect.arrayContaining(["https://policyengine.org/uk/model", "https://github.com/PolicyEngine/policyengine-uk"]),
+    );
+    // Each term link lands on a term the glossary defines
+    const terms = [...container.querySelectorAll('a[href^="#term-"]')];
+    expect(terms.length).toBeGreaterThan(5);
+    for (const link of terms) {
+      expect(container.querySelector(link.getAttribute("href"))).not.toBeNull();
+    }
+    // In-view anchors exist too
+    for (const link of container.querySelectorAll('a[href^="#method-"]')) {
+      expect(container.querySelector(link.getAttribute("href")), link.getAttribute("href")).not.toBeNull();
+    }
+  });
+
+  it("keeps the space after every link: no JSX text after a tag that loses it in the build", () => {
+    // Next's compiler (SWC) drops the leading space of JSX text that runs on
+    // to another line after a closing tag ("net income</Term> under ...",
+    // shown as "net incomeunder"); jsdom's transform keeps it, so a render
+    // test cannot see it. Such text needs an explicit {" "}.
+    const root = join(fileURLToPath(import.meta.url), "..");
+    const files = [
+      "MethodologyTab.jsx",
+      "GeographyMethodology.jsx",
+      ...readdirSync(join(root, "methodology")).filter((f) => f.endsWith(".jsx")).map((f) => `methodology/${f}`),
+      "personal/singleYearMethodNotes.jsx",
+    ];
+    const tag = /(<\/[A-Za-z][\w.]*>|\/>) +(?=[^\s{<])/g;
+    const glued = [];
+    for (const file of files) {
+      const lines = readFileSync(join(root, file), "utf8").split("\n");
+      lines.forEach((line, index) => {
+        for (const match of line.matchAll(tag)) {
+          const rest = line.slice(match.index + match[0].length);
+          const next = (lines[index + 1] ?? "").trim();
+          if (/[<{]/.test(rest) || /^\s*(\/\/|\*)/.test(line) || !next || /^[<{)}/]/.test(next)) continue;
+          glued.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+    expect(glued).toEqual([]);
   });
 
   it("renders every section with its icon, so a missing icon import fails", () => {

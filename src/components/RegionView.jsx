@@ -1,7 +1,9 @@
 import { useId, useState } from "react";
+import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { useGeographyData } from "../hooks/useGeographyData";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { downloadFile } from "../utils/downloadFile";
 import {
   EXPORT_UNITS,
@@ -84,10 +86,13 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
   const titleId = useId();
   const captionId = useId();
 
+  const { combinedId } = useMeasureCatalogue();
   const choice = chooseReform({
     selectedIds: selectedPolicies,
-    policyIds: policies.map((policy) => policy.id),
+    // The package is every measure the page can show, held ones excluded
+    policyIds: policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     reforms: regional.table?.reforms ?? [],
+    packageId: combinedId,
   });
   const view = viewState({
     data: regional,
@@ -182,7 +187,7 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       )}
 
       {view.kind === "loading" && (
-        <p className="geography-loading">Loading results by region…</p>
+        <PlotSkeleton label="Loading results by region…" height={360} />
       )}
 
       {view.kind === "notice" && (

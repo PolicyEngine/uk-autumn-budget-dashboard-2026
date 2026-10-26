@@ -1,79 +1,60 @@
-import { useCallback, useSyncExternalStore } from "react";
-import { parseScatterCsv, SCATTER_FILE } from "../utils/householdScatter";
-
-/**
- * The binned household scatter, fetched once and shared.
- *
- * The state is `loading`, `ready` (with `rows`), `unavailable` (HTTP 404)
- * or `error` (the file could not be fetched or is not in the published
- * format; the page then shows nothing from it).
- */
+import { useEffect, useMemo, useState } from "react";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { loadDashboard, loadVerifiedTablesOnce, peekVerifiedTables } from "../utils/loadDashboard";
 
 export const LOADING = Object.freeze({ status: "loading", rows: null, error: null });
 
-const basePath = () => process.env.NEXT_PUBLIC_BASE_PATH || "";
+const TABLE = "household_scatter_binned";
 
-const failure = (status, error) => Object.freeze({ status, rows: null, error });
+function rowsState(rows) {
+  return rows.length ? { status: "ready", rows, error: null } : { status: "unavailable", rows: null, error: "Household results are unavailable" };
+}
+
+// Whether the catalogue's own load read the scatter (a standalone load, a
+// test's catalogue); the page's catalogue leaves it to load on demand
+const carriesScatter = (catalogue) => Object.values(catalogue.tablesByKey ?? {}).some((tables) => tables && Object.hasOwn(tables, TABLE));
+
+function scatterState(catalogue) {
+  if (!catalogue.manifest || !catalogue.tablesByKey) return { status: "unavailable", rows: null, error: "No verified household results are published" };
+  const rows = Object.values(catalogue.tablesByKey).flatMap((tables) => tables[TABLE] ?? []).filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
+  return rowsState(rows);
+}
+
+/** Standalone consumers use the same receipt-verified route as the page. */
+export async function loadHouseholdScatter({ fetchImpl = fetch, base = process.env.NEXT_PUBLIC_BASE_PATH || "" } = {}) {
+  try {
+    return scatterState((await loadDashboard(base, { fetchImpl })).catalogue);
+  } catch (error) {
+    return { status: "error", rows: null, error: error.message };
+  }
+}
 
 /**
- * @returns {Promise<Object>} A state as above; never rejects.
+ * The binned household results for the page's catalogue. The page loads
+ * them on demand, each artifact's file checked against its verified receipt
+ * (loadVerifiedTablesOnce), so they never hold up the first chart.
  */
-export async function loadHouseholdScatter({
-  fetchImpl = fetch,
-  base = basePath(),
-} = {}) {
-  let response;
-  try {
-    response = await fetchImpl(`${base}/data/${SCATTER_FILE}`, { cache: "no-cache" });
-  } catch {
-    return failure("error", `${SCATTER_FILE} could not be fetched`);
-  }
-  if (response.status === 404) return failure("unavailable", null);
-  if (!response.ok) return failure("error", `${SCATTER_FILE}: HTTP ${response.status}`);
-  try {
-    const rows = parseScatterCsv(await response.text());
-    return Object.freeze({ status: "ready", rows, error: null });
-  } catch (error) {
-    return failure("error", error.message);
-  }
-}
-
-const entries = new Map();
-
-function entryFor(key) {
-  let entry = entries.get(key);
-  if (!entry) {
-    entry = { state: null, listeners: new Set() };
-    entries.set(key, entry);
-    const settle = (state) => {
-      entry.state = state;
-      for (const listener of entry.listeners) listener();
-    };
-    loadHouseholdScatter().then(settle, () =>
-      settle(failure("error", "the file could not be loaded")),
-    );
-  }
-  return entry;
-}
-
-/** The binned scatter's state: `{status, rows, error}`. */
 export function useHouseholdScatterData() {
-  const key = basePath();
-  const subscribe = useCallback(
-    (onChange) => {
-      const entry = entryFor(key);
-      entry.listeners.add(onChange);
-      return () => entry.listeners.delete(onChange);
-    },
-    [key],
-  );
-  const getSnapshot = () => entries.get(key)?.state ?? LOADING;
-  return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
+  const catalogue = useMeasureCatalogue();
+  const lazy = Boolean(catalogue.manifest && catalogue.tablesByKey) && !carriesScatter(catalogue);
+  const initial = useMemo(() => {
+    if (!lazy) return scatterState(catalogue);
+    const peeked = peekVerifiedTables(catalogue, TABLE);
+    return peeked ? rowsState(peeked.rows) : LOADING;
+  }, [catalogue, lazy]);
+  const [loaded, setLoaded] = useState({ catalogue: null, state: LOADING });
+  useEffect(() => {
+    if (!lazy || initial.status !== "loading") return undefined;
+    let cancelled = false;
+    loadVerifiedTablesOnce(catalogue, TABLE)
+      .then(({ rows }) => { if (!cancelled) setLoaded({ catalogue, state: rowsState(rows) }); })
+      .catch((error) => { if (!cancelled) setLoaded({ catalogue, state: { status: "error", rows: null, error: error.message } }); });
+    return () => { cancelled = true; };
+  }, [catalogue, lazy, initial]);
+  if (initial.status !== "loading") return initial;
+  return loaded.catalogue === catalogue ? loaded.state : LOADING;
 }
 
-/** Forget the fetched file (for tests). */
-export function resetHouseholdScatterCache() {
-  entries.clear();
-}
-
+// Kept for consumers' test cleanup; there is no independent figure cache.
+export function resetHouseholdScatterCache() {}
 export default useHouseholdScatterData;

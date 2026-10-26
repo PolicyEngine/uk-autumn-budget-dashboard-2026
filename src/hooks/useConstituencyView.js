@@ -3,8 +3,9 @@ import {
   useConstituencyBoundaries,
   useGeographyData,
 } from "./useGeographyData";
-import { hasReform } from "../utils/geography/rows";
-import { chooseReform } from "../utils/geography/selection";
+import { hasReform, rowsFor } from "../utils/geography/rows";
+import { chooseReform, focusChoice } from "../utils/geography/selection";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
 
 /**
@@ -27,6 +28,7 @@ export function useConstituencyView({
   policies = [],
   selectedYear,
   outcome,
+  focusId = null,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -37,11 +39,26 @@ export function useConstituencyView({
     ...(constituency.table?.reforms ?? []),
     ...(regional.table?.reforms ?? []),
   ];
-  const choice = chooseReform({
-    selectedIds: selectedPolicies,
-    policyIds: policies.map((policy) => policy.id),
-    reforms,
-  });
+  const { combinedId } = useMeasureCatalogue();
+  const policyIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
+  // A selection with no single reform shows one measure at a time: the
+  // reader's, else the one with the largest mean change by constituency
+  const size = (id) => {
+    const values = rowsFor(constituency.table, { reform: id, year: selectedYear, outcome })
+      .map((row) => Math.abs(Number(row.value)))
+      .filter(Number.isFinite);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+  };
+  const choice = focusChoice(
+    chooseReform({
+      selectedIds: selectedPolicies,
+      // The package is every measure the page can show, held ones excluded
+      policyIds,
+      reforms,
+      packageId: combinedId,
+    }),
+    { selectedIds: selectedPolicies, policyIds, reforms, focusId, size },
+  );
   let view = viewState({
     data: constituency,
     choice,

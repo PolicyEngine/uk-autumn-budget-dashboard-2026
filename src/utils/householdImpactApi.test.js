@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import {
+  EngineMismatchError,
+  STAGE_ENGINE_PACKAGES,
+  StageMismatchError,
   atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
+  engineDifferences,
+  mergeStages,
   normaliseHouseholdImpact,
   requestKey,
+  stageMismatch,
   statePensionFor,
 } from "./householdImpactApi";
 import {
@@ -178,6 +185,332 @@ describe("normaliseHouseholdImpact", () => {
     const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, by_policy: null, sweep: null });
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
+  });
+
+  it("reads the marginal rate's parts when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.parts).toBeNull();
+    const steps = HOUSEHOLD_FIXTURE.sweep.marginal_rates.map((rate) => ({
+      income_tax: 0.2,
+      national_insurance: 0.08,
+      other: rate.reform - 0.28,
+    }));
+    const data = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      sweep: {
+        ...HOUSEHOLD_FIXTURE.sweep,
+        marginal_rate_parts: {
+          parts: ["income_tax", "national_insurance", "other"],
+          baseline: steps,
+          reform: steps,
+          own_point: {
+            baseline: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+            reform: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+          },
+        },
+      },
+    });
+    const parts = data.sweep.parts;
+    expect(parts.names).toEqual(["income_tax", "national_insurance", "other"]);
+    expect(parts.after).toHaveLength(data.sweep.rates.length);
+    expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
+    expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
+  });
+
+  it("reads net income's parts at each point when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.netParts).toBeNull();
+    const points = HOUSEHOLD_FIXTURE.sweep.points.map((point) => ({
+      employment_income: point.employment_income,
+      income_tax: -100,
+      other_taxes: point.reform - point.employment_income + 100,
+    }));
+    const withParts = (baseline) =>
+      normaliseHouseholdImpact({
+        ...HOUSEHOLD_FIXTURE,
+        sweep: {
+          ...HOUSEHOLD_FIXTURE.sweep,
+          net_income_parts: { parts: ["employment_income", "income_tax", "other_taxes"], baseline, reform: points },
+        },
+      }).sweep.netParts;
+    const parts = withParts(points);
+    expect(parts.names).toEqual(["employment_income", "income_tax", "other_taxes"]);
+    expect(parts.after).toHaveLength(HOUSEHOLD_FIXTURE.sweep.points.length);
+    expect(parts.before[1].income_tax).toBe(-100);
+    // A side with the wrong number of points is not drawn
+    expect(withParts(points.slice(1))).toBeNull();
+  });
+});
+
+// Review of 428d209, finding 2: a breakdown from one deployment was merged
+// under a headline from another, and kept the headline's engine label.
+describe("the household answer's package versions", () => {
+  const ENGINE = HOUSEHOLD_FIXTURE.engine;
+  const stage = (engine, change, parts) => normaliseHouseholdImpact({
+    ...HOUSEHOLD_FIXTURE,
+    engine,
+    net_income: { ...HOUSEHOLD_FIXTURE.net_income, change },
+    ...parts,
+  });
+
+  it("refuses to merge stages from different package versions", () => {
+    const headline = stage(ENGINE, 100, { by_policy: null, sweep: null });
+    const detail = stage({ ...ENGINE, "policyengine-uk": "9.9.9" }, 999, {});
+    expect(() => mergeStages(headline, detail)).toThrow(EngineMismatchError);
+    try {
+      mergeStages(headline, detail);
+    } catch (error) {
+      expect(error.packages).toEqual(["policyengine-uk"]);
+      expect(error.kind).toBe("engine");
+    }
+    // The same versions merge as before
+    const merged = mergeStages(headline, stage(ENGINE, 100, {}));
+    expect(merged.byPolicy).not.toBeNull();
+    expect(merged.engine).toEqual(ENGINE);
+  });
+
+  const versions = fc.dictionary(
+    fc.constantFrom("policyengine", "policyengine-uk", "policyengine-core"),
+    fc.stringMatching(/^[0-9]{1,2}\.[0-9]{1,3}\.[0-9]{1,2}$/),
+    { minKeys: 1 },
+  );
+
+  it("names exactly the expected packages the API reports otherwise", () => {
+    fc.assert(fc.property(versions, versions, fc.dictionary(fc.constantFrom("uk_budget_data"), fc.string()), (expected, other, extra) => {
+      // Matching versions, plus packages no receipt records: nothing differs
+      expect(engineDifferences(expected, { ...expected, ...extra })).toEqual([]);
+      const reported = { ...expected, ...other };
+      const differ = engineDifferences(expected, reported);
+      expect(differ).toEqual(Object.keys(expected).filter((name) => reported[name] !== expected[name]).sort());
+      // A package the API leaves out always differs
+      for (const name of Object.keys(expected)) {
+        const missing = { ...reported };
+        delete missing[name];
+        expect(engineDifferences(expected, missing)).toContain(name);
+      }
+    }));
+  });
+
+  // Review of e9d7c76, finding 1: the Modal build reports no uk_budget_data
+  // version and Cloud Run reports one, so comparing it refused every
+  // calculation. The stages compare the model packages only, and each must
+  // be reported. Review of d2ec6f2: the oracle names the three packages
+  // itself, so dropping one from STAGE_ENGINE_PACKAGES fails here.
+  const MODEL_PACKAGES = ["policyengine", "policyengine-core", "policyengine-uk"];
+  const project = fc.option(fc.constantFrom("0.1.0", "0.2.0"), { nil: null });
+  it("merges two stages exactly when they report the same model packages", () => {
+    expect([...STAGE_ENGINE_PACKAGES].sort()).toEqual(MODEL_PACKAGES);
+    fc.assert(fc.property(versions, versions, fc.boolean(), project, project, (first, random, same, ownA, ownB) => {
+      const second = same ? { ...first } : random;
+      const headline = stage({ ...first, uk_budget_data: ownA }, 1, { by_policy: null, sweep: null });
+      const detail = stage({ ...second, uk_budget_data: ownB }, 1, {});
+      const agree = MODEL_PACKAGES.every((name) => typeof first[name] === "string" && first[name] === second[name]);
+      if (agree) expect(mergeStages(headline, detail).engine).toEqual(headline.engine);
+      else expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
+    }));
+  });
+
+  // Review of e9d7c76, finding 3, and of d2ec6f2, finding 2: net income is
+  // compared in whole pennies, so £10,000.00 and £10,000.01 agree although
+  // their float difference is just over 0.01
+  const full = { policyengine: "6.10.2", "policyengine-core": "3.33.3", "policyengine-uk": "2.132.6" };
+  const withNet = (baseline, reform, parts = {}) => normaliseHouseholdImpact({
+    ...HOUSEHOLD_FIXTURE,
+    engine: full,
+    net_income: { baseline, reform, change: reform - baseline },
+    ...parts,
+  });
+  it("accepts a breakdown within a penny of the headline's net income, either way, and refuses two pennies", () => {
+    const headline = withNet(10000, 10000, { by_policy: null, sweep: null });
+    for (const reform of [10000, 10000.01, 9999.99]) {
+      expect(stageMismatch(headline, withNet(10000, reform))).toBeNull();
+    }
+    for (const reform of [10000.02, 9999.98]) {
+      expect(stageMismatch(headline, withNet(10000, reform)).packages).toEqual(["net_income"]);
+    }
+    for (const baseline of [10000.01, 9999.99]) {
+      expect(stageMismatch(headline, withNet(baseline, 10000))).toBeNull();
+    }
+    for (const baseline of [10000.02, 9999.98]) {
+      expect(stageMismatch(headline, withNet(baseline, 10000)).packages).toEqual(["net_income"]);
+    }
+  });
+
+  it("refuses a breakdown whose net income differs from the headline's by more than a penny", () => {
+    const raw = { ...HOUSEHOLD_FIXTURE, engine: full };
+    const headline = normaliseHouseholdImpact({ ...raw, by_policy: null, sweep: null });
+    const shifted = (shift) => normaliseHouseholdImpact({ ...raw, net_income: { ...raw.net_income, change: raw.net_income.change + shift, reform: raw.net_income.reform + shift } });
+    // Whole pennies: one either way agrees, two or more doesn't
+    fc.assert(fc.property(fc.integer({ min: -500000, max: 500000 }), (n) => {
+      const detail = shifted(n / 100);
+      if (Math.abs(n) <= 1) expect(mergeStages(headline, detail).engine).toEqual(full);
+      else {
+        expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
+        expect(stageMismatch(headline, detail).packages).toEqual(["net_income"]);
+      }
+    }));
+    // Any amount: under a penny agrees, two pennies or more doesn't
+    fc.assert(fc.property(fc.double({ min: -5000, max: 5000, noNaN: true }), (shift) => {
+      const detail = shifted(shift);
+      if (Math.abs(shift) < 0.01) expect(stageMismatch(headline, detail)).toBeNull();
+      if (Math.abs(shift) >= 0.02) expect(stageMismatch(headline, detail).packages).toEqual(["net_income"]);
+    }));
+  });
+
+  // Review of d2ec6f2, finding 1: two builds with the same package versions
+  // can agree on this household's net income and still differ elsewhere on
+  // its earnings sweep (a threshold change above its earnings). Only the
+  // build commit tells them apart.
+  const A = "a".repeat(40);
+  const B = "b".repeat(40);
+  const otherSweep = (sweep) => ({
+    ...sweep,
+    points: sweep.points.map((point, i) => (i === sweep.points.length - 1 ? { ...point, reform: point.reform - 250, change: point.change - 250 } : point)),
+  });
+  it("refuses a breakdown from another build commit even when net income agrees", () => {
+    const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, by_policy: null, sweep: null });
+    const older = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: B, sweep: otherSweep(HOUSEHOLD_FIXTURE.sweep) });
+    expect(older.net).toEqual(headline.net);
+    expect(older.engine).toEqual(headline.engine);
+    expect(stageMismatch(headline, older).packages).toEqual(["build"]);
+    expect(() => mergeStages(headline, older)).toThrow(StageMismatchError);
+    const same = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A });
+    expect(mergeStages(headline, same).sweep).toEqual(same.sweep);
+    expect(mergeStages(headline, same).build).toBe(A);
+  });
+
+  it("keeps the build commit an answer reports, and none for a missing or empty one", () => {
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).build).toBe(A);
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).builds).toEqual([A]);
+    for (const git_sha of [undefined, null, ""]) {
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).build).toBeNull();
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).builds).toEqual([]);
+    }
+  });
+
+  // Review of e78fbf4: a malformed commit matched an identical malformed one
+  it("matches a malformed commit with nothing, not even itself", () => {
+    const headline = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null, sweep: null });
+    const part = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha });
+    for (const bad of [7, "abc", "A".repeat(40), "a".repeat(39), ` ${A}`]) {
+      expect(stageMismatch(headline(bad), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(A), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(bad), part(A)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(null), part(bad), { sameBuild: true }).packages).toEqual(["build"]);
+    }
+    // A 64-character commit (a SHA-256 repository) is well formed
+    const long = "f".repeat(64);
+    expect(stageMismatch(headline(long), part(long), { sameBuild: true })).toBeNull();
+  });
+
+  // Review of cc15d50, finding 2: a malformed commit passed beside answers
+  // that report none, though invariant 7 says every reported commit is one
+  // well-formed commit
+  it("refuses a malformed commit beside answers that report none", () => {
+    const headline = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null, sweep: null });
+    const sweep = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null });
+    const split = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, sweep: null });
+    for (const bad of [7, "not-a-commit", "A".repeat(40)]) {
+      // A malformed headline, a part with none
+      expect(stageMismatch(headline(bad), sweep(null)).packages).toEqual(["build"]);
+      expect(() => mergeStages(headline(bad), sweep(null))).toThrow(StageMismatchError);
+      // No headline commit, a malformed part
+      expect(stageMismatch(headline(null), sweep(bad)).packages).toEqual(["build"]);
+      // A malformed part already merged under a headline with none (as an
+      // older build would have let through), then a part with none
+      const half = { ...mergeStages(headline(null), sweep(null)), builds: [{ malformed: String(bad) }] };
+      expect(stageMismatch(half, split(null)).packages).toEqual(["build"]);
+    }
+    // Answers that all report none still merge
+    expect(mergeStages(mergeStages(headline(null), sweep(null)), split(null)).builds).toEqual([]);
+  });
+
+  // Review of e78fbf4, finding 2: under a headline that reports no commit,
+  // a sweep from one Cloud Run revision and a split from another each
+  // passed against the headline's null, and made a complete result
+  it("never puts two parts from different commits together, under any headline", () => {
+    const parts = {
+      sweep: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null }),
+      byPolicy: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, sweep: null }),
+    };
+    for (const headlineBuild of [null, A]) {
+      const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineBuild, by_policy: null, sweep: null });
+      for (const [firstPart, secondPart] of [["sweep", "byPolicy"], ["byPolicy", "sweep"]]) {
+        for (const [one, two] of [[A, B], [B, A]]) {
+          if (headlineBuild !== null && one !== headlineBuild) {
+            expect(() => mergeStages(headline, parts[firstPart](one))).toThrow(StageMismatchError);
+            continue;
+          }
+          const half = mergeStages(headline, parts[firstPart](one));
+          // The headline's own commit is kept apart from what its parts reported
+          expect(half.build).toBe(headlineBuild);
+          expect(half.builds).toEqual([one]);
+          expect(() => mergeStages(half, parts[secondPart](two))).toThrow(StageMismatchError);
+          expect(stageMismatch(half, parts[secondPart](two)).packages).toEqual(["build"]);
+          // The same commit, or none, completes it
+          expect(mergeStages(half, parts[secondPart](one)).builds).toEqual([one]);
+          expect(mergeStages(half, parts[secondPart](null)).builds).toEqual([one]);
+        }
+      }
+    }
+  });
+
+  it("never lets a part's commit stand in for a headline that reports none", () => {
+    const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: null, by_policy: null, sweep: null });
+    const half = mergeStages(headline, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, by_policy: null }));
+    // A retry from this partial result still refuses the detail service
+    const modal = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, sweep: null });
+    expect(stageMismatch(half, modal, { sameBuild: true }).packages).toEqual(["build"]);
+    expect(stageMismatch(half, modal)).toBeNull();
+  });
+
+  // Every reported commit, the headline's and each part's in turn, must be
+  // one well-formed commit; answers that report none are compared on the
+  // rest, and a malformed one refuses the next part whatever it reports.
+  // The oracle reads only the raw answers.
+  it("merges a sequence of parts exactly when every commit they report is one", () => {
+    const raw = fc.constantFrom(null, A, B, "not-a-commit");
+    fc.assert(fc.property(raw, fc.array(raw, { minLength: 1, maxLength: 4 }), (headlineSha, partShas) => {
+      let result = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineSha, by_policy: null, sweep: null });
+      let refused = false;
+      for (const git_sha of partShas) {
+        try {
+          result = mergeStages(result, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }));
+        } catch (error) {
+          expect(error).toBeInstanceOf(StageMismatchError);
+          refused = true;
+          break;
+        }
+      }
+      // Up to the first refusal, in order: each part is merged only if the
+      // commits reported so far and its own are all one well-formed commit
+      const wellFormed = (sha) => /^[0-9a-f]{40}$/.test(sha);
+      let expectRefused = false;
+      const reported = headlineSha === null ? [] : [headlineSha];
+      for (const sha of partShas) {
+        const identities = sha === null ? reported : [...reported, sha];
+        if (!identities.every((seen) => wellFormed(seen) && seen === identities[0])) {
+          expectRefused = true;
+          break;
+        }
+        if (sha !== null) reported.push(sha);
+      }
+      expect(refused).toBe(expectRefused);
+      if (!refused) expect(result.build).toEqual(headlineSha === "not-a-commit" ? { malformed: headlineSha } : headlineSha);
+    }));
+  });
+
+  // The detail service's answers (sameBuild) must report the headline's
+  // commit. The main API's need only agree where both report one, as a build
+  // older than the commit field reports none.
+  it("matches build commits exactly as the stage rules say", () => {
+    const build = fc.constantFrom(null, A, B);
+    fc.assert(fc.property(build, build, fc.boolean(), (first, second, sameBuild) => {
+      const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: first, by_policy: null, sweep: null });
+      const detail = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: second });
+      const agree = first !== null && second !== null ? first === second : !sameBuild;
+      const mismatch = stageMismatch(headline, detail, { sameBuild });
+      if (agree) expect(mismatch).toBeNull();
+      else expect(mismatch.packages).toEqual(["build"]);
+    }));
   });
 });
 
@@ -377,6 +710,45 @@ describe("the programme table's whole pounds", () => {
     expect(tax.children.reduce((sum, child) => sum + child.shown.change, 0)).toBe(tax.shown.change);
   });
 
+  it("shows Council Tax as the headline card's Based on does, not nudged to make the column add up", () => {
+    // The family on Universal Credit in 2027-28 (live API, 26 October
+    // 2026): Council Tax £2,628.58 was −£2,628 in the table and £2,629 under
+    // the headline
+    const family = [
+      { id: "employment_income", group: "income", before: 21504.02, after: 21504.02, children: [] },
+      { id: "income_tax", group: "tax", before: 1534.8, after: 1534.8, children: [] },
+      { id: "national_insurance", group: "tax", before: 714.73, after: 714.73, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.58, after: 2628.58, children: [] },
+      { id: "fuel_duty", group: "tax", before: 364.89, after: 338.52, children: [] },
+      { id: "vat_change", group: "tax", before: 0, after: -73.85, children: [] },
+      { id: "tv_licence", group: "tax", before: 180, after: 180, children: [] },
+      { id: "universal_credit", group: "benefit", before: 18443.07, after: 18443.07, children: [] },
+      { id: "child_benefit", group: "benefit", before: 2391.15, after: 2391.15, children: [] },
+      { id: "free_childcare", group: "benefit", before: 3633.88, after: 3633.88, children: [] },
+      { id: "other_taxes", group: "tax", before: 0.04, after: 0.05, children: [] },
+    ];
+    const totals = headlineTotals({ before: 40549.08, after: 40649.3 });
+    const rows = roundProgrammeGroups(programmeGroups(family), totals).flatMap((group) => group.rows);
+    const councilTax = rows.find((row) => row.id === "council_tax");
+    expect(councilTax.shown.before).toBe(-2629);
+    expect(councilTax.shown.after).toBe(-2629);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+  });
+
+  it("rounds an exact 50p of Council Tax as the Based on does, up to the next pound", () => {
+    // money(2628.5) is £2,629; Math.round(-2628.5) alone would give −£2,628
+    const programmes = [
+      { id: "employment_income", group: "income", before: 30000.2, after: 30000.2, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.5, after: 2628.5, children: [] },
+    ];
+    const totals = headlineTotals({ before: 27371.7, after: 27371.7 });
+    const rows = roundProgrammeGroups(programmeGroups(programmes), totals).flatMap((group) => group.rows);
+    expect(rows.find((row) => row.id === "council_tax").shown.before).toBe(-2629);
+    expect(rows.reduce((sum, row) => sum + row.shown.before, 0)).toBe(totals.before);
+  });
+
   it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
     const bars = [{ id: "a", change: 3.5, rounded: 3 }];
     expect(pinnedRound([3.5, 3.5], 7, bars)).toEqual([3, 4]);
@@ -470,6 +842,8 @@ describe("postHouseholdDetail", () => {
       expect(payload).toEqual(ok);
       expect(asked).toEqual([detail, main]);
 
+      // A refusal from the detail URL (an older build may not know a
+      // measure) is asked again of the main API, whose answer stands
       asked.length = 0;
       const fetchInvalid = async (url) => {
         asked.push(url);
@@ -478,10 +852,42 @@ describe("postHouseholdDetail", () => {
       await expect(
         postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchInvalid }),
       ).rejects.toMatchObject({ kind: "invalid" });
-      expect(asked).toEqual([detail]);
+      expect(asked).toEqual([detail, main]);
+
+      // An answer `accept` refuses (another build) is asked of the main API
+      asked.length = 0;
+      const other = { net_income: { baseline: 1, reform: 3, change: 2 } };
+      const fetchOther = async (url) => {
+        asked.push(url);
+        return respond(200, url === detail ? other : ok);
+      };
+      const accepted = await postHouseholdDetail(
+        { include: ["sweep"] },
+        { fetchImpl: fetchOther, accept: (raw) => raw.net_income.reform === 2 },
+      );
+      expect(accepted).toEqual(ok);
+      expect(asked).toEqual([detail, main]);
     } finally {
       process.env = saved;
     }
+  });
+
+  // W5's review of #104: a signal aborted before the call never fired its
+  // abort event, so the request went out regardless
+  it("never sends a request for a signal already aborted", async () => {
+    const { postHouseholdImpact } = await import("./householdImpactApi");
+    const seen = [];
+    const fetchImpl = async (url, init) => {
+      seen.push(init.signal.aborted);
+      if (init.signal.aborted) throw new DOMException("aborted", "AbortError");
+      return respond(200, ok);
+    };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(seen).toEqual([true]);
   });
 
   it("uses the main API alone when no detail URL is set", async () => {

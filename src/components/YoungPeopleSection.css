@@ -22,10 +22,15 @@
 }
 
 
-/* A muted line under a chart, about how to read it */
-.chart-footnote {
-  margin: 8px 0 0;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--pe-gray-500);
+/* By age's Age group control: the chips in one row that scrolls sideways
+   on a phone, never wider than the page */
+.age-group-control {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.age-group-control .obr-view-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }

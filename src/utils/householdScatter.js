@@ -1,5 +1,5 @@
 /**
- * The household scatter, as published in public/data/household_scatter_binned.csv.
+ * The household scatter, from each verified artifact's household_scatter_binned.csv.
  *
  * Households are never shown one by one: each row is one cell of baseline
  * income band by income change band, with the weighted number of
@@ -20,7 +20,7 @@
 
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
-import { chooseReform } from "./geography/selection";
+import { chooseReform, focusChoice } from "./geography/selection";
 import {
   bandLabel,
   changeBandLabel as describeChangeBand,
@@ -125,6 +125,7 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   rows: Array<Object>|null}} options.data
  * @param {Array<string>} options.selectedIds
  * @param {Array<string>} options.policyIds - Every measure the page offers.
+ * @param {string|null} [options.packageId] - The package's combined run.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
@@ -132,24 +133,44 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageId, focusId = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  const choice = chooseReform({ selectedIds, policyIds, reforms });
+  // Several measures and no single published reform: one at a time, the
+  // reader's or the one moving the most households' incomes the most
+  const size = (id) => {
+    let weight = 0;
+    let total = 0;
+    for (const row of data.rows) {
+      if (row.reform_id !== id || row.year !== year) continue;
+      const middle = changeBandMiddle(row.change_band, row.change_band_upper);
+      if (!Number.isFinite(middle)) continue;
+      weight += row.households;
+      total += Math.abs(middle) * row.households;
+    }
+    return weight ? total / weight : 0;
+  };
+  const choice = focusChoice(chooseReform({ selectedIds, policyIds, reforms, packageId }), {
+    selectedIds,
+    policyIds,
+    reforms,
+    focusId,
+    size,
+  });
   if (choice.kind === "none") {
     return notice("Select a measure to see household results.");
   }
   if (choice.kind === "pick") {
-    return notice(
-      "Household results are shown for one measure at a time, or for all measures together.",
-      "Select one measure, or all of them. Groups of households are published for each measure separately and are not added together.",
-    );
+    return notice("Household results are not yet published for the selected measures.");
   }
   if (choice.kind === "no-package") {
-    return notice("Household results are not yet published for the full package.");
+    return notice(
+      "Household results for all the measures together are not published yet.",
+      "Select one measure to see its households. Groups of households are published for each measure on its own and cannot be added up across measures.",
+    );
   }
   if (!reforms.includes(choice.reform)) {
     return notice("Household results are not yet published for this measure.");
@@ -188,6 +209,8 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
   return {
     kind: "points",
     reform: choice.reform,
+    // Several measures: the offered ones, for the card's Measure picker
+    focus: choice.focus ?? null,
     points,
     yearPoints: years.map(cellsIn).filter((cells) => cells.length > 0),
     basisYear,
@@ -550,4 +573,76 @@ export function panelDots(
     }
   });
   return dots;
+}
+
+/**
+ * How households with income like one household's changed: the cells of
+ * the income bands whose middle is within `window` of `income` (two £5,000
+ * bands), and the change bands that hold their middle `share` of
+ * households (by weighted count, from the 10th to the 90th percentile by
+ * default). The range is the outer edges of those two change bands, so at
+ * least `share` of the band's published households fall inside it.
+ *
+ * Null when there is nothing honest to say: the income is off the
+ * published bands, no cells fall in them, or the range reaches an
+ * open-ended band beyond ±£5,000.
+ *
+ * @param {Array<{incomeBand: number, changeBand: number,
+ *   changeBandUpper: number, households: number}>} cells - The year's cells.
+ * @param {number} income - The household's income on the scatter's basis.
+ * @returns {{incomeLow: number, incomeHigh: number, low: number,
+ *   high: number, share: number} | null} `low` and `high` in £ a year
+ *   (the no-change band counts as £0).
+ */
+export function incomeLikeYours(
+  cells,
+  income,
+  { window = 5000, share = 0.8, bins = SCATTER_BINS } = {},
+) {
+  if (!Number.isFinite(income) || income < bins.income_min || income >= bins.income_max) {
+    return null;
+  }
+  const width = bins.income_band_width;
+  const near = cells.filter(
+    (cell) => Math.abs(cell.incomeBand + width / 2 - income) <= window && cell.households > 0,
+  );
+  const total = near.reduce((sum, cell) => sum + cell.households, 0);
+  if (!(total > 0)) return null;
+  const sorted = [...near].sort(
+    (a, b) => a.changeBand - b.changeBand || a.changeBandUpper - b.changeBandUpper,
+  );
+  // Merge cells of the same change band across the income bands
+  const bands = [];
+  for (const cell of sorted) {
+    const last = bands[bands.length - 1];
+    if (last && last.changeBand === cell.changeBand && last.changeBandUpper === cell.changeBandUpper) {
+      last.households += cell.households;
+    } else {
+      bands.push({ ...cell });
+    }
+  }
+  const at = (q) => {
+    const target = q * total;
+    let before = 0;
+    for (const band of bands) {
+      before += band.households;
+      if (before > target) return band;
+    }
+    return bands[bands.length - 1];
+  };
+  const tail = (1 - share) / 2;
+  const lowBand = at(tail);
+  const highBand = at(1 - tail);
+  if (openEdge(lowBand.changeBand, lowBand.changeBandUpper)) return null;
+  if (openEdge(highBand.changeBand, highBand.changeBandUpper)) return null;
+  // The no-change band (−£1, £1) counts as £0 at either end
+  const edge = (value) => (Math.abs(value) <= 1 ? 0 : value);
+  const incomeBands = near.map((cell) => cell.incomeBand);
+  return {
+    incomeLow: Math.min(...incomeBands),
+    incomeHigh: Math.min(Math.max(...incomeBands) + width, bins.income_max),
+    low: edge(lowBand.changeBand),
+    high: edge(highBand.changeBandUpper),
+    share,
+  };
 }

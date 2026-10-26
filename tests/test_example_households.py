@@ -41,6 +41,17 @@ def test_each_definition_is_one_sentence_in_house_style(household):
         assert not re.search(rf"\b{word}\b", text.lower())
 
 
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_each_definition_states_its_measures_effect_as_conditional(household):
+    """The chooser, the charts' exports and Methodology show a household's
+    definition whatever measures are selected, and its measure can be
+    deselected or withdrawn, so the effect it describes is stated as
+    holding when the measure is selected (review of 3d52cff, finding 5)."""
+    circumstances, effect = household.definition.rsplit("; ", 1)
+    assert ", when selected, " in effect
+    assert "when selected" not in circumstances
+
+
 def test_the_pensioners_are_on_private_pension_income_and_the_rest_on_pay():
     for household in EXAMPLE_HOUSEHOLDS:
         expected = (

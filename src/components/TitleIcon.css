@@ -9,7 +9,7 @@
   height: 28px;
   margin-right: 10px;
   border-radius: 8px;
-  background: var(--pe-teal-50, #e6fffa);
+  background: var(--pe-teal-50);
   color: var(--c-gain-text);
   vertical-align: middle;
 }
