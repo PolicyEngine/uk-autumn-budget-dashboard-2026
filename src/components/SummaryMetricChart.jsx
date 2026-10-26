@@ -434,16 +434,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  // 2026-27 is shown only where the selection changes something then (a
-  // measure in force from autumn 2026); otherwise the axis starts in 2027-28
-  const emptyFirst = (points) => {
-    const first = points.find((point) => point.year === DISPLAY_YEARS[0]);
-    return !first || first.value === null || Number(Math.abs(first.value).toFixed(metric.decimals)) === 0;
-  };
-  const firstYearShown = byMeasure
-    ? !byMeasure.every((m) => emptyFirst(m.points))
-    : !emptyFirst(metricByYear(rows, run, metric));
-  const years = firstYearShown ? DISPLAY_YEARS : DISPLAY_YEARS.slice(1);
+  // Every year shown, from 2027-28 (FIRST_DISPLAY_YEAR)
+  const years = DISPLAY_YEARS;
   const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
