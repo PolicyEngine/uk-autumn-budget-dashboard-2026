@@ -148,6 +148,7 @@ export const INEQUALITY_METRICS = {
   "top-10": {
     ...SUMMARY_METRICS.inequality,
     label: "Top 10% share",
+    title: "Change in the top 10% income share",
     key: "top_10_share_change_pp",
     description:
       "Change in the share of equivalised household net income received by the 10% of people with the highest incomes, each year, in percentage points.",
@@ -161,6 +162,7 @@ export const INEQUALITY_METRICS = {
   "top-1": {
     ...SUMMARY_METRICS.inequality,
     label: "Top 1% share",
+    title: "Change in the top 1% income share",
     key: "top_1_share_change_pp",
     description:
       "Change in the share of equivalised household net income received by the 1% of people with the highest incomes, each year, in percentage points.",
@@ -174,6 +176,7 @@ export const INEQUALITY_METRICS = {
   "90-10": {
     ...SUMMARY_METRICS.inequality,
     label: "90/10 ratio",
+    title: "Change in the 90/10 income ratio",
     key: "p90_p10_change",
     description:
       "Relative change in the 90/10 ratio, the equivalised household net income of the person at the 90th percentile over that at the 10th, each year.",
