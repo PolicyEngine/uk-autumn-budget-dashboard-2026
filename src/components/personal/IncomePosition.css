@@ -267,22 +267,6 @@
   vertical-align: middle;
 }
 
-.position-link {
-  margin: 0;
-  font-size: var(--fs-small);
-}
-
-.position-link a {
-  color: var(--c-gain-text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.position-link a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* In a half-width card the comparison rows stack their label */
 .position-pair .position-compare-row {
   grid-template-columns: minmax(110px, 1.1fr) 1fr minmax(80px, auto);

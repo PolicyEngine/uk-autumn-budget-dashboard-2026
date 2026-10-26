@@ -650,8 +650,6 @@ function Measured({ narrow, children }) {
  * - "How your change compares": the average change in each tenth with yours
  *   marked, or you beside households like you.
  *
- * Every household's own change is on All households, linked below.
- *
  * @param {Object} props
  * @param {{ before: number, after: number }} props.net - The household's net income
  * @param {Object} props.household - The request's household (has_partner, children)
@@ -1012,9 +1010,6 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           </div>
         </div>
       </div>
-      <p className="position-link">
-        <a href="?tab=dashboard&sub=all#scatter">See every household&apos;s change on All households →</a>
-      </p>
     </div>
   );
 }
