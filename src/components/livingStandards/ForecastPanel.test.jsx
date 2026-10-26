@@ -110,9 +110,19 @@ describe("Forecast changes with one forecast", () => {
     expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
     // One comparable card per group: the four price measures on one chart
     const prices = card(/^Inflation measures$/);
-    const legend = prices.querySelector(".chart-legend");
-    for (const name of ["CPI", "CPIH", "CPI after housing costs", "RPI"]) expect(legend).toHaveTextContent(name);
-    expect(legend).not.toHaveTextContent("Budget forecast");
+    // Its chips are the key: one per line, all on, and no legend repeating them
+    const chips = within(within(prices).getByRole("group", { name: "Lines: show or hide" })).getAllByRole("button");
+    expect(chips.map((c) => c.textContent)).toEqual(["CPI", "CPIH", "CPI after housing costs", "RPI"]);
+    expect(chips.every((c) => c.getAttribute("aria-pressed") === "true")).toBe(true);
+    expect(prices.querySelector(".chart-legend")).toBeNull();
+    expect(prices).not.toHaveTextContent("Budget forecast");
+    // A chip hides its line; the last one on stays on
+    fireEvent.click(chips[3]);
+    expect(chips[3]).toHaveAttribute("aria-pressed", "false");
+    for (const chip of chips.slice(1, 3)) fireEvent.click(chip);
+    fireEvent.click(chips[0]);
+    expect(chips[0]).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(chips[3]);
     for (const name of [/^Earnings and other income$/, /^House prices and rents$/, /^Mortgage interest payments$/]) {
       expect(card(name)).toBeTruthy();
     }

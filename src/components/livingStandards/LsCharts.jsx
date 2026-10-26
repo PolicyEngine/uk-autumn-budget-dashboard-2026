@@ -211,6 +211,10 @@ export function LsLineChart({
   // Name each line at its end, right of the plot (wide screens only; the
   // legend names them on a phone)
   endLabels = false,
+  // False where the card's own chips (SeriesToggle) are the key
+  legend = true,
+  // The key of a line to bring forward (a hovered chip); the others fade
+  focusKey = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -225,7 +229,7 @@ export function LsLineChart({
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
-    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={margin}>
           <CartesianGrid {...GRID_PROPS} />
@@ -271,9 +275,10 @@ export function LsLineChart({
               dataKey={s.key}
               name={s.name}
               stroke={s.colour}
-              strokeWidth={2.5}
+              strokeWidth={focusKey === s.key ? 3.5 : 2.5}
+              strokeOpacity={focusKey && focusKey !== s.key ? 0.2 : 1}
               strokeDasharray={dashOf(s)}
-              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1 }}
+              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 }}
               activeDot={{ r: 5 }}
               connectNulls={false}
               isAnimationActive={false}
