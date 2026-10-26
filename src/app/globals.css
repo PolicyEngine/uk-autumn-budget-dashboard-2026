@@ -217,6 +217,11 @@ code {
   --c-mtr-universal-credit: #2f855a;
   --c-mtr-other-benefits: #9ae6b4;
   --c-mtr-other: #d1d5db;
+  --c-net-state-pension: #22543d;
+  --c-net-warm-home-discount: #68d391;
+  --c-net-council-tax: #8e7cc3;
+  --c-net-fuel-duty: #553c9a;
+  --c-net-vat: #b794f4;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;
@@ -504,7 +509,7 @@ body {
     gap: 4px;
     padding: 0 4px;
     font-size: 0.875rem;
-    /* "Pre-measures forecast" wraps rather than overflow on a small phone */
+    /* "OBR forecast" wraps rather than overflow on a small phone */
     white-space: normal;
     text-align: center;
     line-height: 1.2;
@@ -717,7 +722,7 @@ body {
 }
 
 /* Section headings (SectionHeading.jsx): an icon in a tinted circle, the
-   title with an optional with/without-the-measures pill and a "#" link,
+   title and a "#" link,
    the subtitle below, and a hairline under it all whose teal start grows
    in as the heading scrolls into view. The circle is larger than a card's
    square chip, so a section reads above its cards. */
@@ -795,30 +800,6 @@ body {
   color: var(--pe-gray-500);
 }
 
-/* With or without the measures: one restrained pill */
-.section-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.section-tag-measures {
-  background: var(--pe-teal-50);
-  color: var(--c-gain-text);
-  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
-}
-
-.section-tag-current-law {
-  background: var(--pe-gray-50);
-  color: var(--pe-gray-600);
-  box-shadow: inset 0 0 0 1px var(--pe-gray-200);
-}
-
 /* "#": a link to the section, shown on hover or focus; a click copies it */
 .section-anchor {
   font-size: var(--fs-body);
@@ -830,6 +811,14 @@ body {
   text-decoration: none;
   opacity: 0;
   transition: opacity 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.section-anchor::before {
+  content: "#";
+}
+
+.section-anchor.is-copied::before {
+  content: "Copied";
 }
 
 .section-heading:hover .section-anchor,

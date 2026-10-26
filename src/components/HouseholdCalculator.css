@@ -690,12 +690,19 @@
   border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
 }
 
-/* Your household keeps its card's tint: the place to start */
+/* Your household keeps its card's tint and its place: the width of the
+   grid, below the examples */
 .household-chip.is-yours {
+  grid-column: 1 / -1;
   font: inherit;
   font-size: var(--fs-caption);
-  background: var(--pe-teal-50);
+  background: linear-gradient(100deg, var(--pe-teal-50), var(--pe-surface) 75%);
   border-color: var(--pe-teal-200);
+}
+
+.household-chip-hint {
+  font-weight: 500;
+  color: var(--pe-teal-700);
 }
 
 .household-chip:focus-visible {
@@ -754,22 +761,9 @@
   color: var(--pe-gray-500);
 }
 
-/* Your household's chip says "Yours" where "Your household" would be cut */
-.household-chip-short {
-  display: none;
-}
-
 /* A phone: still two across, a little tighter, so every chip shows at
    once */
 @media (max-width: 599px) {
-  .household-chip-long {
-    display: none;
-  }
-
-  .household-chip-short {
-    display: inline;
-  }
-
   .household-strip {
     gap: 6px;
   }
@@ -801,6 +795,16 @@
   margin: 0 0 14px;
   font-size: var(--fs-small);
   line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+/* "Example households", over the grid */
+.household-cards-label {
+  margin: 0 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--pe-gray-500);
 }
 
@@ -878,7 +882,6 @@
 }
 
 .household-card:hover::before,
-.household-card[aria-pressed="true"]::before,
 .household-card.is-selected::before {
   opacity: 1;
 }
@@ -887,12 +890,37 @@
   transform: translateY(-1px);
 }
 
-.household-card:focus-visible {
+.household-card:has(.household-card-hit:focus-visible) {
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
 }
 
-.household-card[aria-pressed="true"],
+/* The card's one button: its name, stretched over the whole card, so a
+   click anywhere on it chooses it; the year bars sit above it */
+.household-card-hit {
+  grid-area: name;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.household-card-hit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.household-card-hit:focus-visible {
+  outline: none;
+}
+
 .household-card.is-selected {
   background: var(--card-tint);
   border-color: var(--card-accent);
@@ -920,15 +948,13 @@
 }
 
 .household-card:hover .household-card-icon,
-.household-card[aria-pressed="true"] .household-card-icon,
-.household-card.is-yours .household-card-icon {
+.household-card.is-selected .household-card-icon {
   color: var(--pe-surface);
   background: var(--card-ink);
 }
 
-/* Top right: a tick on the chosen card, "Start here" on yours */
-.household-card-check,
-.household-card-badge {
+/* Top right: a tick on the chosen card */
+.household-card-check {
   position: absolute;
   top: 18px;
   right: 18px;
@@ -953,16 +979,6 @@
   }
 }
 
-.household-card-badge {
-  padding: 3px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--pe-teal-800);
-  background: var(--pe-surface);
-  border: 1px solid var(--pe-teal-200);
-  border-radius: 999px;
-}
 
 /* Two lines, always: a one-line name keeps the second line's room */
 .household-card-name {
@@ -988,7 +1004,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
-  height: 42px;
+  height: 58px;
   padding-top: 6px;
 }
 
@@ -1029,13 +1045,36 @@
   color: var(--pe-gray-500);
 }
 
+/* The year bars: a bar for each year about a zero line, the first and
+   last years under them; above the card's button, so hovering, tapping or
+   focusing them shows a year's figure instead of choosing the card */
 .household-card-spark {
+  position: relative;
+  z-index: 1;
   flex: none;
-  margin-bottom: 5px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  margin-bottom: 2px;
+  padding: 3px 4px 2px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.household-card-spark:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 1px;
+}
+
+.household-card-spark svg {
+  display: block;
+  overflow: visible;
 }
 
 .household-card-spark rect {
   opacity: 0.35;
+  transition: opacity 0.15s ease;
 }
 
 .household-card-spark rect.is-current {
@@ -1052,6 +1091,59 @@
 
 .household-card-spark .is-none {
   fill: var(--c-no-change);
+}
+
+.household-card-spark rect.household-card-spark-hit {
+  fill: transparent;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.household-card-spark-zero {
+  stroke: var(--c-zero-line);
+  stroke-width: 1;
+  opacity: 0.45;
+  shape-rendering: crispEdges;
+}
+
+.household-card-spark-years {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-tick);
+}
+
+/* The figure for the year hovered, tapped or reached by the keys */
+.household-card-spark-tip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  padding: 4px 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  box-shadow: var(--pe-shadow-md);
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.household-card-spark-tip.is-shown {
+  opacity: 1;
+  transform: none;
 }
 
 /* No precomputed figure: a dashed pill says when it comes */
@@ -1126,7 +1218,7 @@
   border-left: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
 }
 
-.household-card[aria-pressed="true"] .household-card-tag:not(.is-start) {
+.household-card.is-selected .household-card-tag {
   background: var(--pe-surface);
 }
 
@@ -1138,29 +1230,266 @@
   border-radius: 50%;
 }
 
-/* "Your household": the start, on a light teal wash, with a chevron that
-   turns as the form opens below */
-.household-card.is-yours {
-  --card-accent: var(--pe-teal-600);
-  background: var(--pe-teal-50);
-  border-color: var(--pe-teal-200);
+/* "Your household": below the examples, the width of the grid, on a soft
+   teal gradient; an invitation to enter your own, with what the form asks
+   first, a button-like call to action and, once calculated, your result */
+.household-yours {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 24px 28px;
+  font: inherit;
+  text-align: left;
+  color: var(--pe-gray-800);
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--pe-teal-100) 70%, transparent), transparent 45%),
+    linear-gradient(110deg, var(--pe-teal-50), var(--pe-surface) 80%);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: var(--card-radius);
+  box-shadow: var(--pe-shadow-sm);
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  animation:
+    household-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.36s backwards,
+    household-yours-call 1.6s ease-in-out 1.1s 2;
 }
 
-.household-card.is-yours::before {
-  opacity: 1;
+/* Once, as the view opens: a soft teal ring twice, to say "start here" */
+@keyframes household-yours-call {
+  0%,
+  100% {
+    box-shadow: var(--pe-shadow-sm);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in srgb, var(--pe-teal-500) 16%, transparent),
+      var(--pe-shadow-md);
+  }
 }
 
-.household-card-tag.is-start {
+.household-yours:hover {
+  transform: translateY(-2px);
+  border-color: var(--pe-teal-300);
+  box-shadow: var(--pe-shadow-md);
+}
+
+.household-yours:active {
+  transform: translateY(0);
+}
+
+.household-yours:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-yours.is-selected {
+  border-color: var(--pe-teal-600);
+  box-shadow:
+    0 0 0 1px var(--pe-teal-600),
+    var(--pe-shadow-sm);
+}
+
+/* A house in two soft rings */
+.household-yours-art {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
   color: var(--pe-surface);
+  background: var(--pe-teal-700);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 7px color-mix(in srgb, var(--pe-teal-500) 18%, transparent),
+    0 0 0 14px color-mix(in srgb, var(--pe-teal-500) 8%, transparent);
+  margin: 0 8px 0 6px;
+}
+
+.household-yours-words {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.household-yours-eyebrow.household-card-name {
+  display: block;
+  min-height: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pe-teal-700);
+}
+
+.household-yours-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--pe-gray-900);
+}
+
+.household-yours-lead {
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+.household-yours-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.household-yours-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--pe-teal-800);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-teal-100);
+  border-radius: 999px;
+}
+
+.household-yours-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.household-yours-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  animation: household-check-in 0.25s ease-out;
+}
+
+.household-yours-result-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.household-yours-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pe-surface);
+  background: var(--pe-teal-700);
+  border-radius: var(--pe-radius-md);
+  transition: background-color 0.15s ease;
+}
+
+.household-yours:hover .household-yours-action {
+  background: var(--pe-teal-800);
+}
+
+.household-yours-arrow {
+  transition: transform 0.18s ease;
+}
+
+.household-yours:hover .household-yours-arrow {
+  transform: translateX(3px);
+}
+
+.household-yours .household-card-chevron {
+  transform: rotate(180deg);
+}
+
+.household-yours .household-card-check {
+  top: 14px;
+  right: 14px;
   background: var(--pe-teal-700);
 }
 
-.household-card-chevron {
-  transition: transform 0.25s ease;
+@media (prefers-reduced-motion: reduce) {
+  .household-yours,
+  .household-yours-result {
+    animation: none;
+  }
+
+  .household-yours,
+  .household-yours:hover,
+  .household-yours-arrow,
+  .household-yours:hover .household-yours-arrow {
+    transform: none;
+    transition: none;
+  }
+
+  .household-card-spark-tip,
+  .household-card-spark rect {
+    transition: none;
+  }
 }
 
-.household-card.is-open .household-card-chevron {
-  transform: rotate(180deg);
+/* A tablet or phone: the words beside the house, the call to action the
+   full width below them */
+@media (max-width: 767px) {
+  .household-yours {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px 16px;
+    padding: 20px;
+  }
+
+  .household-yours-art {
+    align-self: start;
+    width: 48px;
+    height: 48px;
+    margin: 4px 4px 0 2px;
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--pe-teal-500) 18%, transparent),
+      0 0 0 10px color-mix(in srgb, var(--pe-teal-500) 8%, transparent);
+  }
+
+  .household-yours-art svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .household-yours-title {
+    font-size: 1.12rem;
+  }
+
+  .household-yours-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .household-yours-result {
+    align-items: flex-start;
+  }
+
+  .household-yours-action {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .household-yours-result + .household-yours-action {
+    flex: none;
+  }
 }
 
 /* The form, opening below the cards */
@@ -1215,23 +1544,18 @@
     font-size: 1rem;
   }
 
-  /* Clear of the badge or tick in the corner */
-  .household-card.is-yours .household-card-name {
-    padding-right: 88px;
-  }
-
-  .household-card[aria-pressed="true"] .household-card-name {
+  /* Clear of the tick in the corner */
+  .household-card.is-selected .household-card-name {
     padding-right: 28px;
   }
 
-  .household-card-check,
-  .household-card-badge {
+  .household-card-check {
     top: 14px;
     right: 14px;
   }
 
   .household-card-result {
-    height: 36px;
+    height: 54px;
     padding-top: 2px;
   }
 

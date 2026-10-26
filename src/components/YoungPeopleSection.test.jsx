@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render as renderReact, screen } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
@@ -179,9 +179,10 @@ describe("YoungPeopleSection", () => {
 
   it("switches average change by age to single years of age", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
-    const pill = await screen.findByRole("button", { name: /Average change by age shown/ });
-    fireEvent.click(pill);
-    fireEvent.click(screen.getByRole("option", { name: /By single year of age/ }));
+    // The view is the first choice in the card's one Options pill
+    const card = (await screen.findByRole("heading", { level: 3, name: /^Average change by age/ })).closest(".young-people-mean");
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(card).getByRole("radiogroup", { name: "Show" })).getByRole("radio", { name: /By single year of age/ }));
     expect(screen.getByText(/by single year of age \(10 to 40\)/)).toBeInTheDocument();
   });
 

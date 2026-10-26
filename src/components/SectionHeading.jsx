@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
 
-// The pill beside a title on sections that are only with, or only without,
-// the selected measures; the subtitle then says the rest.
-const TAGS = {
-  measures: "With the selected measures",
-  "current-law": "Without the measures",
-};
-
 /** "Who gains and from what" -> "who-gains-and-from-what" */
 export const sectionSlug = (text) =>
   String(text)
@@ -20,11 +13,11 @@ let hashHandled = false;
 
 /**
  * A section's title and one-line subtitle, on the page above its cards: an
- * icon in a tinted circle, the title, an optional with/without-the-measures
- * pill, and a "#" that copies a link to the section. The id is the title's
+ * icon in a tinted circle, the title and a "#" that copies a link to the
+ * section. The id is the title's
  * slug unless given; pass one where a title repeats on another sub-tab.
  */
-function SectionHeading({ title, subtitle, id, icon, tag, className = "" }) {
+function SectionHeading({ title, subtitle, id, icon, className = "" }) {
   const anchor = id ?? (typeof title === "string" ? sectionSlug(title) : undefined);
   const ref = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -73,7 +66,6 @@ function SectionHeading({ title, subtitle, id, icon, tag, className = "" }) {
       <div className="section-heading-text">
         <div className="section-heading-title">
           <h2>{title}</h2>
-          {TAGS[tag] && <span className={`section-tag section-tag-${tag}`}>{TAGS[tag]}</span>}
           {anchor && (
             <a
               className={`section-anchor ${copied ? "is-copied" : ""}`.trim()}
@@ -82,7 +74,8 @@ function SectionHeading({ title, subtitle, id, icon, tag, className = "" }) {
               aria-label={copied ? "Link copied" : `Copy a link to “${title}”`}
               title={copied ? "Link copied" : "Copy a link to this section"}
             >
-              {copied ? "Copied" : "#"}
+              {/* "#" or "Copied" is drawn by CSS, so the heading's text stays
+                  its title and subtitle */}
             </a>
           )}
         </div>

@@ -22,12 +22,6 @@ describe("SectionHeading", () => {
     expect(sectionSlug("Incomes under current law")).toBe("incomes-under-current-law");
   });
 
-  it("shows the with/without-the-measures pill outside the heading", () => {
-    render(<SectionHeading tag="current-law" title="Poverty under current law" />);
-    expect(screen.getByText("Without the measures")).toHaveClass("section-tag-current-law");
-    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
-  });
-
   it("links to the section, and copies the link on click", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     Object.assign(navigator, { clipboard: { writeText } });
@@ -40,6 +34,7 @@ describe("SectionHeading", () => {
     });
     expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\?tab=population&sub=all#public-finances$/));
     expect(window.location.hash).toBe("#public-finances");
-    expect(link).toHaveTextContent("Copied");
+    expect(link).toHaveClass("is-copied");
+    expect(link).toHaveAccessibleName("Link copied");
   });
 });

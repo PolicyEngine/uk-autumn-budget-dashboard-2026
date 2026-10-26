@@ -31,7 +31,7 @@ import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard"
 import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import {
   PENSIONER_AGE_FIRST,
   PENSIONER_AGE_LAST,
@@ -727,15 +727,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
         disabledReason={shares || !published ? undefined : "Choose one policy or all policies"}
       />
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Better and worse off shown"
-          value={view}
-          onChange={setView}
-          options={AGE_VIEWS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (

@@ -28,7 +28,7 @@ import UnavailableNotice from "./publication/UnavailableNotice";
 import SectionHeading from "./SectionHeading";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
 import Note from "./Note";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import TrendCard from "./youngPeople/TrendCard";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -460,15 +460,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Average change by age shown"
-          value={view}
-          onChange={setView}
-          options={AGE_VIEWS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
@@ -729,15 +721,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Better and worse off shown"
-          value={view}
-          onChange={setView}
-          options={AGE_VIEWS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (

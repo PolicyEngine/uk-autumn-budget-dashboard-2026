@@ -26,6 +26,8 @@ import TitleIcon from "../TitleIcon";
  * download: { filename, csv: () => string, legendItems?, image?: false }.
  */
 export default function LsCard({
+  // The card's element id, for a link to it (a twin card's)
+  id,
   title,
   // One line under the title: which side of a pair the card is (with or
   // without the measures) and a link to its twin
@@ -66,7 +68,7 @@ export default function LsCard({
   const aboutNotes = (notes || []).filter(Boolean);
 
   return (
-    <div className={`ls-card ${className}`.trim()}>
+    <div id={id} className={`ls-card ${className}`.trim()}>
       <div className="chart-header">
         <div>
           <h3>
@@ -75,8 +77,16 @@ export default function LsCard({
                 sentence; the downloads keep them in their titles */}
             <span className="title-text">{title}</span>
           </h3>
-          {subtitle && <p className="ls-card-subtitle">{subtitle}</p>}
-          {summary && <p className="chart-description">{summary}</p>}
+          {/* The subtitle shares the description's row, so paired cards
+              (one grid row each) still line up */}
+          {subtitle ? (
+            <div className="chart-description">
+              <p className="ls-card-subtitle">{subtitle}</p>
+              {summary && <p>{summary}</p>}
+            </div>
+          ) : (
+            summary && <p className="chart-description">{summary}</p>
+          )}
         </div>
         {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />}
       </div>

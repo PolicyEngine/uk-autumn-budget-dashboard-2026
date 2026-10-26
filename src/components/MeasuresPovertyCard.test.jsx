@@ -119,7 +119,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     const choice = within(panel).getByRole("group", { name: "Poverty measure" });
     expect(choice.nextElementSibling).toBe(change.parentElement);
     for (const c of [change, measures]) {
-      expect(within(c).queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
+      expect(within(c).queryByRole("button", { name: /^Options:/ })).toBeNull();
     }
     // The change in people, from the outlook's population
     await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/), { timeout: 5000 });
@@ -134,9 +134,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
 
     // One poverty choice for both cards
-    fireEvent.click(within(choice).getByRole("button", { name: /^Poverty line:/ }));
-    fireEvent.click(within(choice).getByRole("option", { name: "Relative" }));
-    expect(within(choice).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Relative");
+    // One Options pill above the pair, its summary the measure
+    fireEvent.click(within(choice).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(choice).getByRole("radiogroup", { name: "Poverty line" })).getByRole("radio", { name: "Relative" }));
+    expect(within(choice).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
     expect(change.querySelector(".chart-description")).toHaveTextContent(/relative/i);
 

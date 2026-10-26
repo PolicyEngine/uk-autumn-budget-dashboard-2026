@@ -5,7 +5,6 @@
 // file without it falls back to income_by_decile's quintiles and deciles
 // (all people). The view of the Growth across the distribution card.
 
-import PillSelect from "../../PillSelect";
 import { housingOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
 import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
@@ -140,7 +139,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     : own;
   const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
-  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, offer.groupings[0]);
+  // Vigintiles by default, the finest split; deciles where the file has no
+  // vigintiles, then whatever it offers
+  const defaultGrouping = ["vigintile", "decile"].find((g) => offer.groupings.includes(g)) ?? offer.groupings[0];
+  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, defaultGrouping);
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");
 
@@ -229,18 +231,15 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // The years compared are the section's (CurrentLawSection); the view is
   // the card's pill and the rest sits under Options (ControlBar)
   const controls = {
-    primary: (
-      <PillSelect
-        variant="light"
-        prefix="View"
-        name="Growth view"
-        value={view}
-        onChange={setView}
-        options={Object.entries(VIEWS).map(([value, label]) => ({ value, label }))}
-        stableWidth
-      />
-    ),
+    // One Options pill: the view first, then the groups, housing costs and
+    // population ("Year by year · Vigintiles · Before housing costs · All people")
     options: [
+      {
+        label: "View",
+        value: view,
+        onChange: setView,
+        options: Object.entries(VIEWS).map(([value, label]) => ({ value, label })),
+      },
       offer.groupings.length > 1 && {
         label: "Income groups",
         value: grouping,
@@ -264,7 +263,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     ? ""
     : diff
       ? " With the selected measures: each bar is the measures' effect on that growth, in percentage points: real growth with the measures less growth without them, from the same pair of simulations (the measure's or the package's run and its own baseline)."
-      : " With the selected measures: current law's growth (the Pre-measures forecast's chart) plus the measures' effect on it, from the same pair of simulations (the measure's or the package's run and its own baseline). So with less without is exactly the effect.";
+      : " With the selected measures: current law's growth (the OBR forecast tab's chart) plus the measures' effect on it, from the same pair of simulations (the measure's or the package's run and its own baseline). So with less without is exactly the effect.";
   const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
   const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected measures" : ", with the selected measures"}` : t);
