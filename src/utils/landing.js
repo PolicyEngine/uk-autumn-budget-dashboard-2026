@@ -41,20 +41,52 @@ export const DEEP_LINK_SCRIPT =
 const MINUS = "−";
 
 /**
+ * A box's live figure: the number, shown large, the words that say what it
+ * is, and its tone ("gain" or "loss" for a change by its sign, else
+ * "neutral"), which colours the number.
+ * @typedef {{value: string, context: string, tone: "gain"|"loss"|"neutral"}} LandingFigure
+ */
+
+const toneOf = (rounded) => (rounded > 0 ? "gain" : rounded < 0 ? "loss" : "neutral");
+
+/**
  * The landing page's Public finances figure: the selected measures' net
- * change in government revenue in `year`, "−£8.8bn in 2027-28" (£bn, one
- * decimal, a true minus). Null when the year is not fully published.
+ * change in government revenue in `year`: "−£8.8bn", "change in revenue,
+ * 2027-28" (£bn, one decimal, a true minus). Null when the year is not
+ * fully published.
+ * @returns {LandingFigure|null}
  */
 export function netRevenueFigure(budgetData, year, label) {
   const value = budgetData?.find((point) => point.year === year)?.netImpact;
   if (value === null || value === undefined || !Number.isFinite(value)) return null;
   const rounded = Math.round(value * 10) / 10;
   const sign = rounded > 0 ? "+" : rounded < 0 ? MINUS : "";
-  return `${sign}£${Math.abs(rounded).toFixed(1)}bn in ${label(year)}`;
+  return {
+    value: `${sign}£${Math.abs(rounded).toFixed(1)}bn`,
+    context: `change in government revenue, ${label(year)}`,
+    tone: toneOf(rounded),
+  };
 }
 
-/** "9 measures", "1 measure"; null for none. */
+/**
+ * An example household's change in net income: "+£88", "a year for a
+ * 22-year-old renting"; "No change" when it rounds to nothing.
+ * @returns {LandingFigure|null}
+ */
+export function householdFigure(change, who) {
+  if (!Number.isFinite(change)) return null;
+  const rounded = Math.round(change);
+  if (rounded === 0) return { value: "No change", context: `for ${who}`, tone: "neutral" };
+  const text = `£${Math.abs(rounded).toLocaleString("en-GB")}`;
+  return {
+    value: rounded > 0 ? `+${text}` : `${MINUS}${text}`,
+    context: `a year for ${who}`,
+    tone: toneOf(rounded),
+  };
+}
+
+/** "9", "measures"; "1", "measure"; null for none. @returns {LandingFigure|null} */
 export function measureCountFigure(count) {
   if (!count) return null;
-  return `${count} measure${count === 1 ? "" : "s"}`;
+  return { value: String(count), context: count === 1 ? "measure" : "measures", tone: "neutral" };
 }

@@ -4,7 +4,7 @@ import TitleIcon from "./TitleIcon";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import { loadPresetChanges } from "../utils/householdPresets";
 import { publishedEngine, useMeasureCatalogue } from "../utils/measureCatalogue";
-import { signedMoney } from "../utils/singleYear";
+import { householdFigure } from "../utils/landing";
 import "./LandingPage.css";
 
 // The example household whose result the Household impact box quotes: the
@@ -17,7 +17,7 @@ const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 /**
  * The first example household's change in net income in `year`, with every
  * published measure, from the precomputed file Household impact's cards
- * read (one fetch, shared): "+£88 a year for a 22-year-old renting". Null
+ * read (one fetch, shared): "+£88", "a year for a 22-year-old renting". Null
  * while loading, when the file does not answer it (another engine, other
  * measures) or when the selection is not every measure, which the figure
  * is for.
@@ -41,12 +41,7 @@ function useHouseholdFigure(year, allSelected) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, JSON.stringify(engine), catalogue.manifest]);
   if (!allSelected || !LANDING_EXAMPLE) return null;
-  const change = changes?.[LANDING_EXAMPLE.id]?.[year]?.change;
-  if (!Number.isFinite(change)) return null;
-  const who = lowerFirst(LANDING_EXAMPLE.label);
-  return Math.round(change) === 0
-    ? `No change for ${who}`
-    : `${signedMoney(change)} a year for ${who}`;
+  return householdFigure(changes?.[LANDING_EXAMPLE.id]?.[year]?.change, lowerFirst(LANDING_EXAMPLE.label));
 }
 
 /** One of the three boxes: a link that opens its view in place. */
@@ -64,11 +59,18 @@ function LandingBox({ tab, sub, icon, title, description, figure, onOpen }) {
           onOpen(tab, sub);
         }}
       >
-        <TitleIcon name={icon} size={22} className="landing-box-icon" />
+        <TitleIcon name={icon} size={24} className="landing-box-icon" />
         <span className="landing-box-title">{title}</span>
         <span className="landing-box-description">{description}</span>
-        {figure && <span className="landing-box-figure">{figure}</span>}
-        <span className="landing-box-arrow" aria-hidden="true">→</span>
+        {figure && (
+          <span className="landing-box-figure">
+            <span className={`landing-box-figure-value is-${figure.tone}`}>{figure.value}</span>{" "}
+            <span className="landing-box-figure-context">{figure.context}</span>
+          </span>
+        )}
+        <span className="landing-box-explore">
+          Explore<span className="landing-box-arrow" aria-hidden="true">→</span>
+        </span>
       </a>
     </li>
   );
@@ -83,15 +85,16 @@ function LandingBox({ tab, sub, icon, title, description, figure, onOpen }) {
  * @param {(tab: string, sub?: string) => void} props.onOpen - Open a view (App's handleTabChange)
  * @param {number} props.year - The band's year
  * @param {boolean} props.allSelected - Whether every published measure is selected
- * @param {string|null} props.financesFigure - Net revenue in the year (netRevenueFigure)
- * @param {string|null} props.measuresFigure - "9 measures" (measureCountFigure)
+ * @param {import("../utils/landing").LandingFigure|null} props.financesFigure - Net revenue in the year (netRevenueFigure)
+ * @param {import("../utils/landing").LandingFigure|null} props.measuresFigure - The number of measures (measureCountFigure)
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
  */
 export default function LandingPage({ onOpen, year, allSelected, financesFigure, measuresFigure, provisional }) {
-  const householdFigure = useHouseholdFigure(year, allSelected);
+  const homeFigure = useHouseholdFigure(year, allSelected);
   return (
     <section className="landing" aria-labelledby="landing-heading">
-      <h2 id="landing-heading" className="visually-hidden">Start here</h2>
+      <div className="landing-hero">
+      <h2 id="landing-heading" className="landing-heading">What Autumn Budget 2026 means</h2>
       <p className="landing-intro">
         This dashboard uses <SourceLink source="policyengine_uk_model" /> to
         show how Autumn Budget 2026 measures would affect the public
@@ -101,6 +104,7 @@ export default function LandingPage({ onOpen, year, allSelected, financesFigure,
         <SourceLink source="obr_efo_current" />.
       </p>
       {provisional}
+      </div>
       <ul className="landing-boxes">
         <LandingBox
           tab="dashboard"
@@ -116,7 +120,7 @@ export default function LandingPage({ onOpen, year, allSelected, financesFigure,
           icon="house"
           title="What it means for your household"
           description="Enter your household, or start from an example, to see your change in income."
-          figure={householdFigure}
+          figure={homeFigure}
           onOpen={onOpen}
         />
         <LandingBox
