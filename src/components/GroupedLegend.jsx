@@ -55,7 +55,7 @@ function Swatch({ item }) {
   return (
     <span
       className="grouped-legend-swatch"
-      style={{ background: item.color }}
+      style={{ background: item.muted ? "transparent" : item.color }}
       aria-hidden="true"
     />
   );
@@ -95,7 +95,8 @@ function textMeasurer(node) {
  * (legendLayout, shared with the export) is chosen from the measured
  * width, on every resize: one column on a phone.
  *
- * Pass `names` (dashboard policy names) or `items`.
+ * Pass `names` (dashboard policy names) or `items`. An item with `muted`
+ * (a measure that is £0 in the year shown, legendMembership) is greyed out.
  */
 function GroupedLegend({ names, items, netLabel }) {
   const all = items ?? policyItems(names ?? []);
@@ -138,7 +139,7 @@ function GroupedLegend({ names, items, netLabel }) {
       <div ref={ref} className="grouped-legend is-row">
         <ul className="grouped-legend-row">
           {all.map((item) => (
-            <li key={item.label} className="grouped-legend-item">
+            <li key={item.label} className={`grouped-legend-item${item.muted ? " is-muted" : ""}`}>
               <Swatch item={item} />
               <span className="grouped-legend-label">{item.label}</span>
             </li>
@@ -173,7 +174,7 @@ function GroupedLegend({ names, items, netLabel }) {
                     style={width ? { width } : undefined}
                   >
                     {column.map((item) => (
-                      <li key={item.label}>
+                      <li key={item.label} className={item.muted ? "is-muted" : undefined}>
                         <Swatch item={item} />
                         <span className="grouped-legend-label">{item.label}</span>
                       </li>

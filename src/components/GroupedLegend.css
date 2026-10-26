@@ -203,3 +203,13 @@
     gap: 6px;
   }
 }
+
+/* A measure that is £0 in the year shown (legendMembership): still listed,
+   greyed out, with an outline swatch; ZeroMeasuresNote says why */
+.grouped-legend .is-muted .grouped-legend-label {
+  color: var(--pe-gray-500);
+}
+
+.grouped-legend .is-muted .grouped-legend-swatch {
+  box-shadow: inset 0 0 0 1.5px var(--pe-gray-400);
+}
