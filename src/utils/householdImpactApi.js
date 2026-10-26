@@ -291,6 +291,8 @@ export async function postHouseholdImpact(
   }, timeoutMs);
   const onAbort = () => controller.abort();
   signal?.addEventListener("abort", onAbort);
+  // A signal aborted before this call never fires its event
+  if (signal?.aborted) controller.abort();
   let response;
   try {
     response = await doFetch(url, {
@@ -490,6 +492,9 @@ function buildOf(value) {
 /** Two reported builds are one only as the same well-formed commit. */
 const sameCommit = (a, b) => typeof a === "string" && a === b;
 
+/** A build commit that was reported but isn't one. */
+const malformed = (build) => build != null && typeof build !== "string";
+
 /** Every commit a result's stages have reported so far. */
 const buildsSeen = (result) => result.builds ?? (result.build == null ? [] : [result.build]);
 
@@ -563,6 +568,8 @@ export class StageMismatchError extends EngineMismatchError {
  * - `sameBuild` (the detail service's answers) also needs the headline
  *   itself to report that commit. A merged part's commit never stands in
  *   for it.
+ * - A malformed commit from either side refuses the part, even beside
+ *   answers that report none (review of cc15d50, finding 2).
  *
  * @param {Object} first - The headline, with any parts merged so far
  * @param {Object} detail - A later part
@@ -576,6 +583,7 @@ export function stageMismatch(first, detail, { sameBuild = false } = {}) {
   if (packages.length) return new StageMismatchError(packages);
   const theirs = detail.build ?? null;
   const otherBuild =
+    [theirs, first.build, ...buildsSeen(first)].some(malformed) ||
     (sameBuild && !sameCommit(first.build, theirs)) ||
     (theirs !== null && buildsSeen(first).some((build) => !sameCommit(build, theirs)));
   if (otherBuild) return new StageMismatchError(["build"]);

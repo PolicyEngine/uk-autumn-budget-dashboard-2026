@@ -66,8 +66,12 @@ _OBJECT_HASH = {"sha1": hashlib.sha1, "sha256": hashlib.sha256}
 
 
 def _git(root: Path, *args: str) -> bytes:
+    # A replacement (``git replace``) would make one command read another
+    # object than the id another command names, so none follow them
     return subprocess.run(
-        ["git", "-C", str(root), *args], capture_output=True, check=True
+        ["git", "--no-replace-objects", "-C", str(root), *args],
+        capture_output=True,
+        check=True,
     ).stdout
 
 
@@ -108,35 +112,41 @@ def _copied_files(root: Path, paths: tuple[str, ...]):
     return files, links
 
 
-def checkout_differences(
-    root: Path, paths: tuple[str, ...] = DEPLOYED_PATHS
-) -> Optional[list[str]]:
-    """The files a deploy from ``root`` would copy whose bytes are not
-    HEAD's: edited, added (untracked or ignored alike), missing, or a
-    symbolic link. An empty list means the copy is exactly HEAD's tree.
-    None when git can't say (no repository, no HEAD).
+def _checkout_state(
+    root: Path, paths: tuple[str, ...]
+) -> tuple[Optional[str], Optional[list[str]]]:
+    """HEAD's commit, and the files under ``paths`` whose bytes are not that
+    commit's tree's (``checkout_differences``). Both None when git can't
+    say.
 
-    It reads the files themselves and HEAD's tree, never git's index or
-    status, so a file git has been told not to check (``assume-unchanged``,
-    ``skip-worktree``) is compared like any other.
+    The commit is read once and its tree listed by that id, so the files
+    are compared with the very commit returned, even if HEAD moves.
     """
     try:
         object_format = (
             _git(root, "rev-parse", "--show-object-format").decode().strip()
         )
-        tree = _git(root, "ls-tree", "-r", "-z", "HEAD", "--", *paths)
+        commit = (
+            _git(root, "rev-parse", "--verify", "HEAD^{commit}")
+            .decode()
+            .strip()
+        )
+        if object_format not in _OBJECT_HASH or not FULL_COMMIT.fullmatch(
+            commit
+        ):
+            return None, None
+        tree = _git(root, "ls-tree", "-r", "-z", commit, "--", *paths)
     except (OSError, subprocess.CalledProcessError):
-        return None
-    if object_format not in _OBJECT_HASH:
-        return None
+        return None, None
     committed = {}
     for entry in tree.split(b"\0"):
         if not entry:
             continue
         meta, _, name = entry.partition(b"\t")
         mode, kind, object_id = meta.decode().split()
-        # A link or submodule in the tree never equals uploaded bytes
-        committed[name.decode()] = (
+        # A link or submodule in the tree never equals uploaded bytes. Names
+        # are decoded as os.walk decodes the files', so any bytes compare.
+        committed[os.fsdecode(name)] = (
             object_id
             if kind == "blob" and mode in ("100644", "100755")
             else None
@@ -151,7 +161,31 @@ def checkout_differences(
         ):
             differ.add(path)
     differ.update(path for path in committed if path not in files)
-    return sorted(differ)
+    return commit, sorted(differ)
+
+
+def checkout_differences(
+    root: Path, paths: tuple[str, ...] = DEPLOYED_PATHS
+) -> Optional[list[str]]:
+    """The files a deploy from ``root`` would copy whose bytes are not
+    HEAD's: edited, added (untracked or ignored alike), missing, or a
+    symbolic link. An empty list means the copy is exactly HEAD's tree.
+    None when git can't say (no repository, no HEAD).
+
+    It reads the files themselves and HEAD's own tree, never git's index,
+    status or replacement objects, so a file git has been told not to check
+    (``assume-unchanged``, ``skip-worktree``) is compared like any other,
+    and HEAD means the commit its id names.
+    """
+    return _checkout_state(root, paths)[1]
+
+
+def printable_paths(paths: list[str]) -> str:
+    """``paths`` as one line print can write: a name that isn't UTF-8
+    comes back from the file system with escapes it would refuse."""
+    return ", ".join(
+        path.encode("utf-8", "backslashreplace").decode() for path in paths
+    )
 
 
 def checkout_commit(
@@ -163,12 +197,8 @@ def checkout_commit(
 
     Otherwise None. A build from such a checkout is no commit, so it reports
     none rather than one it doesn't match, and the page then never uses its
-    answers beside another build's.
+    answers beside another build's. The check reads the files once, before
+    the upload: they must not change while the deploy runs.
     """
-    if checkout_differences(root, paths) != []:
-        return None
-    try:
-        commit = _git(root, "rev-parse", "--verify", "HEAD").decode().strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return commit if FULL_COMMIT.fullmatch(commit) else None
+    commit, differ = _checkout_state(root, paths)
+    return commit if differ == [] else None
