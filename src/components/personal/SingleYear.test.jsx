@@ -318,9 +318,9 @@ describe("Calculate", () => {
     fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
-    // Your household opens the form with its answers, and Calculate, to
-    // change one and calculate again
-    openForm();
+    // "Change these answers" opens the form with its answers, and
+    // Calculate, to change one and calculate again
+    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
     expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
@@ -363,6 +363,85 @@ describe("an example card", () => {
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     delete Element.prototype.scrollIntoView;
     rect.mockRestore();
+  });
+});
+
+describe("switching from one household's card to another", () => {
+  /** The fixture's answer, with a change in net income of `change`. */
+  const answerWith = (body, change) => {
+    const answer = householdAnswerFor(body);
+    const before = answer.net_income.baseline;
+    return { ...answer, net_income: { ...answer.net_income, reform: before + change, change } };
+  };
+  /** Requests held until released by hand: [{ body, release }]. */
+  function serveHeld() {
+    const held = [];
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url, init = {}) => {
+        if (url !== HOUSEHOLD_API) return Promise.resolve(new Response("{}", { status: 404 }));
+        const body = JSON.parse(init.body);
+        household.push(body);
+        return new Promise((resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+          held.push({ body, release: (change) => resolve(json(answerWith(body, change))) });
+        });
+      }),
+    );
+    return held;
+  }
+  const card = (name) =>
+    within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: new RegExp(`^${name}`) });
+
+  it("clears the previous card's result at once, shows the new one when it arrives, and ignores a late answer for the previous card", async () => {
+    const held = serveHeld();
+    renderTab();
+    // Example A: its headline arrives; its split by policy and sweep are
+    // still out when the reader moves on
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(held).toHaveLength(1));
+    held[0].release(1111);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    await waitFor(() => expect(held).toHaveLength(3));
+    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
+    // Example B: A's result and note go at once; B's own note, and a
+    // loading state, not A's figures
+    fireEvent.click(card("A pensioner on the State Pension"));
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByText("+£1,111")).toBeNull();
+    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
+    expect(screen.getByText(/Aged 70 with the full new State Pension/)).toBeInTheDocument();
+    // A's late answers (its split by policy and sweep) change nothing
+    held[1].release(1111);
+    held[2].release(1111);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(headlineCard()).toBeNull();
+    // B's answer arrives: B's figure
+    await waitFor(() => expect(held.some(({ body }) => body.household.age === 70)).toBe(true));
+    held.find(({ body }) => body.household.age === 70 && body.include.length === 0).release(2222);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£2,222"));
+    expect(screen.queryByText("+£1,111")).toBeNull();
+  });
+
+  it("from an example to Your household: the example's result and note go, and your own answers come back", async () => {
+    serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
+    renderTab();
+    // Your own household first (age 41), calculated
+    openForm();
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
+    fireEvent.click(calculateButton());
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
+    // An example
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
+    // Your household: never the example's result or note
+    fireEvent.click(card("Your household"));
+    expect(screen.queryByText("+£1,111")).toBeNull();
+    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(41);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
   });
 });
 

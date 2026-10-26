@@ -254,15 +254,27 @@ describe("the personal impact form", () => {
     expect(yoursCard()).toHaveClass("is-selected");
   });
 
-  it("opens the form with an example's answers from your household, Calculate there to change one and calculate again", () => {
+  it("opens the form with an example's answers from Change these answers, Calculate there to change one and calculate again", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
     applyExample("A pensioner on the State Pension");
-    fireEvent.click(yoursCard());
+    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
     expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
     expect(exampleItem("A pensioner on the State Pension")).toHaveAttribute("aria-pressed", "true");
     expect(box("Age")).toHaveValue(70);
     // Calculate is there, as for your own answers
     expect(screen.getByRole("button", { name: /^Calcul/ })).toBeVisible();
+  });
+
+  it("switches to your own household from an example: Your household is another card, not the example's answers", () => {
+    render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
+    applyExample("A pensioner on the State Pension");
+    fireEvent.click(yoursCard());
+    expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
+    expect(yoursCard()).toHaveClass("is-selected");
+    expect(exampleItem("A pensioner on the State Pension")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText(/Aged 70 with the full new State Pension/)).not.toBeInTheDocument();
+    // Nothing of your own yet: the form's defaults
+    expect(box("Age")).toHaveValue(WIZARD_DEFAULTS.current_age);
   });
 
   it("closes the form when an example card is chosen", () => {

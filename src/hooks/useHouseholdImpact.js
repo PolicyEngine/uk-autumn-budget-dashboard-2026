@@ -46,11 +46,14 @@ const DEBOUNCE_MS = 400;
  * @param {boolean} params.enabled - Ask only while the view is shown
  * @param {number} [params.seeded] - Bumped when answers are added to the
  *   cache, so a request still waiting picks up a precomputed answer
+ * @param {string|null} [params.household] - Which household the answers
+ *   are (an example's id, or "yours"): a result is never shown for another
+ *   household, even while the new one loads
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled, seeded = 0 }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, seeded = 0, household = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
@@ -59,10 +62,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
-  // stale, however many renders that takes.
+  // stale, however many renders that takes. `dataHousehold` is whose
+  // answers `data` is: another household's is never returned.
   const [state, setState] = useState({
     key: null,
     dataKey: null,
+    dataHousehold: null,
     status: "idle",
     data: null,
     error: null,
@@ -77,6 +82,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
       setState({
         key,
         dataKey: key,
+        dataHousehold: household,
         status: "ready",
         data: cached.data,
         error: null,
@@ -87,12 +93,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
     }
     const controller = new AbortController();
     const { signal } = controller;
-    // Keep the last result on screen while the next one loads; it stays
-    // marked stale (dataKey) until this request's answer arrives
+    // The same household asked again (another year or set of policies):
+    // keep its last result on screen while the next one loads, marked stale
+    // (dataKey) until this request's answer arrives, as the guide's "don't
+    // clear results before new data arrives" asks. Another household (a
+    // different card) never keeps it: `shown` below hides it at once, and
+    // a late answer for the earlier request is dropped (its signal is
+    // aborted below, and every update checks it)
     setState((prev) => ({
       ...prev,
       key,
       dataKey: cached ? key : prev.dataKey,
+      dataHousehold: cached ? household : prev.dataHousehold,
       status: cached ? "ready" : "loading",
       data: cached ? cached.data : prev.data,
       error: null,
@@ -113,6 +125,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
           setState({
             key,
             dataKey: null,
+            dataHousehold: null,
             status: "error",
             data: null,
             error,
@@ -127,6 +140,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
         setState({
           key,
           dataKey: key,
+          dataHousehold: household,
           status: "ready",
           data: first,
           error: null,
@@ -157,6 +171,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
               ...prev,
               key,
               dataKey: key,
+              dataHousehold: household,
               status: "ready",
               data: merged,
               error: null,
@@ -177,7 +192,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
     };
     // body is derived from key's inputs
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, attempt, policies.length, seeded]);
+  }, [key, household, enabled, attempt, policies.length, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -186,10 +201,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
   // until the new answer arrives. The page greys it and labels it with its
   // own year, never the new one.
   const asked = state.key === key;
-  const stale = state.data !== null && state.dataKey !== key;
+  // The data is for this household (another card's result is never shown
+  // as this one's, not even greyed while this one loads)
+  const shown = state.data !== null && state.dataHousehold === household ? state.data : null;
+  const stale = shown !== null && state.dataKey !== key;
   return {
     status: asked ? state.status : "loading",
-    data: state.data,
+    data: shown,
     error: asked ? state.error : null,
     detailStatus: asked ? state.detailStatus : "loading",
     detailError: asked ? state.detailError : null,

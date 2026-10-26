@@ -280,11 +280,13 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
+// `own`: your own household's answers and result, kept while an example is
+// shown, so "Your household" brings them back
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, own: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, own: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -371,6 +373,9 @@ function HouseholdCalculator({
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
     if (!preset) return;
+    // Leaving your own household: keep its answers and result for "Your
+    // household" to bring back
+    if (presetId === null) savedWizard.own = { inputs, submitted };
     const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
     setInputs(next);
     setPresetId(preset.id);
@@ -378,7 +383,9 @@ function HouseholdCalculator({
     setFormOpen(false);
     scrollToResult.current = true;
     if (householdPolicies.length > 0) {
-      setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now() });
+      // Another household: its own result or a clean loading state, never
+      // the previous card's (useHouseholdImpact's `household`)
+      setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -390,6 +397,7 @@ function HouseholdCalculator({
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
     seeded,
+    household: submitted?.household ?? null,
   });
   // The answers, year or policies differ from those of the result shown
   const changed =
@@ -417,14 +425,35 @@ function HouseholdCalculator({
     if (!active || submitted === null || answersEdited || householdPolicies.length === 0) return;
     const samePolicies = submitted.policies.join(",") === selectionKey;
     if (submitted.year === year && samePolicies) return;
-    setSubmitted({ inputs: submitted.inputs, year, policies: householdPolicies, at: Date.now() });
+    // The same household again: its last result stays, greyed, until the
+    // new one arrives (unlike a switch to another card)
+    setSubmitted({ ...submitted, year, policies: householdPolicies, at: Date.now() });
     // Only the bar's year and policies (and coming back to the view) rerun it
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
 
-  // "Your household" opens or closes the form, with the answers it holds
-  // (an example's, to change one and calculate again, or your own)
-  const chooseYours = () => setFormOpen((open) => !open);
+  // "Your household" opens or closes the form with your own answers. From
+  // an example's card it is a switch to another household: the example's
+  // result and note go at once, and your own answers (and their result,
+  // for the year and policies now chosen) come back, or the defaults.
+  // "Change these answers", under an example, opens the form with the
+  // example's answers instead.
+  const chooseYours = () => {
+    if (presetId === null) {
+      setFormOpen((open) => !open);
+      return;
+    }
+    const own = savedWizard.own;
+    savedWizard.own = null;
+    setPresetId(null);
+    setInputs(own?.inputs ?? { ...WIZARD_DEFAULTS });
+    setSubmitted(
+      own?.submitted && householdPolicies.length > 0
+        ? { ...own.submitted, year, policies: householdPolicies, at: Date.now(), household: "yours" }
+        : null,
+    );
+    setFormOpen(true);
+  };
   // Your own household's change, on its card, once calculated and unedited
   const yoursChange =
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
@@ -456,7 +485,7 @@ function HouseholdCalculator({
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
-    setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now() });
+    setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now(), household: presetId ?? "yours" });
     // On a phone the results start screens below the button: bring the
     // waiting message into view, so pressing Calculate visibly does something
     requestAnimationFrame(() => {
