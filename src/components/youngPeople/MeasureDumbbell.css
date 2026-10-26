@@ -319,3 +319,13 @@
     left: 6px;
   }
 }
+
+/* A dumbbell card with no controls of its own (Pensioners' Effect of each
+   policy) beside one that has them: the plot takes the controls row too,
+   so no empty row opens above it; it grows to the neighbour's plot bottom,
+   so the axes still line up. */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) > div:not(:has(> .chart-controls)) > .chart-plot:has(> .measure-dumbbell) {
+    grid-row: 3 / span 2;
+  }
+}

@@ -94,8 +94,7 @@ function LoadedCard({ data, rows, run, twinLink }) {
     !run.exact && run.reformId === COMBINED_REFORM_ID
       ? "With part of the package selected, this is the whole package (runs for part of it are not published)."
       : null;
-  // Only the link to the twin (and, rarely, which run this is); "with the
-  // measures" is said in About this chart
+  // The empty card has no About: the link and the run note show in its header
   const subtitle = (
     <>
       {twinLink}
@@ -123,11 +122,12 @@ function LoadedCard({ data, rows, run, twinLink }) {
       </div>
     );
   }
+  // The link to its twin, and which run this is, sit in About this chart
   return (
     <ViewCard
       id={WITH_MEASURES_ANCHOR}
       title={WITH_MEASURES_TITLE}
-      subtitle={subtitle}
+      moreNotes={[packageNote, twinLink && <span key="twin">{twinLink}</span>]}
       icon="bars"
       name="Growth with measures view"
       value={show}

@@ -22,6 +22,7 @@ import "./SummaryMetricChart.css";
 // The in-card pill styles (.ls-controls), shared with the current-law cards
 import "./livingStandards/LivingStandards.css";
 import {
+  barShape,
   AXIS_LINE,
   CHART_COLOURS,
   GRID_PROPS,
@@ -41,6 +42,9 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
+
+// The dashboard's bar style: each bar rounds its end away from zero (chartTheme)
+const VALUE_BAR_SHAPE = barShape(["value"]);
 
 /**
  * The summary statistics from metrics.csv that Population impact charts,
@@ -382,20 +386,16 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <TitleIcon name={metric.icon} />
             <span className="title-text">{metric.title}</span>
           </h3>
+          {/* One short line: the selected year's figure; what the chart
+              measures is in More info */}
           <p className="chart-description">
-            {metric.short ? (
+            {selected?.value != null ? (
               <>
-                {metric.short}, by year.
-                {selected?.value != null && (
-                  <>
-                    {" "}
-                    {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
-                    {selectedPeople && <> ({selectedPeople})</>}.
-                  </>
-                )}
+                {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
+                {selectedPeople && <> ({selectedPeople})</>}.
               </>
             ) : (
-              metric.description
+              metric.short ?? metric.description
             )}
           </p>
         </div>
@@ -468,6 +468,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 dataKey="value"
                 name={metric.title}
                 fill={CHART_COLOURS.gain}
+                shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
                 {data.map((point) => {
@@ -488,8 +489,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </ResponsiveContainer>
         )}
       </div>
-      {/* The short subtitle's full wording, in More info */}
-      {metric.short && (
+      {/* What the chart measures, in More info */}
+      {(
         <div className="chart-footer">
           <ChartMoreInfo>
             <p>{metric.description}</p>

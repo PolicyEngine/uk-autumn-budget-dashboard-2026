@@ -43,6 +43,7 @@ import {
 } from "./pensioners/pensionersData";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -102,6 +103,10 @@ function stackEnds(points, policies) {
   return values;
 }
 
+// The dashboard's bar style (chartTheme barShape): the 100% share bars
+// round both ends
+const SHARE_BAR_SHAPE = barShape(OUTCOMES.map((outcome) => outcome.key), { layout: "vertical", roundBase: true });
+
 /** The policy bars, always mounted (a zero series has no height): the
  * catalogue's displayable measures, keyed by name as pensionersData is;
  * the others fade while one is highlighted from the key (MeasureKey). */
@@ -114,6 +119,7 @@ const policyBars = (catalogue, highlight) =>
       fill={measure.color}
       fillOpacity={measureOpacity(highlight, measure.seriesKey)}
       stackId="stack"
+      shape={barShape(catalogue.displayable.map((item) => item.name))}
       {...chartMotion()}
     />
   ));
@@ -730,7 +736,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
           // One 100% bar per age from State Pension age, then the
           // pensioners' total; the ▲/▼ split at the right as in the group view
           <ResponsiveContainer width="100%" height={singleSharesHeight(data.length)}>
-            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap={3} barSize={14}>
+            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap={3} barSize={11}>
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               <XAxis
                 type="number"
@@ -765,13 +771,13 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
               />
               <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<SharesTooltip yearLabel={yearLabel} />} />
               {OUTCOMES.map((outcome) => (
-                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" {...chartMotion()} />
+                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" shape={SHARE_BAR_SHAPE} {...chartMotion()} />
               ))}
             </BarChart>
           </ResponsiveContainer>
         ) : data.length ? (
           <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap="28%">
+            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap="38%">
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               <XAxis
                 type="number"
@@ -806,7 +812,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
               />
               <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<SharesTooltip yearLabel={yearLabel} />} />
               {OUTCOMES.map((outcome) => (
-                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" {...chartMotion()} />
+                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" shape={SHARE_BAR_SHAPE} {...chartMotion()} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -881,6 +887,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
     <>
       <SectionHeading
         id={PENSIONERS_ANCHOR}
+        icon="armchair"
         title="Change for pensioners"
         subtitle="Pensioners here are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28, as State Pension age rises to 67. Each person counts their household's change in net income."
       />
@@ -896,6 +903,8 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         </section>
       </MeasureKeyProvider>
       <SectionHeading
+        id="pensioners-who-gains"
+        icon="userPlus"
         title="Who gains and from what"
         subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
       />
