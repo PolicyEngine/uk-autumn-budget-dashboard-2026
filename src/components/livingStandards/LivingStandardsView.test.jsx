@@ -168,14 +168,18 @@ describe("the Pre-measures forecast view", () => {
     expect(panel().querySelectorAll(".ls-card-footer > :not(.disclosure)")).toHaveLength(0);
     expect(within(panel()).queryByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeNull();
     expect(within(panel()).queryByText(/Source:/)).toBeNull();
-    // The series note is stated once, in Incomes over time's About this
-    // chart, after the definition and notes, with the source line last
+    // The 2031-32 note is said once, in Methodology's "How the forecast
+    // feeds the baseline": Incomes over time's About this chart links there,
+    // its last line, after its source
     fireEvent.click(within(incomes).getByRole("button", { name: "About this chart" }));
-    expect(within(incomes).getByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeInTheDocument();
-    expect(document.body.textContent.match(/is past the OBR March 2026 forecast/g)).toHaveLength(1);
+    expect(within(incomes).queryByText(/is past the OBR March 2026 forecast/)).toBeNull();
     const about = incomes.querySelector(".disclosure-content");
-    expect(about.lastElementChild).toHaveClass("ls-source");
-    expect(about.lastElementChild).toHaveTextContent(/^Source: DWP, Households Below Average Income/);
+    expect(within(about).getByRole("link", { name: "DWP, Households Below Average Income" })).toBeInTheDocument();
+    expect(about.querySelector(".info-sections").lastElementChild).toHaveClass("info-method");
+    expect(within(about).getByRole("link", { name: /How the OBR forecast feeds these incomes/ })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-forecast-feed",
+    );
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
 
 
@@ -384,8 +388,8 @@ describe("the Pre-measures forecast view", () => {
     // The full sentence and the vigintile note are in About this chart
     expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
-    expect(within(growth).getByText(/Vigintile 1, the lowest-income 5% of people, is left out/)).toBeInTheDocument();
-    expect(within(growth).getByText(/Without the measures \(current law\)/)).toBeInTheDocument();
+    expect(within(growth).getByText(/The lowest-income twentieth is left out/)).toBeInTheDocument();
+    expect(within(growth).getByText(/re-ranked each year/)).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).has("ls_groups")).toBe(false);
     // One Options pill, the view first: no separate View pill
     expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
@@ -406,12 +410,13 @@ describe("the Pre-measures forecast view", () => {
       "ahc",
       "non_pensioners",
     ]);
-    expect(within(growth).getByText(/^Bottom is the lowest-income tenth, top the highest-income tenth among non-pensioners\. Each year from 2028-29 to 2031-32/)).toBeInTheDocument();
+    expect(within(growth).getByText("Bottom is the lowest-income tenth; top the highest-income tenth among non-pensioners.")).toBeInTheDocument();
+    expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32/)).toBeInTheDocument();
     expect(within(growth).getByText("Highest income")).toBeInTheDocument();
     // Decile 1 after housing costs: kept, with a short caution under the
-    // key and the fuller line in About this chart
+    // key, said once (not again in About this chart)
     expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
-    expect(within(growth).getByText(/Decile 1 after housing costs, the lowest-income tenth, is shown/)).toBeInTheDocument();
+    expect(within(growth).getAllByText(/swings from year to year/)).toHaveLength(1);
     // Vigintiles clear the household floor, so they are offered
     choose(growth, "Income groups", "Twentieths");
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at

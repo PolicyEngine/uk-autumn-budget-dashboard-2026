@@ -25,6 +25,7 @@ import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { useUrlChoice } from "../../../utils/livingStandards/urlChoice";
 import { offerFor, seriesFor, withMeasuresRows } from "../../../utils/livingStandards/growthWithMeasures";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
@@ -336,6 +337,24 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     ],
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
+    info: {
+      shows: `The real change in each ${g.noun}'s median income, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
+      how: [
+        measures && !diff && "Current law's growth plus the measures' effect, from the same pair of simulations.",
+        `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
+        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the measures change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
+        popNote.trim(),
+      ],
+      caveats: [
+        "Groups are re-ranked each year: this compares positions in the distribution, not the same people.",
+        skip > 0 &&
+          `The lowest-income ${g.share} is left out: incomes there are often temporarily low or under-reported.`,
+        grouping === "vigintile" &&
+          `The ${low}'s median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,
+        basis === "ahc" && "Real incomes after housing costs use a PolicyEngine CPI after housing costs, not an OBR series.",
+      ],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the income growth data" },
+    },
     download: annual
       ? {
           filename: `${fileStem}-yearly`,

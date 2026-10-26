@@ -17,7 +17,8 @@ import {
 } from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource } from "../sources";
+import { CSV_SOURCES, HBAI_SOURCE, HbaiSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 // Named as on the measures' inequality chart; the data's own name otherwise
 const LABELS = { gini: "Gini", p90_p10: "90/10 ratio" };
@@ -76,6 +77,16 @@ export default function useInequalityView(data, range = null, setRange = null) {
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
+    info: {
+      definitions: [
+        measure === "gini"
+          ? { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." }
+          : { term: "90:10 ratio", meaning: "Income at the 90th percentile over income at the 10th." },
+      ],
+      caveats: ["Our 2024-25 inequality sits below official figures, so read the projection as a change, not a level."],
+      sources: [{ ...HBAI_SOURCE, note: "Table 1.2b" }],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the inequality data" },
+    },
     download: rows.length
       ? {
           filename: `inequality-${measure}-${basis}`,

@@ -27,6 +27,7 @@ import {
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
@@ -188,7 +189,7 @@ export default function WhoIsInPovertySection({ data }) {
   const housing = measure.endsWith("ahc") ? "after housing costs" : "before housing costs";
   const about = b.children
     ? `Share of children in households below ${line}, ${housing}. Families are benefit units; the dashed line is all children.`
-    : `Share of people in households below ${line}, ${housing}. Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age. The dashed line is all people.`;
+    : `Share of people in households below ${line}, ${housing}. A pensioner family is a benefit unit with someone at or above State Pension age. The dashed line is all people.`;
 
   return (
     <LsCard
@@ -199,6 +200,15 @@ export default function WhoIsInPovertySection({ data }) {
       summary={short}
       notes={groupNotes}
       source={<PeSource />}
+      info={{
+        how: [
+          `The line is ${line}, ${housing}.`,
+          b.children
+            ? "Families are benefit units; the dashed line is all children."
+            : "Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age.",
+        ],
+        method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+      }}
       sourceText={CSV_SOURCES.pe}
       download={{
         filename: `${measure}-by-${breakdown}`,

@@ -13,9 +13,13 @@ export const METHOD_ANCHORS = {
   personal: "method-personal",
   living: "method-living",
   forecastFeed: "method-forecast-feed",
+  lsNotes: "method-ls-notes",
   limitations: "method-limitations",
   glossary: "method-terms",
 };
 
 // Every age card's About this chart ends here: who counts and the age bands
 export const AGE_METHOD = { anchor: METHOD_ANCHORS.young, label: "How we split results by age" };
+
+// The by-year age cards' About this chart: how the chart is drawn
+export const BY_YEAR_METHOD = { anchor: METHOD_ANCHORS.young, label: "How the by-year charts are drawn" };

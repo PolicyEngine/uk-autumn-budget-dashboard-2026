@@ -19,6 +19,7 @@ import ControlBar from "../ControlBar";
 import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { BY_YEAR_METHOD } from "../methodology/anchors";
 import Note from "../Note";
 import {
   GRID_PROPS,
@@ -320,20 +321,12 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
         {unpublished.length > 0 && (
           <Note>Not shown: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).</Note>
         )}
-        <ChartMoreInfo members={byMeasure ? members : []} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`}>
-          <p>
-            Pensioners are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28.
-            Each point is their average change in household net income per person, the sum of each selected
-            measure&apos;s own effect; each person counts their household&apos;s change. All ages is dashed. The curve
-            between the annual points never goes past them.
-          </p>
-          <p>
-            A label on the line names the measure behind each of the largest year-on-year steps, worked out from each
-            measure&apos;s own rows. Breakdown by measure stacks each measure&apos;s own change, with the net change as
-            the line; the running total adds each year&apos;s change from {first}. The shaded year is the one chosen in
-            the bar above.
-          </p>
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          members={byMeasure ? members : []}
+          year={Number(selectedYear)}
+          period={`in every year from ${first} to ${last}`}
+          info={{ method: BY_YEAR_METHOD }}
+        />
       </div>
     </div>
   );
