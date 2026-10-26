@@ -90,7 +90,12 @@ def _years_from(first_year: int, value) -> dict[str, any]:
 # retention-rate elasticity of 1 by default (2.132.6 had 0). The drill's
 # capital gains measures are static costings, so they set it to 0 in every
 # policy year: the engine's static recipe, with mtr_elasticity 0 and
-# separate_badr_elasticity false, which are its defaults.
+# separate_badr_elasticity false, which are its defaults. So does every
+# measure that moves capital gains tax through the bands or taxable income
+# (the threshold freeze and both State Pension protections). The reform
+# side is enough: the engine scales the reformed simulation's gains by its
+# own elasticity. Members of a combined run may each set it, to the same
+# values (``combine.SHARED_SETTINGS``).
 CGT_RESPONSE_ELASTICITY = "gov.simulation.capital_gains_responses.elasticity"
 
 
@@ -233,6 +238,8 @@ def _create_state_pension_income_tax_protection(
         name="State Pension income tax protection",
         description=description,
         simulation_modifier=modifier,
+        # The allowance moves taxable income, so the capital gains rate.
+        parameter_changes=_static_capital_gains(),
     )
 
 
@@ -307,6 +314,8 @@ def _create_employer_ni_relief_under_25s() -> Reform:
 def _create_threshold_freeze_2031_32() -> Reform:
     changes = threshold_change(PERSONAL_ALLOWANCE, {"2031": 12570})
     changes.update(threshold_change(BASIC_RATE_BAND, {"2031": 37700}))
+    # The basic rate band sets which gains pay the lower capital gains rate.
+    changes.update(_static_capital_gains())
     return Reform(
         id=THRESHOLD_FREEZE_ID,
         name="Threshold freeze to 2031-32",
@@ -544,6 +553,7 @@ def _create_state_pension_income_tax_protection_extended() -> Reform:
             "kept whatever their other income or State Pension increments."
         ),
         simulation_modifier=state_pension_income_tax_allowance_untapered,
+        parameter_changes=_static_capital_gains(),
     )
 
 

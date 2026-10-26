@@ -86,6 +86,74 @@ def test_cgt_main_rates(drill5):
     assert set(changes[reforms.CGT_HIGHER_RATE].values()) == {0.26}
 
 
+RESPONSES = "gov.simulation.capital_gains_responses"
+# The measures that move capital gains tax: its rates, the relief's limit,
+# the basic rate band and the State Pension allowances (taxable income).
+CGT_PINNED = (
+    reforms.CGT_RATES_ID,
+    reforms.BADR_ID,
+    reforms.THRESHOLD_FREEZE_ID,
+    reforms.STATE_PENSION_ALLOWANCE_ID,
+    reforms.STATE_PENSION_EXTENDED_ID,
+)
+STATIC_PIN = {
+    reforms.CGT_RESPONSE_ELASTICITY: {str(y): 0.0 for y in POLICY_YEARS}
+}
+
+
+def _responses(changes):
+    return {
+        path: periods
+        for path, periods in (changes or {}).items()
+        if path.startswith(RESPONSES)
+    }
+
+
+def test_exactly_the_capital_gains_measures_are_static(drill5):
+    for measure_id, measure in drill5.items():
+        expected = STATIC_PIN if measure_id in CGT_PINNED else {}
+        assert _responses(measure.parameter_changes) == expected, measure_id
+        assert _responses(measure.baseline_parameter_changes) == {}
+
+
+def test_drill5_combined_run_shares_the_static_pin(monkeypatch):
+    """Several members set the pin, to the same values; the combined run
+    builds, with the pin set once (it raised CombineConflict before)."""
+    monkeypatch.setenv("UK_BUDGET_MEASURE_SET", "drill5")
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    combined = reforms.get_reform(reforms.AUTUMN_BUDGET_2026_COMBINED_ID)
+    assert _responses(combined.parameter_changes) == STATIC_PIN
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+
+
+def test_cgt_main_rates_are_static_on_the_installed_engine(drill5):
+    """The engine's default main elasticity is 1 (from policyengine-uk
+    2.134.0); the measure's pin sets it to 0 in its own simulation, so
+    realised gains stay as they are (£50,000 on a £100,000 salary)."""
+    year = 2027
+    situation = {
+        "people": {
+            "p": {
+                "age": {year: 50},
+                "employment_income": {year: 100_000},
+                "capital_gains": {year: 50_000},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+    current_law = Simulation(situation=situation)
+    assert current_law.calculate("capital_gains_elasticity", year)[0] == 1
+    reformed = Simulation(
+        situation=situation,
+        scenario=drill5[reforms.CGT_RATES_ID].to_scenario(),
+    )
+    assert reformed.calculate("capital_gains_elasticity", year)[0] == 0
+    assert reformed.calculate("capital_gains", year)[0] == 50_000
+
+
 def test_surcharge_starts_at_three_quarters_of_current_threshold(drill5):
     changes = drill5[reforms.HVCTS_ID].parameter_changes
     values = changes[reforms.HVCTS_FIRST_THRESHOLD]
