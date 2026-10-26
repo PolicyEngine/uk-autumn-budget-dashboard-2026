@@ -344,10 +344,8 @@ describe("the household calculation, from the fixture", () => {
       "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
     );
     // Whose result it is, in one line under the figure
-    // Whose result it is, as chips under the figure
-    expect([...card.querySelectorAll(".result-fact")].map((chip) => chip.textContent)).toEqual(
-      expect.arrayContaining(["£34,192 and £12,822 salaries", "Renting, Central Greater Manchester", "Assumed energy and fuel spending"]),
-    );
+    // No chip row of household facts: the details are in About this result
+    expect(card.querySelector(".result-facts")).toBeNull();
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -1074,26 +1072,6 @@ describe("the assumed-spending caution", () => {
   });
 });
 
-describe("the result's household facts", () => {
-  it("name salary, home, band, family and assumed spending in plain words", async () => {
-    const { householdFacts } = await import("./SingleYearResults");
-    const data = { salaryUsed: 24166, partnerSalaryUsed: null, area: { brma: "CENTRAL_GREATER_MANCHESTER" }, councilTax: { band: "D" } };
-    const text = (facts) => facts.map((fact) => fact.text);
-    expect(text(householdFacts(data, { tenure: "RENT_PRIVATELY", regionLabel: "North West" }, { petrol: 420, diesel: 230, electricity: 910, assumed: "example" }))).toEqual([
-      "£24,166 salary",
-      "Renting, Central Greater Manchester",
-      "Council Tax band D",
-      "Single adult",
-      "Assumed energy and fuel spending",
-    ]);
-    expect(text(householdFacts({ ...data, salaryUsed: 0 }, { tenure: "OWNED_WITH_MORTGAGE", regionLabel: "North West", partner: true, children: 2 }))).toEqual([
-      "No earnings",
-      "Owns with a mortgage, North West",
-      "Council Tax band D",
-      "Couple, 2 children",
-    ]);
-  });
-});
 
 describe("the Across earnings cards together", () => {
   it("switch view together, and a chip toggled on one is toggled on the other", async () => {

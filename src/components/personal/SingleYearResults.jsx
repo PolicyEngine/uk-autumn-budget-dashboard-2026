@@ -2,8 +2,8 @@ import TitleIcon from "../TitleIcon";
 import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
-import Tip, { InfoTip } from "../Tip";
-import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap, TriangleAlert } from "lucide-react";
+import { InfoTip } from "../Tip";
+import { CircleSlash, ListChecks, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
@@ -364,82 +364,6 @@ function AboutResult({ items, caution, bars }) {
   );
 }
 
-const TENURE_WORDS = {
-  RENT_PRIVATELY: "Renting",
-  RENT_FROM_COUNCIL: "Renting from the council",
-  RENT_FROM_HA: "Renting from a housing association",
-  OWNED_WITH_MORTGAGE: "Owns with a mortgage",
-  OWNED_OUTRIGHT: "Owns outright",
-};
-
-/**
- * Whose result it is, as a few short facts in plain words, each a chip
- * under the figure: salary, home and place, Council Tax band, family, and
- * whether the energy and fuel spending is assumed. The details stay in
- * "About this result".
- *
- * @param {Object} data - normaliseHouseholdImpact's answer
- * @param {{tenure?: string, regionLabel?: string, partner?: boolean, children?: number}} household
- * @param {{petrol?: number, diesel?: number, electricity?: number, assumed?: string|null}|null} [spending]
- * @returns {Array<{key: string, icon: string, text: string, tip?: string}>}
- */
-export function householdFacts(data, { tenure = null, regionLabel = null, partner = false, children = 0 } = {}, spending = null) {
-  const facts = [];
-  const own = data.salaryUsed ?? 0;
-  const theirs = data.partnerSalaryUsed ?? 0;
-  if (own > 0 && theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own)} and ${money(theirs)} salaries` });
-  else if (own + theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own + theirs)} salary` });
-  else facts.push({ key: "salary", icon: "salary", text: "No earnings" });
-  const words = TENURE_WORDS[tenure] ?? null;
-  // A renter's place is their rent area; anyone else's, their region
-  const place = tenure && tenure.startsWith("RENT") && data.area?.brma ? areaName(data.area.brma) : regionLabel;
-  if (words || place) facts.push({ key: "home", icon: "home", text: [words, place].filter(Boolean).join(", ") });
-  if (data.councilTax?.band) facts.push({ key: "council-tax", icon: "receipt", text: `Council Tax band ${data.councilTax.band}` });
-  const family = partner ? "Couple" : "Single adult";
-  facts.push({
-    key: "family",
-    icon: "family",
-    text: children > 0 ? `${family}, ${children} ${children === 1 ? "child" : "children"}` : family,
-  });
-  if (spending?.assumed) {
-    const fuel = (spending.petrol ?? 0) + (spending.diesel ?? 0);
-    facts.push({
-      key: "spending",
-      icon: "energy",
-      text: "Assumed energy and fuel spending",
-      tip: `${money(spending.electricity ?? 0)} a year on electricity and ${money(fuel)} on petrol and diesel, ${spending.assumed === "average" ? "the average household's (ONS)" : "this example's"}. Change them in the form to match your household.`,
-    });
-  }
-  return facts;
-}
-
-const FACT_ICONS = { salary: BriefcaseBusiness, home: House, receipt: ReceiptText, family: UsersRound, energy: Zap };
-
-/** The facts as small chips that wrap whole, then "Edit" to change them. */
-function HouseholdFacts({ facts, onEdit }) {
-  return (
-    <ul className="result-facts" aria-label="Your household">
-      {facts.map((fact) => {
-        const Icon = FACT_ICONS[fact.icon] ?? House;
-        const chip = (
-          <span className="result-fact" tabIndex={fact.tip ? 0 : undefined}>
-            <Icon size={13} strokeWidth={2} aria-hidden="true" />
-            {fact.text}
-          </span>
-        );
-        return <li key={fact.key}>{fact.tip ? <Tip content={fact.tip}>{chip}</Tip> : chip}</li>;
-      })}
-      {onEdit && (
-        <li>
-          <button type="button" className="result-facts-edit" onClick={onEdit}>
-            Edit
-          </button>
-        </li>
-      )}
-    </ul>
-  );
-}
-
 /**
  * The two "Across earnings" cards, in step: one Before | After | Change
  * choice, one set of components shown (a chip toggled on one is toggled on
@@ -478,14 +402,14 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, facts = [], onEdit = null, requestHousehold = null, year, selected = [] }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
     <section className={`card result-card ${changeClass(totals.change)}`} aria-label="Your result">
-      {/* The three tiles on top, then whose result it is, the waterfall
-          from net income before through each measure with an effect to
-          after, and About this result. Each fact once */}
+      {/* The three tiles on top, then the waterfall from net income
+          before through each measure with an effect to after, and About
+          this result. Each fact once */}
       <ResultTiles
         totals={totals}
         changeValue={
@@ -505,7 +429,6 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
         year={year}
         policies={selected}
       />
-      {facts.length > 0 && <HouseholdFacts facts={facts} onEdit={onEdit} />}
       <div className="result-card-body">
         <NetIncomeWaterfall
           totals={totals}
@@ -539,8 +462,6 @@ export function SingleYearHeadline({
   startedAt = null,
   salarySource = null,
   spendingSource = null,
-  household = null,
-  onEdit = null,
   requestHousehold = null,
   selected = [],
 }) {
@@ -595,8 +516,6 @@ export function SingleYearHeadline({
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
-            facts={household ? householdFacts(data, household, spending) : []}
-            onEdit={onEdit}
             requestHousehold={requestHousehold}
             year={data.year ?? year}
             selected={selected}
