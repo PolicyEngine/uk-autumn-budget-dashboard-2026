@@ -2,21 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
-import OutcomeToggle from "./OutcomeToggle";
+import ControlBar from "./ControlBar";
 import PillSelect from "./PillSelect";
+import ViewSwitch from "./ViewSwitch";
+import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
-import ConstituencyRankings, { TABLE_SIZE } from "./ConstituencyRankings";
-import {
-  APPROXIMATE_MARK,
-  APPROXIMATE_NOTE,
-  isApproximate,
-} from "./ConstituencyRankingTable";
 import {
   buildRankingCsv,
-  rankConstituencies,
   rankingEntries,
-  selectTopAndBottom,
 } from "../utils/constituencyRanking";
+import { fitHexes } from "../utils/geography/hexLayout";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { useConstituencyView } from "../hooks/useConstituencyView";
 import { CHART_LOGO } from "../utils/chartLogo";
@@ -39,6 +34,7 @@ import {
   MAP_LEGEND_CLASS,
   appendStatusPatterns,
   drawMapLegend,
+  legendEntries,
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
@@ -65,7 +61,7 @@ import {
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
-import { CHART_COLOURS } from "../utils/chartTheme";
+import { CHART_COLOURS, useNarrowViewport } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip from "./Tip";
@@ -110,13 +106,18 @@ export function seatTooltipRows(described) {
 
 const CHART_TITLE = "Constituency-level impacts";
 
-// The card's two views, and the URL parameter that opens the second.
-const PANELS = ["map", "rankings"];
+// The card's three views, and the URL parameter that opens the second or
+// third. The hex map is the default: every constituency the same size, so
+// London's and the cities' small seats read as clearly as rural ones.
+const PANELS = ["hex", "map", "table"];
 const PANEL_PARAM = "map";
 const PANEL_OPTIONS = [
+  { value: "hex", label: "Hex map" },
   { value: "map", label: "Map" },
-  { value: "rankings", label: "Rankings" },
+  { value: "table", label: "Table" },
 ];
+// Links made before the Table view replaced the Rankings view
+const LEGACY_PANELS = { rankings: "table" };
 
 // Excel reads a CSV as UTF-8 only with a byte-order mark ("Ynys Môn").
 const UTF8_BOM = "\uFEFF";
@@ -125,13 +126,14 @@ const UTF8_BOM = "\uFEFF";
 const isMockBuild = () => process.env.NEXT_PUBLIC_MOCK === "1";
 
 /**
- * The card's view, kept in the URL as ?map=rankings (the map, the default,
- * leaves the URL alone), as the sub-tabs keep theirs.
+ * The card's view, kept in the URL as ?map=map or ?map=table (the hex map,
+ * the default, leaves the URL alone), as the sub-tabs keep theirs.
  */
 function usePanelParam() {
   const [panel, setPanel] = useState(() => {
     if (typeof window === "undefined") return PANELS[0];
-    const value = new URLSearchParams(window.location.search).get(PANEL_PARAM);
+    const raw = new URLSearchParams(window.location.search).get(PANEL_PARAM);
+    const value = LEGACY_PANELS[raw] ?? raw;
     return PANELS.includes(value) ? value : PANELS[0];
   });
   useEffect(() => {
@@ -172,41 +174,30 @@ const exportDescription = (label, outcome) =>
 // The map's drawing area, in SVG units.
 const WIDTH = 800;
 const HEIGHT = 600;
-const MAP_LOGO_CLASS = "map-logo";
+// The space kept round the map at its full fit, in SVG units
+const FIT_PADDING = 12;
 
-/**
- * The part of the SVG on screen, in its units. The SVG fills the width of
- * the page, so on a wide screen it shows more than the drawing area, on
- * either side of the map.
- */
-const DRAWING_AREA = { left: 0, top: 0, right: WIDTH, bottom: HEIGHT, perPx: 1 };
-
-function shownArea(width, height) {
-  if (!(width > 0 && height > 0)) return DRAWING_AREA;
-  const scale = Math.min(width / WIDTH, height / HEIGHT);
-  const left = (WIDTH - width / scale) / 2;
-  const top = (HEIGHT - height / scale) / 2;
-  // perPx: SVG units per screen pixel, so the logo keeps its on-screen size
-  return { left, top, right: WIDTH - left, bottom: HEIGHT - top, perPx: 1 / scale };
+/** The smallest box holding every seat's box, with padding round it. */
+function boxAround(boxes, padding = FIT_PADDING) {
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const box of boxes) {
+    if (!box) continue;
+    const [[a, b], [c, d]] = box;
+    if (![a, b, c, d].every(Number.isFinite)) continue;
+    x0 = Math.min(x0, a);
+    y0 = Math.min(y0, b);
+    x1 = Math.max(x1, c);
+    y1 = Math.max(y1, d);
+  }
+  if (!Number.isFinite(x0)) return { x: 0, y: 0, width: WIDTH, height: HEIGHT };
+  return {
+    x: x0 - padding,
+    y: y0 - padding,
+    width: x1 - x0 + 2 * padding,
+    height: y1 - y0 + 2 * padding,
+  };
 }
 
-/** Put the legend in the top-left corner of what is shown, the logo in the
- * bottom-right one. */
-function placeInCorners(svg, area) {
-  placeMapLegend(svg.select(`g.${MAP_LEGEND_CLASS}`), {
-    x: area.left + LEGEND_INSET,
-    y: area.top + LEGEND_INSET,
-  });
-  // The logo at the same size on screen as on every other card (80px wide,
-  // its own aspect ratio), however far the SVG is scaled
-  const k = area.perPx ?? 1;
-  svg
-    .select(`image.${MAP_LOGO_CLASS}`)
-    .attr("width", CHART_LOGO.width * k)
-    .attr("height", CHART_LOGO.height * k)
-    .attr("x", area.right - (CHART_LOGO.width + CHART_LOGO.padding) * k)
-    .attr("y", area.bottom - (CHART_LOGO.height + CHART_LOGO.padding) * k);
-}
 const SELECTED_STROKE = { stroke: CHART_COLOURS.highlight, strokeWidth: 0.6 };
 const HOVER_STROKE = { stroke: CHART_COLOURS.tick, strokeWidth: 0.3 };
 
@@ -248,6 +239,90 @@ function gridProjection(features) {
       );
     },
   });
+}
+
+/**
+ * How the seats are drawn in a map view, in the 800 × 600 drawing area
+ * either way, so zoom, reset, the textures and the export work alike:
+ * "map", each seat's boundary; "hex", one equal hexagon per seat
+ * (hexLayout.js). `pathFor` gives a seat's SVG path, `boundsOf` its box by
+ * code, and `box` the box round them all, padded: the map's full fit,
+ * Shetland included, which the SVG's viewBox shows and Reset returns to.
+ */
+export function seatGeometry(features, mode) {
+  if (mode === "hex") {
+    const { paths, bounds } = fitHexes(features.map(seatCode), {
+      width: WIDTH,
+      height: HEIGHT,
+    });
+    return {
+      mode,
+      pathFor: (feature) => paths.get(seatCode(feature)) ?? null,
+      boundsOf: (code) => bounds.get(code) ?? null,
+      box: boxAround(bounds.values()),
+    };
+  }
+  const path = d3.geoPath().projection(gridProjection(features));
+  const byCode = new Map(features.map((feature) => [seatCode(feature), feature]));
+  return {
+    mode,
+    pathFor: path,
+    boundsOf: (code) => (byCode.has(code) ? path.bounds(byCode.get(code)) : null),
+    box: boxAround(features.map((feature) => path.bounds(feature))),
+  };
+}
+
+/**
+ * The map's key, beside the map on a wide card and under it on a narrow
+ * one, never over it: the categories, then the status textures, from the
+ * entries the exported map's own legend draws (legendEntries). The
+ * textures are the map SVG's own patterns.
+ */
+function MapKey({ outcome }) {
+  const { categories, tiers } = legendEntries(outcome);
+  const swatch = (entry) => (
+    <svg className="map-key-swatch" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      {entry.halves ? (
+        entry.halves.map((fill, half) => (
+          <rect key={half} x={half * 6} y="0" width="6" height="12" fill={fill} />
+        ))
+      ) : (
+        <rect width="12" height="12" fill={entry.fill} />
+      )}
+      <rect
+        x="0.25"
+        y="0.25"
+        width="11.5"
+        height="11.5"
+        fill="none"
+        stroke={entry.stroke ?? CHART_COLOURS.axis}
+        strokeWidth="0.5"
+      />
+    </svg>
+  );
+  const list = (entries) => (
+    <ul>
+      {entries.map((entry) => (
+        <li key={entry.label}>
+          {swatch(entry)}
+          <span>{entry.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <div className="map-key" role="group" aria-label="Key">
+      <div className="map-key-group">
+        <p className="map-key-title">Change in household net income</p>
+        <p className="map-key-subtitle">Size of the change, in {OUTCOME_LABELS[outcome]}</p>
+        {list(categories)}
+      </div>
+      <div className="map-key-group">
+        <p className="map-key-title">Status, shown by texture</p>
+        {list(tiers)}
+      </div>
+    </div>
+  );
 }
 
 function strokeFor(code, states, selectedCode) {
@@ -301,12 +376,12 @@ function TooltipLines({ lines }) {
  * map. Without the boundaries, the notice alone. The notice keeps one place
  * in the tree either way, so it is not remounted when the boundaries load.
  */
-function MapTemplate({ features, children }) {
+function MapTemplate({ features, mode = "map", children }) {
   const paths = useMemo(() => {
     if (!features?.length) return null;
-    const path = d3.geoPath().projection(gridProjection(features));
-    return features.map((feature) => ({ code: seatCode(feature), d: path(feature) }));
-  }, [features]);
+    const { pathFor } = seatGeometry(features, mode);
+    return features.map((feature) => ({ code: seatCode(feature), d: pathFor(feature) }));
+  }, [features, mode]);
   return (
     <div className={`map-template ${paths ? "" : "map-template-empty"}`}>
       <div className="map-template-canvas">
@@ -363,12 +438,21 @@ export default function ConstituencyMap({
   const [outcome, setOutcome] = useState("relative_change");
   // A selection with no single reform: the measure shown (Measure picker)
   const [focusId, setFocusId] = useState(null);
-  const [panel, setPanel] = usePanelParam();
+  const [panel, setPanelParam] = usePanelParam();
+  // The map view drawn: the one shown, or in the Table view the last one
+  // shown, kept mounted so it keeps its zoom
+  const [mapMode, setMapMode] = useState(panel === "map" ? "map" : "hex");
+  const setPanel = useCallback(
+    (next) => {
+      setPanelParam(next);
+      if (next !== "table") setMapMode(next);
+    },
+    [setPanelParam],
+  );
+  const narrow = useNarrowViewport();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
-  const [area, setArea] = useState(DRAWING_AREA);
-  const areaRef = useRef(DRAWING_AREA);
   const mapRef = useRef(null);
   const selectedRef = useRef(null);
   const statesRef = useRef(null);
@@ -415,19 +499,20 @@ export default function ConstituencyMap({
     [features, constituencyTable, reform, selectedYear, outcome],
   );
 
-  // The Rankings view: every seat's figures for the reform and year, ranked
+  // The Table view: every seat's figures for the reform and year, ranked
   // by the outcome the map shows.
   const metric = outcome === "average_change" ? "gbp" : "pct";
   const rankingEntriesForView = useMemo(
     () => rankingEntries(features, constituencyTable, { reform, year: selectedYear }),
     [features, constituencyTable, reform, selectedYear],
   );
-  const rankingShown = useMemo(() => {
-    const ranked = rankConstituencies(rankingEntriesForView, metric);
-    const { top, bottom } = selectTopAndBottom(ranked, TABLE_SIZE);
-    return [...top, ...bottom];
-  }, [rankingEntriesForView, metric]);
-  const rankingsReady = Boolean(reform) && rankingShown.length > 0;
+  const tableReady = Boolean(reform) && rankingEntriesForView.length > 0;
+
+  // The seats' shapes in the map view drawn
+  const geometry = useMemo(
+    () => (features ? seatGeometry(features, mapMode) : null),
+    [features, mapMode],
+  );
 
   const featuresByCode = useMemo(
     () => new Map((features ?? []).map((feature) => [seatCode(feature), feature])),
@@ -456,26 +541,34 @@ export default function ConstituencyMap({
   const zoomToSeat = useCallback(
     (code) => {
       const map = mapRef.current;
-      const feature = featuresByCode.get(code);
-      if (!map || !feature) return;
-      const [[x0, y0], [x1, y1]] = map.path.bounds(feature);
+      const seatBox = map?.geometry.boundsOf(code);
+      if (!map || !seatBox) return;
+      const [[x0, y0], [x1, y1]] = seatBox;
       const scale = Math.max(
         1,
-        Math.min(4, 0.9 / Math.max((x1 - x0) / WIDTH, (y1 - y0) / HEIGHT)),
+        Math.min(
+        4,
+        0.9 /
+          Math.max(
+            (x1 - x0) / map.geometry.box.width,
+            (y1 - y0) / map.geometry.box.height,
+          ),
+      ),
       );
       const x = (x0 + x1) / 2;
       const y = (y0 + y1) / 2;
+      const { box } = map.geometry;
       map.svg
         .transition()
         .duration(750)
         .call(
           map.zoom.transform,
           d3.zoomIdentity
-            .translate(WIDTH / 2 - scale * x, HEIGHT / 2 - scale * y)
+            .translate(box.x + box.width / 2 - scale * x, box.y + box.height / 2 - scale * y)
             .scale(scale),
         );
     },
-    [featuresByCode],
+    [],
   );
 
   const selectSeat = useCallback(
@@ -497,38 +590,37 @@ export default function ConstituencyMap({
   // Draw the seats, the status textures, the legend's place and the logo
   // once per set of boundaries. Colours are applied separately below.
   useEffect(() => {
-    if (!svgNode || !features) return undefined;
+    if (!svgNode || !features || !geometry) return undefined;
     const svg = d3.select(svgNode);
     svg.selectAll("*").remove();
+    svg.attr("data-view", geometry.mode);
     appendStatusPatterns(svg.append("defs"));
     const layer = svg.append("g").attr("class", MAP_ZOOM_LAYER_CLASS);
-    const path = d3.geoPath().projection(gridProjection(features));
     layer
       .selectAll("path")
       .data(features, seatCode)
       .join("path")
       .attr("class", "constituency-path")
       .attr("data-code", seatCode)
-      .attr("d", path)
+      .attr("d", geometry.pathFor)
       .style("cursor", "pointer");
-    svg.append("g").attr("class", MAP_LEGEND_CLASS);
-    svg
-      .append("image")
-      .attr("class", MAP_LOGO_CLASS)
-      .attr("href", CHART_LOGO.href)
-      .attr("width", CHART_LOGO.width)
-      .attr("height", CHART_LOGO.height);
-    placeInCorners(svg, areaRef.current);
+    // The legend is for the exported file, which shows the whole drawing
+    // area with the legend in its corner; on screen the key is HTML
+    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS), {
+      x: LEGEND_INSET,
+      y: LEGEND_INSET,
+    });
+    const { box } = geometry;
     const zoom = d3
       .zoom()
       .scaleExtent([1, 8])
       .extent([
-        [0, 0],
-        [WIDTH, HEIGHT],
+        [box.x, box.y],
+        [box.x + box.width, box.y + box.height],
       ])
       .on("zoom", (event) => layer.attr("transform", event.transform));
     svg.call(zoom);
-    mapRef.current = { svg, layer, path, zoom };
+    mapRef.current = { svg, layer, geometry, zoom };
     // A seat still selected from before the map was redrawn is centred
     // again, where its tooltip sits.
     if (selectedRef.current) zoomToSeat(selectedRef.current);
@@ -538,29 +630,7 @@ export default function ConstituencyMap({
       svg.on(".zoom", null);
       mapRef.current = null;
     };
-  }, [svgNode, features, zoomToSeat]);
-
-  // Follow the SVG's size, so the legend and logo stay in the corners.
-  useEffect(() => {
-    if (!svgNode || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const next = shownArea(entry.contentRect.width, entry.contentRect.height);
-      setArea((previous) =>
-        Math.abs(previous.left - next.left) < 0.5 &&
-        Math.abs(previous.top - next.top) < 0.5 &&
-        Math.abs((previous.perPx ?? 1) - next.perPx) < 0.01
-          ? previous
-          : next,
-      );
-    });
-    observer.observe(svgNode);
-    return () => observer.disconnect();
-  }, [svgNode]);
-
-  useEffect(() => {
-    areaRef.current = area;
-    if (mapRef.current) placeInCorners(mapRef.current.svg, area);
-  }, [area]);
+  }, [svgNode, features, geometry, zoomToSeat]);
 
   // Colour the seats, draw the legend and attach the handlers.
   useEffect(() => {
@@ -619,7 +689,7 @@ export default function ConstituencyMap({
         );
         d3.select(this).attr("stroke", stroke).attr("stroke-width", strokeWidth);
       });
-  }, [svgNode, features, states, outcome, applyStrokes, selectSeat]);
+  }, [svgNode, features, geometry, states, outcome, applyStrokes, selectSeat]);
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -733,7 +803,7 @@ export default function ConstituencyMap({
     },
     svg: handleExportSvg,
   };
-  // The Rankings view's CSV: every constituency on the map, ranked.
+  // The Table view's CSV: every constituency on the map, ranked.
   const handleExportRankings = () => {
     const mock = isMockBuild();
     const text = buildRankingCsv(rankingEntriesForView, {
@@ -749,8 +819,10 @@ export default function ConstituencyMap({
       "text/csv;charset=utf-8",
     );
   };
-  const onMap = panel === "map";
-  const downloadsReady = onMap ? view.kind === "rows" : rankingsReady;
+  const onMap = panel !== "table";
+  // The map's full fit: the box round every seat in the view drawn
+  const fit = geometry?.box ?? { x: 0, y: 0, width: WIDTH, height: HEIGHT };
+  const downloadsReady = onMap ? view.kind === "rows" : tableReady;
   const downloads = onMap ? mapDownloads : { csv: handleExportRankings };
   const notice =
     view.kind === "notice" ? (
@@ -762,6 +834,26 @@ export default function ConstituencyMap({
         )}
       </UnavailableNotice>
     ) : null;
+
+  // The view switch: segmented on a wide screen, a pill on a phone
+  const viewChooser = narrow ? (
+    <PillSelect
+      variant="light"
+      name="Show constituencies as"
+      prefix="Show"
+      value={panel}
+      onChange={setPanel}
+      options={PANEL_OPTIONS}
+    />
+  ) : (
+    <ViewSwitch
+      options={PANEL_OPTIONS}
+      value={panel}
+      onChange={setPanel}
+      label="Show constituencies as"
+      compact
+    />
+  );
 
   return (
     <div className="constituency-map-wrapper">
@@ -777,17 +869,11 @@ export default function ConstituencyMap({
             </h3>
             <p className="chart-description">
               {/* What the map shows is in the section's subtitle */}
-              {notRouted ? (
-                "Average change in household net income by constituency."
-              ) : onMap ? (
-                "Uncoloured where the estimate is too uncertain."
-              ) : (
-                <>
-                  The {TABLE_SIZE} constituencies with the largest gains and
-                  the {TABLE_SIZE} with the largest losses, ranked by{" "}
-                  {OUTCOME_LABELS[outcome]}.
-                </>
-              )}
+              {notRouted
+                ? "Average change in household net income by constituency."
+                : onMap
+                  ? "Uncoloured where the estimate is too uncertain."
+                  : `Every constituency, ranked by ${OUTCOME_LABELS[outcome]}.`}
             </p>
           </div>
           {downloadsReady ? (
@@ -810,37 +896,35 @@ export default function ConstituencyMap({
           then the logo. */}
       <div className="chart-controls">
         <div className="map-top-bar">
-          {/* Several measures, no single published reform: one at a time */}
-          {choice.focus && (
-            <PillSelect
-              variant="light"
-              name="Measure shown"
-              prefix="Measure"
-              value={choice.reform}
-              onChange={setFocusId}
-              options={choice.focus.options.map((id) => ({ value: id, label: focusName(id) }))}
-            />
-          )}
-          <PillSelect
-            variant="light"
-            name="Show constituencies as"
-            prefix="Show"
-            value={panel}
-            onChange={setPanel}
-            options={PANEL_OPTIONS}
-          />
-          {view.kind === "rows" &&
-            (onMap ? (
-              <OutcomeToggle value={outcome} onChange={setOutcome} />
-            ) : (
-              <OutcomeToggle
-                value={outcome}
-                onChange={setOutcome}
-                label="Rank by"
-                prefix="Rank by"
+          <ControlBar
+            name={CHART_TITLE}
+            options={[
+              view.kind === "rows" && {
+                label: "Show the change as",
+                value: outcome,
+                onChange: setOutcome,
+                options: ["relative_change", "average_change"].map((value) => ({
+                  value,
+                  label: OUTCOME_LABELS[value],
+                })),
+              },
+            ]}
+          >
+            {viewChooser}
+            {/* Several measures, no single published reform: one at a time */}
+            {choice.focus && (
+              <PillSelect
+                variant="light"
+                name="Measure shown"
+                prefix="Measure"
+                value={choice.reform}
+                onChange={setFocusId}
+                options={choice.focus.options.map((id) => ({ value: id, label: focusName(id) }))}
               />
-            ))}
-          {/* The map view's search, on the same line as the view switch */}
+            )}
+          </ControlBar>
+          {/* The map views' search, on the same line as the view switch;
+              the Table view has its own */}
           {onMap && view.kind !== "loading" && (
             <div className="map-search-section">
               <div className="search-container">
@@ -898,38 +982,34 @@ export default function ConstituencyMap({
 
         {/* The one notice, over whichever view is shown */}
         {view.kind === "notice" && onMap && (
-          <MapTemplate features={boundariesReady ? features : null}>{notice}</MapTemplate>
+          <MapTemplate features={boundariesReady ? features : null} mode={panel}>
+            {notice}
+          </MapTemplate>
         )}
 
         {!onMap && view.kind !== "loading" && (
           <div className="rankings-panel">
-            <ConstituencyRankings
+            <ConstituencyTable
               entries={view.kind === "rows" ? rankingEntriesForView : []}
               metric={metric}
-              outcome={outcome}
-              yearLabel={yearLabel}
             />
             {notice && <div className="map-template-overlay">{notice}</div>}
-            {rankingsReady && rankingShown.some(isApproximate) && (
-              <p className="rankings-note">
-                {APPROXIMATE_MARK} {APPROXIMATE_NOTE}
-              </p>
-            )}
           </div>
         )}
 
-        {/* Kept mounted in the Rankings view, so the map keeps its zoom */}
+        {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
           <div className="map-content" hidden={!onMap}>
+            <MapKey outcome={outcome} />
             <div className="map-canvas" ref={canvasRef}>
               <svg
                 ref={setSvgNode}
-                width={WIDTH}
-                height={HEIGHT}
-                viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+                width={fit.width}
+                height={fit.height}
+                viewBox={`${fit.x} ${fit.y} ${fit.width} ${fit.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 role="img"
-                aria-label={`Map of ${CHART_TITLE.toLowerCase()}, ${label}, ${yearLabel}`}
+                aria-label={`${mapMode === "hex" ? "Hex map" : "Map"} of ${CHART_TITLE.toLowerCase()}, ${label}, ${yearLabel}`}
                 onClick={clearSelection}
               />
 
@@ -1016,7 +1096,7 @@ export default function ConstituencyMap({
 
       <div className="chart-legend">
         {/* While the results load, the scale without values (kept, unseen,
-            in the Rankings view, so the card keeps its height). With no
+            in the Table view, so the card keeps its height). With no
             results to show, no scale: a key with nothing to read */}
         {view.kind === "loading" && (
           <div style={{ visibility: onMap ? "visible" : "hidden" }}>
@@ -1026,11 +1106,8 @@ export default function ConstituencyMap({
       </div>
 
       <div className="chart-logo">
-        {/* The drawn map carries its own logo */}
-        {!(onMap && view.kind === "rows") && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={CHART_LOGO.href} alt="PolicyEngine" />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
 
     </div>

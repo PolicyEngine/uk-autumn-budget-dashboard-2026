@@ -1,4 +1,4 @@
-// The OBR forecast view (?tab=outlook; ?tab=living before): the
+// The Before the Budget view (?tab=outlook; ?tab=living before): the
 // outlook without the Budget measures, under current law, in three
 // sub-tabs. Living standards and Poverty (CurrentLawSection) mirror
 // Population impact's sub-tabs of the same names; Forecast changes is the OBR
@@ -64,7 +64,7 @@ function ForecastPanel({ forecast, data, onShowTab }) {
   );
 }
 
-/** The OBR forecast's sub-tabs; the first, Living standards, is the default. */
+/** Before the Budget's sub-tabs; the first, Living standards, is the default. */
 export const OUTLOOK_SUB_TABS = [
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
@@ -76,7 +76,7 @@ const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
 const ID_PREFIX = "outlook";
 
 /**
- * The OBR forecast view: what happens without the measures, under
+ * The Before the Budget view: what happens without the measures, under
  * current law, as pill sub-tabs under the view tabs. Living standards
  * (incomes, growth across the distribution, inequality) and Poverty are the
  * twins of Population impact's sub-tabs of the same names, which show the
@@ -103,7 +103,7 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
         tabs={OUTLOOK_SUB_TABS}
         value={sub}
         onChange={setSub}
-        ariaLabel="OBR forecast sections"
+        ariaLabel="Before the Budget sections"
         idPrefix={ID_PREFIX}
       />
       {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (

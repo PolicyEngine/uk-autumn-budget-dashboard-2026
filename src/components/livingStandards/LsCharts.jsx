@@ -326,6 +326,9 @@ export function LsBarChart({
   // (seriesKey, row) => { label, value, colour? }: a tooltip for the one
   // bar hovered (its series dimmed others), in place of the year's list
   describeBar = null,
+  // A faint band behind every other category, so each year's cluster of
+  // bars reads as its own group
+  categoryBands = false,
 }) {
   const narrow = useNarrowViewport();
   const [hovered, setHovered] = useState(null);
@@ -358,6 +361,19 @@ export function LsBarChart({
             width={yWidth}
             allowDecimals
           />
+          {categoryBands &&
+            data
+              .filter((_, i) => i % 2 === 0)
+              .map((d) => (
+                <ReferenceArea
+                  key={`band-${d[xKey]}`}
+                  x1={d[xKey]}
+                  x2={d[xKey]}
+                  fill={CHART_COLOURS.mutedFill}
+                  fillOpacity={0.8}
+                  stroke="none"
+                />
+              ))}
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
           {describeBar ? (
             // Beside the bar, never over the year's other bars

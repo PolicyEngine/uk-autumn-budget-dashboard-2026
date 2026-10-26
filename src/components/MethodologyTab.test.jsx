@@ -145,7 +145,7 @@ describe("MethodologyTab", () => {
     fireEvent.click(notes);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
-    // The current-law cards on the OBR forecast's sub-tabs
+    // The current-law cards on the Before the Budget's sub-tabs
     for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["Forecast changes", "forecast"]]) {
       const link = within(living).getByRole("link", { name });
       expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
@@ -183,7 +183,9 @@ describe("MethodologyTab", () => {
 
   it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {
     const { container } = renderTab();
-    expect(container.textContent).not.toMatch(
+    // "Before the Budget" is the tab's name (current law, without the
+    // measures), true on any date; any other such phrase is not
+    expect(container.textContent.replaceAll("Before the Budget", "")).not.toMatch(
       /pre-Budget|before the Budget|after the Budget|28 October|once the OBR|candidate|likely for the Budget/i,
     );
   });
