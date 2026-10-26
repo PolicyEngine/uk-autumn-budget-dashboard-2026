@@ -79,6 +79,9 @@ const LOADED = {
   pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Incomes under current law heading shows once the outlook is read.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
+  // Its Forecast vintages sub-tab (?sub=vintages): the chart card shows
+  // once the forecasts file is read.
+  vintages: (panel) => within(panel).findAllByRole("heading", { name: "Real household disposable income per head" }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -168,9 +171,10 @@ const CASES = [
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
   ["Population impact: Public finances", "finances", "/", "Public finances"],
+  ["Pre-measures forecast: Forecast vintages", "vintages", "/?tab=outlook&sub=vintages", "Forecast vintages"],
 ];
 
-describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
+describe("each of the five tabs, Population impact's sub-tabs and Forecast vintages, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -357,7 +361,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Forecast vintages", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }

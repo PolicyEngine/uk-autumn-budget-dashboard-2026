@@ -2,13 +2,15 @@
 // outlook before the Budget's measures, the pre-Budget baseline for UK
 // household incomes and poverty, and the OBR forecast it is built on.
 // Ported from PolicyEngine/uk-living-standards-outlook (branch
-// review-1-fixes, db0c8e4): its two tabs are this view's two sub-tabs,
-// Baseline outlook and Forecast changes, in the dashboard's layout. The
-// sub-tab pill comes first, under the view tabs, then the intro, which holds
-// for both sub-tabs. It reads
-// public/data/living_standards_outlook.json and runs on its own engine
+// review-1-fixes, db0c8e4): its two tabs are this view's first two
+// sub-tabs, Baseline outlook and Forecast changes, in the dashboard's
+// layout. The sub-tab pill comes first, under the view tabs. Those two read
+// public/data/living_standards_outlook.json and run on its own engine
 // version; the Methodology view states that version, the data's status,
-// its notes and what the baseline leaves out.
+// its notes and what the baseline leaves out. The third, Forecast vintages
+// (?sub=vintages), is the OBR's forecasts beside the outturn
+// (forecastVintages/ForecastVintagesView): it reads its own file, so it
+// shows whether or not the outlook can be read.
 
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
@@ -25,6 +27,7 @@ import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
 import { forecastName } from "../../utils/livingStandards/forecast";
+import ForecastVintagesView from "../forecastVintages/ForecastVintagesView";
 import "./LivingStandards.css";
 
 // The baseline sections, in order: each one row of two cards that line up
@@ -103,6 +106,7 @@ function Row({ row, data, onShowTab, idPrefix = "living", onPopulation = false }
 const SUB_TABS = [
   { value: "baseline", label: "Baseline outlook", icon: "trend" },
   { value: "forecast", label: "Forecast changes", icon: "refresh" },
+  { value: "vintages", label: "Forecast vintages", icon: "clock" },
 ];
 const SUB_TAB_VALUES = SUB_TABS.map((t) => t.value);
 
@@ -228,30 +232,33 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
 
   const { loading, data, error } = useOutlook();
 
+  // The sub-tabs show from the first render: Forecast vintages reads its own
+  // file, and the outlook's two show its state until it is read
   return (
-    <>
-      <OutlookStatus loading={loading} error={error} />
-
-      {data && (
-        <div className="results-container">
-          <SubTabs
-            tabs={SUB_TABS}
-            value={sub}
-            onChange={setSub}
-            ariaLabel="Pre-measures forecast sections"
-            idPrefix="living"
-          />
-          {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
-            <SubTabPanel key={value} idPrefix="living" value={value} hidden={value !== sub}>
-              {value === "forecast" ? (
-                <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
-              ) : (
-                <BaselinePanel data={data} onShowTab={onShowTab} />
-              )}
-            </SubTabPanel>
-          ))}
-        </div>
-      )}
-    </>
+    <div className="results-container">
+      <SubTabs
+        tabs={SUB_TABS}
+        value={sub}
+        onChange={setSub}
+        ariaLabel="Pre-measures forecast sections"
+        idPrefix="living"
+      />
+      {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
+        <SubTabPanel key={value} idPrefix="living" value={value} hidden={value !== sub}>
+          {value === "vintages" ? (
+            <ForecastVintagesView
+              active={active && value === sub}
+              related={{ href: "?tab=outlook&sub=forecast", label: "Forecast changes", onShow: () => setSub("forecast") }}
+            />
+          ) : !data ? (
+            <OutlookStatus loading={loading} error={error} />
+          ) : value === "forecast" ? (
+            <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
+          ) : (
+            <BaselinePanel data={data} onShowTab={onShowTab} />
+          )}
+        </SubTabPanel>
+      ))}
+    </div>
   );
 }

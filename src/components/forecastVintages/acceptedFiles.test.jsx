@@ -831,7 +831,7 @@ describe("a forecasts file the loader accepts", () => {
   /** Mounts the page on `data`, on `variable`, as a reader opens it. */
   async function mount(data, variable) {
     resetForecastVintages();
-    window.history.replaceState({}, "", `/?tab=forecasts&variable=${encodeURIComponent(variable.id)}`);
+    window.history.replaceState({}, "", `/?tab=outlook&sub=vintages&variable=${encodeURIComponent(variable.id)}`);
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(data))));
     render(<ForecastVintagesView />);
     await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });

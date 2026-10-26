@@ -2,8 +2,8 @@
  * The forecast vintages view on the committed file
  * (public/data/obr_forecast_vintages.json), and on files it must refuse:
  * a view whose data cannot be shown says so and shows no figure. The last
- * cases mount it as another view's sub-tab; ForecastVintagesTab.test.jsx
- * has it as a tab of its own.
+ * cases mount it as another view's sub-tab, as Pre-measures forecast holds
+ * it; livingStandards/OutlookVintages.test.jsx has it in the page.
  */
 import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
@@ -37,7 +37,7 @@ const respond = (body, status = 200) =>
 
 beforeEach(() => {
   resetForecastVintages();
-  window.history.replaceState({}, "", "/?tab=forecasts");
+  window.history.replaceState({}, "", "/?tab=outlook&sub=vintages");
 });
 
 afterEach(() => {
@@ -111,7 +111,7 @@ describe("the chart", () => {
     expect(option("Full history")).toHaveAttribute("aria-pressed", "false");
     expect(option("Annual totals")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Quarterly annualised (×4)")).toBeInTheDocument();
-    expect(window.location.search).toBe("?tab=forecasts");
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
   });
 
   // Found by the thirteenth review: a % change's button kept the file's
@@ -127,7 +127,7 @@ describe("the chart", () => {
     const data = structuredClone(DATA);
     Object.assign(data.variables.find((v) => v.id === "receipts").units.pct, { from: "level", transform: "growth" });
     vi.stubGlobal("fetch", respond(data));
-    window.history.replaceState({}, "", "/?tab=forecasts&variable=receipts");
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=receipts");
     render(<ForecastVintagesView />);
     const percent = await screen.findByRole("button", { name: "%" });
     expect(percent).toHaveAttribute("title", GROWTH_AXIS);
@@ -217,7 +217,7 @@ describe("the chart", () => {
   });
 
   it("opens the measure a link names", async () => {
-    window.history.replaceState({}, "", "/?tab=forecasts&variable=cpi");
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=cpi");
     await renderView();
     const cpi = DATA.variables.find((v) => v.id === "cpi");
     expect(screen.getByRole("heading", { level: 3, name: cpi.label })).toBeInTheDocument();
@@ -292,7 +292,7 @@ describe("the page's text", () => {
     // outturn that starts later is a file the loader accepts)
     for (const period of Object.keys(gdp.level.outturn)) if (Number(period) <= 2009) delete gdp.level.outturn[period];
     vi.stubGlobal("fetch", respond(data));
-    window.history.replaceState({}, "", "/?tab=forecasts&variable=real_gdp");
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=real_gdp");
     render(<ForecastVintagesView />);
     fireEvent.click(await screen.findByRole("button", { name: "About this chart" }));
     expect(
@@ -605,5 +605,22 @@ describe("as another view's sub-tab", () => {
     unmount();
     await renderView({});
     expect(screen.queryByText(/forecast behind PolicyEngine's living standards baseline/)).toBeNull();
+  });
+
+  it("lets the browser follow the link when it is given no way to show the sibling", async () => {
+    await renderView({ related: SIBLING });
+    const link = screen.getByRole("link", { name: "Forecast changes" });
+    // No onShow: the view leaves the click to the browser, which follows the
+    // link's address (stopped here, after the view has seen it: jsdom does
+    // not navigate)
+    let prevented = null;
+    const follow = (event) => {
+      prevented = event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener("click", follow);
+    fireEvent.click(link);
+    document.removeEventListener("click", follow);
+    expect(prevented).toBe(false);
   });
 });

@@ -8,11 +8,12 @@
 // holds a forecast after the newest this view shows, leaves the view
 // unavailable; it never shows zero in its place.
 //
-// It is self-contained, so it can be a view of its own (ForecastVintagesTab,
-// ?tab=forecasts) or a sub-tab of another view: it loads its own file, keeps
-// the measure shown in ?variable= (never ?sub=, which belongs to the view
-// that holds it), and takes the link to the forecast behind the living
-// standards baseline from whatever holds it.
+// It is the Pre-measures forecast view's Forecast vintages sub-tab
+// (livingStandards/LivingStandardsTab, ?tab=outlook&sub=vintages), and is
+// self-contained: it loads its own file, keeps the measure shown in
+// ?variable= (never ?sub=, which belongs to the view that holds it), and
+// takes the link to the forecast behind the living standards baseline from
+// whatever holds it.
 
 import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";

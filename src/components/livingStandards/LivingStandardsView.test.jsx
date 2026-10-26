@@ -52,12 +52,16 @@ describe("the Pre-measures forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook");
   });
 
-  it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro shared", async () => {
+  it("splits into Baseline outlook, Forecast changes and Forecast vintages sub-tabs, with the intro shared", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
     const subTabs = await screen.findByRole("tablist", { name: "Pre-measures forecast sections" });
-    const [baseline, forecast] = within(subTabs).getAllByRole("tab");
-    expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
+    const [baseline, forecast, vintages] = within(subTabs).getAllByRole("tab");
+    expect([baseline, forecast, vintages].map((t) => t.textContent)).toEqual([
+      "Baseline outlook",
+      "Forecast changes",
+      "Forecast vintages",
+    ]);
     // No tab-level intro: the sections start straight under the sub-tabs
     expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
