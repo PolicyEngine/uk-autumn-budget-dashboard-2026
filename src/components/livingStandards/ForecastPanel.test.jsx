@@ -129,7 +129,7 @@ describe("Forecast changes with one forecast", () => {
     // No sentence repeats its series' name as a verb ("growth growing")
     expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
     // How the forecast feeds the figures is in Methodology, one link away
-    expect(screen.getByRole("link", { name: "How these forecasts feed our figures → Methodology" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "How these forecasts feed our figures →" })).toHaveAttribute(
       "href",
       "?tab=methodology#method-forecast-feed",
     );
