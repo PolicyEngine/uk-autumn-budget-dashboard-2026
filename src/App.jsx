@@ -33,6 +33,9 @@ import HomeButton from "./components/HomeButton";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
+import { prefetchGeography } from "./hooks/useGeographyData";
+import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
@@ -186,10 +189,27 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
-    return whenIdle(() => {
-      for (const table of IDLE_TABLES) loadVerifiedTablesOnce(catalogue, table).catch(() => {});
-      pruneVerifiedCache().catch(() => {});
-    });
+    // One step per idle period, the views' own tables first
+    const steps = [
+      ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
+      () => prefetchGeography(catalogue),
+      () => loadOutlook().catch(() => {}),
+      () => loadPresetChanges().catch(() => {}),
+      () => pruneVerifiedCache().catch(() => {}),
+    ];
+    let cancel;
+    const next = () => {
+      const step = steps.shift();
+      if (!step) return;
+      cancel = whenIdle(() => {
+        Promise.resolve(step()).finally(next);
+      });
+    };
+    next();
+    return () => {
+      steps.length = 0;
+      cancel?.();
+    };
   }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
