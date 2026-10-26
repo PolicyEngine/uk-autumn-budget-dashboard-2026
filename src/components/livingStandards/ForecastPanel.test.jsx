@@ -128,6 +128,12 @@ describe("Forecast changes with one forecast", () => {
     }
     // No sentence repeats its series' name as a verb ("growth growing")
     expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
+    // How the forecast feeds the figures is in Methodology, one link away
+    expect(screen.getByRole("link", { name: "How these forecasts feed our figures → Methodology" })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-forecast-feed",
+    );
+    expect(screen.queryByText(/What this means for the Budget figures/)).toBeNull();
     // The tile shows one value and no change
     expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
