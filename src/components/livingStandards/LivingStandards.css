@@ -779,6 +779,14 @@
   overflow-wrap: anywhere;
 }
 
+/* Poverty tiles: the measure they share, said once above them */
+.poverty-tiles-caption {
+  margin: 0 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
 /* A section with one card: the card takes the full width */
 .charts-grid.forecast-single {
   grid-template-columns: minmax(0, 1fr);

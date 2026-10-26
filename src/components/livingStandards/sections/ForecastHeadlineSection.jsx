@@ -44,15 +44,21 @@ const W = 120;
 const H = 32;
 const PAD = 4;
 
-/** A small line of a series' forecast years, its first and last points dotted. */
-export function Sparkline({ rows, label }) {
+/**
+ * A small line of a series' years, its first and last points dotted. The
+ * vertical scale spans at least `minSpan` (in the values' units, centred on
+ * the series), so a change of a tenth of a point stays a near-flat line
+ * rather than filling the box.
+ */
+export function Sparkline({ rows, label, minSpan = 2 }) {
   const points = rows.filter((r) => r.value != null);
   if (points.length < 2) return null;
   const vals = points.map((p) => p.value);
-  const lo = Math.min(...vals);
-  const hi = Math.max(...vals);
-  // A flat series sits mid-height; otherwise the line spans the box
-  const y = (v) => (hi - lo < 1e-9 ? H / 2 : PAD + ((hi - v) / (hi - lo)) * (H - 2 * PAD));
+  const mid = (Math.min(...vals) + Math.max(...vals)) / 2;
+  const half = Math.max((Math.max(...vals) - Math.min(...vals)) / 2, minSpan / 2);
+  const lo = mid - half;
+  const hi = mid + half;
+  const y = (v) => PAD + ((hi - v) / (hi - lo)) * (H - 2 * PAD);
   const x = (i) => PAD + (i / (points.length - 1)) * (W - 2 * PAD);
   const coords = points.map((p, i) => [x(i), y(p.value)]);
   const ends = [coords[0], coords[coords.length - 1]];

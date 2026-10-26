@@ -14,7 +14,7 @@ import {
 import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
 import MeasureKey, { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -31,7 +31,6 @@ import {
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
-  HOVER_CURSOR,
   divergingAxis,
 } from "../utils/chartTheme";
 import {
@@ -210,6 +209,8 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
   const [highlight, setHighlight] = useState(null);
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable,
@@ -335,25 +336,19 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               ticks={yAxisTicks}
             />
 
+            {/* One segment at a time, beside the cursor; the other measures dim */}
+
             <Tooltip
 
               {...TOOLTIP_PROPS}
 
-              cursor={HOVER_CURSOR}
+              shared={false}
 
-              content={
+              cursor={false}
 
-                <ChartTooltip
+              offset={16}
 
-                  format={(value) => `£${value.toFixed(1)}bn`}
-
-                  labelFormat={fiscalYearTick}
-
-                  netKey="netImpact"
-
-                />
-
-              }
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
 
             />
             {orderedPolicies.map((policyName) => (
@@ -361,7 +356,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                fillOpacity={measureOpacity(highlight, policyName)}
+                fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(highlight, policyName)}
+                onMouseEnter={() => setHoveredMeasure(policyName)}
+                onMouseLeave={() => setHoveredMeasure(null)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 shape={barShape(orderedPolicies)}

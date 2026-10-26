@@ -358,6 +358,8 @@ export function LsBarChart({
               shared={false}
               cursor={false}
               offset={16}
+              // On a phone, under the plot, so it never covers the bars
+              {...(narrow ? { position: { x: 0, y: plotHeight(narrow) - 8 }, allowEscapeViewBox: { x: false, y: true } } : {})}
               content={<BarTooltip describe={describeBar} />}
             />
           ) : (
