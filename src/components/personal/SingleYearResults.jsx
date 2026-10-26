@@ -127,7 +127,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: "spending",
       label: "Spending a year",
       value: parts.join(", "),
-      detail: "petrol and diesel, and electricity, as in More details",
+      detail: "petrol, diesel and electricity, from More details",
     });
   }
   if (showDependantsNote(data)) {
