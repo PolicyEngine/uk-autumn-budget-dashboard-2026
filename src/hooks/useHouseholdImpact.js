@@ -160,12 +160,14 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const parts = DETAIL_PARTS.filter((include) =>
         include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
       );
-      // The detail service's answer is used only if it reports the
-      // headline's build commit and matches it; otherwise the part is asked
-      // of the main API
-      const accept = (raw) => {
+      // The detail service's answer is used only if it has the part asked
+      // for, reports the headline's build commit and matches it; otherwise
+      // the part is asked of the main API
+      const acceptFor = (include) => (raw) => {
         try {
-          return stageMismatch(first, normaliseHouseholdImpact(raw), { sameBuild: true }) === null;
+          const detail = normaliseHouseholdImpact(raw);
+          const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
+          return answered && stageMismatch(first, detail, { sameBuild: true }) === null;
         } catch {
           return false;
         }
@@ -175,7 +177,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include) },
             );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,

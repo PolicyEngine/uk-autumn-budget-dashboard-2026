@@ -349,6 +349,28 @@ describe("the household answer's package versions", () => {
     expect(stageMismatch(headline(long), part(long), { sameBuild: true })).toBeNull();
   });
 
+  // Review of cc15d50, finding 2: a malformed commit passed beside answers
+  // that report none, though invariant 7 says every reported commit is one
+  // well-formed commit
+  it("refuses a malformed commit beside answers that report none", () => {
+    const headline = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null, sweep: null });
+    const sweep = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null });
+    const split = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, sweep: null });
+    for (const bad of [7, "not-a-commit", "A".repeat(40)]) {
+      // A malformed headline, a part with none
+      expect(stageMismatch(headline(bad), sweep(null)).packages).toEqual(["build"]);
+      expect(() => mergeStages(headline(bad), sweep(null))).toThrow(StageMismatchError);
+      // No headline commit, a malformed part
+      expect(stageMismatch(headline(null), sweep(bad)).packages).toEqual(["build"]);
+      // A malformed part already merged under a headline with none (as an
+      // older build would have let through), then a part with none
+      const half = { ...mergeStages(headline(null), sweep(null)), builds: [{ malformed: String(bad) }] };
+      expect(stageMismatch(half, split(null)).packages).toEqual(["build"]);
+    }
+    // Answers that all report none still merge
+    expect(mergeStages(mergeStages(headline(null), sweep(null)), split(null)).builds).toEqual([]);
+  });
+
   // Review of e78fbf4, finding 2: under a headline that reports no commit,
   // a sweep from one Cloud Run revision and a split from another each
   // passed against the headline's null, and made a complete result
@@ -390,7 +412,8 @@ describe("the household answer's package versions", () => {
 
   // Every reported commit, the headline's and each part's in turn, must be
   // one well-formed commit; answers that report none are compared on the
-  // rest. The oracle reads only the raw answers.
+  // rest, and a malformed one refuses the next part whatever it reports.
+  // The oracle reads only the raw answers.
   it("merges a sequence of parts exactly when every commit they report is one", () => {
     const raw = fc.constantFrom(null, A, B, "not-a-commit");
     fc.assert(fc.property(raw, fc.array(raw, { minLength: 1, maxLength: 4 }), (headlineSha, partShas) => {
@@ -405,17 +428,18 @@ describe("the household answer's package versions", () => {
           break;
         }
       }
-      // Up to the first refusal, in order
-      const asked = [headlineSha, ...partShas];
+      // Up to the first refusal, in order: each part is merged only if the
+      // commits reported so far and its own are all one well-formed commit
+      const wellFormed = (sha) => /^[0-9a-f]{40}$/.test(sha);
       let expectRefused = false;
-      const reported = [];
-      for (const sha of asked) {
-        if (sha === null) continue;
-        if (reported.length && !(reported.every((seen) => seen === sha) && /^[0-9a-f]{40}$/.test(sha) && /^[0-9a-f]{40}$/.test(reported[0]))) {
+      const reported = headlineSha === null ? [] : [headlineSha];
+      for (const sha of partShas) {
+        const identities = sha === null ? reported : [...reported, sha];
+        if (!identities.every((seen) => wellFormed(seen) && seen === identities[0])) {
           expectRefused = true;
           break;
         }
-        reported.push(sha);
+        if (sha !== null) reported.push(sha);
       }
       expect(refused).toBe(expectRefused);
       if (!refused) expect(result.build).toEqual(headlineSha === "not-a-commit" ? { malformed: headlineSha } : headlineSha);
@@ -755,6 +779,24 @@ describe("postHouseholdDetail", () => {
     } finally {
       process.env = saved;
     }
+  });
+
+  // W5's review of #104: a signal aborted before the call never fired its
+  // abort event, so the request went out regardless
+  it("never sends a request for a signal already aborted", async () => {
+    const { postHouseholdImpact } = await import("./householdImpactApi");
+    const seen = [];
+    const fetchImpl = async (url, init) => {
+      seen.push(init.signal.aborted);
+      if (init.signal.aborted) throw new DOMException("aborted", "AbortError");
+      return respond(200, ok);
+    };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(seen).toEqual([true]);
   });
 
   it("uses the main API alone when no detail URL is set", async () => {

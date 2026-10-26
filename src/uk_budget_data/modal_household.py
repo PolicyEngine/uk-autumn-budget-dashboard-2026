@@ -9,10 +9,10 @@ time. The route builds one synthetic household from the answers: no survey
 data and no Hugging Face token, so the data licence question does not arise.
 
 Cost (Modal's published rates, 25 October 2026: $0.0473 per core-hour,
-$0.008 per GiB-hour): no container is kept warm by default
-(``MIN_CONTAINERS`` 0), so an idle app costs nothing; a container lives
-``SCALEDOWN_SECONDS`` after its last call. Keeping containers warm is a
-decision with a price (see the runbook), not a default.
+$0.008 per GiB-hour): the deploy itself keeps no container warm
+(``MIN_CONTAINERS`` 0); the warm schedule below then keeps some warm until
+4 November. A container lives ``SCALEDOWN_SECONDS`` after its last call.
+Keeping containers warm is a decision with a price (see the runbook).
 
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop uk-budget-household   # when done
@@ -59,6 +59,7 @@ from uk_budget_data.household_warm import warm_target  # noqa: E402
 from uk_budget_data.runtime_identity import (  # noqa: E402
     checkout_commit,
     checkout_differences,
+    printable_paths,
 )
 
 
@@ -74,7 +75,11 @@ def build_image() -> modal.Image:
         print(
             "No build commit: the files this deploy copies are not exactly "
             "the checkout's HEAD, so the page will not use its breakdowns."
-            + (f" They differ in: {', '.join(differ[:10])}" if differ else "")
+            + (
+                f" They differ in: {printable_paths(differ[:10])}"
+                if differ
+                else ""
+            )
         )
     return (
         modal.Image.debian_slim(
