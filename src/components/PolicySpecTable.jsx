@@ -15,21 +15,19 @@ import {
  * loaded once for every card. `override` (tests) skips the request.
  */
 export function usePolicyParameters(override) {
-  const [tables, setTables] = useState(override ?? null);
+  const [loaded, setLoaded] = useState(null);
+  const given = override !== undefined;
   useEffect(() => {
-    if (override !== undefined) {
-      setTables(override);
-      return undefined;
-    }
+    if (given) return undefined;
     let live = true;
     loadPolicyParameters().then((document) => {
-      if (live) setTables(document);
+      if (live) setLoaded(document);
     });
     return () => {
       live = false;
     };
-  }, [override]);
-  return tables;
+  }, [given]);
+  return given ? override : loaded;
 }
 
 // A change's tone, by the catalogue's direction for the measure: a measure
