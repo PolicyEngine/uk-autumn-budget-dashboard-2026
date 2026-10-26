@@ -83,3 +83,22 @@
   font-size: 11px;
   color: var(--pe-gray-500);
 }
+
+/* A key item that is not a line (the selected year's shading): a swatch
+   and a label, quiet, not a button */
+.series-toggle-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 6px;
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+.series-toggle-band {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--pe-gray-200);
+}

@@ -129,10 +129,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
     expect(rows[0]).toBe("Plan 2 threshold unfrozen");
-    expect(rows.at(-1)).toBe("Package");
+    expect(rows.at(-1)).toBe("All measures together");
     expect(rows).not.toContain("Employer NI relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
-    expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
+    expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
     expect(headline).toHaveTextContent(/^Of the measures, Plan 2 threshold unfrozen does most, lifting about [\d,]+ people out of poverty; all the measures together, about [\d,]+\.$/);
