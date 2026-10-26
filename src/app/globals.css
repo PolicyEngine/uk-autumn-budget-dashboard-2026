@@ -215,6 +215,11 @@ code {
   --c-mtr-universal-credit: #2f855a;
   --c-mtr-other-benefits: #9ae6b4;
   --c-mtr-other: #d1d5db;
+  --c-net-state-pension: #22543d;
+  --c-net-warm-home-discount: #68d391;
+  --c-net-council-tax: #8e7cc3;
+  --c-net-fuel-duty: #553c9a;
+  --c-net-vat: #b794f4;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

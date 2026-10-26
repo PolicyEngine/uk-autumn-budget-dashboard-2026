@@ -245,7 +245,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     const panel = await screen.findByRole("tabpanel", { name: label });
     expect(await within(panel).findAllByRole("heading", { name: measures }, { timeout: 5000 })).not.toHaveLength(0);
     expect(panel.textContent).toMatch(/With the selected measures:/);
-    expect(panel.textContent).not.toMatch(/Without the measures/);
+    // (the growth card with the measures links to its twin as "Without the measures")
+    expect(panel.textContent).not.toMatch(/Without the measures \(current law\)|Without the measures:/);
     expect(within(panel).queryByRole("heading", { name: currentLaw })).toBeNull();
     // The one link to its twin
     fireEvent.click(within(panel).getByRole("link", { name: "See this without the measures →" }));
