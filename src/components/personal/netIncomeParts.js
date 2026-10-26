@@ -25,7 +25,7 @@ export const NET_LAYERS = [
   { key: "student_loan", label: "Student loan", color: CHART_COLOURS.mtrStudentLoan },
   { key: "council_tax", label: "Council Tax", color: CHART_COLOURS.netCouncilTax },
   { key: "fuel_duty", label: "Fuel duty", color: CHART_COLOURS.netFuelDuty },
-  { key: "vat_change", label: "VAT", color: CHART_COLOURS.netVat },
+  { key: "vat_change", label: "VAT change", color: CHART_COLOURS.netVat },
   {
     key: "child_benefit_charge",
     label: "Child Benefit charge",
