@@ -192,7 +192,7 @@ def _age_row(year, band):
     return {"year": year, "age_band": band, "mean_change": 1.0}
 
 
-def test_a_thin_age_year_keeps_only_its_all_row():
+def test_a_thin_band_keeps_only_all_and_a_thin_all_keeps_nothing():
     rows = [
         _age_row(year, band)
         for year in (2027, 2028, 2029)
@@ -206,6 +206,90 @@ def test_a_thin_age_year_keeps_only_its_all_row():
         (2029, "40"),
         (2029, "all"),
     ]
+
+
+BANDS = [label for label, _, _ in floor.AGE_BANDS]
+ROW_LABELS = BANDS + ["all", "16", "36", "40", "70", "90+"]
+
+
+@pytest.mark.parametrize(
+    "thin, withheld",
+    [
+        (["40"], {"36", "40"}),
+        (["90+"], {"70", "90+"}),
+        (["65+" + floor.OTHER_AGES], {"70", "90+"}),
+        (["16", "40"], {"16", "36", "40"}),
+        (["35-49"], set(ROW_LABELS) - {"all"}),
+        ([floor.NO_BAND], set(ROW_LABELS) - {"all"}),
+        (["all"], None),
+    ],
+)
+def test_what_is_withheld_with_each_thin_group(thin, withheld):
+    """#208 review, finding 6: one thin single age left only "all", which
+    blanked the sections built from bands and single ages. A thin single age
+    now takes its band's single ages with it: the band then shows as one
+    row, and no sum or difference of the rows left gives the thin one
+    back."""
+    assert floor.withheld_age_labels(thin, ROW_LABELS) == withheld
+
+
+def test_a_year_with_a_thin_single_age_keeps_its_bands():
+    rows = [_age_row(YEAR, label) for label in ROW_LABELS]
+    kept = floor.withhold_thin_age_rows(rows, {("age_impact", YEAR): ["40"]})
+    assert [row["age_band"] for row in kept] == BANDS + [
+        "all",
+        "16",
+        "70",
+        "90+",
+    ]
+
+
+def test_ages_without_a_row_of_their_own_are_a_group():
+    """A band less its single ages gives back the ages with too few records
+    for a row, so the floor checks them too."""
+    age = np.array([33] * 100 + [30] * 5)
+    groups = floor.age_groups(age, np.ones(len(age)))
+    assert "30" not in groups
+    other = groups["25-34" + floor.OTHER_AGES]
+    assert other.sum() == 5 and not other[:100].any()
+    assert groups["35-49" + floor.OTHER_AGES].sum() == 0
+    assert groups[floor.NO_BAND].sum() == 0
+
+
+def _ages(changed):
+    """People in single-person records, ten records to a survey household:
+    households 0-49 aged 36, 50-99 aged 40, 100-199 aged 70. Those in
+    ``changed`` gain £100."""
+    survey = np.repeat(np.arange(200), 10)
+    age = np.select([survey < 50, survey < 100], [36, 40], 70)
+    household_id = np.arange(len(survey)) + 1_000
+    decile = survey // 20 + 1
+    base = np.full(len(survey), 20_000.0)
+    gain = np.where(np.isin(survey, list(changed)), 100.0, 0.0)
+    person = {
+        "household_id": household_id,
+        "age": age,
+        "household_income_decile": decile,
+    }
+
+    def simulation(net):
+        return _Simulation(
+            {
+                "household_id": household_id,
+                "household_net_income": net,
+                "household_income_decile": decile,
+            },
+            person,
+        )
+
+    return simulation(base), simulation(base + gain), survey
+
+
+def test_a_thin_single_age_in_a_band_that_is_not_thin_is_found_alone():
+    # Twelve survey households aged 36 change, and two aged 40.
+    baseline, reformed, survey = _ages(set(range(12)) | {50, 51})
+    found = floor.thin_cells(baseline, reformed, [YEAR], survey)
+    assert found[("age_impact", YEAR)] == ["40"]
 
 
 def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):

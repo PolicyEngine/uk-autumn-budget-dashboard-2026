@@ -11,9 +11,11 @@ from one survey household, so the floor counts the survey households behind
 the changed records (``pipeline.scatter_survey_households``), as the binned
 scatter and the results by area do.
 
-The age table may leave rows out, so a year with a thin age cell keeps only
-its "all" row, or no row at all when "all" is thin itself: one withheld row
-could otherwise be given back by the others and "all". The decile tables
+The age table may leave rows out, so its thin cells are withheld with
+whatever would give them back by difference (``withheld_age_labels``): a
+thin single year of age takes the other single ages of its band with it,
+so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
+leaves no row. The decile tables
 must hold every decile, so generation refuses a run with a thin decile cell
 (``generate._apply_disclosure_floor``), or, with THIN_DECILES_ENV set to
 "warn" where the generation starts, writes it and says which cells are
@@ -41,6 +43,11 @@ SURVEY_HOUSEHOLD_FLOOR = SCATTER_MIN_HOUSEHOLDS
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
+# Groups no row shows but the rows give back by difference (``age_groups``):
+# a band's people whose age has no row of its own, labelled with the band
+# and this, and anyone in no band.
+OTHER_AGES = " (ages without a row)"
+NO_BAND = "all (in no band)"
 THIN_DECILES_ENV = "UK_BUDGET_THIN_DECILES"
 
 
@@ -84,16 +91,26 @@ def age_groups(age: np.ndarray, decile: np.ndarray) -> dict[str, np.ndarray]:
     """The age table's groups, by person, as ``AgeImpactCalculator``
     publishes them: the age bands, "all", and each single year of age with
     at least SINGLE_AGE_MIN_RECORDS records. People whose household has no
-    income decile are left out."""
+    income decile are left out.
+
+    Also the groups the published rows give back by difference, which no
+    row shows: each band's people whose age has no row of its own (the band
+    less its single ages, labelled with OTHER_AGES), and anyone in no band
+    ("all" less the bands, NO_BAND)."""
     kept = decile >= 1
     bands = age_band_of(age)
     groups = {label: kept & (bands == label) for label, _, _ in AGE_BANDS}
     groups[AGE_BAND_ALL] = kept
+    groups[NO_BAND] = kept & (bands == "")
     singles = single_age_of(age)
+    with_a_row = np.zeros(len(age), dtype=bool)
     for label in np.unique(singles[kept]):
         members = kept & (singles == label)
         if members.sum() >= SINGLE_AGE_MIN_RECORDS:
             groups[str(label)] = members
+            with_a_row |= members
+    for label, _, _ in AGE_BANDS:
+        groups[label + OTHER_AGES] = groups[label] & ~with_a_row
     return groups
 
 
@@ -188,16 +205,67 @@ def thin_cells_reason(found: dict[tuple[str, int], list[str]]) -> str:
     )
 
 
+def _band_of_single_age(label: str) -> str:
+    """The band a single year of age's label ("40", "90+") falls in."""
+    return age_band_of(np.array([int(label.rstrip("+"))]))[0]
+
+
+def withheld_age_labels(
+    thin: list[str], labels: list[str]
+) -> Optional[set[str]]:
+    """Which of a year's age table ``labels`` to withhold, given its
+    ``thin`` groups (``age_groups``), so that no published row, nor any sum
+    or difference of them, rests on a thin group; None withholds them all.
+
+    - "all" thin: every row.
+    - A band thin, or the people in no band: every row but "all", since the
+      bands add up to it.
+    - Otherwise every single year of age in a band with a thin single age,
+      or whose ages without a row are thin; the bands, "all" and the other
+      bands' single ages stay. Each band is then either whole, giving back
+      only its ages without a row, which are not thin, or shown as one row.
+    """
+    if AGE_BAND_ALL in thin:
+        return None
+    bands = {label for label, _, _ in AGE_BANDS}
+    if NO_BAND in thin or bands & set(thin):
+        return {label for label in labels if label != AGE_BAND_ALL}
+    dirty = {
+        (
+            label[: -len(OTHER_AGES)]
+            if label.endswith(OTHER_AGES)
+            else _band_of_single_age(label)
+        )
+        for label in thin
+    }
+    return {
+        label
+        for label in labels
+        if label not in bands
+        and label != AGE_BAND_ALL
+        and _band_of_single_age(label) in dirty
+    }
+
+
 def withhold_thin_age_rows(
     rows: list[dict], found: dict[tuple[str, int], list[str]]
 ) -> list[dict]:
-    """The age table's rows without its thin cells. A year with a thin cell
-    keeps only its "all" row, and no row when "all" is thin itself."""
+    """The age table's rows without its thin cells, nor any row that would
+    give one back (``withheld_age_labels``), year by year."""
+    labels: dict[int, list[str]] = {}
+    for row in rows:
+        labels.setdefault(row["year"], []).append(row["age_band"])
+    withheld = {
+        year: withheld_age_labels(found[(AGE_TABLE, year)], year_labels)
+        for year, year_labels in labels.items()
+        if (AGE_TABLE, year) in found
+    }
     kept = []
     for row in rows:
-        thin = found.get((AGE_TABLE, row["year"]))
-        if thin and (row["age_band"] != AGE_BAND_ALL or AGE_BAND_ALL in thin):
-            continue
+        if row["year"] in withheld:
+            dropped = withheld[row["year"]]
+            if dropped is None or row["age_band"] in dropped:
+                continue
         kept.append(row)
     return kept
 
