@@ -692,11 +692,18 @@
   color: var(--pe-gray-600);
 }
 
-/* A tile's trend (HeadlineTile): faint gridlines, the bottom and top of
-   its range at the left, official years solid grey, the projection or
-   forecast dashed teal; a guide and tip on hover or focus */
+/* A tile's trend (HeadlineTile): its series named above, a line over a
+   light area, the first and last values labelled, the figure's year
+   ringed; a guide and tip on hover or focus */
 .tile-trend {
   min-width: 0;
+}
+
+.tile-trend-series {
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--pe-gray-500);
 }
 
 .tile-trend-plot {
@@ -715,46 +722,42 @@
   overflow: visible;
 }
 
-.tile-trend-grid {
-  stroke: var(--c-grid);
-  stroke-width: 1;
-}
-
-.tile-trend-axis {
-  font-size: 10px;
-  fill: var(--c-tick);
-  font-variant-numeric: tabular-nums;
+.tile-trend-area {
+  fill: var(--c-gain);
+  fill-opacity: 0.1;
 }
 
 .tile-trend-line {
   fill: none;
+  stroke: var(--c-gain);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
-.tile-trend-line.is-official {
-  stroke: var(--c-before);
-}
-
-.tile-trend-line.is-projection {
-  stroke: var(--c-gain);
+.tile-trend-line.is-dashed {
   stroke-dasharray: 5 3;
 }
 
-.tile-trend-dot.is-official,
-.tile-trend-end.is-official,
-.tile-trend-hover.is-official {
-  fill: var(--c-before);
-}
-
-.tile-trend-dot.is-projection,
-.tile-trend-end.is-projection,
-.tile-trend-hover.is-projection {
+.tile-trend-dot {
   fill: var(--c-gain);
 }
 
+.tile-trend-hero {
+  fill: var(--c-surface);
+  stroke: var(--c-gain-text);
+  stroke-width: 2.5;
+}
+
+.tile-trend-value {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--c-gain-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .tile-trend-hover {
+  fill: var(--c-gain-text);
   stroke: var(--c-surface);
   stroke-width: 1.5;
 }
@@ -793,32 +796,11 @@
 .forecast-tile-info {
   display: inline-flex;
   margin-left: auto;
-  color: var(--pe-gray-400);
-  cursor: help;
-  border-radius: 50%;
-  outline: none;
-}
-
-.forecast-tile-info:hover,
-.forecast-tile-info:focus-visible {
-  color: var(--c-gain-text);
 }
 
 /* The poverty tiles sit as one more row of the section's cards */
 .poverty-tiles {
   margin-bottom: 20px;
-}
-
-/* The line under the tiles linking to the forecast's method */
-.forecast-feed-link {
-  margin: 0 0 8px;
-  font-size: var(--fs-small);
-}
-
-.forecast-feed-link a {
-  color: var(--c-gain-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .forecast-feed-params {

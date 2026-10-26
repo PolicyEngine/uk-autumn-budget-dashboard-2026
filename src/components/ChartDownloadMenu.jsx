@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import { chartDownloads } from "../utils/chartDownloads";
 import "./ChartDownloadMenu.css";
+import Tip from "./Tip";
 
 const FORMAT_LABELS = {
   csv: { name: "CSV", detail: "Data" },
@@ -83,15 +84,11 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLab
   if (disabledReason) {
     return (
       <div className="chart-download">
-        <button
-          type="button"
-          className="chart-download-button"
-          disabled
-          title={disabledReason}
-          aria-label={`${name}: ${disabledReason}`}
-        >
-          <DownloadIcon />
-        </button>
+        <Tip content={disabledReason}>
+          <button type="button" className="chart-download-button" disabled aria-label={`${name}: ${disabledReason}`}>
+            <DownloadIcon />
+          </button>
+        </Tip>
       </div>
     );
   }
@@ -112,18 +109,19 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLab
 
   return (
     <div className="chart-download" ref={rootRef}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="chart-download-button"
-        aria-expanded={open}
-        aria-controls={menuId}
-        aria-label={name}
-        title={tooltip}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <DownloadIcon />
-      </button>
+      <Tip content={open ? null : tooltip}>
+        <button
+          ref={buttonRef}
+          type="button"
+          className="chart-download-button"
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-label={name}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <DownloadIcon />
+        </button>
+      </Tip>
       {presence.mounted && (
         <ul className={`chart-download-menu ${popoverClass(presence.shown)}`} id={menuId} {...leavingProps(presence.shown)}>
           {available.map((format) => (

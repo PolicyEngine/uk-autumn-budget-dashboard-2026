@@ -68,6 +68,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
+import Tip from "./Tip";
 
 /**
  * A hovered seat's tooltip rows from describeSeat's lines: the figure under
@@ -937,10 +938,10 @@ export default function ConstituencyMap({
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="zoom-controls">
+                  <Tip content="Zoom in">
                   <button
                     className="zoom-control-btn"
                     onClick={() => handleZoom(1.5)}
-                    title="Zoom in"
                     aria-label="Zoom in"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -949,10 +950,11 @@ export default function ConstituencyMap({
                       <path d="M15 15L20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
+                  </Tip>
+                  <Tip content="Zoom out">
                   <button
                     className="zoom-control-btn"
                     onClick={() => handleZoom(0.67)}
-                    title="Zoom out"
                     aria-label="Zoom out"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -961,10 +963,11 @@ export default function ConstituencyMap({
                       <path d="M15 15L20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </button>
+                  </Tip>
+                  <Tip content="Reset zoom">
                   <button
                     className="zoom-control-btn"
                     onClick={handleResetZoom}
-                    title="Reset zoom"
                     aria-label="Reset zoom"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -983,6 +986,7 @@ export default function ConstituencyMap({
                       />
                     </svg>
                   </button>
+                  </Tip>
                 </div>
               </div>
 

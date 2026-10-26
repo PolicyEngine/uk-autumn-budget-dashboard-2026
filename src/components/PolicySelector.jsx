@@ -4,6 +4,7 @@ import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import Tip from "./Tip";
 
 function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason }) {
   const { displayable } = useMeasureCatalogue();
@@ -35,13 +36,13 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
 
   return (
     <div className="policy-selector" ref={dropdownRef}>
+      <Tip content={disabledReason}>
       <button
         className="policy-selector-toggle band-control"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
         aria-label={disabledReason ? `Select policies: ${disabledReason}` : "Select policies"}
         disabled={Boolean(disabledReason)}
-        title={disabledReason}
       >
         <ListChecks className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
         <span className="band-control-text">
@@ -57,6 +58,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         </span>
         <PillChevron />
       </button>
+      </Tip>
 
       {presence.mounted && (
         <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>

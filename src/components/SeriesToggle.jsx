@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./SeriesToggle.css";
+import Tip from "./Tip";
 
 const HINT_KEY = "pe-series-toggle-hint-seen";
 
@@ -74,14 +75,13 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
+            <Tip key={s.key} content={last ? `${s.label}: at least one line stays on` : null}>
             <button
-              key={s.key}
               type="button"
               className={`series-toggle-chip${active ? " is-on" : ""}`}
               style={{ "--chip-colour": s.colour }}
               aria-pressed={active}
               aria-disabled={last || undefined}
-              title={last ? `${s.label}: at least one line stays on` : `${active ? "Hide" : "Show"} ${s.label}`}
               onClick={() => toggle(s.key)}
               onMouseEnter={() => onHover?.(active ? s.key : null)}
               onMouseLeave={() => onHover?.(null)}
@@ -105,6 +105,7 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
               </svg>
               <span className="series-toggle-label">{narrow && s.short ? s.short : s.label}</span>
             </button>
+            </Tip>
           );
         })}
       </div>
