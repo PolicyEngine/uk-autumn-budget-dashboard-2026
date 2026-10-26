@@ -11,10 +11,14 @@ export const FORECAST_FEED_ANCHOR = "method-forecast-feed";
 
 export default function ForecastFeedMethod() {
   const [forecast, setForecast] = useState(null);
+  const [endNote, setEndNote] = useState(null);
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
       if (live && r.data?.forecast) setForecast(r.data.forecast);
+      // "(CPI 2.0%, earnings growth 3.3%)": the long-run assumptions, said
+      // here once; the incomes and inequality charts link here
+      if (live) setEndNote(r.data?.meta?.headline_end_year_note?.match(/\(([^)]*)\)\.?$/)?.[1] ?? null);
     });
     return () => {
       live = false;
@@ -32,7 +36,7 @@ export default function ForecastFeedMethod() {
         <li>Each rate is the growth in a calendar year&apos;s average on the year before.</li>
         <li>
           A financial year takes the growth of the calendar year it starts in. 2031-32 is past the OBR forecast and
-          uses policyengine-uk&apos;s long-run assumptions.
+          uses policyengine-uk&apos;s long-run assumptions{endNote ? ` (${endNote})` : ""}.
         </li>
         <li>Benefit rates in the baseline follow a lagged CPI index built from this forecast.</li>
       </ul>

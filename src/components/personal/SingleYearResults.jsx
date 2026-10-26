@@ -399,7 +399,7 @@ export function householdSummary(data, { tenure = null, regionLabel = null, part
  * reads (and copies) once.
  */
 function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, summary = "" }) {
-  const shown = Math.round(useCountUp(totals.change));
+  const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
   const share = totals.change === 0 ? null : signedPercent(Math.abs(totals.change), totals.before);

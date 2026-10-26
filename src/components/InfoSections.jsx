@@ -37,7 +37,7 @@ export function infoParts(info = {}) {
 
 export const hasInfo = (info) => {
   const p = infoParts(info);
-  return Boolean(p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length);
+  return Boolean(p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length || p.method);
 };
 
 /** The closed disclosure's one line: what is inside, in order ("How it's calculated · Caveats · Source"). */
@@ -50,6 +50,7 @@ export function infoPreview(info) {
     p.sources.length > 0 && (p.sources.length > 1 ? "Sources" : "Source"),
   ].filter(Boolean);
   if (!parts.length && p.shows) parts.push("What it shows");
+  if (!parts.length && p.method) parts.push(p.method.label);
   return parts.join(" · ");
 }
 

@@ -3,6 +3,8 @@
 // data, and the CSV source strings. Ported from
 // PolicyEngine/uk-living-standards-outlook src/lib/sources.jsx.
 
+import { fyDash } from "../../utils/livingStandards/outlook";
+
 export const HBAI_URL =
   "https://www.gov.uk/government/statistics/households-below-average-income-for-financial-years-ending-1995-to-2025";
 export const HBAI_TITLE = "Households Below Average Income: FYE 1995 to FYE 2025";
@@ -112,3 +114,29 @@ export const CSV_SOURCES = {
   obr: "OBR, Economic and fiscal outlook (March 2026)",
   peDerived: "PolicyEngine calculation from ONS and OBR data",
 };
+
+/** The same sources as About this chart's Source items (InfoSections). */
+export const HBAI_SOURCE = { label: "DWP, Households Below Average Income", href: HBAI_URL, date: "March 2026" };
+export const OBR_SOURCE = { label: "OBR, Economic and fiscal outlook", href: OBR_EFO_URL, date: "March 2026" };
+
+/** The forecast's OBR release(s), as Source items. */
+export function forecastSources(forecast) {
+  const { pre, post } = obrSources(forecast);
+  const item = ({ name, url }) => ({ label: name, href: url || undefined });
+  return post ? [item(post), { ...item(pre), note: "earlier forecast" }] : [item(pre)];
+}
+
+/**
+ * A note from the outlook data in plain words, without the outside
+ * analysts the pipeline's notes compared against (the page names only data
+ * sources): their names and the comparisons go.
+ */
+export function scrubNote(text) {
+  const plain = fyDash(plainWords(text));
+  if (/JRF's figure|Resolution Foundation/.test(plain)) {
+    return plain
+      .replace(/ is well below JRF's figure of about [^,]+ \([^)]*\), so read it/, ", so read it")
+      .replace(/, not the typical \(median\) incomes in Resolution Foundation analysis/, ", not medians");
+  }
+  return plain.replace(/, as JRF defines very deep poverty/, "").replace(/ ?\(?JRF-style\)?/, "");
+}

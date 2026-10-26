@@ -1,3 +1,4 @@
+import CountUpText from "../CountUpText";
 import {
   Armchair,
   ArrowRight,
@@ -402,7 +403,7 @@ export default function HouseholdCards({
                   <>
                     <Tip content={`Change in net income in ${fiscalYearTick(year)} with ${figuresWith}`}>
                     <span className={`household-card-figure ${tone(figures.change)}`} id={`household-card-${example.id}-result`}>
-                      {Math.round(figures.change) === 0 ? "No change" : signedMoney(figures.change)}
+                      {Math.round(figures.change) === 0 ? "No change" : <CountUpText text={signedMoney(figures.change)} />}
                       {Math.round(figures.change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
                     </span>
                     </Tip>

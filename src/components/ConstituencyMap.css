@@ -141,31 +141,18 @@
   color: var(--pe-gray-500);
 }
 
-/* The map and its key: the key beside the map on a wide card, under it on
-   a narrow one, never over it. The SVG keeps the whole of Great Britain
-   and Northern Ireland, Shetland included, in view at its full fit. */
+/* The map, then its key under it at every width, never over it. The SVG
+   keeps the whole of Great Britain and Northern Ireland, Shetland
+   included, in view at its full fit. */
 .map-content {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .map-content > .map-key {
   order: 1;
-}
-
-@container constituency-body (min-width: 560px) {
-  .map-content {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-
-  .map-content > .map-key {
-    order: 0;
-    flex: 0 0 auto;
-    width: 260px;
-  }
 }
 
 .map-canvas {
@@ -193,58 +180,187 @@
   display: none;
 }
 
-/* The key */
+/* The key: a diverging ramp from loss to gain with the breaks under its
+   joins, too uncertain beside it, and the status textures in a row */
 .map-key {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   font-size: var(--fs-micro);
   color: var(--pe-gray-700);
+}
+
+.map-key-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
 }
 
 .map-key-title {
   margin: 0;
   font-weight: 600;
-  color: var(--pe-gray-700);
 }
 
-.map-key-subtitle {
-  margin: 0 0 2px;
+.map-key-count {
+  margin-left: auto;
+  color: var(--pe-teal-700);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-key-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 24px;
+}
+
+.map-key-scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 6px;
+}
+
+.map-key-end {
+  line-height: 12px;
   color: var(--pe-gray-500);
+  white-space: nowrap;
 }
 
-.map-key ul {
-  list-style: none;
-  margin: 4px 0 0;
+/* Too uncertain sits after the ramp, or under it when the row is full */
+.map-key-scale > .map-key-item {
+  margin-left: 6px;
+}
+
+.map-key-end:first-child::after {
+  content: "\00a0\2190";
+}
+
+.map-key-ramp + .map-key-end::before {
+  content: "\2192\00a0";
+}
+
+/* Five joined segments; the ticks sit under the joins */
+.map-key-ramp {
+  position: relative;
+  display: flex;
+  width: 200px;
+  flex: 0 1 auto;
+  min-width: 150px;
+  padding-bottom: 16px;
+}
+
+.map-key-segment {
+  flex: 1;
+  height: 12px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  border: 0;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) ease;
 }
 
-.map-key li {
+.map-key-segment:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.map-key-segment:nth-child(5) {
+  border-radius: 0 3px 3px 0;
+}
+
+.map-key-tick {
+  position: absolute;
+  top: 13px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-key-tick::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  height: 3px;
+  border-left: 1px solid var(--pe-gray-400);
+}
+
+.map-key-statuses {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.map-key-item {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  line-height: 1.3;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: 14px;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity var(--motion-fast, 150ms) ease;
 }
 
 .map-key-swatch {
   flex: none;
 }
 
-/* Under the map on a narrow card: the two groups side by side */
-@container constituency-body (max-width: 559px) {
-  .map-key {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px 20px;
-  }
+/* While an entry is hovered the others fade, as do the seats it leaves out */
+.map-key.is-highlighting :is(.map-key-segment, .map-key-item):not(.is-active) {
+  opacity: 0.35;
+}
 
-  .map-key-group {
-    flex: 1 1 150px;
+.map-key-segment:focus-visible,
+.map-key-item:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.map-canvas svg path.constituency-path {
+  transition: opacity var(--motion-fast, 150ms) ease;
+}
+
+.map-canvas svg path.constituency-path[data-dim="true"] {
+  opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-key-segment,
+  .map-key-item,
+  .map-canvas svg path.constituency-path {
+    transition: none;
   }
 }
+
+/* The view switch: the shared segmented control on the row, its name
+   for screen readers only */
+.map-view-switch .control-bar-group {
+  display: block;
+}
+
+.map-view-switch .control-bar-group-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.map-view-switch .control-bar-segments {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
 
 /* Map controls container */
 .map-controls-container {
