@@ -92,8 +92,8 @@ const SHARES_DESCRIPTION =
 const SHARES_SINGLE_DESCRIPTION =
   "Share of people better or worse off (a change over 0.01%), by single year of age (10 to 40).";
 
-/** The two views of "Average change by age". */
-const AGE_VIEWS = [
+/** The two views of "Average change by age" (and Pensioners' Better and worse off). */
+export const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
 ];

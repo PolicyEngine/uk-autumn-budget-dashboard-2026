@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -30,13 +30,15 @@ import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
-import { useAgeImpactRows } from "./YoungPeopleSection";
+import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
+import PillSelect from "./PillSelect";
 import {
   PENSIONER_AGE_FIRST,
   PENSIONER_AGE_LAST,
   pensionerAge,
   pensionerMeasures,
   pensionerShares,
+  pensionerSharesBySingleAge,
   pensionerTrend,
 } from "./pensioners/pensionersData";
 import { ALL_POLICY_NAMES, POLICY_COLORS, getPolicyColor } from "../utils/policyConfig";
@@ -586,13 +588,41 @@ function GroupTick({ x, y, payload, narrow }) {
   );
 }
 
+/** "Aged 67", "Aged 90 and over"; a group's name as it is. */
+const ageLabel = (label) =>
+  /^\d+\+$/.test(label) ? `Aged ${label.slice(0, -1)} and over` : /^\d+$/.test(label) ? `Aged ${label}` : label;
+
+/** One age per row in the single-age view: 14px bars 6px apart, plus the axis. */
+const singleSharesHeight = (rows) => rows * 20 + X_AXIS_HEIGHT + 24;
+
+/**
+ * An age down the side of the single-age view, every age (the 20px rows
+ * leave room for each), the pensioners' total in bold teal.
+ */
+function SingleAgeRowTick({ x, y, payload }) {
+  const total = payload.value === "Pensioners";
+  return (
+    <text
+      x={x - 6}
+      y={y}
+      textAnchor="end"
+      dominantBaseline="middle"
+      fontSize={13}
+      fill={total ? CHART_COLOURS.highlight : TICK_STYLE.fill}
+      fontWeight={total ? 600 : 400}
+    >
+      {payload.value}
+    </text>
+  );
+}
+
 function SharesTooltip({ active, payload, label, yearLabel }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">
-        {label}, {yearLabel}
+        {ageLabel(label)}, {yearLabel}
       </p>
       {OUTCOMES.map((outcome) => (
         <p key={outcome.key} className="chart-tooltip-row">
@@ -614,20 +644,30 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
   const published = isPublished(rows, year);
-  const shares = pensionerShares(rows, policies, selectedPolicies, year);
+  // By group (pensioners, under State Pension age, all ages) or by single
+  // year of age from State Pension age, as Young people's card
+  const [view, setView] = useState("band");
+  const single = view === "single";
+  const from = pensionerAge(year);
+  const shares = (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year);
   const data = shares
-    ? shares.groups.map((group) =>
-        visibleSegments(
-          { group: group.label, key: group.key, ...Object.fromEntries(OUTCOME_KEYS.map((key) => [key, group.row[key]])) },
-          OUTCOME_KEYS,
-        ),
-      )
+    ? shares.groups
+        .filter((group) => !group.suppressed)
+        .map((group) =>
+          visibleSegments(
+            { group: group.label, key: group.key, ...Object.fromEntries(OUTCOME_KEYS.map((key) => [key, group.row[key]])) },
+            OUTCOME_KEYS,
+          ),
+        )
     : [];
+  const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
   const title = `Better and worse off, ${yearLabel}`;
-  const description = "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
+  const description = single
+    ? `Share of people better or worse off (a change over 0.01%), by single year of age from State Pension age (${from}) to 90 and over, then all pensioners.`
+    : "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
   const download = {
     chartRef,
-    name: `pensioners-better-worse-off-${year}`,
+    name: `pensioners-better-worse-off-${single ? "single-age-" : ""}${year}`,
     exportOptions: {
       title,
       description,
@@ -637,14 +677,18 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
     },
     csv: () =>
       buildChartCsv({
-        title: `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
+        title: single
+          ? `People better off, unchanged and worse off by single year of age, pensioners, ${yearLabel}`
+          : `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
-          { key: "group", label: "Group" },
+          { key: "group", label: single ? "Age" : "Group" },
           ...OUTCOMES.map((outcome) => ({ key: outcome.key, label: `${outcome.label} (%)`, decimals: 2 })),
         ],
         rows: data.map((row) => ({ group: row.group, ...row.real })),
-        notes: [],
+        notes: thin.length
+          ? [`Not shown, too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}`]
+          : [],
       }),
     published: data.length > 0,
   };
@@ -658,9 +702,63 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         download={download}
         disabledReason={shares || !published ? undefined : "Choose one policy or all policies"}
       />
+      <div className="chart-controls young-people-controls">
+        <PillSelect
+          variant="light"
+          prefix="Show"
+          name="Better and worse off shown"
+          value={view}
+          onChange={setView}
+          options={AGE_VIEWS}
+          stableWidth
+        />
+      </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : data.length && single ? (
+          // One 100% bar per age from State Pension age, then the
+          // pensioners' total; the ▲/▼ split at the right as in the group view
+          <ResponsiveContainer width="100%" height={singleSharesHeight(data.length)}>
+            <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap={3} barSize={14}>
+              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
+              <XAxis
+                type="number"
+                domain={[0, 100]}
+                ticks={narrow ? [0, 50, 100] : [0, 25, 50, 75, 100]}
+                tickFormatter={(value) => `${value}%`}
+                tick={TICK_STYLE}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                height={X_AXIS_HEIGHT}
+                label={{ value: "Share of people", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
+              />
+              <YAxis
+                type="category"
+                dataKey="group"
+                tick={<SingleAgeRowTick />}
+                width={narrow ? 90 : 96}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
+              <YAxis
+                yAxisId="split"
+                orientation="right"
+                type="category"
+                dataKey="group"
+                tick={<SplitTick data={data} narrow={narrow} />}
+                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
+              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<SharesTooltip yearLabel={yearLabel} />} />
+              {OUTCOMES.map((outcome) => (
+                <Bar key={outcome.key} dataKey={outcome.key} name={outcome.label} fill={outcome.color} stackId="share" {...chartMotion()} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
         ) : data.length ? (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data} layout="vertical" margin={plotMargin(narrow)} barCategoryGap="28%">
@@ -726,6 +824,11 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         )}
       </div>
       <Logo />
+      {published && thin.length > 0 && (
+        <div className="chart-footer">
+          <Note>Not shown, as too few survey records: {thin.map((group) => ageLabel(group.label)).join(", ")}.</Note>
+        </div>
+      )}
     </div>
   );
 }

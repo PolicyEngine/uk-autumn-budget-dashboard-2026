@@ -20,7 +20,15 @@
    an axis as tall as X_AXIS_HEIGHT, the rows sharing the rest evenly, so
    the axis titles line up and no gap opens above the legend. */
 @media (min-width: 1025px) {
+  /* When the neighbour's plot is taller still (a single-age view), the
+     dumbbell grows with the shared row, its axis kept at the bottom */
+  .charts-grid:has(> div + div) .chart-plot:has(> .measure-dumbbell) {
+    display: flex;
+    flex-direction: column;
+  }
+
   .charts-grid:has(> div + div) .measure-dumbbell {
+    flex: 1 1 auto;
     box-sizing: border-box;
     min-height: var(--md-height, 0);
     padding: 16px 0 6px;
@@ -28,7 +36,6 @@
 
   .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
     flex: 1 1 auto;
-    max-height: 76px;
   }
 
   .charts-grid:has(> div + div) .measure-dumbbell-axis {
