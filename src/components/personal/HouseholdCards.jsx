@@ -22,7 +22,7 @@ import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
-import { SELECTABLE_YEARS } from "../../utils/displayYears";
+import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
 import Tip from "../Tip";
 
@@ -101,7 +101,7 @@ export function cardFigures(example, byYear, year, catalogue = null) {
       ? { ids: [mainId], name: chipName(mainId, catalogue), part: mainPart, own: false }
       : { ids: own, name: example.tag, part: ownPart, own: true };
   // Every year a reader can choose: one not yet in is null (its bar a stub)
-  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].sort((a, b) => a - b);
+  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].filter(isDisplayYear).sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
   return { change: current.change, ownPart, top, series };
 }
