@@ -1,0 +1,185 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. The Warm Home Discount rises from \u00a3150 to \u00a3250 for winter 2026-27 only: \u00a3100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
+    "digests": {
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
+      "outputs_sha256": "b907ab348280272c9b39006ac8c8a88669933b3d0faca3986c6a1e07157d3944",
+      "receipt_sha256": "3b02d770e2a3f7d1e71d02d9f1431176393ea5768713deed70eab4cab1a3c3dd"
+    },
+    "files": {
+      "age_impact.csv": "74a45ef5c73efcea3fdfb3059e8c219a9d249094c788a6fb716b2b4cc87e411f",
+      "budgetary_impact.csv": "2efc2ca6af099b81cf7d05f20ec926a2efaf3f2ef54c8ecbf94e5a0e3314e985",
+      "distributional_impact.csv": "9ff82497afa7037dbfca6451d234f896379f5098421d9e377c23a0ce0b21c56c",
+      "household_scatter_binned.csv": "a2a468148ce92dc8c14693ddb86673eef3a6cff4b788a840fc7bf959323eef52",
+      "income_curve.csv": "ff8908f9dd01e3911871b2c7e7104e302b2ef97dcf8ce7ec4df4a51fdb6f52c7",
+      "metrics.csv": "6f511e7d65b5b45017ecd47a44ddcb26351d27004f275a683b6b513dfa496e85",
+      "winners_losers.csv": "5930ba1ef21fa9f6d9d180f86832038f56be79ddd3328d7904b42f3cb480cebc"
+    },
+    "generated_at": "2026-10-26T13:39:47.795521+00:00",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpI3IKmD/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "uc_standard_allowance_below_cpi",
+      "state_pension_income_tax_protection",
+      "state_pension_income_tax_protection_extended",
+      "domestic_electricity_zero_vat",
+      "employer_ni_secondary_threshold_raised",
+      "employer_ni_relief_under_25s",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "domestic_gas_zero_vat",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "8d4a15489cf594fa3b44f54bdc2e43d308a81d8a",
+    "key": "warm_home_discount_top_up",
+    "measure_ids": [
+      "warm_home_discount_top_up"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_benefit_receipt_payment"
+        ]
+      ]
+    },
+    "name": "Warm Home Discount top-up",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "warm_home_discount_top_up baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.0",
+      "certificate_sha256": "cce873188388ef4f17e4274f4bde1d4a0b7d56bb2a3fb57aa5dbf832d86e557a",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "63d795c6e09e37954c193f1d0a08b1b61ab1ccc75fd1181f830431750ae8fe4b"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "b907ab348280272c9b39006ac8c8a88669933b3d0faca3986c6a1e07157d3944",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "warm_home_discount_top_up",
+      "reform_sha256": "dbcbcbf894e9aafb5bb414ef3b231b9cd9bcb6ad83d87c56bac02d6e160215a6",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "install_origin": "archive",
+      "name": "policyengine",
+      "version": "6.11.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

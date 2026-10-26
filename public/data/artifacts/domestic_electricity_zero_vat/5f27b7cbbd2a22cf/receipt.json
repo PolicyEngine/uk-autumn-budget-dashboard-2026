@@ -1,0 +1,185 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
+    "digests": {
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
+      "outputs_sha256": "50955173ba8b0cee9f6677a02617eafc4b4bbbbff16fc0be357d7451a58e007b",
+      "receipt_sha256": "d5c2286dfaf63cde27d5baaf5bfd0af24a5685a215f1c8829ad722947bbc3be6"
+    },
+    "files": {
+      "age_impact.csv": "484f9e04f4ac0bee9440975e48cb1190283b2bfd1b099a6c57c46b0e023fa476",
+      "budgetary_impact.csv": "530afb312d7163be56b7aef06407dc6da4a7b0f96dee123ab239db9aa9c53183",
+      "distributional_impact.csv": "7c85cd768c2ac4f19360407845c0036032277fc9fe11a125cfb93963b6697832",
+      "household_scatter_binned.csv": "5201f7e5a28155d84fb584077186ea16528b19d6e805ca5db7d67a8ebeddee72",
+      "income_curve.csv": "0c36187d535446a28ff24329a1bd338011a3374491df5d9b50f9574d52a6321d",
+      "metrics.csv": "67d00ff7e31bf395432637e74d0ea934d4a46e615ae85cf04142eceaef9d12e8",
+      "winners_losers.csv": "e5a06b1865dc35c87339f682f10071cb0d17b23a4a07e5baeffe6fd083ac3e63"
+    },
+    "generated_at": "2026-10-26T13:39:40.302673+00:00",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpI3IKmD/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "uc_standard_allowance_below_cpi",
+      "state_pension_income_tax_protection",
+      "state_pension_income_tax_protection_extended",
+      "domestic_electricity_zero_vat",
+      "employer_ni_secondary_threshold_raised",
+      "employer_ni_relief_under_25s",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "domestic_gas_zero_vat",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "8d4a15489cf594fa3b44f54bdc2e43d308a81d8a",
+    "key": "domestic_electricity_zero_vat",
+    "measure_ids": [
+      "domestic_electricity_zero_vat"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_vat_base_change"
+        ]
+      ]
+    },
+    "name": "Zero VAT on domestic electricity",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "domestic_electricity_zero_vat baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.0",
+      "certificate_sha256": "cce873188388ef4f17e4274f4bde1d4a0b7d56bb2a3fb57aa5dbf832d86e557a",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "63d795c6e09e37954c193f1d0a08b1b61ab1ccc75fd1181f830431750ae8fe4b"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "50955173ba8b0cee9f6677a02617eafc4b4bbbbff16fc0be357d7451a58e007b",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "domestic_electricity_zero_vat",
+      "reform_sha256": "b6de9448766636e30ad5d052936b354adb747295890b19cfe643056a02dfcc29",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "install_origin": "archive",
+      "name": "policyengine",
+      "version": "6.11.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

@@ -1,0 +1,181 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Drill 5 mock measure. The Universal Credit standard allowance rises by one point less than CPI in April 2027, so from 2027-28 every claimant type's allowance is 1% below current law.",
+    "digests": {
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
+      "outputs_sha256": "60518617c2365cdee845d5b2b3ba2537e9d1098826ef7fd87ac2abc73d9872ce",
+      "receipt_sha256": "c71c6494d36b070d210cc3cc1d858ed427f4ece56bf178fc2fe4e25b74127949"
+    },
+    "files": {
+      "age_impact.csv": "5a7d29dd5fbac1541b2b20a3cc31849802b59cfa3fe15b70331be9ae9c70d3c9",
+      "budgetary_impact.csv": "c1cf8e70c8ec34a89e91e4fbe19fced943137b713729a08f249b9b99dc341d46",
+      "distributional_impact.csv": "cb2489426e1323ed34e097f0fc0fcef8b8a895c19afd086029a48bc2a9b0617c",
+      "household_scatter_binned.csv": "1f1193729b7c24ddc25253e2c7f14910ca1b42d28eec76994365a66898ef7000",
+      "income_curve.csv": "5d58fa73c2e19d8d87a135185a8078584105cfcb2f7a04d06a57f44f9246bd1c",
+      "metrics.csv": "c1d833db0cc8e3fad8e2b22aafa55532c0c99a666d8fc175ce481c04833070b8",
+      "winners_losers.csv": "e2ea34483e6363605aa341662dc726936545f8a30e13d45bec3a1ecb479488c4"
+    },
+    "generated_at": "2026-10-26T13:40:29.171730+00:00",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpI3IKmD/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "uc_standard_allowance_below_cpi",
+      "state_pension_income_tax_protection",
+      "state_pension_income_tax_protection_extended",
+      "domestic_electricity_zero_vat",
+      "employer_ni_secondary_threshold_raised",
+      "employer_ni_relief_under_25s",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "domestic_gas_zero_vat",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "8d4a15489cf594fa3b44f54bdc2e43d308a81d8a",
+    "key": "uc_standard_allowance_below_cpi",
+    "measure_ids": [
+      "uc_standard_allowance_below_cpi"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "UC standard allowance uprated below CPI",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "uc_standard_allowance_below_cpi baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.0",
+      "certificate_sha256": "cce873188388ef4f17e4274f4bde1d4a0b7d56bb2a3fb57aa5dbf832d86e557a",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "63d795c6e09e37954c193f1d0a08b1b61ab1ccc75fd1181f830431750ae8fe4b"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "60518617c2365cdee845d5b2b3ba2537e9d1098826ef7fd87ac2abc73d9872ce",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "uc_standard_allowance_below_cpi",
+      "reform_sha256": "fe33d20adf525bed52d125dcd431f68f569c9cf0676408dc764afc32640d9e25",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "install_origin": "archive",
+      "name": "policyengine",
+      "version": "6.11.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

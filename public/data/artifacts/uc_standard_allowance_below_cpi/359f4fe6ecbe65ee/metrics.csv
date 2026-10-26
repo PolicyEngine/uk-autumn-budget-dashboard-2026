@@ -1,0 +1,7 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2026,0.0,0.0,0.0,0.0
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2027,21.20509248314902,0.0002818576848969006,0.045043945,0.34753463
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2028,21.386782430911843,0.0002875516874679136,0.028255463,0.21659844
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2029,21.545632170369934,0.0002947334358470441,0.029463768,0.22417663
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2030,21.49185986682512,0.00029650532415887565,0.03156662,0.238859
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2031,21.288740223313347,0.00029507275820495467,0.03862381,0.2949387

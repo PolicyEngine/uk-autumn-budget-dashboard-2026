@@ -1,0 +1,181 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Drill 5 mock measure. The employer National Insurance secondary threshold rises by \u00a31,000 a year from April 2027 (\u00a35,000 to \u00a36,000 in 2027-28). Scored at fixed pay, as the under-25s relief is: static and gross, with no pass-through to wages, prices or profits.",
+    "digests": {
+      "execution_identity_sha256": "bacf902f942485de04fe273dbfd0ba80ac943da18607f983e7fc4f185010f681",
+      "outputs_sha256": "1cd0f7e36faf764c3f5c9b09fd90f6cdc58df1b6463b7524c0b43e2bf4ef94a9",
+      "receipt_sha256": "0d1212c1a8cbe5ae50e414d78debe497a937e18fb7fb05807ebbfb752bee2b9c"
+    },
+    "files": {
+      "age_impact.csv": "1e7fac30a5aedc0e6edeb9a6951bd614237b795055a850cfcb2fd81e83d594e3",
+      "budgetary_impact.csv": "da07f375d3ddbfdd3f155f23f390dc5690c6978ed025fbb8fc75fb38fb430868",
+      "distributional_impact.csv": "80ad05800f2dfcd39cc5b2a2f7e3fa8ff530ce7591648ea9eff25a95d8680c28",
+      "household_scatter_binned.csv": "0ba7988fc34ff897508e05d0116bf19d577055285dd257e49dbf6c10a30f4618",
+      "income_curve.csv": "4b9098f140d6bc7ece24388404c096e05bb8e71b590083b9de55c62b5b221f5d",
+      "metrics.csv": "297a0317c4f0f903d5774d294a2e01f27c640e37bd84aa962ac1b37feba98f3f",
+      "winners_losers.csv": "46f050b01f1749d711ba42b1471f390c1e089b96171ff09bd169e5116a372c73"
+    },
+    "generated_at": "2026-10-26T13:37:51.987963+00:00",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpI3IKmD/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "fuel_duty_rise_deferral",
+      "warm_home_discount_top_up",
+      "uc_standard_allowance_below_cpi",
+      "state_pension_income_tax_protection",
+      "state_pension_income_tax_protection_extended",
+      "domestic_electricity_zero_vat",
+      "employer_ni_secondary_threshold_raised",
+      "employer_ni_relief_under_25s",
+      "cgt_main_rates_up_2pp",
+      "council_tax_surcharge_from_1_5m",
+      "lha_reset_april_2027",
+      "dividend_rates_up_1pp",
+      "domestic_gas_zero_vat",
+      "threshold_freeze_2031_32",
+      "badr_lifetime_limit_cut"
+    ],
+    "git_sha": "8d4a15489cf594fa3b44f54bdc2e43d308a81d8a",
+    "key": "employer_ni_secondary_threshold_raised",
+    "measure_ids": [
+      "employer_ni_secondary_threshold_raised"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "Employer NI threshold raised by \u00a31,000",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "employer_ni_secondary_threshold_raised baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.0",
+      "certificate_sha256": "cce873188388ef4f17e4274f4bde1d4a0b7d56bb2a3fb57aa5dbf832d86e557a",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "63d795c6e09e37954c193f1d0a08b1b61ab1ccc75fd1181f830431750ae8fe4b"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "1cd0f7e36faf764c3f5c9b09fd90f6cdc58df1b6463b7524c0b43e2bf4ef94a9",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "employer_ni_secondary_threshold_raised",
+      "reform_sha256": "b4edd63dcfcf57be41cb2baaa6d331bd439812337b88e7aefba68ee5886ab322",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "install_origin": "archive",
+      "name": "policyengine",
+      "version": "6.11.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

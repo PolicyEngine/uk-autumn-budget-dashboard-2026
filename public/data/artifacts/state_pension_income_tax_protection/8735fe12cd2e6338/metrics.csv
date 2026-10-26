@@ -1,0 +1,7 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+state_pension_income_tax_protection,State Pension income tax protection,2026,0.0,0.0,0.0,0.0
+state_pension_income_tax_protection,State Pension income tax protection,2027,2.1939350550379335,-5.871989510680477e-05,-0.0010957718,-0.008454381
+state_pension_income_tax_protection,State Pension income tax protection,2028,2.163113278486938,-9.398564349165928e-05,-0.005724907,-0.04388553
+state_pension_income_tax_protection,State Pension income tax protection,2029,2.583460313515554,-0.00014654263546954273,-0.007498741,-0.057054568
+state_pension_income_tax_protection,State Pension income tax protection,2030,2.859689079860654,-0.00019707243199904145,-0.009654045,-0.07305044
+state_pension_income_tax_protection,State Pension income tax protection,2031,2.707030075982936,-0.0002030576094917176,-0.010059357,-0.07681515
