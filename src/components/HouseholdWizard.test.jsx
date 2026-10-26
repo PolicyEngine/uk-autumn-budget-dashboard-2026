@@ -46,11 +46,13 @@ const renderForm = (ui = <HouseholdCalculator />) => {
 
 describe("the personal impact form", () => {
   it("is one card of boxes in sections, the essentials first and the rest in More details, with the results below it", () => {
-    renderForm();
-    // No steps and no "See results": the results are always there
+    renderForm(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
+    // No steps and no "See results"; no results box before Calculate (the
+    // cards say what to do)
     expect(screen.queryByRole("navigation", { name: "Steps" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "See results" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Results" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Choose an example/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "You" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Family and home" })).toBeInTheDocument();

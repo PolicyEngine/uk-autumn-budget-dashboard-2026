@@ -24,8 +24,15 @@ export const EXAMPLE_ICONS = {
   briefcase: BriefcaseBusiness,
 };
 
-/** "+£88", "−£12" or "No change", from whole pounds. */
-function Figure({ value }) {
+/**
+ * "+£88 a year", "−£12 a year" or "No change", from whole pounds; until
+ * there is a figure, a muted note in its place, so every card keeps the
+ * row and all are the same size.
+ */
+function Figure({ value, pending }) {
+  if (!Number.isFinite(value)) {
+    return <span className="household-card-figure is-pending">{pending}</span>;
+  }
   const rounded = Math.round(value);
   const tone = rounded > 0 ? "is-gain" : rounded < 0 ? "is-loss" : "is-none";
   return (
@@ -98,7 +105,7 @@ export default function HouseholdCards({
             <House size={20} strokeWidth={1.8} />
           </span>
           <span className="household-card-name">Your household</span>
-          {yoursChange !== null && <Figure value={yoursChange} />}
+          <Figure value={yoursChange} pending="Your result after Calculate" />
           <span className="household-card-description">Every answer starts at a typical value</span>
           <span className="household-card-tag is-start">
             {formOpen ? "Your answers" : "Start here"}
@@ -121,7 +128,7 @@ export default function HouseholdCards({
                 <Icon size={20} strokeWidth={1.8} />
               </span>
               <span className="household-card-name">{example.label}</span>
-              {Number.isFinite(change) && <Figure value={change} />}
+              <Figure value={change} pending="Calculated when chosen" />
               <span className="household-card-description">{example.description}</span>
               <span className="household-card-tag">
                 <span className="household-card-dot" aria-hidden="true" />

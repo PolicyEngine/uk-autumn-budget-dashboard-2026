@@ -729,6 +729,10 @@ function HouseholdCalculator({
         </div>
         )}
 
+        {/* Only once there is something to show: a result, its progress
+            or the note to select a policy; before that the cards say
+            what to do */}
+        {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           <SingleYearHeadline
             result={householdResult}
@@ -742,6 +746,7 @@ function HouseholdCalculator({
             startedAt={submitted?.at ?? null}
           />
         </div>
+        )}
       </div>
 
       {/* The results' sections, below the form and headline, once asked */}

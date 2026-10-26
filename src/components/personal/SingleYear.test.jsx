@@ -290,18 +290,19 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
+  it("asks nothing before Calculate; a year change before it shows nothing either", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
-    // Before Calculate: the empty cards and a prompt, and no request
-    expect(screen.getByText("Choose an example, or enter your answers and press Calculate.")).toBeInTheDocument();
+    // Before Calculate: no results box (the cards say what to do), and no
+    // request
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);
-    expect(screen.getByText("Choose an example, or enter your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -330,11 +331,11 @@ describe("Calculate", () => {
     fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[before].household.age).toBe(40);
-    // An edit after a result: the result goes, the prompt comes back, and
-    // nothing is asked
+    // An edit after a result: the result goes, with no box in its place,
+    // and nothing is asked
     const asked = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    expect(screen.getByText("Choose an example, or enter your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);

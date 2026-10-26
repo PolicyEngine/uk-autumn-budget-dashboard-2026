@@ -389,17 +389,10 @@ export function SingleYearHeadline({
     );
   }
 
-  // One state at a time: the prompt (before Calculate, or once the answers
-  // differ from the result's), the processing panel, or the result
-  if (!submitted || changed) {
-    return (
-      <div className="single-year-headline">
-        <div className="card single-year-prompt" role="status">
-          Choose an example, or enter your answers and press Calculate.
-        </div>
-      </div>
-    );
-  }
+  // One state at a time: nothing (before Calculate, or once the answers
+  // differ from the result's: the cards above say what to do), the
+  // processing panel, or the result
+  if (!submitted || changed) return null;
 
   // Calculating, the first time or again: only the processing panel, never
   // an earlier result
