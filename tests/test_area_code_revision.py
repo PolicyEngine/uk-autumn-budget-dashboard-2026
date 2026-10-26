@@ -260,6 +260,9 @@ def test_attested_measures_and_packages_run_after_the_attestation_commit(
         "public/data/manifest.json",
         "public/data/artifacts/alpha/receipt.json",
         "data_inputs/public_data_review.csv",
+        "data_inputs/treasury/sources/AB2026-T4.1.csv",
+        "data_inputs/treasury/mapping.csv",
+        "data_inputs/treasury/exceptions.yaml",
     ],
 )
 def test_later_page_docs_and_publication_commits_do_not_block(
@@ -526,6 +529,41 @@ def test_a_package_is_refused_when_its_member_s_code_changed(
     assert path in report.refused[PACKAGE]
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "data_inputs/treasury/sources/AB2026-T4.1.csv",
+        "data_inputs/treasury/mapping.csv",
+        "data_inputs/treasury/exceptions.yaml",
+    ],
+)
+def test_a_package_generated_after_the_treasury_entry_binds_its_member(
+    documented_state, path
+):
+    """Budget day's order: the members are generated at G2, the Treasury
+    entry, mapping and exceptions are committed at G3, and the package is
+    generated at G4. Reconciliation inputs change no calculation, so the
+    package binds its hand-written member at the member's own commit, as
+    staging requires (rehearsal of 26 October)."""
+    commit(documented_state.repo, {path: f"changed {path}\n"})
+    report = generate(
+        documented_state.world,
+        documented_state.repo,
+        combined=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+    )
+    assert PACKAGE not in report.refused, report.refused
+    (package,) = [ref for ref in report.written if ref.key == PACKAGE]
+    (member,) = [
+        record
+        for record in read_receipt(package.path)["dashboard"]["members"]
+        if record["id"] == "alpha"
+    ]
+    own = documented_state.alpha["execution_receipt"]["reform"]
+    assert member["reform"]["binding"] == "code_revision"
+    for field in ("kind", "representation", "reform_sha256", "binding"):
+        assert member["reform"][field] == own[field]
+
+
 def test_a_package_is_refused_when_its_member_s_receipt_is_not_its_entry_s(
     documented_state,
 ):
@@ -563,6 +601,11 @@ ALLOWED = st.one_of(
     st.builds("public/data/{}.csv".format, NAME),
     st.builds("public/assets/{}/{}.png".format, NAME, NAME),
     st.just("data_inputs/public_data_review.csv"),
+    st.builds(
+        "data_inputs/treasury/{}{}".format,
+        st.sampled_from(["", "sources/"]),
+        st.builds("{}{}".format, NAME, st.sampled_from(r.TREASURY_SUFFIXES)),
+    ),
     st.builds("docs/{}/{}.md".format, NAME, NAME),
     NAME.map("{}.md".format),
     st.builds(
@@ -578,7 +621,12 @@ REFUSED = st.one_of(
     st.sampled_from(
         ["pyproject.toml", "uv.lock", "Dockerfile", "Makefile", "bun.lock"]
     ),
-    st.builds("data_inputs/treasury/{}.csv".format, NAME),
+    # Only the Treasury inputs' own formats: code there is still code.
+    st.builds(
+        "data_inputs/treasury/{}{}".format,
+        NAME,
+        st.sampled_from([".py", ".json", ".txt", ".CSV"]),
+    ),
     NAME.filter(lambda name: name != "public_data_review").map(
         "data_inputs/{}.csv".format
     ),
@@ -637,6 +685,10 @@ def test_only_listed_non_calculation_paths_are_allowed(path):
         "src/uk_budget_data",
         "public",
         "data_inputs/publication/attestations/.json/x",
+        "data_inputs/treasury",
+        "data_inputs/treasury/sources",
+        "data_inputs/treasury/../regions.csv",
+        "data_inputs/Treasury/mapping.csv",
     ],
 )
 def test_odd_paths_are_calculation_paths(path):
