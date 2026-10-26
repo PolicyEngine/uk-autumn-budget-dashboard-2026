@@ -1,8 +1,8 @@
 {
   "measure_id": "employer_ni_relief_under_25s",
-  "receipt_sha256": "e337077b65211cfe7acfcf90548a28c0ee77eb1d475b7c14d2639a2ac6fdeb8f",
-  "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch receipt only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
-  "checker": "REHEARSAL MOCK checker (Budget coordinator)",
-  "second": "REHEARSAL MOCK second (Budget coordinator)",
-  "released_at": "2026-10-26T09:55:00Z"
+  "receipt_sha256": "3499e572098af7c0399924d9eb6541c609209532057b0418583a2f413c6ed081",
+  "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated receipt on drill5-wednesday-path only so G3 and G4 can run end to end. On Budget day Vahid and Maria check the modifier and attest it.",
+  "checker": "DRILL 5 MOCK checker (Budget coordinator)",
+  "second": "DRILL 5 MOCK second (Budget coordinator)",
+  "released_at": "2026-10-26T13:00:00Z"
 }
