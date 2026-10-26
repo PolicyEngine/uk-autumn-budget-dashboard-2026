@@ -2152,7 +2152,6 @@ body {
 
 /* The source: one line in the same slot on every card, empty when none */
 .policy-card-source-line {
-  align-self: end;
   margin: 0;
   font-size: var(--fs-small);
   line-height: 1.5;
