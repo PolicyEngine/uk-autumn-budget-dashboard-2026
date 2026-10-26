@@ -25,7 +25,7 @@ import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { shortNameOf } from "../utils/policyDetails";
+import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import { legendMembership } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
@@ -138,17 +138,16 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
     return `${count} ${way} ${who}`;
   };
-  // Thousands with a thin space ("4 000"), so neighbouring ticks never read
-  // as one number
-  const thin = (n) => thousands.format(n).replace(/,/g, "\u2009");
+  // Thousands with commas ("4,000"); the ticks are spaced so they never meet
   const tickText = (t) =>
-    peopleMode ? (t === 0 ? "0" : `${t < 0 ? "−" : ""}${thin(Math.abs(t))}`) : t === 0 ? "0" : formatPp(-t).replace("pp", "");
+    peopleMode ? (t === 0 ? "0" : `${t < 0 ? "−" : ""}${thousands.format(Math.abs(t))}`) : t === 0 ? "0" : formatPp(-t).replace("pp", "");
 
   const ends = steps.flatMap((s) => [s.start, s.end]).concat(0);
   const allTicks = niceTicks(Math.min(...ends), Math.max(...ends));
   const [x0, x1] = [allTicks[0], allTicks.at(-1)];
-  // Three ticks at most: the ends and one between
-  const ticks = allTicks.length > 3 ? [x0, allTicks[Math.floor(allTicks.length / 2)], x1] : allTicks;
+  // Every round tick (0, 2,000, 4,000, 6,000); on a phone only the ends
+  // keep their labels (MeasuresPovertyCard.css)
+  const ticks = allTicks;
   // Bars by direction only: fewer in poverty in the gain colour, more in the
   // loss colour, the total a darker shade of the same; each measure's own
   // colour is the dot by its name
@@ -177,7 +176,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
   // "Of the measures, <its name>"
   const subjectOf = (step) => {
-    const sentence = catalogue.byId?.get(step.id)?.sentence;
+    const measure = catalogue.byId?.get(step.id);
+    const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
     return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
   };
   const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
@@ -187,7 +187,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
         {subjectOf(top)} does most, {moves(top)}
         {totalStep ? (
           <>
-            ; all the measures together, {about(totalStep)}
+            ; all the measures together {totalStep.x > 0 ? "lift" : "push"} {about(totalStep)}
             {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
           </>
         ) : (

@@ -5,6 +5,8 @@ import {
   CartesianGrid,
   Cell,
   Customized,
+  LabelList,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -34,7 +36,6 @@ import {
   fiscalYearTick,
   shortFiscalYearTick,
   useNarrowViewport,
-  divergingAxis,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
@@ -62,7 +63,7 @@ export const SUMMARY_METRICS = {
     title: "Change in the poverty rate",
     description:
       "Change in the share of people in absolute poverty before housing costs, each year, in percentage points.",
-    unit: "Change (pp)",
+    unit: "Change in poverty rate (percentage points)",
     icon: "users",
     // One formatter for every poverty card (formatPp): 3 decimals under 0.1pp
     decimals: 3,
@@ -178,8 +179,32 @@ export function povertyMetric({ basis, housing, group }) {
       (children ? "Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
     // "the share of children in relative poverty after housing costs"
     phrase: `the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ${HOUSING[housing]}`,
+    // "absolute poverty (before housing costs)", for the card's sentence
+    line: `${basis} poverty (${HOUSING[housing]})`,
+    unit: `Change in ${children ? "child " : ""}poverty rate (percentage points)`,
     group,
   };
+}
+
+/**
+ * A value axis fitted tight to the bars: the largest bar plus 8%, rounded
+ * up to a step of 1, 2, 2.5 or 5 × 10^k (two steps a side), from zero when
+ * every value has one sign and symmetric about zero when they go both ways.
+ */
+export function tightAxis(values) {
+  const finite = values.filter(Number.isFinite);
+  const size = Math.max(...finite.map(Math.abs), 1e-9) * 1.08;
+  const raw = size / 2;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * power).find((candidate) => candidate >= raw - 1e-12);
+  const top = Math.ceil(size / step - 1e-9) * step;
+  const up = finite.some((v) => v > 0);
+  const down = finite.some((v) => v < 0);
+  const lo = down ? -top : 0;
+  const hi = up || !down ? top : 0;
+  const ticks = [];
+  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Number(t.toFixed(10)));
+  return { domain: [lo, hi], ticks };
 }
 
 /** The inequality chart's measures (?inequality=top-10). */
@@ -423,8 +448,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
-  // Symmetric about zero when the change goes both ways (divergingAxis)
-  const { domain, ticks } = divergingAxis(shown.map((point) => point.value));
+  // Fitted to the data: from zero when every bar has one sign, symmetric
+  // when they go both ways, with round ticks (tightAxis)
+  const { domain, ticks } = tightAxis(shown.map((point) => point.value));
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;
@@ -434,6 +460,16 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     selected?.value != null && metric.group && population
       ? peopleShort(selected.value, population(selectedYear, metric.group), metric.group)
       : null;
+  // "about 5,000 people", "under 1,000 children": the selected year's people
+  const selectedCount = (() => {
+    const millions = selected?.value != null && metric.group && population ? population(selectedYear, metric.group) : null;
+    if (!millions) return null;
+    const people = Math.abs((selected.value / 100) * millions * 1e6);
+    const who = metric.group === "children" ? "children" : "people";
+    return people < 1000 ? `under 1,000 ${who}` : `about ${(Math.round(people / 1000) * 1000).toLocaleString("en-GB")} ${who}`;
+  })();
+  // Each bar's value, signed, at its end
+  const barLabel = (value) => (value == null || value === 0 ? "" : `${value > 0 ? "+" : "−"}${metric.format(value)}`);
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -480,6 +516,13 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 In {fiscalYearTick(selectedYear)}, the selected measures{" "}
                 {Math.round(selected.value * 1e6) === 0 ? (
                   <>do not change {subjectOf(metric)}</>
+                ) : metric.line && selectedCount ? (
+                  // "lift about 5,000 people out of absolute poverty (before
+                  // housing costs), less than 0.1 percentage points"
+                  <>
+                    {selected.value < 0 ? "lift" : "push"} <strong>{selectedCount}</strong>{" "}
+                    {selected.value < 0 ? "out of" : "into"} {metric.line}, {plainAmount(metric, selected.value)}
+                  </>
                 ) : (
                   <>
                     {selected.value < 0 ? "reduce" : "increase"} {subjectOf(metric)} by{" "}
@@ -583,6 +626,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                   />
                 }
               />
+              {/* The year chosen in the band above, shaded */}
+              <ReferenceArea x1={selectedYear} x2={selectedYear} fill={CHART_COLOURS.grid} fillOpacity={0.45} ifOverflow="hidden" />
               <Bar
                 dataKey="value"
                 name={metric.title}
@@ -590,6 +635,22 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
+                <LabelList
+                  dataKey="value"
+                  content={({ x, y, width, height: h, value }) =>
+                    value == null ? null : (
+                      <text
+                        x={x + width / 2}
+                        y={value < 0 ? Math.max(y, y + h) + 14 : Math.min(y, y + h) - 6}
+                        textAnchor="middle"
+                        fontSize={11}
+                        fill={CHART_COLOURS.text}
+                      >
+                        {barLabel(value)}
+                      </text>
+                    )
+                  }
+                />
                 {data.map((point) => {
                   const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
                   return (
