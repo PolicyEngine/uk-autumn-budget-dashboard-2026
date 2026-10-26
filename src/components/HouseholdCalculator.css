@@ -1403,14 +1403,6 @@
   min-width: 0;
 }
 
-/* The subtitle and the hints, on one line where they fit */
-.household-yours-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-}
-
 .household-yours-title {
   font-size: 1.15rem;
   font-weight: 700;
@@ -1423,26 +1415,6 @@
   font-size: var(--fs-small);
   line-height: 1.45;
   color: var(--band-ink);
-}
-
-.household-yours-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.household-yours-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 9px 1px 7px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--band-ink);
-  background: var(--band-ink-hover);
-  border: 1px solid var(--band-ink-border);
-  border-radius: 999px;
 }
 
 .household-yours-side {
@@ -1558,11 +1530,6 @@
 
   .household-yours-title {
     font-size: 1.05rem;
-  }
-
-  /* On a phone the hints go: the subtitle says enough */
-  .household-yours-hints {
-    display: none;
   }
 
   .household-yours-side {

@@ -1071,3 +1071,27 @@ describe("the result's one-line summary", () => {
     );
   });
 });
+
+describe("the Across earnings cards together", () => {
+  it("switch view together, and a chip toggled on one is toggled on the other", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { container } = renderTab();
+    toResults();
+    await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
+    const pair = container.querySelector(".single-year-chart-pair");
+    const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
+    fireEvent.click(within(netCard).getByRole("button", { name: "Before" }));
+    expect(within(rateCard).getByRole("button", { name: "Before" })).toHaveAttribute("aria-pressed", "true");
+    // Where both cards have their parts, a chip toggled on one is toggled
+    // on the other, and both keys list the same components in order
+    const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });
+    const netChip = within(netCard).queryByRole("button", { name: "Income tax" });
+    if (rateChip && netChip) {
+      expect(rateChip).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(netChip);
+      expect(within(rateCard).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
+      const labels = (card) => [...card.querySelectorAll(".series-toggle-chip")].map((button) => button.textContent).slice(0, -1);
+      expect(labels(netCard)).toEqual(labels(rateCard));
+    }
+  });
+});

@@ -61,7 +61,7 @@ describe("marginal rate parts", () => {
 });
 
 describe("MarginalRateChart", () => {
-  it("stacks the parts in use, with a note behind an i for the Child Benefit clawback and the PA taper", () => {
+  it("stacks the parts in use, with a note behind an i for the Child Benefit clawback and the personal allowance taper", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
@@ -69,7 +69,10 @@ describe("MarginalRateChart", () => {
     expect(screen.getByRole("button", { name: "After" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Total rate after")).toBeInTheDocument();
     expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
-    expect(screen.queryByText("Student loan")).not.toBeInTheDocument();
+    // Every shared component has a chip, so the two cards' keys line up;
+    // one with nothing for this household is disabled
+    expect(screen.getByRole("button", { name: "Student loan" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Earnings and other income" })).toHaveAttribute("aria-disabled", "true");
     // The parts are chips (shown, hidden or highlighted from the key)
     expect(screen.getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-pressed", "true");
     // One sentence: the rate, then the rate as money; its parts in More info
@@ -124,5 +127,36 @@ describe("MarginalRateChart", () => {
     expect(screen.getByText("After the selected policies")).toBeInTheDocument();
     expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+  });
+});
+
+describe("the two Across earnings cards in step", () => {
+  it("share one list of components: the same chips in the same order on both, those with nothing disabled", async () => {
+    const { sweepChips, SWEEP_COMPONENTS } = await import("./sweepComponents");
+    const net = sweepChips("net", new Set(["market_income", "income_tax", "national_insurance"]), { label: "Net income after", colour: "x" });
+    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate after", colour: "x" });
+    expect(net.map((chip) => chip.label).slice(0, -1)).toEqual(rate.map((chip) => chip.label).slice(0, -1));
+    expect(net.map((chip) => chip.key).slice(0, -1)).toEqual(SWEEP_COMPONENTS.map((component) => component.key));
+    const by = (chips, key) => chips.find((chip) => chip.key === key);
+    expect(by(net, "income_tax").disabled).toBe(false);
+    expect(by(net, "universal_credit")).toMatchObject({ disabled: true, tip: "No effect for this household" });
+    expect(by(net, "pa_taper")).toMatchObject({ disabled: true, tip: "Included in income tax on this card" });
+    expect(by(rate, "earnings").disabled).toBe(true);
+    // The same colour on both
+    for (const chip of net.slice(0, -1)) expect(by(rate, chip.key).colour).toBe(chip.colour);
+  });
+
+  it("says 'With no earnings' at a salary of £0, over the first £200", () => {
+    const own = { before: step(0.2, 0, 0), after: step(0.4, 0, 0) };
+    render(
+      <MarginalRateChart
+        sweep={{ ...sweep({ before: STEPS, after: STEPS, own }), own: { income: 0, beforeRate: 0.2, afterRate: 0.393 } }}
+        salary={0}
+        yearLabel="2027-28"
+      />,
+    );
+    expect(document.querySelector(".chart-description").textContent).toBe(
+      "With no earnings, your marginal tax rate on your first £200 would be 20% before and 39% after, so of your first £200 of earnings, you keep £160 before and keep £121 after.",
+    );
   });
 });
