@@ -16,11 +16,6 @@
   gap: 8px 12px;
 }
 
-.ctable-search {
-  flex: 1 1 240px;
-  max-width: 360px;
-}
-
 .ctable-count {
   margin: 0;
   font-size: var(--fs-micro);
