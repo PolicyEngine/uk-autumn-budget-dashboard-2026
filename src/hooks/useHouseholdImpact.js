@@ -3,10 +3,12 @@ import {
   DETAIL_PARTS,
   DETAIL_TIMEOUT_MS,
   HEADLINE_INCLUDE,
+  askAllAtOnce,
   buildHouseholdRequest,
   mergeStages,
   normaliseHouseholdImpact,
   postHouseholdDetail,
+  postHouseholdHeadline,
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
@@ -46,6 +48,65 @@ export function seedHouseholdImpactCache(entries) {
 
 // Wait this long after the last change before asking
 const DEBOUNCE_MS = 400;
+
+/**
+ * With a detail URL (Modal): the headline, the sweep and the split by
+ * policy asked for at once, each shown as it arrives. Each answer carries
+ * the headline and the programmes, so whichever comes first fills the
+ * result card; the server shares the runs the three requests have in
+ * common. The headline is an error only when no answer arrives at all.
+ * Each answer is marked as `household`'s, as the staged path marks it.
+ */
+async function askEverythingAtOnce(body, key, household, signal, setState) {
+  let merged = null;
+  let headlineError = null;
+  let failure = null;
+  const show = (raw) => {
+    if (signal.aborted) return;
+    const answer = normaliseHouseholdImpact(raw);
+    merged = merged ? mergeStages(merged, answer) : answer;
+    const complete = merged.byPolicy !== null && merged.sweep !== null;
+    cache.set(key, { data: merged, complete });
+    const data = merged;
+    setState((prev) => ({
+      ...prev,
+      key,
+      dataKey: key,
+      dataHousehold: household,
+      status: "ready",
+      data,
+      error: null,
+      detailStatus: complete ? "ready" : "loading",
+    }));
+  };
+  await Promise.all([
+    postHouseholdHeadline({ ...body, include: HEADLINE_INCLUDE }, { signal }).then(show, (error) => {
+      headlineError = error;
+    }),
+    ...DETAIL_PARTS.map((include) =>
+      postHouseholdDetail({ ...body, include }, { signal, timeoutMs: DETAIL_TIMEOUT_MS }).then(show, (error) => {
+        failure = failure ?? error;
+      }),
+    ),
+  ]);
+  if (signal.aborted) return;
+  if (merged === null) {
+    setState({
+      key,
+      dataKey: null,
+      dataHousehold: null,
+      status: "error",
+      data: null,
+      error: headlineError ?? failure,
+      detailStatus: "idle",
+      detailError: null,
+    });
+    return;
+  }
+  if (failure && (merged.byPolicy === null || merged.sweep === null)) {
+    setState((prev) => ({ ...prev, detailStatus: "error", detailError: failure }));
+  }
+}
 
 /**
  * The Household impact results for the wizard's answers: the headline and
@@ -125,6 +186,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, se
       detailError: null,
     }));
     const timer = setTimeout(async () => {
+      if (!cached && askAllAtOnce()) {
+        await askEverythingAtOnce(body, key, household, signal, setState);
+        return;
+      }
       let first = cached?.data ?? null;
       if (!first) {
         try {

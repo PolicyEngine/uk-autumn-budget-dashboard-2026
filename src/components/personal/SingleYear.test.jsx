@@ -151,6 +151,65 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
+  it("with a detail URL, asks for all three parts at once and races the headline across both services", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        asked.push([url, body.include]);
+        // Nothing answers until all the requests are out: none waits for
+        // another's answer
+        await gate;
+        return json(householdAnswerFor(body));
+      }),
+    );
+    renderTab();
+    toResults();
+    await waitFor(() => expect(asked).toHaveLength(4));
+    expect(asked).toEqual(
+      expect.arrayContaining([
+        [HOUSEHOLD_API, []],
+        [DETAIL_API, []],
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
+    release();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+  });
+
+  it("with a detail URL, shows the headline from the detail answers when the headline itself fails", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        return body.include.length === 0 ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body));
+      }),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("shows the result card and breakdown once only the headline has resolved", async () => {
     // The slower parts never answer: the headline must not wait for them
     serve((body) =>
@@ -854,10 +913,10 @@ describe("keepSentence: the marginal rate as money", () => {
     expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
   });
 
-  it("turns to the next £100 at a cliff, where £1,000 would overstate it", () => {
-    // Net income falls £2,140 over the next £100 before, £32 kept after
-    expect(keepSentence(22.4, 0.68)).toBe("Of your next £100 of earnings, you would lose £2,140 before and keep £32 after.");
-    expect(keepSentence(22.4, 22.4)).toBe("Of your next £100 of earnings, you would lose £2,140.");
+  it("turns to the next £200 at a cliff, where £1,000 would overstate it", () => {
+    // Net income falls £2,140 over the next £200 before, £32 kept after
+    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 of earnings, you would lose £2,140.");
   });
 
   it("is null without both rates", () => {

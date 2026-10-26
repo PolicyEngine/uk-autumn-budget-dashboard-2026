@@ -1100,6 +1100,21 @@ def test_the_rate_at_your_salary_is_over_the_next_step():
     assert household_impact.own_rate(1_000, 1_072, 100) == pytest.approx(0.28)
 
 
+def test_the_own_rate_step_sees_the_child_benefit_charge_once():
+    """From £60,000 to £80,000 the High Income Child Benefit Charge is one
+    percentage point per whole £200 of income (ITEPA 2003 s. 681C). The step
+    for the rate at your salary crosses exactly one of those points wherever
+    it starts, so with three children (£3,268.20 of Child Benefit a year in
+    2026-27) it reads the charge's average, about 16 points, not 0 or 32."""
+    step = household_impact.OWN_RATE_STEP
+
+    def points(income):
+        return min(max(income - 60_000, 0) * 100 // 20_000, 100)
+
+    for income in range(60_000, 80_000 - step, 37):
+        assert points(income + step) - points(income) == step // 200
+
+
 def test_salary_in_the_chosen_year_is_returned():
     answers = household_impact.HouseholdAnswers(employment_income=30_000)
     result = calculate(answers, ["threshold_freeze_2031_32"])
@@ -1390,6 +1405,132 @@ def test_modal_runner_sends_every_run_to_fan_out_and_keeps_their_order(
     household_impact.clear_runs()
 
 
+def test_a_run_another_request_is_computing_is_waited_for_not_run_again(
+    monkeypatch,
+):
+    """Two requests at once that share runs (the page asks for its three
+    parts together, each with the before and after runs): the second waits
+    for the first's answer to a shared run rather than sending it again,
+    and gets the same answer."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    sent = []
+    first_started = threading.Event()
+    finish_first = threading.Event()
+
+    def fan_out(jobs):
+        sent.append(list(jobs))
+        if len(sent) == 1:
+            first_started.set()
+            assert finish_first.wait(5)
+        return [{"household_net_income": float(job[1])} for job in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    shared = [("job", 0), ("job", 1)]
+    answers = {}
+
+    def ask(name, jobs):
+        answers[name] = household_impact._run_all(jobs, workers=1)
+
+    first = threading.Thread(target=ask, args=("first", shared))
+    first.start()
+    assert first_started.wait(5)
+    second = threading.Thread(
+        target=ask, args=("second", [*shared, ("job", 2), ("job", 2)])
+    )
+    second.start()
+    # The second request sends only its own new run, once
+    for _ in range(100):
+        if len(sent) == 2:
+            break
+        threading.Event().wait(0.05)
+    assert sent[1] == [("job", 2)]
+    finish_first.set()
+    first.join(5)
+    second.join(5)
+    assert [r["household_net_income"] for r in answers["first"]] == [0, 1]
+    assert [r["household_net_income"] for r in answers["second"]] == [
+        0,
+        1,
+        2,
+        2,
+    ]
+    assert len(sent) == 2
+    household_impact.clear_runs()
+
+
+def test_a_failed_run_fails_every_request_waiting_for_it(monkeypatch):
+    """A shared run that fails is not kept as in progress: the requests
+    waiting for it fail too, and a later request runs it again."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    started = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def fan_out(jobs):
+        calls.append(list(jobs))
+        if len(calls) == 1:
+            started.set()
+            assert release.wait(5)
+            raise RuntimeError("container failed")
+        return [{"household_net_income": 1.0} for _ in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    from concurrent.futures import Future
+
+    waiting = threading.Event()
+
+    class SignallingFuture(Future):
+        def result(self, timeout=None):
+            waiting.set()
+            return super().result(timeout)
+
+    monkeypatch.setattr(household_impact, "Future", SignallingFuture)
+    errors = {}
+
+    def ask(name):
+        try:
+            household_impact._run_all([("job", 0)], workers=1)
+        except RuntimeError as error:
+            errors[name] = str(error)
+
+    first = threading.Thread(target=ask, args=("first",))
+    first.start()
+    assert started.wait(5)
+    second = threading.Thread(target=ask, args=("second",))
+    second.start()
+    # The second request is waiting for the first's run
+    assert waiting.wait(5)
+    release.set()
+    first.join(5)
+    second.join(5)
+    assert errors == {
+        "first": "container failed",
+        "second": "container failed",
+    }
+    assert household_impact._run_all([("job", 0)], workers=1) == [
+        {"household_net_income": 1.0}
+    ]
+    household_impact.clear_runs()
+
+
 def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
     """By policy: a measure provably_unaffected for this household and year
     is not run, and shows exactly as its run would (£0, not affected)."""
@@ -1525,3 +1666,24 @@ def test_skips_give_the_same_answer_as_running_every_measure(year):
         fast = calculate(answers, measures, year, ("by_policy",))
         assert fast == full
     household_impact.clear_runs()
+
+
+def test_programme_notes_name_what_the_model_does():
+    """The Warm Home Discount row names every benefit the measure pays on
+    (as HOUSEHOLD_NOTES does), and the Council Tax Reduction row the
+    schemes policyengine-uk simulates, pensioners' included."""
+    from uk_budget_data.household_impact import HOUSEHOLD_NOTES, PROGRAMMES
+    from uk_budget_data.reforms import WARM_HOME_DISCOUNT_ID
+
+    notes = {row.id: row.note for row in PROGRAMMES}
+    for benefit in (
+        "Universal Credit",
+        "Pension Credit",
+        "Housing Benefit",
+        "income-related ESA",
+    ):
+        assert benefit in notes["warm_home_discount_top_up"]
+        assert benefit in HOUSEHOLD_NOTES[WARM_HOME_DISCOUNT_ID]["text"]
+    ctr = notes["council_tax_reduction"]
+    assert "pension-age" in ctr
+    assert "Scottish and Welsh" in ctr

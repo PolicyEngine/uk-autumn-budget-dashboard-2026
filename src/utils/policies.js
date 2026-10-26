@@ -79,13 +79,13 @@ export const POLICIES = [
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
     summary:
-      "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to March 2028.",
+      "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to March 2028.",
     starts: "October 2026",
     type: "VAT",
     inForce: { from: "2026-10", to: "2028-03" },
     ends: "March 2028",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only.",
+      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",

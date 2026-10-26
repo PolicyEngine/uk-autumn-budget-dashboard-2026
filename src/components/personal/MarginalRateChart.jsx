@@ -174,7 +174,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
       : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]];
   const lineStroke = isChange ? CHANGE_COLOUR : parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
   // The rate as money, from the API's own rates only: they are over the
-  // next £100, which the sentence scales (a sweep step is too coarse)
+  // next £200, which the sentence scales (a sweep step is too coarse)
   const keep = own ? keepClause(own.beforeRate, own.afterRate) : null;
 
   const csvColumns = [
