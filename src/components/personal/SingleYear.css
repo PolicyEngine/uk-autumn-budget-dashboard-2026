@@ -263,7 +263,7 @@
 .select-input:focus {
   outline: none;
   border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .wizard-fields .control-group.is-check label {
@@ -1125,7 +1125,8 @@
   margin: 0 0 8px;
 }
 
-.waterfall-pending {
+.waterfall-pending,
+.waterfall-no-effect {
   margin: 4px 0 0;
 }
 

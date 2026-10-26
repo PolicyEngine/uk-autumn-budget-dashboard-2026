@@ -157,28 +157,51 @@ export function parseTable(name, text, columns = TABLES[name]?.columns) {
   });
 }
 
+/** The columns two tables share as their key: reform, name and year. */
+const METRICS_KEY_COLUMNS = new Set(["reform_id", "reform_name", "year"]);
+
 /**
  * Columns a flat file under public/data carries after its contract columns.
  * metrics.csv adds the poverty and inequality measures the summary charts
  * choose between (uk_budget_data.calculators: POVERTY_MEASURES, POVERTY_GROUPS
- * and inequality_changes). Receipted artifacts keep the contract's columns
- * only, so parseTable never accepts these.
+ * and inequality_changes). A receipted artifact carries them in its own
+ * poverty_inequality table, whose columns these are, so the two cannot
+ * drift; parseTable never accepts them in an artifact's metrics.csv.
  */
-const POVERTY_COLUMNS = ["abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc"].flatMap((measure) =>
-  ["", "child_"].flatMap((group) => [
-    [`${group}poverty_${measure}_change_pp`, "float"],
-    [`${group}poverty_${measure}_change_pct`, "float"],
-  ]),
-);
-
 export const FLAT_EXTRA_COLUMNS = {
-  metrics: [
-    ...POVERTY_COLUMNS,
-    ["top_10_share_change_pp", "float"],
-    ["top_1_share_change_pp", "float"],
-    ["p90_p10_change", "float"],
-  ],
+  metrics: TABLES.poverty_inequality.columns.filter(([column]) => !METRICS_KEY_COLUMNS.has(column)),
 };
+
+/**
+ * An artifact's metrics rows with its poverty_inequality rows' measures
+ * added, matched by reform and year, so the charts read one row per year as
+ * they do from the flat metrics.csv. Without the table (an artifact written
+ * before it), the rows are returned as they are. A poverty_inequality row
+ * with no metrics row, or one naming the run differently, is an error.
+ *
+ * @param {Array<Object>} metrics - Parsed metrics rows.
+ * @param {Array<Object>|undefined} extras - Parsed poverty_inequality rows.
+ * @returns {Array<Object>}
+ * @throws {TableError}
+ */
+export function withPovertyInequality(metrics, extras) {
+  if (!extras?.length) return metrics;
+  const key = (row) => `${row.reform_id}\u0000${row.year}`;
+  const byKey = new Map(extras.map((row) => [key(row), row]));
+  const merged = metrics.map((row) => {
+    const extra = byKey.get(key(row));
+    if (!extra) return row;
+    byKey.delete(key(row));
+    if (extra.reform_name !== row.reform_name) {
+      throw new TableError(`poverty_inequality names ${row.reform_id} ${row.year} differently from metrics`);
+    }
+    return { ...row, ...extra };
+  });
+  if (byKey.size > 0) {
+    throw new TableError(`poverty_inequality has rows metrics does not: ${[...byKey.keys()].map((k) => k.replace("\u0000", " ")).join(", ")}`);
+  }
+  return merged;
+}
 
 /**
  * Parse a flat file under public/data: the contract's columns, then either

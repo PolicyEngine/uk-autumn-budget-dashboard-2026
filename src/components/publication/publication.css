@@ -23,7 +23,7 @@
   font-family: inherit;
   font-size: var(--fs-small);
   color: var(--pe-gray-700);
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--pe-gray-300);
   border-radius: var(--pe-radius-md);
   cursor: pointer;
@@ -139,7 +139,7 @@
 
 .publication-tooltip {
   padding: 8px 10px;
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--c-grid);
   border-radius: 4px;
   font-size: var(--fs-small);
