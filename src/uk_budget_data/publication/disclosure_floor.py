@@ -16,8 +16,8 @@ its "all" row, or no row at all when "all" is thin itself: one withheld row
 could otherwise be given back by the others and "all". The decile tables
 must hold every decile, so generation refuses a run with a thin decile cell
 (``generate._apply_disclosure_floor``), or, with THIN_DECILES_ENV set to
-"warn", writes it and says which cells are thin, for a person to decide
-before it is published.
+"warn" where the generation starts, writes it and says which cells are
+thin, for a person to decide before it is published.
 """
 
 import os
@@ -45,7 +45,10 @@ THIN_DECILES_ENV = "UK_BUDGET_THIN_DECILES"
 
 def refuses_thin_deciles() -> bool:
     """Whether a run with a thin decile cell is refused (the default) rather
-    than written with a warning (THIN_DECILES_ENV set to "warn")."""
+    than written with a warning (THIN_DECILES_ENV set to "warn"). Read where
+    the generation starts and carried on each run
+    (``generate.ArtifactRun.refuse_thin_deciles``), never where a run is
+    made."""
     return os.environ.get(THIN_DECILES_ENV, "refuse") != "warn"
 
 

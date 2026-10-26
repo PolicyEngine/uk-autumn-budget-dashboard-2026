@@ -141,21 +141,32 @@ def test_scatter_rows_name_their_survey_household():
     assert bin_scatter(named) == []
 
 
+def _job(refuse_thin_deciles=True, dataset_path=None):
+    """A run as ``generate.ArtifactRun`` carries what the floor reads."""
+    return SimpleNamespace(
+        dataset_path=dataset_path,
+        config=SimpleNamespace(years=[YEAR]),
+        refuse_thin_deciles=refuse_thin_deciles,
+    )
+
+
 def test_generation_refuses_a_run_with_a_thin_cell(monkeypatch):
+    """Refused as the run says, even where it runs under "warn" (#208
+    review, finding 3: the mode travels with the run)."""
     from uk_budget_data import pipeline
     from uk_budget_data.publication import generate
 
+    monkeypatch.setenv(floor.THIN_DECILES_ENV, "warn")
     baseline, reformed, survey = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
     monkeypatch.setattr(
         pipeline, "scatter_survey_households", lambda sim, path: survey
     )
-    job = SimpleNamespace(
-        dataset_path=None, config=SimpleNamespace(years=[YEAR])
-    )
     result = SimpleNamespace(household_scatter=[])
     with pytest.raises(ReceiptUnavailable, match="fewer than 10 survey"):
-        generate._apply_disclosure_floor("a", job, baseline, reformed, result)
+        generate._apply_disclosure_floor(
+            "a", _job(refuse_thin_deciles=True), baseline, reformed, result
+        )
 
 
 def test_generation_names_survey_households_in_the_scatter(monkeypatch):
@@ -167,9 +178,7 @@ def test_generation_names_survey_households_in_the_scatter(monkeypatch):
     monkeypatch.setattr(
         pipeline, "scatter_survey_households", lambda sim, path: survey
     )
-    job = SimpleNamespace(
-        dataset_path=None, config=SimpleNamespace(years=[YEAR])
-    )
+    job = _job()
     rows = [{"household_id": 1_000}, {"household_id": 1_005}]
     result = SimpleNamespace(household_scatter=rows, age_impact=[])
     generate._apply_disclosure_floor("a", job, baseline, reformed, result)
@@ -200,18 +209,18 @@ def test_a_thin_age_year_keeps_only_its_all_row():
 
 
 def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
+    """Written as the run says, even where it runs under the default, as a
+    Modal container does (#208 review, finding 3)."""
     from uk_budget_data import pipeline
     from uk_budget_data.publication import generate
 
-    monkeypatch.setenv(floor.THIN_DECILES_ENV, "warn")
+    monkeypatch.delenv(floor.THIN_DECILES_ENV, raising=False)
     baseline, reformed, survey = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
     monkeypatch.setattr(
         pipeline, "scatter_survey_households", lambda sim, path: survey
     )
-    job = SimpleNamespace(
-        dataset_path=None, config=SimpleNamespace(years=[YEAR])
-    )
+    job = _job(refuse_thin_deciles=False)
     result = SimpleNamespace(
         household_scatter=[],
         age_impact=[_age_row(YEAR, "35-49"), _age_row(YEAR, "all")],
@@ -284,9 +293,7 @@ def test_uncertified_data_without_survey_households_is_written_unchecked(
     _cannot_tell_apart(monkeypatch)
     baseline, reformed, _ = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
-    job = SimpleNamespace(
-        dataset_path=dataset_path, config=SimpleNamespace(years=[YEAR])
-    )
+    job = _job(dataset_path=dataset_path)
     rows = [_age_row(YEAR, "35-49"), _age_row(YEAR, "all")]
     result = SimpleNamespace(
         household_scatter=[{"household_id": 1_000}], age_impact=list(rows)
@@ -313,12 +320,67 @@ def test_certifiable_data_without_survey_households_is_refused(
     _cannot_tell_apart(monkeypatch)
     baseline, reformed, _ = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
-    job = SimpleNamespace(
-        dataset_path=dataset_path, config=SimpleNamespace(years=[YEAR])
-    )
+    job = _job(dataset_path=dataset_path)
     result = SimpleNamespace(household_scatter=[], age_impact=[])
     with pytest.raises(ReceiptUnavailable, match="cannot be told apart"):
         generate._apply_disclosure_floor("a", job, baseline, reformed, result)
+
+
+class _Planned:
+    """A runner that keeps the runs it is given, unrun, as a worker pool or
+    Modal is sent them."""
+
+    jobs = 2
+    in_process = False
+
+    def __init__(self):
+        self.runs = []
+
+    def map(self, function, units, on_result=lambda index, result: None):
+        self.runs.extend(units)
+        return []
+
+
+@pytest.mark.parametrize(
+    "setting, refuses", [(None, True), ("refuse", True), ("warn", False)]
+)
+def test_every_run_carries_the_mode_its_generation_started_with(
+    monkeypatch, setting, refuses
+):
+    """#208 review, finding 3: the mode was read where each run was made,
+    and a Modal container's environment never says "warn"."""
+    from tests.publication_support import World
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication import generate
+
+    if setting is None:
+        monkeypatch.delenv(floor.THIN_DECILES_ENV, raising=False)
+    else:
+        monkeypatch.setenv(floor.THIN_DECILES_ENV, setting)
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        runner = _Planned()
+        generate.generate_artifacts(
+            [
+                Reform(
+                    id="a",
+                    name="A",
+                    parameter_changes={
+                        "gov.hmrc.income_tax.rates.uk[0].rate": {"2027": 0.21}
+                    },
+                )
+            ],
+            DataConfig(years=[YEAR]),
+            artifacts_root=world.artifacts,
+            runner=runner,
+        )
+    finally:
+        world.close()
+    (run,) = runner.runs
+    assert run.refuse_thin_deciles is refuses
 
 
 def test_stand_in_simulations_are_not_checked():
@@ -326,9 +388,7 @@ def test_stand_in_simulations_are_not_checked():
 
     baseline, reformed, _ = _population({80, 81})
     result = SimpleNamespace(household_scatter=[], age_impact=[])
-    job = SimpleNamespace(
-        dataset_path=None, config=SimpleNamespace(years=[YEAR])
-    )
+    job = _job()
     assert (
         generate._apply_disclosure_floor("a", job, baseline, reformed, result)
         == []

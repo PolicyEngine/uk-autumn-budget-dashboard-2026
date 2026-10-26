@@ -315,6 +315,11 @@ class ArtifactRun:
     # A combined run's members read from the manifest, by id, with the
     # revision each is bound at (``receipt.approved_revision``).
     member_revisions: Optional[dict] = None
+    # Whether a thin decile cell refuses the run, or is written with a
+    # warning (``disclosure_floor.refuses_thin_deciles``), as the process
+    # that planned the runs reads it: a worker or a Modal container does not
+    # share that process's environment.
+    refuse_thin_deciles: bool = True
 
 
 @dataclass
@@ -544,7 +549,8 @@ def _apply_disclosure_floor(
 ) -> list[str]:
     """Hold a run's household tables to the floor of survey households
     (``disclosure_floor``): withhold the age table's thin cells, refuse a run
-    with a thin decile cell (or, under ``UK_BUDGET_THIN_DECILES=warn``,
+    with a thin decile cell (or, when the run was planned under
+    ``UK_BUDGET_THIN_DECILES=warn``, ``job.refuse_thin_deciles`` False,
     return a warning naming them), and make the binned scatter count survey
     households rather than records. Only for simulations built from a
     dataset, whose household and person tables name the survey households
@@ -583,7 +589,7 @@ def _apply_disclosure_floor(
     }
     if deciles:
         reason = disclosure_floor.thin_cells_reason(deciles)
-        if disclosure_floor.refuses_thin_deciles():
+        if job.refuse_thin_deciles:
             raise ReceiptUnavailable(
                 subject, f"{reason}; a decile table cannot withhold one"
             )
@@ -673,6 +679,10 @@ def generate_artifacts(
     the member's artifact from this run if it was generated here, otherwise
     its entry in the manifest beside ``artifacts_root``. A combined run
     whose members are in neither can be written but never staged.
+
+    Whether a thin decile cell refuses a run is read here, from
+    ``UK_BUDGET_THIN_DECILES``, and carried on every run, so a run sent to
+    a worker or a Modal container does as this process says.
     """
     from uk_budget_data.parallel import SerialRunner, portable
 
@@ -693,6 +703,7 @@ def generate_artifacts(
         dataset_path=dataset_path,
         build=build,
         process=process,
+        refuse_thin_deciles=disclosure_floor.refuses_thin_deciles(),
     )
     checked_commits: dict = {}
 
