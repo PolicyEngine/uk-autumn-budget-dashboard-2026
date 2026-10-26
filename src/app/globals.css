@@ -184,8 +184,9 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
-  /* The measures' colour ramps, darkest to lightest, taken in order of
-     size within each group (chartTheme.js POLICY_RAMPS) */
+  /* The measures' colour ramps, darkest to lightest: each group's measures,
+     largest first, take evenly spaced OKLab steps along its ramp
+     (chartTheme.js POLICY_RAMPS, measureRamp) */
   --ramp-raise-1: #78350f;
   --ramp-raise-2: #b45309;
   --ramp-raise-3: #f59e0b;
