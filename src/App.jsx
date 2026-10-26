@@ -129,7 +129,9 @@ export function releaseAddress({ pathname, search, hash }, release, own = DEFAUL
  * switch. Every other pair is kept as the link wrote it, byte for byte.
  */
 export function pastEventAddress({ pathname, search, hash }) {
-  const kept = search.replace(/^\?/, "").split("&").filter((pair) => !new URLSearchParams(pair).has(SUB_TAB_PARAM));
+  // Each pair is read after an "&", which URLSearchParams never strips as
+  // it does a leading "?": "?sub=x" after the first pair is the key "?sub"
+  const kept = search.replace(/^\?/, "").split("&").filter((pair) => !new URLSearchParams(`&${pair}`).has(SUB_TAB_PARAM));
   const query = kept.join("&");
   return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
 }

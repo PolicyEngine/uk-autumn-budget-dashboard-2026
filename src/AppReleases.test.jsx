@@ -673,9 +673,10 @@ const addressParts = (address) => {
 describe("a past event's address from a link", () => {
   // A link's query as written, not as URLSearchParams would write it: a
   // value can hold a comma or a plus, which writing it again would encode,
-  // and a key can be written encoded (%73ub is sub)
+  // a key can be written encoded (%73ub is sub), and a key can start with
+  // "?": "?sub" is not sub, first or not, since a query loses one "?" only
   const pairs = fc.array(
-    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "%73ub", "subs", "policies", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
+    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "%73ub", "?sub", "subs", "policies", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
     { maxLength: 6 },
   );
   const hashes = fc.constantFrom("", "#young-people", "#coverage", "#young-people-2");
@@ -697,5 +698,11 @@ describe("a past event's address from a link", () => {
       }),
       { numRuns: 300 },
     );
+  });
+
+  it("keeps a pair whose key is ?sub, not sub, first or later", () => {
+    expect(pastEventAddress({ pathname: "/budgets/x", search: "?other=1&?sub=keep&sub=drop", hash: "" })).toBe("/budgets/x?other=1&?sub=keep");
+    expect(pastEventAddress({ pathname: "/budgets/x", search: "??sub=keep&sub=drop", hash: "" })).toBe("/budgets/x??sub=keep");
+    expect([...new URL("https://example.test/budgets/x??sub=keep").searchParams.keys()]).toEqual(["?sub"]);
   });
 });
