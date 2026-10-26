@@ -344,11 +344,23 @@ const RAMP = ["large_loss", "small_loss", "little_change", "small_gain", "large_
 const STATUS_ENTRIES = [
   {
     key: "kind:approximate",
-    label: "Approximate (few survey households)",
+    label: "Approximate",
+    detail: "Approximate: few survey households",
     halves: [approximateFill("large_gain"), approximateFill("large_loss")],
   },
-  { key: "kind:withheld", label: "Not published (confidential)", fill: WITHHELD_FILL },
+  {
+    key: "kind:withheld",
+    label: "Not published",
+    detail: "Not published: confidential",
+    fill: WITHHELD_FILL,
+  },
   { key: "kind:no-data", label: "No data", fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
+  {
+    key: `cat:${TOO_UNCERTAIN}`,
+    label: "Too uncertain",
+    detail: "Too uncertain to classify",
+    fill: CATEGORY_COLOURS[TOO_UNCERTAIN],
+  },
 ];
 
 /** Whether a seat's state matches a key entry ("cat:small_gain", "kind:withheld"). */
@@ -430,45 +442,43 @@ function MapKey({ outcome, counts, highlight, onHighlight }) {
           {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
         </span>
       </div>
-      <div className="map-key-rows">
-        <div className="map-key-scale">
-          <span className="map-key-end">Loss</span>
-          <div className="map-key-ramp">
-            {RAMP.map((category) => (
-              <button
-                key={category}
-                className={`map-key-segment${highlight === `cat:${category}` ? " is-active" : ""}`}
-                style={{ background: CATEGORY_COLOURS[category] }}
-                {...entryProps(`cat:${category}`, `${CATEGORY_LABELS[category]}, ${ranges[category]}`)}
-              />
-            ))}
-            {ticks.map((tick, index) => (
-              <span key={tick} className="map-key-tick" style={{ left: `${((index + 1) * 100) / RAMP.length}%` }}>
-                {tick}
-              </span>
-            ))}
-          </div>
-          <span className="map-key-end">Gain</span>
-          <button
-            className={`map-key-item${highlight === `cat:${TOO_UNCERTAIN}` ? " is-active" : ""}`}
-            {...entryProps(`cat:${TOO_UNCERTAIN}`, "Too uncertain")}
-          >
-            {swatch({ fill: CATEGORY_COLOURS[TOO_UNCERTAIN] })}
-            <span>Too uncertain</span>
-          </button>
-        </div>
-        <div className="map-key-statuses">
-          {STATUS_ENTRIES.map((entry) => (
+      {/* The ramp: five joined segments, a break under each join, and
+          Loss and Gain under its two ends */}
+      <div className="map-key-scale">
+        <div className="map-key-ramp">
+          {RAMP.map((category) => (
             <button
-              key={entry.key}
-              className={`map-key-item${highlight === entry.key ? " is-active" : ""}`}
-              {...entryProps(entry.key, entry.label)}
-            >
-              {swatch(entry)}
-              <span>{entry.label}</span>
-            </button>
+              key={category}
+              className={`map-key-segment${highlight === `cat:${category}` ? " is-active" : ""}`}
+              style={{ background: CATEGORY_COLOURS[category] }}
+              {...entryProps(`cat:${category}`, `${CATEGORY_LABELS[category]}, ${ranges[category]}`)}
+            />
           ))}
         </div>
+        <div className="map-key-ticks" aria-hidden="true">
+          {ticks.map((tick, index) => (
+            <span key={tick} className="map-key-tick" style={{ left: `${((index + 1) * 100) / RAMP.length}%` }}>
+              {tick}
+            </span>
+          ))}
+        </div>
+        <div className="map-key-ends" aria-hidden="true">
+          <span>Loss</span>
+          <span>Gain</span>
+        </div>
+      </div>
+      <div className="map-key-statuses">
+        <span className="map-key-statuses-label">Shown by pattern:</span>
+        {STATUS_ENTRIES.map((entry) => (
+          <button
+            key={entry.key}
+            className={`map-key-item${highlight === entry.key ? " is-active" : ""}`}
+            {...entryProps(entry.key, entry.detail ?? entry.label)}
+          >
+            {swatch(entry)}
+            <span>{entry.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

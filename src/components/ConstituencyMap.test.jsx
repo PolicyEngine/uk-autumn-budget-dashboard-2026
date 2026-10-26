@@ -211,8 +211,9 @@ describe("ConstituencyMap", () => {
       expect.stringMatching(/^Large gain, 1% or more: /),
     ]);
     expect(key).toHaveTextContent("Too uncertain");
-    expect(key).toHaveTextContent("Approximate (few survey households)");
-    expect(key).toHaveTextContent("Not published (confidential)");
+    expect(key).toHaveTextContent("Shown by pattern:");
+    expect(key).toHaveTextContent("Approximate");
+    expect(key).toHaveTextContent("Not published");
     expect(key).toHaveTextContent("No data");
     expect(key).not.toHaveTextContent("Reported");
     // The SVG carries no logo of its own; the card's logo row does
