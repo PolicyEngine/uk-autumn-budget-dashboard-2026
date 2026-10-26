@@ -42,6 +42,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { shortNameOf } from "../utils/policyDetails";
 
 // The dashboard's bar style: each bar rounds its end away from zero (chartTheme)
 const VALUE_BAR_SHAPE = barShape(["value"]);
@@ -327,8 +328,9 @@ export function metricByYear(rows, run, metric) {
 /**
  * A summary statistic of the selected policies by year (SUMMARY_METRICS),
  * with the year chosen in the band drawn darker. With a selection that has
- * no single run (two or more policies, not all), it says to choose one
- * policy or all, as Young people's shares do.
+ * no single run (two or more measures, and no published combined run that
+ * matches), one bar per measure and year, each measure's own run: these
+ * statistics are never added up across measures.
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const chartRef = useRef(null);
@@ -340,10 +342,30 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const narrow = useNarrowViewport();
   // The whole selection's run: one measure's own, or the package's combined
   // run (the catalogue's, #104) when every displayable measure is selected
-  const { combinedId } = useMeasureCatalogue();
+  const catalogue = useMeasureCatalogue();
+  const { combinedId } = catalogue;
   const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
-  const data = metricByYear(rows, run, metric);
-  const shown = data.filter((point) => point.value !== null);
+  // No run for the whole selection: each selected measure's own, side by side
+  const byMeasure = !run && selectedPolicies.length > 1
+    ? policies
+        .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+        .map((policy) => ({
+          id: policy.id,
+          name: shortNameOf(policy),
+          colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
+          points: metricByYear(rows, policy.id, metric),
+        }))
+    : null;
+  const measureData = byMeasure
+    ? DISPLAY_YEARS.map((year, i) => ({
+        year,
+        ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
+      }))
+    : null;
+  const data = byMeasure ? [] : metricByYear(rows, run, metric);
+  const shown = byMeasure
+    ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
+    : data.filter((point) => point.value !== null);
   // Every shown value reads as zero at the tooltip's precision (a measure
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
@@ -366,15 +388,26 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     name: metric.file,
     exportOptions: { title: metric.title, description: metric.description, logo: CHART_LOGO },
     csv: () =>
-      buildChartCsv({
-        title: metric.title,
-        units: metric.csvUnits,
-        columns: [
-          { key: "year", label: "Fiscal year" },
-          { key: "value", label: metric.unit, decimals: 4 },
-        ],
-        rows: shown.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
-      }),
+      byMeasure
+        ? buildChartCsv({
+            title: `${metric.title}, each measure on its own`,
+            units: metric.csvUnits,
+            columns: [
+              { key: "year", label: "Fiscal year" },
+              ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.unit}`, decimals: 4 })),
+            ],
+            rows: measureData.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+            notes: ["Each column is one measure simulated on its own; the columns are not added up."],
+          })
+        : buildChartCsv({
+            title: metric.title,
+            units: metric.csvUnits,
+            columns: [
+              { key: "year", label: "Fiscal year" },
+              { key: "value", label: metric.unit, decimals: 4 },
+            ],
+            rows: shown.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+          }),
     published: shown.length > 0,
   };
 
@@ -395,7 +428,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 {selectedPeople && <> ({selectedPeople})</>}.
               </>
             ) : (
-              metric.short ?? metric.description
+              <>
+                {metric.short ?? metric.description}
+                {byMeasure && " Each selected measure on its own."}
+              </>
             )}
           </p>
         </div>
@@ -411,9 +447,61 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         </div>
       )}
       <div ref={chartRef} className={controls.length > 0 && !choiceAbove ? "summary-metric-plot" : undefined}>
-        {!run ? (
+        {byMeasure && shown.length > 0 ? (
+          <>
+            <ResponsiveContainer width="100%" height={height}>
+              <BarChart
+                data={measureData}
+                margin={{ ...chartMargin(narrow, { top: 16 }), bottom: CHART_LOGO.height + CHART_LOGO.padding + 8 }}
+                barGap={1}
+              >
+                <CartesianGrid {...GRID_PROPS} />
+                <XAxis
+                  dataKey="year"
+                  tick={TICK_STYLE}
+                  axisLine={AXIS_LINE}
+                  tickLine={false}
+                  interval={0}
+                  tickFormatter={narrow ? shortFiscalYearTick : fiscalYearTick}
+                />
+                <YAxis
+                  domain={domain}
+                  ticks={ticks}
+                  width={axisWidth(ticks, tick)}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={TICK_STYLE}
+                  tickFormatter={tick}
+                />
+                <Tooltip
+                  {...TOOLTIP_PROPS}
+                  cursor={HOVER_CURSOR}
+                  content={<ChartTooltip format={metric.format} labelFormat={fiscalYearTick} showPlus showZero grouped={false} />}
+                />
+                {byMeasure.map((m) => (
+                  <Bar key={m.id} dataKey={m.id} name={m.name} fill={m.colour} shape={barShape([m.id])} {...chartMotion()}>
+                    {measureData.map((point) => (
+                      <Cell key={point.year} fillOpacity={point.year === selectedYear ? 1 : UNSELECTED_OPACITY} />
+                    ))}
+                  </Bar>
+                ))}
+                <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+                <Customized component={<ChartUnitLabel text={metric.unit} />} />
+                <Customized component={PolicyEngineLogo} />
+              </BarChart>
+            </ResponsiveContainer>
+            <ul className="summary-metric-key">
+              {byMeasure.map((m) => (
+                <li key={m.id}>
+                  <span className="summary-metric-swatch" style={{ background: m.colour }} aria-hidden="true" />
+                  {m.name}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>Choose one policy or all policies</p>
+            <p>No measure is selected that this chart covers</p>
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
@@ -494,7 +582,15 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
         <div className="chart-footer">
           <ChartMoreInfo>
             <p>{metric.description}</p>
-            {population && <p>People are the change in the rate times the population in that year, from the current-law projection.</p>}
+            {population && !byMeasure && (
+              <p>People are the change in the rate times the population in that year, from the current-law projection.</p>
+            )}
+            {byMeasure && (
+              <p>
+                Each bar is one measure simulated on its own. These changes can&apos;t be added up across measures, and no
+                published run covers this selection together.
+              </p>
+            )}
           </ChartMoreInfo>
         </div>
       )}

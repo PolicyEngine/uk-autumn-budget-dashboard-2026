@@ -1,7 +1,7 @@
-/* A view's sub-tabs: a compact segmented pill control, left-aligned in
-   the page column. It is secondary to the underline view tabs above it:
-   a grey track with the chosen segment raised in white and teal text, no
-   underline, no full-width bar, and it does not stick. */
+/* A view's sub-tabs: the view tabs' style one step down, left-aligned in
+   the page column. As there, the only underline is the chosen tab's: one
+   even teal bar the width of the tab, on a thin grey rule as wide as the
+   group. It does not stick. */
 .sub-tabs {
   display: flex;
   width: fit-content;
@@ -63,8 +63,9 @@
 .sub-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
-  left: 6px;
-  right: 6px;
+  /* As the view tabs' underline */
+  left: 8px;
+  right: 8px;
   bottom: -1px;
   height: 3px;
   border-radius: 3px 3px 0 0;

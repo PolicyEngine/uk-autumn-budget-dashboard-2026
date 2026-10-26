@@ -202,3 +202,23 @@ export function pensionerShares(rows, policies, selected, year, combinedId = nul
     ],
   };
 }
+
+/**
+ * A centred moving average of each age's net change (`netChange`), over
+ * `window` single years of age (five by default): the line through the
+ * Change by age bars, so the trend reads through the survey noise of single
+ * years. An age's average uses the ages in its window that have a value,
+ * and needs at least three of them; the ends of the range average the ages
+ * there are. Returns the points with `smooth` added (null where too few).
+ */
+export function smoothByAge(points, window = 5) {
+  const half = Math.floor(window / 2);
+  return points.map((point, index) => {
+    const values = points
+      .slice(Math.max(0, index - half), index + half + 1)
+      .map((each) => each.netChange)
+      .filter((value) => value !== null && Number.isFinite(value));
+    const smooth = point.netChange !== null && values.length >= 3 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+    return { ...point, smooth };
+  });
+}

@@ -724,8 +724,7 @@ body {
 
 /* Section headings (SectionHeading.jsx): an icon in a tinted circle, the
    title and a "#" link,
-   the subtitle below, and a hairline under it all whose teal start grows
-   in as the heading scrolls into view. The circle is larger than a card's
+   the subtitle below, and one even hairline under it all. The circle is larger than a card's
    square chip, so a section reads above its cards. */
 .section-heading {
   position: relative;
@@ -736,18 +735,6 @@ body {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--c-grid);
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
-}
-
-.section-heading::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 56px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--pe-accent);
-  transform-origin: left center;
 }
 
 /* Between sections: 48px (chart sections). None above the first. */
@@ -1162,6 +1149,12 @@ body {
   margin: 0;
 }
 
+/* Sections in a row under one heading (All households: the map, the
+   decile pair, the scatter) keep the cards' own gap between them */
+.report-section + .report-section {
+  margin-top: 20px;
+}
+
 /* Few rules: cards and whitespace separate things. Tables keep only the
    underline beneath their header row. */
 .main-content .region-table th,
@@ -1357,6 +1350,11 @@ body {
 }
 
 /* The logo's clear space under a legend is CHART_LOGO.gap (chartLogo.jsx) */
+/* Revenue impact: its measure key boxed under the plot, the logo below */
+.revenue-key .measure-key.is-section {
+  margin: 8px 0 0;
+}
+
 .chart-logo {
   display: flex;
   justify-content: flex-end;
@@ -2658,19 +2656,8 @@ body {
   transform: none;
 }
 
-/* A section heading's teal rule draws in from the left as it appears */
-.section-heading.reveal::after {
-  transform: scaleX(0);
-  transition: transform 600ms cubic-bezier(0.33, 1, 0.68, 1) 180ms;
-}
-
-.section-heading.reveal.is-revealed::after {
-  transform: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .reveal,
-  .section-heading.reveal::after {
+  .reveal {
     opacity: 1;
     transform: none;
     transition: none;
