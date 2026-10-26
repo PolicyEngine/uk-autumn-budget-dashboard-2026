@@ -595,21 +595,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               selectedPolicies={selectedPolicies}
               policies={POLICIES}
               selectedYear={distributionalYear}
+              descriptionLink={
+                <>
+                  Where would yours be?{" "}
+                  <a
+                    className="twin-link"
+                    href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      handleTabChange("household");
+                    }}
+                  >
+                    Work it out on Household impact →
+                  </a>
+                </>
+              }
             />
           </section>
-          <p className="section-link">
-            Where would your household be?{" "}
-            <a
-              className="twin-link"
-              href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
-              onClick={(event) => {
-                event.preventDefault();
-                handleTabChange("household");
-              }}
-            >
-              Work it out on Household impact →
-            </a>
-          </p>
         </MeasureKeyProvider>
       </div>
     );

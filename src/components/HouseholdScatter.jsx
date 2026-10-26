@@ -85,13 +85,14 @@ const number = (value) =>
 const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
-const describe = (perDot, basisLabel) =>
-  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose. Dots keep their row across years, so you can follow them.`;
+// One short line; the income basis and how dots follow across years are in More info
+const describe = (perDot) =>
+  `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
 
 /**
  * The card's "More info": how to read a dot and the axes, in a few lines.
- * The subtitle already gives the households per dot and that dots keep
- * their row, so these say why and what is left out.
+ * The subtitle already gives the households per dot, so these say what a
+ * dot is, how it follows across years, and what is left out.
  */
 function ScatterMoreInfo({ basisLabel }) {
   return (
@@ -101,8 +102,8 @@ function ScatterMoreInfo({ basisLabel }) {
         sits within its group&apos;s {pounds(SCATTER_BINS.income_band_width)} income band and change band, not on any one household.
       </p>
       <p>
-        Income is {basisLabel} net income in every year, before the measures. Households keep their
-        income band when the year changes, so a dot moves only sideways and its row is the same
+        Each row is {basisLabel} net income in every year, before the measures. Dots keep their row
+        across years, so you can follow them: a dot moves only sideways and its row is the same
         households.
       </p>
       <p>
@@ -410,6 +411,8 @@ function HouseholdScatter({
   title = CHART_TITLE,
   embedded = false,
   onDownload = null,
+  // A link on the subtitle line, after the sentence
+  descriptionLink = null,
 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
@@ -476,7 +479,7 @@ function HouseholdScatter({
           basisLabel,
           incomeMatches,
         })
-      : describe(householdsPerDot(view.basisPoints), basisLabel);
+      : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
 
   // A hovered dot's group belongs to the year and selection it was
@@ -587,7 +590,10 @@ function HouseholdScatter({
                 <NoBreakYear text={chartTitle} />
               </span>
             </h3>
-            <p className="chart-description">{description}</p>
+            <p className="chart-description">
+              {description}
+              {descriptionLink && <> {descriptionLink}</>}
+            </p>
           </div>
           <ChartDownloadMenu
             download={download}
