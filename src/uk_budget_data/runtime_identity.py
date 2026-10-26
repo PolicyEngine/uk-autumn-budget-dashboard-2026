@@ -120,9 +120,16 @@ def _checkout_state(
     say.
 
     The commit is read once and its tree listed by that id, so the files
-    are compared with the very commit returned, even if HEAD moves.
+    are compared with the very commit returned, even if HEAD moves. Only a
+    checkout whose work tree is ``root`` itself counts: git run in a folder
+    inside a larger work tree (or told by ``GIT_DIR`` and ``GIT_WORK_TREE``
+    that one is) would list that folder's files under the names the
+    commit's own top-level files have.
     """
     try:
+        top = _git(root, "rev-parse", "--show-toplevel").rstrip(b"\n")
+        if not os.path.samefile(os.fsdecode(top), root):
+            return None, None
         object_format = (
             _git(root, "rev-parse", "--show-object-format").decode().strip()
         )
@@ -135,7 +142,9 @@ def _checkout_state(
             commit
         ):
             return None, None
-        tree = _git(root, "ls-tree", "-r", "-z", commit, "--", *paths)
+        tree = _git(
+            root, "ls-tree", "-r", "-z", "--full-tree", commit, "--", *paths
+        )
     except (OSError, subprocess.CalledProcessError):
         return None, None
     committed = {}
