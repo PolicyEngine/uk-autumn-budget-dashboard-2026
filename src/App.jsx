@@ -603,15 +603,9 @@ function App() {
           <div className="results-container">
             <SectionHeading
               title="Policies"
-              subtitle="What each measure does, when it is in force and how it is modelled."
+              subtitle="What each measure does, when it is in force and how it is modelled. Each timeline covers 2026-27 to 2031-32 with Budget day marked; an arrow means no end date. “See its effect” shows that measure alone on Population impact."
             />
             <section id="policy-details" className="report-section policy-details-content">
-              <p className="policy-timeline-key">
-                Each card&apos;s timeline shows when the measure is in force over the years
-                the charts cover, 2026-27 to 2031-32, with Budget day marked; an arrow at the
-                right means it has no end date. &ldquo;See its effect&rdquo; opens Population
-                impact with only that measure selected.
-              </p>
               <PolicyCards
                 policies={POLICIES}
                 selectedPolicies={ALL_POLICY_IDS}

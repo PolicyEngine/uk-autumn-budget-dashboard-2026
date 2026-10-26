@@ -1,8 +1,9 @@
 /**
- * The candidate Autumn Budget 2026 measures the page shows, one entry per
- * measure in src/uk_budget_data/reforms.py (same id and name). Each is a
- * candidate modelled before the Budget on 28 October 2026, not announced
- * policy; the page says so once, in the banner under the intro.
+ * The Autumn Budget 2026 measures the page shows, one entry per measure in
+ * src/uk_budget_data/reforms.py (same id and name). Until the Budget on
+ * 28 October 2026 they are modelled before announcement: a card's details
+ * say which values are assumptions made before the Budget, in wording that
+ * stays true after it.
  *
  * Card fields, for the Policies view:
  * - summary: one plain line on what changes;
@@ -25,7 +26,7 @@ export const POLICIES = [
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
     summary:
-      "Keeps fuel duty at 52.95p a litre through winter 2026-27, restoring the 5p in two steps in autumn 2027.",
+      "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
     starts: "January 2027",
     type: "Fuel duty",
     inForce: { from: "2027-01" },
@@ -35,7 +36,7 @@ export const POLICIES = [
     ],
     stepsLabel: "5p restored",
     details:
-      "Assumes no RPI rise in April 2027, 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. Includes the VAT on the lower pump price; fuel spending is held fixed.",
+      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the measure costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -52,7 +53,7 @@ export const POLICIES = [
     type: "Income tax",
     inForce: { from: "2027-04" },
     details:
-      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is not yet published.",
+      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is an assumption made before the Budget.",
   },
   {
     id: "warm_home_discount_top_up",
@@ -84,7 +85,7 @@ export const POLICIES = [
     inForce: { from: "2026-10", to: "2028-03" },
     ends: "March 2028",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is the candidate extension. Applied to electricity spending only.",
+      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
@@ -124,7 +125,7 @@ export const POLICIES = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The value is an assumption: reporting says the relief may be restricted, not how. The model applies the limit to each year's gains, as if none had been used before.",
+      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
@@ -141,7 +142,7 @@ export const POLICIES = [
     inForce: { from: "2026-12", to: "2027-05" },
     ends: "May 2027",
     details:
-      "Assumes the cut is passed through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions; reporting names the option, not its design.",
+      "Assumes the cut is passed through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions made before the Budget.",
   },
   {
     id: "plan_2_threshold_unfreeze",
