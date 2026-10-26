@@ -83,6 +83,25 @@ export const POLICY_ICONS = {
   plan_2_threshold_unfreeze: POLICY_TYPE_ICONS.studentLoan,
 };
 
+// Each measure's short name, for headlines and tight labels (the legends
+// keep the full name from policies.js). One list, by measure id.
+export const POLICY_SHORT_NAMES = {
+  plan_2_threshold_unfreeze: "Plan 2 threshold unfrozen",
+  state_pension_income_tax_protection: "State Pension protection",
+  employer_ni_relief_under_25s: "Employer NI relief, under-25s",
+  fuel_duty_rise_deferral: "Fuel duty deferral",
+  domestic_electricity_zero_vat: "Zero VAT on electricity",
+  road_fuel_vat_cut: "Road fuel VAT cut",
+  warm_home_discount_top_up: "Warm Home Discount top-up",
+  threshold_freeze_2031_32: "Threshold freeze",
+  badr_lifetime_limit_cut: "BADR restricted",
+};
+
+/** A measure's short name by id, or its full name where it has none. */
+export function shortName(id) {
+  return POLICY_SHORT_NAMES[id] ?? POLICIES.find((policy) => policy.id === id)?.name ?? id;
+}
+
 // The id of the run that simulates every measure together
 // (reforms.AUTUMN_BUDGET_2026_COMBINED_ID). Statistics that cannot be added
 // up across measures, such as the share of people better off, are read from

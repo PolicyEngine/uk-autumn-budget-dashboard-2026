@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../App";
-import { measurePovertyRows } from "./MeasuresPovertyCard";
+import { measurePovertyRows, povertyWaterfall } from "./MeasuresPovertyCard";
 import { POLICIES } from "../utils/policies";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
@@ -23,7 +23,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("measurePovertyRows", () => {
+describe("measurePovertyRows and povertyWaterfall", () => {
   const ALL = POLICIES.map((policy) => policy.id);
   const row = (reform_id, value, affected = 1) => ({
     reform_id,
@@ -31,37 +31,50 @@ describe("measurePovertyRows", () => {
     people_affected: String(affected),
     poverty_change_pp: String(value),
   });
+  const rows = [
+    row("autumn_budget_2026_combined", -0.008),
+    row("state_pension_income_tax_protection", -0.002),
+    row("plan_2_threshold_unfreeze", -0.005),
+    row("fuel_duty_rise_deferral", 0),
+    row("employer_ni_relief_under_25s", 0, 0),
+  ];
 
-  it("sorts the measures by size, leaves out £0 ones and puts the package last", () => {
-    const rows = [
-      row("autumn_budget_2026_combined", -0.008),
-      row("state_pension_income_tax_protection", -0.002),
-      row("plan_2_threshold_unfreeze", -0.005),
-      row("fuel_duty_rise_deferral", 0),
-      row("employer_ni_relief_under_25s", 0, 0),
-    ];
-    const { members, bars } = measurePovertyRows(rows, POLICIES, ALL, 2027, "poverty_change_pp");
-    expect(bars.map((bar) => [bar.id, bar.value])).toEqual([
-      ["plan_2_threshold_unfreeze", -0.005],
-      ["state_pension_income_tax_protection", -0.002],
-      ["fuel_duty_rise_deferral", 0],
-      ["autumn_budget_2026_combined", -0.008],
-    ]);
-    expect(bars.at(-1).isPackage).toBe(true);
-    // Employer NI changes no household's income: in More info, not a bar
+  it("reads each measure's own change by its short name, the package from the combined run", () => {
+    const { members, measures, total } = measurePovertyRows(rows, POLICIES, ALL, 2027, "poverty_change_pp");
+    expect(measures.map((m) => m.name)).toContain("Plan 2 threshold unfrozen");
+    expect(total).toBe(-0.008);
+    // Employer NI changes no household's income: in More info, not a step
     expect(members.find((member) => member.id === "employer_ni_relief_under_25s").muted).toBe(true);
+    expect(measures.some((m) => m.id === "employer_ni_relief_under_25s")).toBe(false);
   });
 
-  it("has no package row for a selection with no single run", () => {
-    const rows = [row("plan_2_threshold_unfreeze", -0.005), row("fuel_duty_rise_deferral", 0)];
-    const { bars } = measurePovertyRows(
-      rows,
-      POLICIES,
-      ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"],
-      2027,
-      "poverty_change_pp",
-    );
-    expect(bars.some((bar) => bar.isPackage)).toBe(false);
+  it("steps by size in people out of poverty, closes the gap with an interaction step and ends at the package", () => {
+    const { measures, total } = measurePovertyRows(rows, POLICIES, ALL, 2027, "poverty_change_pp");
+    // 70 million people: 0.001pp is 700 people
+    const { steps, zero, peopleMode } = povertyWaterfall(measures, total, 70);
+    expect(peopleMode).toBe(true);
+    expect(steps.map((s) => [s.kind, s.id])).toEqual([
+      ["measure", "plan_2_threshold_unfreeze"],
+      ["measure", "state_pension_income_tax_protection"],
+      ["interaction", "interaction"],
+      ["total", "autumn_budget_2026_combined"],
+    ]);
+    // A fall in poverty steps right; each step starts where the last ended
+    expect(steps[0].x).toBeCloseTo(3500);
+    expect(steps[1].start).toBeCloseTo(3500);
+    expect(steps[2].x).toBeCloseTo(700);
+    expect(steps[3].start).toBe(0);
+    expect(steps[3].end).toBeCloseTo(5600);
+    // Measures that move no one are one line, not rows
+    expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral"]);
+  });
+
+  it("falls back to percentage points without a population, and has no package for a part selection", () => {
+    const { measures } = measurePovertyRows(rows, POLICIES, ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"], 2027, "poverty_change_pp");
+    const { steps, peopleMode } = povertyWaterfall(measures, null, null);
+    expect(peopleMode).toBe(false);
+    expect(steps.map((s) => s.kind)).toEqual(["measure"]);
+    expect(steps[0].x).toBeCloseTo(0.005);
   });
 });
 
@@ -86,10 +99,15 @@ describe("the Poverty sub-tab", () => {
     }
     // The change in people, from the outlook's population
     expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/);
-    // One bar per measure that changes incomes, the package last
+    // A waterfall in people: short names, the package last, the measures
+    // that move no one on one muted line
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
-    expect(rows.at(-1)).toBe("All selected measures");
-    expect(rows).not.toContain("Employer NI relief for under-25s");
+    expect(rows[0]).toBe("Plan 2 threshold unfrozen");
+    expect(rows.at(-1)).toBe("Package");
+    expect(rows).not.toContain("Employer NI relief, under-25s");
+    expect(within(measures).getByText(/^No effect on poverty: /)).toHaveTextContent(/BADR restricted/);
+    expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
+    expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
 
     // One poverty choice for both cards
     fireEvent.click(within(measures).getByRole("button", { name: /^Poverty line:/ }));
@@ -99,7 +117,7 @@ describe("the Poverty sub-tab", () => {
 
     // More info: the £0 measures and that the parts need not add up
     fireEvent.click(within(measures).getByRole("button", { name: "More info" }));
-    expect(within(measures).getByText(/need not add up exactly to the package/)).toBeInTheDocument();
+    expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
   });
 });
