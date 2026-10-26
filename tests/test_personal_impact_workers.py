@@ -859,13 +859,13 @@ def test_a_later_calculation_starts_before_an_earlier_one_finishes():
     first = threading.Thread(target=calculation, args=("first", 4))
     first.start()
     time.sleep(0.1)
-    second_started = time.monotonic()
     second = threading.Thread(target=calculation, args=("second", 1))
     second.start()
     second.join(30)
     first.join(30)
-    # The second's one run finished well before the first's four did
+    # The second's one run finished before the first's four did: that
+    # ordering is what shows the fairness. There is no wall-clock bound: on
+    # main's CI the second's wait took 8.8 s and 8.5 s (26 Oct, b859b999,
+    # even with the forkserver warmed above) while the ordering held, so a
+    # bound measured the runner's load, not the slots
     assert started["second done"] < started["first done"]
-    # A loose bound: CI's shared runners spawn worker processes slowly (3.5 s
-    # seen), and the ordering above is what shows the fairness
-    assert started["second done"] - second_started < 5
