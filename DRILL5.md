@@ -13,11 +13,11 @@ nine candidates are unchanged. The State Pension protection extension is an
 alternative to the base protection, so the combined run leaves it out (14
 members).
 
-Added on 26 October from that day's reporting (BBC; The Times): a sixteenth
-measure, `state_pension_income_tax_protection_sole_income`, the allowance of
-the full new State Pension for people whose only income is the State Pension
-(savings interest aside). It is another alternative to the base protection,
-so the combined run still has 14 members.
+On 26 October the base protection (`state_pension_income_tax_protection`)
+took the design reported that day (BBC; The Times): the allowance of the full
+new State Pension only for people whose only income is the State Pension
+(savings interest aside). Same id; the earlier tapered design stays as a
+switch (`STATE_PENSION_PROTECTION_DESIGNS`), as on #182.
 
 ## Goals
 

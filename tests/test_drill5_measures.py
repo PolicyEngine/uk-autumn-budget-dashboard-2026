@@ -25,8 +25,8 @@ def drill5():
     return {m.id: m for m in reforms.get_drill5_measures()}
 
 
-def test_drill5_has_sixteen_measures_with_unique_ids(drill5):
-    assert len(drill5) == 16
+def test_drill5_has_fifteen_measures_with_unique_ids(drill5):
+    assert len(drill5) == 15
 
 
 def test_drill5_is_not_registered_by_default():
@@ -61,7 +61,9 @@ def test_secondary_threshold_is_scored_at_fixed_pay(drill5):
 def test_secondary_threshold_moves_no_pay():
     measure = reforms._create_employer_ni_secondary_threshold_raised()
     situation = {
-        "people": {"p": {"age": {2027: 30}, "employment_income": {2027: 30_000}}},
+        "people": {
+            "p": {"age": {2027: 30}, "employment_income": {2027: 30_000}}
+        },
         "benunits": {"b": {"members": ["p"]}},
         "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
     }
@@ -119,17 +121,16 @@ def test_combined_run_leaves_out_alternatives(monkeypatch):
         reforms, "_create_combined_autumn_budget_reform", capture
     )
     ids = reforms.list_reform_ids()
-    assert len(ids) == 17
+    assert len(ids) == 16
     assert len(seen["ids"]) == 14
     assert reforms.STATE_PENSION_EXTENDED_ID not in seen["ids"]
-    assert reforms.STATE_PENSION_SOLE_INCOME_ID not in seen["ids"]
     monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
     monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
 
 
 def test_drill5_modifiers_are_proved_pure_templates():
     """Ported to modules of their own, both stay template-only, so the
-    drill needs no attestation beyond main's two hand-written modifiers."""
+    drill needs no attestation beyond main's hand-written modifiers."""
     revision = CodeRevision("0" * 40, tree_clean=True)
     assert pure_templates(
         state_pension_income_tax_allowance_untapered, revision

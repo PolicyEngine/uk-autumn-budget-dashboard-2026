@@ -180,19 +180,47 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # =============================================================================
 
 
-def _create_state_pension_income_tax_protection() -> Reform:
+# The design: "sole_income" follows the reporting of 26 October 2026 (BBC;
+# The Times): an allowance of the full new State Pension for pensioners
+# "wholly reliant on the state pension", about a million people, costing
+# about £200m a year by 2030. "tapered", the design modelled until then,
+# gives the allowance to everyone over State Pension age and withdraws it
+# £1 for £1 of income above it. A large other_income_limit in the
+# sole-income module gives it to every pensioner, untapered.
+STATE_PENSION_PROTECTION_DESIGN = "sole_income"
+STATE_PENSION_PROTECTION_DESIGNS = {
+    "sole_income": (
+        state_pension_only_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age whose only income is the State Pension (savings interest "
+        "aside) get an income tax allowance equal to the full new State "
+        "Pension (rounded up to the pound: £13,037 in 2027-28), rising with "
+        "it. Someone whose only income is the full new State Pension pays "
+        "no income tax; £1 of other income takes the allowance away.",
+    ),
+    "tapered": (
+        state_pension_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age get an income tax allowance equal to the full new State "
+        "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
+        "for £1 of income above it, down to the standard personal "
+        "allowance. Someone whose only income is the full new State "
+        "Pension pays no income tax.",
+    ),
+}
+
+
+def _create_state_pension_income_tax_protection(
+    design: str = None,
+) -> Reform:
+    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[
+        design or STATE_PENSION_PROTECTION_DESIGN
+    ]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="State Pension income tax protection",
-        description=(
-            "Candidate measure. From 6 April 2027, people over State Pension "
-            "age get an income tax allowance equal to the full new State "
-            "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
-            "for £1 of income above it, down to the standard personal "
-            "allowance. Someone whose only income is the full new State "
-            "Pension pays no income tax."
-        ),
-        simulation_modifier=state_pension_income_tax_allowance,
+        description=description,
+        simulation_modifier=modifier,
     )
 
 
@@ -409,9 +437,6 @@ _MEASURE_FACTORIES = (
 # Budget 2026 markets and reporting up to 25 October 2026. Select them with
 # UK_BUDGET_MEASURE_SET=drill5; without it, nothing below is registered.
 # Specifics are mock values where reporting gives none (issue: Drill 5).
-# A sixteenth, the State Pension protection for those whose only income is
-# the State Pension, was added on 26 October from that day's reporting, as
-# an alternative to the base protection.
 
 UC_STANDARD_ALLOWANCE = "gov.dwp.universal_credit.standard_allowance.amount"
 UC_CLAIMANT_TYPES = (
@@ -441,9 +466,6 @@ DIVIDEND_RATES = tuple(
 
 UC_BELOW_CPI_ID = "uc_standard_allowance_below_cpi"
 STATE_PENSION_EXTENDED_ID = "state_pension_income_tax_protection_extended"
-STATE_PENSION_SOLE_INCOME_ID = (
-    "state_pension_income_tax_protection_sole_income"
-)
 NI_SECONDARY_THRESHOLD_ID = "employer_ni_secondary_threshold_raised"
 CGT_RATES_ID = "cgt_main_rates_up_2pp"
 HVCTS_ID = "council_tax_surcharge_from_1_5m"
@@ -452,8 +474,8 @@ DIVIDEND_RATES_ID = "dividend_rates_up_1pp"
 GAS_VAT_ID = "domestic_gas_zero_vat"
 
 # Measures that are alternatives to another drill 5 measure, so the drill's
-# combined run leaves them out (each replaces the base protection).
-DRILL5_ALTERNATIVES = (STATE_PENSION_EXTENDED_ID, STATE_PENSION_SOLE_INCOME_ID)
+# combined run leaves them out (the extension replaces the base protection).
+DRILL5_ALTERNATIVES = (STATE_PENSION_EXTENDED_ID,)
 
 
 def _current_law(path: str, year: int):
@@ -507,23 +529,6 @@ def _create_state_pension_income_tax_protection_extended() -> Reform:
             "kept whatever their other income or State Pension increments."
         ),
         simulation_modifier=state_pension_income_tax_allowance_untapered,
-    )
-
-
-def _create_state_pension_income_tax_protection_sole_income() -> Reform:
-    return Reform(
-        id=STATE_PENSION_SOLE_INCOME_ID,
-        name="State Pension income tax protection, State Pension income only",
-        description=(
-            "Drill 5 measure, from reporting on 26 October (BBC; The "
-            "Times), an alternative to the State Pension income tax "
-            "protection. From 6 April 2027, people over "
-            "State Pension age whose only income is the State Pension "
-            "(savings interest aside) get a personal allowance of the full "
-            "new State Pension (£13,037 in 2027-28), rising with it. £1 of "
-            "other income takes the whole allowance away."
-        ),
-        simulation_modifier=state_pension_only_income_tax_allowance,
     )
 
 
@@ -666,7 +671,6 @@ _DRILL5_MEASURE_FACTORIES = (
     _create_uc_standard_allowance_below_cpi,
     _create_state_pension_income_tax_protection,
     _create_state_pension_income_tax_protection_extended,
-    _create_state_pension_income_tax_protection_sole_income,
     _create_domestic_electricity_zero_vat,
     _create_employer_ni_secondary_threshold_raised,
     _create_employer_ni_relief_under_25s,
@@ -681,7 +685,7 @@ _DRILL5_MEASURE_FACTORIES = (
 
 
 def get_drill5_measures() -> list[Reform]:
-    """The sixteen drill 5 measures, without a combined run."""
+    """The fifteen drill 5 measures, without a combined run."""
     return [factory() for factory in _DRILL5_MEASURE_FACTORIES]
 
 

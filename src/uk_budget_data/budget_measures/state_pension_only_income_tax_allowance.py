@@ -1,6 +1,6 @@
 """An income tax allowance of the full new State Pension for people whose
-only income is the State Pension (``state_pension_income_tax_protection_sole_income``).
-Hand-written.
+only income is the State Pension: the default design of
+``state_pension_income_tax_protection``. Hand-written.
 
 One modifier in a module of its own: see the package docstring.
 """
@@ -82,9 +82,9 @@ def state_pension_only_income_tax_allowance(
         pa = parameters(
             period
         ).gov.hmrc.income_tax.allowances.personal_allowance
-        income = person("adjusted_net_income", period) - person(
-            "gift_aid_grossed_up", period
-        )
+        # Already net of grossed-up Gift Aid (ITA 2007 s. 58), as the
+        # native allowance reads it.
+        income = person("adjusted_net_income", period)
         reduction = np.maximum(0, income - pa.maximum_ANI) * pa.reduction_rate
         allowance = np.maximum(0, np.ceil(allowances[year] - reduction))
         return np.where(eligible, np.maximum(current, allowance), current)
