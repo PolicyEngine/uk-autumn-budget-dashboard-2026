@@ -825,7 +825,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       <div className="chart-footer">
         <ChartMoreInfo year={year}>
           <p>
-            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the Pre-measures forecast's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
+            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the OBR forecast tab's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
           </p>
           <p>
             {"Everyone's income changes too, so your place before is ranked among everyone's income before the selected policies, and your place after among everyone's income after them."}

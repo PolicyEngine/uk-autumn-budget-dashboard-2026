@@ -31,9 +31,9 @@ it.each(["missing", "invalid", "unreachable", "2025"])("keeps the shell and inde
       render(<App />);
       expect(await screen.findByRole("tablist", { name: "Views" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "UK Autumn Budget 2026" })).toBeInTheDocument();
-      const label = view === "living" ? "Pre-measures forecast" : "Methodology";
+      const label = view === "living" ? "OBR forecast" : "Methodology";
       expect(screen.getByRole("tab", { name: label })).toHaveAttribute("aria-selected", "true");
-      expect(await screen.findByRole("heading", { name: view === "living" ? "Incomes under current law" : "At a glance" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: view === "living" ? "Living standards under current law" : "At a glance" })).toBeInTheDocument();
       expect(requests.some((url) => url.endsWith(".csv"))).toBe(false);
       cleanup();
       vi.unstubAllGlobals();
