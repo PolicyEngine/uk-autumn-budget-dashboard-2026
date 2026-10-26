@@ -514,8 +514,19 @@
   color: var(--pe-gray-500);
 }
 
-/* The header's right side: Examples (quiet) and Calculate (primary) on one
-   row, the same height and radius */
+/* "Starting from: Apprentice": the example Your household began from */
+.household-form-title p.household-start-from {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  font-size: var(--fs-caption);
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
+}
+
+/* The header's right side: Calculate (primary) */
 .household-header-actions {
   display: flex;
   align-items: center;
@@ -524,137 +535,714 @@
   margin-left: auto;
 }
 
-.example-picker {
-  position: relative;
+/* The examples: a row of cards above the form, as the student loan
+   calculator's scenario cards; the chosen one teal */
+/* The eight cards: "Your household", then the seven examples. One grid,
+   four across on a wide screen, two on a tablet, one a row on a phone */
+.household-cards {
+  margin-bottom: 24px;
 }
 
-.example-picker-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 14px;
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--pe-gray-700);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
-}
-
-.example-picker-button:hover {
-  border-color: var(--pe-gray-300);
-  background: var(--pe-gray-50);
-}
-
-.example-picker-button:active {
-  transform: translateY(1px);
-}
-
-.example-picker-button:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--pe-teal-200);
-}
-
-.example-picker-button svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-.example-picker-chevron {
-  transition: transform 0.2s ease;
-}
-
-.example-picker-button[aria-expanded="true"] .example-picker-chevron {
-  transform: rotate(180deg);
-}
-
-/* The menu: a popover list under the button, right-aligned */
-.example-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 50;
-  width: 340px;
-  max-width: calc(100vw - 32px);
-  max-height: min(480px, 70vh);
-  padding: 6px;
-  overflow-y: auto;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--pe-shadow-lg);
-  animation: example-menu-in 0.15s ease-out both;
-}
-
-@keyframes example-menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.example-menu-group + .example-menu-group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.example-menu-title {
-  margin: 0;
-  padding: 8px 10px 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--pe-gray-400);
-}
-
-.example-menu-item {
+.household-cards-head {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  padding: 8px 10px;
-  font-family: inherit;
-  text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: var(--pe-radius-md);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Once a household is chosen: the grid folds away and a strip of chips
+   takes its place (and back with "Show all households"). Each fold
+   animates its height (0fr to 1fr), opacity and a small slide */
+.household-cards-fold,
+.household-strip-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.28s;
+}
+
+.household-cards-fold.is-open,
+.household-strip-fold.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease 0.06s,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+
+.household-cards-fold-inner,
+.household-strip-fold-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Room for the cards' and chips' shadows and focus rings inside the fold */
+.household-cards-fold-inner {
+  padding: 4px 3px 3px;
+  margin: 0 -3px -3px;
+}
+
+.household-strip-fold-inner {
+  padding: 10px 0 0;
+}
+
+/* "Show all households" / "Show fewer", right of the title */
+.household-cards-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
   cursor: pointer;
 }
 
-.example-menu-item:hover,
-.example-menu-item:focus-visible {
-  background: var(--pe-gray-50);
-  outline: none;
-}
-
-.example-menu-item:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--pe-teal-200);
-}
-
-.example-menu-item[aria-checked="true"] {
+.household-cards-toggle:hover {
+  border-color: var(--pe-teal-300);
   background: var(--pe-teal-50);
 }
 
-.example-menu-name {
-  font-size: var(--fs-small);
+.household-cards-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-cards.is-folded {
+  margin-bottom: 16px;
+}
+
+/* The chips: the eight cards in the same order and grid they fold from,
+   each the same width and height (four across, two rows; two across on a
+   tablet or phone, four rows); one listbox, Your household first */
+.household-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+}
+
+@media (max-width: 1023px) {
+  .household-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A chip: icon, short name (cut with an ellipsis if long; the full name
+   on hover), its figure at the right */
+.household-chip {
+  --card-accent: var(--pe-teal-600);
+  --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px 0 7px;
+  font-size: var(--fs-caption);
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  box-shadow: var(--pe-shadow-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+/* In one after another as the strip opens */
+.household-strip-fold.is-open .household-chip {
+  animation: household-chip-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+
+@keyframes household-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.household-chip:hover {
+  border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
+}
+
+/* Your household keeps its card's tint: the place to start */
+.household-chip.is-yours {
+  font: inherit;
+  font-size: var(--fs-caption);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
+}
+
+.household-chip:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-chip[aria-selected="true"],
+.household-chip.is-selected {
+  color: var(--pe-gray-900);
+  background: color-mix(in srgb, var(--card-accent) 10%, var(--pe-surface));
+  border-color: var(--card-accent);
+  box-shadow:
+    0 0 0 1px var(--card-accent),
+    var(--pe-shadow-sm);
+}
+
+.household-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--card-ink);
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--pe-surface));
+  border-radius: 50%;
+}
+
+.household-chip[aria-selected="true"] .household-chip-icon,
+.household-chip.is-selected .household-chip-icon {
+  color: var(--pe-surface);
+  background: var(--card-ink);
+}
+
+.household-chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 600;
+}
+
+.household-chip-figure {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.household-chip-figure.is-gain {
+  color: var(--c-gain-text);
+}
+
+.household-chip-figure.is-loss {
+  color: var(--c-loss-text);
+}
+
+.household-chip-figure.is-none {
+  color: var(--pe-gray-500);
+}
+
+/* Your household's chip says "Yours" where "Your household" would be cut */
+.household-chip-short {
+  display: none;
+}
+
+/* A phone: still two across, a little tighter, so every chip shows at
+   once */
+@media (max-width: 599px) {
+  .household-chip-long {
+    display: none;
+  }
+
+  .household-chip-short {
+    display: inline;
+  }
+
+  .household-strip {
+    gap: 6px;
+  }
+
+  .household-chip {
+    gap: 6px;
+    height: 36px;
+    padding: 0 10px 0 5px;
+  }
+
+  .household-chip-icon {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.household-cards-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--pe-gray-800);
 }
 
-.example-menu-description {
-  font-size: var(--fs-micro);
+.household-cards-subtitle {
+  margin: 0 0 14px;
+  font-size: var(--fs-small);
+  line-height: 1.5;
   color: var(--pe-gray-500);
+}
+
+.household-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* A card: the same six rows on every card, each a fixed height, so all
+   eight are exactly the same size: icon, name (two lines), result, where
+   it mainly comes from (one line), who they are (two lines), and the
+   measure it is for at the foot */
+.household-card {
+  --card-accent: var(--pe-teal-600);
+  --card-tint: color-mix(in srgb, var(--card-accent) 10%, var(--pe-surface));
+  --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
+  --card-line: 1.3em;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto 1fr;
+  grid-template-areas:
+    "icon"
+    "name"
+    "result"
+    "source"
+    "description"
+    "tag";
+  align-items: start;
+  min-width: 0;
+  height: 100%;
+  padding: 20px 20px 18px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--pe-gray-800);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--pe-shadow-sm);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+  /* In one after another as the view opens */
+  animation: household-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes household-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The measure's colour as a hairline along the top */
+.household-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--card-accent);
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+}
+
+.household-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
+  box-shadow: var(--pe-shadow-md);
+}
+
+.household-card:hover::before,
+.household-card[aria-pressed="true"]::before,
+.household-card.is-selected::before {
+  opacity: 1;
+}
+
+.household-card:active {
+  transform: translateY(-1px);
+}
+
+.household-card:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-card[aria-pressed="true"],
+.household-card.is-selected {
+  background: var(--card-tint);
+  border-color: var(--card-accent);
+  box-shadow:
+    0 0 0 1px var(--card-accent),
+    var(--pe-shadow-sm);
+}
+
+/* The icon in a soft circle of the measure's colour, filled on hover and
+   when chosen */
+.household-card-icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 14px;
+  color: var(--card-ink);
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--pe-surface));
+  border-radius: 50%;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.household-card:hover .household-card-icon,
+.household-card[aria-pressed="true"] .household-card-icon,
+.household-card.is-yours .household-card-icon {
+  color: var(--pe-surface);
+  background: var(--card-ink);
+}
+
+/* Top right: a tick on the chosen card, "Start here" on yours */
+.household-card-check,
+.household-card-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+
+.household-card-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--pe-surface);
+  background: var(--card-ink);
+  border-radius: 50%;
+  animation: household-check-in 0.22s ease-out;
+}
+
+@keyframes household-check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.household-card-badge {
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--pe-teal-800);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
+}
+
+/* Two lines, always: a one-line name keeps the second line's room */
+.household-card-name {
+  grid-area: name;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * var(--card-line));
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: var(--card-line);
+  letter-spacing: -0.01em;
+  color: var(--pe-gray-900);
+}
+
+/* The result, with a bar for each year beside it, or a placeholder, in a
+   row of its own height */
+.household-card-result {
+  grid-area: result;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 42px;
+  padding-top: 6px;
+}
+
+.household-card-figure {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.household-card-figure.is-gain {
+  color: var(--c-gain-text);
+}
+
+.household-card-figure.is-loss {
+  color: var(--c-loss-text);
+}
+
+.household-card-figure.is-none {
+  font-size: 1.15rem;
+  color: var(--pe-gray-500);
+}
+
+.household-card-figure.is-muted {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--pe-teal-700);
+  opacity: 0.75;
+}
+
+.household-card-figure-unit {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--pe-gray-500);
+}
+
+.household-card-spark {
+  flex: none;
+  margin-bottom: 5px;
+}
+
+.household-card-spark rect {
+  opacity: 0.35;
+}
+
+.household-card-spark rect.is-current {
+  opacity: 1;
+}
+
+.household-card-spark .is-gain {
+  fill: var(--c-gain);
+}
+
+.household-card-spark .is-loss {
+  fill: var(--c-loss);
+}
+
+.household-card-spark .is-none {
+  fill: var(--c-no-change);
+}
+
+/* No precomputed figure: a dashed pill says when it comes */
+.household-card-pending {
+  margin-bottom: 4px;
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--pe-gray-500);
+  border: 1px dashed var(--pe-gray-300);
+  border-radius: 999px;
+}
+
+/* Where most of the change comes from, when not the card's own measure */
+.household-card-source {
+  grid-area: source;
+  min-height: 1.45em;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+}
+
+.household-card-description {
+  grid-area: description;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * 1.45em);
+  margin-top: 8px;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+/* The measure it is for, pinned to the foot, with its own part */
+.household-card-tag {
+  grid-area: tag;
+  align-self: end;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 4px 10px 4px 9px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--card-ink);
+  background: var(--card-tint);
+  border-radius: 999px;
+}
+
+.household-card-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.household-card-tag-part {
+  flex: none;
+  padding-left: 7px;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
+}
+
+.household-card[aria-pressed="true"] .household-card-tag:not(.is-start) {
+  background: var(--pe-surface);
+}
+
+.household-card-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--card-accent);
+  border-radius: 50%;
+}
+
+/* "Your household": the start, on a light teal wash, with a chevron that
+   turns as the form opens below */
+.household-card.is-yours {
+  --card-accent: var(--pe-teal-600);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
+}
+
+.household-card.is-yours::before {
+  opacity: 1;
+}
+
+.household-card-tag.is-start {
+  color: var(--pe-surface);
+  background: var(--pe-teal-700);
+}
+
+.household-card-chevron {
+  transition: transform 0.25s ease;
+}
+
+.household-card.is-open .household-card-chevron {
+  transform: rotate(180deg);
+}
+
+/* The form, opening below the cards */
+.household-form-panel > .expander-inner {
+  /* Room for the card's shadow while it grows */
+  padding: 2px;
+  margin: -2px;
+}
+
+/* Focused after an example card, not outlined: it is not a control */
+.household-results:focus {
+  outline: none;
+}
+
+@media (max-width: 1023px) {
+  .household-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phones: one card a row, the icon beside the words; every card the
+   same height still */
+@media (max-width: 599px) {
+  .household-cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .household-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-areas:
+      "icon name"
+      "icon result"
+      "icon source"
+      "icon description"
+      "icon tag";
+    column-gap: 14px;
+    padding: 16px;
+  }
+
+  .household-card-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0;
+  }
+
+  .household-card-name {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    min-height: var(--card-line);
+    font-size: 1rem;
+  }
+
+  /* Clear of the badge or tick in the corner */
+  .household-card.is-yours .household-card-name {
+    padding-right: 88px;
+  }
+
+  .household-card[aria-pressed="true"] .household-card-name {
+    padding-right: 28px;
+  }
+
+  .household-card-check,
+  .household-card-badge {
+    top: 14px;
+    right: 14px;
+  }
+
+  .household-card-result {
+    height: 36px;
+    padding-top: 2px;
+  }
+
+  .household-card-figure {
+    font-size: 1.3rem;
+  }
+
+  .household-card-description {
+    margin-top: 4px;
+  }
+
+  .household-card-tag {
+    margin-top: 10px;
+  }
 }
 
 /* Calculate, as the student loan calculator's .calculate-button */
@@ -726,14 +1314,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.household-examples-note {
-  margin: 0;
-  padding: 14px 28px 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--pe-gray-600);
 }
 
 /* Groups: a small spaced label, then a grid of boxes; hairlines between */
@@ -1056,6 +1636,10 @@
   left: 50%;
   z-index: 100;
   width: 260px;
+  /* Never wider than the screen less a 16px margin each side; shifted
+     inside it by --tip-shift (utils/infoTooltip.js) near an edge */
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   padding: 12px 14px;
   font-size: 0.8rem;
   font-weight: 400;
@@ -1068,15 +1652,16 @@
   box-shadow: var(--pe-shadow-lg);
   opacity: 0;
   visibility: hidden;
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
   transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
+/* The arrow stays over the icon when the box is shifted */
 .info-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: clamp(12px, calc(50% - var(--tip-shift, 0px)), calc(100% - 12px));
   border: 6px solid transparent;
   border-top-color: var(--pe-gray-800);
   transform: translateX(-50%);
@@ -1167,28 +1752,13 @@
     padding-right: 16px;
   }
 
-  .household-examples-note {
-    padding: 14px 16px 0;
-  }
-
   .household-header-actions {
     flex: 1 1 100%;
     margin-left: 0;
   }
 
-  .example-picker,
   .calculate-button {
     flex: 1 1 0;
-  }
-
-  .example-picker-button {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .example-menu {
-    left: 0;
-    right: auto;
   }
 
   .household-more {
@@ -1197,17 +1767,39 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .household-cards-fold,
+  .household-cards-fold.is-open,
+  .household-strip-fold,
+  .household-strip-fold.is-open,
+  .household-chip {
+    transition: none;
+  }
+
+  .household-strip-fold.is-open .household-chip {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .household-more-chevron,
   .info-tooltip,
   .calculate-button,
   .calculate-arrow,
-  .example-picker-button,
-  .example-picker-chevron {
+  .household-card,
+  .household-card::before,
+  .household-card-icon,
+  .household-card-chevron {
     transition: none;
   }
 
-  .example-menu {
+  .household-card,
+  .household-card-check {
     animation: none;
+  }
+
+  .household-card:hover,
+  .household-card:active {
+    transform: none;
   }
 
   .calculate-spinner {

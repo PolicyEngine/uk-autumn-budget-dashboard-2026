@@ -1,0 +1,28 @@
+/* A chart card's "More info" (ChartMoreInfo): small text, as "About this
+   chart"; the £0 measures one per line */
+.chart-more-info-content {
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.chart-more-info-content p {
+  margin: 0;
+}
+
+.chart-more-info-content > * + * {
+  margin-top: 8px;
+}
+
+.zero-measures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-more-info-content a {
+  color: var(--pe-teal-700);
+}

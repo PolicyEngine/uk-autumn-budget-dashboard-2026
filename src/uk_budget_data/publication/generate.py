@@ -55,7 +55,7 @@ from uk_budget_data.publication.receipt import (
     measure_identities,
     scenario_identity,
 )
-from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.tables import TABLES, bin_scatter
 from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
     measure_templates_proof,
@@ -85,7 +85,13 @@ def result_tables(
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
-        "metrics": result.metrics,
+        # The flat metrics.csv also carries the poverty and inequality
+        # measures the charts choose between; a receipted artifact keeps its
+        # contracted columns (TABLES["metrics"]) until the contract adds them.
+        "metrics": [
+            {column: row[column] for column in TABLES["metrics"].column_names}
+            for row in result.metrics
+        ],
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,

@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { parseCsv, parseTable } from "./csv";
+import { FLAT_EXTRA_COLUMNS, TABLES, TableError, parseCsv, parseFlatTable, parseTable } from "./csv";
 import { AGE_BANDS } from "../ageImpact";
 import { COMBINED_REFORM_ID } from "../policyConfig";
 
@@ -43,12 +43,19 @@ const standaloneIds = (rows) =>
 
 describe("the flat tables the page reads", () => {
   const tables = Object.fromEntries(
-    CONTRACT_TABLES.map(([name, file]) => [name, () => parseTable(name, read(file))]),
+    CONTRACT_TABLES.map(([name, file]) => [name, () => parseFlatTable(name, read(file))]),
   );
 
   it.each(CONTRACT_TABLES)("%s has the contract's columns and types", (name) => {
     const rows = tables[name]();
     expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("metrics.csv carries the poverty and inequality measures the charts choose between", () => {
+    const [row] = tables.metrics();
+    for (const [column] of FLAT_EXTRA_COLUMNS.metrics) {
+      expect(Number.isFinite(row[column]), column).toBe(true);
+    }
   });
 
   it.each([...CONTRACT_TABLES.map(([, file]) => file), "obr_comparison.csv"])(
@@ -126,5 +133,25 @@ describe("the flat tables the page reads", () => {
         expect([...deciles].sort(), `${name} ${key}`).toEqual([...labels, ...extra].sort());
       }
     }
+  });
+});
+
+describe("parseFlatTable", () => {
+  const contract = TABLES.metrics.columns.map(([column]) => column);
+  const extras = FLAT_EXTRA_COLUMNS.metrics.map(([column]) => column);
+  const row = (n) => ["r", "R", "2027", ...Array(n - 3).fill("0.5")].join(",");
+
+  it("reads a metrics file with or without the extra columns", () => {
+    const wide = parseFlatTable("metrics", `${[...contract, ...extras].join(",")}\n${row(contract.length + extras.length)}\n`);
+    expect(wide[0].p90_p10_change).toBe(0.5);
+    const narrow = parseFlatTable("metrics", `${contract.join(",")}\n${row(contract.length)}\n`);
+    expect(Object.keys(narrow[0])).toEqual(contract);
+  });
+
+  it("refuses columns it does not know, and parseTable refuses the extras", () => {
+    const text = `${[...contract, "mystery"].join(",")}\n${row(contract.length + 1)}\n`;
+    expect(() => parseFlatTable("metrics", text)).toThrow(TableError);
+    const wide = `${[...contract, ...extras].join(",")}\n${row(contract.length + extras.length)}\n`;
+    expect(() => parseTable("metrics", wide)).toThrow(TableError);
   });
 });

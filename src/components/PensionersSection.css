@@ -1,0 +1,5 @@
+/* Pensioners: the Young people layout (YoungPeopleSection.css). */
+
+#pensioners {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}

@@ -79,6 +79,72 @@ export const CHART_COLOURS = {
   mtrOther: "#D1D5DB",
 };
 
+/**
+ * The measures' colour ramps, one per group: Raise revenue in ambers (browns),
+ * Cost revenue in teals, each running darkest to lightest. A group's
+ * measures take its ramp in order of size (largest darkest), so a stack,
+ * its legend and its tooltip shade monotonically. The JS mirror of the
+ * --ramp-* tokens in src/app/globals.css (chartTheme.test.js keeps the two
+ * equal); policyConfig.js assigns them to the measures.
+ */
+export const POLICY_RAMPS = {
+  // Amber 900, 700, 500
+  raise: ["#78350F", "#B45309", "#F59E0B"],
+  // Teals, dark blue-teal to mint: the hue turns as the steps lighten, so
+  // the dark end stays apart (seven steps do not fit at 3:1 on white; the
+  // lightest is 1.75:1)
+  cost: ["#0D4359", "#016768", "#088075", "#00997F", "#28B084", "#4AC685", "#75D987"],
+};
+
+/**
+ * Income groups from the lowest-income to the highest-income end: a
+ * diverging ramp, amber (low) through a grey midpoint to teal (high), each
+ * arm darkest at its end. The JS mirror of the --income-ramp-* tokens in
+ * src/app/globals.css (chartTheme.test.js keeps the two equal).
+ * incomeGroupColours samples it for any number of groups.
+ */
+export const INCOME_RAMP = ["#8A3A0C", "#B8641C", "#E0954A", "#9CA3AF", "#5FB3AA", "#2A8C84", "#0F5F59"];
+
+const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const rgbToHex = (rgb) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+
+/**
+ * `n` colours along INCOME_RAMP, evenly spaced from its low-income end to its
+ * high-income end (an odd count puts the middle group on the grey midpoint),
+ * interpolated between neighbouring stops.
+ */
+export function incomeGroupColours(n) {
+  if (n <= 1) return [INCOME_RAMP[INCOME_RAMP.length - 1]];
+  const last = INCOME_RAMP.length - 1;
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i / (n - 1)) * last;
+    const lo = Math.min(Math.floor(t), last - 1);
+    const f = t - lo;
+    const [a, b] = [hexToRgb(INCOME_RAMP[lo]), hexToRgb(INCOME_RAMP[lo + 1])];
+    return rgbToHex(a.map((v, k) => v + (b[k] - v) * f));
+  });
+}
+
+/**
+ * Names ordered by size, largest first: the mean absolute value over the
+ * points given (a point marked `unpublished` is left out). Ties keep the
+ * order given.
+ *
+ * @param {string[]} names
+ * @param {Array<Object>} points - One object per year, keyed by name
+ */
+export function orderBySize(names, points) {
+  const shown = points.filter((point) => !point.unpublished);
+  const size = (name) =>
+    shown.length === 0
+      ? 0
+      : shown.reduce((sum, point) => sum + Math.abs(Number(point[name]) || 0), 0) / shown.length;
+  return names
+    .map((name, index) => ({ name, index, size: size(name) }))
+    .sort((a, b) => b.size - a.size || a.index - b.index)
+    .map(({ name }) => name);
+}
+
 // Light horizontal gridlines only.
 /** "Before" is a grey dashed line on every chart, "after" a teal solid one */
 export const BEFORE_DASH = "6 4";
@@ -195,6 +261,40 @@ export function zeroBasedAxis(values, { pad = 0.05 } = {}) {
   const ticks = [];
   for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+// Round steps: 1, 2, 2.5 or 5 x 10^n, the smallest at least `raw`
+function niceStep(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+}
+
+/**
+ * An axis symmetric about 0, for values on both sides of it: ±m, where m is
+ * the largest absolute value padded by `pad` and rounded up to a round step
+ * (about two or three ticks a side), so 0 sits in the middle and a rise and
+ * a fall of the same size are drawn the same length. Returns { domain, ticks }.
+ */
+export function symmetricAxis(values, { pad = 0.05 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const largest = Math.max(0, ...vals.map(Math.abs)) * (1 + pad) || 1;
+  const step = niceStep(largest / 2.5);
+  const end = Math.ceil(largest / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = -end; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6 || 0);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * The y axis of a chart that can diverge from 0 (changes, gains and
+ * costs): symmetric about 0 (symmetricAxis) when the values fall on both
+ * sides of it, otherwise from 0 (zeroBasedAxis), so a chart whose values
+ * are all one sign is not drawn half empty.
+ */
+export function divergingAxis(values, options) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
+  return both ? symmetricAxis(vals, options) : zeroBasedAxis(vals, options);
 }
 
 /**

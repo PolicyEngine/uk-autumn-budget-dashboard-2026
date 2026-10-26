@@ -21,7 +21,7 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { ALL_POLICY_NAMES, POLICY_COLORS } from "../utils/policyConfig";
 import { POLICIES } from "../utils/policies";
 import {
   useNarrowViewport,
@@ -34,12 +34,19 @@ import {
   legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import ChartMoreInfo from "./ChartMoreInfo";
+import {
+  decileMembership,
+  legendItems as membershipItems,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
 // Order for waterfall chart: good for households first, then bad
 // Every legend uses one order, set in policyConfig: revenue raisers, then
@@ -95,24 +102,15 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     });
   }, [rawData, selectedPolicies, selectedYear]);
 
-  // The measures with a non-zero effect in any shown year, not just this
-  // one: the legend (and so the plot's height) stays the same from year to
-  // year, so a year change or Play tweens the bars instead of rescaling
-  const activePolicies = useMemo(() => {
-    const ids = new Set(
-      (rawData ?? [])
-        .filter(
-          (row) =>
-            row.decile !== "all" && isDisplayYear(row.year) &&
-            selectedPolicies.includes(row.reform_id) &&
-            Math.abs(parseFloat(row.avg_change)) > 0.01,
-        )
-        .map((row) => row.reform_id),
-    );
-    return ALL_POLICY_NAMES.filter((name) =>
-      ids.has(POLICIES.find((policy) => policy.name === name)?.id),
-    );
-  }, [rawData, selectedPolicies]);
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect on any household this year is greyed out, and the note under
+  // the chart says why (legendMembership)
+  const members = useMemo(
+    () => decileMembership(rawData, "avg_change", selectedPolicies, selectedYear),
+    [rawData, selectedPolicies, selectedYear],
+  );
+  const activePolicies = drawnNames(members);
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -156,7 +154,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       });
     });
 
-    return zeroBasedAxis([minValue, maxValue]);
+    // Symmetric about zero when deciles gain and lose (divergingAxis)
+    return divergingAxis([minValue, maxValue]);
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
@@ -195,12 +194,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...activePolicies.map((name) => ({
-      color: POLICY_COLORS[name],
-      label: name,
-      type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
-    })),
+    ...exportLegendItems(members),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
@@ -308,7 +302,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 wrapperStyle={legendWrapperStyle(narrow)}
                 content={
                   <GroupedLegend
-                    names={activePolicies}
+                    items={membershipItems(members)}
                     netLabel={activePolicies.length > 1 ? "Net change" : undefined}
                   />
                 }
@@ -361,6 +355,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           />
         )}
       </div>
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,19 +1,7 @@
 /**
- * The example households on the household charts, as the Python side
- * defines them (uk_budget_data.example_households, through the publication
- * contract): id, chooser label, one-line definition, x-axis income and its
- * label, and the top of its income grid.
+ * Number helpers for the household earnings charts: round axis ticks and
+ * short and full pound labels.
  */
-import contract from "./publication/contract.json";
-
-export const EXAMPLE_HOUSEHOLDS = contract.income_curve_households;
-
-export const DEFAULT_HOUSEHOLD = EXAMPLE_HOUSEHOLDS[0].id;
-
-/** The household with this id, or the first one if there is none. */
-export function exampleHousehold(id) {
-  return EXAMPLE_HOUSEHOLDS.find((household) => household.id === id) ?? EXAMPLE_HOUSEHOLDS[0];
-}
 
 /** Tick values from 0 to `max` in a round step, at most five intervals. */
 export function roundTicks(max) {
