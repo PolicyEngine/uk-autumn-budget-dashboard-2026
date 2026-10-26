@@ -4,8 +4,6 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
-import YearRangeSelect from "../YearRangeSelect";
-import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   changeVerb,
@@ -20,7 +18,6 @@ import {
 import {
   EMPTY,
   NO_OFFICIAL_SERIES,
-  VIEW_OPTIONS,
   chartEndYear,
   lineSeries,
   mergeSeries,
@@ -28,8 +25,8 @@ import {
   projectionStartYear,
   trimProjection,
   visibleRows,
-  shortLabel,
 } from "../../../utils/livingStandards/baseline";
+import { periodOption } from "../controlOptions";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
 
@@ -160,13 +157,10 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     download: chartData.length
       ? { filename: `living-standards-${metric}-${adjustment}`, legendItems: lineLegendItems(series), csv }
       : null,
-    controls: (
-      <>
-        {range && setRange && rangeYears(data).length > 2 && (
-          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
-        )}
-        {/* The metric as two choices, the average then housing costs (worded
-            as every housing-costs pill on the dashboard) */}
+    // The years compared are the section's (CurrentLawSection); the card
+    // keeps the average as its pill and the rest under Options (ControlBar)
+    controls: {
+      primary: (
         <PillSelect
           variant="light"
           prefix="Average"
@@ -178,42 +172,32 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
             { value: "mean", label: "Mean" },
           ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(o.value, metric.endsWith("_ahc") ? "ahc" : "bhc")) }))}
         />
-        <PillSelect
-          variant="light"
-          prefix="Housing costs"
-          name="Housing costs"
-          value={metric.endsWith("_ahc") ? "ahc" : "bhc"}
-          onChange={(h) => setMetric(metricId(metric.startsWith("mean") ? "mean" : "median", h))}
-          options={[
-            { value: "bhc", label: "Before housing costs", badge: "Before" },
-            { value: "ahc", label: "After housing costs", badge: "After" },
-          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(metric.startsWith("mean") ? "mean" : "median", o.value)) }))}
-        />
-        <PillSelect
-          variant="light"
-          prefix="Prices"
-          name="Price basis"
-          value={adjustment}
-          onChange={setAdjustment}
-          options={[
+      ),
+      options: [
+        {
+          // Worded as every housing-costs choice on the dashboard
+          label: "Housing costs",
+          value: metric.endsWith("_ahc") ? "ahc" : "bhc",
+          onChange: (h) => setMetric(metricId(metric.startsWith("mean") ? "mean" : "median", h)),
+          options: [
+            { value: "bhc", label: "Before housing costs", summary: "Before housing costs" },
+            { value: "ahc", label: "After housing costs", summary: "After housing costs" },
+          ].map((o) => ({ ...o, disabled: !metricIds.includes(metricId(metric.startsWith("mean") ? "mean" : "median", o.value)) })),
+        },
+        {
+          label: "Prices",
+          value: adjustment,
+          onChange: setAdjustment,
+          options: [
             { value: "real", label: "Real" },
-            { value: "nominal", label: "Cash terms", badge: shortLabel("Cash terms") },
-          ]}
-        />
-        <PillSelect
-          variant="light"
-          prefix="Period"
-          name="Series shown"
-          value={effectiveView}
-          onChange={setViewMode}
-          options={VIEW_OPTIONS.map((o) =>
-            o.value === "outturn" && noOutturn
-              ? { ...o, disabled: true, title: realOnlyOutturn ? "Official series in real terms only" : NO_OFFICIAL_SERIES }
-              : o,
-          )}
-        />
-      </>
-    ),
+            { value: "nominal", label: "Cash terms" },
+          ],
+        },
+        periodOption(effectiveView, setViewMode, noOutturn
+          ? (realOnlyOutturn ? "Official series in real terms only" : NO_OFFICIAL_SERIES)
+          : null),
+      ],
+    },
     chart:
       chartData.length === 0 ? (
         <div className="chart-plot">

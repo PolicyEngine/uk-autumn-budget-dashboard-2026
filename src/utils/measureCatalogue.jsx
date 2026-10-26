@@ -1,10 +1,12 @@
 import { createContext, useContext } from "react";
 import { isDisplayable, measureAvailability } from "./publication/manifest";
 import { combinedEntryFor, isSupported } from "./publication/select";
+import { MEASURE_PALETTES } from "./chartTheme";
 
-export const COST_COLORS = ["#115E59", "#2DD4BF", "#0F766E", "#5EEAD4", "#0D9488", "#99F6E4", "#14B8A6"];
-export const REVENUE_COLORS = ["#78350F", "#B45309", "#F59E0B"];
-export const NEUTRAL_COLOR = "#9CA3AF";
+// The palettes live with the other colour tokens (chartTheme.js, docs/COLOURS.md)
+export const COST_COLORS = MEASURE_PALETTES.cost;
+export const REVENUE_COLORS = MEASURE_PALETTES.revenue;
+export const NEUTRAL_COLOR = MEASURE_PALETTES.neutral;
 
 // A colour depends only on the published id and budgetary direction. Adding
 // or reordering measures cannot change an existing measure's colour.

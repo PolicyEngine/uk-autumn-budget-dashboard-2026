@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -16,7 +16,7 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import MeasureKey, { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
@@ -211,6 +211,8 @@ const CHART_DESCRIPTION =
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // The measure highlighted from the key (MeasureKey); the others fade
+  const [highlight, setHighlight] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable,
@@ -232,6 +234,13 @@ function BudgetaryImpactChart({ data, selectedYear }) {
 
   const orderedPolicies = measureOrder(data, catalogue);
   const activePolicies = orderedPolicies.filter(hasNonZeroValues);
+  // The key's chips: the measures with revenue in some year (a measure with
+  // none has nothing to show here)
+  const keyMembers = activePolicies.map((key) => {
+    const measure = bySeriesKey.get(key);
+    return { id: measure?.id ?? key, key, name: measure?.label ?? key, description: measure?.description, muted: false };
+  });
+  const netLabel = activePolicies.length > 1 ? "Net impact" : undefined;
 
   // Y axis: symmetric about zero when the year's stacks go both ways
   // (divergingAxis), with about 5% room past the tallest stack; from zero
@@ -293,7 +302,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 700 : 640}>
+        <ResponsiveContainer width="100%" height={narrow ? 660 : 620}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { top: 24 })}
@@ -347,9 +356,11 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
               content={
-                <GroupedLegend
-                  names={activePolicies}
-                  netLabel={activePolicies.length > 1 ? "Net impact" : undefined}
+                <MeasureKey
+                  members={keyMembers}
+                  netLabel={netLabel}
+                  highlight={highlight}
+                  onHighlight={setHighlight}
                 />
               }
             />
@@ -358,6 +369,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
+                fillOpacity={measureOpacity(highlight, policyName)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 {...chartMotion()}

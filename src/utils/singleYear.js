@@ -13,6 +13,7 @@ import {
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
 import { CHART_COLOURS } from "./chartTheme";
+import { shortNameOf } from "./policyDetails";
 
 export const MINUS = "−";
 
@@ -202,10 +203,17 @@ export const INTERACTION_THRESHOLD = 1;
 export function policyRows(byPolicy, total, policies) {
   const nameOf = (row) =>
     policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+  // A short name for tight labels (policyDetails.js's, while it describes
+  // the published measure), else the name
+  const labelOf = (row) => {
+    const measure = policies.find((policy) => policy.id === row.id);
+    return measure ? shortNameOf(measure) : nameOf(row);
+  };
   const affected = byPolicy.measures.filter((row) => row.status !== "not_affected");
   const rows = affected.map((row) => ({
     id: row.id,
     name: nameOf(row),
+    label: labelOf(row),
     color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
     change: row.change,
   }));
@@ -243,6 +251,7 @@ export function policyRows(byPolicy, total, policies) {
       .map((row) => ({
         id: row.id,
         name: nameOf(row),
+        label: labelOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
         reason: row.noteKind === "employer_cost" ? row.note : null,
       })),

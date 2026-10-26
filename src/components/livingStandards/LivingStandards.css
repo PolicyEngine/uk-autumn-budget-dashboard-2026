@@ -30,29 +30,18 @@
   margin: 4px 0 24px;
 }
 
-/* Labels and full values on every pill. In a half-width card the row
-   needs about 600px against 500px, so the pills wrap tidily: two a row,
-   left-aligned, the same 8px gap (2 + 2, not 3 + 1) */
+/* Labels and full values on every pill. One row: a card's controls are
+   its primary pills and an Options button (ControlBar) */
 .ls-controls .pill-select-prefix::after {
   content: ":";
 }
-
-@media (min-width: 1025px) {
-  .charts-grid > :not(:only-child) .ls-controls {
-    display: grid;
-    grid-template-columns: repeat(2, max-content);
-    justify-content: start;
-  }
-}
-
-
 
 /* The years compared: one pill holding the two year lists and an arrow */
 .ls-range {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  height: 40px;
+  height: 32px;
   padding: 0 4px;
   border: 1px solid var(--pe-gray-300);
   border-radius: 999px;
@@ -65,7 +54,7 @@
 }
 
 .ls-range .pill-select-light .pill-select-toggle {
-  height: 26px;
+  height: 24px;
   padding: 0 4px 0 6px;
   border-color: transparent;
   background: transparent;
@@ -86,12 +75,12 @@
   margin: 0;
 }
 
-/* The page's one control height, 40px; two a row in a half-width card */
+/* The page's one in-card control height, 32px */
 .ls-controls .pill-select-light .pill-select-toggle {
   gap: 6px;
-  height: 40px;
+  height: 32px;
   padding: 0 10px 0 12px;
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
 }
 
 .ls-controls .pill-select-light .pill-select-badge {
@@ -141,9 +130,8 @@
   min-width: 0;
 }
 
-.ls-controls-placeholder {
-  display: contents;
-  visibility: hidden;
+.ls-controls > .control-bar {
+  flex: 1 1 auto;
 }
 
 .ls-card-footer {
@@ -433,7 +421,7 @@
 .ls-dot-plot .dot.from {
   width: 14px;
   height: 14px;
-  background: var(--c-surface, #fff);
+  background: var(--c-surface);
   border: 2px solid var(--c-before);
   box-sizing: border-box;
 }
@@ -659,7 +647,7 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--pe-teal-50, #e6fffa);
+  background: var(--pe-teal-50);
   color: var(--c-gain-text);
 }
 
@@ -790,7 +778,7 @@
   left: 100%;
   margin-left: 4px;
   padding: 0 3px;
-  background: var(--c-surface, #fff);
+  background: var(--c-surface);
   border-radius: 3px;
   transform: translateY(-50%);
   color: var(--pe-gray-800);
@@ -804,7 +792,7 @@
   margin-left: 0;
   padding: 0;
   background: none;
-  color: var(--c-surface, #fff);
+  color: var(--c-surface);
   font-weight: 600;
 }
 
@@ -893,4 +881,12 @@
   .ls-bar-axis > .ls-bar-label {
     display: none;
   }
+}
+
+/* A line under a chart's key on what it leaves out (vigintile 1) */
+.ls-legend-note {
+  margin: 6px 0 0;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
 }

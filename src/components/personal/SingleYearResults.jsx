@@ -6,7 +6,6 @@ import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
-import { NoEffectList } from "./PolicyBars";
 import NetIncomeWaterfall from "./NetIncomeWaterfall";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -249,12 +248,13 @@ function scrollToSection(event, id) {
 }
 
 /**
- * What the waterfall's steps leave out: policies worth under £1, notes on
- * a policy's figure, and the policies with no effect (closed at first).
+ * What the waterfall's steps leave out: policies worth under £1 and notes
+ * on a policy's figure (an employer cost's says why it is £0). The
+ * policies with no effect are one line in the waterfall itself.
  */
 function PolicyNotes({ bars }) {
-  const notes = bars.notes.filter((note) => note.kind !== "employer_cost");
-  if (bars.underAPound.length === 0 && notes.length === 0 && bars.noEffectItems.length === 0) return null;
+  const notes = bars.notes;
+  if (bars.underAPound.length === 0 && notes.length === 0) return null;
   return (
     <div className="result-card-notes">
       {bars.underAPound.length > 0 && (
@@ -265,9 +265,6 @@ function PolicyNotes({ bars }) {
           <strong>{note.name}</strong>: {note.text}
         </p>
       ))}
-      {bars.noEffectItems.length > 0 && (
-        <NoEffectList items={bars.noEffectItems} title="No effect on your household" />
-      )}
     </div>
   );
 }
@@ -352,6 +349,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
         <NetIncomeWaterfall
           totals={totals}
           steps={bars ? bars.rows : null}
+          noEffect={bars ? bars.noEffectItems : []}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
         />
@@ -473,7 +471,7 @@ function PendingSkeleton({ kind, startedAt }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, household = null, selected = null, changed = false, startedAt = null }) {
+export function SingleYearDetails({ result, year, policies, household = null, selected = null, you = null, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Never an earlier result: nothing while the headline is calculated
   // again, or once the answers differ from the result's
@@ -503,6 +501,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
               year={data.year ?? year}
               policies={selected ?? []}
               yearLabel={yearLabel}
+              you={you}
             />
           </section>
         </>
