@@ -393,6 +393,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           {/* Inequality: the measures' effect beside its level under
               current law (side by side on a desktop, stacked on a phone) */}
           <SectionHeading
+            id="inequality-heading"
             icon="scale"
             tag={measures ? undefined : "current-law"}
             title="Inequality"
