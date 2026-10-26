@@ -41,6 +41,7 @@ from uk_budget_data.publication.publish import (
 )
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import (
+    POVERTY_INEQUALITY_COLUMNS,
     SCATTER_BINS,
     SCATTER_MIN_HOUSEHOLDS,
     SCATTER_ROUND_TO,
@@ -345,6 +346,65 @@ def test_tables_read_back_complete(world):
     problems = table_problems(tables, key="alpha", years=YEARS)
     assert "distributional_impact: 2027 has 9 rows, expected 10" in problems
     assert "winners_losers: missing 2028" in problems
+
+
+def _with_poverty_inequality(key, values):
+    """make_tables plus the poverty and inequality measures for each year."""
+    tables = make_tables(key, values)
+    tables["poverty_inequality"] = [
+        {
+            "reform_id": row["reform_id"],
+            "reform_name": row["reform_name"],
+            "year": row["year"],
+            **{
+                column: row["poverty_change_pp"] * (index + 1)
+                for index, (column, _) in enumerate(POVERTY_INEQUALITY_COLUMNS)
+            },
+        }
+        for row in tables["metrics"]
+    ]
+    return tables
+
+
+def test_poverty_inequality_is_receipted_and_verified(world):
+    tables = _with_poverty_inequality("alpha", VALUES)
+    reference = world.write("alpha", VALUES, tables=tables)
+    document = read_receipt(reference.path)
+    assert "poverty_inequality.csv" in document["dashboard"]["files"]
+    assert file_problems(reference.path, document) == []
+    read = read_tables(reference.path)
+    assert read["poverty_inequality"] == tables["poverty_inequality"]
+    assert table_problems(read, key="alpha", years=YEARS) == []
+    # Its metrics.csv is byte for byte the one written without the table
+    plain = world.write("beta", VALUES)
+    assert (
+        "poverty_inequality.csv"
+        not in read_receipt(plain.path)["dashboard"]["files"]
+    )
+    assert (reference.path / "metrics.csv").read_bytes() == (
+        plain.path / "metrics.csv"
+    ).read_bytes().replace(b"beta,Beta", b"alpha,Alpha")
+    target = reference.path / "poverty_inequality.csv"
+    target.write_bytes(target.read_bytes().replace(b"-0.1,", b"-0.9,", 1))
+    assert file_problems(reference.path, document) == [
+        "poverty_inequality.csv does not match its recorded digest"
+    ]
+
+
+def test_poverty_inequality_when_present_covers_every_year(world):
+    tables = read_tables(
+        world.write(
+            "alpha", VALUES, tables=_with_poverty_inequality("alpha", VALUES)
+        ).path
+    )
+    tables["poverty_inequality"] = [
+        row for row in tables["poverty_inequality"] if row["year"] != 2028
+    ]
+    assert table_problems(tables, key="alpha", years=YEARS) == [
+        "poverty_inequality: missing 2028"
+    ]
+    del tables["poverty_inequality"]
+    assert table_problems(tables, key="alpha", years=YEARS) == []
 
 
 def test_an_effect_before_the_start_year_is_a_problem(world):

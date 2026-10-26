@@ -8,7 +8,7 @@
  */
 
 import { cachedFile, cachedReceipt, forgetReceipt, rememberFile, rememberReceipt } from "./cache";
-import { parseTable, tableForFile, TABLES } from "./csv";
+import { parseTable, tableForFile, TABLES, withPovertyInequality } from "./csv";
 import { receiptProblems, sha256Hex, verifyReceiptFiles } from "./digest";
 import { manifestUrl, takeEarlyManifest } from "./early";
 import { assertCurrentRelease } from "./release";
@@ -25,6 +25,9 @@ export const DEFAULT_TABLES = [
   "distributional_impact",
   "winners_losers",
   "metrics",
+  // Optional: the poverty and inequality measures, merged into metrics' rows
+  // (withPovertyInequality) when the artifact has them
+  "poverty_inequality",
   "household_scatter_binned",
 ];
 
@@ -185,6 +188,11 @@ export async function loadArtifact(
       loaded[tableForFile(fileName)] = parsedTable(table, digest, bytes);
     }),
   );
+  // The charts choose between the poverty and inequality measures in
+  // metrics' rows, as in the flat metrics.csv
+  if (loaded.metrics && loaded.poverty_inequality) {
+    loaded.metrics = withPovertyInequality(loaded.metrics, loaded.poverty_inequality);
+  }
   loaded.engine = receiptEngine(receipt);
   return loaded;
 }
