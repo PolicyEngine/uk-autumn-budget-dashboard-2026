@@ -67,6 +67,7 @@ export const FIELD_LABELS = {
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
   electricity_spending: "Electricity spending",
+  gas_spending: "Gas spending",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -208,6 +209,7 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       petrol_spending: inputs.petrol_spending_per_year,
       diesel_spending: inputs.diesel_spending_per_year,
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
+      gas_spending: inputs.gas_spending_per_year ?? 0,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
       // The API estimates Council Tax from the band and the region's average

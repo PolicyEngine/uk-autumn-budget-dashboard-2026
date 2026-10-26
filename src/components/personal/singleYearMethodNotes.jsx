@@ -42,7 +42,7 @@ export const EVERY_POLICY_NOTE = (
     lead="Your household is simulated in policyengine-uk with the selected policies applied, as in the national figures."
     points={[
       "Fuel duty deferral: includes the VAT on the lower pump price.",
-      "VAT changes: apply to the petrol, diesel and electricity spending you enter.",
+      "VAT changes: apply to the petrol, diesel, electricity and gas spending you enter.",
       "Employer NI relief: an employer cost, £0 for households (wages held fixed).",
       "Warm Home Discount top-up: paid in 2026-27 only, so not in the selectable years.",
     ]}

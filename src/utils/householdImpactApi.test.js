@@ -99,6 +99,7 @@ describe("buildHouseholdRequest", () => {
         "monthly_rent",
         "dividend_income",
         "electricity_spending",
+        "gas_spending",
         "savings_interest_income",
         "property_income",
         "private_pension_income",

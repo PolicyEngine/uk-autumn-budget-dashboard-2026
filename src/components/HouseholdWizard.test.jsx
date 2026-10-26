@@ -48,7 +48,7 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("heading", { level: 3, name: "You" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Family and home" })).toBeInTheDocument();
     // More details starts closed, with how many questions it holds
-    const more = screen.getByRole("button", { name: "More details 11 questions" });
+    const more = screen.getByRole("button", { name: "More details 12 questions" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "monthly_rent"];
     expect(fields()).toEqual(essentials);
@@ -69,6 +69,7 @@ describe("the personal impact form", () => {
       "petrol_spending_per_year",
       "diesel_spending_per_year",
       "electricity_spending_per_year",
+      "gas_spending_per_year",
       "council_tax_band",
       "claims_universal_credit",
     ]);

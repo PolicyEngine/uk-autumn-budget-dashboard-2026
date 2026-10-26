@@ -655,6 +655,10 @@ class HouseholdAnswers:
     diesel_spending: float = 0
     # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
     electricity_spending: float = ELECTRICITY_SPENDING
+    # Domestic mains gas, £ a year including VAT, none unless entered.
+    # policyengine-uk reads it (``gas_consumption``) only for the zero VAT on
+    # domestic gas.
+    gas_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -961,6 +965,7 @@ def household_entities(
         "petrol_spending": answers.petrol_spending,
         "diesel_spending": answers.diesel_spending,
         "electricity_consumption": answers.electricity_spending,
+        "gas_consumption": answers.gas_spending,
     }
     if answers.brma is not None:
         household["brma"] = answers.brma
@@ -1472,6 +1477,7 @@ SKIP_REASONS = {
     "fuel_duty_rise_deferral": "no petrol or diesel spending",
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
+    "domestic_gas_zero_vat": "no gas spending, or not 2027-28",
 }
 
 
@@ -1503,6 +1509,8 @@ def provably_unaffected(
         return no_fuel or year >= 2028
     if measure_id == "domestic_electricity_zero_vat":
         return not answers.electricity_spending or year >= 2028
+    if measure_id == "domestic_gas_zero_vat":
+        return not answers.gas_spending or year != 2027
     return False
 
 

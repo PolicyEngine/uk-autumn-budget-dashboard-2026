@@ -402,3 +402,30 @@ def test_gas_vat_cut_is_great_britain_only():
     assert after.calculate("household_net_income", 2027)[0] == pytest.approx(
         before.calculate("household_net_income", 2027)[0], abs=0.01
     )
+
+
+@pytest.mark.parametrize("gas, change", [(1_050, 50), (0, 0)])
+def test_the_calculator_takes_gas_spending(monkeypatch, gas, change):
+    """The household route passes the gas answer to gas_consumption, so the
+    gas VAT cut reaches a household that enters its bill (review point A4):
+    £50 on £1,050 in 2027-28, and nothing without one."""
+    from uk_budget_data import household_impact
+
+    monkeypatch.setenv("UK_BUDGET_MEASURE_SET", "drill5")
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    household_impact.clear_runs()
+    try:
+        result = household_impact.calculate_household_impact(
+            household_impact.HouseholdAnswers(
+                salary_year=2027, gas_spending=gas
+            ),
+            [reforms.GAS_VAT_ID],
+            2027,
+            include=("by_policy",),
+        )
+    finally:
+        household_impact.clear_runs()
+        monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+        monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    assert result["net_income"]["change"] == pytest.approx(change, abs=0.01)

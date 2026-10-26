@@ -51,6 +51,7 @@ export const WIZARD_DEFAULTS = {
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
   diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  gas_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
@@ -95,7 +96,13 @@ export const FORM_SECTIONS = [
       {
         title: "Spending",
         icon: "cart",
-        fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
+        fields: [
+          "petrol_spending_per_year",
+          "diesel_spending_per_year",
+          "electricity_spending_per_year",
+          "gas_spending_per_year",
+          "monthly_childcare",
+        ],
       },
       { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
     ],
@@ -258,6 +265,15 @@ const NUMBER_CONFIGS = {
     money: true,
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (ONS Family Spending, 2024-25).",
+  },
+  gas_spending_per_year: {
+    label: "Gas",
+    min: 0,
+    max: 20000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+    hint: "Mains gas, including VAT. Leave at £0 if the home has no gas supply.",
   },
   monthly_childcare: {
     label: "Paid childcare",

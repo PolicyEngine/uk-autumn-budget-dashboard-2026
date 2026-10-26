@@ -1300,6 +1300,9 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             True,
         ),
         ("domestic_electricity_zero_vat", {}, 2028, True),
+        ("domestic_gas_zero_vat", {}, 2027, True),
+        ("domestic_gas_zero_vat", {"gas_spending": 1_050}, 2027, False),
+        ("domestic_gas_zero_vat", {"gas_spending": 1_050}, 2028, True),
         ("some_future_measure", {}, 2027, False),
     ],
 )
