@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Tip from "./Tip";
+import { PanelLeftOpen } from "lucide-react";
 import mark from "@/assets/policyengine-white-square.svg";
+import tealMark from "@/assets/policyengine-teal-square.svg";
 import "./HomeButton.css";
 
 // The bare address: the landing page
@@ -56,11 +58,12 @@ const CUE_KEY = "ab2026-about-cue";
 
 /**
  * An "About" tab pinned to the window's left edge on every view (App.jsx
- * leaves it off the landing page), level with the view tabs bar: the card
- * on hover or focus, and a click
+ * leaves it off the landing page): a rail button in the view tabs bar's
+ * left margin, the bar's own height, with the PolicyEngine mark and a
+ * panel-open icon; the card names it on hover or focus, and a click
  * that opens the overview drawer (OverviewDrawer.jsx), or closes it. It
- * pulses softly once per session (not under reduced motion); on a phone it
- * is the mark alone.
+ * pulses softly once per session (not under reduced motion); on a narrow
+ * screen it is the mark alone, and the bar makes room for it.
  *
  * @param {Object} props
  * @param {boolean} props.open - Whether the overview drawer is open
@@ -78,7 +81,9 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       const bar = document.querySelector(".view-tabs-bar");
       if (!bar || !own.current) return;
       const box = bar.getBoundingClientRect();
-      own.current.style.top = `${Math.round(box.top + box.height / 2)}px`;
+      // Inside the bar's own top and bottom borders, its full height
+      own.current.style.top = `${Math.round(box.top) + 1}px`;
+      own.current.style.height = `${Math.round(box.height) - 2}px`;
     };
     const later = () => {
       if (!frame) frame = requestAnimationFrame(place);
@@ -122,8 +127,9 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
         aria-controls="overview-drawer"
         onClick={onToggle}
       >
-        <Mark className="edge-about-mark" />
-        <span className="edge-about-label" aria-hidden="true">About</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={tealMark.src ?? tealMark} alt="" className="edge-about-mark" />
+        <PanelLeftOpen className="edge-about-icon" size={15} strokeWidth={2} aria-hidden="true" />
       </button>
     </Tip>
   );

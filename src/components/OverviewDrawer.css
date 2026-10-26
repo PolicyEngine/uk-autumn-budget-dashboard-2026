@@ -17,7 +17,8 @@
 .overview-backdrop {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--pe-gray-900) 40%, transparent);
+  background: color-mix(in srgb, var(--pe-gray-900) 32%, transparent);
+  backdrop-filter: blur(3px);
   opacity: 0;
   transition: opacity var(--motion-slide) ease;
 }
@@ -26,18 +27,18 @@
   opacity: 1;
 }
 
+/* The panel: header, a body that fits without scrolling, a footer */
 .overview-panel {
   position: absolute;
   inset: 0 auto 0 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
   width: var(--overview-width);
-  padding: 20px 20px 24px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--page-bg);
-  box-shadow: 8px 0 32px var(--shadow-strong);
+  background: var(--c-surface);
+  border-right: 1px solid var(--card-border);
+  box-shadow: 6px 0 24px var(--shadow-soft);
   transform: translateX(-100%);
   transition: transform var(--motion-slide) ease;
 }
@@ -46,20 +47,50 @@
   transform: none;
 }
 
+.overview-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 10px 0 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.overview-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.overview-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.overview-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* A ghost icon button: no ring until focused by the keyboard */
 .overview-close {
-  align-self: flex-end;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  margin: -6px -6px -10px 0;
   padding: 0;
-  color: var(--pe-gray-600);
+  color: var(--pe-gray-500);
   background: none;
   border: 0;
   border-radius: 50%;
   cursor: pointer;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
 }
 
 .overview-close:hover {
@@ -67,73 +98,138 @@
   background: var(--pe-gray-100);
 }
 
-.overview-close:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
+.overview-close:focus {
+  outline: none;
 }
 
-/* The intro, as on the landing page but sized for the drawer */
-.overview-intro {
-  padding: 0 0 0 12px;
-  border-left: 3px solid var(--pe-teal-500);
+.overview-close:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.overview-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+}
+
+/* The intro, compact for a 380px panel */
+.overview-intro .landing-eyebrow {
+  margin-bottom: 4px;
 }
 
 .overview-intro .landing-heading {
-  font-size: var(--fs-xl);
+  margin: 0 0 10px;
+  font-size: 1.375rem;
+  line-height: 1.25;
 }
 
 .overview-intro .landing-intro {
   font-size: var(--fs-body);
+  line-height: 1.55;
 }
 
 .overview-intro .publication-provisional {
   display: inline-block;
   margin: 10px 0 0;
-  padding: 3px 10px;
+  padding: 2px 10px;
   border-radius: 999px;
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
 }
 
-/* The boxes, stacked and compact: the icon beside the text */
-.landing-boxes.is-compact {
-  grid-template-columns: minmax(0, 1fr);
+.overview-goto {
+  margin: 16px 0 2px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+/* The ways in, as a list of rows */
+.landing-rows {
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-rows > li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.landing-row {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 10px 8px;
+  color: var(--c-text);
+  text-decoration: none;
+  border-radius: var(--pe-radius-md);
+  transition: background-color var(--motion-fast) ease;
 }
 
-.landing-boxes.is-compact .landing-box {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 14px;
-  row-gap: 4px;
-  align-items: start;
-  padding: 16px 16px 14px;
-  backdrop-filter: none;
+.landing-row:hover {
+  background: var(--pe-teal-50);
 }
 
-.landing-boxes.is-compact .landing-box:hover {
-  transform: translateY(-2px);
+.landing-row-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
 }
 
-.landing-boxes.is-compact .landing-box-icon {
-  grid-row: 1 / span 3;
-  width: 40px;
-  height: 40px;
+.landing-row:hover .landing-row-icon {
+  background: var(--c-surface);
+}
+
+.landing-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.landing-row-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.landing-row-description {
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.landing-row-chevron {
+  flex: none;
+  color: var(--pe-gray-400);
+  transition: transform var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.landing-row:hover .landing-row-chevron {
+  color: var(--c-gain-text);
+  transform: translateX(2px);
+}
+
+.overview-footer {
+  flex: none;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.overview-replication {
   margin: 0;
-}
-
-.landing-boxes.is-compact .landing-box-title,
-.landing-boxes.is-compact .landing-box-description,
-.landing-boxes.is-compact .landing-box-explore {
-  grid-column: 2;
-}
-
-.landing-boxes.is-compact .landing-box-title {
-  font-size: var(--fs-card-title);
-}
-
-.landing-boxes.is-compact .landing-box-explore {
-  justify-self: start;
-  margin-top: 8px;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--pe-gray-500);
 }
 
 /* On a phone it takes the whole screen */
@@ -146,7 +242,10 @@
 @media (prefers-reduced-motion: reduce) {
   .overview,
   .overview-backdrop,
-  .overview-panel {
+  .overview-panel,
+  .overview-close,
+  .landing-row,
+  .landing-row-chevron {
     transition: none;
   }
 }

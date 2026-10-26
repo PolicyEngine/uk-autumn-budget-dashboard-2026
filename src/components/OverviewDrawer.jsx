@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { LandingBoxes, LandingIntro } from "./LandingPage";
+import { ReplicationSentence } from "./ReplicationLine";
+import Tip from "./Tip";
+import mark from "@/assets/policyengine-teal-square.svg";
 import "./OverviewDrawer.css";
 
 // A little over --motion-slide (250ms): the slide out has ended
@@ -103,19 +107,34 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
         aria-labelledby="overview-heading"
         onKeyDown={onKeyDown}
       >
-        <button ref={closeRef} type="button" className="overview-close" aria-label="Close the overview" onClick={onClose}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
-        <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
-        <LandingBoxes
-          compact
-          onOpen={(tab, sub) => {
-            onOpen(tab, sub);
-            onClose();
-          }}
-        />
+        <header className="overview-header">
+          <span className="overview-brand">
+            {/* PolicyEngine's square mark (@policyengine/ui-kit's teal-square.svg) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mark.src ?? mark} alt="" className="overview-mark" />
+            <span className="overview-title">About this dashboard</span>
+          </span>
+          <Tip content="Close (Esc)">
+            <button ref={closeRef} type="button" className="overview-close" aria-label="Close the overview" onClick={onClose}>
+              <X size={20} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </Tip>
+        </header>
+        <div className="overview-body">
+          <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
+          <p id="overview-goto" className="overview-goto">Go to</p>
+          <LandingBoxes
+            list
+            labelledBy="overview-goto"
+            onOpen={(tab, sub) => {
+              onOpen(tab, sub);
+              onClose();
+            }}
+          />
+        </div>
+        <footer className="overview-footer">
+          <ReplicationSentence className="replication-sentence overview-replication" />
+        </footer>
       </div>
     </div>
   );

@@ -230,7 +230,7 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
   it("says what the dashboard is on hover or focus", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    expect(edge()).toHaveTextContent("About");
+    expect(edge().querySelector("img")).toHaveAttribute("alt", "");
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
     const tip = await screen.findByRole("tooltip");
@@ -243,7 +243,13 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(edge()).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
-    expect(within(dialog).getAllByRole("link", { name: /Explore$/ })).toHaveLength(3);
+    // The ways in, as a list of three rows under "Go to"
+    const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "The Budget and societyPublic finances, and who gains and loses",
+      "Your householdSee how your income changes",
+      "What's in the BudgetEvery measure, and how we model it",
+    ]);
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was
