@@ -2,10 +2,11 @@ import TitleIcon from "./TitleIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
-import ExamplePicker from "./personal/ExamplePicker";
+import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
+import HouseholdCards from "./personal/HouseholdCards";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
-import useHouseholdImpact from "../hooks/useHouseholdImpact";
+import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
+import { PRESET_POLICIES, loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -18,50 +19,15 @@ import {
   statePensionFor,
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
-import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
+import { SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "../utils/householdDefaults";
+
+// The form's answers at their defaults (utils/householdDefaults.js)
+export { WIZARD_DEFAULTS };
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
-// The form's answers, each at a typical value until changed. Sources:
-// utils/householdDefaults.js
-export const WIZARD_DEFAULTS = {
-  current_age: 30,
-  current_salary: DEFAULT_SALARY,
-  region: "NORTH_WEST",
-  tenure: "RENT_PRIVATELY",
-  // null: the region's average private rent (ONS), until changed
-  monthly_rent: null,
-  // policyengine-uk's repayment depends on the plan and income alone: the
-  // balance only caps a year's repayment, and is not asked for
-  student_loan_plan: "NONE",
-  has_partner: false,
-  partner_age: 30,
-  partner_salary: DEFAULT_SALARY,
-  children_ages: "",
-  // Per child, in the order of children_ages: whether a 16- to 19-year-old
-  // is in full-time non-advanced education (school or college); yes until
-  // answered
-  children_in_education: [],
-  // Entitlement: the household claims what it is due
-  claims_universal_credit: true,
-  council_tax_band: "D",
-  salary_sacrifice_per_year: 0,
-  petrol_spending_per_year: DEFAULT_SPENDING.petrol,
-  diesel_spending_per_year: DEFAULT_SPENDING.diesel,
-  electricity_spending_per_year: DEFAULT_SPENDING.electricity,
-  dividends_per_year: 0,
-  savings_interest_per_year: 0,
-  property_income_per_year: 0,
-  // Private and workplace pensions in payment, £ a year
-  private_pension_per_year: 0,
-  partner_private_pension_per_year: 0,
-  monthly_childcare: 0,
-  // At State Pension age; null is the full new State Pension for the year
-  state_pension_per_year: null,
-  partner_state_pension_per_year: null,
-};
 
 // The form: one card of questions in labelled sections, each a grid of
 // boxes. The essentials first, then the optional details in More details,
@@ -314,12 +280,15 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, moreOpen: false, submitted: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, moreOpen: false, submitted: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null });
 }
+
+// The form's panel, opened by the "Your household" card
+const FORM_PANEL_ID = "household-form-panel";
 
 /**
  * The Household impact view: one list of questions about a household, each
@@ -337,6 +306,9 @@ function HouseholdCalculator({
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
+  // The form, below the cards: closed at first, opened by "Your household"
+  const [formOpen, setFormOpen] = useState(() => savedWizard.formOpen);
+  const form = useCollapse(formOpen);
   // More details, closed at first; kept between tab switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
   const more = useCollapse(moreOpen);
@@ -358,15 +330,31 @@ function HouseholdCalculator({
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
+    savedWizard.formOpen = formOpen;
     savedWizard.moreOpen = moreOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, moreOpen, submitted]);
+  }, [inputs, presetId, formOpen, moreOpen, submitted]);
 
-  // Fill the form from an example; every value stays editable
-  const applyPreset = (preset) => {
-    setInputs({ ...WIZARD_DEFAULTS, ...preset.inputs });
-    setPresetId(preset.id);
-  };
+  // The examples' precomputed answers, loaded once and added to the
+  // session cache; `seeded` tells a request already waiting to look again
+  const [seeded, setSeeded] = useState(0);
+  // and each example's change in net income, for its card
+  const [presetChanges, setPresetChanges] = useState({});
+  useEffect(() => {
+    let live = true;
+    loadPresetResults().then((entries) => {
+      if (!live || entries.length === 0) return;
+      seedHouseholdImpactCache(entries);
+      setSeeded((n) => n + 1);
+    });
+    loadPresetChanges().then((changes) => {
+      if (live) setPresetChanges(changes);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
 
   const householdPolicies = useMemo(
@@ -374,6 +362,25 @@ function HouseholdCalculator({
     [selectionKey],
   );
   const noneSelected = householdPolicies.length === 0;
+  // The cards' figures are for every measure: shown only while every
+  // measure is selected
+  const allSelected =
+    householdPolicies.length === PRESET_POLICIES.length &&
+    PRESET_POLICIES.every((id) => householdPolicies.includes(id));
+  // Fill the form from an example and show its result at once (no
+  // Calculate); every value stays editable
+  const applyPreset = (preset) => {
+    if (!preset) return;
+    const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
+    setInputs(next);
+    setPresetId(preset.id);
+    // The form closes; the result, once shown, is scrolled to
+    setFormOpen(false);
+    scrollToResult.current = true;
+    if (householdPolicies.length > 0) {
+      setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now() });
+    }
+  };
   // The results for the answers sent with Calculate, never the ones being
   // edited. The request carries on whatever else changes on the page (this
   // view stays mounted while another is shown).
@@ -382,6 +389,7 @@ function HouseholdCalculator({
     year: submitted?.year ?? year,
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
+    seeded,
   });
   // The answers, year or policies differ from those of the result shown
   const changed =
@@ -414,7 +422,36 @@ function HouseholdCalculator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
 
+  // "Your household" opens or closes the form, with the answers it holds
+  // (an example's, to change one and calculate again, or your own)
+  const chooseYours = () => setFormOpen((open) => !open);
+  // Your own household's change, on its card, once calculated and unedited
+  const yoursChange =
+    presetId === null && submitted !== null && !changed && householdResult.status === "ready"
+      ? (householdResult.data?.net?.change ?? null)
+      : null;
+
   const resultsRef = useRef(null);
+  // After an example card: once its result (or its progress) shows, bring
+  // it into view below the sticky bars, unless it is already, and move
+  // focus to it
+  const scrollToResult = useRef(false);
+  useEffect(() => {
+    if (!scrollToResult.current || submitted === null) return;
+    scrollToResult.current = false;
+    const frame = requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      const { top, bottom } = target.getBoundingClientRect();
+      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      if (top < offset || bottom > window.innerHeight) {
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      }
+      target.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [submitted]);
+
   const calculate = (event) => {
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
@@ -632,9 +669,33 @@ function HouseholdCalculator({
 
   return (
     <div className="household-calculator">
+      <HouseholdCards
+        examples={HOUSEHOLD_EXAMPLES}
+        value={presetId}
+        formOpen={formOpen}
+        formId={FORM_PANEL_ID}
+        onYours={chooseYours}
+        onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
+        presets={allSelected ? presetChanges : null}
+        yoursChange={yoursChange}
+        year={year}
+      />
+      {activePreset && (
+        <p className="household-examples-note" role="status">
+          <span>{activePreset.note}</span>
+          {!formOpen && (
+            <button type="button" className="text-button" onClick={() => setFormOpen(true)}>
+              Change these answers
+            </button>
+          )}
+        </p>
+      )}
       <div className="household-layout">
-        {/* The whole form in one card: a header with the examples, then
-            the questions in sections */}
+        {/* The whole form in one card, opened from "Your household": a
+            header, then the questions in sections */}
+        {form.mounted && (
+        <div id={FORM_PANEL_ID} className={`expander-body household-form-panel ${form.expanded ? "is-expanded" : ""}`}>
+        <div className="expander-inner">
         <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
             <div className="household-form-title">
@@ -644,12 +705,9 @@ function HouseholdCalculator({
               </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
+            {/* Always there: with an example's answers unedited it
+                calculates them again */}
             <div className="household-header-actions">
-            <ExamplePicker
-              groups={EXAMPLE_GROUPS}
-              value={presetId}
-              onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
-            />
             <button
               type="submit"
               className={`calculate-button ${running ? "is-busy" : ""}`}
@@ -672,15 +730,17 @@ function HouseholdCalculator({
             </button>
             </div>
           </div>
-          {activePreset && (
-            <p className="household-examples-note" role="status">
-              {activePreset.note}
-            </p>
-          )}
           {FORM_SECTIONS.map(renderSection)}
         </form>
+        </div>
+        </div>
+        )}
 
-        <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
+        {/* Only once there is something to show: a result, its progress
+            or the note to select a policy; before that the cards say
+            what to do */}
+        {(noneSelected || (submitted !== null && !changed)) && (
+        <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           <SingleYearHeadline
             result={householdResult}
             year={submitted?.year ?? year}
@@ -693,6 +753,7 @@ function HouseholdCalculator({
             startedAt={submitted?.at ?? null}
           />
         </div>
+        )}
       </div>
 
       {/* The results' sections, below the form and headline, once asked */}

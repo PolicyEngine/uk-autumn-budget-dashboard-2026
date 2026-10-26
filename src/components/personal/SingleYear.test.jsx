@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import PersonalImpactTab from "../PersonalImpactTab";
 import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { PRESET_POLICIES, presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 
@@ -32,6 +33,7 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   // Figures at once, not counted up: the count-up is presentation only
@@ -62,7 +64,13 @@ function renderTab(props = {}) {
 // Nothing is asked until Calculate: every answer has a default, so one
 // press gives the results
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
+/** Open the form below the cards ("Your household"), unless it is open. */
+function openForm() {
+  const yours = screen.getByRole("button", { name: /^Your household/ });
+  if (yours.getAttribute("aria-expanded") !== "true") fireEvent.click(yours);
+}
 function toResults() {
+  openForm();
   fireEvent.click(calculateButton());
 }
 
@@ -86,7 +94,8 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
-    const urls = fetch.mock.calls.map(([url]) => url);
+    // Besides the examples' precomputed file, only the household route
+    const urls = fetch.mock.calls.map(([url]) => url).filter((url) => !url.endsWith("/household_presets.json"));
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
   });
@@ -281,18 +290,19 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
+  it("asks nothing before Calculate; a year change before it shows nothing either", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
-    // Before Calculate: the empty cards and a prompt, and no request
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    // Before Calculate: no results box (the cards say what to do), and no
+    // request
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -301,27 +311,88 @@ describe("the household calculation, from the fixture", () => {
 });
 
 describe("Calculate", () => {
-  it("asks only on Calculate or Enter, never on an example or an edit", async () => {
+  it("asks at once for an example card, with no Calculate; an edit waits for Calculate or Enter", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
-    // An example fills the form only
-    fireEvent.click(screen.getByRole("button", { name: "Examples" }));
-    fireEvent.click(screen.getAllByRole("menuitemradio")[0]);
+    // An example card shows its result without Calculate, and hides it
+    fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(household[0].household.age).toBe(22);
+    // Your household opens the form with its answers, and Calculate, to
+    // change one and calculate again
+    openForm();
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(calculateButton()).toBeEnabled();
+    // An edit brings Calculate back, and asks nothing on its own
+    const before = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    expect(calculateButton()).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household).toEqual([]);
+    expect(household).toHaveLength(before);
     // Enter in a box sends the form
     fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    expect(household[0].household.age).toBe(40);
-    // An edit after a result: the result goes, the prompt comes back, and
-    // nothing is asked
+    expect(household[before].household.age).toBe(40);
+    // An edit after a result: the result goes, with no box in its place,
+    // and nothing is asked
     const asked = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("an example card", () => {
+  it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    // jsdom has no scrolling
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    // The result appears below the screen's foot
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    renderTab();
+    openForm();
+    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+    expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+  });
+});
+
+describe("the examples' precomputed results", () => {
+  it("show an example's result from the published file, with no request to the API", async () => {
+    // The file as the precompute writes it: the API's answer for each
+    // example's own request (here the fixture's answer)
+    const entries = presetRequests().map(({ preset_id, year, request }) => ({
+      preset_id,
+      year,
+      request,
+      response: householdAnswerFor(request),
+    }));
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url.endsWith("/data/household_presets.json")) return json({ entries });
+        household.push(JSON.parse(init.body));
+        return json(householdAnswerFor(JSON.parse(init.body)));
+      }),
+    );
+    render(
+      <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={POLICIES_FOR_TEST} year={2029} />,
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /^A graduate on £35,000/ }));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    expect(household).toEqual([]);
   });
 });
 

@@ -8,6 +8,10 @@
  * than a year):
  *   18-21: £23,596
  *   22-29: £32,347
+ *
+ * The graduate is in householdExamples.js ("A graduate on £35,000"): a
+ * 23-year-old graduate on £32,300 gave the same result in every year, so
+ * the cards keep the one that names the Plan 2 measure.
  * https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/agegroupashetable6
  *
  * The household's other answers (region, home, loan plan, partner,
@@ -37,6 +41,9 @@ export const YOUNG_PERSON_PRESETS = [
     id: "renter-22",
     label: "A 22-year-old renting",
     description: "£25,000, renting at £900 a month, no student loan",
+    icon: "key",
+    measure: "domestic_electricity_zero_vat",
+    tag: "Zero VAT on electricity",
     inputs: {
       ...COMMON,
       current_age: 22,
@@ -54,6 +61,9 @@ export const YOUNG_PERSON_PRESETS = [
     id: "apprentice-19",
     label: "A 19-year-old apprentice",
     description: "£23,600, renting a room at £600 a month",
+    icon: "hardHat",
+    measure: "employer_ni_relief_under_25s",
+    tag: "Employer NI relief",
     inputs: {
       ...COMMON,
       current_age: 19,
@@ -65,22 +75,5 @@ export const YOUNG_PERSON_PRESETS = [
     },
     note:
       "Earns £23,600, the 2025 full-time median for ages 18 to 21 (ONS ASHE). That median covers all full-time employees of that age, not apprentices only, many of whom earn less. No student loan. Rents a room privately at £600 a month, an illustrative figure.",
-  },
-  {
-    id: "graduate-23",
-    label: "A 23-year-old graduate",
-    description: "£32,300 with a Plan 2 student loan",
-    inputs: {
-      ...COMMON,
-      current_age: 23,
-      // ASHE 2025 full-time median for ages 22-29, rounded
-      current_salary: 32300,
-      // Started in England before August 2023
-      student_loan_plan: "PLAN_2",
-      // Illustrative, not a sourced average
-      monthly_rent: 900,
-    },
-    note:
-      "Earns £32,300, the 2025 full-time median for ages 22 to 29 (ONS ASHE), with a Plan 2 student loan. Rents privately at £900 a month, an illustrative figure.",
   },
 ];

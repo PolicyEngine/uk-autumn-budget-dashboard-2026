@@ -20,6 +20,17 @@ export function clearHouseholdImpactCache() {
   cache.clear();
 }
 
+/**
+ * Add complete answers to the session cache, as [requestKey, result]
+ * pairs: the precomputed examples (utils/householdPresets.js), shown at
+ * once when asked for. An answer already fetched is kept.
+ */
+export function seedHouseholdImpactCache(entries) {
+  for (const [key, data] of entries) {
+    if (!cache.get(key)?.complete) cache.set(key, { data, complete: true });
+  }
+}
+
 // Wait this long after the last change before asking
 const DEBOUNCE_MS = 400;
 
@@ -33,11 +44,13 @@ const DEBOUNCE_MS = 400;
  * @param {number} params.year - The policy year (2029 is 2029-30)
  * @param {string[]} params.policies - Selected measure ids
  * @param {boolean} params.enabled - Ask only while the view is shown
+ * @param {number} [params.seeded] - Bumped when answers are added to the
+ *   cache, so a request still waiting picks up a precomputed answer
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, seeded = 0 }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
@@ -164,7 +177,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
     };
     // body is derived from key's inputs
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, attempt, policies.length]);
+  }, [key, enabled, attempt, policies.length, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

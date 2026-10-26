@@ -1,11 +1,14 @@
 /**
- * The example households in the Household impact form's Examples menu, in
- * two groups: the young people (youngPersonPresets.js) and other
- * households, each chosen to show one measure clearly. An example fills
- * the form (on top of its defaults); every value stays editable, and
- * nothing is calculated until Calculate.
+ * The example households, as cards beside "Your household" on the
+ * Household impact view: two young people (youngPersonPresets.js), then
+ * other households, each chosen to show one measure clearly. Each has a
+ * name, a one-line description of who they are, the measure it is for
+ * (`measure`, which gives the card its colour, and `tag`, its short name
+ * on the card) and an icon (named in personal/HouseholdCards.jsx). An
+ * example fills the form (on top of its defaults) and shows its result at
+ * once; every value stays editable.
  *
- * Each "Other households" example was checked against the live household
+ * Each example after the young people was checked against the live household
  * API on 25 October 2026 with every measure selected; the measure it is for
  * changes its net income in the year named:
  *   pensioner: State Pension income tax protection +£93 in 2027-28
@@ -37,7 +40,10 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "pensioner-70",
     label: "A pensioner on the State Pension",
-    description: "70, State Pension only; income tax protection",
+    description: "Aged 70, State Pension only, owns their home",
+    icon: "armchair",
+    measure: "state_pension_income_tax_protection",
+    tag: "State Pension protection",
     inputs: {
       ...RESET,
       current_age: 70,
@@ -53,7 +59,10 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "family-uc",
     label: "A family on Universal Credit",
-    description: "Two children, renting; Warm Home Discount in 2026-27",
+    description: "A couple with two children, renting",
+    icon: "family",
+    measure: "domestic_electricity_zero_vat",
+    tag: "Zero VAT on electricity",
     inputs: {
       ...RESET,
       current_age: 34,
@@ -71,7 +80,10 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "graduate-35k",
     label: "A graduate on £35,000",
-    description: "27, Plan 2 student loan; threshold unfrozen",
+    description: "Aged 27, Plan 2 student loan, renting",
+    icon: "graduate",
+    measure: "plan_2_threshold_unfreeze",
+    tag: "Plan 2 threshold unfrozen",
     inputs: {
       ...RESET,
       current_age: 27,
@@ -85,7 +97,12 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "driver",
     label: "A driver with a long commute",
-    description: "£2,600 a year on petrol; fuel duty and VAT",
+    description: "£38,000, spends £2,600 a year on petrol",
+    icon: "car",
+    measure: "fuel_duty_rise_deferral",
+    // The tag covers both fuel measures, and its figure is their parts
+    measures: ["fuel_duty_rise_deferral", "road_fuel_vat_cut"],
+    tag: "Fuel duty and fuel VAT",
     inputs: {
       ...RESET,
       current_age: 40,
@@ -99,7 +116,10 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   {
     id: "higher-earner",
     label: "A higher earner on £110,000",
-    description: "Threshold freeze bites from 2031-32",
+    description: "Aged 45, owns their home with a mortgage",
+    icon: "briefcase",
+    measure: "threshold_freeze_2031_32",
+    tag: "Threshold freeze, 2031-32",
     inputs: {
       ...RESET,
       current_age: 45,
@@ -110,10 +130,5 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
   },
 ];
 
-export const EXAMPLE_GROUPS = [
-  { title: "Young people", examples: YOUNG_PERSON_PRESETS },
-  { title: "Other households", examples: OTHER_HOUSEHOLD_EXAMPLES },
-];
-
-/** Every example, in menu order. */
-export const HOUSEHOLD_EXAMPLES = EXAMPLE_GROUPS.flatMap((group) => group.examples);
+/** Every example, in the cards' order. */
+export const HOUSEHOLD_EXAMPLES = [...YOUNG_PERSON_PRESETS, ...OTHER_HOUSEHOLD_EXAMPLES];
