@@ -165,7 +165,7 @@ function CustomGroup({ group }) {
  * One choice as a segmented toggle: a radio group whose options sit side
  * by side; the arrow keys move between them and choose, as radios do.
  */
-function Segmented({ group }) {
+export function Segmented({ group }) {
   const labelId = useId();
   const enabled = group.options.filter((option) => !option.disabled);
   const move = (event, step) => {
@@ -206,6 +206,7 @@ function Segmented({ group }) {
               tabIndex={checked ? 0 : -1}
               disabled={option.disabled}
               title={option.title}
+              aria-label={option.ariaLabel}
               className={`control-bar-segment${checked ? " is-checked" : ""}`}
               onClick={() => group.onChange(option.value)}
             >

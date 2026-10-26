@@ -47,36 +47,24 @@ export default function useInequalityView(data, range = null, setRange = null) {
   const series = lineSeries(viewMode, !noOutturn);
 
   const span = headlineSpan(projection, data, range);
-  // One short line on the card; the full sentence in About this chart
+  // One plain sentence on the card; what each measure means is in About
+  // this chart
   let summary = null;
-  let sentence = null;
   if (span) {
     const [a, b] = span;
     const same = fmt(a.value) === fmt(b.value);
-    const name = label(measure);
+    const what =
+      measure === "gini"
+        ? "income inequality, measured by the Gini coefficient,"
+        : "the gap between incomes near the top and near the bottom (the 90:10 ratio)";
     summary = same ? (
       <>
-        The {name} <strong>stays flat</strong> at {fmt(a.value)}.
+        Under current law, {what} <strong>stays at {fmt(a.value)}</strong> from {fyDash(a.year)} to {fyDash(b.year)}.
       </>
     ) : (
       <>
-        The {name} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} to {fmt(b.value)}.
-      </>
-    );
-    sentence = (
-      <>
-        The {label(measure)} ({basis.toUpperCase()}){" "}
-        {same ? (
-          <>
-            <strong>stays flat</strong> at {fmt(a.value)} from {fyDash(a.year)} to {fyDash(b.year)}
-          </>
-        ) : (
-          <>
-            <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in {fyDash(a.year)} to{" "}
-            {fmt(b.value)} by {fyDash(b.year)}
-          </>
-        )}
-        .
+        Under current law, {what} <strong>{b.value > a.value ? "rises" : "falls"}</strong> from {fmt(a.value)} in{" "}
+        {fyDash(a.year)} to {fmt(b.value)} in {fyDash(b.year)}.
       </>
     );
   }
@@ -86,7 +74,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     summary,
     about:
       "Gini: 0 is perfect equality, 1 is one person holding all income. 90/10 ratio: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
-    notes: [sentence, ...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
+    notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
     download: rows.length
