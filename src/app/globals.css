@@ -160,6 +160,16 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
+  /* The marginal tax rate's parts, stacked: taxes and benefit withdrawals
+     in teals and greens, the student loan in orange, the rest grey */
+  --c-mtr-income-tax: #5fb3a8;
+  --c-mtr-child-benefit: #4fd1c5;
+  --c-mtr-allowance-taper: #285e61;
+  --c-mtr-national-insurance: #a7e3da;
+  --c-mtr-student-loan: #e8b66a;
+  --c-mtr-universal-credit: #2f855a;
+  --c-mtr-other-benefits: #9ae6b4;
+  --c-mtr-other: #d1d5db;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

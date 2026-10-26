@@ -425,7 +425,14 @@ def test_the_runs_it_asks_for(monkeypatch):
     calls = []
 
     def run_scenario(
-        people, benunit, household, year, side, axes=None, only=False
+        people,
+        benunit,
+        household,
+        year,
+        side,
+        axes=None,
+        only=False,
+        parts=False,
     ):
         calls.append(
             {
@@ -433,6 +440,7 @@ def test_the_runs_it_asks_for(monkeypatch):
                 "side": side,
                 "axes": axes,
                 "head_pay": people[0]["employment_income"],
+                "parts": parts,
             }
         )
         net = 40_000.0 + 100 * len(calls)
@@ -477,6 +485,9 @@ def test_the_runs_it_asks_for(monkeypatch):
     assert calls[2]["side"] == sides.before
     assert [call["side"] for call in calls[4:6]] == [sides.before, sides.after]
     assert all(call["axes"] is None for call in calls[4:6])
+    # The £100 runs also read the rate's parts at the higher salary
+    assert all(call["parts"] for call in calls[4:6])
+    assert not any(call["parts"] for call in calls[0:4])
     assert all(
         call["head_pay"]
         == calls[0]["head_pay"] + household_impact.OWN_RATE_STEP
@@ -895,6 +906,175 @@ def test_the_sweep_runs_from_zero_past_the_heads_income():
     assert result["by_policy"] is None
 
 
+def test_the_rate_parts_add_up_and_split_the_allowance_taper():
+    """Each part is a tax's share of an extra pound, or a benefit's
+    withdrawal; "other" takes the rest, so the parts add up to the rate."""
+    grid = [0.0, 100.0, 200.0]
+    # The allowance falls 50p a pound: the extra pound and the lost 50p are
+    # both taxed at 40%, so tax rises 60p, 40p of it the rate, 20p the taper
+    components = {
+        "income_tax": [0.0, 60.0, 130.0],
+        "CB_HITC": [0.0, 0.0, 10.0],
+        "personal_allowance": [1000.0, 950.0, 900.0],
+        "national_insurance": [0.0, 2.0, 4.0],
+        "student_loan_repayments": [0.0, 9.0, 18.0],
+        "universal_credit": [500.0, 500.0, 445.0],
+        "household_benefits": [600.0, 600.0, 535.0],
+    }
+    net = [1000.0, 1029.0, 1017.0]
+    parts = household_impact.sweep_rate_parts(grid, net, components)
+    rates = household_impact.marginal_rates(grid, net)
+    for part, rate in zip(parts, rates):
+        assert sum(part.values()) == pytest.approx(rate)
+        assert list(part) == list(household_impact.MARGINAL_RATE_PARTS)
+    assert parts[0]["income_tax"] == pytest.approx(0.40)
+    assert parts[0]["personal_allowance_taper"] == pytest.approx(0.20)
+    assert parts[0]["national_insurance"] == pytest.approx(0.02)
+    assert parts[0]["student_loan"] == pytest.approx(0.09)
+    # The Child Benefit charge is income_tax's, taken out as its own part
+    assert parts[1]["child_benefit_charge"] == pytest.approx(0.10)
+    assert parts[1]["income_tax"] == pytest.approx(0.40)
+    assert parts[1]["universal_credit"] == pytest.approx(0.55)
+    assert parts[1]["other_benefits"] == pytest.approx(0.10)
+
+
+def _own_parts(result):
+    """The reform's rate parts at the head's salary (over the next
+    ``OWN_RATE_STEP`` pounds), and the rate there."""
+    sweep = result["sweep"]
+    return (
+        sweep["marginal_rate_parts"]["own_point"]["reform"],
+        sweep["own_point"]["reform_marginal_rate"],
+    )
+
+
+def _step_parts(result):
+    """The reform's rate parts over the sweep interval holding the head's
+    salary, and that interval's rate."""
+    sweep = result["sweep"]
+    salary = sweep["own_point"]["employment_income"]
+    for i, rate in enumerate(sweep["marginal_rates"]):
+        if rate["from"] <= salary < rate["to"]:
+            return sweep["marginal_rate_parts"]["reform"][i], rate["reform"]
+    raise AssertionError("the salary is outside the sweep")
+
+
+@pytest.mark.parametrize(
+    "answers, expected",
+    [
+        # Basic rate and main National Insurance
+        (
+            Answers(employment_income=30_000),
+            {"income_tax": 0.20, "national_insurance": 0.08},
+        ),
+        # Higher rate and the upper National Insurance rate
+        (
+            Answers(employment_income=60_000),
+            {"income_tax": 0.40, "national_insurance": 0.02},
+        ),
+        # The allowance taper: 40% + 20% + 2% = 62%
+        (
+            Answers(employment_income=110_000),
+            {
+                "income_tax": 0.40,
+                "personal_allowance_taper": 0.20,
+                "national_insurance": 0.02,
+            },
+        ),
+        # A Plan 2 graduate above the threshold: 9% more
+        (
+            Answers(employment_income=38_000, student_loan_plan="PLAN_2"),
+            {
+                "income_tax": 0.20,
+                "national_insurance": 0.08,
+                "student_loan": 0.09,
+            },
+        ),
+        # Universal Credit withdraws 55% of earnings after tax and National
+        # Insurance: 55% x (1 - 0.28) = 39.6%
+        (
+            Answers(
+                employment_income=18_000,
+                claims_universal_credit=True,
+                tenure="RENT_PRIVATELY",
+                monthly_rent=900,
+                children=(
+                    household_impact.Child(age=4),
+                    household_impact.Child(age=8),
+                ),
+            ),
+            {
+                "income_tax": 0.20,
+                "national_insurance": 0.08,
+                "universal_credit": 0.396,
+            },
+        ),
+    ],
+    ids=["30k", "60k", "110k", "plan-2", "universal-credit"],
+)
+def test_the_rate_parts_by_hand(answers, expected):
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], include=("sweep",)
+    )
+    parts, rate = _own_parts(result)
+    assert sum(parts.values()) == pytest.approx(rate, abs=1e-4)
+    # Over £100 the engine's single precision and the allowance's whole
+    # pounds move a part by up to half a point
+    for name, value in parts.items():
+        assert value == pytest.approx(expected.get(name, 0), abs=0.006), name
+    # Every sweep step's parts add up to its rate, before and after
+    sweep = result["sweep"]
+    for side in ("baseline", "reform"):
+        steps = sweep["marginal_rate_parts"][side]
+        assert len(steps) == len(sweep["marginal_rates"])
+        for step, rate in zip(steps, sweep["marginal_rates"]):
+            assert sum(step.values()) == pytest.approx(rate[side], abs=1e-4)
+
+
+def test_the_child_benefit_charge_is_its_own_part():
+    """Two children and £70k: the charge takes 1% of Child Benefit per £200
+    from £60k, so about Child Benefit / £20k of each extra pound, on top of
+    40% income tax and 2% National Insurance. (It moves in £200 steps, so
+    over the sweep step, not the next £100.)"""
+    answers = Answers(
+        employment_income=70_000,
+        children=(household_impact.Child(age=4), household_impact.Child(8)),
+    )
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], include=("sweep",)
+    )
+    parts, rate = _step_parts(result)
+    child_benefit = programme(result, "child_benefit")["reform"]
+    assert child_benefit > 2_000
+    assert parts["child_benefit_charge"] == pytest.approx(
+        child_benefit / 20_000, abs=0.01
+    )
+    assert parts["income_tax"] == pytest.approx(0.40, abs=0.002)
+    assert parts["national_insurance"] == pytest.approx(0.02, abs=0.002)
+    assert sum(parts.values()) == pytest.approx(rate, abs=1e-4)
+
+
+def test_the_rate_parts_at_your_salary_add_up_to_its_rate():
+    """#129's rate at the £110k earner's salary in 2031-32 is unchanged by
+    the parts, and they add up to it: 40% + 20% taper + 2%."""
+    answers = Answers(employment_income=110_000, salary_year=2026)
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], year=2031, include=("sweep",)
+    )
+    own = result["sweep"]["own_point"]
+    parts = result["sweep"]["marginal_rate_parts"]["own_point"]
+    for side in ("baseline", "reform"):
+        rate = own[f"{side}_marginal_rate"]
+        assert sum(parts[side].values()) == pytest.approx(rate, abs=1e-4)
+        assert parts[side]["income_tax"] == pytest.approx(0.40, abs=0.002)
+        assert parts[side]["personal_allowance_taper"] == pytest.approx(
+            0.20, abs=0.002
+        )
+        assert parts[side]["national_insurance"] == pytest.approx(
+            0.02, abs=0.002
+        )
+
+
 def test_the_rate_at_your_salary_is_not_averaged_across_the_taper_end():
     """Issue #118: a £110k earner in 2026, grown to £124,353 in 2031-32,
     is £787 below the end of the Personal Allowance taper. The sweep step
@@ -918,6 +1098,21 @@ def test_the_rate_at_your_salary_is_over_the_next_step():
     assert raised[1]["employment_income"] == 20_000
     assert people[0]["employment_income"] == 30_000
     assert household_impact.own_rate(1_000, 1_072, 100) == pytest.approx(0.28)
+
+
+def test_the_own_rate_step_sees_the_child_benefit_charge_once():
+    """From £60,000 to £80,000 the High Income Child Benefit Charge is one
+    percentage point per whole £200 of income (ITEPA 2003 s. 681C). The step
+    for the rate at your salary crosses exactly one of those points wherever
+    it starts, so with three children (£3,268.20 of Child Benefit a year in
+    2026-27) it reads the charge's average, about 16 points, not 0 or 32."""
+    step = household_impact.OWN_RATE_STEP
+
+    def points(income):
+        return min(max(income - 60_000, 0) * 100 // 20_000, 100)
+
+    for income in range(60_000, 80_000 - step, 37):
+        assert points(income + step) - points(income) == step // 200
 
 
 def test_salary_in_the_chosen_year_is_returned():
@@ -1210,6 +1405,132 @@ def test_modal_runner_sends_every_run_to_fan_out_and_keeps_their_order(
     household_impact.clear_runs()
 
 
+def test_a_run_another_request_is_computing_is_waited_for_not_run_again(
+    monkeypatch,
+):
+    """Two requests at once that share runs (the page asks for its three
+    parts together, each with the before and after runs): the second waits
+    for the first's answer to a shared run rather than sending it again,
+    and gets the same answer."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    sent = []
+    first_started = threading.Event()
+    finish_first = threading.Event()
+
+    def fan_out(jobs):
+        sent.append(list(jobs))
+        if len(sent) == 1:
+            first_started.set()
+            assert finish_first.wait(5)
+        return [{"household_net_income": float(job[1])} for job in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    shared = [("job", 0), ("job", 1)]
+    answers = {}
+
+    def ask(name, jobs):
+        answers[name] = household_impact._run_all(jobs, workers=1)
+
+    first = threading.Thread(target=ask, args=("first", shared))
+    first.start()
+    assert first_started.wait(5)
+    second = threading.Thread(
+        target=ask, args=("second", [*shared, ("job", 2), ("job", 2)])
+    )
+    second.start()
+    # The second request sends only its own new run, once
+    for _ in range(100):
+        if len(sent) == 2:
+            break
+        threading.Event().wait(0.05)
+    assert sent[1] == [("job", 2)]
+    finish_first.set()
+    first.join(5)
+    second.join(5)
+    assert [r["household_net_income"] for r in answers["first"]] == [0, 1]
+    assert [r["household_net_income"] for r in answers["second"]] == [
+        0,
+        1,
+        2,
+        2,
+    ]
+    assert len(sent) == 2
+    household_impact.clear_runs()
+
+
+def test_a_failed_run_fails_every_request_waiting_for_it(monkeypatch):
+    """A shared run that fails is not kept as in progress: the requests
+    waiting for it fail too, and a later request runs it again."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    started = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def fan_out(jobs):
+        calls.append(list(jobs))
+        if len(calls) == 1:
+            started.set()
+            assert release.wait(5)
+            raise RuntimeError("container failed")
+        return [{"household_net_income": 1.0} for _ in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    from concurrent.futures import Future
+
+    waiting = threading.Event()
+
+    class SignallingFuture(Future):
+        def result(self, timeout=None):
+            waiting.set()
+            return super().result(timeout)
+
+    monkeypatch.setattr(household_impact, "Future", SignallingFuture)
+    errors = {}
+
+    def ask(name):
+        try:
+            household_impact._run_all([("job", 0)], workers=1)
+        except RuntimeError as error:
+            errors[name] = str(error)
+
+    first = threading.Thread(target=ask, args=("first",))
+    first.start()
+    assert started.wait(5)
+    second = threading.Thread(target=ask, args=("second",))
+    second.start()
+    # The second request is waiting for the first's run
+    assert waiting.wait(5)
+    release.set()
+    first.join(5)
+    second.join(5)
+    assert errors == {
+        "first": "container failed",
+        "second": "container failed",
+    }
+    assert household_impact._run_all([("job", 0)], workers=1) == [
+        {"household_net_income": 1.0}
+    ]
+    household_impact.clear_runs()
+
+
 def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
     """By policy: a measure provably_unaffected for this household and year
     is not run, and shows exactly as its run would (£0, not affected)."""
@@ -1345,3 +1666,24 @@ def test_skips_give_the_same_answer_as_running_every_measure(year):
         fast = calculate(answers, measures, year, ("by_policy",))
         assert fast == full
     household_impact.clear_runs()
+
+
+def test_programme_notes_name_what_the_model_does():
+    """The Warm Home Discount row names every benefit the measure pays on
+    (as HOUSEHOLD_NOTES does), and the Council Tax Reduction row the
+    schemes policyengine-uk simulates, pensioners' included."""
+    from uk_budget_data.household_impact import HOUSEHOLD_NOTES, PROGRAMMES
+    from uk_budget_data.reforms import WARM_HOME_DISCOUNT_ID
+
+    notes = {row.id: row.note for row in PROGRAMMES}
+    for benefit in (
+        "Universal Credit",
+        "Pension Credit",
+        "Housing Benefit",
+        "income-related ESA",
+    ):
+        assert benefit in notes["warm_home_discount_top_up"]
+        assert benefit in HOUSEHOLD_NOTES[WARM_HOME_DISCOUNT_ID]["text"]
+    ctr = notes["council_tax_reduction"]
+    assert "pension-age" in ctr
+    assert "Scottish and Welsh" in ctr

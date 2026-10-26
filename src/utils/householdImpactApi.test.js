@@ -179,6 +179,35 @@ describe("normaliseHouseholdImpact", () => {
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
   });
+
+  it("reads the marginal rate's parts when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.parts).toBeNull();
+    const steps = HOUSEHOLD_FIXTURE.sweep.marginal_rates.map((rate) => ({
+      income_tax: 0.2,
+      national_insurance: 0.08,
+      other: rate.reform - 0.28,
+    }));
+    const data = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      sweep: {
+        ...HOUSEHOLD_FIXTURE.sweep,
+        marginal_rate_parts: {
+          parts: ["income_tax", "national_insurance", "other"],
+          baseline: steps,
+          reform: steps,
+          own_point: {
+            baseline: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+            reform: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+          },
+        },
+      },
+    });
+    const parts = data.sweep.parts;
+    expect(parts.names).toEqual(["income_tax", "national_insurance", "other"]);
+    expect(parts.after).toHaveLength(data.sweep.rates.length);
+    expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
+    expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
+  });
 });
 
 describe("policyRows", () => {
@@ -375,6 +404,45 @@ describe("the programme table's whole pounds", () => {
     // Income tax's parts add up to it
     const tax = rows.find((row) => row.id === "income_tax");
     expect(tax.children.reduce((sum, child) => sum + child.shown.change, 0)).toBe(tax.shown.change);
+  });
+
+  it("shows Council Tax as the headline card's Based on does, not nudged to make the column add up", () => {
+    // The family on Universal Credit in 2027-28 (live API, 26 October
+    // 2026): Council Tax £2,628.58 was −£2,628 in the table and £2,629 under
+    // the headline
+    const family = [
+      { id: "employment_income", group: "income", before: 21504.02, after: 21504.02, children: [] },
+      { id: "income_tax", group: "tax", before: 1534.8, after: 1534.8, children: [] },
+      { id: "national_insurance", group: "tax", before: 714.73, after: 714.73, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.58, after: 2628.58, children: [] },
+      { id: "fuel_duty", group: "tax", before: 364.89, after: 338.52, children: [] },
+      { id: "vat_change", group: "tax", before: 0, after: -73.85, children: [] },
+      { id: "tv_licence", group: "tax", before: 180, after: 180, children: [] },
+      { id: "universal_credit", group: "benefit", before: 18443.07, after: 18443.07, children: [] },
+      { id: "child_benefit", group: "benefit", before: 2391.15, after: 2391.15, children: [] },
+      { id: "free_childcare", group: "benefit", before: 3633.88, after: 3633.88, children: [] },
+      { id: "other_taxes", group: "tax", before: 0.04, after: 0.05, children: [] },
+    ];
+    const totals = headlineTotals({ before: 40549.08, after: 40649.3 });
+    const rows = roundProgrammeGroups(programmeGroups(family), totals).flatMap((group) => group.rows);
+    const councilTax = rows.find((row) => row.id === "council_tax");
+    expect(councilTax.shown.before).toBe(-2629);
+    expect(councilTax.shown.after).toBe(-2629);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+  });
+
+  it("rounds an exact 50p of Council Tax as the Based on does, up to the next pound", () => {
+    // money(2628.5) is £2,629; Math.round(-2628.5) alone would give −£2,628
+    const programmes = [
+      { id: "employment_income", group: "income", before: 30000.2, after: 30000.2, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.5, after: 2628.5, children: [] },
+    ];
+    const totals = headlineTotals({ before: 27371.7, after: 27371.7 });
+    const rows = roundProgrammeGroups(programmeGroups(programmes), totals).flatMap((group) => group.rows);
+    expect(rows.find((row) => row.id === "council_tax").shown.before).toBe(-2629);
+    expect(rows.reduce((sum, row) => sum + row.shown.before, 0)).toBe(totals.before);
   });
 
   it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
