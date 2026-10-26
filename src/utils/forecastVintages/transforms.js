@@ -151,12 +151,23 @@ export function annualise(series, factor = 4) {
   return out;
 }
 
-/** Calendar-year totals of quarterly values, for complete years only. */
+// A year's total smaller than this share of its quarters' sizes added up
+// is lost to rounding: each quarter is held to about 1e-16 of its size,
+// so quarters that all but cancel leave a total that could be any value
+// that small, even one of zero
+const LOST_TO_ROUNDING = 1e-9;
+
+/**
+ * Calendar-year totals of quarterly values, for complete years only. None
+ * at all where a year's total is lost to rounding (LOST_TO_ROUNDING), as
+ * no change can be taken on it, nor a line drawn through it.
+ */
 export function annualSums(series) {
   const out = new Map();
   const years = new Set([...series.keys()].map((t) => Math.floor(t / 4)));
   for (const year of [...years].sort((a, b) => a - b)) {
     let total = 0;
+    let size = 0;
     let complete = true;
     for (let q = 0; q < 4; q += 1) {
       const v = series.get(year * 4 + q);
@@ -165,8 +176,11 @@ export function annualSums(series) {
         break;
       }
       total += v;
+      size += Math.abs(v);
     }
-    if (complete) out.set(year, total);
+    if (!complete) continue;
+    if (Math.abs(total) < LOST_TO_ROUNDING * size) return new Map();
+    out.set(year, total);
   }
   return out;
 }

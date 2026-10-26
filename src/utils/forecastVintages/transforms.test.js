@@ -134,6 +134,30 @@ describe("annualising", () => {
     );
   });
 
+  it("totals a year to a millionth of its exact total, or totals none where quarters cancel past rounding", () => {
+    // Quarters as the file holds them (four decimals, up to 1e9 in size),
+    // the last often all but cancelling the other three
+    const figure = fc.integer({ min: -1e13, max: 1e13 });
+    fc.assert(
+      fc.property(fc.array(figure, { minLength: 3, maxLength: 3 }), fc.oneof(figure, fc.constantFrom(0, 1, -1, 2)), fc.boolean(), (three, last, cancel) => {
+        const tenThousandths = [...three, cancel ? Math.max(-1e13, Math.min(1e13, -(three[0] + three[1] + three[2]) + last)) : last];
+        const quarters = tenThousandths.map((n) => n / 1e4);
+        const exact = tenThousandths.reduce((a, b) => a + b, 0) / 1e4;
+        const sums = annualSums(new Map(quarters.map((v, q) => [8000 + q, v])));
+        if (!sums.size) {
+          // Only where the total is too small to hold against its quarters
+          const size = quarters.reduce((a, v) => a + Math.abs(v), 0);
+          expect(Math.abs(exact)).toBeLessThan(1e-8 * size);
+          return;
+        }
+        expect(Math.abs(sums.get(2000) - exact)).toBeLessThanOrEqual(1e-6 * Math.abs(exact));
+      }),
+      { numRuns: 1000 },
+    );
+    // Every quarter 0 is a total of 0, as it is
+    expect([...annualSums(new Map([8000, 8001, 8002, 8003].map((t) => [t, 0])))]).toEqual([[2000, 0]]);
+  });
+
   it("totals complete years only", () => {
     const series = new Map([
       [2024 * 4 + 1, 1],

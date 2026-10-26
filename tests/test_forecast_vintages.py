@@ -9,6 +9,7 @@ period rules by properties over every month.
 """
 
 import dataclasses
+import decimal
 import hashlib
 import json
 import math
@@ -912,8 +913,12 @@ def test_the_build_writes_no_figure_finer_than_four_decimals(values):
     assert list(written) == [str(p) for p in sorted(values)]
     for period, value in values.items():
         figure = written[str(period)]
-        assert figure == round(figure, B.DECIMALS)
-        assert abs(figure - value) <= 0.5 * 10**-B.DECIMALS + 1e-9 * abs(value)
+        # The double nearest the value rounded to four decimals, worked in
+        # exact decimals (half to even, as Python rounds)
+        nearest = decimal.Decimal(value).quantize(
+            decimal.Decimal(1).scaleb(-B.DECIMALS), decimal.ROUND_HALF_EVEN
+        )
+        assert figure == float(nearest)
         assert figure == 0 or abs(figure) >= 10**-B.DECIMALS
 
 
@@ -973,6 +978,58 @@ def test_every_committed_check_reads_as_true(committed):
         for name in ("level", "share"):
             if variable.get(name):
                 _check_check(committed, variable["id"], name)
+
+
+# --- A series the page can draw -------------------------------------------------
+
+SERIES_CASES = json.loads(
+    (
+        ROOT / "tests" / "fixtures" / "forecast_vintages_series_cases.json"
+    ).read_text()
+)["cases"]
+
+
+@pytest.mark.parametrize("case", SERIES_CASES, ids=lambda c: c["name"])
+def test_the_build_reads_series_as_the_page_does(case):
+    # The page's loader (isSeries) is held to the same cases in
+    # src/utils/forecastVintages/series.test.js, so the two agree
+    values = json.loads(json.dumps(case["values"]))
+    if case["accepted"]:
+        B.series_as_read("a series", case["frequency"], values)
+    else:
+        with pytest.raises(B.BuildError):
+            B.series_as_read("a series", case["frequency"], values)
+
+
+def test_every_committed_series_reads_as_one(committed):
+    for variable in committed["variables"]:
+        for name in ("level", "share"):
+            measure = variable.get(name)
+            if not measure:
+                continue
+            for values in [measure["outturn"]] + [
+                v["values"] for v in measure["vintages"]
+            ]:
+                B.series_as_read(variable["id"], variable["frequency"], values)
+
+
+def test_an_outturn_with_a_year_missing_between_is_not_written(monkeypatch):
+    # Found by the ninth review: the ONS reader leaves out a blank
+    # observation, so a blank 1955 in ABMI left a gap the build wrote and
+    # the page refused (the whole file, "real_gdp: no outturn")
+    load_ons = B.load_ons
+
+    def blank_1955(root, retrieved):
+        series = load_ons(root, retrieved)
+        del series["ABMI"].years[1955]
+        return series
+
+    monkeypatch.setattr(B, "load_ons", blank_1955)
+    with pytest.raises(
+        B.BuildError,
+        match="real_gdp: its outturn has no value between 1954 and 1956",
+    ):
+        B.build(ROOT)
 
 
 # --- A forecast's figures after its launch -------------------------------------

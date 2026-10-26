@@ -537,6 +537,23 @@ describe("axes and formats", () => {
     expect(stepDecimals(50)).toBe(0);
     expect(stepDecimals(2.5)).toBe(1);
     expect(stepDecimals(0.25)).toBe(2);
+    // Found by the ninth review: a step of 5e-7 was given no decimals, so
+    // six ticks read -0, -0, 0, 0, 0, 0
+    expect(stepDecimals(5e-7)).toBe(7);
+    expect(stepDecimals(2.5e-10)).toBe(11);
+  });
+
+  it("write every tick of an axis apart, and none but 0 as 0, at any scale", () => {
+    const write = formatterFor(variable("cpi"), "index", variable("cpi").level);
+    fc.assert(
+      fc.property(scaled, fc.oneof(scaled, fc.constant(0)), fc.boolean(), (lo, size, zero) => {
+        const { ticks, step } = niceAxis(lo, lo + Math.abs(size), { zero });
+        const labels = ticks.map((t) => write(t, stepDecimals(step)));
+        expect(new Set(labels).size).toBe(labels.length);
+        ticks.forEach((t, i) => expect(/^-?0(\.0*)?$/.test(labels[i])).toBe(t === 0));
+      }),
+      { numRuns: 500 },
+    );
   });
 
   it("write each unit as the page does", () => {
@@ -674,6 +691,30 @@ describe("an index or a % change", () => {
     expect(forecastVintagesProblem(data)).toBeNull();
     for (const unit of ["level", "index", "pct"]) {
       expect(buildView(data, v, { unit }).unavailable).toBe("The March 2026 forecast of this measure cannot be drawn in this unit.");
+    }
+  });
+
+  // Found by the ninth review: 1955's quarters add up to 0 to four
+  // decimals, but to 1.66e-8 in a double, so with A on, 1956's change on
+  // it was drawn as 120,525,976,911.63%
+  it("leaves annual totals undrawn where a year's total is lost to rounding", () => {
+    const data = clone();
+    const v = byId(data, "rhdi_per_person");
+    Object.assign(v.level.outturn, {
+      "1955Q1": 999999999.9999,
+      "1955Q2": -999999999.9998,
+      "1955Q3": 0.0001,
+      "1955Q4": -0.0002,
+      "1956Q1": 5,
+      "1956Q2": 5,
+      "1956Q3": 5,
+      "1956Q4": 5,
+    });
+    expect(forecastVintagesProblem(data)).toBeNull();
+    for (const unit of ["level", "index", "pct"]) {
+      for (const showPast of [true, false]) {
+        expect(buildView(data, v, { unit, annual: true, showPast }).unavailable).toBe("The outturn of this measure cannot be drawn in this unit.");
+      }
     }
   });
 

@@ -154,10 +154,18 @@ export function niceAxis(lo, hi, { zero = false } = {}) {
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks, step };
 }
 
-/** Decimals a tick step needs: 2.5 -> 1, 0.25 -> 2, 50 -> 0. */
+/**
+ * Decimals a tick step needs: 2.5 -> 1, 0.25 -> 2, 50 -> 0, 5e-7 -> 7. To
+ * a billionth of the step itself, so a step finer than any fixed
+ * tolerance still gets its decimals, and no tick but 0 is written "0".
+ */
 export function stepDecimals(step) {
-  for (let d = 0; d < 6; d += 1) if (Math.abs(Math.round(step * 10 ** d) - step * 10 ** d) < 1e-6) return d;
-  return 6;
+  for (let d = 0; d < 20; d += 1) {
+    const scaled = step * 10 ** d;
+    const whole = Math.round(scaled);
+    if (whole !== 0 && Math.abs(whole - scaled) <= 1e-9 * Math.abs(scaled)) return d;
+  }
+  return 20;
 }
 
 /**
@@ -261,6 +269,9 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
   const endKey = parliament.end[frequency];
   const start = periodIndex(startKey, frequency);
   const end = periodIndex(endKey, frequency);
+  // No outturn at all in this frequency (annual totals with no year whole,
+  // or every year's total lost to rounding)
+  if (!levels.outturn.size) return { unavailable: "The outturn of this measure cannot be drawn in this unit." };
   const transformed = inUnit(variable, unit, levels, { annual: quarterlyAnnual, start });
   if (!transformed) return { unavailable: "There is no outturn above zero at the start of this parliament, so no index can be drawn." };
   // The newest forecast in the file is the one drawn bold and labelled at

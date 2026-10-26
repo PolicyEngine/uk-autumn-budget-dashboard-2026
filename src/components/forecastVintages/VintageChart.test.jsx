@@ -20,7 +20,9 @@ import VintageChart, {
   xTicks,
   yAxisFor,
 } from "./VintageChart";
-import { OUTTURN_KEY, buildView, pointsIn } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
+import { forecastVintagesProblem } from "../../utils/forecastVintages/load";
+import { periodIndex } from "../../utils/forecastVintages/transforms";
 
 afterEach(cleanup);
 
@@ -288,6 +290,25 @@ describe("the chart's layout", () => {
     expect(layout.labels.map((l) => l.role)).toEqual(["start", "latest"]);
     expect(collisions(layout.labels, dotsOf(layout, rows))).toEqual([]);
     expect(layout.labels.every((l) => l.conflicts === 0)).toBe(true);
+  });
+
+  // Found by the ninth review: income per head's forecasts at 1e9, the
+  // newest falling to 0.0001 from 2029, as an index brushed to 2029 on:
+  // a step of 5e-7, its six ticks written -0, -0, 0, 0, 0, 0
+  it("writes every y tick apart, however fine the step", () => {
+    const data = JSON.parse(JSON.stringify(DATA));
+    const v = data.variables.find((x) => x.id === "rhdi_per_person");
+    for (const vintage of v.level.vintages) for (const k of Object.keys(vintage.values)) vintage.values[k] = 1e9;
+    const newest = v.level.vintages.at(-1);
+    for (const k of Object.keys(newest.values)) if (periodIndex(k, "quarterly") >= periodIndex("2029Q1", "quarterly")) newest.values[k] = 0.0001;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    const view = buildView(data, v, { unit: "index", showPast: false });
+    const rows = view.rows.filter((r) => r.x >= periodIndex("2029Q1", "quarterly"));
+    const { axis } = chartLayout(view, rows, { canvasWidth: 926 });
+    expect(axis.step).toBeLessThan(1e-6);
+    const labels = axis.ticks.map((t) => view.format(t, stepDecimals(axis.step)));
+    expect(new Set(labels).size).toBe(labels.length);
+    axis.ticks.forEach((t, i) => expect(/^-?0(\.0*)?$/.test(labels[i])).toBe(t === 0));
   });
 
   it("keeps CPI's latest and end labels apart in % with the whole history on a phone", () => {

@@ -314,6 +314,44 @@ def page_period(key, frequency: str):
     return index if back == text and 1900 <= year <= 2100 else None
 
 
+def series_as_read(where: str, frequency: str, values) -> None:
+    """Raise unless the page reads ``values`` as a series it can draw.
+
+    As the page's loader reads a series (isSeries in load.js), on the
+    series as JSON reads it back: at least one period, each one the page
+    reads, each value 0 or between 1e-4 and MAX_VALUE in size, and no
+    period missing between the first and the last. The ONS reader leaves
+    out a blank observation, so a blank year in the middle of an ONS
+    series would otherwise be written as a gap, and the page would refuse
+    the whole file. The cases in
+    tests/fixtures/forecast_vintages_series_cases.json hold this and the
+    page to the same answers.
+    """
+    if not isinstance(values, dict) or not values:
+        raise BuildError(f"{where} has no values")
+    numbers = {}
+    for key, value in values.items():
+        number = page_period(key, frequency)
+        if number is None:
+            raise BuildError(
+                f"{where} has a period the page cannot read: {key!r}"
+            )
+        if not _is_page_number(value) or not (
+            value == 0 or abs(value) >= 10**-DECIMALS
+        ):
+            raise BuildError(
+                f"{where} has a figure the page cannot read: {value!r}"
+            )
+        numbers[number] = key
+    ordered = sorted(numbers)
+    for before, after in zip(ordered, ordered[1:]):
+        if after != before + 1:
+            raise BuildError(
+                f"{where} has no value between {numbers[before]} and "
+                f"{numbers[after]}"
+            )
+
+
 def check_as_read(
     name: str, frequency: str, kind: str, unit: str, check, outturn: dict
 ) -> None:
@@ -551,7 +589,18 @@ def build_measure(
             "person by total population (index, 2008 Q1 = 100)"
         )
     written = _ordered(outturn)
-    # As the page reads it: JSON written and read back
+    # As the page reads them: JSON written and read back
+    series_as_read(
+        f"{variable.id}: its outturn",
+        variable.frequency,
+        json.loads(json.dumps(written)),
+    )
+    for vintage in vintages:
+        series_as_read(
+            f"{variable.id}: the {vintage['label']} forecast",
+            variable.frequency,
+            json.loads(json.dumps(vintage["values"])),
+        )
     check_as_read(
         variable.id,
         variable.frequency,

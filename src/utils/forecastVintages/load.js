@@ -93,9 +93,10 @@ function isPeriod(key, frequency) {
 // {period: value}: at least one period, every value a number in range and
 // 0 or no finer than four decimals, as the build writes them, and no
 // period missing between the first and the last (a value with no
-// neighbour would be drawn as nothing)
+// neighbour would be drawn as nothing). The build's series_as_read is
+// held to the same cases (series.test.js)
 const isFigure = (v) => isNumber(v) && (v === 0 || Math.abs(v) >= ROUNDING);
-function isSeries(values, frequency) {
+export function isSeries(values, frequency) {
   if (!isObject(values)) return false;
   const entries = Object.entries(values);
   if (!entries.length || !entries.every(([k, v]) => isPeriod(k, frequency) && isFigure(v))) return false;
