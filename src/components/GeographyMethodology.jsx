@@ -1,6 +1,8 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
 import FactList from "./methodology/FactList";
+import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
 
 export const METHOD_NOTE_URL =
@@ -22,29 +24,28 @@ function GeographyMethodology() {
 
   return (
     <div className="geography-method">
-      <p className="method-lead">
-        The figures by region and by constituency are estimated from a
-        survey of households. Before a figure is published, it passes these
-        checks.
-      </p>
       <FactList
+        className="method-checklist"
         items={[
           [
             "At least 10 households",
-            <>
-              Every published figure rests on at least 10 survey households,
-              and no single household dominates it: each figure is checked
-              against dominance and p% rules before it is published.
-            </>,
+            {
+              points: [
+                "Every published figure rests on at least 10 survey households.",
+                "No single household dominates it: each figure is checked against dominance and p% rules before it is published.",
+              ],
+            },
+            ShieldCheck,
           ],
           [
             "90% intervals",
-            <>
-              Each figure comes with a 90% interval, from resampling survey
-              households with their weights held fixed. Holding the weights
-              fixed leaves out some of the uncertainty, so the intervals
-              understate it.
-            </>,
+            {
+              points: [
+                "Each figure comes with a 90% interval, from resampling survey households with their weights held fixed.",
+                "Holding the weights fixed leaves out some of the uncertainty, so the intervals understate it.",
+              ],
+            },
+            Ruler,
           ],
           [
             "Rounding",
@@ -52,6 +53,7 @@ function GeographyMethodology() {
               Figures are rounded to the precision the data supports, so a
               less certain figure has fewer digits.
             </>,
+            Hash,
           ],
           [
             "Approximate",
@@ -60,6 +62,7 @@ function GeographyMethodology() {
               interval understates the uncertainty, so read it as a rough
               guide.
             </>,
+            TriangleAlert,
           ],
           [
             "Not published",
@@ -68,41 +71,43 @@ function GeographyMethodology() {
               of survey respondents. The map hatches these constituencies, and
               the tables mark them.
             </>,
+            EyeOff,
           ],
           [
             "Map colours",
-            <>
-              The map groups figures into categories with breaks fixed in
-              advance: little change is under {percent.small} of income (
-              {pounds.small} a year) either way, a small change is up to{" "}
-              {percent.large} ({pounds.large}), and a large change is more. A
-              constituency is coloured only when its interval lies within one
-              category or two neighbouring ones; otherwise it is too uncertain
-              to classify.
-            </>,
+            {
+              lead: "The map groups figures into categories with breaks fixed in advance:",
+              points: [
+                `little change: under ${percent.small} of income (${pounds.small} a year) either way;`,
+                `small change: up to ${percent.large} (${pounds.large});`,
+                "large change: more.",
+                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify.",
+              ],
+            },
+            Palette,
           ],
           [
             "Constituencies and regions",
             <>
-              Constituency figures do not add up exactly to the regional ones,
-              and may come from a different dataset.
+              Constituency figures come from Microcosm&apos;s local-area
+              dataset, in which each household belongs to one constituency.
+              They do not add up exactly to the regional ones, which may come
+              from a different dataset.
             </>,
+            Layers,
           ],
           [
             "Later years",
             <>
-              Constituency figures from the national dataset use its
-              constituency weights, which are estimated for 2025. Later years
-              keep each household&apos;s 2025 split across constituencies,
-              scaled to that year&apos;s household weights.
+              Each household keeps its constituency in every year; later years
+              use that year&apos;s household weights.
             </>,
+            CalendarClock,
           ],
         ]}
       />
       <p className="method-more">
-        <a href={METHOD_NOTE_URL} target="_blank" rel="noopener noreferrer">
-          Read the method note for constituency figures
-        </a>
+        <ExternalLink href={METHOD_NOTE_URL}>Read the method note for constituency figures</ExternalLink>
         .
       </p>
     </div>

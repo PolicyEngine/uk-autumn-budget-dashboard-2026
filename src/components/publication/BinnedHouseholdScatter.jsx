@@ -24,6 +24,7 @@ import {
 import UnavailableNotice from "./UnavailableNotice";
 import "./publication.css";
 import { CHART_COLOURS } from "../../utils/chartTheme";
+import { TOOLTIP_PROPS } from "../ChartTooltip";
 
 const pounds = (value) =>
   `${value < 0 ? "−" : ""}£${new Intl.NumberFormat("en-GB", {
@@ -135,8 +136,8 @@ function BinnedHouseholdScatter({ series }) {
             }}
           />
           <ZAxis type="number" dataKey="households" range={[20, 400]} />
-          <ReferenceLine y={0} stroke={CHART_COLOURS.noChange} />
-          <Tooltip content={<CellTooltip />} />
+          <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} />
+          <Tooltip content={<CellTooltip />} trigger={TOOLTIP_PROPS.trigger} />
           <Scatter data={points} shape="circle" isAnimationActive={false}>
             {points.map((point) => (
               <Cell

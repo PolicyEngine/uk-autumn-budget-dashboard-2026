@@ -28,6 +28,11 @@ export function loadOutlook() {
   return cached;
 }
 
+/** Forget the loaded outlook, so the next loadOutlook fetches it (tests). */
+export function clearOutlookCache() {
+  cached = null;
+}
+
 /** "2024-25" -> 2024 (numeric x value for the line chart). */
 export const fyStart = (fy) => parseInt(String(fy).slice(0, 4), 10);
 
@@ -91,10 +96,11 @@ export const headlineStartYear = (data) => data?.meta?.headline_start_year || nu
  * row (or the last row) of a projection. Series that also carry earlier
  * model years still report change from 2027-28.
  */
-export function headlineSpan(rows, data) {
+export function headlineSpan(rows, data, range = null) {
   if (!rows || rows.length < 2) return null;
-  const start = headlineStartYear(data);
-  const end = headlineYear(data);
+  // A reader-chosen [from, to] (useYearRange) wins over the headline years
+  const start = range?.[0] ?? headlineStartYear(data);
+  const end = range?.[1] ?? headlineYear(data);
   const first = (start && rows.find((r) => r.year === start)) || rows[0];
   const last = (end && rows.find((r) => r.year === end)) || rows[rows.length - 1];
   return first === last ? null : [first, last];

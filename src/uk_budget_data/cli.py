@@ -7,6 +7,10 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.constituencies import (
+    add_constituencies_parser,
+    run_constituencies,
+)
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.living_standards.commands import (
     add_living_standards_parsers,
@@ -14,11 +18,14 @@ from uk_budget_data.living_standards.commands import (
     run_obr_forecast,
 )
 from uk_budget_data.models import DataConfig, Reform
+from uk_budget_data.parallel import add_jobs_arguments
 from uk_budget_data.pipeline import (
     generate_age_impact,
     generate_all_data,
     generate_household_scatter,
     generate_income_curve,
+    generate_income_distribution,
+    generate_income_growth,
 )
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
@@ -132,17 +139,28 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     generate_parser.add_argument(
         "--only",
-        choices=["age_impact", "household_scatter"],
+        choices=[
+            "age_impact",
+            "household_scatter",
+            "income_distribution",
+            "income_growth",
+        ],
         default=None,
         help=(
             "Write only this file to --output-dir, leaving the others as "
             "they are. age_impact: results by age band (age_impact.csv). "
             "household_scatter: households by income band and income "
-            "change band, binned (household_scatter_binned.csv)."
+            "change band, binned (household_scatter_binned.csv). "
+            "income_distribution: percentiles of equivalised household net "
+            "income before and after each measure "
+            "(income_distribution.csv). income_growth: real growth of "
+            "each income group's median HBAI income with each measure and "
+            "under its baseline (income_growth_with_measures.csv)."
         ),
     )
 
     add_generate_arguments(generate_parser)
+    add_jobs_arguments(generate_parser, modal=True)
 
     # The example households alone: household simulations, no survey data
     income_curve_parser = subparsers.add_parser(
@@ -175,11 +193,80 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
 
+    # What each measure changes, current law beside the measure: parameter
+    # lookups only, no dataset or simulation
+    policy_table_parser = subparsers.add_parser(
+        "policy-table",
+        help=(
+            "Write only policy_parameters.json: each measure's policy "
+            "parameters before and after, from the model (no dataset needed)"
+        ),
+    )
+    policy_table_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("./public/data"),
+        help="Output directory (default: ./public/data)",
+    )
+
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_constituencies_parser(subparsers)
     add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
+
+
+def runner_for(parsed: argparse.Namespace, units: int, years: int):
+    """The runner ``--jobs`` and ``--backend`` ask for."""
+    from uk_budget_data.parallel import make_runner
+
+    jobs = parsed.jobs
+    if jobs != "auto":
+        try:
+            if int(jobs) < 1:
+                raise ValueError
+        except ValueError:
+            raise SystemExit(
+                f"--jobs takes a whole number from 1, or auto, not {jobs!r}"
+            ) from None
+    return make_runner(
+        jobs,
+        units,
+        years,
+        backend=getattr(parsed, "backend", "local"),
+        say=console.print,
+        unit_gb=parsed.unit_memory_gb,
+    )
+
+
+def modal_artifacts_problem(dataset, repo_root: Path = Path(".")) -> str:
+    """Why ``--artifacts --backend modal`` cannot run, or "".
+
+    The containers run the working tree's package, so a run on the bundle's
+    dataset needs the committed tree: its receipts then name the code that
+    ran. A local dataset file is never sent; a ``synthetic:`` dataset (the
+    smoke test) is built in each container instead.
+    """
+    from uk_budget_data import synthetic_dataset
+    from uk_budget_data.publication.receipt import code_revision
+
+    if dataset is not None:
+        if str(dataset).startswith(synthetic_dataset.PREFIX):
+            return ""
+        return (
+            "--backend modal never sends a dataset file; leave out --dataset "
+            "to use the bundle's, or use synthetic:<households>:<seed> to "
+            "test the plumbing"
+        )
+    revision = code_revision(repo_root)
+    if not revision.tree_clean:
+        return (
+            "--artifacts --backend modal needs a clean working tree, so the "
+            "receipts name the code the containers ran: "
+            + ", ".join(revision.dirty_paths[:5])
+        )
+    return ""
 
 
 def get_reforms_from_ids(reform_ids: list[str]) -> list[Reform]:
@@ -271,17 +358,46 @@ def run_generate(parsed: argparse.Namespace) -> int:
                 "with --artifacts, --combined or --legacy-geography[/red]"
             )
             return 1
+        runner = runner_for(parsed, len(reforms), len(config.years))
         if parsed.only == "household_scatter":
-            generate_household_scatter(reforms=reforms, config=config)
+            generate_household_scatter(
+                reforms=reforms, config=config, runner=runner
+            )
+        elif parsed.only == "income_distribution":
+            generate_income_distribution(
+                reforms=reforms, config=config, runner=runner
+            )
+        elif parsed.only == "income_growth":
+            generate_income_growth(
+                reforms=reforms, config=config, runner=runner
+            )
         else:
-            generate_age_impact(reforms=reforms, config=config)
+            generate_age_impact(reforms=reforms, config=config, runner=runner)
         return 0
 
     # Receipted artifacts: one write-once directory per measure, and one
     # per combined set. --combined alone generates only the combined runs.
     if parsed.artifacts or parsed.combined:
+        if parsed.backend == "modal":
+            problem = modal_artifacts_problem(parsed.dataset)
+            if problem:
+                console.print(f"[red]Error: {problem}[/red]")
+                return 1
+            console.print(
+                "[yellow]Modal: these receipts carry the container's "
+                "execution identity. Make every artifact of this release on "
+                "Modal (measures, combined run, area run), or staging needs "
+                "--adopt-execution.[/yellow]"
+            )
         standalone = reforms if (parsed.reforms or not parsed.combined) else []
-        return run_generate_artifacts(parsed, config, standalone, get_reform)
+        units = max(len(standalone), len(parsed.combined or []), 1)
+        return run_generate_artifacts(
+            parsed,
+            config,
+            standalone,
+            get_reform,
+            runner=runner_for(parsed, units, len(config.years)),
+        )
 
     # Run pipeline
     try:
@@ -289,6 +405,10 @@ def run_generate(parsed: argparse.Namespace) -> int:
             reforms=reforms,
             config=config,
             skip_input_check=parsed.skip_input_check,
+            runner=runner_for(parsed, len(reforms), len(config.years)),
+            # The binned scatter, from the same simulations, so that
+            # --only household_scatter needs no second pass.
+            household_scatter=True,
         )
         console.print("\n[bold green]Data generation complete![/bold green]")
         # The household scatter is no longer sampled into public/data: one
@@ -333,10 +453,17 @@ def main(args: list[str] = None) -> int:
         return run_generate(parsed)
     elif parsed.command == "income-curve":
         return run_income_curve(parsed)
+    elif parsed.command == "policy-table":
+        from uk_budget_data.policy_table import write
+
+        console.print(f"Wrote {write(parsed.output_dir)}")
+        return 0
     elif parsed.command == "publish":
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "constituencies":
+        return run_constituencies(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
@@ -350,11 +477,18 @@ def main(args: list[str] = None) -> int:
         )
         console.print("  income-curve - The example households' curves only")
         console.print(
+            "  policy-table - Each measure's parameters, before and after"
+        )
+        console.print(
             "  publish   - Reconcile, stage, approve and check publications"
         )
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  constituencies - geography's seats pass on the published "
+            "local-area cut, a fresh process per measure"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"

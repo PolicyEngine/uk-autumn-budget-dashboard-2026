@@ -46,3 +46,39 @@ def sdlt_from_purchases_read_at_build(
         purchases = np.asarray(sim.calculate(PURCHASED, year))
         sim.set_input(NON_RESIDENTIAL_SDLT, year, purchases * rate)
     return sim
+
+
+ADDITIONAL_PURCHASES = "additional_residential_property_purchased"
+ENCODED_ADDITIONAL_PURCHASES = "nqqvgvbany_erfvqragvny_cebcregl_chepunfrq"
+
+
+def sdlt_priced_on_purchases(sim):
+    """A limit that shows only in a formula: SDLT priced on second-home
+    purchases."""
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def formula(household, period, parameters):
+        return household(ADDITIONAL_PURCHASES, period) * 0.05
+
+    _replace_formula(sim, "sdlt_on_residential_property_transactions", formula)
+    return sim
+
+
+def council_tax_on_purchases_from_2028(sim):
+    """Council tax charged on second-home purchases, read only from 2028, so
+    a watch over the first year alone would miss it. Council tax's own
+    formula reads nothing limited, and the input's name is decoded as the
+    formula runs, so nothing in 2027 gives it away: only watching 2028
+    does."""
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def formula(household, period, parameters):
+        import codecs
+
+        if period.start.year >= 2028:
+            name = codecs.decode(ENCODED_ADDITIONAL_PURCHASES, "rot13")
+            return household(name, period) * 0.05
+        return household.empty_array()
+
+    _replace_formula(sim, "council_tax", formula)
+    return sim

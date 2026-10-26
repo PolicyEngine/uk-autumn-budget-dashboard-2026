@@ -1,7 +1,9 @@
 import { useId, useState } from "react";
+import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { useGeographyData } from "../hooks/useGeographyData";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { downloadFile } from "../utils/downloadFile";
 import {
   EXPORT_UNITS,
@@ -30,6 +32,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./RegionView.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import TitleIcon from "./TitleIcon";
 
 const TITLE = "Results by region";
 
@@ -83,10 +86,13 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
   const titleId = useId();
   const captionId = useId();
 
+  const { combinedId } = useMeasureCatalogue();
   const choice = chooseReform({
     selectedIds: selectedPolicies,
-    policyIds: policies.map((policy) => policy.id),
+    // The package is every measure the page can show, held ones excluded
+    policyIds: policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     reforms: regional.table?.reforms ?? [],
+    packageId: combinedId,
   });
   const view = viewState({
     data: regional,
@@ -145,7 +151,10 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       <div className="chart-header">
         <div>
           <h3 id={titleId}>
-            {TITLE}, <span className="nowrap">{yearLabel}</span>
+            <TitleIcon name="map" />
+            <span className="title-text">
+              {TITLE}, <span className="nowrap">{yearLabel}</span>
+            </span>
           </h3>
           <p className="chart-description">
             The average change in household net income in each region and
@@ -178,7 +187,7 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       )}
 
       {view.kind === "loading" && (
-        <p className="geography-loading">Loading results by region…</p>
+        <PlotSkeleton label="Loading results by region…" height={360} />
       )}
 
       {view.kind === "notice" && (

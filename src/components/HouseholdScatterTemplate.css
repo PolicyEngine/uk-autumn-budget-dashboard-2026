@@ -35,14 +35,13 @@
   height: 400px;
 }
 
-/* Side by side with the map, the plot takes the map's controls, map and
-   colour scale rows (3 to 5) and fills them: it starts level with the
-   map's view switch, and its x-axis title ends level with the colour
-   scale. Absolutely placed, the drawing adds no height of its own, so the
+/* Side by side with the map, the plot takes the map's controls and map
+   rows (3 and 4) and fills them, and its key takes the colour scale's
+   row (5). Absolutely placed, the drawing adds no height of its own, so the
    map's rows (its body is a fixed 440px) set the card's height. */
 @media (min-width: 1025px) {
   .charts-grid > div.household-scatter-template:not(:only-child) > .chart-plot {
-    grid-row: 3 / span 3;
+    grid-row: 3 / span 2;
     align-self: stretch;
     min-height: 0;
   }
@@ -51,6 +50,12 @@
     position: absolute;
     inset: 0;
     height: auto;
+  }
+
+  /* The key takes the row of the map's colour scale, under the plot */
+  .charts-grid > div.household-scatter-template:not(:only-child) > .scatter-legend {
+    grid-row: 5;
+    align-self: start;
   }
 }
 
@@ -63,7 +68,7 @@
   padding: 10px;
   font-size: 12px;
   color: var(--c-text);
-  background-color: white;
+  background-color: var(--c-surface);
   border: 1px solid var(--c-axis);
   border-radius: 4px;
   pointer-events: none;
@@ -71,4 +76,61 @@
 
 .household-scatter-tooltip p {
   margin: 2px 0;
+}
+
+/* Key under the scatter, outside the plot so it never meets the axis
+   title: one centred row, dots as the chart draws them */
+.scatter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.scatter-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scatter-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* The reader's household in the key: the plot's dark ring, solid centre */
+.scatter-legend-dot.scatter-legend-you {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  opacity: 1;
+  border: 2px solid var(--c-net);
+  background: radial-gradient(circle, var(--c-net) 0 2.5px, var(--c-surface) 3px);
+}
+
+/* A selection the chart is not published for: a compact panel, no plot */
+.household-scatter-empty {
+  min-height: 132px;
+  margin-top: 8px;
+}
+
+.household-scatter-empty .household-scatter-empty-reason {
+  max-width: 46ch;
+  margin: 0 auto;
+  color: var(--pe-gray-700);
+}
+
+.household-scatter-empty .household-scatter-empty-detail {
+  max-width: 60ch;
+  margin: 6px auto 0;
+  font-weight: 400;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
 }

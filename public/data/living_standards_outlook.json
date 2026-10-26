@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-24T17:07:39+00:00",
+    "generated_at": "2026-10-26T11:45:54+00:00",
     "policyengine": "6.10.2",
     "policyengine_uk": "2.132.6",
     "dataset": {
@@ -126,12 +126,12 @@
       }
     },
     "notes": [
-      "Model figures are unvalidated demo output from the Microcosm dataset.",
+      "Model projections; not yet validated against outturn.",
       "Income outturn is HBAI, published in real terms; BHC cash values are recovered with OBR CPI, and AHC outturn is shown in real terms only.",
       "Poverty and inequality outturn is the HBAI admin-linked series, which starts in 2021-22.",
       "The 2024-25 model point uses the weights solved for 2025, scaled for population, so it carries 2025 composition and caseloads (UC \u00a374bn).",
       "OBR series are calendar years; CPI after housing costs and social rent are PolicyEngine derivations, not OBR forecasts.",
-      "The Autumn Budget 2026 OBR forecast is due on 28 October 2026; until then the post-Budget series repeat the pre-Budget ones."
+      "Until a later OBR forecast is loaded, the post series repeat the March 2026 forecast."
     ],
     "caveats": [
       "Ages and benefit take-up are held fixed, so the State Pension age rise to 67 removes State Pension from 66-year-olds with no work response.",
@@ -1749,6 +1749,13 @@
       9,
       10
     ],
+    "quintiles": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "bases": {
       "bhc": "Before housing costs (deflated by OBR CPI)",
       "ahc": "After housing costs (deflated by CPI excluding housing costs)"
@@ -1902,6 +1909,93 @@
             0.00012
           ]
         }
+      ],
+      "quintile_by_year": [
+        {
+          "year": "2027-28",
+          "real_median": [
+            23039,
+            33514,
+            43149,
+            54137,
+            76234
+          ],
+          "cumulative_growth": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "year": "2028-29",
+          "real_median": [
+            22910,
+            33333,
+            42961,
+            54051,
+            76067
+          ],
+          "cumulative_growth": [
+            -0.0056,
+            -0.00542,
+            -0.00436,
+            -0.00158,
+            -0.0022
+          ]
+        },
+        {
+          "year": "2029-30",
+          "real_median": [
+            22864,
+            33226,
+            42894,
+            53880,
+            75917
+          ],
+          "cumulative_growth": [
+            -0.0076,
+            -0.0086,
+            -0.00591,
+            -0.00475,
+            -0.00417
+          ]
+        },
+        {
+          "year": "2030-31",
+          "real_median": [
+            22829,
+            33149,
+            42906,
+            53813,
+            76022
+          ],
+          "cumulative_growth": [
+            -0.0091,
+            -0.01089,
+            -0.00563,
+            -0.00598,
+            -0.00279
+          ]
+        },
+        {
+          "year": "2031-32",
+          "real_median": [
+            22856,
+            33293,
+            43138,
+            54212,
+            76568
+          ],
+          "cumulative_growth": [
+            -0.00794,
+            -0.00661,
+            -0.00025,
+            0.00138,
+            0.00438
+          ]
+        }
       ]
     },
     "ahc": {
@@ -2051,6 +2145,93 @@
             0.00592,
             0.00015,
             -0.00817
+          ]
+        }
+      ],
+      "quintile_by_year": [
+        {
+          "year": "2027-28",
+          "real_median": [
+            17234,
+            27875,
+            36919,
+            47617,
+            69519
+          ],
+          "cumulative_growth": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "year": "2028-29",
+          "real_median": [
+            17074,
+            27662,
+            36835,
+            47557,
+            69123
+          ],
+          "cumulative_growth": [
+            -0.00932,
+            -0.00766,
+            -0.00227,
+            -0.00125,
+            -0.00569
+          ]
+        },
+        {
+          "year": "2029-30",
+          "real_median": [
+            16996,
+            27624,
+            36680,
+            47359,
+            68731
+          ],
+          "cumulative_growth": [
+            -0.01383,
+            -0.00903,
+            -0.00646,
+            -0.00541,
+            -0.01134
+          ]
+        },
+        {
+          "year": "2030-31",
+          "real_median": [
+            16885,
+            27547,
+            36637,
+            47257,
+            68566
+          ],
+          "cumulative_growth": [
+            -0.02027,
+            -0.01178,
+            -0.00764,
+            -0.00755,
+            -0.01372
+          ]
+        },
+        {
+          "year": "2031-32",
+          "real_median": [
+            16862,
+            27688,
+            36839,
+            47531,
+            68997
+          ],
+          "cumulative_growth": [
+            -0.0216,
+            -0.00674,
+            -0.00215,
+            -0.0018,
+            -0.00751
           ]
         }
       ]
@@ -2867,10 +3048,16 @@
   "poverty_by_group": {
     "years": [
       "2027-28",
+      "2028-29",
+      "2029-30",
+      "2030-31",
       "2031-32"
     ],
     "measures": {
       "relative_ahc": "Relative poverty (AHC)",
+      "absolute_ahc": "Absolute poverty (AHC)",
+      "relative_bhc": "Relative poverty (BHC)",
+      "absolute_bhc": "Absolute poverty (BHC)",
       "median_equivalised_income_bhc": "Median equivalised income (BHC), \u00a3 a year, adjusted for household size (shown for a couple with no children)"
     },
     "min_unweighted_households": 100,
@@ -2887,6 +3074,9 @@
           "owned_outright": {
             "2027-28": {
               "relative_ahc": 0.09165,
+              "absolute_ahc": 0.07769,
+              "relative_bhc": 0.1348,
+              "absolute_bhc": 0.11154,
               "median_equivalised_income_bhc": {
                 "nominal": 44047,
                 "real": 44047
@@ -2895,8 +3085,50 @@
               "unweighted_households": 37727,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.09212,
+              "absolute_ahc": 0.0787,
+              "relative_bhc": 0.13397,
+              "absolute_bhc": 0.11196,
+              "median_equivalised_income_bhc": {
+                "nominal": 44841,
+                "real": 43962
+              },
+              "people_millions": 23.419,
+              "unweighted_households": 37727,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.09051,
+              "absolute_ahc": 0.07901,
+              "relative_bhc": 0.13628,
+              "absolute_bhc": 0.11219,
+              "median_equivalised_income_bhc": {
+                "nominal": 45718,
+                "real": 43943
+              },
+              "people_millions": 23.522,
+              "unweighted_households": 37727,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.0899,
+              "absolute_ahc": 0.0792,
+              "relative_bhc": 0.13536,
+              "absolute_bhc": 0.11259,
+              "median_equivalised_income_bhc": {
+                "nominal": 46726,
+                "real": 44031
+              },
+              "people_millions": 23.628,
+              "unweighted_households": 37727,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.09072,
+              "absolute_ahc": 0.07915,
+              "relative_bhc": 0.13605,
+              "absolute_bhc": 0.11137,
               "median_equivalised_income_bhc": {
                 "nominal": 47869,
                 "real": 44223
@@ -2909,6 +3141,9 @@
           "mortgage": {
             "2027-28": {
               "relative_ahc": 0.09991,
+              "absolute_ahc": 0.0904,
+              "relative_bhc": 0.07477,
+              "absolute_bhc": 0.06537,
               "median_equivalised_income_bhc": {
                 "nominal": 49274,
                 "real": 49274
@@ -2917,8 +3152,50 @@
               "unweighted_households": 23109,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.10044,
+              "absolute_ahc": 0.09173,
+              "relative_bhc": 0.07456,
+              "absolute_bhc": 0.06575,
+              "median_equivalised_income_bhc": {
+                "nominal": 50117,
+                "real": 49134
+              },
+              "people_millions": 23.319,
+              "unweighted_households": 23109,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.10211,
+              "absolute_ahc": 0.09334,
+              "relative_bhc": 0.07541,
+              "absolute_bhc": 0.0666,
+              "median_equivalised_income_bhc": {
+                "nominal": 50866,
+                "real": 48891
+              },
+              "people_millions": 23.421,
+              "unweighted_households": 23109,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.10491,
+              "absolute_ahc": 0.09504,
+              "relative_bhc": 0.07557,
+              "absolute_bhc": 0.0667,
+              "median_equivalised_income_bhc": {
+                "nominal": 51832,
+                "real": 48843
+              },
+              "people_millions": 23.527,
+              "unweighted_households": 23109,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.1059,
+              "absolute_ahc": 0.09591,
+              "relative_bhc": 0.07583,
+              "absolute_bhc": 0.0658,
               "median_equivalised_income_bhc": {
                 "nominal": 53335,
                 "real": 49273
@@ -2931,6 +3208,9 @@
           "social_rent": {
             "2027-28": {
               "relative_ahc": 0.36249,
+              "absolute_ahc": 0.301,
+              "relative_bhc": 0.25781,
+              "absolute_bhc": 0.19905,
               "median_equivalised_income_bhc": {
                 "nominal": 32838,
                 "real": 32838
@@ -2939,8 +3219,50 @@
               "unweighted_households": 8622,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.36326,
+              "absolute_ahc": 0.30934,
+              "relative_bhc": 0.25849,
+              "absolute_bhc": 0.20009,
+              "median_equivalised_income_bhc": {
+                "nominal": 33459,
+                "real": 32803
+              },
+              "people_millions": 11.089,
+              "unweighted_households": 8622,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.36463,
+              "absolute_ahc": 0.32402,
+              "relative_bhc": 0.26064,
+              "absolute_bhc": 0.20153,
+              "median_equivalised_income_bhc": {
+                "nominal": 34083,
+                "real": 32759
+              },
+              "people_millions": 11.138,
+              "unweighted_households": 8622,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.36547,
+              "absolute_ahc": 0.32516,
+              "relative_bhc": 0.26076,
+              "absolute_bhc": 0.20166,
+              "median_equivalised_income_bhc": {
+                "nominal": 34781,
+                "real": 32775
+              },
+              "people_millions": 11.188,
+              "unweighted_households": 8622,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.36582,
+              "absolute_ahc": 0.32498,
+              "relative_bhc": 0.26068,
+              "absolute_bhc": 0.20044,
               "median_equivalised_income_bhc": {
                 "nominal": 35623,
                 "real": 32910
@@ -2953,6 +3275,9 @@
           "private_rent": {
             "2027-28": {
               "relative_ahc": 0.33033,
+              "absolute_ahc": 0.28048,
+              "relative_bhc": 0.18347,
+              "absolute_bhc": 0.15395,
               "median_equivalised_income_bhc": {
                 "nominal": 39384,
                 "real": 39384
@@ -2961,8 +3286,50 @@
               "unweighted_households": 8732,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.32914,
+              "absolute_ahc": 0.28291,
+              "relative_bhc": 0.18286,
+              "absolute_bhc": 0.15473,
+              "median_equivalised_income_bhc": {
+                "nominal": 39949,
+                "real": 39165
+              },
+              "people_millions": 12.401,
+              "unweighted_households": 8732,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.32915,
+              "absolute_ahc": 0.28562,
+              "relative_bhc": 0.18284,
+              "absolute_bhc": 0.15503,
+              "median_equivalised_income_bhc": {
+                "nominal": 40613,
+                "real": 39036
+              },
+              "people_millions": 12.455,
+              "unweighted_households": 8732,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.33065,
+              "absolute_ahc": 0.28909,
+              "relative_bhc": 0.18501,
+              "absolute_bhc": 0.15619,
+              "median_equivalised_income_bhc": {
+                "nominal": 41415,
+                "real": 39026
+              },
+              "people_millions": 12.511,
+              "unweighted_households": 8732,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.32735,
+              "absolute_ahc": 0.29159,
+              "relative_bhc": 0.18651,
+              "absolute_bhc": 0.15705,
               "median_equivalised_income_bhc": {
                 "nominal": 42350,
                 "real": 39125
@@ -2987,6 +3354,9 @@
           "lone_parent": {
             "2027-28": {
               "relative_ahc": 0.35412,
+              "absolute_ahc": 0.30512,
+              "relative_bhc": 0.25403,
+              "absolute_bhc": 0.20402,
               "median_equivalised_income_bhc": {
                 "nominal": 31568,
                 "real": 31568
@@ -2995,8 +3365,50 @@
               "unweighted_households": 3783,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.34987,
+              "absolute_ahc": 0.31755,
+              "relative_bhc": 0.26547,
+              "absolute_bhc": 0.19848,
+              "median_equivalised_income_bhc": {
+                "nominal": 31918,
+                "real": 31292
+              },
+              "people_millions": 5.588,
+              "unweighted_households": 3783,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.35133,
+              "absolute_ahc": 0.32337,
+              "relative_bhc": 0.26697,
+              "absolute_bhc": 0.19985,
+              "median_equivalised_income_bhc": {
+                "nominal": 32483,
+                "real": 31222
+              },
+              "people_millions": 5.612,
+              "unweighted_households": 3783,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.35451,
+              "absolute_ahc": 0.32412,
+              "relative_bhc": 0.26678,
+              "absolute_bhc": 0.20036,
+              "median_equivalised_income_bhc": {
+                "nominal": 33190,
+                "real": 31276
+              },
+              "people_millions": 5.637,
+              "unweighted_households": 3783,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.35556,
+              "absolute_ahc": 0.32344,
+              "relative_bhc": 0.26996,
+              "absolute_bhc": 0.19813,
               "median_equivalised_income_bhc": {
                 "nominal": 33640,
                 "real": 31078
@@ -3009,6 +3421,9 @@
           "couple_with_children": {
             "2027-28": {
               "relative_ahc": 0.19769,
+              "absolute_ahc": 0.16257,
+              "relative_bhc": 0.13694,
+              "absolute_bhc": 0.11139,
               "median_equivalised_income_bhc": {
                 "nominal": 41844,
                 "real": 41844
@@ -3017,8 +3432,50 @@
               "unweighted_households": 17323,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.19712,
+              "absolute_ahc": 0.16435,
+              "relative_bhc": 0.13361,
+              "absolute_bhc": 0.11165,
+              "median_equivalised_income_bhc": {
+                "nominal": 42611,
+                "real": 41775
+              },
+              "people_millions": 23.863,
+              "unweighted_households": 17369,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.19793,
+              "absolute_ahc": 0.16984,
+              "relative_bhc": 0.13684,
+              "absolute_bhc": 0.1123,
+              "median_equivalised_income_bhc": {
+                "nominal": 43205,
+                "real": 41528
+              },
+              "people_millions": 23.968,
+              "unweighted_households": 17369,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.19971,
+              "absolute_ahc": 0.17205,
+              "relative_bhc": 0.13801,
+              "absolute_bhc": 0.11278,
+              "median_equivalised_income_bhc": {
+                "nominal": 44067,
+                "real": 41525
+              },
+              "people_millions": 24.076,
+              "unweighted_households": 17369,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.1984,
+              "absolute_ahc": 0.17287,
+              "relative_bhc": 0.13786,
+              "absolute_bhc": 0.11251,
               "median_equivalised_income_bhc": {
                 "nominal": 45200,
                 "real": 41758
@@ -3031,6 +3488,9 @@
           "single_no_children": {
             "2027-28": {
               "relative_ahc": 0.20264,
+              "absolute_ahc": 0.18544,
+              "relative_bhc": 0.17296,
+              "absolute_bhc": 0.14627,
               "median_equivalised_income_bhc": {
                 "nominal": 44537,
                 "real": 44537
@@ -3039,8 +3499,50 @@
               "unweighted_households": 22263,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.20465,
+              "absolute_ahc": 0.18773,
+              "relative_bhc": 0.17298,
+              "absolute_bhc": 0.14795,
+              "median_equivalised_income_bhc": {
+                "nominal": 45183,
+                "real": 44298
+              },
+              "people_millions": 15.158,
+              "unweighted_households": 22410,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.20634,
+              "absolute_ahc": 0.1911,
+              "relative_bhc": 0.17343,
+              "absolute_bhc": 0.14862,
+              "median_equivalised_income_bhc": {
+                "nominal": 46060,
+                "real": 44272
+              },
+              "people_millions": 15.225,
+              "unweighted_households": 22410,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.2071,
+              "absolute_ahc": 0.19326,
+              "relative_bhc": 0.17211,
+              "absolute_bhc": 0.14881,
+              "median_equivalised_income_bhc": {
+                "nominal": 47104,
+                "real": 44387
+              },
+              "people_millions": 15.294,
+              "unweighted_households": 22410,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.20725,
+              "absolute_ahc": 0.19487,
+              "relative_bhc": 0.17178,
+              "absolute_bhc": 0.14866,
               "median_equivalised_income_bhc": {
                 "nominal": 48481,
                 "real": 44789
@@ -3053,6 +3555,9 @@
           "couple_no_children": {
             "2027-28": {
               "relative_ahc": 0.09781,
+              "absolute_ahc": 0.08635,
+              "relative_bhc": 0.08137,
+              "absolute_bhc": 0.07118,
               "median_equivalised_income_bhc": {
                 "nominal": 54056,
                 "real": 54056
@@ -3061,8 +3566,50 @@
               "unweighted_households": 16919,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.10107,
+              "absolute_ahc": 0.08991,
+              "relative_bhc": 0.08494,
+              "absolute_bhc": 0.07504,
+              "median_equivalised_income_bhc": {
+                "nominal": 54818,
+                "real": 53743
+              },
+              "people_millions": 12.66,
+              "unweighted_households": 17163,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.10006,
+              "absolute_ahc": 0.09155,
+              "relative_bhc": 0.08578,
+              "absolute_bhc": 0.07615,
+              "median_equivalised_income_bhc": {
+                "nominal": 55671,
+                "real": 53509
+              },
+              "people_millions": 12.716,
+              "unweighted_households": 17163,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.10078,
+              "absolute_ahc": 0.09188,
+              "relative_bhc": 0.08617,
+              "absolute_bhc": 0.07674,
+              "median_equivalised_income_bhc": {
+                "nominal": 56723,
+                "real": 53451
+              },
+              "people_millions": 12.773,
+              "unweighted_households": 17163,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.10045,
+              "absolute_ahc": 0.09209,
+              "relative_bhc": 0.08542,
+              "absolute_bhc": 0.07483,
               "median_equivalised_income_bhc": {
                 "nominal": 58468,
                 "real": 54016
@@ -3075,6 +3622,9 @@
           "pensioner": {
             "2027-28": {
               "relative_ahc": 0.12258,
+              "absolute_ahc": 0.0972,
+              "relative_bhc": 0.13057,
+              "absolute_bhc": 0.10305,
               "median_equivalised_income_bhc": {
                 "nominal": 39242,
                 "real": 39242
@@ -3083,8 +3633,50 @@
               "unweighted_households": 28108,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.12108,
+              "absolute_ahc": 0.09574,
+              "relative_bhc": 0.12665,
+              "absolute_bhc": 0.1024,
+              "median_equivalised_income_bhc": {
+                "nominal": 39940,
+                "real": 39157
+              },
+              "people_millions": 12.958,
+              "unweighted_households": 27641,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.11922,
+              "absolute_ahc": 0.09618,
+              "relative_bhc": 0.12621,
+              "absolute_bhc": 0.10221,
+              "median_equivalised_income_bhc": {
+                "nominal": 40710,
+                "real": 39129
+              },
+              "people_millions": 13.015,
+              "unweighted_households": 27641,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.11907,
+              "absolute_ahc": 0.09665,
+              "relative_bhc": 0.1261,
+              "absolute_bhc": 0.10243,
+              "median_equivalised_income_bhc": {
+                "nominal": 41570,
+                "real": 39173
+              },
+              "people_millions": 13.074,
+              "unweighted_households": 27641,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.12158,
+              "absolute_ahc": 0.09703,
+              "relative_bhc": 0.12921,
+              "absolute_bhc": 0.10186,
               "median_equivalised_income_bhc": {
                 "nominal": 42621,
                 "real": 39376
@@ -3116,6 +3708,9 @@
           "NORTH_EAST": {
             "2027-28": {
               "relative_ahc": 0.20722,
+              "absolute_ahc": 0.18591,
+              "relative_bhc": 0.17641,
+              "absolute_bhc": 0.12468,
               "median_equivalised_income_bhc": {
                 "nominal": 38191,
                 "real": 38191
@@ -3124,8 +3719,50 @@
               "unweighted_households": 2964,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.20922,
+              "absolute_ahc": 0.18634,
+              "relative_bhc": 0.17573,
+              "absolute_bhc": 0.12728,
+              "median_equivalised_income_bhc": {
+                "nominal": 38756,
+                "real": 37996
+              },
+              "people_millions": 2.789,
+              "unweighted_households": 2964,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.20868,
+              "absolute_ahc": 0.18795,
+              "relative_bhc": 0.17519,
+              "absolute_bhc": 0.12989,
+              "median_equivalised_income_bhc": {
+                "nominal": 39316,
+                "real": 37789
+              },
+              "people_millions": 2.801,
+              "unweighted_households": 2964,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.21198,
+              "absolute_ahc": 0.19181,
+              "relative_bhc": 0.17569,
+              "absolute_bhc": 0.13134,
+              "median_equivalised_income_bhc": {
+                "nominal": 40013,
+                "real": 37705
+              },
+              "people_millions": 2.814,
+              "unweighted_households": 2964,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.21185,
+              "absolute_ahc": 0.1873,
+              "relative_bhc": 0.17571,
+              "absolute_bhc": 0.12753,
               "median_equivalised_income_bhc": {
                 "nominal": 41196,
                 "real": 38059
@@ -3138,6 +3775,9 @@
           "NORTH_WEST": {
             "2027-28": {
               "relative_ahc": 0.201,
+              "absolute_ahc": 0.15643,
+              "relative_bhc": 0.16626,
+              "absolute_bhc": 0.13968,
               "median_equivalised_income_bhc": {
                 "nominal": 41817,
                 "real": 41817
@@ -3146,8 +3786,50 @@
               "unweighted_households": 6890,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.20032,
+              "absolute_ahc": 0.15937,
+              "relative_bhc": 0.16519,
+              "absolute_bhc": 0.14044,
+              "median_equivalised_income_bhc": {
+                "nominal": 42488,
+                "real": 41655
+              },
+              "people_millions": 7.839,
+              "unweighted_households": 6890,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.20021,
+              "absolute_ahc": 0.17705,
+              "relative_bhc": 0.16508,
+              "absolute_bhc": 0.14103,
+              "median_equivalised_income_bhc": {
+                "nominal": 43197,
+                "real": 41520
+              },
+              "people_millions": 7.874,
+              "unweighted_households": 6890,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.20104,
+              "absolute_ahc": 0.17733,
+              "relative_bhc": 0.16535,
+              "absolute_bhc": 0.14202,
+              "median_equivalised_income_bhc": {
+                "nominal": 44086,
+                "real": 41544
+              },
+              "people_millions": 7.909,
+              "unweighted_households": 6890,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.20125,
+              "absolute_ahc": 0.17771,
+              "relative_bhc": 0.16921,
+              "absolute_bhc": 0.1419,
               "median_equivalised_income_bhc": {
                 "nominal": 45281,
                 "real": 41833
@@ -3160,6 +3842,9 @@
           "YORKSHIRE": {
             "2027-28": {
               "relative_ahc": 0.16781,
+              "absolute_ahc": 0.13423,
+              "relative_bhc": 0.14145,
+              "absolute_bhc": 0.12611,
               "median_equivalised_income_bhc": {
                 "nominal": 39427,
                 "real": 39427
@@ -3168,8 +3853,50 @@
               "unweighted_households": 6694,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.16936,
+              "absolute_ahc": 0.13676,
+              "relative_bhc": 0.14298,
+              "absolute_bhc": 0.12248,
+              "median_equivalised_income_bhc": {
+                "nominal": 40239,
+                "real": 39450
+              },
+              "people_millions": 5.716,
+              "unweighted_households": 6694,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.16997,
+              "absolute_ahc": 0.13967,
+              "relative_bhc": 0.14458,
+              "absolute_bhc": 0.12412,
+              "median_equivalised_income_bhc": {
+                "nominal": 40672,
+                "real": 39093
+              },
+              "people_millions": 5.741,
+              "unweighted_households": 6694,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.17197,
+              "absolute_ahc": 0.13939,
+              "relative_bhc": 0.14457,
+              "absolute_bhc": 0.12415,
+              "median_equivalised_income_bhc": {
+                "nominal": 41555,
+                "real": 39158
+              },
+              "people_millions": 5.767,
+              "unweighted_households": 6694,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.17289,
+              "absolute_ahc": 0.14573,
+              "relative_bhc": 0.14679,
+              "absolute_bhc": 0.12139,
               "median_equivalised_income_bhc": {
                 "nominal": 42580,
                 "real": 39338
@@ -3182,6 +3909,9 @@
           "EAST_MIDLANDS": {
             "2027-28": {
               "relative_ahc": 0.18447,
+              "absolute_ahc": 0.15425,
+              "relative_bhc": 0.16507,
+              "absolute_bhc": 0.13085,
               "median_equivalised_income_bhc": {
                 "nominal": 39248,
                 "real": 39248
@@ -3190,8 +3920,50 @@
               "unweighted_households": 4682,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.18418,
+              "absolute_ahc": 0.16768,
+              "relative_bhc": 0.17739,
+              "absolute_bhc": 0.1308,
+              "median_equivalised_income_bhc": {
+                "nominal": 39844,
+                "real": 39063
+              },
+              "people_millions": 5.153,
+              "unweighted_households": 4682,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.18253,
+              "absolute_ahc": 0.16737,
+              "relative_bhc": 0.18231,
+              "absolute_bhc": 0.13089,
+              "median_equivalised_income_bhc": {
+                "nominal": 40441,
+                "real": 38871
+              },
+              "people_millions": 5.176,
+              "unweighted_households": 4682,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.18371,
+              "absolute_ahc": 0.16786,
+              "relative_bhc": 0.17784,
+              "absolute_bhc": 0.13191,
+              "median_equivalised_income_bhc": {
+                "nominal": 41186,
+                "real": 38811
+              },
+              "people_millions": 5.199,
+              "unweighted_households": 4682,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.18588,
+              "absolute_ahc": 0.16808,
+              "relative_bhc": 0.17569,
+              "absolute_bhc": 0.13113,
               "median_equivalised_income_bhc": {
                 "nominal": 41999,
                 "real": 38800
@@ -3204,6 +3976,9 @@
           "WEST_MIDLANDS": {
             "2027-28": {
               "relative_ahc": 0.19708,
+              "absolute_ahc": 0.1467,
+              "relative_bhc": 0.15274,
+              "absolute_bhc": 0.10864,
               "median_equivalised_income_bhc": {
                 "nominal": 39289,
                 "real": 39289
@@ -3212,8 +3987,50 @@
               "unweighted_households": 4563,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.19606,
+              "absolute_ahc": 0.14694,
+              "relative_bhc": 0.15089,
+              "absolute_bhc": 0.10918,
+              "median_equivalised_income_bhc": {
+                "nominal": 40030,
+                "real": 39245
+              },
+              "people_millions": 6.286,
+              "unweighted_households": 4563,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.19571,
+              "absolute_ahc": 0.15094,
+              "relative_bhc": 0.15317,
+              "absolute_bhc": 0.10977,
+              "median_equivalised_income_bhc": {
+                "nominal": 40724,
+                "real": 39142
+              },
+              "people_millions": 6.314,
+              "unweighted_households": 4563,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.19704,
+              "absolute_ahc": 0.15649,
+              "relative_bhc": 0.1547,
+              "absolute_bhc": 0.10997,
+              "median_equivalised_income_bhc": {
+                "nominal": 41508,
+                "real": 39114
+              },
+              "people_millions": 6.342,
+              "unweighted_households": 4563,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.19758,
+              "absolute_ahc": 0.15788,
+              "relative_bhc": 0.15519,
+              "absolute_bhc": 0.10838,
               "median_equivalised_income_bhc": {
                 "nominal": 42652,
                 "real": 39404
@@ -3226,6 +4043,9 @@
           "EAST_OF_ENGLAND": {
             "2027-28": {
               "relative_ahc": 0.12569,
+              "absolute_ahc": 0.11414,
+              "relative_bhc": 0.1038,
+              "absolute_bhc": 0.08237,
               "median_equivalised_income_bhc": {
                 "nominal": 44785,
                 "real": 44785
@@ -3234,8 +4054,50 @@
               "unweighted_households": 7153,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.12762,
+              "absolute_ahc": 0.1165,
+              "relative_bhc": 0.10324,
+              "absolute_bhc": 0.08371,
+              "median_equivalised_income_bhc": {
+                "nominal": 45585,
+                "real": 44691
+              },
+              "people_millions": 6.708,
+              "unweighted_households": 7153,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.12917,
+              "absolute_ahc": 0.11773,
+              "relative_bhc": 0.10367,
+              "absolute_bhc": 0.08465,
+              "median_equivalised_income_bhc": {
+                "nominal": 46225,
+                "real": 44430
+              },
+              "people_millions": 6.737,
+              "unweighted_households": 7153,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.13316,
+              "absolute_ahc": 0.11874,
+              "relative_bhc": 0.10399,
+              "absolute_bhc": 0.08476,
+              "median_equivalised_income_bhc": {
+                "nominal": 47202,
+                "real": 44480
+              },
+              "people_millions": 6.768,
+              "unweighted_households": 7153,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.1344,
+              "absolute_ahc": 0.11845,
+              "relative_bhc": 0.10346,
+              "absolute_bhc": 0.08446,
               "median_equivalised_income_bhc": {
                 "nominal": 48524,
                 "real": 44829
@@ -3248,6 +4110,9 @@
           "LONDON": {
             "2027-28": {
               "relative_ahc": 0.199,
+              "absolute_ahc": 0.18428,
+              "relative_bhc": 0.11018,
+              "absolute_bhc": 0.09239,
               "median_equivalised_income_bhc": {
                 "nominal": 49209,
                 "real": 49209
@@ -3256,8 +4121,50 @@
               "unweighted_households": 8110,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.19835,
+              "absolute_ahc": 0.18455,
+              "relative_bhc": 0.10759,
+              "absolute_bhc": 0.09278,
+              "median_equivalised_income_bhc": {
+                "nominal": 49821,
+                "real": 48844
+              },
+              "people_millions": 9.204,
+              "unweighted_households": 8110,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.19827,
+              "absolute_ahc": 0.18523,
+              "relative_bhc": 0.10802,
+              "absolute_bhc": 0.09173,
+              "median_equivalised_income_bhc": {
+                "nominal": 50709,
+                "real": 48740
+              },
+              "people_millions": 9.244,
+              "unweighted_households": 8110,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.19828,
+              "absolute_ahc": 0.1867,
+              "relative_bhc": 0.10688,
+              "absolute_bhc": 0.09179,
+              "median_equivalised_income_bhc": {
+                "nominal": 51719,
+                "real": 48736
+              },
+              "people_millions": 9.286,
+              "unweighted_households": 8110,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.19842,
+              "absolute_ahc": 0.18658,
+              "relative_bhc": 0.10789,
+              "absolute_bhc": 0.09133,
               "median_equivalised_income_bhc": {
                 "nominal": 52955,
                 "real": 48923
@@ -3270,6 +4177,9 @@
           "SOUTH_EAST": {
             "2027-28": {
               "relative_ahc": 0.15229,
+              "absolute_ahc": 0.14061,
+              "relative_bhc": 0.12359,
+              "absolute_bhc": 0.11143,
               "median_equivalised_income_bhc": {
                 "nominal": 48756,
                 "real": 48756
@@ -3278,8 +4188,50 @@
               "unweighted_households": 11478,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.15242,
+              "absolute_ahc": 0.14256,
+              "relative_bhc": 0.12164,
+              "absolute_bhc": 0.11183,
+              "median_equivalised_income_bhc": {
+                "nominal": 49605,
+                "real": 48632
+              },
+              "people_millions": 9.794,
+              "unweighted_households": 11478,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.15307,
+              "absolute_ahc": 0.14507,
+              "relative_bhc": 0.12163,
+              "absolute_bhc": 0.11197,
+              "median_equivalised_income_bhc": {
+                "nominal": 50462,
+                "real": 48503
+              },
+              "people_millions": 9.837,
+              "unweighted_households": 11478,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.15463,
+              "absolute_ahc": 0.14548,
+              "relative_bhc": 0.12287,
+              "absolute_bhc": 0.11207,
+              "median_equivalised_income_bhc": {
+                "nominal": 51573,
+                "real": 48599
+              },
+              "people_millions": 9.881,
+              "unweighted_households": 11478,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.15502,
+              "absolute_ahc": 0.14736,
+              "relative_bhc": 0.12349,
+              "absolute_bhc": 0.11119,
               "median_equivalised_income_bhc": {
                 "nominal": 53040,
                 "real": 49001
@@ -3292,6 +4244,9 @@
           "SOUTH_WEST": {
             "2027-28": {
               "relative_ahc": 0.16007,
+              "absolute_ahc": 0.12134,
+              "relative_bhc": 0.1158,
+              "absolute_bhc": 0.09356,
               "median_equivalised_income_bhc": {
                 "nominal": 42501,
                 "real": 42501
@@ -3300,8 +4255,50 @@
               "unweighted_households": 6710,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.16124,
+              "absolute_ahc": 0.12063,
+              "relative_bhc": 0.11491,
+              "absolute_bhc": 0.096,
+              "median_equivalised_income_bhc": {
+                "nominal": 43316,
+                "real": 42467
+              },
+              "people_millions": 5.959,
+              "unweighted_households": 6710,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.15976,
+              "absolute_ahc": 0.12123,
+              "relative_bhc": 0.12237,
+              "absolute_bhc": 0.09696,
+              "median_equivalised_income_bhc": {
+                "nominal": 44206,
+                "real": 42490
+              },
+              "people_millions": 5.985,
+              "unweighted_households": 6710,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.16018,
+              "absolute_ahc": 0.12103,
+              "relative_bhc": 0.12174,
+              "absolute_bhc": 0.09873,
+              "median_equivalised_income_bhc": {
+                "nominal": 45020,
+                "real": 42423
+              },
+              "people_millions": 6.012,
+              "unweighted_households": 6710,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.15476,
+              "absolute_ahc": 0.12108,
+              "relative_bhc": 0.12169,
+              "absolute_bhc": 0.10098,
               "median_equivalised_income_bhc": {
                 "nominal": 46037,
                 "real": 42531
@@ -3314,6 +4311,9 @@
           "WALES": {
             "2027-28": {
               "relative_ahc": 0.21775,
+              "absolute_ahc": 0.19451,
+              "relative_bhc": 0.18158,
+              "absolute_bhc": 0.16298,
               "median_equivalised_income_bhc": {
                 "nominal": 38505,
                 "real": 38505
@@ -3322,8 +4322,50 @@
               "unweighted_households": 5033,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.21729,
+              "absolute_ahc": 0.1975,
+              "relative_bhc": 0.18192,
+              "absolute_bhc": 0.16577,
+              "median_equivalised_income_bhc": {
+                "nominal": 38931,
+                "real": 38168
+              },
+              "people_millions": 3.213,
+              "unweighted_households": 5033,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.21805,
+              "absolute_ahc": 0.20079,
+              "relative_bhc": 0.18371,
+              "absolute_bhc": 0.16634,
+              "median_equivalised_income_bhc": {
+                "nominal": 39340,
+                "real": 37812
+              },
+              "people_millions": 3.227,
+              "unweighted_households": 5033,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.21843,
+              "absolute_ahc": 0.20215,
+              "relative_bhc": 0.18762,
+              "absolute_bhc": 0.16652,
+              "median_equivalised_income_bhc": {
+                "nominal": 40094,
+                "real": 37782
+              },
+              "people_millions": 3.241,
+              "unweighted_households": 5033,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.2176,
+              "absolute_ahc": 0.20292,
+              "relative_bhc": 0.18542,
+              "absolute_bhc": 0.16699,
               "median_equivalised_income_bhc": {
                 "nominal": 41016,
                 "real": 37892
@@ -3336,6 +4378,9 @@
           "SCOTLAND": {
             "2027-28": {
               "relative_ahc": 0.17889,
+              "absolute_ahc": 0.16518,
+              "relative_bhc": 0.17217,
+              "absolute_bhc": 0.14406,
               "median_equivalised_income_bhc": {
                 "nominal": 42724,
                 "real": 42724
@@ -3344,8 +4389,50 @@
               "unweighted_households": 7067,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.1786,
+              "absolute_ahc": 0.16755,
+              "relative_bhc": 0.17259,
+              "absolute_bhc": 0.14461,
+              "median_equivalised_income_bhc": {
+                "nominal": 43539,
+                "real": 42685
+              },
+              "people_millions": 5.608,
+              "unweighted_households": 7067,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.1815,
+              "absolute_ahc": 0.1678,
+              "relative_bhc": 0.17201,
+              "absolute_bhc": 0.14709,
+              "median_equivalised_income_bhc": {
+                "nominal": 44392,
+                "real": 42669
+              },
+              "people_millions": 5.632,
+              "unweighted_households": 7067,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.18115,
+              "absolute_ahc": 0.17174,
+              "relative_bhc": 0.1734,
+              "absolute_bhc": 0.14662,
+              "median_equivalised_income_bhc": {
+                "nominal": 45355,
+                "real": 42739
+              },
+              "people_millions": 5.658,
+              "unweighted_households": 7067,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.18221,
+              "absolute_ahc": 0.17085,
+              "relative_bhc": 0.17333,
+              "absolute_bhc": 0.14467,
               "median_equivalised_income_bhc": {
                 "nominal": 46476,
                 "real": 42937
@@ -3358,6 +4445,9 @@
           "NORTHERN_IRELAND": {
             "2027-28": {
               "relative_ahc": 0.23832,
+              "absolute_ahc": 0.20484,
+              "relative_bhc": 0.2348,
+              "absolute_bhc": 0.17814,
               "median_equivalised_income_bhc": {
                 "nominal": 36252,
                 "real": 36252
@@ -3366,8 +4456,50 @@
               "unweighted_households": 6846,
               "suppressed": false
             },
+            "2028-29": {
+              "relative_ahc": 0.24054,
+              "absolute_ahc": 0.21083,
+              "relative_bhc": 0.22161,
+              "absolute_bhc": 0.17877,
+              "median_equivalised_income_bhc": {
+                "nominal": 36877,
+                "real": 36154
+              },
+              "people_millions": 1.959,
+              "unweighted_households": 6846,
+              "suppressed": false
+            },
+            "2029-30": {
+              "relative_ahc": 0.24047,
+              "absolute_ahc": 0.21257,
+              "relative_bhc": 0.2201,
+              "absolute_bhc": 0.1787,
+              "median_equivalised_income_bhc": {
+                "nominal": 37477,
+                "real": 36022
+              },
+              "people_millions": 1.968,
+              "unweighted_households": 6846,
+              "suppressed": false
+            },
+            "2030-31": {
+              "relative_ahc": 0.23722,
+              "absolute_ahc": 0.21331,
+              "relative_bhc": 0.22009,
+              "absolute_bhc": 0.17795,
+              "median_equivalised_income_bhc": {
+                "nominal": 38257,
+                "real": 36051
+              },
+              "people_millions": 1.977,
+              "unweighted_households": 6846,
+              "suppressed": false
+            },
             "2031-32": {
               "relative_ahc": 0.23699,
+              "absolute_ahc": 0.21246,
+              "relative_bhc": 0.22057,
+              "absolute_bhc": 0.17768,
               "median_equivalised_income_bhc": {
                 "nominal": 39393,
                 "real": 36393
@@ -3480,5 +4612,2741 @@
       "OBR's national-accounts measure, including non-profit institutions and imputed income; not comparable in level to the survey-based HBAI series.",
       "2025-26 onwards are OBR March 2026 forecast years."
     ]
+  },
+  "income_growth_by_group": {
+    "base_year": "2027-28",
+    "end_year": "2031-32",
+    "measure": "median",
+    "statistic": "Median equivalised household income within each person-weighted income group, real 2027-28 prices",
+    "bases": {
+      "bhc": "Before housing costs (deflated by OBR CPI)",
+      "ahc": "After housing costs (deflated by CPI excluding housing costs)"
+    },
+    "populations": {
+      "all": "All people",
+      "non_pensioners": "Non-pensioners: people in families (benefit units) with no one at or above State Pension age"
+    },
+    "groupings": {
+      "quintile": 5,
+      "decile": 10,
+      "vigintile": 20
+    },
+    "min_unweighted_households": 100,
+    "withheld_groupings": {},
+    "method": "Each population is ranked on its own equivalised income (BHC on BHC income, AHC on AHC income), re-ranked each year, and cut into person-weighted groups; each group's median is deflated by CPI (BHC) or CPI-AHC (AHC). annual_growth is the change on the year before (for 2027-28, on 2026-27); cumulative_growth the change since 2027-28.",
+    "series": {
+      "all": {
+        "bhc": {
+          "quintile": {
+            "min_unweighted_households": 10238,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  23039,
+                  33514,
+                  43149,
+                  54137,
+                  76234
+                ],
+                "annual_growth": [
+                  -0.00352,
+                  -0.00295,
+                  0.00041,
+                  0.00034,
+                  -0.00116
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  22910,
+                  33333,
+                  42961,
+                  54051,
+                  76067
+                ],
+                "annual_growth": [
+                  -0.0056,
+                  -0.00542,
+                  -0.00436,
+                  -0.00158,
+                  -0.0022
+                ],
+                "cumulative_growth": [
+                  -0.0056,
+                  -0.00542,
+                  -0.00436,
+                  -0.00158,
+                  -0.0022
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  22864,
+                  33226,
+                  42894,
+                  53880,
+                  75917
+                ],
+                "annual_growth": [
+                  -0.00201,
+                  -0.0032,
+                  -0.00156,
+                  -0.00317,
+                  -0.00198
+                ],
+                "cumulative_growth": [
+                  -0.0076,
+                  -0.0086,
+                  -0.00591,
+                  -0.00475,
+                  -0.00417
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  22829,
+                  33149,
+                  42906,
+                  53813,
+                  76022
+                ],
+                "annual_growth": [
+                  -0.00151,
+                  -0.00231,
+                  0.00028,
+                  -0.00124,
+                  0.00138
+                ],
+                "cumulative_growth": [
+                  -0.0091,
+                  -0.01089,
+                  -0.00563,
+                  -0.00598,
+                  -0.00279
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  22856,
+                  33293,
+                  43138,
+                  54212,
+                  76568
+                ],
+                "annual_growth": [
+                  0.00117,
+                  0.00433,
+                  0.00541,
+                  0.0074,
+                  0.00719
+                ],
+                "cumulative_growth": [
+                  -0.00794,
+                  -0.00661,
+                  -0.00025,
+                  0.00138,
+                  0.00438
+                ]
+              }
+            ]
+          },
+          "decile": {
+            "min_unweighted_households": 4841,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  17794,
+                  26271,
+                  31266,
+                  35758,
+                  40323,
+                  45295,
+                  50736,
+                  58144,
+                  67481,
+                  95056
+                ],
+                "annual_growth": [
+                  -0.01159,
+                  -0.00371,
+                  -0.00274,
+                  -0.00144,
+                  -0.00203,
+                  -0.00039,
+                  0.0,
+                  0.00052,
+                  0.0001,
+                  -0.00058
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  17656,
+                  26153,
+                  31065,
+                  35472,
+                  40204,
+                  45170,
+                  50655,
+                  57962,
+                  67204,
+                  94872
+                ],
+                "annual_growth": [
+                  -0.00771,
+                  -0.00447,
+                  -0.00643,
+                  -0.00801,
+                  -0.00297,
+                  -0.00276,
+                  -0.0016,
+                  -0.00313,
+                  -0.0041,
+                  -0.00193
+                ],
+                "cumulative_growth": [
+                  -0.00771,
+                  -0.00447,
+                  -0.00643,
+                  -0.00801,
+                  -0.00297,
+                  -0.00276,
+                  -0.0016,
+                  -0.00313,
+                  -0.0041,
+                  -0.00193
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  17458,
+                  26086,
+                  31010,
+                  35388,
+                  40042,
+                  45025,
+                  50569,
+                  57841,
+                  66871,
+                  94260
+                ],
+                "annual_growth": [
+                  -0.01122,
+                  -0.00256,
+                  -0.00175,
+                  -0.00237,
+                  -0.00401,
+                  -0.00321,
+                  -0.0017,
+                  -0.0021,
+                  -0.00495,
+                  -0.00645
+                ],
+                "cumulative_growth": [
+                  -0.01885,
+                  -0.00702,
+                  -0.00817,
+                  -0.01036,
+                  -0.00697,
+                  -0.00596,
+                  -0.0033,
+                  -0.00522,
+                  -0.00903,
+                  -0.00837
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  17380,
+                  26081,
+                  31035,
+                  35381,
+                  39991,
+                  45045,
+                  50631,
+                  57859,
+                  66788,
+                  94426
+                ],
+                "annual_growth": [
+                  -0.00446,
+                  -0.00021,
+                  0.00079,
+                  -0.0002,
+                  -0.00127,
+                  0.00043,
+                  0.00122,
+                  0.00032,
+                  -0.00125,
+                  0.00177
+                ],
+                "cumulative_growth": [
+                  -0.02322,
+                  -0.00723,
+                  -0.00738,
+                  -0.01057,
+                  -0.00823,
+                  -0.00553,
+                  -0.00208,
+                  -0.00491,
+                  -0.01026,
+                  -0.00662
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  17355,
+                  26134,
+                  31078,
+                  35611,
+                  40216,
+                  45379,
+                  50970,
+                  58272,
+                  67269,
+                  95067
+                ],
+                "annual_growth": [
+                  -0.00145,
+                  0.00203,
+                  0.00139,
+                  0.00652,
+                  0.00562,
+                  0.00744,
+                  0.0067,
+                  0.00714,
+                  0.00721,
+                  0.00679
+                ],
+                "cumulative_growth": [
+                  -0.02464,
+                  -0.00522,
+                  -0.006,
+                  -0.00411,
+                  -0.00265,
+                  0.00187,
+                  0.00461,
+                  0.0022,
+                  -0.00313,
+                  0.00012
+                ]
+              }
+            ]
+          },
+          "vigintile": {
+            "min_unweighted_households": 2254,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  13258,
+                  20796,
+                  24836,
+                  27681,
+                  30064,
+                  32472,
+                  34519,
+                  36985,
+                  39148,
+                  41664,
+                  44162,
+                  46640,
+                  49473,
+                  52378,
+                  56095,
+                  60131,
+                  64390,
+                  70861,
+                  83180,
+                  114663
+                ],
+                "annual_growth": [
+                  -0.01518,
+                  -0.00485,
+                  -0.00037,
+                  -0.00263,
+                  -0.00199,
+                  -0.00115,
+                  -0.00132,
+                  -0.00053,
+                  -0.00198,
+                  -0.00083,
+                  -0.00031,
+                  -0.00096,
+                  -0.00234,
+                  -0.00072,
+                  -0.00195,
+                  0.0018,
+                  -0.00066,
+                  -0.00236,
+                  -0.00422,
+                  -0.00083
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  13020,
+                  20605,
+                  24749,
+                  27612,
+                  29960,
+                  32275,
+                  34348,
+                  36857,
+                  39064,
+                  41505,
+                  44114,
+                  46535,
+                  49395,
+                  52326,
+                  56000,
+                  59981,
+                  64188,
+                  70591,
+                  83125,
+                  114230
+                ],
+                "annual_growth": [
+                  -0.01789,
+                  -0.00918,
+                  -0.00353,
+                  -0.0025,
+                  -0.00347,
+                  -0.00606,
+                  -0.00495,
+                  -0.00347,
+                  -0.00216,
+                  -0.00384,
+                  -0.00109,
+                  -0.00224,
+                  -0.00159,
+                  -0.001,
+                  -0.00171,
+                  -0.00248,
+                  -0.00313,
+                  -0.0038,
+                  -0.00065,
+                  -0.00378
+                ],
+                "cumulative_growth": [
+                  -0.01789,
+                  -0.00918,
+                  -0.00353,
+                  -0.0025,
+                  -0.00347,
+                  -0.00606,
+                  -0.00495,
+                  -0.00347,
+                  -0.00216,
+                  -0.00384,
+                  -0.00109,
+                  -0.00224,
+                  -0.00159,
+                  -0.001,
+                  -0.00171,
+                  -0.00248,
+                  -0.00313,
+                  -0.0038,
+                  -0.00065,
+                  -0.00378
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  12900,
+                  20575,
+                  24723,
+                  27556,
+                  29831,
+                  32217,
+                  34280,
+                  36717,
+                  38933,
+                  41334,
+                  44014,
+                  46499,
+                  49258,
+                  52147,
+                  55851,
+                  59730,
+                  63961,
+                  70279,
+                  82671,
+                  113702
+                ],
+                "annual_growth": [
+                  -0.00926,
+                  -0.00145,
+                  -0.00104,
+                  -0.00201,
+                  -0.0043,
+                  -0.0018,
+                  -0.00196,
+                  -0.00378,
+                  -0.00335,
+                  -0.00411,
+                  -0.00225,
+                  -0.00077,
+                  -0.00277,
+                  -0.00341,
+                  -0.00266,
+                  -0.00419,
+                  -0.00355,
+                  -0.00442,
+                  -0.00547,
+                  -0.00462
+                ],
+                "cumulative_growth": [
+                  -0.02699,
+                  -0.01062,
+                  -0.00457,
+                  -0.00451,
+                  -0.00776,
+                  -0.00785,
+                  -0.0069,
+                  -0.00724,
+                  -0.0055,
+                  -0.00793,
+                  -0.00334,
+                  -0.00301,
+                  -0.00435,
+                  -0.00441,
+                  -0.00436,
+                  -0.00667,
+                  -0.00667,
+                  -0.0082,
+                  -0.00612,
+                  -0.00838
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  12861,
+                  20383,
+                  24744,
+                  27538,
+                  29783,
+                  32089,
+                  34261,
+                  36705,
+                  38934,
+                  41364,
+                  44037,
+                  46535,
+                  49290,
+                  52188,
+                  55844,
+                  59770,
+                  63932,
+                  70219,
+                  82640,
+                  113277
+                ],
+                "annual_growth": [
+                  -0.00298,
+                  -0.00937,
+                  0.00085,
+                  -0.00065,
+                  -0.0016,
+                  -0.00397,
+                  -0.00058,
+                  -0.00034,
+                  3e-05,
+                  0.00073,
+                  0.00051,
+                  0.00077,
+                  0.00065,
+                  0.00078,
+                  -0.00012,
+                  0.00068,
+                  -0.00044,
+                  -0.00085,
+                  -0.00037,
+                  -0.00374
+                ],
+                "cumulative_growth": [
+                  -0.02989,
+                  -0.01989,
+                  -0.00372,
+                  -0.00515,
+                  -0.00935,
+                  -0.01179,
+                  -0.00748,
+                  -0.00758,
+                  -0.00547,
+                  -0.0072,
+                  -0.00284,
+                  -0.00225,
+                  -0.00371,
+                  -0.00364,
+                  -0.00448,
+                  -0.006,
+                  -0.00711,
+                  -0.00905,
+                  -0.00649,
+                  -0.01209
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  12713,
+                  20406,
+                  24735,
+                  27591,
+                  29927,
+                  32270,
+                  34418,
+                  36895,
+                  39135,
+                  41620,
+                  44300,
+                  46737,
+                  49646,
+                  52580,
+                  56381,
+                  60206,
+                  64521,
+                  70783,
+                  83183,
+                  114052
+                ],
+                "annual_growth": [
+                  -0.01157,
+                  0.00114,
+                  -0.00036,
+                  0.00193,
+                  0.00482,
+                  0.00565,
+                  0.0046,
+                  0.00519,
+                  0.00517,
+                  0.00618,
+                  0.00597,
+                  0.00434,
+                  0.00723,
+                  0.00751,
+                  0.00963,
+                  0.00729,
+                  0.00921,
+                  0.00803,
+                  0.00657,
+                  0.00684
+                ],
+                "cumulative_growth": [
+                  -0.04111,
+                  -0.01877,
+                  -0.00408,
+                  -0.00323,
+                  -0.00457,
+                  -0.00621,
+                  -0.00291,
+                  -0.00243,
+                  -0.00033,
+                  -0.00107,
+                  0.00312,
+                  0.00209,
+                  0.00349,
+                  0.00384,
+                  0.0051,
+                  0.00125,
+                  0.00203,
+                  -0.00109,
+                  4e-05,
+                  -0.00533
+                ]
+              }
+            ]
+          }
+        },
+        "ahc": {
+          "quintile": {
+            "min_unweighted_households": 10520,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  17234,
+                  27875,
+                  36919,
+                  47617,
+                  69519
+                ],
+                "annual_growth": [
+                  -0.01201,
+                  -0.00762,
+                  -0.0058,
+                  -0.00474,
+                  0.0006
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  17074,
+                  27662,
+                  36835,
+                  47557,
+                  69123
+                ],
+                "annual_growth": [
+                  -0.00932,
+                  -0.00766,
+                  -0.00227,
+                  -0.00125,
+                  -0.00569
+                ],
+                "cumulative_growth": [
+                  -0.00932,
+                  -0.00766,
+                  -0.00227,
+                  -0.00125,
+                  -0.00569
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  16996,
+                  27624,
+                  36680,
+                  47359,
+                  68731
+                ],
+                "annual_growth": [
+                  -0.00456,
+                  -0.00138,
+                  -0.0042,
+                  -0.00416,
+                  -0.00568
+                ],
+                "cumulative_growth": [
+                  -0.01383,
+                  -0.00903,
+                  -0.00646,
+                  -0.00541,
+                  -0.01134
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  16885,
+                  27547,
+                  36637,
+                  47257,
+                  68566
+                ],
+                "annual_growth": [
+                  -0.00653,
+                  -0.00277,
+                  -0.00119,
+                  -0.00216,
+                  -0.0024
+                ],
+                "cumulative_growth": [
+                  -0.02027,
+                  -0.01178,
+                  -0.00764,
+                  -0.00755,
+                  -0.01372
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  16862,
+                  27688,
+                  36839,
+                  47531,
+                  68997
+                ],
+                "annual_growth": [
+                  -0.00135,
+                  0.0051,
+                  0.00554,
+                  0.00579,
+                  0.00629
+                ],
+                "cumulative_growth": [
+                  -0.0216,
+                  -0.00674,
+                  -0.00215,
+                  -0.0018,
+                  -0.00751
+                ]
+              }
+            ]
+          },
+          "decile": {
+            "min_unweighted_households": 5058,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  11047,
+                  20717,
+                  25611,
+                  30330,
+                  34776,
+                  39600,
+                  44398,
+                  51350,
+                  61087,
+                  87034
+                ],
+                "annual_growth": [
+                  -0.02462,
+                  -0.01124,
+                  -0.00562,
+                  -0.00655,
+                  -0.0018,
+                  0.00011,
+                  -0.00508,
+                  -0.00312,
+                  -0.00115,
+                  -0.0025
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  10728,
+                  20600,
+                  25503,
+                  30121,
+                  34677,
+                  39487,
+                  44327,
+                  51274,
+                  61067,
+                  86516
+                ],
+                "annual_growth": [
+                  -0.0289,
+                  -0.00564,
+                  -0.00421,
+                  -0.00689,
+                  -0.00284,
+                  -0.00285,
+                  -0.0016,
+                  -0.00147,
+                  -0.00033,
+                  -0.00595
+                ],
+                "cumulative_growth": [
+                  -0.0289,
+                  -0.00564,
+                  -0.00421,
+                  -0.00689,
+                  -0.00284,
+                  -0.00285,
+                  -0.0016,
+                  -0.00147,
+                  -0.00033,
+                  -0.00595
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  10611,
+                  20439,
+                  25343,
+                  29938,
+                  34436,
+                  39320,
+                  44160,
+                  51136,
+                  60645,
+                  85997
+                ],
+                "annual_growth": [
+                  -0.01084,
+                  -0.00782,
+                  -0.00625,
+                  -0.00608,
+                  -0.00695,
+                  -0.00423,
+                  -0.00377,
+                  -0.00269,
+                  -0.00691,
+                  -0.00599
+                ],
+                "cumulative_growth": [
+                  -0.03943,
+                  -0.01341,
+                  -0.01044,
+                  -0.01292,
+                  -0.00978,
+                  -0.00707,
+                  -0.00536,
+                  -0.00416,
+                  -0.00723,
+                  -0.01191
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  10396,
+                  20419,
+                  25331,
+                  29836,
+                  34403,
+                  39309,
+                  44030,
+                  51200,
+                  60727,
+                  85715
+                ],
+                "annual_growth": [
+                  -0.02032,
+                  -0.00095,
+                  -0.00047,
+                  -0.00339,
+                  -0.00097,
+                  -0.00027,
+                  -0.00296,
+                  0.00124,
+                  0.00135,
+                  -0.00328
+                ],
+                "cumulative_growth": [
+                  -0.05894,
+                  -0.01435,
+                  -0.0109,
+                  -0.01627,
+                  -0.01074,
+                  -0.00734,
+                  -0.0083,
+                  -0.00293,
+                  -0.0059,
+                  -0.01515
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  10086,
+                  20420,
+                  25372,
+                  30053,
+                  34567,
+                  39540,
+                  44312,
+                  51654,
+                  61096,
+                  86322
+                ],
+                "annual_growth": [
+                  -0.02984,
+                  4e-05,
+                  0.00161,
+                  0.00728,
+                  0.00479,
+                  0.00587,
+                  0.00641,
+                  0.00887,
+                  0.00608,
+                  0.00708
+                ],
+                "cumulative_growth": [
+                  -0.08703,
+                  -0.01431,
+                  -0.00932,
+                  -0.00911,
+                  -0.006,
+                  -0.00151,
+                  -0.00195,
+                  0.00592,
+                  0.00015,
+                  -0.00817
+                ]
+              }
+            ]
+          },
+          "vigintile": {
+            "min_unweighted_households": 2196,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  5805,
+                  14400,
+                  19132,
+                  21930,
+                  24421,
+                  26726,
+                  29090,
+                  31299,
+                  33456,
+                  35732,
+                  38193,
+                  40510,
+                  43033,
+                  45826,
+                  49527,
+                  53873,
+                  58263,
+                  64503,
+                  76101,
+                  103442
+                ],
+                "annual_growth": [
+                  -0.04145,
+                  -0.02668,
+                  -0.00847,
+                  -0.00559,
+                  -0.00273,
+                  -0.00615,
+                  -0.00426,
+                  -0.00505,
+                  -0.00721,
+                  -0.00412,
+                  -0.00334,
+                  -0.00426,
+                  -0.00221,
+                  -0.00319,
+                  -0.00182,
+                  -0.00361,
+                  -0.00039,
+                  -0.00433,
+                  -0.00281,
+                  -0.00034
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  5506,
+                  14300,
+                  19024,
+                  21852,
+                  24297,
+                  26590,
+                  28928,
+                  31183,
+                  33280,
+                  35563,
+                  38080,
+                  40442,
+                  42944,
+                  45688,
+                  49405,
+                  53784,
+                  58092,
+                  64311,
+                  75866,
+                  103366
+                ],
+                "annual_growth": [
+                  -0.05143,
+                  -0.00693,
+                  -0.00563,
+                  -0.00354,
+                  -0.00507,
+                  -0.00511,
+                  -0.00557,
+                  -0.00368,
+                  -0.00525,
+                  -0.00473,
+                  -0.00297,
+                  -0.00168,
+                  -0.00206,
+                  -0.00299,
+                  -0.00247,
+                  -0.00165,
+                  -0.00293,
+                  -0.00298,
+                  -0.00309,
+                  -0.00074
+                ],
+                "cumulative_growth": [
+                  -0.05143,
+                  -0.00693,
+                  -0.00563,
+                  -0.00354,
+                  -0.00507,
+                  -0.00511,
+                  -0.00557,
+                  -0.00368,
+                  -0.00525,
+                  -0.00473,
+                  -0.00297,
+                  -0.00168,
+                  -0.00206,
+                  -0.00299,
+                  -0.00247,
+                  -0.00165,
+                  -0.00293,
+                  -0.00298,
+                  -0.00309,
+                  -0.00074
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  5403,
+                  14192,
+                  18917,
+                  21763,
+                  24183,
+                  26445,
+                  28792,
+                  31000,
+                  33193,
+                  35460,
+                  38049,
+                  40396,
+                  42905,
+                  45524,
+                  49231,
+                  53593,
+                  57901,
+                  64091,
+                  75425,
+                  103346
+                ],
+                "annual_growth": [
+                  -0.01878,
+                  -0.00756,
+                  -0.00565,
+                  -0.00408,
+                  -0.00468,
+                  -0.00543,
+                  -0.00471,
+                  -0.00588,
+                  -0.00262,
+                  -0.00291,
+                  -0.00081,
+                  -0.00113,
+                  -0.00091,
+                  -0.00359,
+                  -0.00352,
+                  -0.00355,
+                  -0.00328,
+                  -0.00342,
+                  -0.00582,
+                  -0.00019
+                ],
+                "cumulative_growth": [
+                  -0.06925,
+                  -0.01444,
+                  -0.01125,
+                  -0.0076,
+                  -0.00973,
+                  -0.01051,
+                  -0.01025,
+                  -0.00953,
+                  -0.00786,
+                  -0.00763,
+                  -0.00377,
+                  -0.0028,
+                  -0.00297,
+                  -0.00658,
+                  -0.00598,
+                  -0.0052,
+                  -0.00621,
+                  -0.00639,
+                  -0.00889,
+                  -0.00093
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  5352,
+                  14083,
+                  18820,
+                  21743,
+                  24106,
+                  26395,
+                  28780,
+                  30956,
+                  33173,
+                  35481,
+                  38032,
+                  40432,
+                  42866,
+                  45431,
+                  49215,
+                  53580,
+                  57937,
+                  64131,
+                  75272,
+                  103532
+                ],
+                "annual_growth": [
+                  -0.00942,
+                  -0.00767,
+                  -0.0051,
+                  -0.00091,
+                  -0.0032,
+                  -0.00192,
+                  -0.00041,
+                  -0.00142,
+                  -0.00059,
+                  0.0006,
+                  -0.00045,
+                  0.00087,
+                  -0.00091,
+                  -0.00205,
+                  -0.00034,
+                  -0.00024,
+                  0.00062,
+                  0.00062,
+                  -0.00202,
+                  0.0018
+                ],
+                "cumulative_growth": [
+                  -0.07802,
+                  -0.022,
+                  -0.01629,
+                  -0.00851,
+                  -0.0129,
+                  -0.01241,
+                  -0.01066,
+                  -0.01094,
+                  -0.00844,
+                  -0.00703,
+                  -0.00422,
+                  -0.00193,
+                  -0.00388,
+                  -0.00861,
+                  -0.00631,
+                  -0.00544,
+                  -0.00559,
+                  -0.00578,
+                  -0.01089,
+                  0.00087
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  5226,
+                  14029,
+                  18791,
+                  21763,
+                  24193,
+                  26499,
+                  28892,
+                  31126,
+                  33351,
+                  35735,
+                  38137,
+                  40574,
+                  43105,
+                  45794,
+                  49598,
+                  54019,
+                  58312,
+                  64484,
+                  75689,
+                  103832
+                ],
+                "annual_growth": [
+                  -0.02344,
+                  -0.00387,
+                  -0.00155,
+                  0.00091,
+                  0.0036,
+                  0.00395,
+                  0.0039,
+                  0.00549,
+                  0.00534,
+                  0.00716,
+                  0.00275,
+                  0.00352,
+                  0.00558,
+                  0.00799,
+                  0.00779,
+                  0.0082,
+                  0.00648,
+                  0.0055,
+                  0.00553,
+                  0.00289
+                ],
+                "cumulative_growth": [
+                  -0.09963,
+                  -0.02578,
+                  -0.01782,
+                  -0.00761,
+                  -0.00935,
+                  -0.00851,
+                  -0.00681,
+                  -0.00551,
+                  -0.00315,
+                  8e-05,
+                  -0.00149,
+                  0.00158,
+                  0.00168,
+                  -0.00069,
+                  0.00142,
+                  0.00272,
+                  0.00085,
+                  -0.0003,
+                  -0.00542,
+                  0.00376
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "non_pensioners": {
+        "bhc": {
+          "quintile": {
+            "min_unweighted_households": 6881,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  22804,
+                  33874,
+                  43780,
+                  55180,
+                  78201
+                ],
+                "annual_growth": [
+                  -0.00135,
+                  -0.00315,
+                  -0.0015,
+                  -0.00178,
+                  -0.00244
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  22616,
+                  33670,
+                  43721,
+                  55200,
+                  78040
+                ],
+                "annual_growth": [
+                  -0.00822,
+                  -0.00602,
+                  -0.00135,
+                  0.00037,
+                  -0.00205
+                ],
+                "cumulative_growth": [
+                  -0.00822,
+                  -0.00602,
+                  -0.00135,
+                  0.00037,
+                  -0.00205
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  22514,
+                  33555,
+                  43674,
+                  54930,
+                  77515
+                ],
+                "annual_growth": [
+                  -0.00451,
+                  -0.00343,
+                  -0.00108,
+                  -0.00489,
+                  -0.00673
+                ],
+                "cumulative_growth": [
+                  -0.01269,
+                  -0.00942,
+                  -0.00243,
+                  -0.00453,
+                  -0.00877
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  22483,
+                  33473,
+                  43667,
+                  54962,
+                  77469
+                ],
+                "annual_growth": [
+                  -0.0014,
+                  -0.00243,
+                  -0.00015,
+                  0.00059,
+                  -0.00059
+                ],
+                "cumulative_growth": [
+                  -0.01407,
+                  -0.01183,
+                  -0.00258,
+                  -0.00395,
+                  -0.00936
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  22565,
+                  33672,
+                  44039,
+                  55472,
+                  78034
+                ],
+                "annual_growth": [
+                  0.00365,
+                  0.00593,
+                  0.00851,
+                  0.00927,
+                  0.0073
+                ],
+                "cumulative_growth": [
+                  -0.01048,
+                  -0.00597,
+                  0.00591,
+                  0.00529,
+                  -0.00213
+                ]
+              }
+            ]
+          },
+          "decile": {
+            "min_unweighted_households": 3179,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  16913,
+                  26058,
+                  31623,
+                  36490,
+                  41277,
+                  46182,
+                  51903,
+                  59083,
+                  68748,
+                  98051
+                ],
+                "annual_growth": [
+                  -0.00628,
+                  -0.00234,
+                  -0.00037,
+                  0.00182,
+                  0.00063,
+                  -0.00164,
+                  -0.00035,
+                  -0.00174,
+                  -0.00214,
+                  -0.00164
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  16542,
+                  25955,
+                  31257,
+                  36203,
+                  41020,
+                  46042,
+                  51732,
+                  59031,
+                  68629,
+                  97743
+                ],
+                "annual_growth": [
+                  -0.02194,
+                  -0.00395,
+                  -0.01159,
+                  -0.00787,
+                  -0.00623,
+                  -0.00304,
+                  -0.0033,
+                  -0.00089,
+                  -0.00173,
+                  -0.00315
+                ],
+                "cumulative_growth": [
+                  -0.02194,
+                  -0.00395,
+                  -0.01159,
+                  -0.00787,
+                  -0.00623,
+                  -0.00304,
+                  -0.0033,
+                  -0.00089,
+                  -0.00173,
+                  -0.00315
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  16519,
+                  25879,
+                  31121,
+                  35996,
+                  40827,
+                  45923,
+                  51590,
+                  58887,
+                  68254,
+                  96618
+                ],
+                "annual_growth": [
+                  -0.00141,
+                  -0.00294,
+                  -0.00435,
+                  -0.00572,
+                  -0.00471,
+                  -0.00259,
+                  -0.00273,
+                  -0.00243,
+                  -0.00547,
+                  -0.01151
+                ],
+                "cumulative_growth": [
+                  -0.02332,
+                  -0.00688,
+                  -0.01589,
+                  -0.01354,
+                  -0.01091,
+                  -0.00562,
+                  -0.00602,
+                  -0.00332,
+                  -0.00719,
+                  -0.01462
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  16470,
+                  25865,
+                  31112,
+                  35964,
+                  40841,
+                  45922,
+                  51579,
+                  58827,
+                  68304,
+                  96771
+                ],
+                "annual_growth": [
+                  -0.00293,
+                  -0.00054,
+                  -0.00028,
+                  -0.0009,
+                  0.00034,
+                  -2e-05,
+                  -0.00022,
+                  -0.00102,
+                  0.00074,
+                  0.00159
+                ],
+                "cumulative_growth": [
+                  -0.02618,
+                  -0.00741,
+                  -0.01617,
+                  -0.01443,
+                  -0.01058,
+                  -0.00564,
+                  -0.00624,
+                  -0.00434,
+                  -0.00645,
+                  -0.01306
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  16443,
+                  25991,
+                  31260,
+                  36247,
+                  41130,
+                  46263,
+                  51933,
+                  59243,
+                  68894,
+                  97329
+                ],
+                "annual_growth": [
+                  -0.00167,
+                  0.00488,
+                  0.00475,
+                  0.00787,
+                  0.00708,
+                  0.00744,
+                  0.00687,
+                  0.00706,
+                  0.00863,
+                  0.00577
+                ],
+                "cumulative_growth": [
+                  -0.02781,
+                  -0.00257,
+                  -0.0115,
+                  -0.00667,
+                  -0.00357,
+                  0.00176,
+                  0.00059,
+                  0.0027,
+                  0.00212,
+                  -0.00737
+                ]
+              }
+            ]
+          },
+          "vigintile": {
+            "min_unweighted_households": 1480,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  12446,
+                  20312,
+                  24600,
+                  27591,
+                  30125,
+                  32713,
+                  34920,
+                  37684,
+                  39887,
+                  42711,
+                  44923,
+                  47719,
+                  50345,
+                  53471,
+                  57267,
+                  61070,
+                  65421,
+                  72640,
+                  85821,
+                  116116
+                ],
+                "annual_growth": [
+                  -0.02952,
+                  -0.00406,
+                  -0.00025,
+                  0.00058,
+                  -0.00423,
+                  -0.00193,
+                  -0.00287,
+                  3e-05,
+                  -0.00195,
+                  -0.00218,
+                  -0.0025,
+                  -0.00274,
+                  -0.00076,
+                  -0.00035,
+                  -0.00182,
+                  -0.00144,
+                  -0.00522,
+                  -0.00178,
+                  -0.00137,
+                  0.00053
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  12277,
+                  20094,
+                  24507,
+                  27497,
+                  30036,
+                  32552,
+                  34682,
+                  37584,
+                  39751,
+                  42633,
+                  44833,
+                  47601,
+                  50154,
+                  53353,
+                  57177,
+                  60888,
+                  65342,
+                  72436,
+                  85501,
+                  115557
+                ],
+                "annual_growth": [
+                  -0.0136,
+                  -0.01072,
+                  -0.00377,
+                  -0.00342,
+                  -0.00297,
+                  -0.00491,
+                  -0.00681,
+                  -0.00264,
+                  -0.0034,
+                  -0.00182,
+                  -0.002,
+                  -0.00248,
+                  -0.00379,
+                  -0.0022,
+                  -0.00158,
+                  -0.00298,
+                  -0.00121,
+                  -0.00281,
+                  -0.00374,
+                  -0.00482
+                ],
+                "cumulative_growth": [
+                  -0.0136,
+                  -0.01072,
+                  -0.00377,
+                  -0.00342,
+                  -0.00297,
+                  -0.00491,
+                  -0.00681,
+                  -0.00264,
+                  -0.0034,
+                  -0.00182,
+                  -0.002,
+                  -0.00248,
+                  -0.00379,
+                  -0.0022,
+                  -0.00158,
+                  -0.00298,
+                  -0.00121,
+                  -0.00281,
+                  -0.00374,
+                  -0.00482
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  12204,
+                  20084,
+                  24471,
+                  27387,
+                  29907,
+                  32415,
+                  34596,
+                  37402,
+                  39561,
+                  42443,
+                  44665,
+                  47404,
+                  49977,
+                  53184,
+                  57045,
+                  60639,
+                  65074,
+                  72212,
+                  85092,
+                  114359
+                ],
+                "annual_growth": [
+                  -0.00597,
+                  -0.00048,
+                  -0.00146,
+                  -0.00402,
+                  -0.0043,
+                  -0.00423,
+                  -0.00246,
+                  -0.00484,
+                  -0.00479,
+                  -0.00447,
+                  -0.00376,
+                  -0.00414,
+                  -0.00353,
+                  -0.00317,
+                  -0.00229,
+                  -0.00409,
+                  -0.0041,
+                  -0.0031,
+                  -0.00478,
+                  -0.01037
+                ],
+                "cumulative_growth": [
+                  -0.01949,
+                  -0.0112,
+                  -0.00523,
+                  -0.00743,
+                  -0.00726,
+                  -0.00911,
+                  -0.00926,
+                  -0.00746,
+                  -0.00817,
+                  -0.00629,
+                  -0.00575,
+                  -0.00661,
+                  -0.00731,
+                  -0.00536,
+                  -0.00387,
+                  -0.00706,
+                  -0.00531,
+                  -0.0059,
+                  -0.0085,
+                  -0.01514
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  12171,
+                  20035,
+                  24428,
+                  27368,
+                  29846,
+                  32367,
+                  34542,
+                  37432,
+                  39546,
+                  42449,
+                  44625,
+                  47375,
+                  49945,
+                  53327,
+                  57142,
+                  60529,
+                  64928,
+                  72228,
+                  84951,
+                  113937
+                ],
+                "annual_growth": [
+                  -0.00273,
+                  -0.00248,
+                  -0.00179,
+                  -0.00067,
+                  -0.00204,
+                  -0.00148,
+                  -0.00159,
+                  0.00078,
+                  -0.00037,
+                  0.00013,
+                  -0.00088,
+                  -0.0006,
+                  -0.00064,
+                  0.00268,
+                  0.00169,
+                  -0.00182,
+                  -0.00225,
+                  0.00023,
+                  -0.00165,
+                  -0.00369
+                ],
+                "cumulative_growth": [
+                  -0.02216,
+                  -0.01365,
+                  -0.00701,
+                  -0.00809,
+                  -0.00928,
+                  -0.01058,
+                  -0.01083,
+                  -0.00669,
+                  -0.00854,
+                  -0.00615,
+                  -0.00663,
+                  -0.00721,
+                  -0.00794,
+                  -0.00269,
+                  -0.00218,
+                  -0.00886,
+                  -0.00755,
+                  -0.00567,
+                  -0.01014,
+                  -0.01877
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  12066,
+                  19890,
+                  24401,
+                  27571,
+                  29967,
+                  32459,
+                  34763,
+                  37616,
+                  39857,
+                  42728,
+                  45070,
+                  47768,
+                  50408,
+                  53631,
+                  57380,
+                  61020,
+                  65475,
+                  72667,
+                  85676,
+                  114691
+                ],
+                "annual_growth": [
+                  -0.00857,
+                  -0.00722,
+                  -0.00109,
+                  0.0074,
+                  0.00407,
+                  0.00285,
+                  0.0064,
+                  0.00493,
+                  0.00786,
+                  0.00658,
+                  0.00996,
+                  0.00829,
+                  0.00927,
+                  0.00571,
+                  0.00416,
+                  0.0081,
+                  0.00843,
+                  0.00608,
+                  0.00853,
+                  0.00662
+                ],
+                "cumulative_growth": [
+                  -0.03054,
+                  -0.02078,
+                  -0.00809,
+                  -0.00075,
+                  -0.00524,
+                  -0.00775,
+                  -0.0045,
+                  -0.00179,
+                  -0.00075,
+                  0.00038,
+                  0.00326,
+                  0.00102,
+                  0.00126,
+                  0.003,
+                  0.00197,
+                  -0.00083,
+                  0.00082,
+                  0.00037,
+                  -0.00169,
+                  -0.01228
+                ]
+              }
+            ]
+          }
+        },
+        "ahc": {
+          "quintile": {
+            "min_unweighted_households": 6626,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  16124,
+                  27220,
+                  36678,
+                  47737,
+                  69519
+                ],
+                "annual_growth": [
+                  -0.01265,
+                  -0.00427,
+                  -0.00058,
+                  -0.00275,
+                  -0.0014
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  15910,
+                  27021,
+                  36513,
+                  47584,
+                  69123
+                ],
+                "annual_growth": [
+                  -0.01328,
+                  -0.00732,
+                  -0.00451,
+                  -0.00319,
+                  -0.00569
+                ],
+                "cumulative_growth": [
+                  -0.01328,
+                  -0.00732,
+                  -0.00451,
+                  -0.00319,
+                  -0.00569
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  15717,
+                  26933,
+                  36336,
+                  47291,
+                  68755
+                ],
+                "annual_growth": [
+                  -0.01209,
+                  -0.00323,
+                  -0.00486,
+                  -0.00617,
+                  -0.00533
+                ],
+                "cumulative_growth": [
+                  -0.02522,
+                  -0.01053,
+                  -0.00934,
+                  -0.00935,
+                  -0.011
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  15588,
+                  26949,
+                  36286,
+                  47168,
+                  68566
+                ],
+                "annual_growth": [
+                  -0.0082,
+                  0.00059,
+                  -0.00137,
+                  -0.00259,
+                  -0.00275
+                ],
+                "cumulative_growth": [
+                  -0.03321,
+                  -0.00995,
+                  -0.0107,
+                  -0.01191,
+                  -0.01372
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  15599,
+                  27036,
+                  36439,
+                  47476,
+                  68859
+                ],
+                "annual_growth": [
+                  0.00068,
+                  0.00323,
+                  0.00423,
+                  0.00653,
+                  0.00428
+                ],
+                "cumulative_growth": [
+                  -0.03255,
+                  -0.00675,
+                  -0.00652,
+                  -0.00546,
+                  -0.00949
+                ]
+              }
+            ]
+          },
+          "decile": {
+            "min_unweighted_households": 3220,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  9575,
+                  19852,
+                  25008,
+                  29633,
+                  34196,
+                  39462,
+                  44416,
+                  51327,
+                  61242,
+                  87496
+                ],
+                "annual_growth": [
+                  -0.03197,
+                  -0.00922,
+                  -0.00839,
+                  -0.00558,
+                  -0.00562,
+                  -0.00188,
+                  -0.00469,
+                  -0.0021,
+                  -0.00052,
+                  -0.00798
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  9332,
+                  19747,
+                  24831,
+                  29437,
+                  34080,
+                  39401,
+                  44247,
+                  51205,
+                  61067,
+                  87114
+                ],
+                "annual_growth": [
+                  -0.02545,
+                  -0.00528,
+                  -0.00709,
+                  -0.0066,
+                  -0.00338,
+                  -0.00155,
+                  -0.0038,
+                  -0.00237,
+                  -0.00285,
+                  -0.00436
+                ],
+                "cumulative_growth": [
+                  -0.02545,
+                  -0.00528,
+                  -0.00709,
+                  -0.0066,
+                  -0.00338,
+                  -0.00155,
+                  -0.0038,
+                  -0.00237,
+                  -0.00285,
+                  -0.00436
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  9263,
+                  19583,
+                  24667,
+                  29255,
+                  33928,
+                  39096,
+                  43959,
+                  51101,
+                  60597,
+                  86229
+                ],
+                "annual_growth": [
+                  -0.00738,
+                  -0.00834,
+                  -0.00659,
+                  -0.0062,
+                  -0.00447,
+                  -0.00774,
+                  -0.00651,
+                  -0.00203,
+                  -0.00769,
+                  -0.01017
+                ],
+                "cumulative_growth": [
+                  -0.03264,
+                  -0.01357,
+                  -0.01363,
+                  -0.01276,
+                  -0.00784,
+                  -0.00928,
+                  -0.01029,
+                  -0.00439,
+                  -0.01052,
+                  -0.01448
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  9098,
+                  19465,
+                  24535,
+                  29220,
+                  33793,
+                  39057,
+                  43892,
+                  51042,
+                  60607,
+                  85878
+                ],
+                "annual_growth": [
+                  -0.01773,
+                  -0.00601,
+                  -0.00539,
+                  -0.00119,
+                  -0.00399,
+                  -0.001,
+                  -0.00152,
+                  -0.00116,
+                  0.00016,
+                  -0.00406
+                ],
+                "cumulative_growth": [
+                  -0.0498,
+                  -0.0195,
+                  -0.01894,
+                  -0.01393,
+                  -0.0118,
+                  -0.01026,
+                  -0.01179,
+                  -0.00555,
+                  -0.01036,
+                  -0.01849
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  8887,
+                  19438,
+                  24718,
+                  29397,
+                  33939,
+                  39256,
+                  44182,
+                  51607,
+                  61096,
+                  86848
+                ],
+                "annual_growth": [
+                  -0.02326,
+                  -0.0014,
+                  0.00746,
+                  0.00607,
+                  0.00433,
+                  0.00511,
+                  0.00662,
+                  0.01107,
+                  0.00807,
+                  0.0113
+                ],
+                "cumulative_growth": [
+                  -0.0719,
+                  -0.02087,
+                  -0.01162,
+                  -0.00795,
+                  -0.00752,
+                  -0.00521,
+                  -0.00525,
+                  0.00546,
+                  -0.00237,
+                  -0.0074
+                ]
+              }
+            ]
+          },
+          "vigintile": {
+            "min_unweighted_households": 1334,
+            "by_year": [
+              {
+                "year": "2027-28",
+                "real_median": [
+                  4849,
+                  13212,
+                  18171,
+                  21319,
+                  23871,
+                  26227,
+                  28454,
+                  30873,
+                  33000,
+                  35428,
+                  38099,
+                  40452,
+                  43033,
+                  45826,
+                  49512,
+                  53736,
+                  58262,
+                  64823,
+                  76143,
+                  103691
+                ],
+                "annual_growth": [
+                  -0.01606,
+                  -0.00966,
+                  -0.0108,
+                  -0.00315,
+                  -0.0036,
+                  -0.00365,
+                  -0.00354,
+                  -0.00532,
+                  -0.00551,
+                  -0.00545,
+                  -0.00061,
+                  -0.00212,
+                  -0.00156,
+                  -0.0034,
+                  -0.00127,
+                  -0.00148,
+                  -0.0004,
+                  -0.00468,
+                  -0.00865,
+                  -0.00543
+                ],
+                "cumulative_growth": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              {
+                "year": "2028-29",
+                "real_median": [
+                  4447,
+                  13024,
+                  18008,
+                  21214,
+                  23763,
+                  26042,
+                  28283,
+                  30619,
+                  32870,
+                  35212,
+                  37833,
+                  40365,
+                  42944,
+                  45655,
+                  49385,
+                  53555,
+                  58039,
+                  64626,
+                  75866,
+                  103282
+                ],
+                "annual_growth": [
+                  -0.083,
+                  -0.01423,
+                  -0.00897,
+                  -0.00491,
+                  -0.00455,
+                  -0.00708,
+                  -0.006,
+                  -0.00824,
+                  -0.00392,
+                  -0.00608,
+                  -0.00697,
+                  -0.00214,
+                  -0.00206,
+                  -0.00372,
+                  -0.00257,
+                  -0.00338,
+                  -0.00383,
+                  -0.00304,
+                  -0.00363,
+                  -0.00394
+                ],
+                "cumulative_growth": [
+                  -0.083,
+                  -0.01423,
+                  -0.00897,
+                  -0.00491,
+                  -0.00455,
+                  -0.00708,
+                  -0.006,
+                  -0.00824,
+                  -0.00392,
+                  -0.00608,
+                  -0.00697,
+                  -0.00214,
+                  -0.00206,
+                  -0.00372,
+                  -0.00257,
+                  -0.00338,
+                  -0.00383,
+                  -0.00304,
+                  -0.00363,
+                  -0.00394
+                ]
+              },
+              {
+                "year": "2029-30",
+                "real_median": [
+                  4261,
+                  12890,
+                  17909,
+                  21161,
+                  23645,
+                  25950,
+                  28132,
+                  30482,
+                  32706,
+                  35017,
+                  37709,
+                  40274,
+                  42788,
+                  45476,
+                  49231,
+                  53382,
+                  57725,
+                  64091,
+                  75445,
+                  103006
+                ],
+                "annual_growth": [
+                  -0.04182,
+                  -0.01027,
+                  -0.00545,
+                  -0.00251,
+                  -0.00495,
+                  -0.00351,
+                  -0.00533,
+                  -0.00448,
+                  -0.005,
+                  -0.00555,
+                  -0.00329,
+                  -0.00226,
+                  -0.00363,
+                  -0.00391,
+                  -0.00311,
+                  -0.00323,
+                  -0.0054,
+                  -0.00828,
+                  -0.00555,
+                  -0.00267
+                ],
+                "cumulative_growth": [
+                  -0.12134,
+                  -0.02436,
+                  -0.01437,
+                  -0.00741,
+                  -0.00947,
+                  -0.01057,
+                  -0.0113,
+                  -0.01268,
+                  -0.0089,
+                  -0.01159,
+                  -0.01024,
+                  -0.00439,
+                  -0.00569,
+                  -0.00762,
+                  -0.00567,
+                  -0.00659,
+                  -0.00922,
+                  -0.01129,
+                  -0.00916,
+                  -0.0066
+                ]
+              },
+              {
+                "year": "2030-31",
+                "real_median": [
+                  3785,
+                  12783,
+                  17851,
+                  21053,
+                  23572,
+                  25840,
+                  28083,
+                  30348,
+                  32642,
+                  34962,
+                  37704,
+                  40175,
+                  42656,
+                  45370,
+                  49207,
+                  53314,
+                  57684,
+                  63931,
+                  75163,
+                  102997
+                ],
+                "annual_growth": [
+                  -0.11172,
+                  -0.00828,
+                  -0.00327,
+                  -0.00508,
+                  -0.00308,
+                  -0.00426,
+                  -0.00174,
+                  -0.0044,
+                  -0.00197,
+                  -0.00158,
+                  -0.00012,
+                  -0.00245,
+                  -0.00309,
+                  -0.00234,
+                  -0.0005,
+                  -0.00128,
+                  -0.00073,
+                  -0.00249,
+                  -0.00373,
+                  -0.0001
+                ],
+                "cumulative_growth": [
+                  -0.21951,
+                  -0.03243,
+                  -0.01759,
+                  -0.01245,
+                  -0.01252,
+                  -0.01478,
+                  -0.01302,
+                  -0.01703,
+                  -0.01084,
+                  -0.01315,
+                  -0.01036,
+                  -0.00684,
+                  -0.00876,
+                  -0.00994,
+                  -0.00617,
+                  -0.00786,
+                  -0.00994,
+                  -0.01375,
+                  -0.01286,
+                  -0.0067
+                ]
+              },
+              {
+                "year": "2031-32",
+                "real_median": [
+                  3611,
+                  12646,
+                  17861,
+                  21041,
+                  23599,
+                  25945,
+                  28226,
+                  30550,
+                  32940,
+                  35182,
+                  37973,
+                  40478,
+                  42974,
+                  45732,
+                  49572,
+                  53813,
+                  58165,
+                  64369,
+                  75689,
+                  103909
+                ],
+                "annual_growth": [
+                  -0.04586,
+                  -0.01074,
+                  0.00056,
+                  -0.00058,
+                  0.00114,
+                  0.00409,
+                  0.0051,
+                  0.00668,
+                  0.00913,
+                  0.00632,
+                  0.00713,
+                  0.00754,
+                  0.00747,
+                  0.00798,
+                  0.00743,
+                  0.00936,
+                  0.00835,
+                  0.00685,
+                  0.00699,
+                  0.00885
+                ],
+                "cumulative_growth": [
+                  -0.2553,
+                  -0.04283,
+                  -0.01704,
+                  -0.01302,
+                  -0.01139,
+                  -0.01075,
+                  -0.00799,
+                  -0.01046,
+                  -0.00182,
+                  -0.00692,
+                  -0.00331,
+                  0.00065,
+                  -0.00136,
+                  -0.00203,
+                  0.00121,
+                  0.00142,
+                  -0.00167,
+                  -0.007,
+                  -0.00596,
+                  0.0021
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
   }
 }

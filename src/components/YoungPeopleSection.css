@@ -1,7 +1,8 @@
-/* "Young people (under 25)": the chart cards in the page's charts grid,
-   two pairs; the first pair has a choice box above each plot. */
+/* Young people: the chart cards in the page's charts grid, two pairs;
+   the first pair has a choice box above each plot. Links to
+   #young-people land on the first section's heading. */
 
-.young-people-heading {
+#young-people {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
@@ -17,13 +18,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 12px 0 16px;
+  margin: 12px 0 24px;
 }
 
-/* The outcome legend: one centred row, no group headings */
-.young-people-outcome-legend .grouped-legend-items {
-  display: flex;
+
+/* By age's Age group control: the chips in one row that scrolls sideways
+   on a phone, never wider than the page */
+.age-group-control {
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 20px;
+  max-width: 100%;
+}
+
+.age-group-control .obr-view-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }

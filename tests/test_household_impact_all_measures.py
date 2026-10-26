@@ -20,8 +20,8 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
-from uk_budget_data.budget_measures import (
-    road_fuel_vat_cut,
+from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.models import DataConfig
@@ -257,6 +257,17 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     assert -programme(result, "vat_change")["change"] == pytest.approx(
         expected, abs=0.01
     )
+
+
+def test_northern_ireland_keeps_the_electricity_vat():
+    """The temporary zero rate is for domestic electricity in Great
+    Britain only."""
+    result = calculate(
+        Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
+        2027,
+        ["domestic_electricity_zero_vat"],
+    )
+    assert result["net_income"]["change"] == 0
 
 
 def test_no_electricity_spending_no_electricity_vat_change():

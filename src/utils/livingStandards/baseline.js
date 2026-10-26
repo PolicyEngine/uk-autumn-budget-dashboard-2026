@@ -1,6 +1,7 @@
 // Helpers shared by the baseline sections (living standards, poverty).
 
 import { fyStart } from "./outlook";
+import { zeroBasedAxis } from "../chartTheme";
 import { CHART_COLOURS } from "../chartTheme";
 
 export const EMPTY = [];
@@ -11,7 +12,7 @@ export const PROJECTION_COLOUR = CHART_COLOURS.after;
 /**
  * A short form of a measure or group name for a closed in-card pill, so a
  * card's pills fit one line; the list keeps the full name. "Absolute (BHC)"
- * becomes "Abs. BHC", "All people" "All".
+ * becomes "Absolute, before housing", "All people" "All".
  */
 export function shortLabel(label) {
   const text = String(label);
@@ -25,9 +26,11 @@ export function shortLabel(label) {
   };
   if (fixed[text]) return fixed[text];
   const basis = text.match(/^(Absolute|Relative) \((BHC|AHC)\)$/);
-  if (basis) return `${basis[1] === "Absolute" ? "Abs." : "Rel."} ${basis[2]}`;
+  // Plain words, not BHC / AHC
+  const housing = (code) => (code === "BHC" ? "before housing" : "after housing");
+  if (basis) return `${basis[1]}, ${housing(basis[2])}`;
   const income = text.match(/^(Mean|Median) equivalised income \((BHC|AHC)\)$/);
-  if (income) return `${income[1]} ${income[2]}`;
+  if (income) return `${income[1]}, ${housing(income[2])}`;
   return text;
 }
 
@@ -139,26 +142,13 @@ export function niceAxis(dataMax) {
 }
 
 /**
- * Axis over [min, max] (optionally forced to include 0) with about five round
- * steps. For series that do not start at zero (Gini, 90:10) or that go
- * negative (growth). Returns { domain, ticks }.
+ * Axis over the values with about five round steps, always including 0
+ * (the dashboard's rule, chartTheme.zeroBasedAxis): for series that go
+ * negative (growth) or sit well above 0 (Gini, 90:10). `includeZero` is
+ * kept for callers; 0 is always in. Returns { domain, ticks }.
  */
-export function rangeAxis(values, { includeZero = false, pad = 0.05 } = {}) {
-  const vals = values.filter((v) => v != null && Number.isFinite(v));
-  if (!vals.length) return { domain: [0, 1], ticks: [0, 1] };
-  let lo = Math.min(...vals, ...(includeZero ? [0] : []));
-  let hi = Math.max(...vals, ...(includeZero ? [0] : []));
-  const span = hi - lo || Math.abs(hi) || 1;
-  if (!(includeZero && lo === 0)) lo -= span * pad;
-  if (!(includeZero && hi === 0)) hi += span * pad;
-  const raw = (hi - lo) / 5;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  const start = Math.floor(lo / step) * step;
-  const end = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
-  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+export function rangeAxis(values, { pad = 0.05 } = {}) {
+  return zeroBasedAxis(values, { pad });
 }
 
 /** Rows of { year, value } -> chart rows keyed by fiscal-year start. */
@@ -192,3 +182,35 @@ export const PALETTE = {
   grey: CHART_COLOURS.noChange,
   amber: CHART_COLOURS.loss,
 };
+
+// Round steps: 1, 2 or 5 x 10^n, the smallest at least `raw` (no 2.5, so
+// a percentage tick never needs a second decimal: 12.5% would read "13%")
+const roundStep = (raw) => {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+};
+
+/**
+ * An axis fitted to the values, for a level over time (incomes, the Gini, a
+ * poverty rate), so a change of a few per cent is visible: the data's range
+ * padded by `pad` of itself each side, in about `steps` round steps, never
+ * below 0 for values that are not. `broken` is true when the axis does not
+ * start at 0, so the chart marks the break. Returns { domain, ticks, broken }.
+ */
+export function zoomAxis(values, { pad = 0.3, steps = 4 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  if (!vals.length) return { domain: [0, 1], ticks: [0, 1], broken: false };
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  // A flat series still gets a little room either side (5% of its level)
+  const span = Math.max(max - min, Math.abs(max) * 0.05, 1e-6);
+  let lo = min - span * pad;
+  const hi = max + span * pad;
+  if (min >= 0) lo = Math.max(0, lo);
+  const step = roundStep((hi - lo) / steps);
+  const start = Math.floor(lo / step + 1e-9) * step;
+  const end = Math.ceil(hi / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks, broken: ticks[0] > 0 };
+}

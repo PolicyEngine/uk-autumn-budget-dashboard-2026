@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import contract from "./contract.json";
@@ -140,6 +139,58 @@ describe("verifying the fixture's artifacts", () => {
 });
 
 describe("binding a receipt to its manifest entry", () => {
+  it.each(["name", "description"])("binds the public %s to the receipt", async (field) => {
+    const entry = { ...entries.alpha, [field]: "Altered public text" };
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      `the receipt's ${field} is not the manifest's`,
+    );
+  });
+
+  it("accepts matching public descriptions covered by the artifact digest", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.description = "A newly announced measure.";
+    const entry = {
+      ...entries.alpha,
+      description: receipt.dashboard.description,
+      artifact_sha256: await artifactSha256(receipt),
+    };
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+  });
+
+  it("rejects a receipt with a non-text description", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.description = null;
+    const entry = { ...entries.alpha, artifact_sha256: await artifactSha256(receipt) };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's description is not text",
+    );
+  });
+
+  it("binds the personal response mapping to the receipt", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.personal = { key: "impact_alpha", policies: ["alpha", "beta"] };
+    const entry = {
+      ...entries.alpha,
+      personal: receipt.dashboard.personal,
+      artifact_sha256: await artifactSha256(receipt),
+    };
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+    entry.personal = { key: "impact_other" };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's personal mapping is not the manifest's",
+    );
+  });
+
+  it("rejects malformed personal response mappings", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.personal = { key: 7 };
+    const entry = { ...entries.alpha, artifact_sha256: await artifactSha256(receipt) };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's personal mapping key is missing",
+    );
+  });
+
   // Differential: the manifest's artifact digests were computed by Python.
   it.each(Object.entries(entries))(
     "%s: the browser computes the manifest's artifact digest",

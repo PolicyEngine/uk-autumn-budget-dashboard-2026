@@ -37,7 +37,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   : '/uk/autumn-budget-2026';
 
 
-// The Personal impact tab's API URL is baked in at build time: fail a
+// The Household impact tab's API URL is baked in at build time: fail a
 // production build that lacks it, and every build that has it in the wrong
 // form (scripts/household-api-env.mjs).
 checkHouseholdApiEnv(process.env);
@@ -52,6 +52,17 @@ const nextConfig: NextConfig = {
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
   // them through Next's pipeline avoids ESM/CJS mismatch errors during build.
   transpilePackages: ['recharts', 'd3'],
+  // An artifact directory is named by its digest and never changes once
+  // written, so the browser may keep its files; the page still checks every
+  // byte against the manifest, which is always fetched fresh
+  async headers() {
+    return [
+      {
+        source: '/data/artifacts/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
+  },
   turbopack: {
     root: process.cwd(),
   },

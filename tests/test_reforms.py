@@ -6,13 +6,14 @@ and thresholds of the installed policyengine-uk (2.132.6), and the model
 must agree to the penny (it computes in float32).
 """
 
+import inspect
 import math
+from importlib import import_module
 
 import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
 
-from uk_budget_data import budget_measures
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
@@ -34,6 +35,14 @@ from uk_budget_data.reforms import (
     list_reform_ids,
     plan_2_unfrozen_thresholds,
 )
+
+
+def modifier(name):
+    """A measure's modifier, from its own module in ``budget_measures``."""
+    return getattr(
+        import_module(f"uk_budget_data.budget_measures.{name}"), name
+    )
+
 
 PENNY = 0.01
 PARAMETERS = system.parameters
@@ -150,14 +159,13 @@ def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
         "road_fuel_vat_cut": ["apply_vat_base_change"],
     }
     for name, templates in pure.items():
-        modifier = getattr(budget_measures, name)
-        assert pure_templates(modifier, REVISION) == templates, name
+        assert pure_templates(modifier(name), REVISION) == templates, name
     # These need the two-person attestation before approval
     for name in (
         "employer_ni_relief_ages_21_to_24",
         "connect_student_loan_repayments",
     ):
-        assert pure_templates(getattr(budget_measures, name), REVISION) is None
+        assert pure_templates(modifier(name), REVISION) is None
 
 
 # --- 1. Fuel duty -----------------------------------------------------------
@@ -193,12 +201,10 @@ def test_the_fuel_duty_path_by_hand():
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
-    defaults = budget_measures.pump_vat_on_fuel_duty_deferral.__defaults__
-    names = (
-        budget_measures.pump_vat_on_fuel_duty_deferral.__code__.co_varnames[
-            1 : 1 + len(defaults)
-        ]
-    )
+    defaults = modifier("pump_vat_on_fuel_duty_deferral").__defaults__
+    names = modifier("pump_vat_on_fuel_duty_deferral").__code__.co_varnames[
+        1 : 1 + len(defaults)
+    ]
     for name, value in zip(names, defaults):
         fuel, year = name.split("_")
         price = getattr(PARAMETERS.household.consumption.fuel.prices, fuel)(
@@ -237,10 +243,10 @@ def nsp(year: int) -> float:
 def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
     defaults = dict(
         zip(
-            budget_measures.state_pension_income_tax_allowance.__code__.co_varnames[
-                1:12
-            ],
-            budget_measures.state_pension_income_tax_allowance.__defaults__,
+            modifier(
+                "state_pension_income_tax_allowance"
+            ).__code__.co_varnames[1:12],
+            modifier("state_pension_income_tax_allowance").__defaults__,
         )
     )
     for year in range(2027, 2032):
@@ -393,7 +399,7 @@ def test_warm_home_discount_receipt_follows_desnz_rates_on_data():
     reformed = Microsimulation(
         dataset=data(),
         scenario=Scenario(
-            simulation_modifier=budget_measures.warm_home_discount_top_up
+            simulation_modifier=modifier("warm_home_discount_top_up")
         ),
     )
     variable = "cost_of_living_support_payment"
@@ -444,8 +450,10 @@ def test_pension_credit_households_draw_against_85_percent():
 
 def test_receipt_rates_come_in_pairs():
     sim = Simulation(situation=situation({"p": {"age": {2026: 40}}}))
+    from uk_budget_data import measure_templates
+
     with pytest.raises(ValueError, match="both receipt rates"):
-        budget_measures.apply_benefit_receipt_payment(
+        measure_templates.apply_benefit_receipt_payment(
             sim,
             amount=100,
             eligible_benefits=["universal_credit"],
@@ -502,6 +510,100 @@ def test_employer_ni_on_30000_pounds_by_age(age, relieved):
     assert income[1] == pytest.approx(income[0], abs=PENNY)
 
 
+@pytest.mark.parametrize("age, relief", [(22, 3_000), (30, 0)])
+def test_employer_ni_relief_on_25000_pounds_by_hand(age, relief):
+    """2027-28, checked by hand: a 22-year-old on £25,000 saves their
+    employer 15% x (£25,000 - £5,000) = £3,000 a year; a 30-year-old
+    saves nothing. Employer NI before the measure is £3,000 for both."""
+    year = 2027
+    sit = situation(
+        {"worker": {"age": {year: age}, "employment_income": {year: 25_000}}}
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert baseline == pytest.approx(3_000, abs=PENNY)
+    assert baseline - reformed == pytest.approx(relief, abs=PENNY)
+
+
+def test_employer_ni_relief_starts_in_2027_28():
+    """2026-27 is before the measure: a 22-year-old on £25,000 is charged
+    £3,000 in both runs."""
+    year = 2026
+    sit = situation(
+        {"worker": {"age": {year: 22}, "employment_income": {year: 25_000}}}
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
+def test_employer_ni_relief_leaves_apprentices_as_the_model_has_them():
+    """A 23-year-old apprentice has the s.9B zero rate in law, so the
+    measure does not relieve them again. On £60,000 the charge above the
+    upper threshold, 15% x (£60,000 - £50,270) = £1,459.50 once the
+    engine applies s.9B, must survive; relieving twice and flooring at
+    zero would remove it. Under policyengine-uk 2.132.6 the engine still
+    charges the full £8,250, and the measure leaves it there."""
+    year = 2027
+    sit = situation(
+        {
+            "worker": {
+                "age": {year: 23},
+                "employment_income": {year: 60_000},
+                "is_apprentice": {year: True},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
+def test_the_employer_ni_description_states_the_apprentice_default():
+    """The measure reads ``is_apprentice``, which the certified data leave
+    at its default, False, so its cost includes 21 to 24-year-old
+    apprentices. A measure that reads an input the data leave at its
+    default is released at the Treasury check (G3) with the default stated
+    in its public text (coordinator, 24 October, policyengine.py#715), and
+    the description is the text G3 approves. So while the measure reads the
+    input, the description must say the data identify no apprentices."""
+    source = inspect.getsource(modifier("employer_ni_relief_ages_21_to_24"))
+    assert '"is_apprentice"' in source
+    description = get_reform("employer_ni_relief_under_25s").description
+    assert "identify no apprentices" in description
+    assert "cost includes 21 to 24-year-old apprentices" in description
+
+
+def test_the_badr_description_carries_the_capital_gains_caveat():
+    """#127 put the capital gains calibration caveat in the Methodology
+    table, which now shows each measure's registry description (#104), so
+    the caveat lives here, in the text G3 approves."""
+    description = get_reform("badr_lifetime_limit_cut").description
+    assert "calibrated to 2024-25" in description
+    assert "1.5 to 1.7 times too high" in description
+
+
+@pytest.mark.certified_data
+def test_the_certified_data_still_flag_no_apprentices():
+    """Tripwire: when certified data flag apprentices, this fails, and the
+    employer NI relief's description and methodology note, which say the
+    cost includes them, are corrected in the bundle-adoption PR that brings
+    that data."""
+    from uk_budget_data.pipeline import build_microsimulation
+
+    sim = build_microsimulation(None)
+    # Control: a column the data do carry has its periods set, so an empty
+    # holder below means the data lack the input, not that nothing loaded.
+    assert sim.get_holder("age").get_known_periods()
+    assert sim.get_holder("is_apprentice").get_known_periods() == [], (
+        "the certified data now set is_apprentice: correct the employer NI "
+        "relief's description and methodology note"
+    )
+
+
 def test_employer_ni_above_the_upper_threshold_is_still_charged():
     """£60,000 at 23: 15% of £55,000, £8,250, less the relief of 15% of
     £50,270 - £5,000, £6,790.50, leaves £1,459.50."""
@@ -519,10 +621,10 @@ def test_employer_ni_above_the_upper_threshold_is_still_charged():
 def test_the_upper_thresholds_are_the_engines_upper_earnings_limit():
     defaults = dict(
         zip(
-            budget_measures.employer_ni_relief_ages_21_to_24.__code__.co_varnames[
+            modifier("employer_ni_relief_ages_21_to_24").__code__.co_varnames[
                 1:9
             ],
-            budget_measures.employer_ni_relief_ages_21_to_24.__defaults__,
+            modifier("employer_ni_relief_ages_21_to_24").__defaults__,
         )
     )
     uel = PARAMETERS.gov.hmrc.national_insurance.class_1.thresholds
@@ -633,17 +735,86 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
     assert reformed == pytest.approx(1_325.97, abs=PENNY)
 
 
-def test_the_page_names_each_measure_as_the_pipeline_does():
-    """src/utils/policies.js lists the same ids, in the same order, with
-    the same names, so the page's rows join the published files."""
+# The blocks of page source that may name more than one candidate measure,
+# until the publication carries their text (#185 on #104). None decides which
+# measures exist or how they are named, ordered or coloured, and each steps
+# aside for the published measure when its words may no longer fit it. The
+# frontend guard (src/utils/measureCatalogue.test.jsx) lists the same blocks
+# with the tests that hold each:
+# - POLICY_DETAILS: card text, used only for a measure described exactly as
+#   its entry was written for;
+# - an example's measure and measures: its card names them only while every
+#   one is published;
+# - SPENDING_MEASURES: those whose gain scales with fuel and electricity
+#   spending, for one line of text, which a measure not published can only
+#   make show less often.
+CARD_TEXT_BLOCKS = {
+    "utils/policyDetails.js": [
+        r"(?s)export const POLICY_DETAILS = \[.*?\n\];"
+    ],
+    "utils/householdExamples.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
+    "utils/youngPersonPresets.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
+    "components/personal/SingleYearResults.jsx": [
+        r"export const SPENDING_MEASURES = \[.*\];"
+    ],
+}
+
+
+def test_the_page_keeps_no_measure_list_of_its_own():
+    """The page lists, names and describes the measures from the published
+    receipts (#104), which generation writes from this registry
+    (test_generated_receipts_carry_the_registry_metadata). A second list in
+    the page's source could disagree with them, so there is none: no page
+    file outside the tests names more than one candidate measure, outside
+    the blocks in CARD_TEXT_BLOCKS."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src"
+    lists = {}
+    for path in sorted(root.rglob("*")):
+        if path.suffix not in {".js", ".jsx", ".ts", ".tsx"}:
+            continue
+        relative = path.relative_to(root)
+        if "test" in relative.parts or ".test." in path.name:
+            continue
+        text = path.read_text()
+        for block in CARD_TEXT_BLOCKS.get(relative.as_posix(), []):
+            text = re.sub(block, "", text)
+        named = [m for m in CANDIDATES if f'"{m}"' in text]
+        if len(named) > 1:
+            lists[relative.as_posix()] = named
+    assert lists == {}
+
+
+def test_each_card_text_block_is_still_there():
+    """An exemption names a block that exists, so it cannot outlive its
+    block or quietly cover another."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src"
+    for relative, blocks in CARD_TEXT_BLOCKS.items():
+        text = (root / relative).read_text()
+        for block in blocks:
+            assert re.search(block, text), (relative, block)
+
+
+def test_the_methodology_note_is_for_a_registered_measure():
+    """The one modelling note the page keeps by hand (MODELLING_NOTE in
+    src/utils/measureModelling.js, #113's scope note) names a registered
+    measure, so renaming the measure can't leave its note unshown without a
+    failure here."""
     import re
     from pathlib import Path
 
     source = (
-        Path(__file__).resolve().parents[1] / "src/utils/policies.js"
+        Path(__file__).resolve().parents[1] / "src/utils/measureModelling.js"
     ).read_text()
-    pairs = re.findall(r'id: "([a-z0-9_]+)",\n\s+name: "([^"]+)"', source)
-    assert pairs == [(m, get_reform(m).name) for m in CANDIDATES]
+    (measure_id,) = re.findall(
+        r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source
+    )
+    assert get_reform(measure_id) is not None
 
 
 # --- Every year the policy differs is covered ---------------------------------

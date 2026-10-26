@@ -1,0 +1,17 @@
+/* The £0 measures, one caveat in a card's "About this chart" */
+.zero-measures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-more-info-legacy > p {
+  margin: 0;
+}
+
+.chart-more-info-legacy > p + p {
+  margin-top: 6px;
+}

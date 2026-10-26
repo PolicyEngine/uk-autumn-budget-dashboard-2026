@@ -180,7 +180,10 @@ def household_request_limit() -> int:
     memory stay bounded by the slots. Without workers every run is in this
     process, so one request at a time.
     """
-    if household_workers() <= 1:
+    # On Modal (HOUSEHOLD_RUNNER=modal) the runs happen in their own
+    # containers, not in this process, so requests can overlap.
+    modal_runner = os.environ.get("HOUSEHOLD_RUNNER") == "modal"
+    if household_workers() <= 1 and not modal_runner:
         return 1
     try:
         return max(1, int(os.environ.get("HOUSEHOLD_CONCURRENT_REQUESTS", 4)))
@@ -406,7 +409,15 @@ class HouseholdAnswersRequest(BaseModel):
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(
-        default=0, ge=0, le=MAX_AMOUNT
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Pension paid by salary sacrifice, £ a year. employment_income "
+            "is pay after the sacrifice, as policyengine-uk reads it: the "
+            "sacrifice changes no figure until the £2,000 cap from April "
+            "2029, which returns the excess to pay"
+        ),
     )
     state_pension: Optional[float] = Field(
         default=None,

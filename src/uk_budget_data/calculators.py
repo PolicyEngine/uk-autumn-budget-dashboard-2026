@@ -297,6 +297,91 @@ class WinnersLosersCalculator(BaseCalculator):
         return results
 
 
+# Poverty measures published beside the headline (``poverty_change_*``,
+# absolute before housing costs, kept for older readers). Each is a
+# policyengine-uk household flag, read per person. The absolute lines are
+# 60% of the FYE 2025 median held constant in real terms; the relative
+# lines are 60% of the median in the same simulation, so under a reform the
+# line moves with the reform's own median (policyengine-uk 2.132.6,
+# in_relative_poverty_bhc / _ahc).
+POVERTY_MEASURES = {
+    "abs_bhc": "in_poverty_bhc",
+    "abs_ahc": "in_poverty_ahc",
+    "rel_bhc": "in_relative_poverty_bhc",
+    "rel_ahc": "in_relative_poverty_ahc",
+}
+# People in the poverty columns: everyone, and HBAI dependent children
+# (is_hbai_dependent_child: under 16, or 16-19 in non-advanced education and
+# living with a parent), as DWP's child poverty statistics count them.
+POVERTY_GROUPS = {"": None, "child_": "is_hbai_dependent_child"}
+
+
+def poverty_change(
+    baseline_flag: np.ndarray,
+    reformed_flag: np.ndarray,
+    person_weight: np.ndarray,
+    in_group: Optional[np.ndarray] = None,
+    label: str = "poverty",
+) -> tuple[float, float]:
+    """Change in a weighted poverty rate: (percentage points, % of baseline).
+
+    ``in_group`` restricts the rate to some people (children); the rate's
+    denominator is that group's weighted count.
+    """
+    weight = np.asarray(person_weight, dtype=float)
+    if in_group is not None:
+        weight = weight * np.asarray(in_group, dtype=bool)
+    total = weight.sum()
+    if total <= 0:
+        raise ValueError(f"No weighted people for {label}.")
+    baseline_rate = weight[np.asarray(baseline_flag, dtype=bool)].sum() / total
+    reformed_rate = weight[np.asarray(reformed_flag, dtype=bool)].sum() / total
+    if baseline_rate <= 0:
+        raise ValueError(
+            f"Baseline {label} rate is 0; a relative change is undefined."
+        )
+    change_pp = (reformed_rate - baseline_rate) * 100
+    return change_pp, (reformed_rate - baseline_rate) / baseline_rate * 100
+
+
+def inequality_measures(income: np.ndarray, weights: np.ndarray) -> dict:
+    """Gini, top 10% and top 1% shares and the 90/10 ratio of an income.
+
+    The income and weights are those of the headline Gini: equivalised
+    household net income floored at zero, each household weighted by its
+    people. The 90/10 ratio is the 90th percentile over the 10th.
+    """
+    series = MicroSeries(np.asarray(income, dtype=float), weights=weights)
+    p10 = series.quantile(0.1)
+    if p10 <= 0:
+        raise ValueError(
+            "The 10th percentile is 0; the 90/10 ratio is undefined."
+        )
+    return {
+        "gini": series.gini(),
+        "top_10_share": series.top_x_pct_share(0.1),
+        "top_1_share": series.top_x_pct_share(0.01),
+        "p90_p10": series.quantile(0.9) / p10,
+    }
+
+
+def inequality_changes(baseline: dict, reformed: dict) -> dict:
+    """Columns for metrics.csv: the shares' change in percentage points and
+    the 90/10 ratio's relative change (a fraction, as ``gini_change``)."""
+    return {
+        "top_10_share_change_pp": (
+            reformed["top_10_share"] - baseline["top_10_share"]
+        )
+        * 100,
+        "top_1_share_change_pp": (
+            reformed["top_1_share"] - baseline["top_1_share"]
+        )
+        * 100,
+        "p90_p10_change": (reformed["p90_p10"] - baseline["p90_p10"])
+        / baseline["p90_p10"],
+    }
+
+
 @dataclass
 class MetricsCalculator(BaseCalculator):
     """Calculates summary metrics (affected %, Gini, poverty)."""
@@ -400,17 +485,53 @@ class MetricsCalculator(BaseCalculator):
             )
         poverty_pct = (poverty_pp / baseline_rate) * 100
 
-        return [
-            {
-                "reform_id": reform_id,
-                "reform_name": reform_name,
-                "year": year,
-                "people_affected": percent_affected,
-                "gini_change": gini_change,
-                "poverty_change_pp": poverty_pp,
-                "poverty_change_pct": poverty_pct,
-            }
-        ]
+        row = {
+            "reform_id": reform_id,
+            "reform_name": reform_name,
+            "year": year,
+            "people_affected": percent_affected,
+            "gini_change": gini_change,
+            "poverty_change_pp": poverty_pp,
+            "poverty_change_pct": poverty_pct,
+        }
+
+        # Every poverty measure, for everyone and for children
+        groups = {
+            prefix: (
+                None
+                if flag is None
+                else baseline.calculate(
+                    flag, period=year, map_to="person"
+                ).values.astype(bool)
+            )
+            for prefix, flag in POVERTY_GROUPS.items()
+        }
+        for measure, variable in POVERTY_MEASURES.items():
+            before = baseline.calculate(
+                variable, period=year, map_to="person"
+            ).values
+            after = reformed.calculate(
+                variable, period=year, map_to="person"
+            ).values
+            for prefix, in_group in groups.items():
+                pp, pct = poverty_change(
+                    before,
+                    after,
+                    person_weight,
+                    in_group,
+                    label=f"{prefix}{variable} ({reform_id}, {year})",
+                )
+                row[f"{prefix}poverty_{measure}_change_pp"] = pp
+                row[f"{prefix}poverty_{measure}_change_pct"] = pct
+
+        # The other inequality measures, on the Gini's income and weights
+        row.update(
+            inequality_changes(
+                inequality_measures(baseline_equiv_values, adjusted_weights),
+                inequality_measures(reformed_equiv_values, adjusted_weights),
+            )
+        )
+        return [row]
 
     def calculate_from_values(
         self,
@@ -514,35 +635,45 @@ class IncomeCurveCalculator(BaseCalculator):
         reform_scenario,
         reform_id: str,
         reform_name: str,
-        year: int,
+        year,
     ) -> list[dict]:
-        """Every example household's curve for one measure and year.
+        """Every example household's curve for one measure, in one year or
+        several.
 
         Args:
             baseline_scenario: Scenario for baseline (pre-budget policy).
             reform_scenario: Scenario for reform (post-budget policy).
             reform_id: Unique identifier for the reform.
             reform_name: Human-readable reform name.
-            year: Year to calculate for.
+            year: A year, or a list of years. Each household is simulated
+                once per scenario for every year at once (``simulate``
+                reads each year as built), which gives the same values as
+                one simulation per year, to the bit, in about a quarter of
+                the time.
 
         Returns:
-            One row per household and grid point (see ``rows``).
+            One row per household and grid point (see ``rows``), year by
+            year, as consecutive one-year calls would return them.
         """
         from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 
-        results = []
+        years = [year] if isinstance(year, int) else [int(y) for y in year]
+        by_year: dict[int, list[dict]] = {y: [] for y in years}
         for household in EXAMPLE_HOUSEHOLDS:
-            results.extend(
-                self.rows(
-                    household,
-                    self.simulate(household, baseline_scenario, [year]),
-                    self.simulate(household, reform_scenario, [year]),
-                    reform_id,
-                    reform_name,
-                    [year],
+            baseline = self.simulate(household, baseline_scenario, years)
+            reformed = self.simulate(household, reform_scenario, years)
+            for y in years:
+                by_year[y].extend(
+                    self.rows(
+                        household,
+                        baseline,
+                        reformed,
+                        reform_id,
+                        reform_name,
+                        [y],
+                    )
                 )
-            )
-        return results
+        return [row for y in years for row in by_year[y]]
 
 
 def full_new_state_pension(years: list[int]) -> dict[int, float]:
@@ -1030,6 +1161,319 @@ class AgeImpactCalculator(BaseCalculator):
         return rows
 
 
+# The income distribution: the percentiles published, and the floor on
+# the survey households behind each one.
+DISTRIBUTION_PERCENTILES = tuple(range(1, 100))
+# Each percentile is the mean over the people in a band one percentile wide
+# around it; a band with fewer survey households than this has no row.
+DISTRIBUTION_MIN_HOUSEHOLDS = SINGLE_AGE_MIN_RECORDS
+DISTRIBUTION_BAND = 1.0
+DISTRIBUTION_SIDES = ("baseline", "reform")
+# Items in the survey data's household net income that the household
+# calculator never gives a household it builds from the form, so a reader
+# can be placed on the distribution: public spending in kind on health,
+# education and transport subsidies (benefits in household_benefits), and
+# the business rates and stamp duty the model attributes to households
+# (taxes in household_tax).
+NOT_IN_CALCULATOR_BENEFITS = (
+    "nhs_spending",
+    "dfe_education_spending",
+    "dft_subsidy_spending",
+)
+NOT_IN_CALCULATOR_TAXES = (
+    "business_rates",
+    "corporate_sdlt",
+    "expected_sdlt",
+    "expected_ltt",
+    "expected_lbtt",
+)
+
+
+def comparable_net_income(sim, year: int) -> np.ndarray:
+    """Household net income as the household calculator counts it, by
+    household: ``household_net_income`` less public spending in kind
+    (NHS, schools, transport subsidies), plus the attributed business
+    rates and stamp duty (NOT_IN_CALCULATOR_*). What
+    stays is earnings and other market income, cash benefits and free
+    childcare, less income tax, National Insurance, council tax, fuel duty,
+    VAT changes, student loan repayments and pension contributions."""
+
+    def household(variable):
+        return np.asarray(
+            sim.calculate(variable, period=year, map_to="household").values,
+            dtype=float,
+        )
+
+    income = household("household_net_income")
+    for variable in NOT_IN_CALCULATOR_BENEFITS:
+        income = income - household(variable)
+    for variable in NOT_IN_CALCULATOR_TAXES:
+        income = income + household(variable)
+    return income
+
+
+def distribution_points(
+    income: np.ndarray,
+    people: np.ndarray,
+    survey_households: Optional[np.ndarray] = None,
+    percentiles=DISTRIBUTION_PERCENTILES,
+    band: float = DISTRIBUTION_BAND,
+    min_households: int = DISTRIBUTION_MIN_HOUSEHOLDS,
+) -> list[tuple[int, float, int]]:
+    """Smoothed percentile points of a person-weighted income distribution.
+
+    ``income`` is each household's income, ``people`` its weight in people
+    (household weight times household size), so a point is where a share
+    of people, not of households, lies below. Households are sorted by
+    income; each person sits at the midpoint of their household's slice of
+    the cumulative share. The point for percentile p is the person-weighted
+    mean income of the people between p - band/2 and p + band/2, so it is
+    never one household's own figure. A band with fewer than
+    ``min_households`` survey households (distinct ``survey_households``
+    ids; the household records when None) is left out.
+
+    Returns (percentile, income, survey households) for each kept point.
+    """
+    income = np.asarray(income, dtype=float)
+    people = np.asarray(people, dtype=float)
+    keep = people > 0
+    income, people = income[keep], people[keep]
+    ids = (
+        np.arange(len(keep))[keep]
+        if survey_households is None
+        else np.asarray(survey_households)[keep]
+    )
+    order = np.argsort(income, kind="stable")
+    income, people, ids = income[order], people[order], ids[order]
+    total = people.sum()
+    if total <= 0:
+        return []
+    upper = np.cumsum(people) / total * 100
+    middle = upper - people / total * 100 / 2
+    points = []
+    for p in percentiles:
+        members = (middle >= p - band / 2) & (middle < p + band / 2)
+        households = len(np.unique(ids[members]))
+        if households < min_households:
+            continue
+        w = people[members]
+        points.append(
+            (int(p), float((w * income[members]).sum() / w.sum()), households)
+        )
+    return points
+
+
+@dataclass
+class IncomeDistributionCalculator(BaseCalculator):
+    """Percentiles of equivalised household net income, before and after.
+
+    The income is ``comparable_net_income`` (household net income as the
+    household calculator counts it, so fuel duty and VAT measures count,
+    and NHS spending in kind and attributed business taxes do not) divided
+    by the HBAI modified OECD scale (``household_equivalisation_bhc``), so
+    a reader's household from the calculator can be placed on it. It is
+    not the HBAI income the decile charts rank on, which leaves out fuel
+    duty and VAT.
+
+    People are counted, not households: each household weighs its weight
+    times its size, as the deciles do. The ``baseline`` points rank
+    everyone's income before the measure, the ``reform`` points everyone's
+    income after it, each against its own distribution. Points run from
+    the 1st to the 99th percentile; see ``distribution_points`` for how
+    each is made and when one is left out.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        survey_households=None,
+    ) -> list[dict]:
+        def household(sim, variable):
+            return np.asarray(
+                sim.calculate(
+                    variable, period=year, map_to="household"
+                ).values,
+                dtype=float,
+            )
+
+        frame = pd.DataFrame(
+            {
+                "people": household(baseline, "household_weight")
+                * household(baseline, "household_count_people"),
+                "baseline": comparable_net_income(baseline, year)
+                / household(baseline, "household_equivalisation_bhc"),
+                "reform": comparable_net_income(reformed, year)
+                / household(reformed, "household_equivalisation_bhc"),
+            }
+        )
+        if survey_households is not None:
+            frame["survey_household"] = np.asarray(survey_households)
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        """Rows from a household-level frame: ``people`` (weight times
+        size), ``baseline`` and ``reform`` equivalised net income, and
+        optionally ``survey_household`` ids."""
+        ids = (
+            frame["survey_household"].to_numpy()
+            if "survey_household" in frame
+            else None
+        )
+        rows = []
+        for side in DISTRIBUTION_SIDES:
+            for percentile, income, _ in distribution_points(
+                frame[side].to_numpy(), frame["people"].to_numpy(), ids
+            ):
+                rows.append(
+                    {
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "side": side,
+                        "percentile": percentile,
+                        "equivalised_net_income": round(income),
+                    }
+                )
+        return rows
+
+
+# Income mobility: a mover's cell (people moving up, or down, from one
+# starting decile) is published only when its movers come from at least
+# this many distinct survey households, as the binned scatter's floor.
+MOBILITY_MIN_HOUSEHOLDS = 10
+
+
+def person_ranks(income: np.ndarray, people: np.ndarray) -> np.ndarray:
+    """Each household's rank (0 to 100) in a person-weighted distribution:
+    the midpoint of the share of people at its income, households with the
+    same income sharing one rank."""
+    income = np.asarray(income, dtype=float)
+    people = np.asarray(people, dtype=float)
+    total = people.sum()
+    frame = pd.DataFrame({"income": income, "people": people})
+    by = frame.groupby("income", sort=True)["people"].sum()
+    upper = by.cumsum() / total * 100
+    middle = upper - by / total * 100 / 2
+    return middle.reindex(income).to_numpy()
+
+
+@dataclass
+class IncomeMobilityCalculator(BaseCalculator):
+    """Who changes place in the income distribution, by starting decile.
+
+    Each household is ranked by ``comparable_net_income`` (equivalised, as
+    IncomeDistributionCalculator) among everyone before the measure, and
+    again among everyone after it. People move up a percentile (or decile)
+    when the whole percentile (decile) of their rank after is higher than
+    before, and down when it is lower. Rows give the share of people (%)
+    moving up, down or not at all, for each starting decile (by rank
+    before) and for everyone (``all``). A share of movers drawn from fewer
+    than MOBILITY_MIN_HOUSEHOLDS survey households is left blank, and so is
+    the matching share staying put.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        survey_households=None,
+    ) -> list[dict]:
+        def household(sim, variable):
+            return np.asarray(
+                sim.calculate(
+                    variable, period=year, map_to="household"
+                ).values,
+                dtype=float,
+            )
+
+        frame = pd.DataFrame(
+            {
+                "people": household(baseline, "household_weight")
+                * household(baseline, "household_count_people"),
+                "baseline": comparable_net_income(baseline, year)
+                / household(baseline, "household_equivalisation_bhc"),
+                "reform": comparable_net_income(reformed, year)
+                / household(reformed, "household_equivalisation_bhc"),
+            }
+        )
+        if survey_households is not None:
+            frame["survey_household"] = np.asarray(survey_households)
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        frame = frame[frame["people"] > 0]
+        people = frame["people"].to_numpy()
+        ids = (
+            frame["survey_household"].to_numpy()
+            if "survey_household" in frame
+            else np.arange(len(frame))
+        )
+        before = person_ranks(frame["baseline"].to_numpy(), people)
+        after = person_ranks(frame["reform"].to_numpy(), people)
+        start = np.minimum(np.floor(before / 10).astype(int) + 1, 10)
+        groups = [(str(d), start == d) for d in range(1, 11)]
+        groups.append(("all", np.ones(len(frame), dtype=bool)))
+        rows = []
+        for unit, size in (("percentile", 1), ("decile", 10)):
+            b = np.minimum(np.floor(before / size), 100 / size - 1)
+            a = np.minimum(np.floor(after / size), 100 / size - 1)
+            up, down = a > b, a < b
+            for label, members in groups:
+                w = people[members]
+                total = w.sum()
+                if total <= 0:
+                    continue
+
+                def share(flags):
+                    movers = members & flags
+                    if len(np.unique(ids[movers])) < MOBILITY_MIN_HOUSEHOLDS:
+                        return None
+                    return float(people[movers].sum() / total * 100)
+
+                up_share, down_share = share(up), share(down)
+                still = (
+                    100 - up_share - down_share
+                    if up_share is not None and down_share is not None
+                    else None
+                )
+                rows.append(
+                    {
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "unit": unit,
+                        "start_decile": label,
+                        "pct_up": up_share,
+                        "pct_down": down_share,
+                        "pct_same": still,
+                    }
+                )
+        return rows
+
+
 def get_standard_calculators(
     years: list[int] = None,
     income_curve_points: int = 201,
@@ -1061,4 +1505,5 @@ def get_standard_calculators(
         "constituency": ConstituencyCalculator(),
         "demographic_constituency": DemographicConstituencyCalculator(),
         "age_impact": AgeImpactCalculator(),
+        "income_distribution": IncomeDistributionCalculator(),
     }

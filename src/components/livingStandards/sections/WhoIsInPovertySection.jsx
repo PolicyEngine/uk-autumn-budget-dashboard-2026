@@ -1,7 +1,8 @@
-// Who is in poverty: one dot plot for every breakdown, from the headline
-// start year, 2027-28 (grey), to the headline end year (teal), with an arrow
-// for the direction, the values and a change chip per row, and a dashed
-// line for the reference group (all people, or all children). Family type
+// Who is in poverty: one bar per group for the end year (teal, its value at
+// the bar's end), a dark tick at the start year's value, a change chip per
+// row, and a dashed line for the reference group (all people, or all
+// children), labelled once above the rows. Changes here are tenths of a
+// point, so a bar with a tick reads where two overlapping dots did not. Family type
 // and tenure come from poverty_by_group; children by number of children and
 // by lone parent or couple from child_poverty_by_family. Replaces the
 // Poverty by group and Child poverty by family cards.
@@ -11,23 +12,28 @@ import LsCard from "../LsCard";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
-import PillSelect from "../../PillSelect";
+import { povertyMeasureOptions } from "../PovertyMeasurePills";
+import ControlBar from "../../ControlBar";
+import { yearsOption } from "../controlOptions";
+import { defaultRange, useYearRange } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
   fyDash,
-  headlineStartYear,
-  headlineYear,
   periodLabel,
   round1,
   signedChange,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
   absolute_ahc: { label: "Absolute poverty (AHC)", badge: "Absolute (AHC)", noun: "absolute poverty rate" },
+  relative_bhc: { label: "Relative poverty (BHC)", badge: "Relative (BHC)", noun: "relative poverty rate (BHC)" },
+  absolute_bhc: { label: "Absolute poverty (BHC)", badge: "Absolute (BHC)", noun: "absolute poverty rate (BHC)" },
 };
 
 /** Row labels as plural, sentence-case nouns. */
@@ -80,19 +86,19 @@ function breakdownsFor(data, from, to) {
     if (!b) continue;
     out[id] = {
       label: b.label,
-      measures: ["relative_ahc"],
+      measures: Object.keys(pbg.measures ?? {}).filter((m) => MEASURES[m]),
       reference: "All people",
       children: false,
-      rows: () =>
+      rows: (m) =>
         Object.entries(b.groups).map(([g, label]) => {
           const cell = (y) => {
             const c = b.cells[g]?.[y];
-            return c && !c.suppressed ? pct(c.relative_ahc) : null;
+            return c && !c.suppressed ? pct(c[m]) : null;
           };
           const name = PLURAL[g] || label;
           return { id: g, label: name, subject: name, a: cell(from), z: cell(to) };
         }),
-      all: () => pct(at(data.poverty?.projection?.relative_ahc?.all, to)),
+      all: (m) => pct(at(data.poverty?.projection?.[m]?.all, to)),
     };
   }
   const cp = data.child_poverty_by_family;
@@ -121,12 +127,15 @@ function breakdownsFor(data, from, to) {
 
 export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;
-  const from = headlineStartYear(data) || pbg?.years?.[0];
-  const to = headlineYear(data) || pbg?.years?.[pbg.years.length - 1];
+  const years = pbg?.years ?? [];
+  // The two years compared: chosen by the reader, 2027-28 to 2031-32 at first
+  const [[from, to], setRange] = useYearRange(years, defaultRange(years));
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
-  const [measureChoice, setMeasure] = useState("relative_ahc");
+  // One measure for the sub-tab's tiles and both cards (usePovertyMeasure);
+  // a breakdown without it (the child ones) falls back to its first
+  const [measureChoice, setMeasure] = usePovertyMeasure();
   const plotRef = useRef(null);
   // Cleared when the breakdown or measure changes, so it never shows a row
   // that has gone
@@ -154,37 +163,52 @@ export default function WhoIsInPovertySection({ data }) {
 
   const top = rows[0];
   const noun = b.children ? m.noun.replace(/ poverty rate$/, " child poverty rate") : m.noun;
-  const lead = top && (
+  // One plain sentence on the card; the poverty line and family types are
+  // defined in About this chart
+  const change =
+    top?.d == null
+      ? ""
+      : flat(top.d)
+        ? `, the same as in ${fyDash(from)}`
+        : `, ${top.d > 0 ? "up" : "down"} ${Math.abs(round1(top.d)).toFixed(1)} points since ${fyDash(from)}`;
+  const short = top && (
     <>
-      {top.subject} have the highest {noun} ({formatPct(top.z ?? top.a)} in {fyDash(to)})
-      {top.d != null && (
-        <>
-          ,{" "}
-          <strong>
-            {flat(top.d) ? "unchanged" : `${top.d > 0 ? "up" : "down"} ${signedChange(Math.abs(top.d), "pp").slice(1)}`}
-          </strong>{" "}
-          since {fyDash(from)}
-        </>
-      )}
-      .
+      Under current law, {top.subject.toLowerCase()} have the highest {noun}: <strong>{formatPct(top.z ?? top.a)}</strong> in{" "}
+      {fyDash(to)}
+      {change}.
     </>
   );
 
   const groupNotes = b.children
     ? data.child_poverty_by_family?.notes || []
     : (pbg?.notes || []).filter((n) => !/^Region/.test(n));
+  // The poverty line and housing costs of the measure shown
+  const line = measure.startsWith("absolute")
+    ? "a fixed line (60% of the 2024-25 median income) held constant in real terms"
+    : "60% of current median income";
+  const housing = measure.endsWith("ahc") ? "after housing costs" : "before housing costs";
   const about = b.children
-    ? `Share of children in households below the poverty line, after housing costs. Relative: 60% of current median income; absolute: a fixed real-terms line. Families are benefit units; the dashed line is all children.`
-    : `Share of people in households below 60% of current median income, after housing costs. Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age. The dashed line is all people.`;
+    ? `Share of children in households below ${line}, ${housing}. Families are benefit units; the dashed line is all children.`
+    : `Share of people in households below ${line}, ${housing}. A pensioner family is a benefit unit with someone at or above State Pension age. The dashed line is all people.`;
 
   return (
     <LsCard
       title="Who is in poverty"
+      icon="users"
       period={periodLabel(from, to)}
       about={about}
-      summary={lead}
+      summary={short}
       notes={groupNotes}
       source={<PeSource />}
+      info={{
+        how: [
+          `The line is ${line}, ${housing}.`,
+          b.children
+            ? "Families are benefit units; the dashed line is all children."
+            : "Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age.",
+        ],
+        method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+      }}
       sourceText={CSV_SOURCES.pe}
       download={{
         filename: `${measure}-by-${breakdown}`,
@@ -206,83 +230,75 @@ export default function WhoIsInPovertySection({ data }) {
           }),
       }}
       controls={
-        <>
-          <PillSelect
-            variant="light"
-            prefix="Breakdown"
-            name="Breakdown"
-            value={breakdown}
-            onChange={setBreakdown}
-            options={ids.map((id) => ({ value: id, label: breakdowns[id].label, badge: breakdowns[id].badge }))}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Poverty measure"
-            value={measure}
-            onChange={setMeasure}
-            options={Object.entries(MEASURES).map(([id, x]) => ({
-              value: id,
-              label: x.label,
-              badge: x.badge,
-              ...(b.measures.includes(id) ? {} : { disabled: true, title: "Not available for this breakdown" }),
-            }))}
-          />
-        </>
+        // The card's one Options pill: the years compared, the breakdown,
+        // then the poverty measure
+        <ControlBar
+          name="Who is in poverty"
+          options={[
+            yearsOption(years, [from, to], setRange),
+            {
+              label: "Breakdown",
+              value: breakdown,
+              onChange: setBreakdown,
+              options: ids.map((id) => ({ value: id, label: breakdowns[id].label, summary: breakdowns[id].badge ?? breakdowns[id].label })),
+            },
+            ...povertyMeasureOptions(measure, b.measures, setMeasure),
+          ]}
+        />
       }
     >
       <div className="chart-plot">
         <div
           ref={plotRef}
           style={{ position: "relative" }}
-          className="dot-plot ls-dot-plot"
+          className="ls-bars"
           role="table"
-          aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(from)} and ${fyDash(to)}`}
+          aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(to)}, with ${fyDash(from)} marked`}
         >
-          <div className="dot-head" aria-hidden="true">
-            <span className="dot-label" />
-            <span className="dot-plot-area">
-              {allValue != null && (
-                <span className="dot-all-label" style={{ left: pos(allValue) }}>
+          {/* The reference group's value, said once above the rows */}
+          {allValue != null && (
+            <div className="ls-bar-row ls-bar-head" aria-hidden="true">
+              <span className="ls-bar-label" />
+              <span className="ls-bar-area">
+                <span className="ls-bar-all-label" style={{ left: pos(allValue) }}>
                   {b.reference} {formatPct(allValue)}
                 </span>
-              )}
-            </span>
-            <span className="dot-values" />
-          </div>
+              </span>
+              <span className="ls-bar-chip-cell" />
+            </div>
+          )}
           {rows.map((r) => {
-            const both = r.a != null && r.z != null;
-            const lo = Math.min(r.a ?? r.z, r.z ?? r.a);
-            const hi = Math.max(r.a ?? r.z, r.z ?? r.a);
-            const rising = both && r.z > r.a;
             // A fall in poverty is good (teal); a rise is orange
             const tone = flat(r.d) ? "flat" : r.d < 0 ? "good" : "bad";
+            const end = r.z ?? r.a;
+            // The value sits past the bar's end, or inside it near the axis end
+            const inside = scale(end) > 82;
             return (
-              <div className="dot-row" role="row" key={r.id}>
-                <span className="dot-label" role="rowheader">
+              <div className="ls-bar-row" role="row" key={r.id}>
+                <span className="ls-bar-label" role="rowheader">
                   {r.label}
                 </span>
                 <span
-                  className="dot-plot-area has-tooltip"
+                  className="ls-bar-area has-tooltip"
                   role="cell"
                   tabIndex={0}
-                  aria-label={`${fyDash(from)} ${r.a == null ? "n/a" : formatPct(r.a)}, ${fyDash(to)} ${r.z == null ? "n/a" : formatPct(r.z)}`}
+                  aria-label={`${fyDash(to)} ${r.z == null ? "n/a" : formatPct(r.z)}, ${fyDash(from)} ${r.a == null ? "n/a" : formatPct(r.a)}`}
                   {...handlers(
                     r.id,
                     <TooltipRows
                       label={`${r.label}: ${m.label.charAt(0).toLowerCase()}${m.label.slice(1)}`}
                       rows={[
                         {
-                          key: "from",
-                          name: fyDash(from),
-                          text: r.a == null ? "n/a" : formatPct(r.a),
-                          color: CHART_COLOURS.before,
-                        },
-                        {
                           key: "to",
                           name: fyDash(to),
                           text: r.z == null ? "n/a" : formatPct(r.z),
                           color: CHART_COLOURS.after,
+                        },
+                        {
+                          key: "from",
+                          name: fyDash(from),
+                          text: r.a == null ? "n/a" : formatPct(r.a),
+                          color: CHART_COLOURS.before,
                         },
                         ...(r.d == null
                           ? []
@@ -313,49 +329,49 @@ export default function WhoIsInPovertySection({ data }) {
                   )}
                 >
                   {axis.ticks.map((t) => (
-                    <span key={t} className="dot-grid" style={{ left: pos(t) }} />
+                    <span key={t} className="ls-bar-grid" style={{ left: pos(t) }} />
                   ))}
-                  {allValue != null && <span className="dot-all" style={{ left: pos(allValue) }} />}
-                  {both && (
-                    <span className="dot-link" style={{ left: pos(lo), width: `${scale(hi) - scale(lo)}%` }}>
-                      {scale(hi) - scale(lo) > 6 && <span className={`dot-arrow ${rising ? "right" : "left"}`} />}
+                  {end != null && (
+                    <span className="ls-bar-fill" style={{ width: pos(end) }}>
+                      <span className={`ls-bar-value ${inside ? "inside" : ""}`}>{formatPct(end)}</span>
                     </span>
                   )}
-                  {r.a != null && <span className="dot from" style={{ left: pos(r.a) }} />}
-                  {r.z != null && <span className="dot to" style={{ left: pos(r.z) }} />}
+                  {allValue != null && <span className="ls-bar-all" style={{ left: pos(allValue) }} />}
+                  {r.a != null && r.z != null && <span className="ls-bar-start" style={{ left: pos(r.a) }} />}
                 </span>
-                <span className="dot-values" role="cell">
-                  <span className="dot-nums">
-                    {r.a == null ? "–" : formatPct(r.a)} → {r.z == null ? "–" : formatPct(r.z)}
-                  </span>
-                  {r.d != null && <span className={`dot-chip ${tone}`}>{signedChange(r.d, "pp")}</span>}
+                <span className="ls-bar-chip-cell" role="cell">
+                  {r.d != null && <span className={`dot-chip ${tone}`}>{flat(r.d) ? "no change" : signedChange(r.d, "pp")}</span>}
                 </span>
               </div>
             );
           })}
-          <div className="dot-row dot-axis" aria-hidden="true">
-            <span className="dot-label" />
-            <span className="dot-plot-area">
+          <div className="ls-bar-row ls-bar-axis" aria-hidden="true">
+            <span className="ls-bar-label" />
+            <span className="ls-bar-area">
               {axis.ticks.map((t) => (
-                <span key={t} className="dot-tick" style={{ left: pos(t) }}>
+                <span key={t} className="ls-bar-tick" style={{ left: pos(t) }}>
                   {t}%
                 </span>
               ))}
             </span>
-            <span className="dot-values" />
+            <span className="ls-bar-chip-cell" />
           </div>
           <FloatingTooltip tip={tip} />
         </div>
       </div>
-      {/* In the legend row, level with the legend of the card beside it */}
       <div className="chart-legend">
-        <span className="dot-legend">
+        <span className="dot-legend ls-bar-legend">
           <span>
-            <i className="from" /> {fyDash(from)}
+            <i className="ls-key-bar" /> {fyDash(to)} rate
           </span>
           <span>
-            <i className="to" /> {fyDash(to)}
+            <i className="ls-key-start" /> {fyDash(from)}
           </span>
+          {allValue != null && (
+            <span>
+              <i className="ls-key-all" /> {b.reference.toLowerCase()}
+            </span>
+          )}
         </span>
       </div>
       <div className="chart-logo">

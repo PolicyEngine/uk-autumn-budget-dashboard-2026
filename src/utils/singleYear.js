@@ -1,14 +1,21 @@
 /**
- * What Personal impact shows, worked out from the API's answer
+ * What Household impact shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.
  */
+import {
+  CHANGE_BY_POLICY_NOTE,
+  COUNCIL_TAX_NOTE,
+  EVERY_POLICY_NOTE,
+  MARGINAL_RATE_NOTE,
+  WHO_IS_A_CHILD_NOTE,
+} from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
-import { getPolicyColor } from "./policyConfig";
 import { CHART_COLOURS } from "./chartTheme";
+import { shortNameOf } from "./policyDetails";
 
-const MINUS = "−";
+export const MINUS = "−";
 
 /** "£1,234", whole pounds, a true minus. */
 export function money(value) {
@@ -69,7 +76,6 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Salary sacrifice cap: broad-base pay cut",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -162,7 +168,7 @@ export function largestChangesSentence(groups) {
 
 // Notes about one part of a row, shown only when that part is: income
 // tax's is about the High Income Child Benefit Charge, employment income's
-// about the salary sacrifice cap's pay cut
+// about its pay cut row (labelled by the household API)
 const NOTE_PART = {
   income_tax: "child_benefit_charge",
   employment_income: "salary_sacrifice_haircut",
@@ -183,7 +189,7 @@ export const INTERACTION_THRESHOLD = 1;
 /**
  * The per-policy rows (the API's single-measure method): each measure's own
  * change, that measure alone at its Budget setting with the other selected
- * measures at pre-Budget law. Where the combined change differs from the
+ * measures at current law. Where the combined change differs from the
  * sum of those by £1 or more, the difference is a row of its own,
  * "Interaction between policies", so the bars add up to the change. In
  * whole pounds that add up to the headline tile (largest remainder), sorted
@@ -197,11 +203,18 @@ export const INTERACTION_THRESHOLD = 1;
 export function policyRows(byPolicy, total, policies) {
   const nameOf = (row) =>
     policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+  // A short name for tight labels (policyDetails.js's, while it describes
+  // the published measure), else the name
+  const labelOf = (row) => {
+    const measure = policies.find((policy) => policy.id === row.id);
+    return measure ? shortNameOf(measure) : nameOf(row);
+  };
   const affected = byPolicy.measures.filter((row) => row.status !== "not_affected");
   const rows = affected.map((row) => ({
     id: row.id,
     name: nameOf(row),
-    color: getPolicyColor(row.id),
+    label: labelOf(row),
+    color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
     change: row.change,
   }));
   if (Math.abs(byPolicy.residual) >= INTERACTION_THRESHOLD) {
@@ -229,6 +242,19 @@ export function policyRows(byPolicy, total, policies) {
     noEffect: byPolicy.measures
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
+    // Every measure that leaves the household's net income where it was,
+    // with its colour and, for an employer cost, the API's note on why. No
+    // reason is kept here by measure id: that would be a measure list of
+    // the page's own
+    noEffectItems: byPolicy.measures
+      .filter((row) => row.status === "not_affected")
+      .map((row) => ({
+        id: row.id,
+        name: nameOf(row),
+        label: labelOf(row),
+        color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
+        reason: row.noteKind === "employer_cost" ? row.note : null,
+      })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount
     notes: byPolicy.measures
@@ -288,6 +314,41 @@ export function pinnedRound(values, total, bars = []) {
   return sum === Math.round(total) ? out : consistentRound(values, total);
 }
 
+// Rows the headline card also states, rounded on their own there ("Based
+// on: Council Tax £2,629"): the table keeps that whole-pound figure
+// rather than nudging it by £1 to make its column add up.
+export const STATED_ELSEWHERE = new Set(["council_tax"]);
+
+/**
+ * The before column's whole pounds (consistentRound to `total`), with each
+ * row in STATED_ELSEWHERE at its own rounding and the others adding up to
+ * the rest; plain consistent rounding if they then cannot.
+ */
+export function pinnedBefore(rows, total) {
+  const values = rows.map((row) => row.before);
+  // Rounded as money() rounds the headline's positive amount: half away from
+  // zero, so a negated row at an exact 50p (−£2,628.50) is −£2,629, not −£2,628
+  const pinned = rows.map((row) =>
+    STATED_ELSEWHERE.has(row.id) ? Math.sign(row.before) * Math.round(Math.abs(row.before)) || 0 : null,
+  );
+  const free = values.map((_, index) => index).filter((index) => pinned[index] === null);
+  if (free.length === values.length || free.length === 0) return consistentRound(values, total);
+  const pinnedSum = pinned.reduce((sum, pin) => sum + (pin ?? 0), 0);
+  const freeValues = free.map((index) => values[index]);
+  const rest = Math.round(total) - pinnedSum;
+  // Only when the free rows already sum to the rest within £1, as
+  // consistentRound assumes
+  if (Math.abs(freeValues.reduce((sum, value) => sum + value, 0) - rest) > 1) {
+    return consistentRound(values, total);
+  }
+  const rounded = consistentRound(freeValues, rest);
+  const out = pinned.slice();
+  free.forEach((index, i) => {
+    out[index] = rounded[i];
+  });
+  return out;
+}
+
 /**
  * The whole pounds the programme table shows, as `shown: {before, after,
  * change}` on each row and part. The before column adds up to the before
@@ -322,10 +383,7 @@ export function roundProgrammeGroups(groups, totals, bars = []) {
     return children.map((child, index) => ({ ...child, shown: shown(before[index], change[index]) }));
   };
   const rows = groups.flatMap((group) => group.rows);
-  const before = consistentRound(
-    rows.map((row) => row.before),
-    totals.before,
-  );
+  const before = pinnedBefore(rows, totals.before);
   const change = pinnedRound(
     rows.map((row) => row.change),
     totals.change,
@@ -391,6 +449,39 @@ export function rateAt(rates, income) {
 }
 
 /**
+ * The marginal rate as money: "Of your next £1,000 of earnings, you keep
+ * £324." from the rates over the next £200 (the API's own step), before
+ * and after, said once when they round to the same pounds. A rate over
+ * 200% is a cliff (net income falls by more than the £200 earned), which
+ * a £1,000 multiple would overstate, so the sentence is then about the
+ * next £200 itself. A keep below zero is a loss: "you would lose £X".
+ * Null without both rates.
+ */
+export function keepSentence(before, after) {
+  const clause = keepClause(before, after);
+  return clause && `${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
+}
+
+/**
+ * keepSentence's words without the capital or full stop, to follow the
+ * marginal rate in one sentence: "of your next £1,000 of earnings, you
+ * keep £720". Null without both rates.
+ */
+export function keepClause(before, after, { first = false } = {}) {
+  if (before === null || before === undefined || after === null || after === undefined) return null;
+  // With no earnings yet, the API's rate is over the first £200 only: say
+  // that, not a wider sum it may not hold for
+  const unit = first || before > 2 || after > 2 ? 200 : 1000;
+  const kept = (rate) => Math.round(unit * (1 - rate));
+  const say = (amount) =>
+    amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
+  const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
+  const [was, now] = [kept(before), kept(after)];
+  if (was === now) return `${lead} ${say(was)}`;
+  return `${lead} ${say(was)} before and ${say(now)} after`;
+}
+
+/**
  * Steps where net income after the policies falls as salary rises by more
  * than `threshold` pounds: [{from, to, drop}].
  */
@@ -417,8 +508,8 @@ export function areaName(brma) {
 
 /**
  * How the single-year calculation works, in one place: the Methodology
- * tab's single-year card and the page's "How this is calculated" expander
- * both show these, as [term, text].
+ * view's Household impact section shows these, as [term, text]; the
+ * Household impact cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
@@ -427,7 +518,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "One year",
-    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under pre-Budget law and with the selected policies.",
+    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under current law and with the selected policies.",
   ],
   [
     "Salary",
@@ -435,22 +526,22 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Change by policy",
-    "Each policy's bar is that policy on its own: switched to its Budget setting, with every other selected policy held at pre-Budget law, against the same baseline. Policies can interact, so their own effects need not add up to the combined change; a difference of £1 or more is shown as “Interaction between policies”, so the bars add up to the change in the tiles.",
+    CHANGE_BY_POLICY_NOTE,
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
+    MARGINAL_RATE_NOTE,
   ],
   [
     "Every policy applied",
-    "Each side is a policyengine-uk simulation of your household with the policies' parameter changes and their changes to the model's formulas, as in the national figures: the fuel duty deferral includes the VAT on the lower pump price, and the VAT changes apply to the petrol, diesel and electricity spending you enter. The employer NI relief for under-25s changes what employers pay, with wages held fixed, so it is £0 for every household (an employer cost). The Warm Home Discount top-up is shown for a household that would get it, if received: not every eligible household receives it, and the national figures pay it to 85% of Pension Credit households and 70% of other eligible households (DESNZ receipt rates).",
+    EVERY_POLICY_NOTE,
   ],
   [
     "Who counts as a child",
-    "Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19, as you answer for each. Child Benefit counts such a young person until 20; Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
+    WHO_IS_A_CHILD_NOTE,
   ],
   [
     "Council Tax",
-    "Estimated from your band and your region's average Band D for 2026-27 (MHCLG for England, tax-base weighted by region; the Welsh and Scottish governments), grown to the chosen year with policyengine-uk's OBR Council Tax forecast, and taken off net income. Northern Ireland has domestic rates, which are not modelled. No selected policy changes it.",
+    COUNCIL_TAX_NOTE,
   ],
 ];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legendLayout, subColumns, wrapLabel } from "./legendLayout";
+import { flowWidth, legendLayout, subColumns, wrapLabel } from "./legendLayout";
 
 // 7px a character, so widths are easy to reason about
 const measure = (text) => String(text).length * 7;
@@ -77,5 +77,23 @@ describe("wrapLabel", () => {
       "tax protection",
     ]);
     expect(wrapLabel("Short", 140, measure)).toEqual(["Short"]);
+  });
+});
+
+describe("flowWidth", () => {
+  it("is the widest row when the items wrap", () => {
+    // 100 + 16 + 120 = 236 fits in 250; 80 starts a new row
+    expect(flowWidth([100, 120, 80], 250, 16)).toBe(236);
+    // Rows 100+16+120 and 200: the widest is 236
+    expect(flowWidth([100, 120, 200], 250, 16)).toBe(236);
+  });
+
+  it("is the one row's width when everything fits", () => {
+    expect(flowWidth([50, 60], 500, 16)).toBe(126);
+  });
+
+  it("is never wider than the room", () => {
+    expect(flowWidth([300], 250, 16)).toBe(250);
+    expect(flowWidth([], 250, 16)).toBe(0);
   });
 });

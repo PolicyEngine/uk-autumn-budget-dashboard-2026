@@ -196,6 +196,28 @@ class World:
         self._dataset.write_bytes(b"dummy certified dataset")
         self.bundle = self._bundle_for(self._dataset)
         (self.root / "manifest.json").write_text(json.dumps(self.bundle))
+        self._patch()
+
+    @classmethod
+    def attach(cls, root) -> "World":
+        """The World another process made at ``root``, patched into this
+        one: a worker process (``--jobs``) shares none of the test
+        process's patches, so it builds its receipts against the same
+        bundle and dataset this way. Only that process's exit undoes it."""
+        instance = cls.__new__(cls)
+        instance.root = Path(root)
+        instance.data_root = instance.root / "public" / "data"
+        instance.artifacts = instance.data_root / "artifacts"
+        instance.inputs = instance.root / "treasury"
+        instance._dataset = instance.root / f"{DATASET_NAME}.h5"
+        instance.bundle = json.loads(
+            (instance.root / "manifest.json").read_text()
+        )
+        instance._patch()
+        return instance
+
+    def _patch(self):
+        """Point policyengine's receipt code at this World's bundle."""
         self._original_path = certification.default_bundle_source_path
         self._original_loader = receipt_module.load_bundle_manifest
         certification.default_bundle_source_path = lambda: (
@@ -335,8 +357,11 @@ class World:
         data_limits=(),
         model_limits=(),
         name=None,
+        description="",
+        personal=None,
         with_tables=None,
         modifier_templates=None,
+        git_sha=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -349,9 +374,10 @@ class World:
         key's default name). An artifact recording a data limit is
         receipt-only, as generation writes it; ``with_tables=True`` writes
         one with its tables anyway, as generation did before, to test that
-        the gates refuse it.
+        the gates refuse it. ``git_sha`` is the commit the receipt records
+        (and binds code-bound identities to), by default a stand-in.
         """
-        revision = self.revision(clean)
+        revision = self.revision(clean, sha=git_sha or "a" * 40)
         scenario = Scenario(
             parameter_changes={
                 RATE_PATH: {str(y): rate for y in sorted(values)}
@@ -415,6 +441,8 @@ class World:
             rows = (tables or {}).get("budgetary_impact") or []
             name = rows[0]["reform_name"] if rows else default_name(key)
         inputs["name"] = name
+        inputs["description"] = description
+        inputs["personal"] = personal
         sim = self.sim(dataset, dataset_years, dataset_name)
 
         def build(file_digests):

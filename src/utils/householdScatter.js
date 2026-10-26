@@ -1,5 +1,5 @@
 /**
- * The household scatter, as published in public/data/household_scatter_binned.csv.
+ * The household scatter, from each verified artifact's household_scatter_binned.csv.
  *
  * Households are never shown one by one: each row is one cell of baseline
  * income band by income change band, with the weighted number of
@@ -20,7 +20,7 @@
 
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
-import { chooseReform } from "./geography/selection";
+import { chooseReform, focusChoice } from "./geography/selection";
 import {
   bandLabel,
   changeBandLabel as describeChangeBand,
@@ -125,6 +125,7 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   rows: Array<Object>|null}} options.data
  * @param {Array<string>} options.selectedIds
  * @param {Array<string>} options.policyIds - Every measure the page offers.
+ * @param {string|null} [options.packageId] - The package's combined run.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
@@ -132,24 +133,44 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageId, focusId = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  const choice = chooseReform({ selectedIds, policyIds, reforms });
+  // Several measures and no single published reform: one at a time, the
+  // reader's or the one moving the most households' incomes the most
+  const size = (id) => {
+    let weight = 0;
+    let total = 0;
+    for (const row of data.rows) {
+      if (row.reform_id !== id || row.year !== year) continue;
+      const middle = changeBandMiddle(row.change_band, row.change_band_upper);
+      if (!Number.isFinite(middle)) continue;
+      weight += row.households;
+      total += Math.abs(middle) * row.households;
+    }
+    return weight ? total / weight : 0;
+  };
+  const choice = focusChoice(chooseReform({ selectedIds, policyIds, reforms, packageId }), {
+    selectedIds,
+    policyIds,
+    reforms,
+    focusId,
+    size,
+  });
   if (choice.kind === "none") {
     return notice("Select a measure to see household results.");
   }
   if (choice.kind === "pick") {
-    return notice(
-      "Household results are shown for one measure at a time, or for all measures together.",
-      "Select one measure, or all of them. Groups of households are published for each measure separately and are not added together.",
-    );
+    return notice("Household results are not yet published for the selected measures.");
   }
   if (choice.kind === "no-package") {
-    return notice("Household results are not yet published for the full package.");
+    return notice(
+      "Household results for all the measures together are not published yet.",
+      "Select one measure to see its households. Groups of households are published for each measure on its own and cannot be added up across measures.",
+    );
   }
   if (!reforms.includes(choice.reform)) {
     return notice("Household results are not yet published for this measure.");
@@ -180,10 +201,18 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
     (row) => row.reform_id === choice.reform,
   ).income_basis_year;
   const basisPoints = cellsIn(basisYear);
+  // Every year's cells for this selection, so the change axis can be fitted
+  // once across years and stay put while the year changes
+  const years = [
+    ...new Set(data.rows.filter((row) => row.reform_id === choice.reform).map((row) => row.year)),
+  ].sort((a, b) => a - b);
   return {
     kind: "points",
     reform: choice.reform,
+    // Several measures: the offered ones, for the card's Measure picker
+    focus: choice.focus ?? null,
     points,
+    yearPoints: years.map(cellsIn).filter((cells) => cells.length > 0),
     basisYear,
     // Without the basis year's cells, the year's own share out the dots
     basisPoints: basisPoints.length > 0 ? basisPoints : points,
@@ -258,8 +287,80 @@ export function scatterCsv(points, { title, basisYear }) {
  */
 export const SCATTER_DOTS = 500;
 
-/** The change axis, as in 2025: fixed at ±£5,000, linear. */
+/**
+ * The widest change axis: ±£5,000, the 2025 dashboard's fixed axis. The
+ * axis drawn is fitted to the dots (fitChangeAxis) and never wider.
+ */
 export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
+
+// Tick steps the fitted change axis may use, in £
+const CHANGE_STEPS = [10, 25, 50, 100, 250, 500, 1000, 2500];
+// The share of dots at each end the fit may leave outside the axis: they
+// are drawn at the edge rather than widening it for everyone
+const CHANGE_TRIM = 0.01;
+
+function quantile(sorted, q) {
+  if (sorted.length === 0) return 0;
+  const at = Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))));
+  return sorted[at];
+}
+
+/**
+ * The change axis fitted to the dots shown: from the 1st to the 99th
+ * percentile of their changes, always including £0, rounded out to a tick
+ * step chosen for about four to six ticks, and never wider than ±£5,000.
+ * A side that would end at £0 gets half a step of room so dots at zero are
+ * not cut. Dots beyond the axis (including the open-ended bands past
+ * ±£5,000) are clamped to its edge by clampToAxis.
+ *
+ * @param {Array<{change: number, hidden?: boolean, edge?: string}>} dots
+ * @returns {{domain: [number, number], ticks: number[]}}
+ */
+export function fitChangeAxis(dots) {
+  const changes = dots
+    .filter((dot) => !dot.hidden || dot.edge)
+    .map((dot) => (dot.edge ? (dot.edge === "upper" ? 1 : -1) * Infinity : dot.change))
+    .sort((a, b) => a - b);
+  const lowData = Math.max(CHANGE_AXIS_DOMAIN[0], Math.min(0, quantile(changes, CHANGE_TRIM)));
+  const highData = Math.min(CHANGE_AXIS_DOMAIN[1], Math.max(0, quantile(changes, 1 - CHANGE_TRIM)));
+  const range = Math.max(highData - lowData, CHANGE_STEPS[0]);
+  const step = CHANGE_STEPS.find((s) => range / s <= 5) ?? CHANGE_STEPS[CHANGE_STEPS.length - 1];
+  const low = Math.floor(lowData / step) * step;
+  const high = Math.ceil(highData / step) * step;
+  const ticks = [];
+  for (let t = low; t <= high + 1e-9; t += step) ticks.push(Math.round(t));
+  return {
+    domain: [low === 0 ? -step / 2 : low, high === 0 ? step / 2 : high],
+    ticks,
+  };
+}
+
+/**
+ * The change axis for a selection, fitted once across all its years: the
+ * dots of every year (each placed as panelDots places them) pooled, then
+ * fitChangeAxis. Kept while the year changes, so dots slide on one scale.
+ */
+export function fitChangeAxisAcrossYears(basisCells, yearCells) {
+  const pooled = yearCells.flatMap((cells) => panelDots(basisCells, cells));
+  return fitChangeAxis(pooled);
+}
+
+/**
+ * Dots beyond the fitted axis, and dots in the open-ended bands past
+ * ±£5,000, placed at the axis edge and marked `clamped`, so every group
+ * stays on the plot without one far change setting the scale for all.
+ */
+export function clampToAxis(dots, [low, high]) {
+  return dots.map((dot) => {
+    if (dot.hidden && !dot.edge) return dot;
+    if (dot.edge) {
+      return { ...dot, hidden: false, clamped: true, change: dot.edge === "upper" ? high : low };
+    }
+    if (dot.change < low) return { ...dot, clamped: true, change: low };
+    if (dot.change > high) return { ...dot, clamped: true, change: high };
+    return dot;
+  });
+}
 
 /** The income axis, as in 2025: £0 to £150,000. */
 export const INCOME_AXIS_DOMAIN = [0, 150000];
@@ -463,6 +564,7 @@ export function panelDots(
         income,
         change,
         hidden: Boolean(edge),
+        edge: edge || undefined,
         incomeBand,
         changeBand: cell.changeBand,
         changeBandUpper: cell.changeBandUpper,
@@ -471,4 +573,76 @@ export function panelDots(
     }
   });
   return dots;
+}
+
+/**
+ * How households with income like one household's changed: the cells of
+ * the income bands whose middle is within `window` of `income` (two £5,000
+ * bands), and the change bands that hold their middle `share` of
+ * households (by weighted count, from the 10th to the 90th percentile by
+ * default). The range is the outer edges of those two change bands, so at
+ * least `share` of the band's published households fall inside it.
+ *
+ * Null when there is nothing honest to say: the income is off the
+ * published bands, no cells fall in them, or the range reaches an
+ * open-ended band beyond ±£5,000.
+ *
+ * @param {Array<{incomeBand: number, changeBand: number,
+ *   changeBandUpper: number, households: number}>} cells - The year's cells.
+ * @param {number} income - The household's income on the scatter's basis.
+ * @returns {{incomeLow: number, incomeHigh: number, low: number,
+ *   high: number, share: number} | null} `low` and `high` in £ a year
+ *   (the no-change band counts as £0).
+ */
+export function incomeLikeYours(
+  cells,
+  income,
+  { window = 5000, share = 0.8, bins = SCATTER_BINS } = {},
+) {
+  if (!Number.isFinite(income) || income < bins.income_min || income >= bins.income_max) {
+    return null;
+  }
+  const width = bins.income_band_width;
+  const near = cells.filter(
+    (cell) => Math.abs(cell.incomeBand + width / 2 - income) <= window && cell.households > 0,
+  );
+  const total = near.reduce((sum, cell) => sum + cell.households, 0);
+  if (!(total > 0)) return null;
+  const sorted = [...near].sort(
+    (a, b) => a.changeBand - b.changeBand || a.changeBandUpper - b.changeBandUpper,
+  );
+  // Merge cells of the same change band across the income bands
+  const bands = [];
+  for (const cell of sorted) {
+    const last = bands[bands.length - 1];
+    if (last && last.changeBand === cell.changeBand && last.changeBandUpper === cell.changeBandUpper) {
+      last.households += cell.households;
+    } else {
+      bands.push({ ...cell });
+    }
+  }
+  const at = (q) => {
+    const target = q * total;
+    let before = 0;
+    for (const band of bands) {
+      before += band.households;
+      if (before > target) return band;
+    }
+    return bands[bands.length - 1];
+  };
+  const tail = (1 - share) / 2;
+  const lowBand = at(tail);
+  const highBand = at(1 - tail);
+  if (openEdge(lowBand.changeBand, lowBand.changeBandUpper)) return null;
+  if (openEdge(highBand.changeBand, highBand.changeBandUpper)) return null;
+  // The no-change band (−£1, £1) counts as £0 at either end
+  const edge = (value) => (Math.abs(value) <= 1 ? 0 : value);
+  const incomeBands = near.map((cell) => cell.incomeBand);
+  return {
+    incomeLow: Math.min(...incomeBands),
+    incomeHigh: Math.min(Math.max(...incomeBands) + width, bins.income_max),
+    low: edge(lowBand.changeBand),
+    high: edge(highBand.changeBandUpper),
+    share,
+  };
 }

@@ -349,6 +349,9 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
       const years = array(pg.years, "poverty_by_group.years");
       years.forEach((y, i) => fiscalYear(y, `poverty_by_group.years[${i}]`));
       labels(pg.measures, "poverty_by_group.measures");
+      // Every poverty rate the file names, relative AHC always among them
+      const rates = Object.keys(pg.measures).filter((m) => m !== "median_equivalised_income_bhc");
+      if (!rates.includes("relative_ahc")) fail("poverty_by_group.measures", "has no relative_ahc");
       number(pg.min_unweighted_households, "poverty_by_group.min_unweighted_households", { min: 1 });
       const breakdowns = object(pg.breakdowns, "poverty_by_group.breakdowns");
       for (const name of ["tenure", "family_type"]) {
@@ -372,9 +375,11 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
             const small = cell.unweighted_households < pg.min_unweighted_households;
             if (small !== cell.suppressed) fail(path, "suppression does not follow min_unweighted_households");
             if (cell.suppressed) {
-              if (cell.relative_ahc !== null) fail(`${path}.relative_ahc`, "is shown in a suppressed cell");
+              for (const m of rates) {
+                if (cell[m] !== null) fail(`${path}.${m}`, "is shown in a suppressed cell");
+              }
             } else {
-              number(cell.relative_ahc, `${path}.relative_ahc`, { min: 0, max: 1 });
+              for (const m of rates) number(cell[m], `${path}.${m}`, { min: 0, max: 1 });
               number(cell.median_equivalised_income_bhc?.real, `${path}.median_equivalised_income_bhc.real`, {
                 min: 0,
               });

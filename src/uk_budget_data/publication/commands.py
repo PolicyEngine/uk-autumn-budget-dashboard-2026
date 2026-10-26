@@ -114,6 +114,16 @@ def add_publish_parser(subparsers) -> None:
     withdrawing.add_argument("--reason", required=True)
 
     actions.add_parser("check", help="Re-run every gate (used by CI)")
+    indexing = actions.add_parser(
+        "index", help="Bind every flat CSV to this approved manifest snapshot"
+    )
+    indexing.add_argument(
+        "--without-area",
+        action="store_true",
+        help="Instead, take the results by area off the page: delete the "
+        "index, the area tables and their provenance, and save the manifest "
+        "without a flat binding (G5)",
+    )
     actions.add_parser("status", help="List manifest entries")
     compare = actions.add_parser(
         "definitions",
@@ -241,6 +251,34 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
             )
         return run_check(data_root, out)
 
+    if action == "index":
+        from uk_budget_data.publication.release_index import (
+            unbind_area_results,
+            write_release_index,
+        )
+
+        try:
+            if getattr(parsed, "without_area", False):
+                manifest = unbind_area_results(
+                    m.load_manifest(data_root), data_root=data_root
+                )
+                out(
+                    "results by area taken off the page at manifest revision "
+                    f"{manifest.revision}; run publish check, then the "
+                    "review rows"
+                )
+                return 0
+            manifest = write_release_index(
+                m.load_manifest(data_root), data_root=data_root, inputs=inputs
+            )
+        except (PublishError, OSError, ValueError) as error:
+            out(f"REFUSED release index: {error}")
+            return 1
+        out(
+            f"release index bound to manifest revision {manifest.revision}; review these new bytes"
+        )
+        return 0
+
     manifest = m.load_manifest(data_root)
     if action == "status":
         out(f"revision {manifest.revision}")
@@ -284,7 +322,7 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         else:
             out(
                 "usage: uk-budget-data publish "
-                "{reconcile,stage,approve,withdraw,check,status,"
+                "{reconcile,stage,approve,withdraw,check,index,status,"
                 "definitions,review-rows}"
             )
             return 2
@@ -342,9 +380,12 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
 
 
 def run_generate_artifacts(
-    parsed, config, reforms, get_reform, out=print
+    parsed, config, reforms, get_reform, out=print, runner=None
 ) -> int:
-    """Run ``generate --artifacts``. Returns the process exit code."""
+    """Run ``generate --artifacts``. Returns the process exit code.
+
+    ``runner`` runs the artifacts (see ``generate_artifacts``); one after
+    another by default."""
     from uk_budget_data.publication.generate import generate_artifacts
 
     combined_sets = []
@@ -362,6 +403,7 @@ def run_generate_artifacts(
         artifacts_root=parsed.artifacts_root,
         generator_argv=sys.argv,
         on_progress=out,
+        runner=runner,
     )
     out(
         f"{len(report.written)} artifacts written, "

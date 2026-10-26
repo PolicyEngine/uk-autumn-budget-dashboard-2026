@@ -1,6 +1,6 @@
 # Data contract: `public/data/living_standards_outlook.json`
 
-Written by `uk-budget-data living-standards` (`src/uk_budget_data/living_standards/`), read by the Living standards tab (`src/components/livingStandards/`). Ported on 24 October 2026 from PolicyEngine/uk-living-standards-outlook (`public/data/outlook.json`, `pipeline/build_outlook.py`), which is no longer this file's source.
+Written by `uk-budget-data living-standards` (`src/uk_budget_data/living_standards/`), read by the Pre-measures forecast tab (`src/components/livingStandards/`) and by Population impact's growth and poverty cards with the measures (`GrowthWithMeasuresCard`, `PovertyMeasuresRow`). Ported on 24 October 2026 from PolicyEngine/uk-living-standards-outlook (`public/data/outlook.json`, `pipeline/build_outlook.py`), which is no longer this file's source.
 Years are UK fiscal years as strings, e.g. `"2024-25"`. Rates are fractions (0.132). Equivalised income (HBAI basis) is in £ a year, adjusted for household size (shown for a couple with no children), unless a field says otherwise.
 
 Projection years: the income (`living_standards`), poverty (`poverty`) and inequality (`inequality`) projections start at the model's own 2024-25 point, the latest HBAI outturn year, so the level gap to HBAI shows within 2024-25 rather than as a one-year change; they carry 2025-26 too. Every other projection (`income_by_decile`, `child_poverty_by_family`, `deep_poverty`, `poverty_by_group`) starts in 2027-28, the base year. Headline changes run from `meta.headline_start_year` (2027-28) to `meta.headline_end_year` (2031-32), and every model series stops at 2031-32, the dashboard's period. Real values are in 2027-28 prices (`meta.real_price_base`).
@@ -66,19 +66,36 @@ Both deflators (OBR CPI for BHC, CPI after housing costs for AHC) are rebased to
 All are top-level keys. Years are fiscal, `"2027-28"` to `"2031-32"` (inequality projection from `"2024-25"`). Real values are in 2027-28 prices. Each section carries its own `notes` (section-specific caveats, one sentence each; may be empty).
 
 ### `income_by_decile`
-Real growth in equivalised income by person-weighted income decile (re-ranked each year; growth compares positions, not people).
+Real growth in equivalised income by person-weighted income decile, and by quintile (re-ranked each year; growth compares positions, not people). Quintiles carry their own medians, not two deciles' averaged.
 ```json
 {
-  "base_year": "2027-28", "end_year": "2031-32", "statistic": "...", "deciles": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "base_year": "2027-28", "end_year": "2031-32", "statistic": "...", "deciles": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "quintiles": [1, 2, 3, 4, 5],
   "bases": {"bhc": "...", "ahc": "..."},
   "bhc": {"cumulative_growth_to_end": [10 fractions],
-          "by_year": [{"year": "2027-28", "real_median": [10 x £], "cumulative_growth": [10 fractions vs 2027-28]}]},
+          "by_year": [{"year": "2027-28", "real_median": [10 x £], "cumulative_growth": [10 fractions vs 2027-28]}],
+          "quintile_by_year": [{"year": "2027-28", "real_median": [5 x £], "cumulative_growth": [5 fractions vs 2027-28]}]},
   "ahc": {"...same shape..."},
   "non_pensioner_split": {"basis": "ahc", "statistic": "...", "groups": {"below_middle": "...", "above_middle": "..."},
                           "series": {"below_middle": [{"year": "2027-28", "real_mean": 0, "cumulative_growth": 0.0}], "above_middle": []}},
   "comparator": "Resolution Foundation, Living Standards Outlook 2026", "notes": []
 }
 ```
+
+### `income_growth_by_group` (added 26 October 2026)
+Real median equivalised income of each person-weighted income group, every year from 2027-28 to 2031-32, with the change on the year before and since 2027-28. Groups are quintiles, deciles and vigintiles, for all people and for non-pensioners (people in benefit units with no one at or above State Pension age, ranked among themselves), before (OBR CPI) and after (CPI after housing costs) housing costs; re-ranked each year. The measure is the group's median, as in `income_by_decile`, whose all-people quintile and decile `real_median` values it repeats exactly. Appended last, so every other key keeps its bytes. Written by `uk-budget-data living-standards` (`--backend modal` runs it on Modal).
+```json
+{
+  "base_year": "2027-28", "end_year": "2031-32", "measure": "median", "statistic": "...", "method": "...",
+  "bases": {"bhc": "...", "ahc": "..."},
+  "populations": {"all": "All people", "non_pensioners": "Non-pensioners: ..."},
+  "groupings": {"quintile": 5, "decile": 10, "vigintile": 20},
+  "min_unweighted_households": 100,
+  "withheld_groupings": {},
+  "series": {"all": {"bhc": {"decile": {"min_unweighted_households": 4841,
+      "by_year": [{"year": "2027-28", "real_median": [10 x £], "annual_growth": [10 fractions vs 2026-27], "cumulative_growth": [10 x 0.0]}]}}}}
+}
+```
+A grouping is published only if every cell it reads (each group, population, basis, and year from 2026-27 to 2031-32) has at least `min_unweighted_households` distinct unweighted households, the floor `poverty_by_group` uses; otherwise it is left out of `groupings` and `series` and named in `withheld_groupings` with the reason. `min_unweighted_households` in each series is its smallest cell. `annual_growth` for 2027-28 is the change on 2026-27; the page shows the years after the first year chosen.
 
 ### `child_poverty_by_family`
 Child poverty (relative and absolute AHC) by number of HBAI dependent children in the benefit unit and lone parent vs couple.
@@ -116,15 +133,15 @@ JRF-style very deep poverty: people below 40% (and 50%) of the model's own media
 ```
 
 ### `poverty_by_group`
-Relative AHC poverty and median equivalised BHC income by tenure, family type and region, for 2027-28 and 2031-32 (`years[0]` is the base year). The disability breakdown was removed on 21 October 2026: it recorded disability-benefit receipt, not HBAI's self-reported definition. Region stays in the file but is not shown on the page: it is not validated against official regional figures.
+Poverty rates (relative and absolute, AHC and BHC, as `poverty` gives them) and median equivalised BHC income by tenure, family type and region, for every year from 2027-28 to 2031-32 (`years[0]` is the base year). A suppressed cell is null for every measure. The disability breakdown was removed on 21 October 2026: it recorded disability-benefit receipt, not HBAI's self-reported definition. Region stays in the file but is not shown on the page: it is not validated against official regional figures.
 ```json
 {
-  "years": ["2027-28", "2031-32"],
-  "measures": {"relative_ahc": "...", "median_equivalised_income_bhc": "..."},
+  "years": ["2027-28", "2028-29", "2029-30", "2030-31", "2031-32"],
+  "measures": {"relative_ahc": "...", "absolute_ahc": "...", "relative_bhc": "...", "absolute_bhc": "...", "median_equivalised_income_bhc": "..."},
   "min_unweighted_households": 100,
   "breakdowns": {
     "tenure": {"label": "Tenure", "groups": {"owned_outright": "Owned outright"},
-               "cells": {"owned_outright": {"2027-28": {"relative_ahc": 0.089, "median_equivalised_income_bhc": {"nominal": 0, "real": 0},
+               "cells": {"owned_outright": {"2027-28": {"relative_ahc": 0.089, "absolute_ahc": 0.081, "relative_bhc": 0.10, "absolute_bhc": 0.09, "median_equivalised_income_bhc": {"nominal": 0, "real": 0},
                                                           "people_millions": 0.0, "unweighted_households": 37727, "suppressed": false}}}},
     "family_type": {}, "region": {}
   },

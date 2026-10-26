@@ -1,12 +1,15 @@
-// Headline forecast figures as tiles: CPI, RPI and earnings growth in the first forecast year (2027),
-// and once the Budget forecast is published, both forecasts and the change
-// ("2.3% → 2.6%", "+0.3pp"). Their definition and source sit in an "About
-// these figures" disclosure, as every chart's do.
+// The forecast at a glance: one tile per headline series (forecast.headline:
+// CPI, RPI, earnings). Each has an icon, the series' name, its growth in
+// the first forecast year as a big figure, a small trend of the forecast
+// years (HeadlineTile), and one plain line on what it means
+// (forecastWords.tileMeaning), which never repeats the figure. The basis and source are in the panel's
+// intro, once. The Budget-day forecast is held (ForecastPanel), so a tile
+// shows the one published forecast.
 
-import { changeClass, heroYear, forecastName, pctLabel, ppWords, toRows } from "../../../utils/livingStandards/forecast";
-import Disclosure from "../../Disclosure";
-import StatTiles from "../../StatTiles";
-import { ForecastSource } from "../sources";
+import { Briefcase, Coins, House, KeyRound, Percent, Receipt, Tag } from "lucide-react";
+import { heroYear, pctLabel, toRows } from "../../../utils/livingStandards/forecast";
+import { tileMeaning } from "../../../utils/livingStandards/forecastWords";
+import HeadlineTile from "../HeadlineTile";
 
 // ONS series pages for the tile names (checked 20 Oct 2026). Earnings is not
 // linked: the tile is OBR's calendar-year average earnings growth, and ONS
@@ -16,53 +19,68 @@ const ONS_SERIES = {
   rpi: "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/czbh/mm23",
 };
 
+const NAMES = {
+  cpi: "Consumer prices (CPI)",
+  rpi: "Retail prices (RPI)",
+  earnings: "Average earnings",
+  non_labour_income: "Non-labour income",
+  house_prices: "House prices",
+  rent: "Rents",
+  mortgage_interest: "Mortgage interest",
+};
+
+const ICONS = {
+  cpi: Tag,
+  cpih: Tag,
+  rpi: Receipt,
+  earnings: Briefcase,
+  non_labour_income: Coins,
+  house_prices: House,
+  rent: KeyRound,
+  mortgage_interest: Percent,
+};
+
 export default function ForecastHeadlineSection({ data }) {
   const forecast = data.forecast;
-  const published = Boolean(forecast.post_published);
   const year = heroYear(forecast);
   const byKey = {};
   forecast.sections.forEach((s) => s.series.forEach((series) => (byKey[series.key] = series)));
+  // Every series' rows as { year, value } in percent, for the comparisons
+  const rowsOf = (key) => (byKey[key] ? toRows(byKey[key], false).map((r) => ({ year: r.year, value: r.previous })) : null);
+  const allRows = Object.fromEntries(Object.keys(byKey).map((key) => [key, rowsOf(key)]));
 
-  const cards = (forecast.headline || [])
+  const tiles = (forecast.headline || [])
     .map((key) => {
-      const series = byKey[key];
-      if (!series) return null;
-      const row = toRows(series, published).find((r) => r.year === year);
-      if (!row) return null;
-      return { key, label: `${series.label.replace(/ (inflation|growth)$/i, "")} ${year}`, ...row };
+      const rows = allRows[key];
+      const row = rows?.find((r) => r.year === year);
+      if (!row || row.value == null) return null;
+      return { key, name: NAMES[key] ?? byKey[key].label, rows, value: row.value };
     })
     .filter(Boolean);
 
-  if (!cards.length) return null;
-
-  const pre = forecastName(forecast.pre_label);
-  const about = published
-    ? `Calendar-year growth in the annual average: ${pre} (pre-Budget), then the ${forecastName(forecast.post_label)} forecast, and the change in percentage points.`
-    : `Calendar-year growth in the annual average, ${pre} forecast.`;
+  if (!tiles.length) return null;
 
   return (
-    <StatTiles
-      items={cards.map((card) => ({
-        key: card.key,
-        value: published ? `${pctLabel(card.previous)} → ${pctLabel(card.updated)}` : pctLabel(card.previous),
-        label: ONS_SERIES[card.key] ? (
-          <a href={ONS_SERIES[card.key]} target="_blank" rel="noopener noreferrer" title="ONS series">
-            {card.label}
-          </a>
-        ) : (
-          card.label
-        ),
-        sub: published ? ppWords(card.shownChange) : null,
-        subClassName: changeClass(card.shownChange),
-      }))}
-      footer={
-        <Disclosure inCard title="About these figures">
-          <p>{about}</p>
-          <p className="ls-source">
-            <ForecastSource forecast={forecast} />
-          </p>
-        </Disclosure>
-      }
-    />
+    <div className="forecast-tiles">
+      {tiles.map((tile) => (
+        <HeadlineTile
+          key={tile.key}
+          icon={ICONS[tile.key] ?? Tag}
+          name={tile.name}
+          href={ONS_SERIES[tile.key]}
+          hrefTip={ONS_SERIES[tile.key] && "The ONS series this measures"}
+          value={pctLabel(tile.value)}
+          caption={`annual growth, ${year}`}
+          trend={{
+            rows: tile.rows.map((r) => ({ label: r.year, value: r.value })),
+            format: pctLabel,
+            seriesLabel: "OBR forecast",
+            highlight: year,
+            minSpan: 1,
+          }}
+          meaning={tileMeaning(tile.key, tile.rows, allRows)}
+        />
+      ))}
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Check that a served build of the dashboard answers the page, each of its
-# five tabs and every data file the tabs fetch with HTTP 200.
+# four tabs, Young people sub-tab and required independent data files with HTTP 200.
 #
 # The vitest smoke (src/tabsSmoke.test.jsx) renders each tab on these files
 # in jsdom; this checks the built site actually serves them, under the base
@@ -16,19 +16,25 @@ SITE="${1:-http://127.0.0.1:3000/uk/autumn-budget-2026}"
 SITE="${SITE%/}"
 read -r -a EXTRA <<<"${SMOKE_CURL_ARGS:-}"
 
-# Every file a tab fetches (App.jsx, OBRComparisonTable, the income-curve
-# charts, YoungPeopleSection, the Living standards view, the map).
+# Every independent file a tab fetches that every build carries: the Living
+# standards view and the map's boundaries. The 2025 OBR comparison is unavailable
+# and must not be required as a current Budget input. Budget
+# figures come only from manifest.json, its artifacts and release-index.json,
+# which exist only once results are published; src/tabsSmoke.test.jsx renders
+# each tab on the verified publication fixture.
 DATA_FILES=(
-  budgetary_impact.csv
-  distributional_impact.csv
-  winners_losers.csv
-  metrics.csv
-  obr_comparison.csv
-  income_curve.csv
-  age_impact.csv
   living_standards_outlook.json
   uk_constituencies_2024.geojson
 )
+# Results by area, once published: the build ships whichever of them
+# public/data holds (next.config.ts), and the area views fetch them, with
+# the area run's record of what they were made from.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+for file in regional.csv constituency.csv area_provenance.json; do
+  if [ -f "$ROOT/public/data/$file" ]; then
+    DATA_FILES+=("$file")
+  fi
+done
 TABS=("" "?tab=personal" "?tab=young" "?tab=living" "?tab=methodology")
 
 failures=0

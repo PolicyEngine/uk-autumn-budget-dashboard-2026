@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    include: ['src/**/*.test.{js,jsx}'],
+    pool: "threads",
+    maxWorkers: 2,
+    testTimeout: 30000,
+    hookTimeout: 30000,
     globals: true,
     setupFiles: ['./src/test/setup.js'],
     server: {

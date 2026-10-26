@@ -1,5 +1,5 @@
 /**
- * The Personal impact form's defaults, with their sources. Every field has
+ * The Household impact form's defaults, with their sources. Every field has
  * one, so the results show before anything is changed.
  *
  * Salary: ONS, Annual Survey of Hours and Earnings (ASHE) 2026 provisional,
@@ -51,4 +51,46 @@ export const DEFAULT_SPENDING = {
   petrol: 620,
   diesel: 340,
   electricity: 1040,
+};
+
+// The form's answers, each at a typical value until changed. Sources:
+// above
+export const WIZARD_DEFAULTS = {
+  current_age: 30,
+  current_salary: DEFAULT_SALARY,
+  region: "NORTH_WEST",
+  // The constituency picked (its name, 2024 boundaries), which sets the
+  // region; null until picked. Not sent: the API reads the region
+  constituency: null,
+  tenure: "RENT_PRIVATELY",
+  // null: the region's average private rent (ONS), until changed
+  monthly_rent: null,
+  // policyengine-uk's repayment depends on the plan and income alone: the
+  // balance only caps a year's repayment, and is not asked for
+  student_loan_plan: "NONE",
+  has_partner: false,
+  partner_age: 30,
+  partner_salary: DEFAULT_SALARY,
+  children_ages: "",
+  // Per child, in the order of children_ages: whether a 16- to 19-year-old
+  // is in full-time non-advanced education (school or college); yes until
+  // answered
+  children_in_education: [],
+  // Entitlement: the household claims what it is due
+  claims_universal_credit: true,
+  council_tax_band: "D",
+  salary_sacrifice_per_year: 0,
+  petrol_spending_per_year: DEFAULT_SPENDING.petrol,
+  diesel_spending_per_year: DEFAULT_SPENDING.diesel,
+  electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  dividends_per_year: 0,
+  savings_interest_per_year: 0,
+  property_income_per_year: 0,
+  // Private and workplace pensions in payment, £ a year
+  private_pension_per_year: 0,
+  partner_private_pension_per_year: 0,
+  monthly_childcare: 0,
+  // At State Pension age; null is the full new State Pension for the year
+  state_pension_per_year: null,
+  partner_state_pension_per_year: null,
 };
