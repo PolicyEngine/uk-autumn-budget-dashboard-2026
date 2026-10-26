@@ -73,3 +73,5 @@ table.households .def { font-weight: 400; font-size: 7.6pt; color: #4B5563; marg
 section > ul { padding-left: 5mm; }
 section > ul li { margin-bottom: 1.5mm; }
 table.households .at { font-size: 7.2pt; color: #4B5563; font-weight: 400; }
+#measures table th[scope="row"] { width: 34mm; }
+#measures table td:last-child { width: 30mm; }

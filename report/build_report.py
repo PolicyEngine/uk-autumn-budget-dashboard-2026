@@ -456,18 +456,14 @@ class Report:
 {self.no_combined()}
 {self.contents()}
 </section>"""
-        rev, _ = self.budget(c, y, "bn2", S)
+        rev = float(c.row("budgetary_impact", year=y)["value"])
         rev_words = self.t.fig(rev, "bn_words", c.path("budgetary_impact"), "value", {"reform_id": c.key, "year": y}, section=S)
-        rev_sentence = (
-            f"cost the government {rev_words}" if rev < 0 else f"raise {rev_words} for the government"
-        )
         hh, hh_text = self.cell(c, "winners_losers", "avg_change", {"year": y, "decile": "all"}, "gbp", S)
         better, better_text = self.cell(c, "age_impact", "pct_better_off", {"year": y, "age_band": "all"}, "pct1_plain", S)
         worse, worse_text = self.cell(c, "age_impact", "pct_worse_off", {"year": y, "age_band": "all"}, "pct1_plain", S)
         pov, pov_text = self.cell(c, "poverty_inequality", "poverty_abs_bhc_change_pp", {"year": y}, "pp2", S)
         lo, lo_text = self.cell(c, "distributional_impact", "value", {"year": y, "decile": "1st"}, "pct2", S)
         hi, hi_text = self.cell(c, "distributional_impact", "value", {"year": y, "decile": "10th"}, "pct2", S)
-        what = "measure" if c.combined is False else f"{count_words(len(self.pub.measures))} measures together"
         tiles = f"""
 <div class="tiles">
   <div class="tile"><div class="v">{rev_words}</div><div class="l">{'Cost to the government' if rev < 0 else 'Raised for the government'}, {fy(y)}</div></div>
@@ -476,7 +472,6 @@ class Report:
   <div class="tile"><div class="v">{pov_text}</div><div class="l">Change in absolute poverty before housing costs, percentage points, {fy(y)}{' (less than 0.005 points either way)' if pov_text.lstrip('+' + MINUS).startswith('0.00') else ''}</div></div>
 </div>"""
         sentences = [
-            f"In {fy(y)} the {what} {rev_sentence}.",
             f"As a share of net income, the lowest-income tenth of households {self._share_verb(lo, lo_text)} and the highest-income tenth {self._share_verb(hi, hi_text)}.",
         ]
         return f"""
@@ -512,6 +507,9 @@ class Report:
         return f'<nav aria-label="Contents"><h3>Contents</h3><ol class="toc">{rows}</ol></nav>'
 
     def no_combined(self):
+        if getattr(self, "_no_combined_shown", False):
+            return '<div class="notice" role="note"><p>No combined run is published for exactly these measures (see the summary), so this section shows each measure on its own only.</p></div>'
+        self._no_combined_shown = True
         ids = ", ".join(self.name(k) for k in self.order)
         return (
             '<div class="notice" role="note"><p><b>No combined run is published for exactly these measures.</b> '
@@ -760,8 +758,6 @@ class Report:
             w = 0.38
             b1 = ax.bar([x - w / 2 for x in xs], a_vals, width=w, color=HIGHLIGHT, label="All people")
             b2 = ax.bar([x + w / 2 for x in xs], k_vals, width=w, color="#81E6D9", label="Children")
-            label_bars(ax, b1, [t if not t.lstrip("+" + MINUS).startswith("0.00") else "" for t in a_labels], a_vals, size=6.8)
-            label_bars(ax, b2, [t if not t.lstrip("+" + MINUS).startswith("0.00") else "" for t in k_labels], k_vals, size=6.8)
             ax.axhline(0, color=ZERO, linewidth=0.8)
             ax.set_xticks(xs, [fy(yy) for yy in years])
             ax.set_ylim(*pad_limits(a_vals + k_vals, 0.35, 0.35))
@@ -770,18 +766,25 @@ class Report:
             minus_ticks(ax)
             style_axes(ax)
             alt = "; ".join(f"{fy(yy)}: all people {a}, children {k}" for yy, a, k in zip(years, a_labels, k_labels))
-            parts.append(self.figure(svg_of(plt, fig), "The measures together: change in absolute poverty before housing costs, by year", alt, "Below zero, fewer people in poverty. Bars without a label round to 0.00pp."))
+            parts.append(self.figure(svg_of(plt, fig), "The measures together: change in absolute poverty before housing costs, by year", alt, "Below zero, fewer people in poverty. The values are in the table below."))
+            head = "".join(f'<th scope="col" class="num">{fy(yy)}</th>' for yy in years)
+            parts.append(
+                f"""<table class="keep compact"><caption>The measures together: change in absolute poverty before housing costs by year, percentage points</caption>
+<thead><tr><th scope="col">People</th>{head}</tr></thead><tbody>
+<tr><th scope="row">All people</th>{''.join(f'<td class="num">{t}</td>' for t in a_labels)}</tr>
+<tr><th scope="row">Children</th>{''.join(f'<td class="num">{t}</td>' for t in k_labels)}</tr></tbody></table>"""
+            )
 
             # Table: report year, the four measures, all and children
             rows = []
-            for key, label in (("abs_bhc", "Absolute, before housing costs"), ("abs_ahc", "Absolute, after housing costs"), ("rel_bhc", "Relative, before housing costs"), ("rel_ahc", "Relative, after housing costs")):
+            for key, label in (("abs_ahc", "Absolute, after housing costs"), ("rel_bhc", "Relative, before housing costs"), ("rel_ahc", "Relative, after housing costs")):
                 _, a = self.cell(c, "poverty_inequality", f"poverty_{key}_change_pp", {"year": y}, "pp2", S + "-table")
                 _, ap = self.cell(c, "poverty_inequality", f"poverty_{key}_change_pct", {"year": y}, "pct2", S + "-table")
                 _, k = self.cell(c, "poverty_inequality", f"child_poverty_{key}_change_pp", {"year": y}, "pp2", S + "-table")
                 _, kp = self.cell(c, "poverty_inequality", f"child_poverty_{key}_change_pct", {"year": y}, "pct2", S + "-table")
                 rows.append(f'<tr><th scope="row">{label}</th><td class="num">{a}</td><td class="num">{ap}</td><td class="num">{k}</td><td class="num">{kp}</td></tr>')
             parts.append(
-                f"""<table class="keep"><caption>The measures together: change in poverty, {fy(y)}</caption>
+                f"""<table class="keep"><caption>The measures together: change in other measures of poverty, {fy(y)}</caption>
 <thead><tr><th scope="col">Poverty measure</th><th scope="col" class="num">All people, pp</th><th scope="col" class="num">All people, % of rate</th><th scope="col" class="num">Children, pp</th><th scope="col" class="num">Children, % of rate</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"""
             )
             _, g = self.cell(c, "metrics", "gini_change", {"year": y}, "pct2", S + "-table", "x100")
@@ -1129,6 +1132,7 @@ class Report:
             self.measures_section(),
             self.method(),
         ]
+        body = [keep_lead(part) for part in body]
         watermark = '<div class="watermark" aria-hidden="true">Provisional</div>' if self.pub.provisional else ""
         css = (HERE / "report.css").read_text()
         fonts = "".join(
@@ -1146,6 +1150,15 @@ class Report:
 {watermark}
 {''.join(body)}
 </body></html>"""
+
+
+def keep_lead(section: str) -> str:
+    """Keep a section's heading and introduction on the page of its first figure,
+    table or notice (Chrome does not honour break-after: avoid on headings)."""
+    match = re.search(r'<p class="kicker">.*?(</figure>|</table>|</div></div>)', section, flags=re.S)
+    if not match or "</section>" in match.group(0):
+        return section
+    return section[: match.start()] + '<div class="keep">' + match.group(0) + "</div>" + section[match.end():]
 
 
 def footer(pub: Publication, title: str) -> str:
