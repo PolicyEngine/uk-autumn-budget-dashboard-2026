@@ -500,7 +500,7 @@ function Measured({ narrow, children }) {
  * selected policies. Above: a headline (how many in every 100 people have
  * a lower income than yours) and three tiles (your change, its share of
  * your income, your place before → after, with how you and everyone move in
- * its tip), and one Before | After choice for both cards below:
+ * its tip). Each card has a Before | After switch, one state for both:
  *
  * - "Where you sit": the distribution with you on it, as a spread (how many
  *   people at each income) or a rank (how many have less than each income),
@@ -689,7 +689,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
 
   return (
     <div className="position-block">
-      {/* The headline and tiles, and the one Before | After for both cards */}
+      {/* The headline and tiles; each card below has the shared Before | After */}
       <div className="card single-year-card position-card position-summary">
         <div className="chart-header">
           <div>
@@ -711,10 +711,6 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             </div>
           ))}
         </dl>
-        <div className="position-controls">
-          <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
-          <span className="position-controls-note">The selected policies, for both charts below</span>
-        </div>
       </div>
 
       <div className="charts-grid position-pair">
@@ -742,6 +738,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
+            {/* Before | After: one state for both cards, a switch on each */}
+            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
             <span className="position-segment-lead">Show as</span>
             <ViewSwitch options={SHOW_AS} value={showAs} onChange={setShowAs} label="Show the distribution as" compact />
           </div>
@@ -801,6 +799,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             />
           </div>
           <div className="chart-controls position-segment">
+            <ViewSwitch options={SIDES} value={side} onChange={setSide} label="Before or after the selected policies" compact />
             <ViewSwitch options={COMPARE_BY} value={compareBy} onChange={setCompareBy} label="Compare by" compact />
             <ViewSwitch options={UNIT_OPTIONS.map((o) => ({ ...o, label: o.value === "pct" ? "%" : "£" }))} value={unit} onChange={setUnit} label="Units" compact />
           </div>
