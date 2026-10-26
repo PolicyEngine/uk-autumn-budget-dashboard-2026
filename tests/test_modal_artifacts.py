@@ -12,7 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from uk_budget_data.modal_runner import ModalRunner, ModalUnavailable, assemble
+from uk_budget_data.modal_runner import (
+    ModalRunner,
+    ModalRunsFailed,
+    ModalUnavailable,
+    Timed,
+    assemble,
+    phase_line,
+)
 from uk_budget_data.publication.artifacts import ArtifactError, ArtifactRef
 from uk_budget_data.publication.generate import ArtifactOutcome, run_artifact
 
@@ -127,6 +134,80 @@ def test_the_runner_fans_out_artifacts_in_order(tmp_path):
     assert [r.key for r in results] == ["alpha", "beta"]
     assert reported == [0, 1] and seen[0][1] is False
     assert (tmp_path / "beta" / "abcd1234abcd1234" / "receipt.json").exists()
+
+
+def test_one_failed_container_keeps_every_other_artifact(tmp_path):
+    """A container that raises comes back in its place (Modal's
+    return_exceptions): the artifacts before and after it are still written
+    here, then the run stops naming the failed one and the written ones, so
+    only the failed one is run again."""
+    jobs = [
+        Job("alpha", tmp_path),
+        Job("beta", tmp_path),
+        Job("gamma", tmp_path),
+    ]
+    said = []
+
+    def remote_artifacts(sent, smoke):
+        yield _returned("alpha", FILES)
+        yield TimeoutError("Function timed out")
+        yield _returned("gamma", FILES)
+
+    reported = []
+    runner = ModalRunner(say=said.append, remote_artifacts=remote_artifacts)
+    with pytest.raises(ModalRunsFailed) as raised:
+        runner.map(
+            run_artifact, jobs, on_result=lambda i, r: reported.append(i)
+        )
+    for key in ("alpha", "gamma"):
+        assert (tmp_path / key / "abcd1234abcd1234" / "receipt.json").exists()
+    assert not (tmp_path / "beta").exists()
+    assert reported == [0, 2]
+    assert raised.value.failed == {"beta": "TimeoutError: Function timed out"}
+    assert [Path(p).parent.name for p in raised.value.written] == [
+        "alpha",
+        "gamma",
+    ]
+    assert "FAILED beta" in str(raised.value)
+    assert any("beta: FAILED" in line for line in said)
+
+
+def test_a_rerun_after_a_failure_leaves_the_written_artifacts_unchanged(
+    tmp_path,
+):
+    """Rerunning the whole set at the same commit is safe: the artifacts
+    written before are unchanged (write-once), the failed one is written."""
+    jobs = [Job("alpha", tmp_path), Job("beta", tmp_path)]
+    first = ModalRunner(
+        say=lambda m: None,
+        remote_artifacts=lambda sent, smoke: [
+            _returned("alpha", FILES),
+            RuntimeError("out of memory"),
+        ],
+    )
+    with pytest.raises(ModalRunsFailed):
+        first.map(run_artifact, jobs)
+    again = ModalRunner(
+        say=lambda m: None,
+        remote_artifacts=lambda sent, smoke: [
+            _returned(job.key, FILES) for job in sent
+        ],
+    ).map(run_artifact, jobs)
+    assert [r.reference.created for r in again] == [False, True]
+
+
+def test_the_container_s_time_is_split_by_phase():
+    times = []
+    timed = Timed(lambda x: x * 2, times)
+    assert timed(3) == 6 and len(times) == 1 and times[0] >= 0
+    line = phase_line("alpha", 100.0, [40.0, 15.0], [30.0])
+    assert line == (
+        "alpha: 100 s in its Modal container (builds 40 + 15 s, tables 30 s, "
+        "checks and receipt 15 s)"
+    )
+    assert phase_line("alpha", 5.0, [], []) == (
+        "alpha: 5 s in its Modal container (checks and receipt 5 s)"
+    )
 
 
 def test_the_runner_refuses_a_result_for_another_measure(tmp_path):

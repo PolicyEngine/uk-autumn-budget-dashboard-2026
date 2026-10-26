@@ -108,44 +108,6 @@ def _pack(directory: Path) -> bytes:
     return buffer.getvalue()
 
 
-class _Timed:
-    """``function``, its calls' wall times appended to ``times``. Only for
-    the progress line: it changes nothing a run computes or records."""
-
-    def __init__(self, function, times: list):
-        self.function = function
-        self.times = times
-
-    def __call__(self, *args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return self.function(*args, **kwargs)
-        finally:
-            self.times.append(time.perf_counter() - started)
-
-
-def phase_line(key: str, total: float, builds: list, processes: list) -> str:
-    """Where a container's time went. The first build also downloads and
-    checks the dataset in a fresh container, so the difference between the
-    two builds is roughly the download."""
-    built = sum(builds)
-    processed = sum(processes)
-    parts = [
-        (
-            "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
-            if builds
-            else None
-        ),
-        f"tables {processed:.0f} s" if processes else None,
-        f"checks and receipt {max(total - built - processed, 0):.0f} s",
-    ]
-    return (
-        f"{key}: {total:.0f} s in its Modal container ("
-        + ", ".join(part for part in parts if part)
-        + ")"
-    )
-
-
 def run_artifact_here(job, allow_bundle: bool):
     """One receipted artifact in this container.
 
@@ -156,6 +118,7 @@ def run_artifact_here(job, allow_bundle: bool):
     path is refused, since no dataset file is ever sent to Modal.
     """
     from uk_budget_data import synthetic_dataset
+    from uk_budget_data.modal_runner import Timed, phase_line
     from uk_budget_data.publication.generate import run_artifact
 
     scratch = Path(tempfile.mkdtemp(prefix="artifact-"))
@@ -182,8 +145,8 @@ def run_artifact_here(job, allow_bundle: bool):
             job,
             artifacts_root=root,
             dataset_path=dataset,
-            build=_Timed(job.build, builds),
-            process=_Timed(job.process, processes),
+            build=Timed(job.build, builds),
+            process=Timed(job.process, processes),
         )
     )
     outcome.progress.append(

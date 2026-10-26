@@ -20,6 +20,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
@@ -75,6 +76,44 @@ def _import_modal():
             "`uv run --with modal==1.6.2 uk-budget-data ...`"
         ) from error
     return modal
+
+
+class Timed:
+    """``function``, its calls' wall times appended to ``times``. Only for
+    the progress line: it changes nothing a run computes or records."""
+
+    def __init__(self, function, times: list):
+        self.function = function
+        self.times = times
+
+    def __call__(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return self.function(*args, **kwargs)
+        finally:
+            self.times.append(time.perf_counter() - started)
+
+
+def phase_line(key: str, total: float, builds: list, processes: list) -> str:
+    """Where a container's time went. The first build also downloads and
+    checks the dataset in a fresh container, so the difference between the
+    two builds is roughly the download."""
+    built = sum(builds)
+    processed = sum(processes)
+    parts = [
+        (
+            "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
+            if builds
+            else None
+        ),
+        f"tables {processed:.0f} s" if processes else None,
+        f"checks and receipt {max(total - built - processed, 0):.0f} s",
+    ]
+    return (
+        f"{key}: {total:.0f} s in its Modal container ("
+        + ", ".join(part for part in parts if part)
+        + ")"
+    )
 
 
 def _modal_remote(units: Sequence) -> Iterable:
