@@ -364,3 +364,13 @@
 .position-plot-loading {
   min-height: 300px;
 }
+
+/* The tiles' rows line up: the caption keeps three lines' room and the
+   footnote sits at the foot */
+.position-tiles .forecast-tile-sub {
+  min-height: calc(3 * 1.45em);
+}
+
+.position-tiles .forecast-tile-meaning {
+  margin-top: auto;
+}
