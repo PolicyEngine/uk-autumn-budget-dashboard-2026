@@ -85,7 +85,7 @@ describe("the Poverty sub-tab", () => {
       expect(within(c).getByRole("button", { name: /^Poverty line:/ })).toBeInTheDocument();
     }
     // The change in people, from the outlook's population
-    expect(change.querySelector(".chart-description")).toHaveTextContent(/In 2027-28: −0\.01pp, about [\d,]+ fewer people in poverty/);
+    expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/);
     // One bar per measure that changes incomes, the package last
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);
     expect(rows.at(-1)).toBe("All selected measures");

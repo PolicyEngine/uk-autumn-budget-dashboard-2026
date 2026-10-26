@@ -13,21 +13,19 @@ import ChartMoreInfo from "./ChartMoreInfo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
-import { outlookPopulation } from "../utils/povertyPeople";
+import { formatPp, outlookPopulation, peopleShort } from "../utils/povertyPeople";
 import { CHART_COLOURS, divergingAxis, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { COMBINED_REFORM_ID, POLICY_COLORS } from "../utils/policyConfig";
 import { legendMembership } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
-import { peopleInPovertyText } from "../utils/povertyPeople";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
 
 const PACKAGE = "All selected measures";
 
-/** "−0.005pp", "+0.002pp", "0.000pp" */
-const pp = (value) => `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(3)}pp`;
+const pp = formatPp;
 /** A bar's value: "no change" for a measure that moves no one */
 const barText = (value) => (value === 0 ? "no change" : pp(value));
 
@@ -66,7 +64,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const year = fiscalYearTick(selectedYear);
   const { members, bars } = measurePovertyRows(rows, policies, selectedPolicies, selectedYear, metric.key);
   const millions = population ? population(selectedYear, poverty.group) : null;
-  const people = (value) => peopleInPovertyText(value, millions, poverty.group);
+  // "≈4,000 fewer people"; the package's without the noun, said once
+  const people = (value, options) => peopleShort(value, millions, poverty.group, options);
 
   const { domain, ticks } = divergingAxis(bars.map((bar) => bar.value).concat(0));
   const [x0, x1] = domain;
@@ -79,18 +78,18 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const summary =
     top && top.value !== 0 ? (
       <>
-        {top.name} moves it most on its own: <strong>{pp(top.value)}</strong>
-        {people(top.value) && <>, {people(top.value)}</>}.
+        Biggest: {top.name}, <strong>{pp(top.value)}</strong>
+        {people(top.value) && <> ({people(top.value)})</>}.
         {total && (
           <>
             {" "}
-            The package: <strong>{pp(total.value)}</strong>
-            {people(total.value) && <>, {people(total.value)}</>}.
+            Package: <strong>{pp(total.value)}</strong>
+            {people(total.value, { who: false }) && <> ({people(total.value, { who: false })})</>}.
           </>
         )}
       </>
     ) : (
-      <>None of the selected measures moves anyone across this poverty line on its own in {year}.</>
+      <>No measure on its own moves anyone across this line in {year}.</>
     );
 
   const zeroed = measures.filter((bar) => bar.value === 0);
@@ -103,8 +102,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       period={year}
       summary={
         <>
-          Each selected measure on its own, and the package: the change in {metric.phrase}, in percentage
-          points. {summary}
+          {metric.short}, by measure. {summary}
         </>
       }
       download={{
@@ -134,6 +132,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       ))}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
+          <p>
+            Each selected measure on its own, and the package (all of them together), in {year}: the change
+            in {metric.phrase}, in percentage points.{metric.detail ? ` ${metric.detail}` : ""}
+          </p>
           <p>
             Each bar is a measure modelled on its own. Measures can reach the same households, so their
             separate effects need not add up exactly to the package&apos;s.
@@ -175,7 +177,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                       label={`${bar.name}, ${year}`}
                       rows={[
                         { key: "change", name: "Change", text, color: bar.colour },
-                        ...(who ? [{ key: "people", name: "People", text: who, color: "transparent" }] : []),
+                        ...(who ? [{ key: "people", name: "People", text: who.replace(/^≈/, "about "), color: "transparent" }] : []),
                       ]}
                     />,
                   )}
@@ -184,6 +186,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                     <span key={t} className="ls-bar-grid" style={{ left: `${scale(t)}%` }} />
                   ))}
                   <span className="mp-zero" style={{ left: `${zero}%` }} />
+                  {bar.value !== 0 && (
                   <span
                     className="mp-bar-fill"
                     style={{
@@ -192,6 +195,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                       background: bar.colour,
                     }}
                   />
+                  )}
                 </span>
                 <span className="ls-bar-chip-cell mp-value" role="cell">
                   {text}

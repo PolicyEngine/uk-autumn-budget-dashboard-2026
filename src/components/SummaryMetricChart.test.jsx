@@ -110,7 +110,7 @@ describe("measure choices", () => {
     choose("People", "Children");
     expect(screen.getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
     expect(screen.getByRole("heading")).toHaveTextContent("Change in the child poverty rate");
-    expect(screen.getByText(/relative poverty after housing costs/)).toBeInTheDocument();
+    expect(screen.getByText(/Change in relative child poverty \(AHC\), pp, by year/)).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
     expect(params.get("poverty")).toBe("relative-ahc-children");
     expect(params.get("sub")).toBe("poverty");

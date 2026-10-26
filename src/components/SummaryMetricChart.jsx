@@ -37,7 +37,8 @@ import {
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { chartMotion } from "../utils/chartMotion";
-import { peopleInPovertyText } from "../utils/povertyPeople";
+import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
+import ChartMoreInfo from "./ChartMoreInfo";
 
 /**
  * The summary statistics from metrics.csv that Population impact charts,
@@ -54,8 +55,9 @@ export const SUMMARY_METRICS = {
       "Change in the share of people in absolute poverty before housing costs, each year, in percentage points.",
     unit: "Change (pp)",
     icon: "users",
-    decimals: 2,
-    format: (value) => `${Math.abs(value).toFixed(2)}pp`,
+    // One formatter for every poverty card (formatPp): 3 decimals under 0.1pp
+    decimals: 3,
+    format: (value) => formatPp(Math.abs(value)).replace(/^[+−]/, ""),
     csvUnits: "percentage points; people in households below the absolute poverty line, before housing costs",
     file: "poverty-rate-change",
     noChange: "The selected policies do not change the poverty rate in any year shown.",
@@ -142,6 +144,12 @@ export function povertyMetric({ basis, housing, group }) {
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
+    // "Change in absolute poverty (BHC), pp": the card's short subtitle
+    short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
+    // What the long description adds, for More info
+    detail:
+      (basis === "relative" ? "The relative line is 60% of median income in the same year, so it moves with the policies' effect on the median. " : "") +
+      (children ? "Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
     // "the share of children in relative poverty after housing costs"
     phrase: `the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ${HOUSING[housing]}`,
     group,
@@ -338,7 +346,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const decimals = (String(step).split(".")[1] ?? "").length;
   const tick = (value) => (value === 0 ? "0" : value.toFixed(decimals));
   const selected = data.find((point) => point.year === selectedYear);
-  const selectedPeople = selected?.value != null ? peopleText(selectedYear, selected.value) : null;
+  const selectedPeople =
+    selected?.value != null && metric.group && population
+      ? peopleShort(selected.value, population(selectedYear, metric.group), metric.group)
+      : null;
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -367,17 +378,19 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <span className="title-text">{metric.title}</span>
           </h3>
           <p className="chart-description">
-            {metric.description}
-            {selectedPeople && (
+            {metric.short ? (
               <>
-                {" "}
-                In {fiscalYearTick(selectedYear)}:{" "}
-                <strong>
-                  {selected.value > 0 ? "+" : "−"}
-                  {metric.format(selected.value)}
-                </strong>
-                , {selectedPeople}.
+                {metric.short}, by year.
+                {selected?.value != null && (
+                  <>
+                    {" "}
+                    {fiscalYearTick(selectedYear)}: <strong>{formatPp(selected.value)}</strong>
+                    {selectedPeople && <> ({selectedPeople})</>}.
+                  </>
+                )}
               </>
+            ) : (
+              metric.description
             )}
           </p>
         </div>
@@ -479,6 +492,15 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </ResponsiveContainer>
         )}
       </div>
+      {/* The short subtitle's full wording, in More info */}
+      {metric.short && (
+        <div className="chart-footer">
+          <ChartMoreInfo>
+            <p>{metric.description}</p>
+            {population && <p>People are the change in the rate times the population in that year, from the current-law projection.</p>}
+          </ChartMoreInfo>
+        </div>
+      )}
     </div>
   );
 }

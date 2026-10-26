@@ -894,3 +894,11 @@
     display: none;
   }
 }
+
+/* A line under a chart's key on what it leaves out (vigintile 1) */
+.ls-legend-note {
+  margin: 6px 0 0;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}

@@ -40,3 +40,24 @@ export function peopleInPovertyText(pp, millions, group = "all") {
   if (people < 1000) return `under 1,000 ${way} ${who} in poverty`;
   return `about ${thousands.format(Math.round(people / 1000) * 1000)} ${way} ${who} in poverty`;
 }
+
+/**
+ * A change in percentage points, signed, as every poverty card writes it:
+ * three decimals under 0.1pp (the measures' changes are thousandths of a
+ * point), two above. "−0.008pp", "+0.12pp", "0.000pp".
+ */
+export function formatPp(value) {
+  const size = Math.abs(value);
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${size.toFixed(size < 0.1 ? 3 : 2)}pp`;
+}
+
+/** "≈5,000 fewer people", "<1,000 more children"; null as peopleInPovertyText. */
+export function peopleShort(pp, millions, group = "all", { who = true } = {}) {
+  if (!millions || !pp) return null;
+  const people = Math.abs((pp / 100) * millions * 1e6);
+  const noun = who ? ` ${group === "children" ? "children" : "people"}` : "";
+  const way = pp < 0 ? "fewer" : "more";
+  if (people < 1000) return `<1,000 ${way}${noun}`;
+  return `≈${thousands.format(Math.round(people / 1000) * 1000)} ${way}${noun}`;
+}
