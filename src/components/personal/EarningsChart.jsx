@@ -22,6 +22,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
+import SeriesToggle from "../SeriesToggle";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import { CHART_VIEWS } from "./chartViews";
@@ -110,6 +111,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const [hover, setHover] = useState(null);
+  // The layers (and the total line) hidden from the chips, and the one the
+  // pointer or a chip is on, which comes forward while the rest dim
+  const [hidden, setHidden] = useState([]);
+  const [focus, setFocus] = useState(null);
   const width = measured > 0 ? measured : narrow ? 358 : 560;
   const title = `Household net income, ${yearLabel}`;
   // The file and image name the view shown
@@ -129,7 +134,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     if (isChange) return layersInUse(rows);
     return layersInUse([...layerRows(points, netParts, "before"), ...layerRows(points, netParts, "after")]);
   }, [netParts, isChange, rows, points]);
-  const stack = useMemo(() => stackLayers(rows, layers), [rows, layers]);
+  const shownLayers = useMemo(() => layers.filter((layer) => !hidden.includes(layer.key)), [layers, hidden]);
+  const totalShown = !hidden.includes("total");
+  const stack = useMemo(() => stackLayers(rows, shownLayers), [rows, shownLayers]);
   const drops = useMemo(
     () => (isChange ? [] : netIncomeDrops(points.map((p) => ({ income: p.income, after: p[view] })))),
     [isChange, points, view],
@@ -173,14 +180,40 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const onMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
     const income = ((px - left) / plotW) * xMax;
     let best = 0;
     rows.forEach((p, i) => {
       if (Math.abs(p.income - income) < Math.abs(rows[best].income - income)) best = i;
     });
     setHover(best);
+    // The layer under the pointer, if any: its band at this salary holds
+    // the pointer's value
+    const value = yLo + ((top + plotH - py) / plotH) * (yHi - yLo);
+    const under = shownLayers.find((layer) => {
+      const band = stack.bands[layer.key]?.[best];
+      return band && value >= Math.min(band.lo, band.hi) && value <= Math.max(band.lo, band.hi) && Math.abs(band.hi - band.lo) > 0;
+    });
+    setPointerLayer(under ? under.key : null);
   };
 
+  const [pointerLayer, setPointerLayer] = useState(null);
+  // One chip per layer, but Child Benefit and its charge together (as the
+  // legend had them): a chip's key and the layers it stands for
+  const chips = useMemo(() => {
+    const keys = new Set(layers.map((layer) => layer.key));
+    const both = keys.has("child_benefit") && keys.has("child_benefit_charge");
+    return layers
+      .filter((layer) => !(both && layer.key === "child_benefit_charge"))
+      .map((layer) =>
+        both && layer.key === "child_benefit"
+          ? { key: layer.key, label: "Child Benefit and its charge", colour: layer.color, members: ["child_benefit", "child_benefit_charge"] }
+          : { key: layer.key, label: layer.label, colour: layer.color, members: [layer.key] },
+      );
+  }, [layers]);
+  const membersOf = (key) => chips.find((chip) => chip.key === key)?.members ?? [key];
+  const highlightedKeys = focus ? membersOf(focus) : pointerLayer ? [pointerLayer] : [];
+  const highlighted = highlightedKeys.length ? highlightedKeys : null;
   const hovered = hover !== null ? rows[hover] : null;
   // Without the parts: one line, coloured as before or after, or the
   // change's gain and loss
@@ -244,9 +277,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   };
 
   // The shared tooltip, fed the hovered point: each layer's £, then the total
+  // On a layer: that layer alone ("At £40k: Income tax −£5,486")
+  const layerTip = hovered && pointerLayer ? layers.find((layer) => layer.key === pointerLayer) : null;
   const tooltipPayload = !hovered
     ? []
-    : [
+    : layerTip
+      ? [{ dataKey: `layer-${layerTip.key}`, name: layerTip.label, value: hovered[layerTip.key] ?? 0, color: layerTip.color }]
+      : [
         ...layers
           .filter((layer) => Math.abs(hovered[layer.key] ?? 0) >= 0.5)
           .map((layer) => ({
@@ -325,15 +362,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             />
 
             {/* The layers, stacked outward from zero */}
-            {layers.map((layer) => (
+            {shownLayers.map((layer) => (
               <path
                 key={layer.key}
                 className="earnings-layer"
                 data-layer={layer.key}
                 d={bandPath(rows, stack.bands[layer.key], x, y)}
                 fill={layer.color}
-                fillOpacity={0.85}
+                fillOpacity={highlighted ? (highlighted.includes(layer.key) ? 0.95 : 0.2) : 0.85}
                 stroke="none"
+                style={{ transition: "fill-opacity 0.15s ease" }}
               />
             ))}
 
@@ -342,13 +380,14 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 <path d={areaPath(points, x, y, 1)} fill={AFTER_COLOUR} fillOpacity={0.6} stroke="none" />
                 <path d={areaPath(points, x, y, -1)} fill={LOSS_COLOUR} fillOpacity={0.6} stroke="none" />
               </>
-            ) : (
+            ) : totalShown && (
               <path
                 className="earnings-total"
                 d={linePath(rows, x, y, "total")}
                 fill="none"
                 stroke={lineColour}
                 strokeWidth={netParts ? 2.5 : 2}
+                strokeOpacity={highlighted && !highlighted.includes("total") ? 0.3 : 1}
                 strokeDasharray={!netParts && view === "before" ? BEFORE_DASH : undefined}
               />
             )}
@@ -396,7 +435,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                   strokeWidth={4}
                   paintOrder="stroke"
                 >
-                  You
+                  {/* "You: £18,010", as the marginal rate card's "You: 28%" */}
+                  {youValue === null
+                    ? "You"
+                    : `You: ${isChange ? `${youValue < 0 ? "−" : "+"}${formatPounds(Math.abs(Math.round(youValue / 10) * 10))}` : formatPounds(Math.round(youValue / 10) * 10)}`}
                 </text>
               </g>
             )}
@@ -415,7 +457,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
               height={plotH}
               fill="transparent"
               onMouseMove={onMove}
-              onMouseLeave={() => setHover(null)}
+              onMouseLeave={() => {
+                setHover(null);
+                setPointerLayer(null);
+              }}
             />
           </svg>
           {hovered && (
@@ -432,9 +477,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => `${X_LABEL} ${formatPounds(v)}, ${yearLabel}`}
+                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : `${X_LABEL} ${formatPounds(v)}, ${yearLabel}`)}
                 grouped={false}
-                netKey={netParts ? "total" : undefined}
+                netKey={netParts && !layerTip ? "total" : undefined}
                 netLabel={TOTAL_NAME[view]}
                 showZero
               />
@@ -443,19 +488,53 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        <GroupedLegend items={legendItems} />
+        {netParts ? (
+          // The layers and the total as chips: show or hide each, hover to
+          // bring one forward
+          <SeriesToggle
+            lead="Show:"
+            label="Layers"
+            series={[
+              ...chips.map((chip) => ({ key: chip.key, label: chip.label, colour: chip.colour, shape: "block" })),
+              { key: "total", label: TOTAL_NAME[view], colour: TOTAL_COLOUR },
+            ]}
+            shown={[...chips.map((chip) => chip.key), "total"].filter((key) => !membersOf(key).some((member) => hidden.includes(member)))}
+            onChange={(next) =>
+              setHidden(
+                [...chips.map((chip) => chip.key), "total"].filter((key) => !next.includes(key)).flatMap(membersOf),
+              )
+            }
+            onHover={setFocus}
+            narrow={narrow}
+            extras={drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : []}
+          />
+        ) : (
+          <GroupedLegend items={legendItems} />
+        )}
       </div>
       <div className="card-logo chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
+      {/* The same "About this chart" as the marginal rate card beside it:
+          what it shows, how it is calculated, caveats */}
       <div className="chart-footer">
-        {isChange && smallChange && <p className="chart-note">The change is under 1% of net income at every salary.</p>}
-        {youSentence && (
-          <ChartMoreInfo>
-            <p>{description}</p>
-          </ChartMoreInfo>
-        )}
+        <ChartMoreInfo
+          info={{
+            shows: description,
+            how: [
+              "Your household is calculated again at each salary from £0 up, with partner income and everything else held fixed.",
+              netParts
+                ? "Each layer is one tax or benefit's part of net income; income and benefits are above zero, taxes below, and the line is net income."
+                : "The line is your household's net income.",
+              "The dashed line marks your salary.",
+            ],
+            caveats: [
+              isChange && smallChange && "The change is under 1% of net income at every salary.",
+              drops.length > 0 && "In the shaded bands net income falls as salary rises, as benefits are withdrawn.",
+            ],
+          }}
+        />
       </div>
     </div>
   );
