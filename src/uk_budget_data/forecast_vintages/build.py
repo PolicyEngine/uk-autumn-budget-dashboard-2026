@@ -747,8 +747,24 @@ def _sources_meta(series: dict, retrieved: dict, hpi: dict) -> dict:
 def check_units(variable: V.Variable) -> None:
     """Raise unless the variable's unit pills are ones the page can draw."""
     for unit, spec in variable.units.items():
+        if spec["from"] not in ("level", "share"):
+            raise BuildError(f"{variable.id}: {unit} reads no measure")
         if spec["from"] == "share" and variable.share is None:
             raise BuildError(f"{variable.id}: {unit} reads a share it lacks")
+        transform = spec.get("transform")
+        if transform is not None and (transform != "growth" or unit != "pct"):
+            raise BuildError(f"{variable.id}: {unit} has an unknown transform")
+        # A % shown as published reads a measure in %, a % change one that
+        # is not (a rate's change on a year earlier is no rate), and £ or
+        # people never read one: the page's loader refuses a file otherwise
+        measure = variable.share if spec["from"] == "share" else variable.level
+        in_pct = measure.unit.startswith("%")
+        if (unit == "pct" and (transform == "growth") == in_pct) or (
+            unit == "level" and in_pct
+        ):
+            raise BuildError(
+                f"{variable.id}: its {unit} unit reads a measure in other units"
+            )
         # A quarterly measure's £ is always at an annual rate (its axis
         # names a year), and nothing else is: the page's loader refuses a
         # file otherwise

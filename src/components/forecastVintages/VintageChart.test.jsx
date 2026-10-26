@@ -20,7 +20,7 @@ import VintageChart, {
   xTicks,
   yAxisFor,
 } from "./VintageChart";
-import { OUTTURN_KEY, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, buildView, pointsIn, stepDecimals } from "../../utils/forecastVintages/view";
 import { forecastVintagesProblem } from "../../utils/forecastVintages/load";
 import { periodIndex } from "../../utils/forecastVintages/transforms";
 
@@ -168,6 +168,18 @@ describe("the labelled points' text", () => {
     for (const l of labels) for (const t of l.boxes.text) expect(t.left >= 0 && t.right <= 610).toBe(true);
   });
 
+  it("sets a value smaller only where no anchor keeps it between the plot's sides", () => {
+    const points = [{ role: "latest", x: 50, y: 1100 }];
+    const bounds = { left: 0, right: 100, top: -50, bottom: 400 };
+    const long = () => "£1,000,000,000.000000bn";
+    const [wide] = pointLabels(points, { ...place, format: long, bounds });
+    expect(wide.valueSize).toBeGreaterThan(0);
+    expect(wide.valueSize).toBeLessThan(labelGeometry({ above: true }).valueSize);
+    for (const t of wide.boxes.text) expect(t.left >= 0 && t.right <= 100).toBe(true);
+    const [fits] = pointLabels(points, { ...place, format, bounds });
+    expect(fits.valueSize).toBeNull();
+  });
+
   it("keeps each label's own side where the plot is not laid out yet", () => {
     const points = ROLES.map((role) => ({ role, x: 0, y: 0 }));
     const labels = pointLabels(points, { format });
@@ -220,7 +232,7 @@ describe("the chart's layout", () => {
   // phone puts them there
   const CROWDED = 16;
 
-  it("lays the labels out on the axis drawn, clear of each other, the other dots and the plot's edges", () => {
+  it("lays the labels out on the axis drawn, clear of each other, the other dots and the plot's edges, every value at full size", () => {
     const problems = [];
     let laidOut = 0;
     let brushed = 0;
@@ -248,6 +260,7 @@ describe("the chart's layout", () => {
                 problems.push(`${where}: ${l.role} leaves the plot`);
               }
             }
+            if (l.valueSize !== null) problems.push(`${where}: ${l.role} set smaller`);
             laidOut += 1;
           }
           // Every value covers the rows' data, room or not
@@ -278,6 +291,75 @@ describe("the chart's layout", () => {
       }
     }
     expect(problems).toEqual([]);
+  });
+
+  // Found by the eleventh review: real GDP's figures written to six
+  // decimals, in £ with F off, brushed to 2028-30 on a 320px phone: the
+  // end label started at its line and ran past the card, where centred on
+  // its line it fitted
+  it("centres a label on its line where only that keeps it on the card", () => {
+    const data = JSON.parse(JSON.stringify(DATA));
+    const v = data.variables.find((x) => x.id === "real_gdp");
+    v.level.decimals = 6;
+    expect(forecastVintagesProblem(data)).toBeNull();
+    const view = buildView(data, v, { unit: "level", showPast: false });
+    const rows = view.rows.filter((r) => r.x >= 2028 && r.x <= 2030);
+    const layout = chartLayout(view, rows, { canvasWidth: 254, narrow: true });
+    const end = layout.labels.find((l) => l.role === "end");
+    expect(end.value).toBe("£3,114.673023bn");
+    expect(end.anchor).toBe("middle");
+    expect(end.valueSize).toBeNull();
+    for (const t of end.boxes.text) expect(t.left >= layout.bounds.left && t.right <= layout.bounds.right).toBe(true);
+  });
+
+  // Whatever decimals the figures are written to (the loader takes 0 to
+  // 6), at any card width and brush, every label's text stays between the
+  // plot's sides, and a value is set smaller only where no anchor would
+  // keep it there at full size
+  it("keeps every label between the plot's sides, at full size wherever an anchor can", () => {
+    const shown = DATA.variables.flatMap((v) => UNIT_ORDER.filter((u) => v.units[u]).map((unit) => ({ id: v.id, unit })));
+    const files = new Map();
+    const fileWith = (decimals) => {
+      if (!files.has(decimals)) {
+        const data = JSON.parse(JSON.stringify(DATA));
+        for (const v of data.variables) for (const m of [v.level, v.share]) if (m) m.decimals = decimals;
+        expect(forecastVintagesProblem(data)).toBeNull();
+        files.set(decimals, data);
+      }
+      return files.get(decimals);
+    };
+    let laidOut = 0;
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...shown),
+        fc.integer({ min: 0, max: 6 }),
+        fc.boolean(),
+        fc.integer({ min: 254, max: 1400 }),
+        fc.boolean(),
+        fc.nat(),
+        fc.nat(),
+        ({ id, unit }, decimals, showPast, canvasWidth, narrow, a, b) => {
+          const data = fileWith(decimals);
+          const view = buildView(data, data.variables.find((v) => v.id === id), { unit, showPast });
+          if (view.unavailable) return;
+          const n = view.rows.length;
+          const lo = a % (n - 1);
+          const rows = view.rows.slice(lo, lo + 2 + (b % (n - 1 - lo)));
+          const layout = chartLayout(view, rows, { canvasWidth, narrow });
+          const { bounds } = layout;
+          const size = labelGeometry({ above: true, narrow }).valueSize;
+          for (const l of layout.labels) {
+            for (const t of l.boxes.text) expect(t.left >= bounds.left && t.right <= bounds.right, `${id} ${unit} ${l.role} ${l.value}`).toBe(true);
+            const x = l.boxes.line.left + 0.5;
+            const widest = Math.max(bounds.right - x, x - bounds.left, 2 * Math.min(x - bounds.left, bounds.right - x));
+            expect(l.valueSize === null, `${id} ${unit} ${l.role} ${l.value}`).toBe(textWidth(l.value, size, true) <= widest);
+            laidOut += 1;
+          }
+        },
+      ),
+      { numRuns: 400 },
+    );
+    expect(laidOut).toBeGreaterThan(200);
   });
 
   it("keeps employment's latest label off the start dot in %, brushed to 2017 to 2028 on a phone", () => {

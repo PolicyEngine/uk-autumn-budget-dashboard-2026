@@ -888,6 +888,46 @@ def test_a_quarterly_measures_pounds_and_only_those_are_at_an_annual_rate(
         B.check_units(variable)
 
 
+def _without_transform(variable_id: str, unit: str):
+    variable = _units(variable_id, unit)
+    spec = {k: x for k, x in variable.units[unit].items() if k != "transform"}
+    return dataclasses.replace(variable, units={**variable.units, unit: spec})
+
+
+@pytest.mark.parametrize(
+    "variable, message",
+    [
+        # Found by the eleventh review: a rate's change on a year earlier,
+        # under the rate's own axis
+        (_units("psnd", "pct", transform="growth"), "other units"),
+        (_units("unemployment", "pct", transform="growth"), "other units"),
+        (_units("psnb", "pct", transform="growth"), "other units"),
+        (_without_transform("real_gdp", "pct"), "other units"),
+        (_units("psnb", "pct", **{"from": "level"}), "other units"),
+        (_units("psnb", "level", **{"from": "share"}), "other units"),
+        (_units("real_gdp", "index", transform="growth"), "unknown transform"),
+        (_units("real_gdp", "pct", transform="index"), "unknown transform"),
+        (_units("real_gdp", "pct", **{"from": "garbage"}), "reads no measure"),
+    ],
+    ids=[
+        "% change of debt",
+        "% change of unemployment",
+        "% change of a share",
+        "GDP's % unchanged",
+        "% as published of £",
+        "£ of a share",
+        "index as growth",
+        "unknown transform",
+        "no measure",
+    ],
+)
+def test_a_unit_reads_only_a_measure_its_figures_are_in(variable, message):
+    # The loader's rule (load.js, variableProblem): % as published reads a
+    # measure in %, a % change one that is not, £ never one in %
+    with pytest.raises(B.BuildError, match=message):
+        B.check_units(variable)
+
+
 def test_every_committed_figure_is_written_to_four_decimals(committed):
     # The page refuses a figure that is not 0 and finer than 1e-4: one far
     # finer would underflow when a forecast is carried on (load.js, isFigure)

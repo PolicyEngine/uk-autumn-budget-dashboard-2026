@@ -168,6 +168,11 @@ describe("the committed file", () => {
     ["a growth rate under 100%", (d) => (byId(d, "cpi").level.vintages.at(-1).values["2027"] = 150), /do not read as growth rates/],
     ["a % shown as published that reads a measure in %", (d) => (byId(d, "psnb").units.pct.from = "level"), /reads a measure in other units/],
     ["£ that reads no measure in %", (d) => (byId(d, "psnb").units.level.from = "share"), /reads a measure in other units/],
+    // Found by the eleventh review: a change on a year earlier taken of a
+    // rate, under the rate's own axis (debt's 93.2% of GDP drawn as 0.3%)
+    ["a % change of no measure in %", (d) => (byId(d, "psnd").units.pct.transform = "growth"), /reads a measure in other units/],
+    ["a % change of no rate", (d) => (byId(d, "unemployment").units.pct.transform = "growth"), /reads a measure in other units/],
+    ["a % change of no share", (d) => (byId(d, "psnb").units.pct.transform = "growth"), /reads a measure in other units/],
     // Found by the fourth review: a check stated in terms its gaps are
     // not in, and a forecast the build would not write
     ["a check in its measure's terms", (d) => (byId(d, "employment").level.check.in = "% change on a year earlier"), /outturn check is incomplete/],

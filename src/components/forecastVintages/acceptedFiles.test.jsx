@@ -239,10 +239,12 @@ function variableOk(v) {
   if (!unitsOk(v)) return false;
   const read = new Set(Object.values(v.units).map((spec) => spec.from));
   if (![...read].every((name) => measureOk(v[name], v.frequency))) return false;
-  // A % shown as published reads a measure in %; £ or people never do
+  // A % shown as published reads a measure in %, a % change one that is
+  // not; £ or people never read one
   return Object.entries(v.units).every(([unit, spec]) => {
     const inPct = v[spec.from].unit.startsWith("%");
-    return !(unit === "pct" && spec.transform !== "growth" && !inPct) && !(unit === "level" && inPct);
+    const growth = spec.transform === "growth";
+    return !(unit === "pct" && growth === inPct) && !(unit === "level" && inPct);
   });
 }
 
@@ -412,10 +414,22 @@ function patternOf(path) {
 const valueAt = (data, path) => path.reduce((o, k) => (o == null ? undefined : o[k]), data);
 const frequencyAt = (data, path) => (path[0] === "variables" ? data.variables[path[1]]?.frequency : null);
 
-// Every field: each object's keys and one it does not have, every
-// variable, another list's first and last items, and of a series its
-// first, a middle and its last periods, the period after its last, one
-// two after (a gap) and a key that is no period
+// The keys WHAT_IT_HOLDS names for an object at `path` that it lacks: a
+// unit's transform or annualise, a variable's notes, a source's archive
+// address (found by the eleventh review: no change added a transform)
+function absentKeys(value, path) {
+  const pattern = patternOf(path);
+  const prefix = pattern ? `${pattern}.` : "";
+  return Object.keys(WHAT_IT_HOLDS)
+    .filter((p) => p.startsWith(prefix) && p !== prefix && !p.slice(prefix.length).includes("."))
+    .map((p) => p.slice(prefix.length))
+    .filter((key) => !/^[[{]/.test(key) && key !== "garbage" && !Object.hasOwn(value, key));
+}
+
+// Every field: each object's keys, those it lacks and one it does not
+// have, every variable, another list's first and last items, and of a
+// series its first, a middle and its last periods, the period after its
+// last, one two after (a gap) and a key that is no period
 function fieldPaths(value, path = [], out = []) {
   out.push(path);
   if (Array.isArray(value)) {
@@ -432,6 +446,7 @@ function fieldPaths(value, path = [], out = []) {
       out.push([...path, "garbage"]);
     } else {
       for (const key of keys) fieldPaths(value[key], [...path, key], out);
+      for (const key of absentKeys(value, path)) out.push([...path, key]);
       out.push([...path, "garbage"]);
     }
   }

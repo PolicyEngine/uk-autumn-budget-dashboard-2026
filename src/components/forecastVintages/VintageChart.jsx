@@ -212,12 +212,16 @@ function textBox(x, baseline, width, size, anchor) {
   };
 }
 
-/** A label's value, caption and leader line, as boxes in the plot's pixels. */
-export function labelBoxes({ x, y, above, lift = 0, anchor, value, caption, narrow = false }) {
+/**
+ * A label's value, caption and leader line, as boxes in the plot's
+ * pixels. `valueSize` sets the value smaller than its geometry's size.
+ */
+export function labelBoxes({ x, y, above, lift = 0, anchor, value, caption, narrow = false, valueSize = null }) {
   const g = labelGeometry({ above, lift, narrow });
+  const size = valueSize ?? g.valueSize;
   return {
     text: [
-      textBox(x, y + g.valueY, textWidth(value, g.valueSize, true), g.valueSize, anchor),
+      textBox(x, y + g.valueY, textWidth(value, size, true), size, anchor),
       textBox(x, y + g.captionY, textWidth(caption, CAPTION_SIZE), CAPTION_SIZE, anchor),
     ],
     line: {
@@ -266,16 +270,19 @@ const inside = (box, bounds) =>
  * The labelled points with where their text goes. Each label is tried on
  * its own side (start under the line, latest and end over it), then on
  * the other, then lifted a level at a time on either; at each, with its
- * own anchor, then starting or ending at its leader line. It goes where
- * its text is clear of the labels already placed and of `obstacles`, with
- * the fewest of these: its text or leader line on another labelled dot,
- * its line across another label's text or its text across another's line,
- * its text outside `bounds` (which the chart then makes room for). Text
- * never overlaps text; the rest are kept off where any place avoids them.
- * Text anchored at its middle that would cross a side of `bounds` is
- * anchored at that side instead. `px` and `py` place a point in the plot
- * (pixels from its left and top); without them every label keeps its own
- * side, unlifted.
+ * own anchor, then starting at, ending at or centred on its leader line,
+ * of those that keep its text between the sides of `bounds`. It goes
+ * where its text is clear of the labels already placed and of
+ * `obstacles`, with the fewest of these: its text or leader line on
+ * another labelled dot, its line across another label's text or its text
+ * across another's line, its text outside `bounds` (above or below, the
+ * chart then makes room for it). Text never overlaps text; the rest are
+ * kept off where any place avoids them. A value too wide for any anchor
+ * to keep it between the sides (a figure written far longer than any the
+ * build writes, at a narrow canvas) is set smaller until one does; only a
+ * caption wider than the room on every anchor leaves them. `px` and `py`
+ * place a point in the plot (pixels from its left and top); without them
+ * every label keeps its own side, unlifted.
  */
 export function pointLabels(points, { px, py, format, narrow = false, bounds = null, obstacles = [] }) {
   const laidOut = Boolean(px && py);
@@ -301,20 +308,25 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
     if (!laidOut) return { ...point, ...style, value, level: 0, lift: 0, boxes: null };
     const x = px(point.x);
     const y = py(point.y);
-    const width = Math.max(
-      textWidth(value, labelGeometry({ above: true, narrow }).valueSize, true),
-      textWidth(style.caption, CAPTION_SIZE),
-    );
-    let anchor = style.anchor;
-    if (bounds) {
-      const left = anchor === "end" ? x - width : x - width / 2;
-      if (left < bounds.left) anchor = "start";
-      else if (anchor === "middle" && x + width / 2 > bounds.right) anchor = "end";
-    }
-    // Starting or ending at its line instead, where that keeps it inside
+    const size = labelGeometry({ above: true, narrow }).valueSize;
+    const full = textWidth(value, size, true);
+    const captionWidth = textWidth(style.caption, CAPTION_SIZE);
+    // The room between the sides for text starting at its line, ending at
+    // it, or centred on it
+    const room = bounds
+      ? { start: bounds.right - x, end: x - bounds.left, middle: 2 * Math.min(x - bounds.left, bounds.right - x) }
+      : { start: Infinity, end: Infinity, middle: Infinity };
+    const widest = Math.max(room.start, room.end, room.middle);
+    // To a hundredth of a pixel under, so it fits past rounding
+    const valueSize = full > widest && widest > 0 ? Math.floor((size * widest * 100) / full) / 100 : null;
+    const width = Math.max(valueSize ? textWidth(value, valueSize, true) : full, captionWidth);
     const across = (a) => (a === "end" ? [x - width, x] : a === "start" ? [x, x + width] : [x - width / 2, x + width / 2]);
     const fitsAcross = (a) => !bounds || (across(a)[0] >= bounds.left && across(a)[1] <= bounds.right);
-    const anchors = [anchor, ...["start", "end"].filter((a) => a !== anchor && fitsAcross(a))];
+    const order = [...new Set([style.anchor, "start", "end", "middle"])];
+    const fitting = order.filter(fitsAcross);
+    // Where none fits (a caption wider than every room), the roomiest
+    const anchors = fitting.length ? fitting : [order.reduce((a, b) => (room[b] > room[a] ? b : a))];
+    const anchor = anchors[0];
     const at = (above, level, textAnchor = anchor) =>
       labelBoxes({
         x,
@@ -325,6 +337,7 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
         value,
         caption: style.caption,
         narrow,
+        valueSize,
       });
     const textClear = (boxes) =>
       boxes.text.every(
@@ -369,6 +382,7 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
       level: best.level,
       lift: best.level * LABEL_LIFT,
       value,
+      valueSize,
       boxes: best.boxes,
       // How many of the conflicts above it could not avoid (0 nearly always)
       conflicts: best.conflicts ?? null,
@@ -483,7 +497,7 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
  * line has to pass another label, it passes under that label's text.
  * Recharts passes the dot's box as viewBox.
  */
-function PointLabel({ viewBox, part, role, value, caption, above, anchor, lift = 0, narrow }) {
+function PointLabel({ viewBox, part, role, value, caption, above, anchor, lift = 0, narrow, valueSize = null }) {
   if (!viewBox) return null;
   const cx = viewBox.x + viewBox.width / 2;
   const cy = viewBox.y + viewBox.height / 2;
@@ -515,7 +529,7 @@ function PointLabel({ viewBox, part, role, value, caption, above, anchor, lift =
         x={cx}
         y={cy + g.valueY}
         textAnchor={anchor}
-        fontSize={g.valueSize}
+        fontSize={valueSize ?? g.valueSize}
         fontWeight={700}
         fill={CHART_COLOURS.ink}
         {...halo}
@@ -692,6 +706,7 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
                         anchor={l.anchor}
                         lift={l.lift}
                         narrow={narrow}
+                        valueSize={l.valueSize}
                       />
                     }
                   />

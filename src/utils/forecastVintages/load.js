@@ -349,10 +349,12 @@ function variableProblem(variable) {
     if (problem) return problem;
   }
   // A unit says what its figures are: a % shown as published reads a
-  // measure in %, and £ or people never read one
+  // measure in %, a % change one that is not (a rate's change on a year
+  // earlier is no rate, whatever its axis says), and £ or people never
+  // read one
   for (const [unit, spec] of units) {
     const inPct = variable[spec.from].unit.startsWith("%");
-    if ((unit === "pct" && spec.transform !== "growth" && !inPct) || (unit === "level" && inPct)) {
+    if ((unit === "pct" && (spec.transform === "growth") === inPct) || (unit === "level" && inPct)) {
       return `${id}: its ${unit} unit reads a measure in other units`;
     }
   }
