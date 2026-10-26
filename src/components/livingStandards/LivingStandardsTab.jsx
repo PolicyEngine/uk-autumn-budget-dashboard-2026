@@ -37,11 +37,10 @@ const BASELINE_ROWS = [
     title: "Incomes under current law",
     subtitle: (onShowTab) => (
       <>
-        Household income and inequality over time, and income growth across the distribution, before any Budget
-        measure (<SourceLink source="obr_efo_march_2026">OBR March 2026 forecast</SourceLink>). How the measures
-        change incomes is on{" "}
+        Incomes before any Budget measure (<SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink>). With
+        the measures:{" "}
         <ViewLink tab="dashboard" sub="living" hash="deciles" onShowTab={onShowTab}>
-          Population impact, Living standards
+          Living standards
         </ViewLink>
         .
       </>
@@ -53,10 +52,9 @@ const BASELINE_ROWS = [
     title: "Poverty under current law",
     subtitle: (onShowTab) => (
       <>
-        Poverty rates, how far below the line people are, and who is in poverty, before any Budget measure. How the
-        measures change poverty rates is on{" "}
+        Poverty before any Budget measure. With the measures:{" "}
         <ViewLink tab="dashboard" sub="poverty" hash="poverty" onShowTab={onShowTab}>
-          Population impact, Poverty
+          Poverty
         </ViewLink>
         .
       </>
