@@ -7,7 +7,7 @@ import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 export const POPULATION_SUB_TABS = [
   { value: "finances", label: "Public finances", icon: "landmark" },
   { value: "all", label: "All households", icon: "users" },
-  { value: "age", label: "By age", icon: "ages" },
+  { value: "age", label: "By age", icon: "usersRound" },
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
 ];

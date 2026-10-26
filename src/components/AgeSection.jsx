@@ -87,7 +87,7 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
       <span id={PENSIONERS_ANCHOR} aria-hidden="true" />
       <MeasureKeyProvider>
         <SectionHeading
-          icon="ages"
+          icon="usersRound"
           title="How much each age group gains"
           subtitle={
             group === PENSIONERS
