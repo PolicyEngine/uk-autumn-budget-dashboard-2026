@@ -38,6 +38,7 @@ from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
+    ArtifactError,
     ArtifactRef,
     write_artifact,
 )
@@ -47,9 +48,11 @@ from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptInputs,
     ReceiptUnavailable,
+    approved_revision,
     build_receipt_document,
     code_revision,
     combined_identities,
+    entry_receipt,
     is_code_defect,
     load_basis,
     measure_identities,
@@ -60,6 +63,7 @@ from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
     measure_templates_proof,
 )
+from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES
 from uk_budget_data.scored_years import missing_scored_years
 
 
@@ -377,6 +381,8 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
             data_limits=limits,
             model_limits=held,
             name=reform.name,
+            description=reform.description,
+            personal=PUBLIC_PERSONAL_SERIES.get(reform.id),
             modifier_templates=(
                 job.modifier_templates
                 if job.modifier_templates is not None
@@ -481,6 +487,34 @@ def generate_artifacts(
         build=build,
         process=process,
     )
+    checked_commits: dict = {}
+
+    def member_revisions(key: str, ids: list[str]) -> dict[str, CodeRevision]:
+        """Each member read from the manifest, bound at the commit its own
+        receipt was made at, so the combined run records the identity that
+        receipt holds and staging (which compares them exactly) accepts it.
+        A member written in this run was made at HEAD."""
+        revisions = {}
+        for member in ids:
+            if member in written_outputs or member not in manifest.measures:
+                continue
+            try:
+                document = entry_receipt(
+                    "its manifest entry's receipt",
+                    member,
+                    manifest.measures[member],
+                    artifacts_root.parent,
+                )
+                revisions[member] = approved_revision(
+                    document, revision, checked_commits, repo_root
+                )
+            except (ArtifactError, OSError, ValueError, KeyError) as error:
+                raise ReceiptUnavailable(
+                    key,
+                    f"member {member}: {error}; regenerate {member} and stage "
+                    "it before its combined runs",
+                ) from error
+        return revisions
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
@@ -572,6 +606,7 @@ def generate_artifacts(
         )
 
         def prepare():
+            revisions = member_revisions(key, ids)
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
@@ -604,6 +639,7 @@ def generate_artifacts(
                     if combined_baseline is not None
                     else False
                 ),
+                member_revisions=revisions,
             )
 
         try:

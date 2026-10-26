@@ -23,9 +23,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
+import { clearBasisIncomeCache } from "./hooks/useBasisIncome";
 import { clearOutlookCache } from "./utils/livingStandards/outlook";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
+import { fixtureJson } from "./test/publicationFixture";
+import { receiptEngine } from "./utils/publication/load";
+
+// The receipt fixture's supported year follows the engine's projection
+// end (currently beyond the dashboard's Budget-year window). Exercise the
+// live calculator in that verified fixture year without rewriting receipts.
+vi.mock("./utils/displayYears", async (original) => {
+  const actual = await original();
+  const { IN_DATA } = await import("./test/publicationFixture");
+  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+});
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const API = "https://household-api.test";
@@ -33,7 +46,7 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv"]);
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -60,13 +73,13 @@ const LOADED = {
   household: (panel) => within(panel).findAllByRole("heading", { name: "Choose a household" }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
-  young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
-  // Population impact's Pensioners sub-tab (?sub=pensioners): the cards
-  // render once age_impact.csv is read.
-  pensioners: (panel) => within(panel).findAllByRole("heading", { name: /Change per pensioner by year/ }),
+  // Young people and Pensioners read the age table from verified artifacts;
+  // the fixture's carry none, so both say so (#104)
+  young: (panel) => within(panel).findAllByText(/Results by age are not available/),
+  pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Incomes under current law heading shows once the outlook is read.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
-  // Every measure's card, whatever the band's selection
+  // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
@@ -78,6 +91,18 @@ const TEST_ONLY = /^An update to .* inside a test was not wrapped in act/;
 let requests;
 let consoleErrors;
 
+const publicationFetch = dashboardFixtureFetch();
+
+// The household API must run the model versions the approved receipts
+// record, or Household impact shows nothing: answer with alpha's.
+const PUBLISHED_ENGINE = receiptEngine(
+  fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
+);
+function publishedAnswerFor(body) {
+  const answer = householdAnswerFor(body);
+  return { ...answer, engine: { ...answer.engine, ...PUBLISHED_ENGINE } };
+}
+
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
@@ -85,7 +110,7 @@ function serve(input, init = {}) {
     const ok = url === HOUSEHOLD_API && method === "POST";
     requests.push({ url, status: ok ? 200 : 404, body: init.body });
     return ok
-      ? new Response(JSON.stringify(householdAnswerFor(init.body)), {
+      ? new Response(JSON.stringify(publishedAnswerFor(init.body)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })
@@ -97,6 +122,7 @@ function serve(input, init = {}) {
     return new Response("{}", { status: 404 });
   }
   const { pathname } = new URL(url, "http://localhost");
+  if (pathname === "/data/manifest.json" || pathname.startsWith("/data/artifacts/")) return publicationFetch(url, init);
   const path = normalize(join(PUBLIC, decodeURIComponent(pathname)));
   const found = path.startsWith(PUBLIC) && existsSync(path) && statSync(path).isFile();
   requests.push({ url: pathname, status: found ? 200 : 404 });
@@ -108,6 +134,7 @@ beforeEach(() => {
   consoleErrors = [];
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   clearHouseholdImpactCache();
+  clearBasisIncomeCache();
   // Each test reads the outlook afresh, so its requests can be counted
   clearOutlookCache();
   // Each tab opens as a new visit would: the form at its first step
@@ -143,7 +170,7 @@ const CASES = [
   ["Population impact: Public finances", "finances", "/", "Public finances"],
 ];
 
-describe("each of the five tabs and Population impact's sub-tabs, on the real data", () => {
+describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -153,6 +180,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
     async (_name, value, address, label) => {
       window.history.replaceState({}, "", address);
       render(<App />);
+      await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
       const panel = await screen.findByRole("tabpanel", { name: label });
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.
@@ -289,9 +317,11 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
     );
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    // The views are rebuilt once the publication verifies
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
-    fireEvent.click(within(personal).getByRole("button", { name: /^Your household/ }));
-    fireEvent.click(within(personal).getByRole("button", { name: /^Calculate/ }));
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Your household/ }));
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
 
     // Away to Methodology while the first stage is in flight
@@ -350,9 +380,10 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
     );
     window.history.replaceState({}, "", "/?tab=household");
     render(<App />);
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const household = await screen.findByRole("tabpanel", { name: "Household impact" });
-    fireEvent.click(within(household).getByRole("button", { name: /^Your household/ }));
-    fireEvent.click(within(household).getByRole("button", { name: /^Calculate/ }));
+    fireEvent.click(await within(household).findByRole("button", { name: /^Your household/ }));
+    fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(household).not.toBeVisible();

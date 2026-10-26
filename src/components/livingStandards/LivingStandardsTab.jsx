@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
+import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
 import ViewLink from "../ViewLink";
 import { ForecastSource } from "./sources";
@@ -119,6 +120,16 @@ function BaselinePanel({ data, onShowTab }) {
 /** The OBR forecast behind the baseline, and the OBR's household income. */
 function ForecastPanel({ data, forecastView, setForecastView }) {
   const forecast = data.forecast;
+  // `obr-forecast` updates an independent baseline JSON. Its Budget-day
+  // extract has no receipt or release-index binding yet, so publication of
+  // that JSON alone cannot authorise the new forecast figures.
+  if (forecast?.post_published) {
+    return (
+      <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
+        <p>The baseline outlook, on the forecast it was built from, remains available in Baseline outlook.</p>
+      </UnavailableNotice>
+    );
+  }
   return (
     <>
       {forecast && (

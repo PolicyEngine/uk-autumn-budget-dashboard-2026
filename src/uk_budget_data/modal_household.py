@@ -9,18 +9,27 @@ time. The route builds one synthetic household from the answers: no survey
 data and no Hugging Face token, so the data licence question does not arise.
 
 Cost (Modal's published rates, 25 October 2026: $0.0473 per core-hour,
-$0.008 per GiB-hour): no container is kept warm by default
-(``MIN_CONTAINERS`` 0), so an idle app costs nothing; a container lives
-``SCALEDOWN_SECONDS`` after its last call. Keeping containers warm is a
-decision with a price (see the runbook), not a default.
+$0.008 per GiB-hour): the deploy itself keeps no container warm
+(``MIN_CONTAINERS`` 0); the warm schedule below then keeps some warm until
+4 November. A container lives ``SCALEDOWN_SECONDS`` after its last call.
+Keeping containers warm is a decision with a price (see the runbook).
 
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop uk-budget-household   # when done
 
+Deploy from a clean checkout of the commit Cloud Run serves. The image
+reports the checkout's commit (``GIT_SHA``) only when every file it copies
+has exactly that commit's bytes and it copies nothing else (compared with
+HEAD's tree, not git's status), and the page uses this service's sweep and
+split by policy only under a headline that reports the same commit;
+otherwise it asks Cloud Run for them.
+
 After a deploy, send one request (any household) and wait for it: the
 first containers take the memory snapshots (about two minutes), and later
 cold starts restore them. A deploy's change-over leaves containers of the
-previous version answering for a while; ``fan_out`` takes their answers too.
+previous version answering for a while; ``fan_out`` refuses a request any
+of whose runs they answered, and the page asks Cloud Run for that part
+(``household_runs``).
 
 A test app (same code, no warm schedule, scales to zero):
 
@@ -81,7 +90,17 @@ DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_CPU": str(CPU),
 }
 
+from uk_budget_data.household_runs import (  # noqa: E402
+    container_build,
+    fan_out_answers,
+    run_answer,
+)
 from uk_budget_data.household_warm import warm_target  # noqa: E402
+from uk_budget_data.runtime_identity import (  # noqa: E402
+    checkout_commit,
+    checkout_differences,
+    printable_paths,
+)
 
 
 def build_image() -> modal.Image:
@@ -90,6 +109,18 @@ def build_image() -> modal.Image:
     if not modal.is_local():
         return modal.Image.debian_slim()
     root = Path(__file__).resolve().parents[2]
+    commit = checkout_commit(root)
+    if commit is None:
+        differ = checkout_differences(root)
+        print(
+            "No build commit: the files this deploy copies are not exactly "
+            "the checkout's HEAD, so the page will not use its breakdowns."
+            + (
+                f" They differ in: {printable_paths(differ[:10])}"
+                if differ
+                else ""
+            )
+        )
     return (
         modal.Image.debian_slim(
             python_version=(root / ".python-version").read_text().strip()
@@ -101,7 +132,10 @@ def build_image() -> modal.Image:
                 "OMP_NUM_THREADS": "1",
                 "HOUSEHOLD_RUNNER": "modal",
                 "HOUSEHOLD_WORKERS": "1",
-                "GIT_SHA": os.environ.get("GIT_SHA", ""),
+                # The checkout's own commit, or none if the files copied
+                # below differ from it: the page uses this service's
+                # breakdowns only under a headline from the same commit
+                "GIT_SHA": commit or "",
                 **DEPLOY_SETTINGS,
             }
         )
@@ -113,6 +147,7 @@ def build_image() -> modal.Image:
         .add_local_dir(
             str(root / "src" / "uk_budget_data"),
             "/root/uk_budget_data",
+            # runtime_identity.IMAGE_LEAVES_OUT must name the same folders
             ignore=["**/__pycache__/**"],
         )
     )
@@ -187,40 +222,25 @@ class Household:
 
         started = time.perf_counter()
         result = hi.run_scenario(*job)
-        # The run's own time and container, for fan_out's log line; fan_out
-        # takes them off, so the answer is run_scenario's alone.
-        return {
-            "result": result,
-            "seconds": time.perf_counter() - started,
-            "container": os.environ.get("MODAL_TASK_ID", ""),
-        }
+        # The run's own time and container, for fan_out's log line, and the
+        # container's build, which fan_out checks; it takes them all off, so
+        # the answer is run_scenario's alone.
+        return run_answer(
+            result,
+            time.perf_counter() - started,
+            os.environ.get("MODAL_TASK_ID", ""),
+            container_build(),
+        )
 
 
 def fan_out(jobs: list) -> list:
-    """Each job in its own ``Household`` container, at once, in order."""
-    started = time.perf_counter()
-    # A container still on the previous deploy answers with the bare
-    # result: take either, so a deploy's change-over drops no request.
-    answers = [
-        (
-            a
-            if isinstance(a, dict) and "seconds" in a and "result" in a
-            else {
-                "result": a,
-                "seconds": float("nan"),
-                "container": "previous",
-            }
-        )
-        for a in Household().run.map(jobs)
-    ]
-    runs = ", ".join(f"{a['seconds']:.1f}" for a in answers)
-    containers = len({a["container"] for a in answers})
-    print(
-        f"household fan-out: {len(jobs)} runs in "
-        f"{time.perf_counter() - started:.1f} s on {containers} containers "
-        f"(each run, s: {runs})"
-    )
-    return [a["result"] for a in answers]
+    """Each job in its own ``Household`` container, at once, in order.
+
+    Raises:
+        OtherBuildError: when a container of another build (a deploy's
+            change-over) answered any run; the page then asks Cloud Run.
+    """
+    return fan_out_answers(Household().run.map, jobs)
 
 
 @app.cls(

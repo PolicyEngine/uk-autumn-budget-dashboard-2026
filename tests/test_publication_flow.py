@@ -128,6 +128,37 @@ def test_each_measure_gets_its_own_receipted_artifact(world):
     )
 
 
+@pytest.mark.parametrize(
+    "description", ["", "Alpha, as published.", "Zero-rated £\nsecond line"]
+)
+def test_generated_receipts_carry_the_registry_metadata(
+    world, monkeypatch, description
+):
+    # The page names and describes each measure from its receipt (#104),
+    # and staging copies the description and personal mapping from it, so a
+    # generator that stops writing them fails nothing downstream: the
+    # catalogue just shows its placeholder. Pin them where receipts are made.
+    personal = {"key": "impact_alpha"}
+    monkeypatch.setitem(
+        generate_module.PUBLIC_PERSONAL_SERIES, "alpha", personal
+    )
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "beta": {2027: 3.0, 2028: 4.0},
+    }
+    report = run_generate(
+        world,
+        [reform("alpha", description=description), reform("beta", 0.22)],
+        values,
+    )
+    alpha, beta = (read_receipt(r.path) for r in report.written)
+    assert alpha["dashboard"]["name"] == "Alpha"
+    assert alpha["dashboard"]["description"] == description
+    assert alpha["dashboard"]["personal"] == personal
+    assert beta["dashboard"]["description"] == ""
+    assert "personal" not in beta["dashboard"]
+
+
 def test_a_single_measure_run_leaves_the_others_untouched(world):
     values = {
         "alpha": {2027: -1.0, 2028: -2.0},

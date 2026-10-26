@@ -40,6 +40,38 @@ class RecordingCalculator:
         return {"years": {}, "policies": {}, "totals": {"cumulative": 0}}
 
 
+class ControlledCalculator:
+    """Hold each real worker until its test releases it explicitly."""
+
+    def __init__(self, incomes):
+        self.started = {income: threading.Event() for income in incomes}
+        self.release = {income: threading.Event() for income in incomes}
+        self.runs = []
+
+    def calculate(self, household):
+        income = household.employment_income
+        started = time.perf_counter()
+        self.started[income].set()
+        if not self.release[income].wait(timeout=10):
+            raise RuntimeError("The test did not release its calculation")
+        self.runs.append((income, started, time.perf_counter()))
+        return {"years": {}, "policies": {}, "totals": {"cumulative": 0}}
+
+    def release_all(self):
+        for event in self.release.values():
+            event.set()
+
+
+async def wait_until(predicate):
+    """Wait for an observed state, with a generous failure bound."""
+
+    async def poll():
+        while not predicate():
+            await asyncio.sleep(0.001)
+
+    await asyncio.wait_for(poll(), timeout=5)
+
+
 def client():
     return httpx.AsyncClient(
         transport=httpx.ASGITransport(app=api.app), base_url="http://test"
@@ -53,26 +85,28 @@ def post(session, income):
 
 
 def test_version_answers_while_a_household_is_calculated(monkeypatch):
-    calculator = RecordingCalculator()
+    calculator = ControlledCalculator([30_000])
     monkeypatch.setattr(api, "get_calculator", lambda: calculator)
 
     async def run():
         async with client() as session:
             household = asyncio.create_task(post(session, 30_000))
-            # Wait until the calculation has really started.
-            loop = asyncio.get_running_loop()
-            assert await loop.run_in_executor(None, calculator.started.wait, 5)
-            started = time.perf_counter()
-            version = await session.get("/api/version")
-            waited = time.perf_counter() - started
-            running = not household.done()
-            return version, waited, running, await household
+            try:
+                await wait_until(calculator.started[30_000].is_set)
+                version = await asyncio.wait_for(
+                    session.get("/api/version"), timeout=5
+                )
+                # The calculation remains held until the independent route answers.
+                assert not household.done()
+                assert not calculator.runs
+                calculator.release[30_000].set()
+                return version, await household
+            finally:
+                calculator.release_all()
+                await asyncio.gather(household, return_exceptions=True)
 
-    version, waited, running, response = asyncio.run(run())
-    assert version.status_code == 200 and response.status_code == 200
-    # The version came back while the calculation was still running.
-    assert running
-    assert waited < HOLD_SECONDS
+    version, response = asyncio.run(run())
+    assert version.status_code == response.status_code == 200
 
 
 def test_calculations_run_one_at_a_time_in_arrival_order(monkeypatch):
@@ -116,10 +150,9 @@ def timing(response):
 def test_the_household_route_reports_its_time_and_memory(
     peak, monkeypatch, tmp_path
 ):
-    """Server-Timing carries the calculation's own time, its wait for the
-    one before, and, where the container's cgroup reports it, the peak
-    memory. The second of two requests sent together waits for the first."""
-    calculator = RecordingCalculator()
+    """The real limiter queues the second request; reported times cover
+    the observed calculation and wait, independent of host scheduling."""
+    calculator = ControlledCalculator([10_000, 20_000])
     monkeypatch.setattr(api, "get_calculator", lambda: calculator)
     path = tmp_path / "memory.peak"
     if peak is not None:
@@ -127,22 +160,63 @@ def test_the_household_route_reports_its_time_and_memory(
     monkeypatch.setattr(api, "MEMORY_PEAK_FILES", (path,))
 
     async def run():
+        elapsed = {}
         async with client() as session:
-            first = asyncio.create_task(post(session, 10_000))
-            await asyncio.sleep(0.02)
-            second = asyncio.create_task(post(session, 20_000))
-            return await first, await second
 
-    first, second = asyncio.run(run())
+            async def measured(income):
+                started = time.perf_counter()
+                response = await post(session, income)
+                elapsed[income] = (time.perf_counter() - started) * 1000
+                return response
+
+            tasks = []
+            try:
+                first = asyncio.create_task(measured(10_000))
+                tasks.append(first)
+                await wait_until(calculator.started[10_000].is_set)
+                second = asyncio.create_task(measured(20_000))
+                tasks.append(second)
+                # Observe the actual limiter, rather than assuming a delay queued it.
+                await wait_until(
+                    lambda: api.CALCULATIONS.statistics().tasks_waiting == 1
+                )
+                assert not calculator.started[20_000].is_set()
+                queued_at = time.perf_counter()
+                version = await asyncio.wait_for(
+                    session.get("/api/version"), timeout=5
+                )
+                assert version.status_code == 200
+                assert not first.done() and not second.done()
+                minimum_queue_ms = (time.perf_counter() - queued_at) * 1000
+                calculator.release[10_000].set()
+                first_response = await first
+                await wait_until(calculator.started[20_000].is_set)
+                calculator.release[20_000].set()
+                second_response = await second
+                return (
+                    first_response,
+                    second_response,
+                    elapsed,
+                    minimum_queue_ms,
+                )
+            finally:
+                calculator.release_all()
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+    first, second, elapsed, minimum_queue_ms = asyncio.run(run())
     assert first.status_code == second.status_code == 200
-    held = HOLD_SECONDS * 1000
-    for response in (first, second):
+    assert [income for income, _, _ in calculator.runs] == [10_000, 20_000]
+    assert calculator.runs[1][1] >= calculator.runs[0][2]
+    for income, started, ended in calculator.runs:
+        response = first if income == 10_000 else second
         entries = timing(response)
-        assert entries["calculate"] >= held * 0.9
+        # Header durations are rounded to whole milliseconds. Their sum cannot
+        # exceed the complete request; calculation covers the held worker interval.
+        assert entries["calculate"] + 1 >= (ended - started) * 1000
+        assert entries["queue"] >= 0
+        assert entries["calculate"] + entries["queue"] <= elapsed[income] + 1
         if peak is None:
             assert "memory" not in entries
         else:
             assert entries["memory"] == 'desc="peak 3072 MiB"'
-    # The second request queued behind the first's calculation.
-    assert timing(first)["queue"] < held / 2
-    assert timing(second)["queue"] >= held * 0.5
+    assert timing(second)["queue"] + 1 >= minimum_queue_ms

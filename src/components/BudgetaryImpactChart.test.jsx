@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
+import fc from "fast-check";
 import { render, screen } from "@testing-library/react";
 import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
 
 // Recharts ResponsiveContainer measures the parent in jsdom and refuses
 // to render its children when width / height resolve to zero. Replace it
@@ -18,53 +20,32 @@ vi.mock("recharts", async () => {
   };
 });
 
-const mockData = [
-  {
-    year: 2026,
-    "Threshold freeze to 2031-32": 0,
-    "Business Asset Disposal Relief restricted": 0.4,
-    "Fuel duty rises deferred": -1.2,
-    "Employer NI relief for under-25s": -6.2,
-    "Warm Home Discount top-up": -0.5,
-    netImpact: -7.5,
-  },
-  {
-    year: 2027,
-    "Threshold freeze to 2031-32": 4.2,
-    "Business Asset Disposal Relief restricted": 0.4,
-    "Fuel duty rises deferred": -0.5,
-    "Employer NI relief for under-25s": -6.3,
-    "Warm Home Discount top-up": 0,
-    netImpact: -2.2,
-  },
-];
+const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
+const mockData = [{
+  year: YEAR,
+  ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, 2])),
+  netImpact: 4,
+}];
 
 describe("BudgetaryImpactChart", () => {
+  it("shows no figures without a verified catalogue", () => {
+    fc.assert(fc.property(fc.integer({ min: -100000, max: 100000 }), (value) => {
+      const view = render(<BudgetaryImpactChart data={[{ year: YEAR, netImpact: value }]} />);
+      expect(screen.getByRole("status")).toHaveTextContent("Revenue figures are unavailable");
+      expect(screen.queryByTestId("recharts-responsive-container")).not.toBeInTheDocument();
+      view.unmount();
+    }), { numRuns: 20 });
+  });
   it("renders a recharts ResponsiveContainer", () => {
-    render(<BudgetaryImpactChart data={mockData} />);
+    render(<MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={mockData} /></MeasureCatalogueProvider>);
     expect(
       screen.getByTestId("recharts-responsive-container"),
     ).toBeInTheDocument();
   });
 
-  it("orders each group by size, largest first, raisers before costs", () => {
-    const order = measureOrder(mockData).filter((name) => name in mockData[0]);
-    expect(order).toEqual([
-      "Threshold freeze to 2031-32",
-      "Business Asset Disposal Relief restricted",
-      "Employer NI relief for under-25s",
-      "Fuel duty rises deferred",
-      "Warm Home Discount top-up",
-    ]);
-  });
-
-  it("shades each group darkest for its largest measure", () => {
-    const luminance = (hex) => {
-      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    };
-    const costs = ["Employer NI relief for under-25s", "Fuel duty rises deferred", "Warm Home Discount top-up"];
-    const levels = costs.map((name) => luminance(POLICY_COLORS[name]));
-    expect(levels).toEqual([...levels].sort((a, b) => a - b));
+  it("orders raisers before costs, each group by size (the catalogue's groups)", () => {
+    const keyOf = (id) => catalogue.byId.get(id).seriesKey;
+    const order = measureOrder(mockData, catalogue);
+    expect(order).toEqual([keyOf(BETA), keyOf(ALPHA)]);
   });
 });

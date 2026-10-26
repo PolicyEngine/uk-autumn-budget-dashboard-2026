@@ -372,6 +372,8 @@ class DataPipeline:
 
         for key, filename in file_mapping.items():
             if key in data and len(data[key]) > 0:
+                # Metadata belongs to the manifest and its bound receipts.
+                # Keep the numeric tables in the canonical artifact schema.
                 save_csv(data[key], output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
