@@ -41,7 +41,7 @@ describe("metricByYear", () => {
 });
 
 describe("SummaryMetricChart", () => {
-  it("asks for one policy or all when the selection has no single run, never adding up", () => {
+  it("draws each measure's own series when the selection has no single run, never adding up", () => {
     render(
       <SummaryMetricChart
         metric={SUMMARY_METRICS.poverty}
@@ -51,7 +51,10 @@ describe("SummaryMetricChart", () => {
         selectedYear={2027}
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Choose one policy or all policies");
+    // No blocking message: one series per measure, with its key
+    expect(screen.queryByText(/Choose one policy or all policies/)).toBeNull();
+    expect(document.querySelectorAll(".summary-metric-key li")).toHaveLength(2);
+    expect(document.querySelector(".chart-description")).toHaveTextContent(/each selected measure on its own/i);
   });
 
   it("says a run is not yet published rather than drawing zeros", () => {
