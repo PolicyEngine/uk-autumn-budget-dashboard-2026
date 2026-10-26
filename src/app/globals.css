@@ -583,60 +583,92 @@ body {
   border: 0;
 }
 
-/* The policy selector on the teal band: translucent white outline, white
-   text, a white count badge. Its list stays white. */
-.title-row .policy-selector-toggle {
-  height: 40px;
+/* The band's two controls (year, measures; YearSlider.jsx and
+   PolicySelector.jsx): the card Options pill's shape (a full pill, a
+   1px border, an icon, the value, a chevron) on the teal band, as a
+   translucent white pill with white text. A small label sits over the
+   value. Their lists stay white. */
+.title-row .band-control {
+  height: 44px;
   min-width: 0;
-  padding: 0 14px 0 6px;
+  padding: 0 14px 0 12px;
   gap: 8px;
   color: var(--band-ink);
-  background: transparent;
+  background: var(--band-ink-hover);
   border: 1px solid var(--band-ink-border);
   border-radius: 999px;
 }
 
-.title-row .policy-selector-toggle:disabled {
+.title-row .band-control:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.title-row .policy-selector-toggle:hover:not(:disabled) {
-  background: var(--band-ink-hover);
+.title-row .band-control:hover:not(:disabled) {
+  background: var(--band-ink-active);
   border-color: var(--band-ink-border-hover);
 }
 
-.title-row .policy-selector-toggle:active:not(:disabled),
-.title-row .policy-selector-toggle[aria-expanded="true"] {
+.title-row .band-control:active:not(:disabled),
+.title-row .band-control[aria-expanded="true"],
+.title-row .band-control[aria-pressed="true"] {
   background: var(--band-ink-active);
+  border-color: var(--band-ink);
 }
 
-.title-row .policy-selector-toggle:focus-visible {
+.title-row .band-control:focus-visible {
   outline: 2px solid var(--band-ink);
   outline-offset: 2px;
+  box-shadow: none;
 }
 
-.title-row .policy-selector-label,
-.title-row .policy-selector-label-short,
-.title-row .policy-selector-icon {
+.band-control-icon {
+  flex: none;
   color: var(--band-ink);
 }
 
-.title-row .policy-selector-count {
-  min-width: 24px;
-  height: 24px;
-  font-size: var(--fs-caption);
-  background: var(--band-ink);
-  color: var(--band-teal);
-  font-weight: 600;
+/* The label over the value, left-aligned */
+.band-control-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.15;
+  text-align: left;
 }
 
-.title-row .policy-selector-label {
+/* White, not muted: muted white on the band is under 4.5:1 at this size */
+.band-control-label {
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--band-ink);
+}
+
+.band-control-value {
   font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--band-ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.title-row .policy-selector-icon {
-  font-size: 0.625rem;
+/* The count is part of the value's text, not a badge */
+.title-row .band-control .policy-selector-count {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  border-radius: 0;
+}
+
+.title-row .band-control .policy-selector-icon {
+  color: var(--band-ink);
+  margin-left: 2px;
 }
 
 /* Standfirst: the full content width */
@@ -1483,37 +1515,24 @@ body {
     font-size: var(--fs-card-title);
   }
 
-  .band-year .year-picker-toggle {
-    gap: 4px;
-    padding: 0 10px 0 4px;
-  }
-
-  .band-year .year-picker-badge {
-    padding: 0 7px;
-  }
-
   /* The pills' lists span the band */
   .band-policy .policy-selector,
   .band-year .year-picker {
     position: static;
   }
 
-  .title-row .policy-selector-toggle {
+  /* Compact on a phone: icon, value and chevron; no label, no unit */
+  .title-row .band-control {
     width: auto;
     min-width: 0;
     height: 40px;
     gap: 6px;
-    padding: 0 12px 0 5px;
+    padding: 0 12px 0 10px;
   }
 
-  .title-row .policy-selector-label {
+  .band-control-label,
+  .band-control-unit {
     display: none;
-  }
-
-  .title-row .policy-selector-label-short {
-    display: inline;
-    font-size: var(--fs-caption);
-    font-weight: 500;
   }
 
   .main-content .recharts-default-legend {

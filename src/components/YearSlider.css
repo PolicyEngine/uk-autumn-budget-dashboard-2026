@@ -9,12 +9,6 @@
   min-width: 0;
 }
 
-/* The year in the badge: the policy pill's count badge, widened */
-.year-picker-badge {
-  padding: 0 10px;
-  font-variant-numeric: tabular-nums;
-}
-
 .year-picker-dropdown {
   position: absolute;
   top: calc(100% + 8px);
