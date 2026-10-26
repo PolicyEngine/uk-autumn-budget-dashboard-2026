@@ -58,10 +58,13 @@
   }
 }
 
-/* The "About" rail button (EdgeAboutTab): in the view tabs bar's left
-   margin, flush to the window's edge, the bar's own height and surface,
-   with a crisp rule on its right; EdgeAboutTab sets its top and height
-   from the bar. Over the bar (1090), under the title band (1100) */
+/* The "About" rail button (EdgeAboutTab): in the left margin of the view
+   tabs bar and any sub-tab band, flush to the window's edge, their full
+   height (EdgeAboutTab sets its top and height), in the title band's deep
+   teal with white marks, so it reads as a control apart from the rows.
+   The same on every view: the mark and the panel icon (stacked when two
+   rows tall, side by side when one), and "About" under them on a wide
+   screen. Over the bar (1090), under the title band (1100) */
 .edge-about {
   position: fixed;
   left: 0;
@@ -71,32 +74,41 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 48px;
+  gap: 4px;
+  width: 64px;
   height: var(--view-tabs-height);
   padding: 0;
-  /* A light teal block, apart from the white rows; teal-700 on teal-100
-     is 4.9:1, and the icon stays over 3:1 on the hover tint */
-  color: var(--pe-teal-700);
-  background: var(--pe-teal-100);
+  color: var(--band-ink);
+  background: var(--band-teal);
   border: 0;
-  border-right: 1px solid var(--pe-teal-200);
+  border-right: 1px solid color-mix(in srgb, var(--band-teal) 70%, var(--pe-gray-900));
   cursor: pointer;
-  transition: background-color var(--landing-motion) ease, color var(--landing-motion) ease;
+  transition: background-color var(--landing-motion) ease, box-shadow var(--landing-motion) ease;
 }
 
 .edge-about:hover {
-  background: color-mix(in srgb, var(--pe-teal-200) 70%, var(--pe-teal-100));
-}
-
-/* Too short for both (a view with no sub-tabs, stuck): the mark alone */
-.edge-about[data-short="true"] .edge-about-icon {
-  display: none;
+  background: color-mix(in srgb, var(--band-teal) 86%, var(--band-ink));
+  box-shadow: 2px 0 8px var(--shadow-soft);
 }
 
 .edge-about:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: -2px;
+  outline: 2px solid var(--band-ink);
+  outline-offset: -5px;
+}
+
+.edge-about-icons {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.edge-about[data-short="true"] .edge-about-icons {
+  flex-direction: row;
+}
+
+.edge-about[data-short="true"] {
+  gap: 2px;
 }
 
 .edge-about-mark {
@@ -107,12 +119,25 @@
 
 .edge-about-icon {
   flex: none;
+  transition: transform var(--landing-motion) ease;
+}
+
+.edge-about:hover .edge-about-icon {
+  transform: translateX(2px);
+}
+
+.edge-about-label {
+  font-family: var(--pe-font-family);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 /* The bar and band make room for it where their margin is narrower */
 .app:has(.edge-about) .view-tabs-bar,
 .app:has(.edge-about) .sub-tabs-band {
-  padding-left: max(52px, calc((100vw - 1120px) / 2));
+  padding-left: max(72px, calc((100vw - 1120px) / 2));
 }
 
 /* Hidden while the overview drawer is open: the drawer's own close
@@ -129,10 +154,10 @@
 @keyframes edge-about-cue {
   0%,
   100% {
-    background: var(--pe-teal-100);
+    background: var(--band-teal);
   }
   50% {
-    background: var(--pe-teal-200);
+    background: color-mix(in srgb, var(--band-teal) 75%, var(--band-ink));
   }
 }
 
@@ -142,6 +167,10 @@
     width: 40px;
   }
 
+  .edge-about-label {
+    display: none;
+  }
+
   .app:has(.edge-about) .view-tabs-bar,
   .app:has(.edge-about) .sub-tabs-band {
     padding-left: 44px;
@@ -149,8 +178,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edge-about {
+  .edge-about,
+  .edge-about-icon {
     transition: none;
+  }
+
+  .edge-about:hover .edge-about-icon {
+    transform: none;
   }
 
   .edge-about.is-cue {
