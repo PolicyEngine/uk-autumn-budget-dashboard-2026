@@ -91,8 +91,8 @@ DEPLOY_SETTINGS = {
 }
 
 from uk_budget_data.household_runs import (  # noqa: E402
-    OtherBuildError,
-    kept_results,
+    container_build,
+    fan_out_answers,
     run_answer,
 )
 from uk_budget_data.household_warm import warm_target  # noqa: E402
@@ -229,7 +229,7 @@ class Household:
             result,
             time.perf_counter() - started,
             os.environ.get("MODAL_TASK_ID", ""),
-            os.environ.get("GIT_SHA") or None,
+            container_build(),
         )
 
 
@@ -240,20 +240,7 @@ def fan_out(jobs: list) -> list:
         OtherBuildError: when a container of another build (a deploy's
             change-over) answered any run; the page then asks Cloud Run.
     """
-    started = time.perf_counter()
-    try:
-        results, detail = kept_results(
-            list(Household().run.map(jobs)),
-            os.environ.get("GIT_SHA") or None,
-        )
-    except OtherBuildError as error:
-        print(f"household fan-out refused: {error}")
-        raise
-    print(
-        f"household fan-out: {len(jobs)} runs in "
-        f"{time.perf_counter() - started:.1f} s {detail}"
-    )
-    return results
+    return fan_out_answers(Household().run.map, jobs)
 
 
 @app.cls(
