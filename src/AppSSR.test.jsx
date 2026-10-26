@@ -11,7 +11,7 @@ it("prerenders the shell without a browser or any Budget figures", () => {
     expect(html).toContain(label);
   }
   // The landing page, whole, with no view mounted under it
-  expect(html).toContain("What Autumn Budget 2026 means");
+  expect(html).toContain("Autumn Budget 2026: fiscal and distributional analysis");
   expect(html).toContain('class="landing-backdrop"');
   expect(html).not.toContain('role="tabpanel"');
   expect(html).not.toContain('id="revenue"');

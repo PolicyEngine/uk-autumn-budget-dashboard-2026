@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { VIEWS, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
+import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
 beforeEach(() => {
@@ -28,7 +28,10 @@ const tabs = () => within(viewList()).getAllByRole("tab");
 const subList = () => screen.getByRole("tablist", { name: "Population impact sections" });
 const subTabs = () => within(subList()).getAllByRole("tab");
 const band = (container) => container.querySelector(".title-row");
-const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
+// A pill is always in the band (never hidden or inert); "shown" is whether
+// it applies to the view: not faded, its button not aria-disabled
+const visible = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert") && !pill.hasAttribute("aria-hidden");
+const shown = (pill) => visible(pill) && !pill.classList.contains("is-inactive") && !pill.querySelector('.band-control[aria-disabled="true"]');
 
 describe("the view tabs", () => {
   it("are five tabs under the band, in order, with no view pill in the band", async () => {
@@ -77,8 +80,34 @@ describe("the view tabs", () => {
       fireEvent.click(tabs()[index]);
       const year = band(container).querySelector(".band-year");
       const policy = band(container).querySelector(".band-policy");
-      // Both stay in the band, so a hidden one keeps its place
+      // Both stay in the band, visible, so the band never moves; one that
+      // does not apply is faded and says why
+      expect([visible(year), visible(policy)]).toEqual([true, true]);
       expect([shown(year), shown(policy)]).toEqual(expected[view.value]);
+      expect(container.querySelector(".app")).not.toHaveAttribute("data-band");
+      if (!expected[view.value][0]) {
+        expect(year.querySelector(".band-control")).toHaveAttribute("aria-label", expect.stringContaining(YEAR_INACTIVE));
+        fireEvent.click(year.querySelector(".band-control"));
+        expect(year.querySelector('[role="listbox"]')).toBeNull();
+        // No visible tip: the reason is in the name only
+        fireEvent.mouseEnter(year.querySelector(".band-control"));
+        fireEvent.pointerEnter(year.querySelector(".band-control"));
+        fireEvent.focus(year.querySelector(".band-control"));
+        fireEvent.mouseOver(year.querySelector(".band-control"));
+        fireEvent.focusIn(year.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
+      }
+      if (!expected[view.value][1]) {
+        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", `Select policies: ${POLICIES_INACTIVE}`);
+        fireEvent.click(policy.querySelector(".band-control"));
+        expect(policy.querySelector(".policy-selector-dropdown")).toBeNull();
+        fireEvent.mouseEnter(policy.querySelector(".band-control"));
+        fireEvent.pointerEnter(policy.querySelector(".band-control"));
+        fireEvent.focus(policy.querySelector(".band-control"));
+        fireEvent.mouseOver(policy.querySelector(".band-control"));
+        fireEvent.focusIn(policy.querySelector(".band-control"));
+        expect(document.querySelector(".tip")).toBeNull();
+      }
     });
   });
 

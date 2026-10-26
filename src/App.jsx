@@ -29,7 +29,8 @@ import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton from "./components/HomeButton";
+import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
+import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
@@ -48,8 +49,8 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
-// the band's pills apply to a view; the others keep their place in the band
-// but are hidden. Pre-measures forecast is current law (incomes and poverty
+// the band's pills apply to a view; the others stay in the band, faded and
+// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
@@ -66,6 +67,11 @@ export const VIEWS = [
 ];
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
+
+// The accessible names' reason on a band pill that does not change the
+// view shown (no visible tip)
+export const YEAR_INACTIVE = "The year doesn't change this tab";
+export const POLICIES_INACTIVE = "Policy choices don't change this tab";
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
@@ -219,6 +225,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
+  // The overview drawer, opened by the "About" tab on the window's edge
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const aboutTabRef = useRef(null);
+  const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
@@ -722,7 +732,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     <div
       className="app"
       ref={appRef}
-      data-band={yearShown ? undefined : "compact"}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
@@ -741,29 +750,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Household impact. A pill that does
-              not apply keeps its place but is hidden, so the band does not
-              move. */}
-          <div
-            className={`band-year ${yearShown ? "" : "is-hidden"}`}
-            aria-hidden={yearShown ? undefined : "true"}
-            inert={!yearShown}
-          >
+              not apply stays in its place, faded, and does not open; its
+              reason is in its accessible name only. Both are on every view, so the band never moves. */}
+          <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
               selectedYear={distributionalYear}
               onYearChange={setDistributionalYear}
+              inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
             />
           </div>
-          <div
-            className={`band-policy ${policiesShown ? "" : "is-hidden"}`}
-            aria-hidden={policiesShown ? undefined : "true"}
-            inert={!policiesShown}
-          >
+          <div className={`band-policy${policiesShown ? "" : " is-inactive"}`}>
             <PolicySelector
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
+              inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
             />
           </div>
         </div>
@@ -879,6 +882,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
+        {/* "About" on the window's edge, on every view but the landing
+            page: it opens the overview drawer */}
+        {!landing && (
+          <>
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+            <OverviewDrawer
+              open={overviewOpen}
+              onClose={closeOverview}
+              onOpen={handleTabChange}
+              returnFocus={aboutTabRef}
+              provisional={provisional && (
+                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
+              )}
+            />
+          </>
+        )}
         <ReplicationLine />
       </main>
     </div>

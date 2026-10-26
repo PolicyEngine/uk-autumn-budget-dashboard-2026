@@ -19,12 +19,11 @@
   border: 0;
   border-radius: 4px;
   cursor: pointer;
-  transition: opacity var(--landing-motion) ease, transform var(--landing-motion) ease;
+  transition: opacity var(--landing-motion) ease;
 }
 
 .title-row .home-button:hover {
-  opacity: 0.85;
-  transform: scale(1.06);
+  opacity: 0.8;
 }
 
 .title-row .home-button[aria-current="page"] {
@@ -45,7 +44,7 @@
   object-fit: contain;
 }
 
-/* Its tip, as a mini card above the band */
+/* The edge tab's tip, as a mini card */
 .tip:has(> .home-tip) {
   z-index: 1200;
   max-width: 260px;
@@ -91,7 +90,110 @@
     transition: none;
   }
 
-  .title-row .home-button:hover {
+}
+
+/* The "About" rail button (EdgeAboutTab): in the view tabs bar's left
+   margin, flush to the window's edge, the bar's own height and surface,
+   with a crisp rule on its right; EdgeAboutTab sets its top and height
+   from the bar. Over the bar (1090), under the title band (1100) */
+.edge-about {
+  position: fixed;
+  left: 0;
+  top: var(--title-row-height);
+  z-index: 1095;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 48px;
+  height: var(--view-tabs-height);
+  padding: 0;
+  color: var(--pe-gray-500);
+  background: var(--c-surface);
+  border: 0;
+  border-right: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: background-color var(--landing-motion) ease, color var(--landing-motion) ease,
+    transform var(--motion-slide) ease;
+}
+
+.edge-about:hover,
+.edge-about[aria-expanded="true"] {
+  color: var(--c-gain-text);
+  background: var(--pe-teal-50);
+}
+
+.edge-about:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+}
+
+.edge-about-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.edge-about-icon {
+  flex: none;
+}
+
+/* The bar makes room for it where its margin is narrower than it */
+.app:has(.edge-about) .view-tabs-bar {
+  padding-left: max(52px, calc((100vw - 1120px) / 2));
+}
+
+/* While the overview drawer is open the tab rides on its edge, above it,
+   so it closes it too (OverviewDrawer.css: 380px wide) */
+.edge-about[aria-expanded="true"] {
+  z-index: 1310;
+  transform: translateX(380px);
+}
+
+/* On a phone the drawer takes the screen; its close button closes it */
+@media (max-width: 600px) {
+  .edge-about[aria-expanded="true"] {
+    z-index: 1095;
     transform: none;
+  }
+}
+
+/* Once a session: two soft pulses of tint, so it is seen */
+.edge-about.is-cue {
+  animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
+}
+
+@keyframes edge-about-cue {
+  0%,
+  100% {
+    background: var(--c-surface);
+  }
+  50% {
+    background: var(--pe-teal-100);
+  }
+}
+
+/* On a narrow screen: the mark alone */
+@media (max-width: 768px) {
+  .edge-about {
+    width: 40px;
+  }
+
+  .edge-about-icon {
+    display: none;
+  }
+
+  .app:has(.edge-about) .view-tabs-bar {
+    padding-left: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-about {
+    transition: none;
+  }
+
+  .edge-about.is-cue {
+    animation: none;
   }
 }
