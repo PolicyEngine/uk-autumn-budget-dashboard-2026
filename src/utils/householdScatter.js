@@ -151,8 +151,8 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
   }
   if (choice.kind === "no-package") {
     return notice(
-      "Household results are not published for this combination of measures.",
-      "They are published for each measure on its own, and for all measures together once the package's combined run is published. Groups of households cannot be added up across measures.",
+      "Household results for all the measures together are not published yet.",
+      "Select one measure to see its households. Groups of households are published for each measure on its own and cannot be added up across measures.",
     );
   }
   if (!reforms.includes(choice.reform)) {
