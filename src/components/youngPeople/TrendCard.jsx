@@ -66,11 +66,15 @@ const FOCUS_LABEL = SERIES.find((series) => series.key === FOCUS).label;
 // The focus group in the brand colour, all ages as the reference, the rest
 // as faint context
 const FOCUS_COLOUR = CHART_COLOURS.gain;
-const CONTEXT_COLOUR = CHART_COLOURS.axis;
-const CONTEXT_HOVER = CHART_COLOURS.tick;
+// The other age groups in the focus view: each its own muted colour and
+// dash, so a line matches its chip; faint until hovered
+const CONTEXT_DASH = { "0-15": "2 3", "25-34": undefined, "35-49": "8 3", "50-64": "1 2", "65+": "6 2 1 2" };
+const CONTEXT_OPACITY = 0.45;
+// The invisible stroke over each line that takes the hover, so a thin line
+// is easy to point at
+const HIT_WIDTH = 12;
 const SELECTED_FILL = CHART_COLOURS.highlightBand;
-// The focus view's one chip for every other age group
-const OTHERS = "others";
+
 
 const COMPARE_OPTIONS = [
   { value: "focus", label: `${FOCUS_LABEL} vs all ages`, summary: `${FOCUS_LABEL} vs all` },
@@ -337,14 +341,15 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const groupsView = compare === "groups" && view === "lines";
   // The focus view: 16 to 24, all ages and the other groups (one chip for
   // all of them), every one at first
-  const [shownFocus, setShownFocus] = useState([FOCUS, ALL_BAND, OTHERS]);
+  // Every group on at first: 16 to 24 and all ages strong, the others faint
+  const [shownFocus, setShownFocus] = useState(() => SERIES.map((series) => series.key));
   const focusView = compare === "focus" && view === "lines";
   /** Whether a line is drawn in the view shown. */
   const isShown = (key) =>
     groupsView
       ? shownGroups.includes(key)
       : focusView
-        ? shownFocus.includes(key === FOCUS || key === ALL_BAND ? key : OTHERS)
+        ? shownFocus.includes(key)
         : true;
   const cumulative = years === "total";
   const byMeasure = view === "measures";
@@ -461,10 +466,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         key: series.key,
         label: series.label,
         short: series.short,
-        colour: hovered === series.key || hovered === OTHERS ? CONTEXT_HOVER : CONTEXT_COLOUR,
-        hoverColour: CONTEXT_HOVER,
-        textColour: CHART_COLOURS.tick,
-        width: hovered === series.key || hovered === OTHERS ? 2.25 : 1.25,
+        colour: series.color,
+        dash: CONTEXT_DASH[series.key],
+        context: true,
+        width: hovered === series.key ? 2.5 : 1.5,
       };
     });
   })();
@@ -634,10 +639,30 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   stroke={line.colour}
                   strokeWidth={line.width}
                   // All age groups: a hovered chip or line brings its line forward
-                  strokeOpacity={groupsView && hovered && hovered !== line.key ? 0.22 : 1}
+                  strokeOpacity={
+                    groupsView && hovered && hovered !== line.key ? 0.22 : line.context && hovered !== line.key ? CONTEXT_OPACITY : 1
+                  }
                   strokeDasharray={line.dash}
                   dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
                   activeDot={line.strong ? { r: 5 } : false}
+                  isAnimationActive={false}
+                  onMouseEnter={() => setHovered(line.key)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              ))}
+            {/* A wide invisible stroke over each line takes the hover */}
+            {!byMeasure &&
+              ordered.filter((line) => isShown(line.key)).map((line) => (
+                <Line
+                  key={`hit-${line.key}`}
+                  type="monotoneX"
+                  dataKey={line.key}
+                  stroke="transparent"
+                  strokeWidth={HIT_WIDTH}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                  tooltipType="none"
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
                   onMouseLeave={() => setHovered(null)}
@@ -672,11 +697,13 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         )}
         {focusView && (
           <SeriesToggle
+            // 16 to 24 and all ages first, then each other group in its
+            // line's own colour and dash
             series={[
-              { key: FOCUS, label: FOCUS_LABEL, colour: FOCUS_COLOUR },
-              { key: ALL_BAND, label: "All ages", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH },
-              { key: OTHERS, label: "Other age groups", colour: CONTEXT_HOVER },
-            ]}
+              ...lines.filter((line) => line.key === FOCUS),
+              ...lines.filter((line) => line.key === ALL_BAND),
+              ...lines.filter((line) => line.context),
+            ].map((line) => ({ key: line.key, label: line.label, short: line.short, colour: line.colour, dash: line.dash }))}
             shown={shownFocus}
             onChange={setShownFocus}
             onHover={setHovered}

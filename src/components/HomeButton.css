@@ -13,21 +13,30 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   color: var(--band-ink);
-  background: var(--band-ink-hover);
-  border: 1px solid var(--band-ink-border);
-  border-radius: 50%;
+  /* A light tint on the band, brighter than the pills, so it reads */
+  background: var(--band-ink-active);
+  border: 1px solid var(--band-ink-border-hover);
+  border-radius: 10px;
   cursor: pointer;
   transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
 }
 
 .title-row .home-button:hover,
 .title-row .home-button[aria-current="page"] {
-  background: var(--band-ink-active);
-  border-color: var(--band-ink-border-hover);
+  background: color-mix(in srgb, var(--band-ink) 28%, transparent);
+  border-color: var(--band-ink);
+}
+
+/* The square mark, whole and undistorted */
+.home-button-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 .title-row .home-button[aria-current="page"] {
@@ -75,8 +84,13 @@
   }
 
   .title-row .home-button {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .home-button-mark {
+    width: 20px;
+    height: 20px;
   }
 }
 

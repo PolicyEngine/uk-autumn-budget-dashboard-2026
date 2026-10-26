@@ -117,7 +117,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
                             onChange={() => onPolicyToggle(policy.id)}
                           />
                           <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
-                          <span className="policy-name">{shortNameOf(policy)}</span>
+                          <span className="policy-selector-name">{shortNameOf(policy)}</span>
                         </label>
                         {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
                       </div>
