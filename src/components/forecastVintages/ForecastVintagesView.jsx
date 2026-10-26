@@ -165,14 +165,16 @@ function Toggles({ toggles }) {
   return (
     <div className="obr-view-switch is-compact fv-toggles" role="group" aria-label="Chart options">
       {/* Each letter's name, or why it is off, in a tip as the unit
-          switch's are (Tip) */}
+          switch's are (Tip). A disabled toggle takes no focus and its tip is
+          on the page only while shown, so its name carries the reason, as
+          ChartDownloadMenu's does */}
       {toggles.map((t) => (
         <Tip key={t.letter} content={t.disabled ? t.disabledTitle : t.label}>
           <button
             type="button"
             className="obr-view-option"
             aria-pressed={t.on}
-            aria-label={t.label}
+            aria-label={t.disabled ? t.disabledTitle : t.label}
             disabled={t.disabled}
             onClick={t.onToggle}
           >

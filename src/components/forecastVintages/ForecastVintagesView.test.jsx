@@ -218,9 +218,11 @@ describe("the chart", () => {
     fireEvent.click(screen.getByRole("option", { name: PSNB.label }));
     expect(screen.getByRole("heading", { level: 3, name: PSNB.label })).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("variable")).toBe("psnb");
-    expect(option("Annual totals")).toBeDisabled();
-    // Its tip says why; the others' say what they are
-    expect(tipOf(option("Annual totals"))).toBe("Annual totals: this measure is already annual");
+    // A disabled toggle's name says why, for a reader who cannot hover it;
+    // so does its tip. The others' tips say what they are
+    const annual = option("Annual totals: this measure is already annual");
+    expect(annual).toBeDisabled();
+    expect(tipOf(annual)).toBe("Annual totals: this measure is already annual");
     expect(tipOf(option("Earlier forecasts"))).toBe("Earlier forecasts");
     expect(option("Earlier forecasts")).not.toHaveAttribute("title");
     expect(screen.queryByText("Quarterly annualised (×4)")).toBeNull();
