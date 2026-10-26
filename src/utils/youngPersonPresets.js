@@ -74,7 +74,7 @@ export const YOUNG_PERSON_PRESETS = [
     description: "£23,600, renting a room at £600 a month",
     icon: "hardHat",
     measure: "employer_ni_relief_under_25s",
-    tag: "Employer NI relief",
+    tag: "Under-25s employer relief",
     inputs: {
       ...COMMON,
       current_age: 19,

@@ -170,7 +170,7 @@ export function povertyMetric({ basis, housing, group }) {
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
-    // "Change in absolute poverty (BHC), pp": the card's short subtitle
+    // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
     // What the long description adds, for More info
     detail:

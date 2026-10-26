@@ -355,7 +355,7 @@ describe("the personal impact form", () => {
       "Renter, 22",
       "Apprentice",
       "Pensioner",
-      "UC family",
+      "Universal Credit family",
       "Graduate",
       "Commuter",
       "High earner",
