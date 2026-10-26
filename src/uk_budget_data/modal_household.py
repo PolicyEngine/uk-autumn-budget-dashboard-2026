@@ -51,8 +51,8 @@ TIMEOUT_SECONDS = 300
 # requests overlap a little. A ceiling on what a burst can cost.
 MAX_CONTAINERS = 12
 # What the deploy keeps warm, none by default. warm_schedule (below) sets
-# household_warm.warm_target's count within 10 minutes, so this lasts only
-# until its first run.
+# both warm counts from household_warm.warm_target within 10 minutes, so
+# this lasts only until its first run.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
 
