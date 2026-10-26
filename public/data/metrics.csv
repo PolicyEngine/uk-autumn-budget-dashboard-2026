@@ -1,6 +1,6 @@
 reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,98.42037609073074,-0.0011394979197543302,-0.016340256,-0.14241415
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,99.80554074327395,-0.0016117888293413639,-0.0075244904,-0.064223155
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,97.76160308072204,-0.0011228617780771658,-0.016340256,-0.14241415
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,99.2068733578515,-0.0015792860014443631,-0.0075244904,-0.064223155
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,75.65783433281497,-0.0006932331077991361,-0.008694649,-0.073860615
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,75.41798117269984,-0.000744706426640355,-0.0060253143,-0.050893694
 autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2030,75.05695260472586,-0.0008043649483525157,-0.010622978,-0.08690541
@@ -23,8 +23,8 @@ warm_home_discount_top_up,Warm Home Discount top-up,2028,0.0,0.0,0.0,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2029,0.0,0.0,0.0,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2030,0.0,0.0,0.0,0.0
 warm_home_discount_top_up,Warm Home Discount top-up,2031,0.0,0.0,0.0,0.0
-domestic_electricity_zero_vat,Zero VAT on domestic electricity,2026,94.30124084961243,-0.0003069291625990448,0.0,0.0
-domestic_electricity_zero_vat,Zero VAT on domestic electricity,2027,98.55741959032343,-0.0006054590508015761,0.0,0.0
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2026,91.62818440257782,-0.0002903348412327846,0.0,0.0
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2027,95.81289731346307,-0.0005729774617522766,0.0,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2028,0.0,0.0,0.0,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2029,0.0,0.0,0.0,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2030,0.0,0.0,0.0,0.0
