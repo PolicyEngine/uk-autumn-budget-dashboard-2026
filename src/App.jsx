@@ -758,7 +758,7 @@ function App() {
     };
   }, []);
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…" }
+    ? { reason: "Loading published measures…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
