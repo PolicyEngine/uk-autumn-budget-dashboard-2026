@@ -1701,55 +1701,33 @@ body {
    last visible section): 48px above the rule, 24px below the chips. The
    auto top margin keeps it at the bottom of a short page. */
 .replication-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 12px;
   margin: auto 0 0;
   padding: 48px 0 24px;
   font-size: var(--fs-caption);
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--pe-gray-500);
   text-align: center;
 }
 
+.replication-sentence {
+  margin: 0;
+}
+
 .replication-line::before {
   content: "";
-  flex: 0 0 100%;
+  display: block;
   height: 1px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
   background: var(--card-border);
 }
 
-.replication-title {
-  font-weight: 500;
-}
-
-.replication-links {
-  display: contents;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Each link after the label, set off by a middle dot */
-.replication-links li {
-  display: inline-flex;
-  align-items: center;
-}
-
-.replication-links li::before {
-  content: "·";
-  margin-right: 12px;
-  color: var(--pe-gray-400);
-}
-
 /* A plain link with its icon, underlined on hover, a small arrow then */
+/* A link inside the sentence: its icon, its words, an arrow on hover */
 .replication-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  vertical-align: bottom;
   font-weight: 500;
   color: var(--pe-teal-700);
   text-decoration: none;
@@ -1784,17 +1762,6 @@ body {
 .replication-link:focus-visible {
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
-}
-
-/* A phone: the label on its own line, the two links below it */
-@media (max-width: 599px) {
-  .replication-title {
-    flex-basis: 100%;
-  }
-
-  .replication-links li:first-child::before {
-    content: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
