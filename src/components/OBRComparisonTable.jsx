@@ -5,6 +5,7 @@ import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import Disclosure from "./Disclosure";
 import SourceLink from "./SourceLink";
+import { parseCsv } from "../utils/publication/csv";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
 export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
@@ -24,14 +25,15 @@ export function useObrComparisonData(enabled = true) {
     ])
       .then(([obrCsvText, peCsvText]) => {
         // Parse OBR data
-        const obrLines = obrCsvText.trim().split("\n");
-        const obrHeaders = obrLines[0].split(",");
+        // Quoted names may hold commas ("raised by £1,000"): parse, don't split
+        const obrLines = parseCsv(obrCsvText.trim()).filter((row) => row.length > 1);
+        const obrHeaders = obrLines[0];
         const staticIdx = obrHeaders.indexOf("obr_static_value");
         const behaviouralIdx = obrHeaders.indexOf("obr_post_behavioural_value");
 
         const obrData = {};
         for (let i = 1; i < obrLines.length; i++) {
-          const values = obrLines[i].split(",");
+          const values = obrLines[i];
           const reform_id = values[0];
           const year = parseInt(values[2]);
           const key = `${reform_id}_${year}`;
@@ -46,15 +48,15 @@ export function useObrComparisonData(enabled = true) {
         }
 
         // Parse PolicyEngine budgetary impact data
-        const peLines = peCsvText.trim().split("\n");
-        const peHeaders = peLines[0].split(",");
+        const peLines = parseCsv(peCsvText.trim()).filter((row) => row.length > 1);
+        const peHeaders = peLines[0];
         const reformIdIdx = peHeaders.indexOf("reform_id");
         const reformNameIdx = peHeaders.indexOf("reform_name");
         const yearIdx = peHeaders.indexOf("year");
         const valueIdx = peHeaders.indexOf("value");
 
         for (let i = 1; i < peLines.length; i++) {
-          const values = peLines[i].split(",");
+          const values = peLines[i];
           const reform_id = values[reformIdIdx];
           const year = parseInt(values[yearIdx]);
           const pe_value = parseFloat(values[valueIdx]);

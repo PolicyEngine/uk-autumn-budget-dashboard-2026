@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseCsv } from "../utils/publication/csv";
 
 // One fetch of budgetary_impact.csv for every note that quotes a measure's
 // revenue (ChartMoreInfo); the page's charts read the same file
@@ -22,12 +23,11 @@ function loadRevenue() {
 
 /** budgetary_impact.csv as {[reformId]: {[year]: £bn}}. */
 export function parseRevenue(csvText) {
-  const [header, ...lines] = csvText.trim().split("\n");
-  const keys = header.trim().split(",");
+  // Quoted names may hold commas ("raised by £1,000"): parse, don't split
+  const [keys, ...lines] = parseCsv(csvText.trim()).filter((row) => row.length > 1);
   const at = (name) => keys.indexOf(name);
   const byId = {};
-  for (const line of lines) {
-    const cells = line.split(",");
+  for (const cells of lines) {
     const id = cells[at("reform_id")];
     (byId[id] ??= {})[Number(cells[at("year")])] = Number(cells[at("value")]);
   }
