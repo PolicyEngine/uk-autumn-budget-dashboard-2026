@@ -77,6 +77,13 @@ export const CHART_COLOURS = {
   mtrUniversalCredit: "#2F855A",
   mtrOtherBenefits: "#9AE6B4",
   mtrOther: "#D1D5DB",
+  // The net income card's layers the marginal rate card has not: benefits
+  // in greens, the household's other taxes in purples
+  netStatePension: "#22543D",
+  netWarmHomeDiscount: "#68D391",
+  netCouncilTax: "#8E7CC3",
+  netFuelDuty: "#553C9A",
+  netVat: "#B794F4",
 };
 
 /**
