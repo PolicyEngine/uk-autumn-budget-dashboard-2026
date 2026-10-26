@@ -92,7 +92,7 @@ export const CHART_COLOURS = {
  * measures take its ramp in order of size (largest darkest), so a stack,
  * its legend and its tooltip shade monotonically. The JS mirror of the
  * --ramp-* tokens in src/app/globals.css (chartTheme.test.js keeps the two
- * equal). The measures' own colours are the catalogue's (MEASURE_PALETTES).
+ * equal). The catalogue samples them for any number of measures (measureRamp, below).
  */
 export const POLICY_RAMPS = {
   // Amber 900, 700, 500
@@ -104,17 +104,94 @@ export const POLICY_RAMPS = {
 };
 
 /**
- * The palettes the measure catalogue (measureCatalogue.jsx, #104) picks each
- * published measure's colour from, by its id and budgetary direction, so
- * adding or reordering measures never changes an existing measure's colour.
- * Revenue-raising measures take ambers, those that cost revenue teals, and a
- * measure with no published costing the no-change grey.
+ * How the measure catalogue (measureCatalogue.jsx, #104) colours the
+ * published measures: each direction's measures, ranked by budgetary size
+ * (largest first), take evenly spaced steps along that direction's ramp
+ * above, darkest first, so any number of measures get distinct shades.
+ * Revenue-raising measures take the raise ramp (ambers), those that cost
+ * revenue the cost ramp (teals), and a measure with no published costing
+ * the no-change grey. With more than `alternateAbove` measures in one
+ * direction, every second step turns its hue by `hue` degrees and scales
+ * its chroma by `chroma` (cost: blue-teal; revenue: brown), at the same
+ * lightness, so neighbours in a stack stay apart. Numbers, not colours: the
+ * colours are the POLICY_RAMPS tokens.
  */
-export const MEASURE_PALETTES = Object.freeze({
-  cost: Object.freeze(["#115E59", "#2DD4BF", "#0F766E", "#5EEAD4", "#0D9488", "#99F6E4", "#14B8A6"]),
-  revenue: Object.freeze(["#78350F", "#B45309", "#F59E0B"]),
+export const MEASURE_RAMPS = Object.freeze({
+  cost: Object.freeze({ stops: POLICY_RAMPS.cost, hue: 25, chroma: 1 }),
+  revenue: Object.freeze({ stops: POLICY_RAMPS.raise, hue: -8, chroma: 0.6 }),
+  alternateAbove: 8,
   neutral: CHART_COLOURS.noChange,
 });
+
+// sRGB <-> OKLab (Björn Ottosson's matrices), for even perceptual steps
+const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const fromLinear = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+
+/** A hex colour as OKLab [L, a, b]. */
+export function hexToOklab(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => toLinear(parseInt(hex.slice(i, i + 2), 16) / 255));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabToLinearRgb([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+/** An OKLab colour as hex; out of the sRGB gamut, chroma is reduced (lightness and hue kept). */
+function oklabToHex([L, a0, b0]) {
+  let [a, b] = [a0, b0];
+  for (let k = 0; k < 60; k += 1) {
+    if (oklabToLinearRgb([L, a, b]).every((v) => v >= -1e-4 && v <= 1 + 1e-4)) break;
+    a *= 0.95;
+    b *= 0.95;
+  }
+  return rgbToHex(oklabToLinearRgb([L, a, b]).map((v) => fromLinear(Math.min(1, Math.max(0, v))) * 255));
+}
+
+/**
+ * `n` colours for one direction's measures, largest first: evenly spaced in
+ * OKLab along the direction's ramp (by distance along it), from its darkest
+ * stop to its lightest, with every second step turned in hue when n is over
+ * MEASURE_RAMPS.alternateAbove. A neutral direction gives the grey.
+ */
+export function measureRamp(direction, n) {
+  const ramp = MEASURE_RAMPS[direction];
+  if (!ramp?.stops) return Array.from({ length: n }, () => MEASURE_RAMPS.neutral);
+  const labs = ramp.stops.map(hexToOklab);
+  const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  const alternate = n > MEASURE_RAMPS.alternateAbove;
+  return Array.from({ length: n }, (_, i) => {
+    let along = n === 1 ? 0 : (i / (n - 1)) * total;
+    let k = 0;
+    while (k < lengths.length - 1 && along > lengths[k]) {
+      along -= lengths[k];
+      k += 1;
+    }
+    const f = lengths[k] ? Math.min(1, along / lengths[k]) : 0;
+    let [L, a, b] = labs[k].map((v, j) => v + (labs[k + 1][j] - v) * f);
+    if (alternate && i % 2 === 1) {
+      const chroma = Math.hypot(a, b) * ramp.chroma;
+      const hue = Math.atan2(b, a) + (ramp.hue * Math.PI) / 180;
+      [a, b] = [chroma * Math.cos(hue), chroma * Math.sin(hue)];
+    }
+    return oklabToHex([L, a, b]);
+  });
+}
 
 /**
  * Income groups from the lowest-income to the highest-income end: a

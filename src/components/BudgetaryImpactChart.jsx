@@ -34,7 +34,6 @@ import {
   CHART_COLOURS,
   HOVER_CURSOR,
   divergingAxis,
-  orderBySize,
 } from "../utils/chartTheme";
 import {
   NOT_YET_PUBLISHED,
@@ -188,19 +187,16 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selecte
 }
 
 /**
- * The measures in the chart's order: raise revenue, then cost revenue, each
- * group by size (mean absolute £bn over the years shown), largest first.
+ * The measures in the chart's order: the catalogue's (#104), raise revenue,
+ * then cost revenue, each group by size (total absolute £bn over the
+ * published years), largest first, then measures with no published costing.
  * The stack (largest nearest zero), the legend and the tooltip all take
- * this order. The groups and series keys come from the catalogue (#104);
- * measures with no published costing ("neutral") come last.
+ * this order, which is also the order of the measures' shades (largest
+ * darkest), so a stack shades monotonically on every selection.
  */
 export function measureOrder(data, catalogue) {
-  const byDirection = (direction) =>
-    orderBySize(
-      catalogue.allPolicyNames.filter((key) => catalogue.bySeriesKey.get(key)?.direction === direction),
-      data,
-    );
-  return [...byDirection("revenue"), ...byDirection("cost"), ...byDirection("neutral")];
+  const order = (key) => catalogue.bySeriesKey.get(key)?.order ?? Number.MAX_SAFE_INTEGER;
+  return [...catalogue.allPolicyNames].sort((a, b) => order(a) - order(b));
 }
 
 // Chart metadata for export

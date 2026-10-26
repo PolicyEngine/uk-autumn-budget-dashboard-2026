@@ -36,10 +36,9 @@ export function IncomesOverTimeCard({ data }) {
 IncomesOverTimeCard.requires = "living_standards";
 
 export function InequalityOverTimeCard({ data }) {
-  // The years come from the section's Years compared, above the cards
-  // (SectionYearRange), so the card has no years pill of its own
-  const [range] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
-  const inequality = useInequalityView(data, range, null);
+  // The years compared are the first choice in the card's Options pill
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const inequality = useInequalityView(data, range, setRange);
   return (
     <ViewCard
       title="Inequality over time (current law)"

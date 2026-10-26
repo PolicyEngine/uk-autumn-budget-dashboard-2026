@@ -184,8 +184,9 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
-  /* The measures' colour ramps, darkest to lightest, taken in order of
-     size within each group (chartTheme.js POLICY_RAMPS) */
+  /* The measures' colour ramps, darkest to lightest: each group's measures,
+     largest first, take evenly spaced OKLab steps along its ramp
+     (chartTheme.js POLICY_RAMPS, measureRamp) */
   --ramp-raise-1: #78350f;
   --ramp-raise-2: #b45309;
   --ramp-raise-3: #f59e0b;
@@ -2137,21 +2138,12 @@ body {
   border-top: 2.5px solid var(--policy-accent, var(--c-after));
 }
 
-.pchg-summary,
-.pchg-also {
+.pchg-caption {
   margin: 0;
   font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-700);
-  font-variant-numeric: tabular-nums;
-}
-
-.pchg-also {
+  line-height: 1.45;
+  text-align: left;
   color: var(--pe-gray-600);
-}
-
-.pchg-unit {
-  color: var(--pe-gray-500);
 }
 
 .pchg-plot {
@@ -2269,60 +2261,105 @@ body {
   transform: translate(-50%, -2px);
 }
 
-/* A change that holds: two bars to scale */
-.pchg-pair {
-  display: grid;
-  gap: 6px;
+/* A permanent change: the two values, large, and the change */
+.pchg-ba {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pchg-ba-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-900);
+}
+
+.pchg-ba-before {
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  text-decoration: line-through;
+  text-decoration-color: var(--c-before);
+  text-decoration-thickness: 2px;
+}
+
+.pchg-ba-arrow {
+  font-weight: 400;
+  color: var(--pe-gray-400, var(--c-tick));
+}
+
+/* Several values side by side, only where the measure differs */
+.pchg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
 
-.pchg-pair-row {
-  display: grid;
-  grid-template-columns: 9em minmax(40px, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--fs-small);
+.pchg-table caption {
+  padding-bottom: 6px;
 }
 
-.pchg-pair-name {
+.pchg-table th,
+.pchg-table td {
+  padding: 6px 4px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--pe-gray-100);
+}
+
+.pchg-table thead th {
+  font-size: var(--fs-micro);
+  font-weight: 500;
   color: var(--pe-gray-500);
 }
 
-.pchg-bar-track {
-  height: 12px;
-  border-radius: 3px;
-  background: var(--c-muted-fill);
+.pchg-table th:first-child {
+  padding-left: 0;
+  text-align: left;
+  white-space: normal;
 }
 
-.pchg-bar {
-  display: block;
-  height: 100%;
-  min-width: 2px;
-  border-radius: 3px;
+.pchg-table tbody th {
+  font-weight: 500;
+  color: var(--pe-gray-700);
 }
 
-.is-before .pchg-bar {
-  background: var(--c-before);
+.pchg-table td {
+  color: var(--pe-gray-500);
 }
 
-.is-after .pchg-bar {
-  background: var(--policy-accent, var(--c-after));
-}
-
-.pchg-pair-value {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 7.5em;
-  text-align: right;
-  color: var(--pe-gray-600);
-}
-
-.is-after .pchg-pair-value {
-  font-size: var(--fs-body);
+.pchg-table .pchg-table-after {
   font-weight: 700;
   color: var(--pe-gray-900);
+}
+
+.pchg-more {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 4px 0;
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-teal-700);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+/* A switch measure's change, on its timeline chip: "5% → 0%" */
+.ptl-change {
+  margin-right: 6px;
+  font-weight: 700;
 }
 
 .pchg-chip {
@@ -2363,17 +2400,8 @@ body {
 }
 
 @media (max-width: 768px) {
-  .pchg-pair-row {
-    grid-template-columns: minmax(48px, 1fr) auto;
-    row-gap: 2px;
-  }
-
-  .pchg-pair-name {
-    grid-column: 1 / -1;
-  }
-
-  .pchg-pair-value {
-    min-width: 0;
+  .pchg-ba-values {
+    font-size: var(--fs-section);
   }
 
 }
