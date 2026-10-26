@@ -3,7 +3,6 @@ import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
-import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
@@ -13,7 +12,6 @@ import { POLICY_COLORS } from "../utils/policyConfig";
 import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
 import ExpandableText from "./methodology/ExpandableText";
 import {
-  Briefcase,
   Calculator,
   ChevronDown,
   CircleSlash,
@@ -23,12 +21,9 @@ import {
   House,
   Info,
   MapPinned,
-  PersonStanding,
   TrendingUp,
   TriangleAlert,
-  User,
   Users,
-  UsersRound,
 } from "lucide-react";
 import "./methodology/Methodology.css";
 
@@ -64,15 +59,6 @@ export const METHOD_CONTENTS = [
 ];
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, icon }) => [id, icon]));
-
-// An icon for each example household, by its id
-const HOUSEHOLD_ICONS = {
-  single_renter: User,
-  couple_three_children: Users,
-  lone_parent: PersonStanding,
-  pensioner_couple: UsersRound,
-  higher_income_saver: Briefcase,
-};
 
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
@@ -349,11 +335,7 @@ function MethodologyTab({ onShowTab }) {
               The national charts add up every household&apos;s change with its weight: the revenue
               chart as the change in the government&apos;s balance, the decile charts by income
               group, and the household scatter for the spread behind the averages. Counts are
-              rounded and no household is ever shown on its own. The{" "}
-              <ViewLink tab="household" hash="household" onShowTab={onShowTab}>
-                example households&apos; income charts
-              </ViewLink>{" "}
-              on Household impact follow five fixed households instead.
+              rounded and no household is ever shown on its own.
             </p>
           }
           details={
@@ -485,23 +467,6 @@ function MethodologyTab({ onShowTab }) {
                   ],
                 ]}
               />
-              <h3 className="method-details-title">Example households</h3>
-              <p className="method-more">
-                The income charts on Household impact follow five fixed households, a different set
-                from the calculator&apos;s example cards. Each chart varies one income, from £0 to the
-                top of its axis, for a fixed household.
-              </p>
-              <ul className="method-households">
-                {EXAMPLE_HOUSEHOLDS.map((household) => (
-                  <li key={household.id} className="method-household">
-                    <IconChip icon={HOUSEHOLD_ICONS[household.id] ?? User} size="sm" />
-                    <div>
-                      <h4 className="method-household-name">{household.label}</h4>
-                      <p className="method-household-text">{household.definition}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
             </>
           }
         />

@@ -94,11 +94,8 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
-    // Besides the examples' precomputed file and the example households'
-    // income charts below the calculator, only the household route
-    const urls = fetch.mock.calls
-      .map(([url]) => url)
-      .filter((url) => !url.endsWith("/household_presets.json") && !url.endsWith("/income_curve.csv"));
+    // Besides the examples' precomputed file, only the household route
+    const urls = fetch.mock.calls.map(([url]) => url).filter((url) => !url.endsWith("/household_presets.json"));
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
   });
@@ -278,17 +275,23 @@ describe("the household calculation, from the fixture", () => {
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
   });
 
-  it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
+  it("shows net income and its change as a pair of cards marking you, with the marginal rate in its own card below", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Net income across earnings/ });
-    expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
+    await screen.findByRole("heading", { name: "Household net income, 2029-30" });
     // Always shown, not in an expander
     expect(screen.queryByRole("button", { name: "Marginal tax rate across earnings" })).not.toBeInTheDocument();
-    const pair = container.querySelector(".single-year-chart-pair");
-    expect(within(pair).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    const [pair, rate] = container.querySelectorAll(".single-year-chart-pair");
     expect(pair.children).toHaveLength(2);
+    expect(within(pair).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
+    expect(within(pair).getByRole("heading", { name: "Net income change, 2029-30" })).toBeInTheDocument();
+    // Both cards mark you, at the same salary
+    expect(pair.querySelectorAll(".earnings-you")).toHaveLength(2);
+    pair.querySelectorAll(".earnings-you").forEach((you) => expect(you).toHaveTextContent("You"));
+    expect(within(pair).getByText("Higher net income")).toBeInTheDocument();
+    expect(rate.children).toHaveLength(1);
+    expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
     expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
@@ -667,7 +670,7 @@ describe("the household calculation's errors", () => {
     );
     renderTab();
     toResults();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
     finishByPolicy();
     expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
@@ -680,7 +683,7 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
   });
 

@@ -736,19 +736,10 @@ body {
     .budgetary-impact-chart,
     .waterfall-chart,
     .distributional-chart,
-    .employment-income-chart,
-    .employment-income-diff-chart,
     .constituency-map-wrapper,
     .region-view
   ) {
   min-width: 0;
-}
-
-.employment-income-chart,
-.employment-income-diff-chart {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .main-content .report-section .chart-description {
@@ -2185,19 +2176,4 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
-}
-
-/* Household impact's income charts, below the calculator */
-.income-curve-examples {
-  margin-top: 48px;
-  scroll-margin-top: calc(var(--sticky-offset) + 16px);
-}
-
-/* Example households: one chooser above the pair of charts */
-.example-household-picker {
-  margin: 0 0 16px;
-}
-
-.example-household-picker .household-picker {
-  margin: 0;
 }

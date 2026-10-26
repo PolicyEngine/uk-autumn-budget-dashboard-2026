@@ -245,6 +245,13 @@
   margin-top: 0;
 }
 
+/* The pair, then the marginal rate card below it */
+.single-year-earnings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 /* Wizard: choices and the optional details */
 .select-input {
   flex: 1;

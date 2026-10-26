@@ -531,13 +531,20 @@ export function SingleYearDetails({ result, year, policies, changed = false, sta
 
       <SectionHeading
         title="Across earnings"
-        subtitle="How your household's net income and marginal tax rate change as your salary varies."
+        subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
       />
       <section className="report-section">
         {data.sweep ? (
-          <div className="charts-grid single-year-chart-pair">
-            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+          <div className="single-year-earnings">
+            {/* Net income and its change, a pair of cards as the
+                population charts are; the marginal rate below, full width */}
+            <div className="charts-grid single-year-chart-pair">
+              <EarningsChart panel="net" sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+              <EarningsChart panel="change" sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+            </div>
+            <div className="charts-grid single-year-chart-pair">
+              <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+            </div>
           </div>
         ) : detailFailed ? (
           <div className="card single-year-card">

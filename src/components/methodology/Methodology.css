@@ -554,40 +554,6 @@
   margin-bottom: 4px;
 }
 
-/* Example households: small cards */
-.method-households {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.method-household {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-surface);
-}
-
-.method-household-name {
-  margin: 0 0 4px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-household-text {
-  margin: 0;
-  font-size: var(--fs-caption);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
 /* Limitations: callouts */
 .method-callouts {
   display: grid;
