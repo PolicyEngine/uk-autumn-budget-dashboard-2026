@@ -310,13 +310,6 @@ function ResultCard({ totals, yearLabel, policyCount, items }) {
               </div>
             ))}
           </dl>
-          <a
-            className="result-card-more"
-            href="#household-breakdown"
-            onClick={(event) => scrollToSection(event, "household-breakdown")}
-          >
-            See the breakdown <span aria-hidden="true">↓</span>
-          </a>
         </div>
       )}
     </section>

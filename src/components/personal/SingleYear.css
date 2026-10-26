@@ -809,25 +809,6 @@
   color: var(--pe-gray-800);
 }
 
-.result-card-more {
-  margin-left: auto;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.result-card-more:hover {
-  text-decoration: underline;
-}
-
-.result-card-more:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
 /* A detail card while it is calculated: empty at its final height, with
    one centred message and no box of its own */
 .waiting-card {
@@ -1083,9 +1064,6 @@
     font-size: 2rem;
   }
 
-  .result-card-more {
-    margin-left: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
