@@ -1935,6 +1935,9 @@ body {
   background: var(--c-notice-bg);
   border: 1px solid var(--c-loss-border);
   border-radius: 999px;
+  /* Overhangs its line by a pixel each way, so a card with the tag keeps
+     the same height of head as one without */
+  margin: -2px 0;
 }
 
 .policy-card-summary {
