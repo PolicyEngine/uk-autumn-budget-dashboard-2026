@@ -36,7 +36,7 @@ release. The wheel is vendored in `vendor/` and installed by its URL
 index or archive install; from a git source every receipt is uncertified, so
 nothing could be staged provisional or approved.
 
-Until 26 October 13:50 the pin was the national-only commit 324ecad6. Each
+Until 26 October 13:26 the pin was the national-only commit 324ecad6. Each
 receipt binds the wheel it ran on, so regenerate anything generated on that
 pin before G4. Budget day uses the released bundle instead; this branch never
 merges.
