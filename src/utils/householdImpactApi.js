@@ -388,6 +388,24 @@ function normaliseByPolicy(raw) {
   };
 }
 
+/**
+ * The marginal rate's parts on each sweep step and at your salary, before
+ * and after: {names, before: [{part: rate}], after: [...], own: {before,
+ * after} | null}, or null when the answer has none (an API from before
+ * they were added), so the page draws the totals alone.
+ */
+function rateParts(raw) {
+  if (!raw || !Array.isArray(raw.parts) || !raw.baseline || !raw.reform) return null;
+  const step = (values) => Object.fromEntries(raw.parts.map((name) => [name, num(values?.[name])]));
+  const own = raw.own_point;
+  return {
+    names: raw.parts,
+    before: raw.baseline.map(step),
+    after: raw.reform.map(step),
+    own: own?.baseline && own?.reform ? { before: step(own.baseline), after: step(own.reform) } : null,
+  };
+}
+
 function normaliseSweep(raw) {
   if (!raw || !Array.isArray(raw.points) || raw.points.length < 2) return null;
   const points = raw.points.map((point) => ({
@@ -405,6 +423,7 @@ function normaliseSweep(raw) {
       before: num(rate.baseline),
       after: num(rate.reform),
     })),
+    parts: rateParts(raw.marginal_rate_parts),
     own: own
       ? {
           income: num(own.employment_income),

@@ -425,7 +425,14 @@ def test_the_runs_it_asks_for(monkeypatch):
     calls = []
 
     def run_scenario(
-        people, benunit, household, year, side, axes=None, only=False
+        people,
+        benunit,
+        household,
+        year,
+        side,
+        axes=None,
+        only=False,
+        parts=False,
     ):
         calls.append(
             {
@@ -433,6 +440,7 @@ def test_the_runs_it_asks_for(monkeypatch):
                 "side": side,
                 "axes": axes,
                 "head_pay": people[0]["employment_income"],
+                "parts": parts,
             }
         )
         net = 40_000.0 + 100 * len(calls)
@@ -477,6 +485,9 @@ def test_the_runs_it_asks_for(monkeypatch):
     assert calls[2]["side"] == sides.before
     assert [call["side"] for call in calls[4:6]] == [sides.before, sides.after]
     assert all(call["axes"] is None for call in calls[4:6])
+    # The £100 runs also read the rate's parts at the higher salary
+    assert all(call["parts"] for call in calls[4:6])
+    assert not any(call["parts"] for call in calls[0:4])
     assert all(
         call["head_pay"]
         == calls[0]["head_pay"] + household_impact.OWN_RATE_STEP
@@ -893,6 +904,175 @@ def test_the_sweep_runs_from_zero_past_the_heads_income():
         rate["baseline"] == pytest.approx(0.62, abs=0.005) for rate in taper
     )
     assert result["by_policy"] is None
+
+
+def test_the_rate_parts_add_up_and_split_the_allowance_taper():
+    """Each part is a tax's share of an extra pound, or a benefit's
+    withdrawal; "other" takes the rest, so the parts add up to the rate."""
+    grid = [0.0, 100.0, 200.0]
+    # The allowance falls 50p a pound: the extra pound and the lost 50p are
+    # both taxed at 40%, so tax rises 60p, 40p of it the rate, 20p the taper
+    components = {
+        "income_tax": [0.0, 60.0, 130.0],
+        "CB_HITC": [0.0, 0.0, 10.0],
+        "personal_allowance": [1000.0, 950.0, 900.0],
+        "national_insurance": [0.0, 2.0, 4.0],
+        "student_loan_repayments": [0.0, 9.0, 18.0],
+        "universal_credit": [500.0, 500.0, 445.0],
+        "household_benefits": [600.0, 600.0, 535.0],
+    }
+    net = [1000.0, 1029.0, 1017.0]
+    parts = household_impact.sweep_rate_parts(grid, net, components)
+    rates = household_impact.marginal_rates(grid, net)
+    for part, rate in zip(parts, rates):
+        assert sum(part.values()) == pytest.approx(rate)
+        assert list(part) == list(household_impact.MARGINAL_RATE_PARTS)
+    assert parts[0]["income_tax"] == pytest.approx(0.40)
+    assert parts[0]["personal_allowance_taper"] == pytest.approx(0.20)
+    assert parts[0]["national_insurance"] == pytest.approx(0.02)
+    assert parts[0]["student_loan"] == pytest.approx(0.09)
+    # The Child Benefit charge is income_tax's, taken out as its own part
+    assert parts[1]["child_benefit_charge"] == pytest.approx(0.10)
+    assert parts[1]["income_tax"] == pytest.approx(0.40)
+    assert parts[1]["universal_credit"] == pytest.approx(0.55)
+    assert parts[1]["other_benefits"] == pytest.approx(0.10)
+
+
+def _own_parts(result):
+    """The reform's rate parts at the head's salary (over the next
+    ``OWN_RATE_STEP`` pounds), and the rate there."""
+    sweep = result["sweep"]
+    return (
+        sweep["marginal_rate_parts"]["own_point"]["reform"],
+        sweep["own_point"]["reform_marginal_rate"],
+    )
+
+
+def _step_parts(result):
+    """The reform's rate parts over the sweep interval holding the head's
+    salary, and that interval's rate."""
+    sweep = result["sweep"]
+    salary = sweep["own_point"]["employment_income"]
+    for i, rate in enumerate(sweep["marginal_rates"]):
+        if rate["from"] <= salary < rate["to"]:
+            return sweep["marginal_rate_parts"]["reform"][i], rate["reform"]
+    raise AssertionError("the salary is outside the sweep")
+
+
+@pytest.mark.parametrize(
+    "answers, expected",
+    [
+        # Basic rate and main National Insurance
+        (
+            Answers(employment_income=30_000),
+            {"income_tax": 0.20, "national_insurance": 0.08},
+        ),
+        # Higher rate and the upper National Insurance rate
+        (
+            Answers(employment_income=60_000),
+            {"income_tax": 0.40, "national_insurance": 0.02},
+        ),
+        # The allowance taper: 40% + 20% + 2% = 62%
+        (
+            Answers(employment_income=110_000),
+            {
+                "income_tax": 0.40,
+                "personal_allowance_taper": 0.20,
+                "national_insurance": 0.02,
+            },
+        ),
+        # A Plan 2 graduate above the threshold: 9% more
+        (
+            Answers(employment_income=38_000, student_loan_plan="PLAN_2"),
+            {
+                "income_tax": 0.20,
+                "national_insurance": 0.08,
+                "student_loan": 0.09,
+            },
+        ),
+        # Universal Credit withdraws 55% of earnings after tax and National
+        # Insurance: 55% x (1 - 0.28) = 39.6%
+        (
+            Answers(
+                employment_income=18_000,
+                claims_universal_credit=True,
+                tenure="RENT_PRIVATELY",
+                monthly_rent=900,
+                children=(
+                    household_impact.Child(age=4),
+                    household_impact.Child(age=8),
+                ),
+            ),
+            {
+                "income_tax": 0.20,
+                "national_insurance": 0.08,
+                "universal_credit": 0.396,
+            },
+        ),
+    ],
+    ids=["30k", "60k", "110k", "plan-2", "universal-credit"],
+)
+def test_the_rate_parts_by_hand(answers, expected):
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], include=("sweep",)
+    )
+    parts, rate = _own_parts(result)
+    assert sum(parts.values()) == pytest.approx(rate, abs=1e-4)
+    # Over £100 the engine's single precision and the allowance's whole
+    # pounds move a part by up to half a point
+    for name, value in parts.items():
+        assert value == pytest.approx(expected.get(name, 0), abs=0.006), name
+    # Every sweep step's parts add up to its rate, before and after
+    sweep = result["sweep"]
+    for side in ("baseline", "reform"):
+        steps = sweep["marginal_rate_parts"][side]
+        assert len(steps) == len(sweep["marginal_rates"])
+        for step, rate in zip(steps, sweep["marginal_rates"]):
+            assert sum(step.values()) == pytest.approx(rate[side], abs=1e-4)
+
+
+def test_the_child_benefit_charge_is_its_own_part():
+    """Two children and £70k: the charge takes 1% of Child Benefit per £200
+    from £60k, so about Child Benefit / £20k of each extra pound, on top of
+    40% income tax and 2% National Insurance. (It moves in £200 steps, so
+    over the sweep step, not the next £100.)"""
+    answers = Answers(
+        employment_income=70_000,
+        children=(household_impact.Child(age=4), household_impact.Child(8)),
+    )
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], include=("sweep",)
+    )
+    parts, rate = _step_parts(result)
+    child_benefit = programme(result, "child_benefit")["reform"]
+    assert child_benefit > 2_000
+    assert parts["child_benefit_charge"] == pytest.approx(
+        child_benefit / 20_000, abs=0.01
+    )
+    assert parts["income_tax"] == pytest.approx(0.40, abs=0.002)
+    assert parts["national_insurance"] == pytest.approx(0.02, abs=0.002)
+    assert sum(parts.values()) == pytest.approx(rate, abs=1e-4)
+
+
+def test_the_rate_parts_at_your_salary_add_up_to_its_rate():
+    """#129's rate at the £110k earner's salary in 2031-32 is unchanged by
+    the parts, and they add up to it: 40% + 20% taper + 2%."""
+    answers = Answers(employment_income=110_000, salary_year=2026)
+    result = calculate(
+        answers, ["threshold_freeze_2031_32"], year=2031, include=("sweep",)
+    )
+    own = result["sweep"]["own_point"]
+    parts = result["sweep"]["marginal_rate_parts"]["own_point"]
+    for side in ("baseline", "reform"):
+        rate = own[f"{side}_marginal_rate"]
+        assert sum(parts[side].values()) == pytest.approx(rate, abs=1e-4)
+        assert parts[side]["income_tax"] == pytest.approx(0.40, abs=0.002)
+        assert parts[side]["personal_allowance_taper"] == pytest.approx(
+            0.20, abs=0.002
+        )
+        assert parts[side]["national_insurance"] == pytest.approx(
+            0.02, abs=0.002
+        )
 
 
 def test_the_rate_at_your_salary_is_not_averaged_across_the_taper_end():
