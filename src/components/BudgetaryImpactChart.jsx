@@ -7,7 +7,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Customized,
@@ -28,7 +27,6 @@ import {
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   chartMargin,
-  legendWrapperStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
@@ -276,6 +274,8 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     description: CHART_DESCRIPTION,
     legendItems,
     logo: CHART_LOGO,
+    // The key is above the plot, not a Recharts legend: crop nothing
+    reservedLegendHeight: 0,
   };
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
@@ -298,8 +298,19 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
+      {/* The measures' key, boxed above the plot as on every tab
+          (MeasureKey): click chips to highlight several together */}
+      <MeasureKey
+        members={keyMembers}
+        netLabel={netLabel}
+        highlight={highlight}
+        onHighlight={setHighlight}
+        placement="section"
+        label="Measures"
+      />
+
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 660 : 620}>
+        <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { top: 24 })}
@@ -349,17 +360,6 @@ function BudgetaryImpactChart({ data, selectedYear }) {
 
               }
 
-            />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              content={
-                <MeasureKey
-                  members={keyMembers}
-                  netLabel={netLabel}
-                  highlight={highlight}
-                  onHighlight={setHighlight}
-                />
-              }
             />
             {orderedPolicies.map((policyName) => (
               <Bar
