@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
+import useSegmentThumb from "../hooks/useSegmentThumb";
 import PillChevron from "./PillChevron";
 import "./ControlBar.css";
+import Tip from "./Tip";
 
 /**
  * A card's controls on one row: at most two primary pills (the view, the
@@ -124,7 +126,6 @@ function OptionsButton({ groups, name }) {
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
         aria-label={`Options: ${summary}`}
-        title={summary}
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
         <svg className="control-bar-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
@@ -186,6 +187,7 @@ function CustomGroup({ group }) {
  */
 export function Segmented({ group, inSummary: summarised = true }) {
   const labelId = useId();
+  const { containerRef: thumbContainer, itemRef: thumbItem, ready: thumbReady, thumbStyle } = useSegmentThumb(group.value);
   const enabled = group.options.filter((option) => !option.disabled);
   const move = (event, step) => {
     event.preventDefault();
@@ -205,7 +207,8 @@ export function Segmented({ group, inSummary: summarised = true }) {
         {group.label}
       </span>
       <div
-        className="control-bar-segments"
+        ref={thumbContainer}
+        className={`control-bar-segments${thumbReady ? " has-thumb" : ""}`}
         role="radiogroup"
         aria-labelledby={labelId}
         onKeyDown={(event) => {
@@ -213,11 +216,14 @@ export function Segmented({ group, inSummary: summarised = true }) {
           else if (event.key === "ArrowLeft" || event.key === "ArrowUp") move(event, -1);
         }}
       >
+        {/* The chosen option's white pill, which slides to a new choice */}
+        <span className={`segment-thumb${thumbReady ? " is-ready" : ""}`} style={thumbStyle} aria-hidden="true" />
         {group.options.map((option) => {
           const checked = option.value === group.value;
           return (
+            <Tip key={option.value} content={option.title}>
             <button
-              key={option.value}
+              ref={thumbItem(option.value)}
               type="button"
               role="radio"
               data-value={option.value}
@@ -226,13 +232,13 @@ export function Segmented({ group, inSummary: summarised = true }) {
               // One tab stop per group: its chosen option
               tabIndex={checked ? 0 : -1}
               disabled={option.disabled}
-              title={option.title}
               aria-label={option.ariaLabel}
               className={`control-bar-segment${checked ? " is-checked" : ""}`}
               onClick={() => group.onChange(option.value)}
             >
               {option.label}
             </button>
+            </Tip>
           );
         })}
       </div>

@@ -1,4 +1,6 @@
 import "./ViewSwitch.css";
+import Tip from "./Tip";
+import useSegmentThumb from "../hooks/useSegmentThumb";
 
 /**
  * An icon switch between a card's views, styled as the OBR comparison's
@@ -16,24 +18,28 @@ import "./ViewSwitch.css";
  *   in-card pills beside it
  */
 function ViewSwitch({ options, value, onChange, label, compact = false }) {
+  const { containerRef: thumbContainer, itemRef: thumbItem, ready: thumbReady, thumbStyle } = useSegmentThumb(value);
   return (
     <div
-      className={`obr-view-switch${compact ? " is-compact" : ""}`}
+      ref={thumbContainer}
+      className={`obr-view-switch${compact ? " is-compact" : ""}${thumbReady ? " has-thumb" : ""}`}
       role="group"
       aria-label={label}
     >
+      <span className={`segment-thumb${thumbReady ? " is-ready" : ""}`} style={thumbStyle} aria-hidden="true" />
       {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className="obr-view-option"
-          aria-pressed={value === option.value}
-          title={option.title ?? option.label}
-          onClick={() => onChange(option.value)}
-        >
-          {option.icon}
-          <span>{option.label}</span>
-        </button>
+        <Tip key={option.value} content={option.title}>
+          <button
+            ref={thumbItem(option.value)}
+            type="button"
+            className="obr-view-option"
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+          >
+            {option.icon}
+            <span>{option.label}</span>
+          </button>
+        </Tip>
       ))}
     </div>
   );

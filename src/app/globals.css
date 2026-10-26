@@ -73,6 +73,8 @@
   --motion-fast: 150ms;
   --motion-base: 220ms;
   --motion-chart: 300ms;
+  /* A segmented control's chosen pill sliding to a new choice */
+  --motion-slide: 250ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Transitions (the ui-kit names, on the motion tokens) */
@@ -86,6 +88,7 @@
     --motion-fast: 0ms;
     --motion-base: 0ms;
     --motion-chart: 0ms;
+    --motion-slide: 0ms;
   }
 }
 
@@ -2862,6 +2865,68 @@ body {
   .popover-motion.is-leaving {
     animation: none;
   }
+}
+
+/* ---------- Segmented controls: the chosen pill slides (useSegmentThumb) ---------- */
+/* The thumb sits under the options; once it has a place, the chosen
+   option's own background gives way to it, and it slides to a new choice */
+.control-bar-segments,
+.view-toggle,
+.obr-view-switch {
+  position: relative;
+}
+
+.segment-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment-thumb.is-ready {
+  opacity: 1;
+  transition:
+    transform var(--motion-slide) var(--ease-out),
+    width var(--motion-slide) var(--ease-out),
+    height var(--motion-slide) var(--ease-out);
+}
+
+.has-thumb > button {
+  position: relative;
+  z-index: 1;
+  transition: color var(--motion-slide) var(--ease-out);
+}
+
+/* Options popovers: the white pill on the grey track */
+.control-bar-segments > .segment-thumb {
+  border-radius: 6px;
+  background: var(--pe-surface);
+  box-shadow: 0 1px 2px var(--shadow-strong);
+}
+
+.control-bar-segments.has-thumb > .control-bar-segment.is-checked {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Chart or table */
+.view-toggle > .segment-thumb {
+  background: var(--pe-teal-50);
+}
+
+.view-toggle.has-thumb > .view-toggle-button.is-checked {
+  background: transparent;
+}
+
+/* The household charts' view switches */
+.obr-view-switch > .segment-thumb {
+  background: var(--band-teal);
+}
+
+.obr-view-switch.has-thumb > .obr-view-option[aria-pressed="true"] {
+  background: transparent;
 }
 
 /* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */

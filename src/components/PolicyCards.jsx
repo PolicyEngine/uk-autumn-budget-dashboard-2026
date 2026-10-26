@@ -6,6 +6,7 @@ import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
 import ModellingFacts, { limitationCount } from "./ModellingFacts";
 import { measureModellingFacts } from "../utils/measureModelling";
+import Tip from "./Tip";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
 // measure's budgetary effect. Cards carry no icon per measure: a map by
@@ -150,7 +151,11 @@ function PolicyTimeline({ policy, highlight }) {
               style={{ left: share(timelineMonth(step.month)) }}
             />
           ))}
-          {!to && <span className="ptl-arrow" title="No end date" />}
+          {!to && (
+            <Tip content="No end date">
+              <span className="ptl-arrow" />
+            </Tip>
+          )}
         </div>
         {" "}
         {/* Always there, empty when unused, so the years line up across a row */}
@@ -260,18 +265,19 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       {/* The footer, one line: the source, how it is modelled, its effect */}
       <div className="policy-card-foot">
         {policy.source && (
+          <Tip content={policy.source.label}>
           <a
             className="policy-card-source"
             href={policy.source.href}
             target="_blank"
             rel="noopener noreferrer"
-            title={policy.source.label}
           >
             Source
             <span className="policy-sr-only">: {policy.source.label}</span>
             <ExternalLink size={14} aria-hidden="true" />
             <span className="policy-sr-only"> (opens in a new tab)</span>
           </a>
+          </Tip>
         )}
         {hasModelling && (
           <details className="policy-card-details">

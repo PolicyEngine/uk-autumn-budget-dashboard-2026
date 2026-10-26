@@ -23,7 +23,8 @@
   cursor: pointer;
 }
 
-.obr-view-option + .obr-view-option {
+.obr-view-option + .obr-view-option,
+.tip-anchor + .tip-anchor > .obr-view-option {
   border-left: 1px solid var(--card-border);
 }
 
