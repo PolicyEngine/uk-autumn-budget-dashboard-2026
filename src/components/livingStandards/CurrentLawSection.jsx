@@ -14,13 +14,10 @@ import TwinLink from "../TwinLink";
 import { GrowthCard, IncomesOverTimeCard, InequalityOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import { OutlookStatus } from "./useOutlook";
-import YearRangeSelect from "./YearRangeSelect";
-import { rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
-import { headlineStartYear, headlineYear } from "../../utils/livingStandards/outlook";
 import "./LivingStandards.css";
 
-// Each sub-tab is one heading, the years every card compares, then rows of
-// two cards that line up (a card alone takes the full width). A card shows
+// Each sub-tab is one heading, then rows of two cards (each card's years
+// compared are the first choice in its Options pill) that line up (a card alone takes the full width). A card shows
 // one view at a time, with a Show pill; notes and sources sit in its "About
 // this chart". The subtitle says plainly that it is without the measures,
 // and links to the twin with them.
@@ -76,7 +73,6 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
               </>
             }
           />
-          <SectionYearRange data={data} />
           <section id={SECTION_IDS[id]} className="report-section ls-section">
             {rows.map((row, i) => (
               <div key={i} className="charts-grid">
@@ -89,21 +85,5 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
         </>
       )}
     </>
-  );
-}
-
-/**
- * The years every card in the section compares, chosen once above the
- * cards (each card reads the same ?ls_from / ?ls_to, useYearRange).
- */
-export function SectionYearRange({ data }) {
-  const years = rangeYears(data);
-  const [range, setRange] = useYearRange(years, [headlineStartYear(data), headlineYear(data)]);
-  if (years.length <= 2) return null;
-  return (
-    <div className="section-controls">
-      <span className="section-controls-label">Years compared</span>
-      <YearRangeSelect years={years} from={range[0]} to={range[1]} onChange={setRange} />
-    </div>
   );
 }

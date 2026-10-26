@@ -36,13 +36,15 @@ export default function ViewCard({ id, title, subtitle, icon, views, value, onCh
         <ControlBar
           name={title}
           options={[
+            // The years compared lead, then the view, then its other choices
+            ...(view.controls?.options ?? []).filter((group) => group?.control),
             available.length > 1 && {
               label: "Show",
               value: current.value,
               onChange,
               options: available.map((v) => ({ value: v.value, label: v.label })),
             },
-            ...(view.controls?.options ?? []),
+            ...(view.controls?.options ?? []).filter((group) => group && !group.control),
           ]}
         >
           {view.controls?.primary}
