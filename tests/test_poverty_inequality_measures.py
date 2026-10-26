@@ -13,7 +13,13 @@ from uk_budget_data.calculators import (
     poverty_change,
 )
 from uk_budget_data.publication.generate import result_tables
-from uk_budget_data.publication.tables import TABLES
+from uk_budget_data.publication.tables import (
+    POVERTY_INEQUALITY_COLUMNS,
+    TABLES,
+    TableError,
+    canonical_csv,
+    parse_csv,
+)
 
 
 def test_poverty_change_counts_weighted_people():
@@ -138,14 +144,67 @@ def test_calculate_adds_every_measure_and_keeps_the_headline():
     )
 
 
-def test_artifacts_keep_the_contracted_metrics_columns():
-    baseline, reformed = _sims()
-    metrics = MetricsCalculator().calculate(baseline, reformed, "r", "R", 2027)
-
+def _result(metrics):
     class Result:
         budgetary_impact = distributional_impact = winners_losers = []
         income_curve = household_scatter = age_impact = []
 
     Result.metrics = metrics
-    [row] = result_tables(Result())["metrics"]
+    return Result()
+
+
+def test_artifacts_keep_the_contracted_metrics_columns():
+    baseline, reformed = _sims()
+    metrics = MetricsCalculator().calculate(baseline, reformed, "r", "R", 2027)
+    [row] = result_tables(_result(metrics))["metrics"]
     assert tuple(row) == TABLES["metrics"].column_names
+
+
+def test_artifacts_carry_the_other_measures_in_poverty_inequality():
+    """The 19 measures the flat metrics.csv adds go to the receipted
+    artifact's poverty_inequality table, with the same values."""
+    baseline, reformed = _sims()
+    [full] = MetricsCalculator().calculate(baseline, reformed, "r", "R", 2027)
+    [row] = result_tables(_result([full]))["poverty_inequality"]
+    assert tuple(row) == TABLES["poverty_inequality"].column_names
+    assert row == {column: full[column] for column in row}
+    # Exactly the calculator's columns beyond the headline, in its order
+    extras = tuple(c for c in full if c not in TABLES["metrics"].column_names)
+    assert tuple(c for c, _ in POVERTY_INEQUALITY_COLUMNS) == extras
+    assert len(extras) == 19
+    # And it writes as a canonical table that reads back to the same values
+    data = canonical_csv("poverty_inequality", [row])
+    assert parse_csv("poverty_inequality", data) == [row]
+
+
+def test_rows_without_the_measures_give_no_poverty_inequality_table():
+    """Rows from before the measures (a fake processor, say) give metrics
+    only, so the artifact is written as before."""
+    headline = {
+        "reform_id": "r",
+        "reform_name": "R",
+        "year": 2027,
+        "people_affected": 1.0,
+        "gini_change": 0.0,
+        "poverty_change_pp": 0.0,
+        "poverty_change_pct": 0.0,
+    }
+    tables = result_tables(_result([headline]))
+    assert tables["poverty_inequality"] == []
+    assert tables["metrics"] == [headline]
+
+
+def test_a_row_with_only_some_measures_is_refused():
+    partial = {
+        "reform_id": "r",
+        "reform_name": "R",
+        "year": 2027,
+        "people_affected": 1.0,
+        "gini_change": 0.0,
+        "poverty_change_pp": 0.0,
+        "poverty_change_pct": 0.0,
+        "p90_p10_change": 0.1,
+    }
+    rows = result_tables(_result([partial]))["poverty_inequality"]
+    with pytest.raises(TableError, match="missing columns"):
+        canonical_csv("poverty_inequality", rows)
