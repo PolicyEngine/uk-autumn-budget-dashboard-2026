@@ -1736,7 +1736,7 @@ body {
   animation: policy-timeline-grow 0.6s cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
-/* A lasting measure runs off the end of the timeline */
+/* A lasting measure runs off the end of the timeline, square-ended */
 .policy-timeline-bar.is-lasting {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
@@ -1761,8 +1761,12 @@ body {
   color: var(--pe-gray-500);
 }
 
-.policy-timeline-labels span {
+.policy-timeline-labels > span {
   text-align: center;
+}
+
+.policy-timeline-label-short {
+  display: none;
 }
 
 .policy-card-foot {
@@ -1856,6 +1860,15 @@ body {
 
   .policy-card-start {
     font-size: var(--fs-section);
+  }
+
+  /* "26-27" rather than "2026-27", so the years fit on one line */
+  .policy-timeline-label-full {
+    display: none;
+  }
+
+  .policy-timeline-label-short {
+    display: inline;
   }
 
   .policy-card-effect {

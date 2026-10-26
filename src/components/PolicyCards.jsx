@@ -55,7 +55,10 @@ function PolicyTimeline({ inForce, temporary }) {
       </div>
       <div className="policy-timeline-labels">
         {TIMELINE_LABELS.map((label) => (
-          <span key={label}>{label}</span>
+          <span key={label}>
+            <span className="policy-timeline-label-full">{label}</span>
+            <span className="policy-timeline-label-short">{label.slice(2)}</span>
+          </span>
         ))}
       </div>
     </div>
