@@ -43,7 +43,7 @@ const selectedViewTabs = () =>
   within(tabBar())
     .getAllByRole("tab")
     .filter((tab) => tab.getAttribute("aria-selected") === "true");
-const home = () => screen.getByRole("button", { name: "Back to the start: about this dashboard" });
+const home = () => screen.getByRole("link", { name: "Back to the start" });
 const search = () => new URLSearchParams(window.location.search);
 
 describe("the landing page", () => {
@@ -172,7 +172,7 @@ describe("the landing page", () => {
   });
 });
 
-describe("the band's home button", () => {
+describe("the band's home link", () => {
   it("is marked current on the landing page, where it does nothing", async () => {
     await renderApp();
     expect(home()).toHaveAttribute("aria-current", "page");
@@ -181,12 +181,13 @@ describe("the band's home button", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("says what the dashboard is on hover or focus", async () => {
+  it("is the mark alone, a link to the bare address, with no card", async () => {
     await renderApp();
+    expect(home()).toHaveAttribute("href", "/");
+    expect(home().querySelector("img")).toHaveAttribute("alt", "");
     fireEvent.focus(home());
-    const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/^About this dashboard/);
-    expect(home()).toHaveAttribute("aria-describedby", tip.id);
+    fireEvent.mouseEnter(home());
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("goes back to the landing page from any view, in place", async () => {
@@ -229,7 +230,7 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
   it("says what the dashboard is on hover or focus", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    expect(edge()).toHaveTextContent("About");
+    expect(edge().querySelector("img")).toHaveAttribute("alt", "");
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
     const tip = await screen.findByRole("tooltip");
@@ -242,7 +243,13 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(edge()).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
-    expect(within(dialog).getAllByRole("link", { name: /Explore$/ })).toHaveLength(3);
+    // The ways in, as a list of three rows under "Go to"
+    const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "The Budget and societyPublic finances, and who gains and loses",
+      "Your householdSee how your income changes",
+      "What's in the BudgetEvery measure, and how we model it",
+    ]);
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was
