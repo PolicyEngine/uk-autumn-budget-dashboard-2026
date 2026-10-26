@@ -4,7 +4,6 @@ import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import ControlBar, { Segmented } from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { PE_MODEL_SOURCE } from "./InfoSections";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
@@ -194,7 +193,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
     `The average change in household net income in each of the 650 Westminster ` +
     `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}. ` +
     `Shown: ${label}.`;
-  if (notRouted) return { shows, sources: [PE_MODEL_SOURCE] };
+  if (notRouted) return { shows };
   const show = (text) => formatFigure(outcome, text, { signed: false });
   const { small, large } = CATEGORY_BREAKS[outcome];
   return {
@@ -216,14 +215,12 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
           "Each constituency drawn as one hexagon of the same size, placed roughly where it lies. It shows every seat equally, cities included; sizes and shapes are not geographic.",
       },
       { term: "Map", meaning: "Each constituency drawn with its own boundary, so large rural seats take up most of the map." },
-      { ref: "static" },
     ],
     caveats: [
       "Holding the survey weights fixed leaves out some of the uncertainty, so the intervals understate it.",
       "Constituency figures do not add up exactly to the regional ones, and may come from a different dataset.",
     ],
     sources: [
-      PE_MODEL_SOURCE,
       { label: "2024 Westminster constituency boundaries (650 seats)" },
       {
         label: "Hex layout: Open Innovations, UK constituencies 2024 HexJSON (CC BY 4.0)",
