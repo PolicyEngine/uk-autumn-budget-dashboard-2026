@@ -126,10 +126,16 @@ const TOUCH =
  * @param {(value: number) => string} props.format - Absolute value text
  * @param {string} [props.netKey] - The row's net, shown under the measure
  * @param {string} [props.netLabel]
+ * @param {string|null} [props.activeKey] - The hovered series, where the chart passes all of them
  */
-export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change" }) {
+export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change", activeKey }) {
   if (!active || !payload?.length) return null;
-  const entry = payload.find((item) => item.dataKey !== netKey) ?? payload[0];
+  // A composed chart passes every series: show the one the pointer is on
+  // (activeKey, from the bars' mouse events), nothing between segments
+  const entry = activeKey === undefined
+    ? payload.find((item) => item.dataKey !== netKey) ?? payload[0]
+    : payload.find((item) => item.dataKey === activeKey);
+  if (!entry) return null;
   const row = entry.payload ?? {};
   const value = Number(entry.value);
   const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);

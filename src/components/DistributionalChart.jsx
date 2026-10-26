@@ -314,7 +314,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
                 offset={16}
 
-                content={<SegmentTooltip labelOf={(row) => `Income decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`} format={(value) => `${value.toFixed(2)}%`} netKey="netChange" netLabel="Net change" />}
+                content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => `Income decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`} format={(value) => `${value.toFixed(2)}%`} netKey="netChange" netLabel="Net change" />}
 
               />
               {!key.shared && (

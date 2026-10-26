@@ -1,7 +1,7 @@
 // Small presentational pieces of the Methodology view: an icon in a tinted
 // chip, a tag (a pill, optionally a link), a callout and a back-to-top link.
 
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, CircleSlash } from "lucide-react";
 import { goToSection } from "./MethodContents";
 import { EXTERNAL, SOURCES } from "../../utils/sources";
 
@@ -80,5 +80,22 @@ export function SourceLink({ id, children }) {
     <a href={source.url} {...EXTERNAL}>
       {children ?? source.label}
     </a>
+  );
+}
+
+/** A compact list of measures and a reason each ("Unavailable", "Not modelled"). */
+export function ReasonList({ items, icon = false }) {
+  return (
+    <ul className="mm-reasons">
+      {items.map((item) => (
+        <li key={item.name}>
+          <span className="mm-reason-name">
+            {icon && <CircleSlash className="method-row-icon" aria-hidden="true" strokeWidth={1.75} />}
+            {item.name}
+          </span>
+          <span className="mm-reason-why">{item.why}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -146,6 +146,70 @@ describe("PolicyCards", () => {
   });
 });
 
+describe("how it is modelled (measureModelling.js)", () => {
+  const caveat = "The base is likely 1.5 to 1.7 times too high.";
+  const modelled = (description, id = ALPHA) => ({ ...catalogue.byId.get(ALPHA), id, description: `${description} ${caveat}` });
+
+  it("signals a limitation on the closed modelling, saying nothing the card already shows", () => {
+    const policy = modelled("Prices are day-weighted to fiscal years.", "a_mock_measure");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = document.querySelector(".policy-card-details");
+    expect(details.open).toBe(false);
+    // The caveat is signalled while closed
+    expect(details.querySelector("summary")).toHaveTextContent("How it is modelled1 known limitation");
+    // The card shows the whole published description here, so a fact it
+    // states gets no chip, and the limitation's chip opens to nothing new
+    expect(details.querySelectorAll(".mf-chip")).toHaveLength(1);
+    expect(details).toHaveTextContent("Known limitation");
+    expect(within(details).queryByRole("button", { name: "Known limitation" })).toBeNull();
+    expect(details.querySelectorAll(".mf-limit")).toHaveLength(0);
+    cleanup();
+  });
+
+  it("opens a limitation chip to its sentence when the card's own text does not state it", () => {
+    const policy = published("badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = document.querySelector(".policy-card-details");
+    expect(details.querySelector("summary")).toHaveTextContent("1 known limitation");
+    const chip = within(details).getByRole("button", { name: "Known limitation" });
+    const sentence = document.getElementById(chip.getAttribute("aria-controls"));
+    details.open = true;
+    expect(sentence).not.toBeVisible();
+    fireEvent.click(chip);
+    expect(sentence).toBeVisible();
+    expect(sentence).toHaveTextContent("1.5 to 1.7 times too high");
+    cleanup();
+  });
+
+  it("says each caveat once: no chip or sentence for what the card's details already state", () => {
+    // The Warm Home Discount card's details say it is paid in Great Britain
+    // and that eligibility in Scotland is approximate
+    const policy = published("warm_home_discount_top_up", "Warm Home Discount top-up");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = document.querySelector(".policy-card-details");
+    expect(details).not.toHaveTextContent("Great Britain only");
+    expect(within(details).queryByRole("button", { name: "Approximate for Scotland" })).toBeNull();
+    expect(details).toHaveTextContent("Approximate for Scotland");
+    expect(details.querySelectorAll(".mf-limit")).toHaveLength(0);
+    cleanup();
+  });
+
+  it("shows the modelling note as bullets in its measure's card", () => {
+    const policy = published("employer_ni_relief_under_25s", "Employer NI relief for under-25s");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const note = within(document.querySelector(".policy-card-details")).getByRole("list", { name: "Modelling note", hidden: true });
+    expect(within(note).getAllByRole("listitem", { hidden: true }).length).toBeGreaterThan(1);
+    expect(note).toHaveTextContent("HMRC");
+    cleanup();
+  });
+
+  it("has no modelling disclosure for a measure with nothing to say", () => {
+    render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
+    expect(document.querySelector(".policy-card-details")).toBeNull();
+    cleanup();
+  });
+});
+
 describe("the in-force timeline", () => {
   it("places each measure's months on the charts' years", () => {
     const vat = timelineSpan({ from: "2026-12", to: "2027-05" });
@@ -213,11 +277,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(plot.querySelector(".pchg-gap").getAttribute("d")).not.toBe("");
     expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["+£500"]);
     expect(plot).toHaveClass("is-gain");
-    // The values' table sits inside a visually hidden box (a table ignores
-    // a 1px width of its own)
-    const hidden = block.querySelector("table");
-    expect(hidden.parentElement).toHaveClass("policy-sr-only");
-    expect(within(hidden).getAllByRole("row")).toHaveLength(7);
+    // The years behind a button, closed until asked for
+    expect(block.querySelector("table")).toBeNull();
+    fireEvent.click(within(block).getByRole("button", { name: "Show the years" }));
+    expect(within(block).getAllByRole("row")).toHaveLength(6);
   });
 
   it("puts the block between the card's summary and its timing", () => {
@@ -244,13 +307,17 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       { label: "A limit", unit: "gbp", unit_words: "£", primary: true, source, points: yearly(() => 1000, (y) => (y >= 2027 ? 500 : 1000)) },
     ]);
     let block = within(card(amount)).getByRole("region", { name: "What changes" });
-    expect(block).toHaveTextContent("A limit, from 2027-28£1,000 → £500−£500");
+    // When it applies is on the timeline, so not in the label
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A limit$/);
+    expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law£1,000");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure£500−£500");
     cleanup();
     const rate = tables("before-after", [
       { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
     ]);
     block = within(card(rate)).getByRole("region", { name: "What changes" });
-    expect(block).toHaveTextContent("A rate, from 2027-2815% → 0%");
+    expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
     expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
@@ -273,8 +340,8 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     ]);
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
     const block = within(item).getByRole("region", { name: "What changes" });
-    expect(block).toHaveTextContent("A VAT rate, October 2026 to March 2028");
-    expect(block.querySelector(".pchg-ba-values")).toHaveTextContent("5% → 0%");
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });
@@ -287,15 +354,19 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue", ".pchg-ba"],
       ["employer_ni_relief_under_25s", "Employer NI relief for under-25s", "cost", ".pchg-ba"],
       ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "revenue", ".pchg-table"],
-      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150 → £250+£100"],
-      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5% → 0%"],
-      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", ".pchg-ba", "20% → 15%"],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150£250+£100"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5%0%−5 points"],
+      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", ".pchg-ba", "20%15%−5 points"],
     ];
     for (const [id, name, direction, selector, values] of cases) {
       render(<PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />);
-      const item = screen.getByRole("listitem");
+      // The card (its modelling note has list items of its own)
+      const item = document.querySelector(".policy-card");
       expect(item.querySelector(selector), id).toBeTruthy();
-      if (values) expect(item.querySelector(".pchg-ba-values"), id).toHaveTextContent(values);
+      if (values) {
+        const tiles = [...item.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("");
+        expect(tiles, id).toBe(values);
+      }
       cleanup();
     }
   });
@@ -321,5 +392,18 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 
   it("shows nothing without the file", () => {
     expect(within(card(null)).queryByRole("region", { name: "What changes" })).toBeNull();
+  });
+});
+
+describe("the card's frame", () => {
+  it("puts the source, how it is modelled and the effect on one footer line, and the arrow says no end date", () => {
+    const id = "badr_lifetime_limit_cut";
+    render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
+    const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
+    expect([...foot.children].map((child) => child.className)).toEqual([
+      "policy-card-source", "policy-card-details", "policy-card-effect",
+    ]);
+    expect(within(foot).getByRole("link", { name: /^Source: Business Asset Disposal Relief/ })).toBeTruthy();
+    expect(screen.getByRole("listitem").querySelector(".ptl-arrow")).toHaveAttribute("title", "No end date");
   });
 });
