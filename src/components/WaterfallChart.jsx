@@ -42,7 +42,7 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ZeroMeasuresNote from "./ZeroMeasuresNote";
 import {
-  legendMembership,
+  decileMembership,
   legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
@@ -64,7 +64,7 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
 const FLIP_SIGN_POLICIES = [];
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, showZeroNote = true }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -106,19 +106,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   // and the plot's height, hold still on a year change or Play); one with
   // no effect on any household this year is greyed out, and the note under
   // the chart says why (legendMembership)
-  const members = useMemo(() => {
-    const ids = new Set(
-      (rawData ?? [])
-        .filter(
-          (row) =>
-            row.decile !== "all" &&
-            parseInt(row.year) === selectedYear &&
-            Math.abs(parseFloat(row.avg_change)) > 0,
-        )
-        .map((row) => row.reform_id),
-    );
-    return legendMembership(selectedPolicies, (id) => ids.has(id));
-  }, [rawData, selectedPolicies, selectedYear]);
+  const members = useMemo(
+    () => decileMembership(rawData, "avg_change", selectedPolicies, selectedYear),
+    [rawData, selectedPolicies, selectedYear],
+  );
   const activePolicies = drawnNames(members);
 
   // The y axis for the year shown, from the lowest to the highest stack and
@@ -364,7 +355,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           />
         )}
       </div>
-      {published && <ZeroMeasuresNote members={members} year={selectedYear} />}
+      {published && showZeroNote && <ZeroMeasuresNote members={members} year={selectedYear} />}
     </div>
   );
 }

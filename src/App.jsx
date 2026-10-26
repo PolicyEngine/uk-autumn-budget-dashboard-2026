@@ -5,6 +5,8 @@ import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
+import ZeroMeasuresNote from "./components/ZeroMeasuresNote";
+import { decileMembership } from "./utils/legendMembership";
 import ConstituencyMap from "./components/ConstituencyMap";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
@@ -559,13 +561,26 @@ function App() {
                 rawData={results.rawWinnersLosers}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
+                showZeroNote={false}
               />
               <DistributionalChart
                 rawData={results.rawDistributional}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
+                showZeroNote={false}
               />
             </div>
+            {/* One note for both charts: the measures that are £0 for
+                households this year (greyed out in both keys) */}
+            <ZeroMeasuresNote
+              members={decileMembership(
+                results.rawWinnersLosers,
+                "avg_change",
+                selectedPolicies,
+                distributionalYear,
+              )}
+              year={distributionalYear}
+            />
           </section>
           <SectionHeading title="Inequality" />
           <section id="inequality" className="report-section hero-chart">

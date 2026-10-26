@@ -53,6 +53,25 @@ export function legendMembership(selectedPolicies, hasEffect) {
     .map((policy) => ({ id: policy.id, name: policy.name, muted: !hasEffect(policy.id) }));
 }
 
+/**
+ * legendMembership for a published table with a row per measure, year and
+ * decile (winners_losers.csv, distributional_impact.csv): a measure has an
+ * effect when any decile's `valueKey` is non-zero in `year`.
+ */
+export function decileMembership(rows, valueKey, selectedPolicies, year) {
+  const ids = new Set(
+    (rows ?? [])
+      .filter(
+        (row) =>
+          row.decile !== "all" &&
+          parseInt(row.year) === year &&
+          Math.abs(parseFloat(row[valueKey])) > 0,
+      )
+      .map((row) => row.reform_id),
+  );
+  return legendMembership(selectedPolicies, (id) => ids.has(id));
+}
+
 /** Why a greyed-out measure is £0 in `year`. */
 export function zeroReason(id, year) {
   if (ZERO_FOR_HOUSEHOLDS[id]) return ZERO_FOR_HOUSEHOLDS[id];
