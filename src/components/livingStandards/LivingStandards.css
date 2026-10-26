@@ -890,3 +890,23 @@
   font-size: var(--fs-micro);
   line-height: 1.4;
 }
+
+/* A card's one-line subtitle under its title: which side of a with/without
+   pair it is, and the link to its twin (GrowthWithMeasuresCard) */
+.main-content .chart-header .ls-card-subtitle {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--c-axis-title);
+}
+.main-content .chart-header .ls-card-subtitle a {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.main-content .chart-header .ls-card-subtitle ~ .chart-description {
+  grid-row: 3;
+  margin-top: 8px;
+}

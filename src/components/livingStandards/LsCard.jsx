@@ -27,6 +27,9 @@ import TitleIcon from "../TitleIcon";
  */
 export default function LsCard({
   title,
+  // One line under the title: which side of a pair the card is (with or
+  // without the measures) and a link to its twin
+  subtitle,
   icon,
   period,
   summary,
@@ -72,6 +75,7 @@ export default function LsCard({
                 sentence; the downloads keep them in their titles */}
             <span className="title-text">{title}</span>
           </h3>
+          {subtitle && <p className="ls-card-subtitle">{subtitle}</p>}
           {summary && <p className="chart-description">{summary}</p>}
         </div>
         {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />}

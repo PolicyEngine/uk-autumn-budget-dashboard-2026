@@ -24,10 +24,26 @@ import {
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { useUrlChoice } from "../../../utils/livingStandards/urlChoice";
+import { offerFor, seriesFor, withMeasuresRows } from "../../../utils/livingStandards/growthWithMeasures";
 import { CSV_SOURCES, PeSource } from "../sources";
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
+// The measures' effect on growth, in percentage points (two decimals: it is
+// often a few hundredths)
+const pp2 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const ppTick = (v) => `${pp2.format(v)}pp`;
+const pp = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${pp2.format(Math.abs(v))}pp`;
+/** "+0.02pp to +0.10pp a year", "nil" for a group's annual effects (in pp). */
+export function ppRange(values) {
+  const r = values.map((v) => Math.round(v * 100) / 100);
+  const lo = Math.min(...r);
+  const hi = Math.max(...r);
+  if (lo === 0 && hi === 0) return "nil each year";
+  return lo === hi ? `${pp(lo)} each year` : `${pp(lo)} to ${pp(hi)} a year`;
+}
+/** "+0.12pp", "nil" for one effect (in pp). */
+const ppOne = (v) => (Math.round(v * 100) === 0 ? "nil" : pp(v));
 
 // Each grouping: its pill label, the noun and the share in the sentence
 export const GROUPINGS = {
@@ -104,16 +120,36 @@ export function annualRange(values) {
 /**
  * Card parts for the Growth across the distribution card. A file without
  * the groups gives no view.
+ *
+ * `measures` ({ rows, reformId, mode }) makes it the card with the
+ * selected measures: rows from income_growth_with_measures.csv, the run
+ * that stands for the selection, and mode "growth" (growth with the
+ * measures: current law's plus the run's effect, withMeasuresRows) or
+ * "difference" (the effect itself, in percentage points). The choices are
+ * the same pills, kept in the same address parameters.
  */
-export default function useQuintileGrowthView(data, range = null, setRange = null) {
-  const offer = available(data);
+export default function useQuintileGrowthView(data, range = null, setRange = null, measures = null) {
+  const own = available(data);
+  const run = measures && offerFor(measures.rows, measures.reformId);
+  const offer = run
+    ? {
+        groupings: own.groupings.filter((x) => run.groupings.includes(x)),
+        populations: own.populations.filter((x) => run.populations.includes(x)),
+        bases: own.bases.filter((x) => run.bases.includes(x)),
+      }
+    : own;
   const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
   const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, offer.groupings[0]);
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");
 
-  const byYear = growthRows(data, population, basis, grouping) || [];
+  const twinRows = growthRows(data, population, basis, grouping);
+  const byYear =
+    (measures
+      ? withMeasuresRows(twinRows, seriesFor(measures.rows, { reformId: measures.reformId, population, basis, grouping }))
+      : twinRows) || [];
+  const diff = measures?.mode === "difference";
   const [fromYear, toYear] = range ?? [headlineStartYear(data), headlineYear(data)];
   const firstIndex = Math.max(0, byYear.findIndex((r) => r.year === fromYear));
   const endIndex = byYear.findIndex((r) => r.year === toYear);
@@ -143,14 +179,16 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // Whole period: one bar per group, the change from the first to the end year
   const periodRows = shown.map((i) => ({
     group: i + 1,
-    growth: ((1 + end.cumulative[i]) / (1 + first.cumulative[i]) - 1) * 100,
+    growth:
+      ((1 + end.cumulative[i]) / (1 + first.cumulative[i]) - 1) * 100 -
+      (diff ? ((1 + end.twin_cumulative[i]) / (1 + first.twin_cumulative[i]) - 1) * 100 : 0),
   }));
   // Year by year: one group of bars per year after the first, each group's
   // change on the year before
   const annualYears = byYear.slice(firstIndex + 1, lastIndex + 1);
   const annualRows = annualYears.map((r) => ({
     year: fyStart(r.year),
-    ...Object.fromEntries(shown.map((i) => [`g${i + 1}`, r.annual[i] * 100])),
+    ...Object.fromEntries(shown.map((i) => [`g${i + 1}`, (diff ? r.difference[i] : r.annual[i]) * 100])),
   }));
   const groupSeries = shown.map((i) => ({ key: `g${i + 1}`, name: groupName(i), colour: colourOf(i) }));
   const annual = view === "annual" && annualRows.length > 0;
@@ -160,10 +198,23 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
   const axis = divergingAxis(values, { pad: 0.1 });
-  const lowAnnual = annualYears.map((r) => r.annual[skip] * 100);
-  const highAnnual = annualYears.map((r) => r.annual[n - 1] * 100);
+  const lowAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[skip] * 100);
+  const highAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[n - 1] * 100);
+  const income = `real median income growth (${basisShort})${who}`;
 
-  const summary = annual ? (
+  const summary = diff ? (
+    annual ? (
+      <>
+        Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, the measures&apos; effect on {income} in the {lowest} is{" "}
+        <strong>{ppRange(lowAnnual)}</strong>; in the highest-income {g.share} it is <strong>{ppRange(highAnnual)}</strong>.
+      </>
+    ) : (
+      <>
+        From {fyDash(first.year)} to {fyDash(end.year)}, the measures&apos; effect on {income} in the {lowest} is{" "}
+        <strong>{ppOne(periodRows[0].growth)}</strong>; in the highest-income {g.share} it is <strong>{ppOne(periodRows.at(-1).growth)}</strong>.
+      </>
+    )
+  ) : annual ? (
     <>
       Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the {lowest}{" "}
       <strong>{annualRange(lowAnnual)}</strong>; in the highest-income {g.share} it <strong>{annualRange(highAnnual)}</strong>.
@@ -209,8 +260,14 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const block = data.income_growth_by_group?.groupings && Object.keys(data.income_growth_by_group.groupings).length ? data.income_growth_by_group : null;
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
   const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}, ranked among themselves.` : "";
-  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}. Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}`;
-  const fileStem = `income-growth-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
+  const measuresAbout = !measures
+    ? ""
+    : diff
+      ? " With the selected measures: each bar is the measures' effect on that growth, in percentage points: real growth with the measures less growth without them, from the same pair of simulations (the measure's or the package's run and its own baseline)."
+      : " With the selected measures: current law's growth (the Pre-measures forecast's chart) plus the measures' effect on it, from the same pair of simulations (the measure's or the package's run and its own baseline). So with less without is exactly the effect.";
+  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}`;
+  const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
+  const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected measures" : ", with the selected measures"}` : t);
 
   return {
     period: periodLabel(first.year, end.year),
@@ -229,8 +286,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
           legendItems,
           csv: () =>
             seriesCsv({
-              title: `Annual income growth by ${g.noun} (${basisShort})${who}`,
-              units: "% real change in median equivalised income on the year before",
+              title: csvTitle(`Annual income growth by ${g.noun} (${basisShort})${who}`),
+              units: diff
+                ? "Percentage points: real growth in median equivalised income on the year before, with the measures less without"
+                : "% real change in median equivalised income on the year before",
               source: CSV_SOURCES.pe,
               rows: annualRows,
               xKey: "year",
@@ -243,14 +302,16 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
           legendItems,
           csv: () =>
             seriesCsv({
-              title: `Income growth by ${g.noun} (${basisShort})${who}`,
-              units: `% real change in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}`,
+              title: csvTitle(`Income growth by ${g.noun} (${basisShort})${who}`),
+              units: diff
+                ? `Percentage points: real growth in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}, with the measures less without`
+                : `% real change in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}`,
               source: CSV_SOURCES.pe,
               rows: periodRows,
               xKey: "group",
               xLabel: axisLabel,
               xFormat: String,
-              series: [{ key: "growth", name: `Real change, ${fyDash(first.year)} to ${fyDash(end.year)}` }],
+              series: [{ key: "growth", name: `${diff ? "Effect on real change" : "Real change"}, ${fyDash(first.year)} to ${fyDash(end.year)}` }],
             }),
         },
     controls,
@@ -262,11 +323,11 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         xFormat={narrow ? fyShortLabel : fyLabel}
         series={groupSeries}
         legendItems={legendItems}
-        yFormat={pctTick}
-        tooltipFormat={pct}
+        yFormat={diff ? ppTick : pctTick}
+        tooltipFormat={diff ? pp : pct}
         tooltipLabelFormat={(y) => `${fyLabel(y)}, change on ${fyLabel(y - 1)}`}
         showPlus
-        yLabel="Real change on the year before (%)"
+        yLabel={diff ? "Effect on real growth (pp)" : "Real change on the year before (%)"}
         yDomain={axis.domain}
         yTicks={axis.ticks}
         barGap={n > 10 ? 0 : 1}
@@ -280,15 +341,15 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         xKey="group"
         xFormat={String}
         xLabel={axisLabel}
-        series={[{ key: "growth", name: `Real change, ${fyDash(first.year)} to ${fyDash(end.year)}`, colour: colours.at(-1) }]}
+        series={[{ key: "growth", name: `${diff ? "Effect on real change" : "Real change"}, ${fyDash(first.year)} to ${fyDash(end.year)}`, colour: colours.at(-1) }]}
         cellColours={colours}
         legendNote={skip ? VIGINTILE_NOTE : null}
         legendItems={legendItems}
-        yFormat={pctTick}
-        tooltipFormat={pct}
+        yFormat={diff ? ppTick : pctTick}
+        tooltipFormat={diff ? pp : pct}
         tooltipLabelFormat={(i) => groupName(i - 1)}
         showPlus
-        yLabel="Real change (%)"
+        yLabel={diff ? "Effect on real growth (pp)" : "Real change (%)"}
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />
