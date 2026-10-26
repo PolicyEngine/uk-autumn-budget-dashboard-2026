@@ -627,6 +627,38 @@ MARGINAL_RATE_PARTS = (
 )
 
 
+# The further variables the sweep reads to split net income into its parts
+# at each point, summed over the household: policyengine-uk's net income is
+# market income plus benefits less taxes and pension contributions.
+NET_INCOME_LEVEL_VARIABLES = (
+    "household_market_income",
+    "household_benefits",
+    "household_tax",
+    "pension_contributions",
+    "child_benefit",
+    "council_tax",
+)
+
+# The parts of net income at each sweep point, in stacking order, each in £
+# with its sign (taxes negative): the head's employment income, the rest of
+# market income, the benefits, then the taxes and deductions. "other_taxes"
+# is the rest, so the parts add up to net income to the penny.
+NET_INCOME_PARTS = (
+    "employment_income",
+    "other_income",
+    "universal_credit",
+    "child_benefit",
+    "other_benefits",
+    "income_tax",
+    "national_insurance",
+    "student_loan",
+    "council_tax",
+    "child_benefit_charge",
+    "pension_contributions",
+    "other_taxes",
+)
+
+
 def measure_ids() -> list[str]:
     """The measures the household calculation accepts: every registered
     single measure (the combined measure is the sum of these)."""
@@ -1290,9 +1322,22 @@ def run_scenario(
 
     net = simulation.calculate("household_net_income", year)
     if axes is not None:
+        components = rate_part_values()
+        # The levels that split net income into its parts (sweep only)
+        components.update(
+            {
+                name: [
+                    float(v)
+                    for v in simulation.calculate(
+                        name, year, map_to="household"
+                    )
+                ]
+                for name in NET_INCOME_LEVEL_VARIABLES
+            }
+        )
         return {
             "household_net_income": [float(v) for v in net],
-            "components": rate_part_values(),
+            "components": components,
         }
     out = {"household_net_income": float(net[0])}
     if parts or not net_income_only:
@@ -1453,6 +1498,58 @@ def sweep_rate_parts(
         )
         for i, total in enumerate(marginal_rates(grid, net))
     ]
+
+
+def net_income_parts(employment_income: float, net: float, levels: dict):
+    """Net income at one sweep point split into ``NET_INCOME_PARTS``, in £
+    with taxes negative, from the variables read there (``levels``), or
+    None when a run did not read them (one kept from before they were
+    added). Rounded to the penny, with "other_taxes" taking the rest, so
+    the parts add up to net income as the answer reports it."""
+    needed = (*RATE_PART_VARIABLES, *NET_INCOME_LEVEL_VARIABLES)
+    if any(name not in levels for name in needed):
+        return None
+    charge = levels["CB_HITC"]
+    taxes = (
+        levels["income_tax"]
+        + levels["national_insurance"]
+        + levels["student_loan_repayments"]
+        + levels["council_tax"]
+    )
+    part = {
+        "employment_income": employment_income,
+        "other_income": levels["household_market_income"] - employment_income,
+        "universal_credit": levels["universal_credit"],
+        "child_benefit": levels["child_benefit"],
+        "other_benefits": levels["household_benefits"]
+        - levels["universal_credit"]
+        - levels["child_benefit"],
+        "income_tax": -(levels["income_tax"] - charge),
+        "national_insurance": -levels["national_insurance"],
+        "student_loan": -levels["student_loan_repayments"],
+        "council_tax": -levels["council_tax"],
+        "child_benefit_charge": -charge,
+        "pension_contributions": -levels["pension_contributions"],
+        "other_taxes": -(levels["household_tax"] - taxes),
+    }
+    # (+ 0.0: no "-0.0" in the answer)
+    out = {k: _money(v) + 0.0 for k, v in part.items() if k != "other_taxes"}
+    out["other_taxes"] = _money(_money(net) - sum(out.values())) + 0.0
+    return out
+
+
+def sweep_net_income_parts(
+    grid: list[float], net: list[float], components: dict
+) -> Optional[list]:
+    """``net_income_parts`` at each sweep point, or None when the run did
+    not read the variables they need."""
+    steps = [
+        net_income_parts(
+            x, n, {name: values[i] for name, values in components.items()}
+        )
+        for i, (x, n) in enumerate(zip(grid, net))
+    ]
+    return None if any(step is None for step in steps) else steps
 
 
 def _rounded_parts(parts: dict, total: float) -> dict:
@@ -1953,9 +2050,21 @@ def _sweep(
             "two neighbouring points: one minus the change in household net "
             "income over the change in the head's employment income. The "
             f"rate at the head's own income is over the next £{OWN_RATE_STEP} "
-            "they earn."
+            "they earn. net_income_parts splits net income at each point "
+            "into its parts, in pounds with taxes negative, adding up to it."
         ),
     }
+    # Net income's parts at each point, when both sweep runs read them
+    base_sweep, reform_sweep = components[0], components[1]
+    if base_sweep and reform_sweep:
+        base_parts = sweep_net_income_parts(grid, base_line, base_sweep)
+        reform_parts = sweep_net_income_parts(grid, reform_line, reform_sweep)
+        if base_parts and reform_parts:
+            sweep["net_income_parts"] = {
+                "parts": list(NET_INCOME_PARTS),
+                "baseline": base_parts,
+                "reform": reform_parts,
+            }
     # The rates' parts, when every run read them (a run kept from before they
     # were added, or a stand-in engine, has none: the page then draws the
     # totals alone)
