@@ -91,8 +91,8 @@ const tooltip = (container) => container.querySelector(".constituency-tooltip");
 /** Choose how the change is shown, in the card's Options pill. */
 function showChangeAs(name) {
   fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+  // A click applies the choice and closes the popover
   fireEvent.click(screen.getByRole("radio", { name }));
-  fireEvent.click(screen.getByRole("button", { name: "Done" }));
 }
 
 describe("ConstituencyMap", () => {
