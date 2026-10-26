@@ -643,8 +643,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               >
                 <LabelList
                   dataKey="value"
-                  content={({ x, y, width, height: h, value }) =>
-                    value == null ? null : (
+                  // On a phone only the chosen year's bar is labelled, so
+                  // neighbouring labels never meet
+                  content={({ x, y, width, height: h, value, index }) =>
+                    value == null || (narrow && data[index]?.year !== selectedYear) ? null : (
                       <text
                         x={x + width / 2}
                         y={value < 0 ? Math.max(y, y + h) + 14 : Math.min(y, y + h) - 6}
