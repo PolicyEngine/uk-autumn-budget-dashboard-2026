@@ -1883,7 +1883,91 @@ body {
 /* The filter above the cards: All, Raises revenue, Costs revenue, each
    with its direction's dot (the shared ViewSwitch) */
 .policy-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   margin: 0 0 16px;
+}
+
+.policy-filter-label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.policy-filter .obr-view-option {
+  height: 36px;
+  padding: 0 14px;
+}
+
+.policy-filter-count {
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+}
+
+.obr-view-option[aria-pressed="true"] .policy-filter-count {
+  color: var(--pe-teal-800);
+  background: var(--c-highlight-band);
+}
+
+.policy-filter-arrow.is-revenue {
+  color: var(--c-loss-text);
+}
+
+.policy-filter-arrow.is-cost {
+  color: var(--c-gain-text);
+}
+
+/* Small muted icons beside the cards' labels, for scanning: never on a value */
+.policy-card-type,
+.policy-card-dates dt,
+.pchg-title,
+.pchg-more,
+.policy-card-effect,
+.ptl-budget-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.policy-card-type svg,
+.policy-card-dates dt svg,
+.pchg-title svg,
+.pchg-more svg,
+.policy-card-details .disclosure-title svg {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+.policy-card-details .disclosure-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.policy-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ptl-budget-icon {
+  flex: none;
+}
+
+.policy-filter-summary {
+  margin: 0 0 0 auto;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
 }
 
 /* Each segment on one line; on a narrow phone the switch scrolls sideways
@@ -1903,21 +1987,16 @@ body {
     padding-inline: 10px;
     font-size: var(--fs-caption);
   }
-}
 
-.policy-filter-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-}
+  .policy-filter-summary {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
 
-.policy-filter-dot.is-revenue {
-  background: var(--c-loss);
-}
-
-.policy-filter-dot.is-cost {
-  background: var(--c-gain);
+  /* The switch needs the whole line on a phone */
+  .policy-filter-label {
+    display: none;
+  }
 }
 
 /* A card's tags: its direction, then Temporary */
@@ -1938,14 +2017,6 @@ body {
   font-weight: 600;
   line-height: 1.5;
   border-radius: 999px;
-}
-
-.policy-card-direction::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: currentColor;
 }
 
 .policy-card-direction.is-revenue {
@@ -1993,7 +2064,7 @@ body {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 6px;
+  height: 3px;
   background: var(--policy-accent, var(--c-no-change));
 }
 
