@@ -71,6 +71,41 @@ export const CHART_COLOURS = {
   noticeText: "#7A5A1F",
 };
 
+/**
+ * The measures' colour ramps, one per group: Raise revenue in ambers (browns),
+ * Cost revenue in teals, each running darkest to lightest. A group's
+ * measures take its ramp in order of size (largest darkest), so a stack,
+ * its legend and its tooltip shade monotonically. The JS mirror of the
+ * --ramp-* tokens in src/app/globals.css (chartTheme.test.js keeps the two
+ * equal); policyConfig.js assigns them to the measures.
+ */
+export const POLICY_RAMPS = {
+  // Amber 900, 700, 500
+  raise: ["#78350F", "#B45309", "#F59E0B"],
+  // Teal 800 to 200
+  cost: ["#115E59", "#0F766E", "#0D9488", "#14B8A6", "#2DD4BF", "#5EEAD4", "#99F6E4"],
+};
+
+/**
+ * Names ordered by size, largest first: the mean absolute value over the
+ * points given (a point marked `unpublished` is left out). Ties keep the
+ * order given.
+ *
+ * @param {string[]} names
+ * @param {Array<Object>} points - One object per year, keyed by name
+ */
+export function orderBySize(names, points) {
+  const shown = points.filter((point) => !point.unpublished);
+  const size = (name) =>
+    shown.length === 0
+      ? 0
+      : shown.reduce((sum, point) => sum + Math.abs(Number(point[name]) || 0), 0) / shown.length;
+  return names
+    .map((name, index) => ({ name, index, size: size(name) }))
+    .sort((a, b) => b.size - a.size || a.index - b.index)
+    .map(({ name }) => name);
+}
+
 // Light horizontal gridlines only.
 /** "Before" is a grey dashed line on every chart, "after" a teal solid one */
 export const BEFORE_DASH = "6 4";
@@ -187,6 +222,40 @@ export function zeroBasedAxis(values, { pad = 0.05 } = {}) {
   const ticks = [];
   for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+// Round steps: 1, 2, 2.5 or 5 x 10^n, the smallest at least `raw`
+function niceStep(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+}
+
+/**
+ * An axis symmetric about 0, for values on both sides of it: ±m, where m is
+ * the largest absolute value padded by `pad` and rounded up to a round step
+ * (about two or three ticks a side), so 0 sits in the middle and a rise and
+ * a fall of the same size are drawn the same length. Returns { domain, ticks }.
+ */
+export function symmetricAxis(values, { pad = 0.05 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const largest = Math.max(0, ...vals.map(Math.abs)) * (1 + pad) || 1;
+  const step = niceStep(largest / 2.5);
+  const end = Math.ceil(largest / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = -end; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6 || 0);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * The y axis of a chart that can diverge from 0 (changes, gains and
+ * costs): symmetric about 0 (symmetricAxis) when the values fall on both
+ * sides of it, otherwise from 0 (zeroBasedAxis), so a chart whose values
+ * are all one sign is not drawn half empty.
+ */
+export function divergingAxis(values, options) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
+  return both ? symmetricAxis(vals, options) : zeroBasedAxis(vals, options);
 }
 
 /**

@@ -44,7 +44,7 @@ import {
   axisWidth,
   fiscalYearTick,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
@@ -237,7 +237,8 @@ function useBandDomain(rows, policies, selectedPolicies) {
         lo = Math.min(lo, down);
       }
     }
-    return zeroBasedAxis([lo, hi]);
+    // Symmetric about zero when ages gain and lose (divergingAxis)
+    return divergingAxis([lo, hi]);
   }, [rows, policies, selectedPolicies]);
 }
 

@@ -38,6 +38,7 @@ import {
   legendLabelStyle,
   CHART_COLOURS,
   sweepAxis,
+  divergingAxis,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
@@ -131,12 +132,13 @@ function EmploymentIncomeDiffChart({
     );
   }
 
-  // Calculate symmetric y-axis domain
-  const maxAbs = Math.max(...data.map((d) => Math.abs(d.difference)));
-  const yMax = Math.ceil(maxAbs / 1000) * 1000 || 1000;
-  // Symmetric ticks, set here so the axis is as wide as the longest label
-  // ("-£500" is wider than "-£1k")
-  const yTicks = [-yMax, -yMax / 2, 0, yMax / 2, yMax];
+  // Y axis: symmetric about zero when the household gains at some
+  // earnings and loses at others, from zero when the change has one sign
+  // (divergingAxis); ticks set here so the axis is as wide as its longest
+  // label. Changes are rounded to the penny so float noise is not a sign.
+  const { domain: yDomain, ticks: yTicks } = divergingAxis(
+    data.map((d) => Math.round((d.difference ?? 0) * 100) / 100),
+  );
 
   // Check if there are any non-null positive or negative values
   const hasPositive = data.some((d) => d.positive !== null && d.positive > 0);
@@ -193,7 +195,7 @@ function EmploymentIncomeDiffChart({
                 tick={TICK_STYLE}
                 width={axisWidth(yTicks, formatPoundsShort)}
                 ticks={yTicks}
-                domain={[-yMax, yMax]}
+                domain={yDomain}
               />
 
               <Tooltip

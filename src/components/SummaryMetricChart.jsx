@@ -30,7 +30,7 @@ import {
   fiscalYearTick,
   shortFiscalYearTick,
   useNarrowViewport,
-  zeroBasedAxis,
+  divergingAxis,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
@@ -307,7 +307,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
-  const { domain, ticks } = zeroBasedAxis(shown.map((point) => point.value));
+  // Symmetric about zero when the change goes both ways (divergingAxis)
+  const { domain, ticks } = divergingAxis(shown.map((point) => point.value));
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;

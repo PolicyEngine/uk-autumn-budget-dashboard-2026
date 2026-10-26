@@ -1,35 +1,55 @@
 /**
  * Shared policy configuration for colors and labels across all charts.
  *
- * Color scheme:
- * - Teal/green spectrum: policies that are GOOD for households (costs to treasury)
- * - Amber/orange spectrum: policies that are BAD for households (revenue raisers)
+ * Color scheme (POLICY_COLORS): amber ramp for revenue raisers, teal ramp
+ * for measures that cost revenue, each darkest for the largest measure.
  */
 
 import { POLICIES } from "./policies";
+import { POLICY_RAMPS } from "./chartTheme";
 
-// Policy colours by display name (used in population impact charts), from
-// the Autumn Budget 2025 dashboard's theme: raise revenue in its amber
-// family, cost revenue in its teal family (Tailwind's amber and teal
-// scales). Raise revenue runs darkest to lightest, two steps apart, as last
-// year's did. Cost revenue has seven measures, more than last year's four,
-// so its shades alternate dark and light down the stack (each neighbour at
-// least three steps apart) to keep neighbouring bars distinct. The names are
-// the measures' names in src/utils/policies.js.
-export const POLICY_COLORS = {
-  // Raise revenue (amber)
-  "Threshold freeze to 2031-32": "#78350F", // Amber 900
-  "Business Asset Disposal Relief restricted": "#B45309", // Amber 700
+// Measures that raise revenue (the rest of ALL_POLICY_NAMES cost revenue),
+// for the legends' two groups
+export const REVENUE_RAISING_NAMES = new Set([
+  "Threshold freeze to 2031-32",
+  "Business Asset Disposal Relief restricted",
+]);
 
-  // Cost revenue (teal)
-  "Fuel duty rises deferred": "#115E59", // Teal 800
-  "VAT cut on road fuel": "#2DD4BF", // Teal 400
-  "Zero VAT on domestic electricity": "#0F766E", // Teal 700
-  "Warm Home Discount top-up": "#5EEAD4", // Teal 300
-  "State Pension income tax protection": "#0D9488", // Teal 600
-  "Employer NI relief for under-25s": "#99F6E4", // Teal 200
-  "Plan 2 student loan threshold unfrozen": "#14B8A6", // Teal 500
-};
+// Order: revenue raisers first (positive for gov), then costs (negative for
+// gov); within each group by size, largest first: the mean absolute £bn of
+// the full package over the years shown (budgetary_impact.csv, 2026-27 to
+// 2031-32). Every stacked chart stacks in this order (largest nearest
+// zero), and its legend and tooltip list it. policyConfig.test.js checks
+// the order against the published file, so a re-run that changes the
+// ranking fails until this list is updated.
+export const ALL_POLICY_NAMES = [
+  // Raise revenue
+  "Threshold freeze to 2031-32", // £0.69bn a year on average
+  "Business Asset Disposal Relief restricted", // £0.32bn
+  // Cost revenue
+  "Employer NI relief for under-25s", // £5.46bn
+  "Fuel duty rises deferred", // £0.57bn
+  "Zero VAT on domestic electricity", // £0.36bn
+  "Plan 2 student loan threshold unfrozen", // £0.35bn
+  "State Pension income tax protection", // £0.16bn
+  "VAT cut on road fuel", // £0.13bn
+  "Warm Home Discount top-up", // £0.09bn
+];
+
+// Policy colours by display name, the same on every chart and card: each
+// group's ramp (chartTheme.js POLICY_RAMPS, the --ramp-* tokens) taken in
+// the order above, so the largest measure is darkest and each smaller one
+// a step lighter: ambers for raise revenue, teals for cost revenue.
+export const POLICY_COLORS = Object.fromEntries(
+  [true, false].flatMap((raises) =>
+    ALL_POLICY_NAMES.filter((name) => REVENUE_RAISING_NAMES.has(name) === raises).map(
+      (name, index) => {
+        const ramp = raises ? POLICY_RAMPS.raise : POLICY_RAMPS.cost;
+        return [name, ramp[Math.min(index, ramp.length - 1)]];
+      },
+    ),
+  ),
+);
 
 // Policy colours by measure id (personal impact), the same as by name
 export const POLICY_COLORS_BY_KEY = Object.fromEntries(
@@ -62,28 +82,6 @@ export const POLICY_ICONS = {
   employer_ni_relief_under_25s: POLICY_TYPE_ICONS.employerNi,
   plan_2_threshold_unfreeze: POLICY_TYPE_ICONS.studentLoan,
 };
-
-// Order: revenue raisers first (positive for gov), then costs (negative for gov)
-export const ALL_POLICY_NAMES = [
-  // Raise revenue
-  "Threshold freeze to 2031-32",
-  "Business Asset Disposal Relief restricted",
-  // Cost revenue
-  "Fuel duty rises deferred",
-  "VAT cut on road fuel",
-  "Zero VAT on domestic electricity",
-  "Warm Home Discount top-up",
-  "State Pension income tax protection",
-  "Employer NI relief for under-25s",
-  "Plan 2 student loan threshold unfrozen",
-];
-
-// Measures that raise revenue (the rest of ALL_POLICY_NAMES cost revenue),
-// for the legends' two groups
-export const REVENUE_RAISING_NAMES = new Set([
-  "Threshold freeze to 2031-32",
-  "Business Asset Disposal Relief restricted",
-]);
 
 // The id of the run that simulates every measure together
 // (reforms.AUTUMN_BUDGET_2026_COMBINED_ID). Statistics that cannot be added

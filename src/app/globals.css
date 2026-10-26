@@ -160,6 +160,18 @@ code {
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
+  /* The measures' colour ramps, darkest to lightest, taken in order of
+     size within each group (chartTheme.js POLICY_RAMPS) */
+  --ramp-raise-1: #78350f;
+  --ramp-raise-2: #b45309;
+  --ramp-raise-3: #f59e0b;
+  --ramp-cost-1: #115e59;
+  --ramp-cost-2: #0f766e;
+  --ramp-cost-3: #0d9488;
+  --ramp-cost-4: #14b8a6;
+  --ramp-cost-5: #2dd4bf;
+  --ramp-cost-6: #5eead4;
+  --ramp-cost-7: #99f6e4;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

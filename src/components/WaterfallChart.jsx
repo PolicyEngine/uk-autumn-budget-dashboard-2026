@@ -34,7 +34,7 @@ import {
   legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -163,7 +163,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       });
     });
 
-    return zeroBasedAxis([minValue, maxValue]);
+    // Symmetric about zero when deciles gain and lose (divergingAxis)
+    return divergingAxis([minValue, maxValue]);
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
