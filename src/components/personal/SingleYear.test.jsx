@@ -137,8 +137,9 @@ describe("Household impact's results", () => {
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
     // income charts below the calculator, the published household scatter
-    // (the result among all households) and the UK files "Where you sit"
-    // reads, only the household route
+    // (the result among all households, loaded on demand through its
+    // artifact's receipt) and the UK files "Where you sit" reads, only the
+    // household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
@@ -146,6 +147,7 @@ describe("Household impact's results", () => {
           !url.endsWith("/household_presets.json") &&
           !url.endsWith("/income_curve.csv") &&
           !url.endsWith("/household_scatter_binned.csv") &&
+          !url.endsWith("/receipt.json") &&
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
           !url.endsWith("/distributional_impact.csv") &&
