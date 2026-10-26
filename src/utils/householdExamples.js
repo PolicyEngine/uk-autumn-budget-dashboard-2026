@@ -100,6 +100,8 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     description: "£38,000, spends £2,600 a year on petrol",
     icon: "car",
     measure: "fuel_duty_rise_deferral",
+    // The tag covers both fuel measures, and its figure is their parts
+    measures: ["fuel_duty_rise_deferral", "road_fuel_vat_cut"],
     tag: "Fuel duty and VAT on fuel",
     inputs: {
       ...RESET,

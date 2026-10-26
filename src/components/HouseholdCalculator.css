@@ -526,7 +526,7 @@
 /* The examples: a row of cards above the form, as the student loan
    calculator's scenario cards; the chosen one teal */
 /* The eight cards: "Your household", then the seven examples. One grid,
-   four across on a wide screen, two on a tablet, one row each on a phone */
+   four across on a wide screen, two on a tablet, one a row on a phone */
 .household-cards {
   margin-bottom: 24px;
 }
@@ -553,12 +553,13 @@
 .household-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
-/* A card: the same five rows on every card, each a fixed height, so all
-   eight are exactly the same size: icon, name (two lines), result, who
-   they are (two lines), and the measure it is for at the foot */
+/* A card: the same six rows on every card, each a fixed height, so all
+   eight are exactly the same size: icon, name (two lines), result, where
+   it mainly comes from (one line), who they are (two lines), and the
+   measure it is for at the foot */
 .household-card {
   --card-accent: var(--pe-teal-600);
   --card-tint: color-mix(in srgb, var(--card-accent) 10%, var(--pe-surface));
@@ -567,15 +568,15 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto auto 1fr;
   grid-template-areas:
     "icon"
     "name"
-    "figure"
+    "result"
+    "source"
     "description"
     "tag";
   align-items: start;
-  gap: 0;
   min-width: 0;
   height: 100%;
   padding: 20px 20px 18px;
@@ -593,6 +594,16 @@
     box-shadow 0.18s ease,
     border-color 0.18s ease,
     background-color 0.18s ease;
+  /* In one after another as the view opens */
+  animation: household-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes household-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 /* The measure's colour as a hairline along the top */
@@ -607,7 +618,7 @@
 }
 
 .household-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
   box-shadow: var(--pe-shadow-md);
 }
@@ -619,7 +630,7 @@
 }
 
 .household-card:active {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .household-card:focus-visible {
@@ -636,17 +647,67 @@
     var(--pe-shadow-sm);
 }
 
+/* The icon in a soft circle of the measure's colour, filled on hover and
+   when chosen */
 .household-card-icon {
   grid-area: icon;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   margin-bottom: 14px;
   color: var(--card-ink);
   background: color-mix(in srgb, var(--card-accent) 18%, var(--pe-surface));
-  border-radius: 12px;
+  border-radius: 50%;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.household-card:hover .household-card-icon,
+.household-card[aria-pressed="true"] .household-card-icon,
+.household-card.is-yours .household-card-icon {
+  color: var(--pe-surface);
+  background: var(--card-ink);
+}
+
+/* Top right: a tick on the chosen card, "Start here" on yours */
+.household-card-check,
+.household-card-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+
+.household-card-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--pe-surface);
+  background: var(--card-ink);
+  border-radius: 50%;
+  animation: household-check-in 0.22s ease-out;
+}
+
+@keyframes household-check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.household-card-badge {
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--pe-teal-800);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
 }
 
 /* Two lines, always: a one-line name keeps the second line's room */
@@ -665,17 +726,22 @@
   color: var(--pe-gray-900);
 }
 
-/* The result, or a muted placeholder, in a row of its own height */
-.household-card-figure {
-  grid-area: figure;
+/* The result, with a bar for each year beside it, or a placeholder, in a
+   row of its own height */
+.household-card-result {
+  grid-area: result;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  height: 40px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 42px;
   padding-top: 6px;
-  font-size: 1.45rem;
+}
+
+.household-card-figure {
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 34px;
+  line-height: 32px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -690,15 +756,16 @@
 }
 
 .household-card-figure.is-none {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   color: var(--pe-gray-500);
 }
 
-.household-card-figure.is-pending {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--pe-gray-400);
+.household-card-figure.is-muted {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--pe-teal-700);
+  opacity: 0.75;
 }
 
 .household-card-figure-unit {
@@ -706,6 +773,56 @@
   font-weight: 500;
   letter-spacing: 0;
   color: var(--pe-gray-500);
+}
+
+.household-card-spark {
+  flex: none;
+  margin-bottom: 5px;
+}
+
+.household-card-spark rect {
+  opacity: 0.35;
+}
+
+.household-card-spark rect.is-current {
+  opacity: 1;
+}
+
+.household-card-spark .is-gain {
+  fill: var(--c-gain);
+}
+
+.household-card-spark .is-loss {
+  fill: var(--c-loss);
+}
+
+.household-card-spark .is-none {
+  fill: var(--c-no-change);
+}
+
+/* No precomputed figure: a dashed pill says when it comes */
+.household-card-pending {
+  margin-bottom: 4px;
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--pe-gray-500);
+  border: 1px dashed var(--pe-gray-300);
+  border-radius: 999px;
+}
+
+/* Where most of the change comes from, when not the card's own measure */
+.household-card-source {
+  grid-area: source;
+  min-height: 1.45em;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
 }
 
 .household-card-description {
@@ -716,13 +833,13 @@
   line-clamp: 2;
   overflow: hidden;
   min-height: calc(2 * 1.45em);
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: var(--fs-small);
   line-height: 1.45;
   color: var(--pe-gray-500);
 }
 
-/* Pinned to the foot */
+/* The measure it is for, pinned to the foot, with its own part */
 .household-card-tag {
   grid-area: tag;
   align-self: end;
@@ -742,6 +859,19 @@
   border-radius: 999px;
 }
 
+.household-card-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.household-card-tag-part {
+  flex: none;
+  padding-left: 7px;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
+}
+
 .household-card[aria-pressed="true"] .household-card-tag {
   background: var(--pe-surface);
 }
@@ -754,26 +884,16 @@
   border-radius: 50%;
 }
 
-/* "Your household": the start, in the page's teal, with a chevron that
+/* "Your household": the start, on a light teal wash, with a chevron that
    turns as the form opens below */
 .household-card.is-yours {
   --card-accent: var(--pe-teal-600);
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--pe-teal-600) 45%, var(--card-border));
-  background: linear-gradient(160deg, var(--pe-teal-50), var(--pe-surface) 70%);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-200);
 }
 
 .household-card.is-yours::before {
   opacity: 1;
-}
-
-.household-card.is-yours.is-selected {
-  border-style: solid;
-}
-
-.household-card.is-yours .household-card-icon {
-  color: var(--pe-surface);
-  background: var(--pe-teal-600);
 }
 
 .household-card-tag.is-start {
@@ -806,6 +926,11 @@
   margin: -2px;
 }
 
+/* Focused after an example card, not outlined: it is not a control */
+.household-results:focus {
+  outline: none;
+}
+
 @media (max-width: 1023px) {
   .household-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -822,10 +947,11 @@
 
   .household-card {
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
     grid-template-areas:
       "icon name"
-      "icon figure"
+      "icon result"
+      "icon source"
       "icon description"
       "icon tag";
     column-gap: 14px;
@@ -845,15 +971,32 @@
     font-size: 1rem;
   }
 
-  .household-card-figure {
-    height: 32px;
+  /* Clear of the badge or tick in the corner */
+  .household-card.is-yours .household-card-name {
+    padding-right: 88px;
+  }
+
+  .household-card[aria-pressed="true"] .household-card-name {
+    padding-right: 28px;
+  }
+
+  .household-card-check,
+  .household-card-badge {
+    top: 14px;
+    right: 14px;
+  }
+
+  .household-card-result {
+    height: 36px;
     padding-top: 2px;
-    font-size: 1.25rem;
-    line-height: 30px;
+  }
+
+  .household-card-figure {
+    font-size: 1.3rem;
   }
 
   .household-card-description {
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   .household-card-tag {
@@ -1391,11 +1534,18 @@
   .calculate-arrow,
   .household-card,
   .household-card::before,
+  .household-card-icon,
   .household-card-chevron {
     transition: none;
   }
 
-  .household-card:hover {
+  .household-card,
+  .household-card-check {
+    animation: none;
+  }
+
+  .household-card:hover,
+  .household-card:active {
     transform: none;
   }
 

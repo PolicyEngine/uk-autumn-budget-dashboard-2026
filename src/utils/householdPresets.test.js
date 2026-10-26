@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { buildHouseholdRequest, requestKey } from "./householdImpactApi";
+import { cardFigures } from "../components/personal/HouseholdCards";
 import { PRESET_POLICIES, presetCacheEntries, presetChanges, presetInputs, presetRequests } from "./householdPresets";
 
 const file = JSON.parse(readFileSync("public/data/household_presets.json", "utf8"));
@@ -49,11 +50,35 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const changes = presetChanges(file);
     expect(Object.keys(changes).sort()).toEqual(HOUSEHOLD_EXAMPLES.map((example) => example.id).sort());
     for (const entry of file.entries) {
-      expect(changes[entry.preset_id][entry.year]).toBe(entry.response.net_income.change);
+      const { change, byPolicy } = changes[entry.preset_id][entry.year];
+      expect(change).toBe(entry.response.net_income.change);
+      // Each measure's own part (alone, so the parts need not add up to
+      // the change when measures interact)
+      expect(Object.keys(byPolicy).sort()).toEqual([...PRESET_POLICIES].sort());
     }
     // An entry whose example has changed gives no figure
     const [first] = file.entries;
     const edited = { ...first, request: { ...first.request, household: { ...first.request.household, age: 99 } } };
     expect(presetChanges({ entries: [edited] })).toEqual({});
+  });
+
+  it("give each card its figures, never crediting a measure with a change it does not make", () => {
+    const changes = presetChanges(file);
+    const figures = (id, year) => cardFigures(HOUSEHOLD_EXAMPLES.find((example) => example.id === id), changes[id], year);
+    // The apprentice's own measure (employer NI relief) gives the household
+    // nothing; the line under the result names where the change comes from
+    const apprentice = figures("apprentice-19", 2027);
+    expect(Math.round(apprentice.ownPart)).toBe(0);
+    expect(apprentice.source.name).toBe("zero VAT on electricity");
+    expect(Math.round(apprentice.source.part)).toBe(Math.round(changes["apprentice-19"][2027].byPolicy.domestic_electricity_zero_vat));
+    // The pensioner's own measure gives most of it: no second line
+    const pensioner = figures("pensioner-70", 2027);
+    expect(pensioner.source).toBeNull();
+    expect(Math.round(pensioner.ownPart)).toBe(Math.round(changes["pensioner-70"][2027].byPolicy.state_pension_income_tax_protection));
+    // The driver's tag is both fuel measures
+    const driver = changes.driver[2027].byPolicy;
+    expect(figures("driver", 2027).ownPart).toBeCloseTo(driver.fuel_duty_rise_deferral + driver.road_fuel_vat_cut);
+    // A bar for each year a reader can choose
+    expect(figures("renter-22", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
   });
 });

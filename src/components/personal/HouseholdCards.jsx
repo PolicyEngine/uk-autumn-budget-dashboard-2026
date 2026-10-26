@@ -2,6 +2,7 @@ import {
   Armchair,
   BriefcaseBusiness,
   Car,
+  Check,
   ChevronDown,
   GraduationCap,
   HardHat,
@@ -9,6 +10,7 @@ import {
   KeyRound,
   UsersRound,
 } from "lucide-react";
+import { POLICIES } from "../../utils/policies";
 import { POLICY_COLORS_BY_KEY } from "../../utils/policyConfig";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, money } from "../../utils/singleYear";
@@ -24,39 +26,98 @@ export const EXAMPLE_ICONS = {
   briefcase: BriefcaseBusiness,
 };
 
-/**
- * "+£88 a year", "−£12 a year" or "No change", from whole pounds; until
- * there is a figure, a muted note in its place, so every card keeps the
- * row and all are the same size.
- */
-function Figure({ value, pending }) {
-  if (!Number.isFinite(value)) {
-    return <span className="household-card-figure is-pending">{pending}</span>;
-  }
+/** Each measure as a card's "Mainly from …" line names it. */
+const SOURCE_NAMES = {
+  domestic_electricity_zero_vat: "zero VAT on electricity",
+  fuel_duty_rise_deferral: "the fuel duty deferral",
+  road_fuel_vat_cut: "the VAT cut on road fuel",
+  state_pension_income_tax_protection: "State Pension tax protection",
+  plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
+  threshold_freeze_2031_32: "the threshold freeze",
+  warm_home_discount_top_up: "the Warm Home Discount top-up",
+  employer_ni_relief_under_25s: "employer NI relief",
+  badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
+};
+const sourceName = (id) => SOURCE_NAMES[id] ?? POLICIES.find((policy) => policy.id === id)?.name ?? id;
+
+/** "+£88", "−£12" or "£0", from whole pounds. */
+export const signedMoney = (value) => {
   const rounded = Math.round(value);
-  const tone = rounded > 0 ? "is-gain" : rounded < 0 ? "is-loss" : "is-none";
+  return rounded === 0 ? "£0" : `${rounded > 0 ? "+" : MINUS}${money(Math.abs(rounded))}`;
+};
+const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) < 0 ? "is-loss" : "is-none");
+
+/**
+ * What one example's card shows for `year`, from the precomputed results
+ * (householdPresets.js presetChanges): its change in net income, the
+ * change in each year for the sparkline, its own measures' part (on its
+ * tag) and, when another measure gives most of the change, that one.
+ */
+export function cardFigures(example, byYear, year) {
+  const current = byYear?.[year];
+  if (!current) return null;
+  const own = example.measures ?? [example.measure];
+  const ownPart = own.reduce((sum, id) => sum + (current.byPolicy[id] ?? 0), 0);
+  // The measure giving the largest part of the change, if not its own
+  const [mainId, mainPart] = Object.entries(current.byPolicy).reduce(
+    (best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best),
+    [null, 0],
+  );
+  const source =
+    mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
+      ? { name: sourceName(mainId), part: mainPart, most: Math.abs(mainPart) * 2 >= Math.abs(current.change) }
+      : null;
+  const series = Object.keys(byYear)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((y) => ({ year: y, change: byYear[y].change }));
+  return { change: current.change, ownPart, source, series };
+}
+
+/** The change in each year as small bars, the year chosen in full colour. */
+function Sparkline({ series, year }) {
+  const max = Math.max(1, ...series.map((point) => Math.abs(point.change)));
+  const hasLoss = series.some((point) => point.change < 0);
+  const width = series.length * 9 - 3;
+  const height = 26;
+  const zero = hasLoss ? height / 2 : height;
+  const scale = (hasLoss ? height / 2 : height) / max;
   return (
-    <span className={`household-card-figure ${tone}`}>
-      {rounded === 0 ? (
-        "No change"
-      ) : (
-        <>
-          {rounded > 0 ? "+" : MINUS}
-          {money(Math.abs(rounded))}
-          <span className="household-card-figure-unit"> a year</span>
-        </>
-      )}
-    </span>
+    <svg
+      className="household-card-spark"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      aria-hidden="true"
+      focusable="false"
+    >
+      {series.map((point, index) => {
+        const size = Math.max(1.5, Math.abs(point.change) * scale);
+        return (
+          <rect
+            key={point.year}
+            className={`${tone(point.change)} ${point.year === year ? "is-current" : ""}`.trim()}
+            x={index * 9}
+            y={point.change >= 0 ? zero - size : zero}
+            width={6}
+            height={size}
+            rx={1.5}
+          />
+        );
+      })}
+    </svg>
   );
 }
 
 /**
- * The Household impact view's eight cards: "Your household", which opens
- * the form below them, then the seven examples, each of which fills the
- * form and shows its result at once. Each example names who it is and the
- * measure it is for, in that measure's colour, and, once the precomputed
- * results are in and every measure is selected, its change in net income
- * in the year chosen.
+ * The Household impact view's eight cards, all the same size: "Your
+ * household", which opens the form below them, then the seven examples,
+ * each of which fills the form and shows its result at once. Each example
+ * names who it is and, on its tag, the measure it is for, in that
+ * measure's colour. Once the precomputed results are in and every measure
+ * is selected, it shows its change in net income in the year chosen, a
+ * bar for each year, the part its own measure gives (on the tag) and, when
+ * another measure gives more, which one.
  *
  * @param {Object} props
  * @param {Array} props.examples - householdExamples.js's HOUSEHOLD_EXAMPLES
@@ -65,8 +126,7 @@ function Figure({ value, pending }) {
  * @param {string} props.formId - The form panel's id, for aria-controls
  * @param {() => void} props.onYours - "Your household" pressed
  * @param {(id: string) => void} props.onChoose - An example pressed
- * @param {Object<string, number>|null} props.changes - Each example's change
- *   in net income in `year`, or null to show none
+ * @param {Object|null} props.presets - presetChanges' map, or null to show no figures
  * @param {number|null} props.yoursChange - Your household's change, once calculated
  * @param {number} props.year
  */
@@ -77,11 +137,12 @@ export default function HouseholdCards({
   formId,
   onYours,
   onChoose,
-  changes,
+  presets,
   yoursChange = null,
   year,
 }) {
   const yoursSelected = value === null && formOpen;
+  const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
   return (
     <section className="household-cards" aria-labelledby="household-cards-title">
       <div className="household-cards-head">
@@ -90,49 +151,88 @@ export default function HouseholdCards({
         </h2>
         <p className="household-cards-subtitle">
           Enter your own, or start from an example.
-          {changes && ` Figures are the change in net income in ${fiscalYearTick(year)} with every measure.`}
+          {anyFigures &&
+            ` Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
         </p>
       </div>
       <div className="household-cards-grid">
         <button
           type="button"
           className={`household-card is-yours ${yoursSelected ? "is-selected" : ""}`.trim()}
+          style={{ "--i": 0 }}
           aria-expanded={formOpen}
           aria-controls={formId}
           onClick={onYours}
         >
           <span className="household-card-icon" aria-hidden="true">
-            <House size={20} strokeWidth={1.8} />
+            <House size={22} strokeWidth={1.8} />
           </span>
           <span className="household-card-name">Your household</span>
-          <Figure value={yoursChange} pending="Your result after Calculate" />
+          {/* After the name, so the card's name starts with it */}
+          <span className="household-card-badge">Start here</span>
+          {Number.isFinite(yoursChange) ? (
+            <span className="household-card-result">
+              <span className={`household-card-figure ${tone(yoursChange)}`}>
+                {Math.round(yoursChange) === 0 ? "No change" : signedMoney(yoursChange)}
+                {Math.round(yoursChange) !== 0 && <span className="household-card-figure-unit"> a year</span>}
+              </span>
+            </span>
+          ) : (
+            <span className="household-card-result">
+              <span className="household-card-figure is-muted">Your result after Calculate</span>
+            </span>
+          )}
+          <span className="household-card-source" />
           <span className="household-card-description">Every answer starts at a typical value</span>
           <span className="household-card-tag is-start">
-            {formOpen ? "Your answers" : "Start here"}
+            {formOpen ? "Hide your answers" : "Enter your answers"}
             <ChevronDown className="household-card-chevron" size={14} strokeWidth={2} aria-hidden="true" />
           </span>
         </button>
-        {examples.map((example) => {
+        {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
-          const change = changes?.[example.id];
+          const figures = presets ? cardFigures(example, presets[example.id], year) : null;
+          const pressed = value === example.id;
           return (
             <button
               key={example.id}
               type="button"
               className="household-card"
-              aria-pressed={value === example.id}
+              aria-pressed={pressed}
               onClick={() => onChoose(example.id)}
-              style={{ "--card-accent": POLICY_COLORS_BY_KEY[example.measure] }}
+              style={{ "--card-accent": POLICY_COLORS_BY_KEY[example.measure], "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
-                <Icon size={20} strokeWidth={1.8} />
+                <Icon size={22} strokeWidth={1.8} />
               </span>
               <span className="household-card-name">{example.label}</span>
-              <Figure value={change} pending="Calculated when chosen" />
+              {pressed && (
+                <span className="household-card-check" aria-hidden="true">
+                  <Check size={14} strokeWidth={2.6} />
+                </span>
+              )}
+              <span className="household-card-result">
+                {figures ? (
+                  <>
+                    <span className={`household-card-figure ${tone(figures.change)}`}>
+                      {Math.round(figures.change) === 0 ? "No change" : signedMoney(figures.change)}
+                      {Math.round(figures.change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
+                    </span>
+                    <Sparkline series={figures.series} year={year} />
+                  </>
+                ) : (
+                  <span className="household-card-pending">Calculated when chosen</span>
+                )}
+              </span>
+              <span className="household-card-source">
+                {figures?.source &&
+                  `${figures.source.most ? "Mainly" : "Largest part"} from ${figures.source.name}, ${signedMoney(figures.source.part)}`}
+              </span>
               <span className="household-card-description">{example.description}</span>
               <span className="household-card-tag">
                 <span className="household-card-dot" aria-hidden="true" />
-                {example.tag}
+                <span className="household-card-tag-name">{example.tag}</span>
+                {figures && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
               </span>
             </button>
           );

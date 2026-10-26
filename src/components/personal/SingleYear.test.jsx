@@ -318,9 +318,11 @@ describe("Calculate", () => {
     fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
-    // Its answers open in the form, with no Calculate while unedited
-    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
-    expect(screen.queryByRole("button", { name: /^Calcul/ })).toBeNull();
+    // Your household opens the form with its answers, and Calculate, to
+    // change one and calculate again
+    openForm();
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
     const before = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
@@ -339,6 +341,28 @@ describe("Calculate", () => {
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("an example card", () => {
+  it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    // jsdom has no scrolling
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    // The result appears below the screen's foot
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    renderTab();
+    openForm();
+    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+    expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
   });
 });
 

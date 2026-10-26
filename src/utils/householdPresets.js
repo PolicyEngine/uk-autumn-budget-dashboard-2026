@@ -55,8 +55,10 @@ function currentEntries(file) {
 }
 
 /**
- * Each example's change in net income by year, with every measure, from
- * the file: { [presetId]: { [year]: change } }, for the cards' figures.
+ * Each example's change in net income by year, with every measure, and
+ * each measure's own part (that measure alone, as the breakdown shows it;
+ * with interactions the parts need not add up to the change), from the file, for the cards' figures:
+ * { [presetId]: { [year]: { change, byPolicy: { [measureId]: change } } } }.
  * An entry that no longer matches its example is left out, as above.
  */
 export function presetChanges(file) {
@@ -64,7 +66,12 @@ export function presetChanges(file) {
   for (const { entry } of currentEntries(file)) {
     const change = Number(entry.response.net_income?.change);
     if (!Number.isFinite(change)) continue;
-    (changes[entry.preset_id] ??= {})[entry.year] = change;
+    const byPolicy = Object.fromEntries(
+      (entry.response.by_policy?.measures ?? [])
+        .filter((measure) => Number.isFinite(Number(measure.change)))
+        .map((measure) => [measure.id, Number(measure.change)]),
+    );
+    (changes[entry.preset_id] ??= {})[entry.year] = { change, byPolicy };
   }
   return changes;
 }

@@ -367,13 +367,6 @@ function HouseholdCalculator({
   const allSelected =
     householdPolicies.length === PRESET_POLICIES.length &&
     PRESET_POLICIES.every((id) => householdPolicies.includes(id));
-  const cardChanges = useMemo(() => {
-    if (!allSelected) return null;
-    const changes = Object.fromEntries(
-      Object.entries(presetChanges).flatMap(([id, byYear]) => (byYear[year] === undefined ? [] : [[id, byYear[year]]])),
-    );
-    return Object.keys(changes).length > 0 ? changes : null;
-  }, [allSelected, presetChanges, year]);
   // Fill the form from an example and show its result at once (no
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
@@ -381,6 +374,9 @@ function HouseholdCalculator({
     const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
     setInputs(next);
     setPresetId(preset.id);
+    // The form closes; the result, once shown, is scrolled to
+    setFormOpen(false);
+    scrollToResult.current = true;
     if (householdPolicies.length > 0) {
       setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now() });
     }
@@ -403,8 +399,6 @@ function HouseholdCalculator({
   // Busy while the headline is calculated, and while the slower parts are
   // for these same answers; changed answers can be sent once the headline
   // is back, without waiting for the split by policy and the sweep
-  // An example's result, as chosen and unedited: no Calculate to press
-  const showingExample = presetId !== null && submitted !== null && !changed;
   const running =
     submitted !== null &&
     (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
@@ -428,18 +422,9 @@ function HouseholdCalculator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
 
-  // "Your household": from an example, the form starts again at its
-  // typical values, opened; from your own answers, it opens or closes
-  const chooseYours = () => {
-    if (presetId !== null) {
-      setInputs({ ...WIZARD_DEFAULTS });
-      setPresetId(null);
-      setSubmitted(null);
-      setFormOpen(true);
-      return;
-    }
-    setFormOpen((open) => !open);
-  };
+  // "Your household" opens or closes the form, with the answers it holds
+  // (an example's, to change one and calculate again, or your own)
+  const chooseYours = () => setFormOpen((open) => !open);
   // Your own household's change, on its card, once calculated and unedited
   const yoursChange =
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
@@ -447,6 +432,26 @@ function HouseholdCalculator({
       : null;
 
   const resultsRef = useRef(null);
+  // After an example card: once its result (or its progress) shows, bring
+  // it into view below the sticky bars, unless it is already, and move
+  // focus to it
+  const scrollToResult = useRef(false);
+  useEffect(() => {
+    if (!scrollToResult.current || submitted === null) return;
+    scrollToResult.current = false;
+    const frame = requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      const { top, bottom } = target.getBoundingClientRect();
+      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      if (top < offset || bottom > window.innerHeight) {
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      }
+      target.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [submitted]);
+
   const calculate = (event) => {
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
@@ -669,7 +674,7 @@ function HouseholdCalculator({
         formId={FORM_PANEL_ID}
         onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
-        changes={cardChanges}
+        presets={allSelected ? presetChanges : null}
         yoursChange={yoursChange}
         year={year}
       />
@@ -698,7 +703,8 @@ function HouseholdCalculator({
               </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
-            {!showingExample && (
+            {/* Always there: with an example's answers unedited it
+                calculates them again */}
             <div className="household-header-actions">
             <button
               type="submit"
@@ -721,7 +727,6 @@ function HouseholdCalculator({
               )}
             </button>
             </div>
-            )}
           </div>
           {FORM_SECTIONS.map(renderSection)}
         </form>
@@ -733,7 +738,7 @@ function HouseholdCalculator({
             or the note to select a policy; before that the cards say
             what to do */}
         {(noneSelected || (submitted !== null && !changed)) && (
-        <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
+        <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           <SingleYearHeadline
             result={householdResult}
             year={submitted?.year ?? year}
