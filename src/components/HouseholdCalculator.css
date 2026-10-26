@@ -791,13 +791,6 @@
   }
 }
 
-/* Over the examples, once their figures show: what the figures are */
-.household-cards-note {
-  margin: 0 0 12px;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-500);
-}
 
 .household-cards-grid {
   display: grid;
@@ -1328,8 +1321,9 @@
   border-radius: 50%;
 }
 
-/* "Your household": above the examples, the width of the grid, on a soft
-   teal gradient; an invitation to enter your own, with what the form asks
+/* "Your household": above the examples, the width of the grid, in solid
+   deep teal with white words (the examples are white), so it reads as the
+   place to start; an invitation to enter your own, with what the form asks
    first, a button-like call to action and, once calculated, your result */
 .household-yours {
   position: relative;
@@ -1342,11 +1336,12 @@
   padding: 14px 20px 14px 18px;
   font: inherit;
   text-align: left;
-  color: var(--pe-gray-800);
+  color: var(--band-ink);
+  /* White on teal-700 is 5.5:1; a faint lighter glow at the right */
   background:
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--pe-teal-100) 70%, transparent), transparent 45%),
-    linear-gradient(110deg, var(--pe-teal-50), var(--pe-surface) 80%);
-  border: 1px solid var(--pe-teal-200);
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--pe-teal-500) 45%, transparent), transparent 55%),
+    var(--pe-teal-700);
+  border: 1px solid var(--pe-teal-800);
   border-radius: var(--card-radius);
   box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
@@ -1375,7 +1370,9 @@
 
 .household-yours:hover {
   transform: translateY(-2px);
-  border-color: var(--pe-teal-300);
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--pe-teal-500) 45%, transparent), transparent 55%),
+    var(--pe-teal-800);
   box-shadow: var(--pe-shadow-md);
 }
 
@@ -1383,15 +1380,16 @@
   transform: translateY(0);
 }
 
+/* Outside the card, on the page: teal on the page's light ground */
 .household-yours:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
+  outline: 3px solid var(--pe-teal-600);
+  outline-offset: 3px;
 }
 
 .household-yours.is-selected {
-  border-color: var(--pe-teal-600);
+  border-color: var(--pe-teal-900);
   box-shadow:
-    0 0 0 1px var(--pe-teal-600),
+    0 0 0 3px var(--pe-teal-200),
     var(--pe-shadow-sm);
 }
 
@@ -1403,10 +1401,10 @@
   width: 48px;
   height: 48px;
   margin: 0 4px;
-  color: var(--pe-surface);
-  background: var(--pe-teal-700);
+  color: var(--pe-teal-800);
+  background: var(--band-ink);
   border-radius: 50%;
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--pe-teal-500) 14%, transparent);
+  box-shadow: 0 0 0 6px var(--band-ink-hover);
 }
 
 .household-yours-words {
@@ -1429,13 +1427,13 @@
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.015em;
-  color: var(--pe-gray-900);
+  color: var(--band-ink);
 }
 
 .household-yours-lead {
   font-size: var(--fs-small);
   line-height: 1.45;
-  color: var(--pe-gray-600);
+  color: var(--band-ink);
 }
 
 .household-yours-hints {
@@ -1452,9 +1450,9 @@
   font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 1.4;
-  color: var(--pe-teal-800);
-  background: var(--pe-surface);
-  border: 1px solid var(--pe-teal-100);
+  color: var(--band-ink);
+  background: var(--band-ink-hover);
+  border: 1px solid var(--band-ink-border);
   border-radius: 999px;
 }
 
@@ -1474,7 +1472,13 @@
 .household-yours-result-label {
   font-size: var(--fs-micro);
   font-weight: 600;
-  color: var(--pe-gray-500);
+  color: var(--band-ink);
+}
+
+/* Your result in white on the teal: gain and loss read from the sign */
+.household-yours .household-card-figure,
+.household-yours .household-card-figure-unit {
+  color: var(--band-ink);
 }
 
 .household-yours-action {
@@ -1486,14 +1490,15 @@
   font-size: 0.92rem;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--pe-surface);
-  background: var(--pe-teal-700);
+  color: var(--pe-teal-800);
+  background: var(--band-ink);
   border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-sm);
   transition: background-color 0.15s ease;
 }
 
 .household-yours:hover .household-yours-action {
-  background: var(--pe-teal-800);
+  background: var(--pe-teal-50);
 }
 
 .household-yours-arrow {
@@ -1511,7 +1516,8 @@
 .household-yours .household-card-check {
   top: 14px;
   right: 14px;
-  background: var(--pe-teal-700);
+  color: var(--pe-teal-800);
+  background: var(--band-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1553,7 +1559,7 @@
     width: 40px;
     height: 40px;
     margin: 0 2px;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--pe-teal-500) 14%, transparent);
+    box-shadow: 0 0 0 4px var(--band-ink-hover);
   }
 
   .household-yours-art svg {

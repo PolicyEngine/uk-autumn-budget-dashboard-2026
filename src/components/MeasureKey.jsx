@@ -139,15 +139,14 @@ export function SectionMeasureKey({ label = "Measures" }) {
 }
 
 function Chip({ member, color, pinned, onHover, onPin }) {
+  // The short name once, on the chip; the full name in its tooltip (title)
+  // and, on the button, as its accessible name. No second, hidden copy of
+  // the name, so the page's text reads each measure once.
+  const full = member.name;
   const face = (
     <>
       <span className="measure-key-swatch" style={{ "--swatch": color }} aria-hidden="true" />
-      <span className="measure-key-label" aria-hidden="true">{shortNameOf(member)}</span>
-      {/* The full name for screen readers (the short one is for the eye) */}
-      <span className="measure-key-full">
-        {member.name}
-        {member.muted ? ": no effect in the year shown" : ""}
-      </span>
+      <span className="measure-key-label">{shortNameOf(member)}</span>
     </>
   );
   if (member.muted) {
@@ -163,6 +162,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
       <button
         type="button"
         className={`measure-key-chip${pinned ? " is-active" : ""}`}
+        aria-label={full}
         aria-pressed={pinned}
         onMouseEnter={() => onHover(keyOf(member))}
         onMouseLeave={() => onHover(null)}

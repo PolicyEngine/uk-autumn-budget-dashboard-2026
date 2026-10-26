@@ -760,13 +760,11 @@ export default function ConstituencyMap({
               </span>
             </h3>
             <p className="chart-description">
+              {/* What the map shows is in the section's subtitle */}
               {notRouted ? (
                 "Average change in household net income by constituency."
               ) : onMap ? (
-                <>
-                  Average change in household net income by constituency.
-                  Uncoloured where the estimate is too uncertain.
-                </>
+                "Uncoloured where the estimate is too uncertain."
               ) : (
                 <>
                   The {TABLE_SIZE} constituencies with the largest gains and
@@ -987,8 +985,10 @@ export default function ConstituencyMap({
       </div>
 
       <div className="chart-legend">
-        {/* Kept, unseen, in the Rankings view, so the card keeps its height */}
-        {view.kind !== "rows" && (
+        {/* While the results load, the scale without values (kept, unseen,
+            in the Rankings view, so the card keeps its height). With no
+            results to show, no scale: a key with nothing to read */}
+        {view.kind === "loading" && (
           <div style={{ visibility: onMap ? "visible" : "hidden" }}>
             <MapScalePlaceholder />
           </div>

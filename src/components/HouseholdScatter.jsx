@@ -538,6 +538,34 @@ function HouseholdScatter({
     );
   }
 
+  // On its own, a selection the chart is not published for gets the
+  // reason in a compact panel under the title, not an empty plot
+  if (view.kind === "notice") {
+    return (
+      <div className="household-scatter-template household-scatter-empty-card">
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">{DESCRIPTION_LOADING}</p>
+          </div>
+        </div>
+        <div className="chart-plot">
+          <div className="plot-empty household-scatter-empty" role="status">
+            <div>
+              <p className="household-scatter-empty-reason">{view.reason}</p>
+              {view.detail && <p className="household-scatter-empty-detail">{view.detail}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`household-scatter-template${embedded ? " is-embedded" : ""}`}>
       {embedded ? (

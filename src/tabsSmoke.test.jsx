@@ -63,7 +63,7 @@ const FAILURE_TEXT = [
 // out, so charts draw no values; these are the data-driven text around them.)
 const LOADED = {
   // App.jsx renders All households' sections only once the CSVs are read.
-  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
+  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "By area" }),
   // Population impact's other sub-tabs, by ?sub=
   living: (panel) => within(panel).findAllByRole("heading", { name: /Change in income inequality/ }),
   poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
@@ -204,8 +204,13 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         // age, with its default
         fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
-        // Nothing is asked before Calculate
-        expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
+        // Before Calculate the only requests are the example cards' own
+        // figures (the fixture's measures are not the presets file's, so
+        // they are asked in the background): headlines, never your household
+        const yours = (r) => JSON.parse(r.body).household.age === 30;
+        const beforeCalculate = requests.filter((r) => r.url === HOUSEHOLD_API);
+        expect(beforeCalculate.filter(yours)).toEqual([]);
+        expect(beforeCalculate.every((r) => JSON.parse(r.body).include.length === 0)).toBe(true);
         // Every answer has a default: one press asks the household API in
         // two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
@@ -216,7 +221,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
           timeout: 5000,
         });
         const stages = requests
-          .filter((r) => r.url === HOUSEHOLD_API)
+          .filter((r) => r.url === HOUSEHOLD_API && yours(r))
           .map((r) => JSON.parse(r.body).include);
         expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
@@ -400,11 +405,14 @@ describe("the income decile pair", () => {
     const panel = await screen.findByRole("tabpanel", { name: "All households" });
     const absolute = await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 });
     const relative = within(panel).getByRole("heading", { level: 3, name: /^Relative impact by income decile/ });
-    // Side by side under one measure key
+    // Side by side, under the tab's one measure key, above every section
     const section = absolute.closest("#deciles");
     expect(section).not.toBeNull();
     expect(relative.closest("#deciles")).toBe(section);
-    await waitFor(() => expect(section.querySelectorAll(".measure-key")).toHaveLength(1));
+    await waitFor(() => expect(panel.querySelectorAll(".measure-key")).toHaveLength(1));
+    const key = panel.querySelector(".measure-key");
+    expect(key.compareDocumentPosition(panel.querySelector("#constituencies")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(panel).getByRole("heading", { level: 2, name: "By income" })).toBeInTheDocument();
     const map = panel.querySelector("#constituencies");
     const scatter = panel.querySelector("#scatter");
     expect(map.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -413,7 +421,6 @@ describe("the income decile pair", () => {
     const living = screen.getByRole("tabpanel", { name: "Living standards" });
     await within(living).findAllByRole("heading", { name: /^Change in income inequality/ }, { timeout: 5000 });
     expect(within(living).queryByRole("heading", { name: /impact by income decile/ })).toBeNull();
-    expect(within(living).queryByRole("heading", { name: "How the measures change incomes" })).toBeNull();
   }, 15000);
 
   it("opens All households from an old #deciles link", async () => {
