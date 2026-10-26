@@ -32,6 +32,12 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
   const rowRef = useRef(null);
   // The chosen tab's tint and underline, sliding from tab to tab
   const indicator = useSlidingIndicator(rowRef, refs, value);
+  // The chosen tab's left edge in the page column, for the sub-tab band
+  // below to start under it (SubTabs.css, --view-tab-x)
+  useEffect(() => {
+    const scrollLeft = rowRef.current?.scrollLeft ?? 0;
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.max(0, indicator.x - scrollLeft)}px`);
+  }, [indicator.x]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
 

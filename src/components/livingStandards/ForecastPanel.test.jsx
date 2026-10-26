@@ -126,8 +126,11 @@ describe("Forecast changes with one forecast", () => {
   it("switches every card to a table of the series by year", async () => {
     await renderForecast(unpublishedOutlook());
     const prices = card(/^Inflation measures$/);
-    fireEvent.click(within(prices).getByRole("button", { name: "Options: Chart" }));
-    fireEvent.click(await screen.findByRole("radio", { name: "Table" }));
+    // An icon switch in the header, left of Download; no Options pill
+    expect(within(prices).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    const toggle = within(prices).getByRole("radiogroup", { name: "Show Inflation measures as" });
+    expect(toggle.closest(".chart-header-actions").lastElementChild).toHaveClass("chart-download");
+    fireEvent.click(within(toggle).getByRole("radio", { name: "Show as table" }));
     const table = await within(card(/^Inflation measures$/)).findByRole("table");
     expect(within(table).getByRole("columnheader", { name: "CPIH" })).toBeInTheDocument();
     expect(within(table).getAllByRole("row")).toHaveLength(1 + REAL.forecast.sections[0].series[0].pre.length);
