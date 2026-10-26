@@ -31,9 +31,9 @@ A test app (same code, no warm schedule, scales to zero):
 Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
 ``warm_schedule`` runs every 10 minutes and sets how many ``Household``
 containers stay warm from ``WARM_WINDOWS`` (UK time): 2 by default, 12 for
-the Monday 26 October rehearsal (09:00-18:00) and on Budget day (Wednesday
-28 October 12:00-22:00), with the web endpoint kept at 1 only in those
-peaks, and 0 from 4 November 00:00 (the hard stop). To switch it all off
+the Monday 26 October rehearsal (09:00-18:00) and Budget day (Wednesday
+28 October, 08:00 to midnight), 6 on Tuesday 27 and Thursday 29 October
+(08:00-20:00), with the web endpoint kept at 1 only in those windows, and 0 from 4 November 00:00 (the hard stop). To switch it all off
 at once: ``modal app stop uk-budget-household``.
 """
 
@@ -151,7 +151,9 @@ def warm_jobs() -> list:
     max_containers=MAX_CONTAINERS,
     min_containers=MIN_CONTAINERS,
     scaledown_window=SCALEDOWN_SECONDS,
-    retries=0,
+    # One retry: a run takes about 10 s, so a preempted container costs a
+    # retry rather than a fall back to Cloud Run (Anthony, 26 October)
+    retries=1,
     enable_memory_snapshot=SNAPSHOT,
 )
 class Household:
