@@ -49,7 +49,7 @@ import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
-// inactive, with a Tip saying they do not change it. Pre-measures forecast is current law (incomes and poverty
+// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
@@ -67,7 +67,8 @@ export const VIEWS = [
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 
-// The Tips on a band pill that does not change the view shown
+// The accessible names' reason on a band pill that does not change the
+// view shown (no visible tip)
 export const YEAR_INACTIVE = "The year doesn't change this tab";
 export const POLICIES_INACTIVE = "Policy choices don't change this tab";
 
@@ -748,8 +749,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Household impact. A pill that does
-              not apply stays in its place, faded, and says so in a Tip; it
-              does not open. Both are on every view, so the band never moves. */}
+              not apply stays in its place, faded, and does not open; its
+              reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
               selectedYear={distributionalYear}

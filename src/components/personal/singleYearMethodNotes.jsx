@@ -67,7 +67,7 @@ export const COUNCIL_TAX_NOTE = (
     lead="Estimated from your band and region, and taken off net income."
     points={[
       <>
-        Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink> for England, tax-base weighted by
+        Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England, tax-base weighted by
         region; the <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
         <SourceLink source="scotland_council_tax">Scottish</SourceLink> governments.
       </>,
