@@ -8,9 +8,13 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
+)
 from uk_budget_data.cli import main
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
+    YEAR_WEIGHTS,
     build,
     in_force_rate_change,
     render,
@@ -155,6 +159,35 @@ def test_vat_rates_while_in_force(document):
 def test_in_force_dates_that_do_not_fit_the_constants_fail():
     with pytest.raises(ValueError, match="do not fit"):
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
+
+
+def test_electricity_2026_carries_the_winter_share(document):
+    """Electricity's 2026-27 constant is the zero rate weighted by the
+    October to March share of a year's use, not by its 182 days of 365;
+    the road fuel cut stays weighted by its days."""
+    yearly = rows(document, "domestic_electricity_zero_vat")[
+        "VAT on domestic electricity in Great Britain, averaged over the year"
+    ]
+    averages = by_key(yearly)
+    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
+    assert averages["2027"] == (0.05, 0.0)
+    assert "2026-27 by the October to March share" in yearly["note"]
+    fuel = rows(document, "road_fuel_vat_cut")[
+        "VAT on petrol and diesel, averaged over the year"
+    ]
+    assert "weighted by the days it is in force" in fuel["note"]
+    # Weighted by its days, electricity's 2026 constant no longer fits
+    with pytest.raises(ValueError, match="do not fit"):
+        in_force_rate_change(
+            registry.ELECTRICITY_VAT_ID,
+            {2026: -0.05 * 182 / 365, 2027: -0.05},
+        )
+
+
+def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
+    monkeypatch.setitem(YEAR_WEIGHTS, registry.FUEL_VAT_ID, {2028: 0.5})
+    with pytest.raises(ValueError, match="not in force"):
+        in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
 def test_employer_ni(document):
