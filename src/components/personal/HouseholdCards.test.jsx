@@ -96,3 +96,17 @@ describe("where an example sits", () => {
     expect(examplePercentile(example, { change: 1 }, { year: 2027, policies: ["alpha"], rows, catalogue: null })).toBeNull();
   });
 });
+
+describe("what the figures are with", () => {
+  it("says it on hover, not in a line above the cards", () => {
+    const byYear = { 2027: { change: 81, before: 20000, after: 20081 } };
+    const presets = Object.fromEntries(HOUSEHOLD_EXAMPLES.map((example) => [example.id, byYear]));
+    const fill = { pending: new Set(), failed: new Set(), reduced: ["fuel_duty_rise_deferral"] };
+    render(
+      <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={null} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={presets} fill={fill} yoursChange={null} year={2027} />,
+    );
+    expect(screen.queryByText(/^Figures are the change/)).toBeNull();
+    const figure = document.querySelector(".household-card-figure");
+    expect(figure).toHaveAttribute("title", "Change in net income in 2027-28 with the measures the calculator supports");
+  });
+});
