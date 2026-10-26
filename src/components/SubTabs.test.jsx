@@ -95,7 +95,8 @@ describe("SubTabs", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("scrollTo", scrollTo);
     render(<Harness />);
-    const list = screen.getByRole("tablist");
+    // The band around the tablist is what scrolls back
+    const list = screen.getByRole("tablist").closest(".sub-tabs-band");
     // Not scrolled past: the page stays put
     fireEvent.click(tab("Second"));
     expect(scrollTo).not.toHaveBeenCalled();
@@ -115,5 +116,17 @@ describe("SubTabs", () => {
     expect(scrollTo).not.toHaveBeenCalled();
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     vi.unstubAllGlobals();
+  });
+
+  it("sits in its band, with one sliding pill hidden from assistive tech and labels kept as names", () => {
+    const { container } = render(<Harness />);
+    const band = container.querySelector(".sub-tabs-band");
+    expect(band).toContainElement(screen.getByRole("tablist"));
+    const pill = band.querySelectorAll(".sub-tabs-pill");
+    expect(pill).toHaveLength(1);
+    expect(pill[0]).toHaveAttribute("aria-hidden", "true");
+    // The pill is not a tab, and every tab keeps its label as its name
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    for (const { label } of TABS) expect(tab(label)).toBeInTheDocument();
   });
 });
