@@ -490,8 +490,15 @@ HVCTS_FIRST_THRESHOLD = (
     "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold"
 )
 LHA_FREEZE = "gov.dwp.LHA.freeze"
+# From policyengine-uk 2.151.0 Northern Ireland's rates follow their own
+# freeze (the Housing Executive's determinations), which has matched each
+# Great Britain order so far.
+LHA_FREEZE_NORTHERN_IRELAND = "gov.dfc.LHA.freeze"
+# The scale's fourth bracket, at £10m, repeats the additional rate, so a
+# change to that rate has to move both.
 DIVIDEND_RATES = tuple(
-    f"gov.hmrc.income_tax.rates.dividends[{band}].rate" for band in (0, 1, 2)
+    f"gov.hmrc.income_tax.rates.dividends[{band}].rate"
+    for band in (0, 1, 2, 3)
 )
 
 UC_BELOW_CPI_ID = "uc_standard_allowance_below_cpi"
@@ -657,10 +664,13 @@ def _create_lha_reset_april_2027() -> Reform:
         name="Local Housing Allowance reset in April 2027",
         description=(
             "Drill 5 mock measure. Local Housing Allowance rates are reset "
-            "to the 30th percentile of local rents in April 2027, then "
-            "frozen in cash terms again."
+            "to the 30th percentile of local rents in April 2027, in Great "
+            "Britain and Northern Ireland, then frozen in cash terms again."
         ),
-        parameter_changes={LHA_FREEZE: {"2027": False}},
+        parameter_changes={
+            LHA_FREEZE: {"2027": False},
+            LHA_FREEZE_NORTHERN_IRELAND: {"2027": False},
+        },
     )
 
 

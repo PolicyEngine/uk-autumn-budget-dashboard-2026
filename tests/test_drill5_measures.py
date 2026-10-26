@@ -227,15 +227,81 @@ def test_surcharge_starts_at_three_quarters_of_current_threshold(drill5):
 
 def test_lha_unfrozen_for_april_2027_only(drill5):
     changes = drill5[reforms.LHA_RESET_ID].parameter_changes
-    assert changes == {reforms.LHA_FREEZE: {"2027": False}}
+    assert changes == {
+        reforms.LHA_FREEZE: {"2027": False},
+        reforms.LHA_FREEZE_NORTHERN_IRELAND: {"2027": False},
+    }
+
+
+def _renter(year, region, brma):
+    return {
+        "people": {
+            "p": {"age": {year: 40}, "employment_income": {year: 8_000}}
+        },
+        "benunits": {"b": {"members": ["p"], "would_claim_uc": {year: True}}},
+        "households": {
+            "h": {
+                "members": ["p"],
+                "region": {year: region},
+                "brma": {year: brma},
+                "tenure_type": {year: "RENT_PRIVATELY"},
+                "rent": {year: 12_000},
+            }
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "region, brma",
+    [("SOUTH_WEST", "BRISTOL"), ("NORTHERN_IRELAND", "BELFAST")],
+)
+def test_lha_reset_reaches_both_nations_and_holds(drill5, region, brma):
+    """A one-bedroom Universal Credit renter's LHA cap rises from 2027-28
+    and stays at the reset level in 2028-29, in Bristol and in Belfast
+    (Northern Ireland's freeze is a parameter of its own)."""
+    scenario = drill5[reforms.LHA_RESET_ID].to_scenario()
+    for year, rises in ((2026, False), (2027, True), (2028, True)):
+        situation = _renter(year, region, brma)
+        before = Simulation(situation=situation).calculate("uc_LHA_cap", year)
+        after = Simulation(situation=situation, scenario=scenario).calculate(
+            "uc_LHA_cap", year
+        )
+        assert (after[0] > before[0] + 1) == rises, year
 
 
 def test_dividend_rates_one_point_higher(drill5):
     changes = drill5[reforms.DIVIDEND_RATES_ID].parameter_changes
+    assert len(reforms.DIVIDEND_RATES) == 4
     for path in reforms.DIVIDEND_RATES:
         for year, value in changes[path].items():
             base = reforms._current_law(path, int(year))
             assert value == pytest.approx(base + 0.01)
+
+
+def test_dividend_rise_reaches_the_10m_bracket(drill5):
+    """£1m of dividends on £11m of other income all sit in the scale's
+    fourth bracket: 1 point on the £999,500 above the £500 allowance is
+    £9,995 (£0 when only the first three brackets moved)."""
+    year = 2027
+    situation = {
+        "people": {
+            "p": {
+                "age": {year: 55},
+                "self_employment_income": {year: 11_000_000},
+                "dividend_income": {year: 1_000_000},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+    current_law = Simulation(situation=situation)
+    reformed = Simulation(
+        situation=situation,
+        scenario=drill5[reforms.DIVIDEND_RATES_ID].to_scenario(),
+    )
+    assert reformed.calculate("income_tax", year)[0] - current_law.calculate(
+        "income_tax", year
+    )[0] == pytest.approx(9_995, abs=1)
 
 
 def test_combined_run_leaves_out_alternatives(monkeypatch):
