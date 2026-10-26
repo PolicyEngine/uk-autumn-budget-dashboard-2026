@@ -390,6 +390,24 @@ function normaliseByPolicy(raw) {
   };
 }
 
+/**
+ * The marginal rate's parts on each sweep step and at your salary, before
+ * and after: {names, before: [{part: rate}], after: [...], own: {before,
+ * after} | null}, or null when the answer has none (an API from before
+ * they were added), so the page draws the totals alone.
+ */
+function rateParts(raw) {
+  if (!raw || !Array.isArray(raw.parts) || !raw.baseline || !raw.reform) return null;
+  const step = (values) => Object.fromEntries(raw.parts.map((name) => [name, num(values?.[name])]));
+  const own = raw.own_point;
+  return {
+    names: raw.parts,
+    before: raw.baseline.map(step),
+    after: raw.reform.map(step),
+    own: own?.baseline && own?.reform ? { before: step(own.baseline), after: step(own.reform) } : null,
+  };
+}
+
 function normaliseSweep(raw) {
   if (!raw || !Array.isArray(raw.points) || raw.points.length < 2) return null;
   const points = raw.points.map((point) => ({
@@ -407,6 +425,7 @@ function normaliseSweep(raw) {
       before: num(rate.baseline),
       after: num(rate.reform),
     })),
+    parts: rateParts(raw.marginal_rate_parts),
     own: own
       ? {
           income: num(own.employment_income),
@@ -643,6 +662,58 @@ export function consistentRound(values, total) {
   }
   return rounded.map((value) => (Object.is(value, -0) ? 0 : value));
 }
+
+/**
+ * The headline (`include: []`) when the build has a detail URL: asked of
+ * both services at once, the first answer kept and the other request
+ * stopped. A warm Modal answers in a run's time; while it is starting,
+ * Cloud Run answers first, so the headline is never slower than Cloud
+ * Run's. Both run the same code on the same engine, so either answer is
+ * the same answer. An answer the API refuses as invalid is final; if both
+ * fail, the Cloud Run error is thrown, as without a detail URL.
+ *
+ * @param {Object} body - A request from buildHouseholdRequest
+ * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: Function }} [options]
+ */
+export async function postHouseholdHeadline(body, options = {}) {
+  const detailUrl = householdDetailApiUrl();
+  if (!detailUrl) return postHouseholdImpact(body, options);
+  const loser = new AbortController();
+  const onAbort = () => loser.abort();
+  options.signal?.addEventListener("abort", onAbort);
+  const ask = (url) => postHouseholdImpact(body, { ...options, signal: loser.signal, url });
+  const primary = ask(undefined);
+  const modal = ask(detailUrl);
+  try {
+    return await new Promise((resolve, reject) => {
+      let failures = 0;
+      let primaryError = null;
+      const failed = (error, isPrimary) => {
+        if (error instanceof HouseholdApiError && error.kind === "invalid") {
+          reject(error);
+          return;
+        }
+        if (isPrimary) primaryError = error;
+        failures += 1;
+        if (failures === 2) reject(primaryError ?? error);
+      };
+      primary.then(resolve, (error) => failed(error, true));
+      modal.then(resolve, (error) => failed(error, false));
+    });
+  } finally {
+    // The answer is in (or both failed): stop the other request
+    loser.abort();
+    options.signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+/**
+ * Whether the page asks for the headline, the sweep and the split by policy
+ * all at once: only with a detail URL (Modal), where each run has its own
+ * container. On Cloud Run alone the headline goes first, so it is not
+ * queued behind the slower parts on the instance's worker slots.
+ */
+export const askAllAtOnce = () => householdDetailApiUrl() !== null;
 
 /**
  * A detail part (sweep or split by policy): from the detail URL when the

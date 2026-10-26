@@ -304,6 +304,41 @@ export function pinnedRound(values, total, bars = []) {
   return sum === Math.round(total) ? out : consistentRound(values, total);
 }
 
+// Rows the headline card also states, rounded on their own there ("Based
+// on: Council Tax £2,629"): the table keeps that whole-pound figure
+// rather than nudging it by £1 to make its column add up.
+export const STATED_ELSEWHERE = new Set(["council_tax"]);
+
+/**
+ * The before column's whole pounds (consistentRound to `total`), with each
+ * row in STATED_ELSEWHERE at its own rounding and the others adding up to
+ * the rest; plain consistent rounding if they then cannot.
+ */
+export function pinnedBefore(rows, total) {
+  const values = rows.map((row) => row.before);
+  // Rounded as money() rounds the headline's positive amount: half away from
+  // zero, so a negated row at an exact 50p (−£2,628.50) is −£2,629, not −£2,628
+  const pinned = rows.map((row) =>
+    STATED_ELSEWHERE.has(row.id) ? Math.sign(row.before) * Math.round(Math.abs(row.before)) || 0 : null,
+  );
+  const free = values.map((_, index) => index).filter((index) => pinned[index] === null);
+  if (free.length === values.length || free.length === 0) return consistentRound(values, total);
+  const pinnedSum = pinned.reduce((sum, pin) => sum + (pin ?? 0), 0);
+  const freeValues = free.map((index) => values[index]);
+  const rest = Math.round(total) - pinnedSum;
+  // Only when the free rows already sum to the rest within £1, as
+  // consistentRound assumes
+  if (Math.abs(freeValues.reduce((sum, value) => sum + value, 0) - rest) > 1) {
+    return consistentRound(values, total);
+  }
+  const rounded = consistentRound(freeValues, rest);
+  const out = pinned.slice();
+  free.forEach((index, i) => {
+    out[index] = rounded[i];
+  });
+  return out;
+}
+
 /**
  * The whole pounds the programme table shows, as `shown: {before, after,
  * change}` on each row and part. The before column adds up to the before
@@ -338,10 +373,7 @@ export function roundProgrammeGroups(groups, totals, bars = []) {
     return children.map((child, index) => ({ ...child, shown: shown(before[index], change[index]) }));
   };
   const rows = groups.flatMap((group) => group.rows);
-  const before = consistentRound(
-    rows.map((row) => row.before),
-    totals.before,
-  );
+  const before = pinnedBefore(rows, totals.before);
   const change = pinnedRound(
     rows.map((row) => row.change),
     totals.change,
@@ -455,7 +487,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
   ],
   [
     "Every policy applied",

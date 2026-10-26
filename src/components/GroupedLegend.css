@@ -203,3 +203,16 @@
     gap: 6px;
   }
 }
+
+/* An item's note behind an "i" (styles in HouseholdCalculator.css), beside
+   its label */
+.grouped-legend-info {
+  align-self: center;
+  margin-left: -2px;
+}
+
+.grouped-legend-info .info-tooltip {
+  width: 240px;
+  white-space: normal;
+  text-align: left;
+}

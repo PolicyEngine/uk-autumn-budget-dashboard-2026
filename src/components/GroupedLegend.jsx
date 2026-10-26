@@ -64,6 +64,28 @@ function Swatch({ item }) {
   );
 }
 
+/** An item's label, with its note behind an "i" when it has one. */
+function ItemLabel({ item }) {
+  return (
+    <>
+      <span className="grouped-legend-label">{item.label}</span>
+      {item.info && (
+        <span className="info-icon-wrapper grouped-legend-info">
+          <button type="button" className="info-icon" aria-label={`About ${item.label}`}>
+            i
+          </button>
+          <span className="info-tooltip" role="tooltip">
+            {item.info}
+          </span>
+        </span>
+      )}
+    </>
+  );
+}
+
+// The room an "i" takes after a label: its button and gap
+const INFO_WIDTH = 22;
+
 // The legend's font, as in GroupedLegend.css
 const LABEL_FONT = { fontSize: 12.5, fontWeight: "400" };
 const HEADING_FONT = { fontSize: 11, fontWeight: "600" };
@@ -114,6 +136,9 @@ function GroupedLegend({ names, items, netLabel }) {
     const node = ref.current;
     if (!node) return undefined;
     const measure = textMeasurer(node);
+    // A label with an "i" is measured with the room the "i" takes
+    const infoFor = new Map(all.map((item) => [item.label, Boolean(item.info)]));
+    const measureLabel = (text) => measure.label(text) + (infoFor.get(text) ? INFO_WIDTH : 0);
     const decide = () => {
       const next = legendLayout({
         groups: groups.map(([heading, groupItems]) => ({
@@ -121,7 +146,7 @@ function GroupedLegend({ names, items, netLabel }) {
           labels: groupItems.map((item) => item.label),
         })),
         available: node.clientWidth,
-        measure: measure.label,
+        measure: measureLabel,
         measureHeading: measure.heading,
         iconWidth: ICON_WIDTH,
       });
@@ -144,7 +169,7 @@ function GroupedLegend({ names, items, netLabel }) {
           {all.map((item) => (
             <li key={item.label} className="grouped-legend-item">
               <Swatch item={item} />
-              <span className="grouped-legend-label">{item.label}</span>
+              <ItemLabel item={item} />
             </li>
           ))}
         </ul>
@@ -179,7 +204,7 @@ function GroupedLegend({ names, items, netLabel }) {
                     {column.map((item) => (
                       <li key={item.key ?? item.label}>
                         <Swatch item={item} />
-                        <span className="grouped-legend-label">{item.label}</span>
+                        <ItemLabel item={item} />
                       </li>
                     ))}
                     {/* In a narrow card the items flow and the net line
