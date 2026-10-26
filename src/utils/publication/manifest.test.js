@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attestationProblems,
+  CANDIDATE_PROVISIONAL_LABEL,
   isDisplayable,
   isSafeArtifactPath,
   ManifestError,
@@ -8,6 +9,7 @@ import {
   parseManifest,
   personalSeriesProblems,
   PROVISIONAL_LABEL,
+  provisionalLabel,
   publicationLabel,
 } from "./manifest";
 import { fixtureJson } from "../../test/publicationFixture";
@@ -295,6 +297,15 @@ describe("availability", () => {
   it("labels provisional entries only", () => {
     expect(publicationLabel(manifest.measures.gamma)).toBe(PROVISIONAL_LABEL);
     expect(publicationLabel(manifest.measures.alpha)).toBe("");
+  });
+
+  it("calls provisional figures candidates while the basis is pre-Budget", () => {
+    expect(raw.basis.forecast.status).toBe("pre_budget");
+    expect(provisionalLabel(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      copy.basis.forecast.status = "updated";
+    }))).toBe(PROVISIONAL_LABEL);
+    expect(provisionalLabel(undefined)).toBe(PROVISIONAL_LABEL);
   });
 });
 
