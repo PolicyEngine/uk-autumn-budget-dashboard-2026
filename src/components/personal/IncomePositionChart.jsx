@@ -452,8 +452,12 @@ function RankView({ width, narrow, curves, position, side }) {
       <line x1={youX} x2={youX} y1={y(0)} y2={y(youP)} stroke={TEXT} strokeWidth={1.75} />
       <line x1={left} x2={youX} y1={y(youP)} y2={y(youP)} stroke={TEXT} strokeWidth={1} strokeDasharray={REFERENCE_DASH} />
       <circle cx={youX} cy={y(youP)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
-      <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={13}>
-        {`You: ${Math.round(youP)} in 100 live in households with less`}
+      {/* Two short lines, so it fits a half-width card */}
+      <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 26} anchor={onRight ? "end" : "start"} size={13}>
+        {`You: ${Math.round(youP)} in 100`}
+      </Label>
+      <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={11.5} weight={500}>
+        live in households with less
       </Label>
     </svg>
   );
