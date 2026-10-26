@@ -17,7 +17,9 @@ Before anything is written:
 - each outturn is set against the database's own outturn row (the OBR's
   outturn "as available at last forecast") over the last eight periods
   both have, and must agree within the variable's tolerance;
-- each forecast's values must run on from its launch with no gaps;
+- each forecast's values must run on from its launch with no gaps, and
+  read as its measure's kind where they can say otherwise (see
+  :func:`check_kind`);
 - no forecast after March 2026 is taken: the tab shows forecasts made
   before the Budget's measures, and later ones wait for the post-Budget
   rules (docs/budget-day-runbook.md).
@@ -171,6 +173,18 @@ def check_outturn(
     variable: V.Variable, measure: V.Measure, outturn: dict, row: dict
 ) -> dict:
     """Set the outturn against the database's outturn row; raise if apart."""
+    # The page states a share as "of the value", so only gaps in the
+    # outturn's own units (a forecast of levels) can be a share; and no
+    # tolerance is finer than the four decimals a gap is written to
+    if measure.relative and measure.kind != "level":
+        raise BuildError(
+            f"{variable.id}: a tolerance as a share of the value needs a "
+            "forecast of levels"
+        )
+    if measure.tolerance < 10**-DECIMALS:
+        raise BuildError(
+            f"{variable.id}: a tolerance finer than {DECIMALS} decimals"
+        )
     mine = _comparable(measure, outturn)
     common = sorted(set(mine) & set(row), key=periods.sort_key)[
         -CHECK_PERIODS:
@@ -215,6 +229,81 @@ def check_outturn(
         "tolerance": measure.tolerance,
         "tolerance_is_share": measure.relative,
     }
+
+
+# How far a forecast's figure for its launch period may sit from the
+# outturn and still read as its kind. The page's loader
+# (src/utils/forecastVintages/load.js, kindProblem) refuses a file beyond
+# these, so the build refuses to write one.
+NEAR_LEVEL = 0.5
+NEAR_GROWTH = 10.0
+INDEX_SPREAD = 1.5
+MAX_GROWTH = 100.0
+
+
+def _period(key, frequency: str):
+    return int(key) if frequency == "calendar" else key
+
+
+def check_kind(
+    name: str, frequency: str, kind: str, outturn: dict, vintages: list
+) -> None:
+    """Raise unless each forecast's figures read as the measure's kind.
+
+    Takes the measure as written (``outturn`` and ``vintages`` records).
+    The launch period was over when a forecast was published, so its
+    figure there is an estimate of outturn, apart from today's only by
+    revisions: a level's is within half the outturn's largest size of it;
+    a growth rate's within 10 points of the outturn's rate (where the
+    outturn has the launch period and the one a year before, above zero);
+    an index's ratio to the outturn is the same in every forecast, the
+    largest within 1.5 times the smallest. The figures after it are
+    forecasts, never set against the outturn. Every growth rate is under
+    100% either way and every index above zero, and at least one forecast
+    has its launch figure, so the kind is set against something.
+    """
+    lag = 4 if frequency == "quarterly" else 1
+    known = {
+        periods.sort_key(_period(k, frequency)): v for k, v in outturn.items()
+    }
+    size = max(abs(v) for v in known.values())
+    ratios = []
+    estimates = 0
+    for vintage in vintages:
+        where = f"{name}: the {vintage['label']} forecast's figures"
+        values = {
+            periods.sort_key(_period(k, frequency)): v
+            for k, v in vintage["values"].items()
+        }
+        if kind == "index" and min(values.values()) <= 0:
+            raise BuildError(f"{where} include an index at or below zero")
+        if kind == "growth" and max(map(abs, values.values())) >= MAX_GROWTH:
+            raise BuildError(f"{where} include a growth rate of 100% or more")
+        launch = periods.sort_key(_period(vintage["launch"], frequency))
+        if launch not in values:
+            continue
+        estimates += 1
+        estimate = values[launch]
+        now, before = known.get(launch), known.get(launch - lag)
+        if kind == "level" and now is not None:
+            if abs(estimate - now) > NEAR_LEVEL * size:
+                raise BuildError(f"{where} do not start near the outturn")
+        if (
+            kind == "growth"
+            and now is not None
+            and before is not None
+            and before > 0
+            and abs(estimate - 100 * (now / before - 1)) > NEAR_GROWTH
+        ):
+            raise BuildError(f"{where} do not start near the outturn's rate")
+        if kind == "index" and now is not None and now > 0:
+            ratios.append(estimate / now)
+    if not estimates:
+        raise BuildError(
+            f"{name}: no forecast has a figure for its launch period"
+        )
+    if ratios and max(ratios) > INDEX_SPREAD * min(ratios):
+        raise BuildError(f"{name}: its forecasts are not one index")
 
 
 def _check_newest(name: str, vintages) -> None:
@@ -309,6 +398,10 @@ def build_measure(
             "forecast: Table 1.5, real household disposable income per "
             "person by total population (index, 2008 Q1 = 100)"
         )
+    written = _ordered(outturn)
+    check_kind(
+        variable.id, variable.frequency, measure.kind, written, vintages
+    )
     return {
         "unit": measure.unit,
         "kind": measure.kind,
@@ -316,7 +409,7 @@ def build_measure(
         "outturn_source": measure.outturn_source,
         "forecast_source": forecast_source,
         "check": check,
-        "outturn": _ordered(outturn),
+        "outturn": written,
         "vintages": vintages,
     }
 

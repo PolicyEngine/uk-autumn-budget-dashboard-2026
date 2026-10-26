@@ -643,6 +643,151 @@ def test_growth_outturn_two_years_apart_has_nothing_to_check():
         )
 
 
+# --- A forecast's figures read as its kind ------------------------------------
+
+KIND_CASES = json.loads(
+    (
+        ROOT / "tests" / "fixtures" / "forecast_vintages_kind_cases.json"
+    ).read_text()
+)["cases"]
+
+
+def _apply_kind_op(data: dict, op: dict) -> None:
+    """One change from the shared kind cases, made in place."""
+    variable = next(v for v in data["variables"] if v["id"] == op["variable"])
+    measure = variable[op["measure"]]
+    frequency = variable["frequency"]
+    lag = 4 if frequency == "quarterly" else 1
+
+    def no(key):
+        return periods.sort_key(B._period(key, frequency))
+
+    vintage = next(
+        (v for v in measure["vintages"] if v["label"] == op.get("vintage")),
+        None,
+    )
+    if op["op"] == "kind":
+        measure["kind"] = op["to"]
+    elif op["op"] == "drop_launch":
+        del vintage["values"][str(vintage["launch"])]
+    elif op["op"] == "drop_every_launch":
+        for v in measure["vintages"]:
+            if v["label"] != op.get("but"):
+                v["values"].pop(str(v["launch"]), None)
+    elif op["op"] == "set_after_launch":
+        for key in vintage["values"]:
+            if key != str(vintage["launch"]):
+                vintage["values"][key] = op["to"]
+    elif op["op"] == "set_last":
+        vintage["values"][max(vintage["values"], key=no)] = op["to"]
+    elif op["op"] == "scale":
+        for key in vintage["values"]:
+            vintage["values"][key] *= op["by"]
+    elif op["op"] == "launch_off_rate":
+        launch = str(vintage["launch"])
+        before = next(
+            x
+            for k, x in measure["outturn"].items()
+            if no(k) == no(launch) - lag
+        )
+        rate = 100 * (measure["outturn"][launch] / before - 1)
+        vintage["values"][launch] = rate + op["by"]
+    elif op["op"] == "launch_off_level":
+        launch = str(vintage["launch"])
+        size = max(abs(x) for x in measure["outturn"].values())
+        vintage["values"][launch] = (
+            measure["outturn"][launch] + op["by"] * size
+        )
+    else:
+        raise ValueError(f"Unknown kind case op {op['op']!r}")
+
+
+def _kind_check(data: dict, variable_id: str, name: str) -> None:
+    variable = next(v for v in data["variables"] if v["id"] == variable_id)
+    measure = variable[name]
+    B.check_kind(
+        variable_id,
+        variable["frequency"],
+        measure["kind"],
+        measure["outturn"],
+        measure["vintages"],
+    )
+
+
+@pytest.mark.parametrize("case", KIND_CASES, ids=lambda c: c["name"])
+def test_the_build_reads_kinds_as_the_page_does(committed, case):
+    # The page's loader (kindProblem) is held to the same cases in
+    # src/utils/forecastVintages/kind.test.js, so the two agree
+    data = json.loads(json.dumps(committed))
+    for op in case["ops"]:
+        _apply_kind_op(data, op)
+    target = case["ops"][0]
+    if case["accepted"]:
+        _kind_check(data, target["variable"], target["measure"])
+    else:
+        with pytest.raises(B.BuildError):
+            _kind_check(data, target["variable"], target["measure"])
+
+
+def test_every_committed_measure_reads_as_its_kind(committed):
+    for variable in committed["variables"]:
+        for name in ("level", "share"):
+            if variable.get(name):
+                _kind_check(committed, variable["id"], name)
+
+
+def _committed_measures():
+    data = json.loads(COMMITTED.read_text())
+    return [
+        (v["id"], name)
+        for v in data["variables"]
+        for name in ("level", "share")
+        if v.get(name)
+    ]
+
+
+@given(
+    st.sampled_from(_committed_measures()),
+    st.integers(0, 32),
+    st.floats(0.01, 99.99) | st.floats(-99.99, -0.01),
+)
+def test_forecasts_after_the_launch_are_never_set_against_outturn(
+    target, which, value
+):
+    # A forecast may miss by any amount: whatever its figures after its
+    # launch period (an index's above zero), the build still writes it
+    data = json.loads(COMMITTED.read_text())
+    variable_id, name = target
+    variable = next(v for v in data["variables"] if v["id"] == variable_id)
+    measure = variable[name]
+    vintage = measure["vintages"][which % len(measure["vintages"])]
+    figure = abs(value) if measure["kind"] == "index" else value
+    if measure["kind"] == "level":
+        figure = value * 1e6
+    for key in vintage["values"]:
+        if key != str(vintage["launch"]):
+            vintage["values"][key] = figure
+    _kind_check(data, variable_id, name)
+
+
+def test_a_share_tolerance_needs_a_forecast_of_levels():
+    levels = {y: 100.0 * 1.02 ** (y - 2000) for y in range(2000, 2020)}
+    row = {y: 2.0 for y in range(2001, 2020)}
+    with pytest.raises(B.BuildError, match="share"):
+        B.check_outturn(
+            _variable("calendar"),
+            _measure(kind="growth", relative=True, tolerance=0.02),
+            levels,
+            row,
+        )
+
+
+def test_a_tolerance_finer_than_a_gap_is_written_is_refused():
+    row = {periods.fiscal_label(y): 100.0 for y in range(2010, 2020)}
+    with pytest.raises(B.BuildError, match="decimals"):
+        B.check_outturn(_variable(), _measure(tolerance=0.00001), row, row)
+
+
 # --- Downloads never reach obr.uk --------------------------------------------
 
 

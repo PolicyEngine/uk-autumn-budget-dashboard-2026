@@ -1,0 +1,31 @@
+{
+  "about": "Changes to the committed public/data/obr_forecast_vintages.json, each with whether a measure so changed reads as its kind. Read by tests/test_forecast_vintages.py (the build's check_kind) and src/utils/forecastVintages/kind.test.js (the page's kindProblem): the two must agree with these and so with each other. Each op names a variable, a measure and (where it needs one) a forecast by its label.",
+  "cases": [
+    {"name": "a growth forecast that starts the period after its launch, far from what happened", "ops": [{"op": "drop_launch", "variable": "real_gdp", "measure": "level", "vintage": "March 2020"}], "accepted": true},
+    {"name": "a level forecast that starts the period after its launch, far from what happened", "ops": [{"op": "drop_launch", "variable": "psnb", "measure": "level", "vintage": "March 2020"}], "accepted": true},
+    {"name": "a share forecast that starts the period after its launch", "ops": [{"op": "drop_launch", "variable": "current_budget", "measure": "share", "vintage": "November 2020"}], "accepted": true},
+    {"name": "growth forecasts after the launch near 100% up", "ops": [{"op": "set_after_launch", "variable": "real_gdp", "measure": "level", "vintage": "March 2020", "to": 99.9}], "accepted": true},
+    {"name": "growth forecasts after the launch near 100% down", "ops": [{"op": "set_after_launch", "variable": "real_gdp", "measure": "level", "vintage": "March 2020", "to": -99.9}], "accepted": true},
+    {"name": "level forecasts after the launch far from the outturn", "ops": [{"op": "set_after_launch", "variable": "nominal_gdp", "measure": "level", "vintage": "March 2020", "to": 1.0}], "accepted": true},
+    {"name": "a growth rate of 100%", "ops": [{"op": "set_last", "variable": "real_gdp", "measure": "level", "vintage": "March 2020", "to": 100}], "accepted": false},
+    {"name": "a growth estimate 9.9 points above the outturn's rate", "ops": [{"op": "launch_off_rate", "variable": "real_gdp", "measure": "level", "vintage": "March 2020", "by": 9.9}], "accepted": true},
+    {"name": "a growth estimate 10.1 points above the outturn's rate", "ops": [{"op": "launch_off_rate", "variable": "real_gdp", "measure": "level", "vintage": "March 2020", "by": 10.1}], "accepted": false},
+    {"name": "a growth estimate 10.1 points below the outturn's rate", "ops": [{"op": "launch_off_rate", "variable": "real_gdp", "measure": "level", "vintage": "June 2010", "by": -10.1}], "accepted": false},
+    {"name": "a level estimate 0.49 of the outturn's largest size above it", "ops": [{"op": "launch_off_level", "variable": "nominal_gdp", "measure": "level", "vintage": "March 2020", "by": 0.49}], "accepted": true},
+    {"name": "a level estimate 0.51 of the outturn's largest size above it", "ops": [{"op": "launch_off_level", "variable": "nominal_gdp", "measure": "level", "vintage": "March 2020", "by": 0.51}], "accepted": false},
+    {"name": "a share estimate 0.51 of the outturn's largest size below it", "ops": [{"op": "launch_off_level", "variable": "psnb", "measure": "share", "vintage": "March 2026", "by": -0.51}], "accepted": false},
+    {"name": "no forecast with a figure for its launch period", "ops": [{"op": "drop_every_launch", "variable": "real_gdp", "measure": "level"}], "accepted": false},
+    {"name": "one forecast left with a figure for its launch period", "ops": [{"op": "drop_every_launch", "variable": "real_gdp", "measure": "level", "but": "June 2010"}], "accepted": true},
+    {"name": "growth rates marked as levels", "ops": [{"op": "kind", "variable": "real_gdp", "measure": "level", "to": "level"}], "accepted": false},
+    {"name": "levels marked as growth rates", "ops": [{"op": "kind", "variable": "employment", "measure": "level", "to": "growth"}], "accepted": false},
+    {"name": "a rate marked as growth rates", "ops": [{"op": "kind", "variable": "unemployment", "measure": "level", "to": "growth"}], "accepted": false},
+    {"name": "an index marked as growth rates", "ops": [{"op": "kind", "variable": "rhdi_per_person", "measure": "level", "to": "growth"}], "accepted": false},
+    {"name": "an index marked as levels", "ops": [{"op": "kind", "variable": "rhdi_per_person", "measure": "level", "to": "level"}], "accepted": false},
+    {"name": "growth rates, some below zero, marked as an index", "ops": [{"op": "kind", "variable": "real_gdp", "measure": "level", "to": "index"}], "accepted": false},
+    {"name": "growth rates, all above zero, marked as an index", "ops": [{"op": "kind", "variable": "average_earnings", "measure": "level", "to": "index"}], "accepted": false},
+    {"name": "levels marked as an index: the figures cannot say", "ops": [{"op": "kind", "variable": "nominal_gdp", "measure": "level", "to": "index"}], "accepted": true},
+    {"name": "an index rebased in one forecast to twice its figures", "ops": [{"op": "scale", "variable": "rhdi_per_person", "measure": "level", "vintage": "March 2026", "by": 2}], "accepted": false},
+    {"name": "an index 1.3 times its figures in one forecast", "ops": [{"op": "scale", "variable": "rhdi_per_person", "measure": "level", "vintage": "March 2026", "by": 1.3}], "accepted": true},
+    {"name": "an index at zero", "ops": [{"op": "set_last", "variable": "rhdi_per_person", "measure": "level", "vintage": "March 2026", "to": 0}], "accepted": false}
+  ]
+}

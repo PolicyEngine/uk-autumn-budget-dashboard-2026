@@ -45,15 +45,24 @@ const MAX_DECIMALS = 6;
 export const MAX_VALUE = 1e9;
 // The years a period can fall in
 const YEARS = [1900, 2100];
-// largest_gap is written to four decimals
+// largest_gap is written to four decimals, so it is 0 or at least this;
+// and no tolerance is finer
 const ROUNDING = 1e-4;
-// How far a forecast's figures may sit from the outturn and still read as
-// its kind (kindProblem): a forecast of levels starts within half the
+// How far a forecast's figure for its launch period may sit from the
+// outturn and still read as its kind (kindProblem). The launch period was
+// over when the forecast was published (the launch rules), so that figure
+// is an estimate of outturn, apart from today's only by revisions; the
+// figures after it are forecasts, which may miss by any amount and are
+// never set against the outturn. A level estimate is within half the
 // outturn's largest size of it (the committed file's widest is 0.29, the
-// PSNI); a growth forecast's first rate within 10 points of the outturn's
-// (widest 3.2); a growth rate is under 100% either way (widest 11.6)
-const NEAR_OUTTURN = 0.5;
+// PSNI in December 2013); a growth estimate within 10 points of the
+// outturn's rate (widest 3.2, RHDI in March 2016); an index has one base,
+// so its estimate's ratio to the outturn is the same in every forecast
+// but for revisions, the largest within 1.5 times the smallest (widest
+// 1.08). A growth rate is under 100% either way (widest 11.6).
+const NEAR_LEVEL = 0.5;
 const NEAR_GROWTH = 10;
+const INDEX_SPREAD = 1.5;
 const MAX_GROWTH = 100;
 
 const isNumber = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= MAX_VALUE;
@@ -91,7 +100,11 @@ function isSeries(values, frequency) {
   return periods.every((t, i) => i === 0 || t === periods[i - 1] + 1);
 }
 
-const firstPeriod = (values, frequency) => Math.min(...Object.keys(values).map((k) => periodIndex(k, frequency)));
+function firstPeriod(values, frequency) {
+  let first = Infinity;
+  for (const k of Object.keys(values)) first = Math.min(first, periodIndex(k, frequency));
+  return first;
+}
 const after = (a, b) => a.year > b.year || (a.year === b.year && a.month > b.month);
 const same = (a, b) => a.year === b.year && a.month === b.month;
 
@@ -107,32 +120,38 @@ export function launchPeriod(frequency, year, month) {
   return month >= 4 ? year - 1 : year - 2;
 }
 
+// The terms a measure's outturn check is in, as the build writes them: the
+// measure's own units for a forecast of levels; growth rates for a growth
+// forecast or an index, whose figures are not in the outturn's units
+const checkTerms = (measure) => (measure.kind === "level" ? measure.unit : "% change on a year earlier");
+
 // What the page reads from a measure's outturn check (checkSentence): the
-// periods it covers, in order and all in the outturn; a tolerance and a
-// largest gap the sentence can state without contradicting itself
+// periods it covers, in order and all in the outturn; its terms; a
+// tolerance and a largest gap the sentence can state without
+// contradicting itself. A tolerance is a share of the value only where the
+// gaps are in the outturn's own units, the value's
 function checkProblem(check, measure, frequency) {
   if (absent(check)) return null;
   const ok =
     isObject(check) &&
     isText(check.against) &&
-    isText(check.in) &&
+    check.in === checkTerms(measure) &&
     Array.isArray(check.periods) &&
     check.periods.length > 0 &&
     check.periods.every((p) => isPeriod(p, frequency) && Object.hasOwn(measure.outturn, p)) &&
     check.periods.every((p, i) => i === 0 || periodIndex(p, frequency) > periodIndex(check.periods[i - 1], frequency)) &&
     typeof check.tolerance_is_share === "boolean" &&
     isNumber(check.tolerance) &&
-    check.tolerance > 0 &&
-    (!check.tolerance_is_share || check.tolerance < 1) &&
+    check.tolerance >= ROUNDING &&
+    (!check.tolerance_is_share || (check.tolerance < 1 && measure.kind === "level")) &&
     isNumber(check.largest_gap) &&
+    (check.largest_gap === 0 || Math.abs(check.largest_gap) >= ROUNDING) &&
     isPeriod(check.largest_gap_period, frequency) &&
     check.periods.includes(check.largest_gap_period);
   if (!ok) return "its outturn check is incomplete";
   const gap = Math.abs(check.largest_gap);
   if (!check.tolerance_is_share) return gap <= check.tolerance + ROUNDING ? null : "its outturn check's largest gap is beyond its tolerance";
-  // A share of the OBR's own figure, which is the outturn less the gap;
-  // a growth measure's check is on growth rates, which the file does not hold
-  if (measure.kind === "growth") return null;
+  // A share of the OBR's own figure, which is the outturn less the gap
   const theirs = Math.abs(measure.outturn[check.largest_gap_period] - check.largest_gap);
   return gap <= check.tolerance * theirs + ROUNDING ? null : "its outturn check's largest gap is beyond its tolerance";
 }
@@ -153,6 +172,8 @@ function vintageProblem(id, v, frequency, kind) {
     return `${id}: the ${v.label} forecast's launch period does not follow the launch rules`;
   }
   if (!isSeries(v.values, frequency)) return `${id}: the ${v.label} forecast has no values`;
+  // A line, as the build writes it: a forecast of one period is refused there
+  if (Object.keys(v.values).length < 2) return `${id}: the ${v.label} forecast has only one value`;
   // It runs from its launch period, or the period after
   const launch = periodIndex(v.launch, frequency);
   const first = firstPeriod(v.values, frequency);
@@ -191,33 +212,45 @@ function measureProblem(id, name, measure, frequency) {
 }
 
 /**
- * Whether each forecast's figures read as its measure's kind, where they
- * can say otherwise: a forecast of levels starts near the outturn; an
- * index is above zero; a growth rate is under 100% either way and, where
- * the outturn has the period and the one a year before, starts near the
- * outturn's own rate. A forecast of levels marked as an index passes when
- * it is above zero and starts at its launch period: its figures cannot
- * say which it is.
+ * Whether a measure's forecasts read as its kind, where their figures can
+ * say otherwise. Every figure: an index is above zero; a growth rate is
+ * under 100% either way. Each forecast's figure for its launch period, an
+ * estimate of outturn: a level's is near the outturn; a growth rate's near
+ * the outturn's own rate; an index's ratio to the outturn is the same in
+ * every forecast. At least one forecast has that figure, so the kind is
+ * set against something. A forecast of levels marked as an index, with
+ * every figure above zero, its outturn check in growth rates and one base,
+ * passes: its figures cannot say which it is. The build refuses to write
+ * a file this refuses (check_kind in src/uk_budget_data/forecast_vintages/
+ * build.py), on the cases in tests/fixtures/forecast_vintages_kind_cases.json.
  */
-function kindProblem(id, measure, frequency) {
+export function kindProblem(id, measure, frequency) {
   const outturn = new Map(Object.entries(measure.outturn).map(([k, v]) => [periodIndex(k, frequency), v]));
   let size = 0;
   for (const v of outturn.values()) size = Math.max(size, Math.abs(v));
   const lag = frequency === "quarterly" ? 4 : 1;
+  let estimates = 0;
+  let [low, high] = [Infinity, -Infinity];
   for (const v of measure.vintages) {
-    const values = Object.entries(v.values).map(([k, x]) => [periodIndex(k, frequency), x]);
-    const [first, value] = values.reduce((a, b) => (b[0] < a[0] ? b : a));
-    const now = outturn.get(first);
-    const before = outturn.get(first - lag);
-    const reads =
-      measure.kind === "index"
-        ? values.every(([, x]) => x > 0)
-        : measure.kind === "growth"
-          ? values.every(([, x]) => Math.abs(x) < MAX_GROWTH) &&
-            !(before > 0 && now !== undefined && Math.abs(value - 100 * (now / before - 1)) > NEAR_GROWTH)
-          : now === undefined || Math.abs(value - now) <= NEAR_OUTTURN * size;
+    const launch = periodIndex(v.launch, frequency);
+    const values = new Map(Object.entries(v.values).map(([k, x]) => [periodIndex(k, frequency), x]));
+    const all = [...values.values()];
+    let reads =
+      measure.kind === "index" ? all.every((x) => x > 0) : measure.kind === "growth" ? all.every((x) => Math.abs(x) < MAX_GROWTH) : true;
+    const estimate = values.get(launch);
+    const [now, before] = [outturn.get(launch), outturn.get(launch - lag)];
+    if (reads && estimate !== undefined) {
+      estimates += 1;
+      if (measure.kind === "level" && now !== undefined) reads = Math.abs(estimate - now) <= NEAR_LEVEL * size;
+      if (measure.kind === "growth" && now !== undefined && before > 0) {
+        reads = Math.abs(estimate - 100 * (now / before - 1)) <= NEAR_GROWTH;
+      }
+      if (measure.kind === "index" && now > 0) [low, high] = [Math.min(low, estimate / now), Math.max(high, estimate / now)];
+    }
     if (!reads) return `${id}: the ${v.label} forecast's figures do not read as ${KIND_WORDS[measure.kind]}`;
   }
+  if (!estimates) return `${id}: no forecast has a figure for its launch period to set its kind against`;
+  if (high > INDEX_SPREAD * low) return `${id}: its forecasts do not read as one index`;
   return null;
 }
 

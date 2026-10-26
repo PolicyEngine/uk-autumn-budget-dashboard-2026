@@ -137,14 +137,63 @@ describe("the committed file", () => {
     ["a variable id fit for an address", (d) => (d.variables[0].id = "Real GDP"), /label or frequency/],
     // Found by the field audit and the schema sweep: a kind or a unit's
     // measure that its figures contradict
-    ["growth rates marked as growth", (d) => (byId(d, "real_gdp").level.kind = "level"), /do not read as levels/],
-    ["levels marked as levels", (d) => (byId(d, "employment").level.kind = "growth"), /do not read as growth rates/],
+    ["growth rates marked as growth, by their check", (d) => (byId(d, "real_gdp").level.kind = "level"), /outturn check is incomplete/],
+    ["levels marked as levels, by their check", (d) => (byId(d, "employment").level.kind = "growth"), /outturn check is incomplete/],
+    [
+      "growth rates marked as growth",
+      (d) => {
+        byId(d, "real_gdp").level.kind = "level";
+        delete byId(d, "real_gdp").level.check;
+      },
+      /do not read as levels/,
+    ],
+    [
+      "levels marked as levels",
+      (d) => {
+        byId(d, "employment").level.kind = "growth";
+        delete byId(d, "employment").level.check;
+      },
+      /do not read as growth rates/,
+    ],
     ["an index marked as an index", (d) => (byId(d, "rhdi_per_person").level.kind = "growth"), /do not read as growth rates/],
     ["an index above zero", (d) => (byId(d, "real_gdp").level.kind = "index"), /launch period|do not read as an index/],
     ["a level that starts near the outturn", (d) => (byId(d, "nominal_gdp").level.vintages[0].values["2009-10"] *= 3), /do not read as levels/],
     ["a growth rate under 100%", (d) => (byId(d, "cpi").level.vintages.at(-1).values["2027"] = 150), /do not read as growth rates/],
     ["a % shown as published that reads a measure in %", (d) => (byId(d, "psnb").units.pct.from = "level"), /reads a measure in other units/],
     ["£ that reads no measure in %", (d) => (byId(d, "psnb").units.level.from = "share"), /reads a measure in other units/],
+    // Found by the fourth review: a check stated in terms its gaps are
+    // not in, and a forecast the build would not write
+    ["a check in its measure's terms", (d) => (byId(d, "employment").level.check.in = "% change on a year earlier"), /outturn check is incomplete/],
+    [
+      "a share tolerance only on gaps in the outturn's units",
+      (d) => Object.assign(byId(d, "rhdi_per_person").level.check, { tolerance_is_share: true, tolerance: 0.02 }),
+      /outturn check is incomplete/,
+    ],
+    ["a tolerance no finer than a gap is written", (d) => (byId(d, "real_gdp").level.check.tolerance = 0.00001), /outturn check is incomplete/],
+    ["a largest gap no finer than it is written", (d) => (byId(d, "real_gdp").level.check.largest_gap = 1e-300), /outturn check is incomplete/],
+    [
+      "a forecast of two periods or more",
+      (d) => {
+        const newest = byId(d, "unemployment").level.vintages.at(-1);
+        newest.values = { 2025: 4.8 };
+      },
+      /only one value/,
+    ],
+    [
+      "a forecast with a figure for its launch period",
+      (d) => {
+        for (const v of byId(d, "real_gdp").level.vintages) delete v.values[String(v.launch)];
+      },
+      /no forecast has a figure for its launch period/,
+    ],
+    [
+      "an index with one base",
+      (d) => {
+        const newest = byId(d, "rhdi_per_person").level.vintages.at(-1);
+        for (const k of Object.keys(newest.values)) newest.values[k] *= 2;
+      },
+      /do not read as one index/,
+    ],
   ])("is refused without %s", (_, mutate, problem) => {
     const data = clone();
     mutate(data);
@@ -273,7 +322,8 @@ describe("a forecast that cannot be drawn", () => {
         const measure = variable[variable.units[unit].from];
         const newest = measure.vintages[measure.vintages.length - 1];
         const keys = Object.keys(newest.values);
-        newest.values = Object.fromEntries(keys.slice(0, 1 + (keep % keys.length)).map((k) => [k, newest.values[k]]));
+        // Two values at least, as the build writes a forecast
+        newest.values = Object.fromEntries(keys.slice(0, 2 + (keep % (keys.length - 1))).map((k) => [k, newest.values[k]]));
         expect(forecastVintagesProblem(data)).toBeNull();
         const view = buildView(data, variable, { unit, annual, showPast });
         if (view.unavailable) {
@@ -308,10 +358,12 @@ describe("a forecast that cannot be drawn", () => {
   // Found by the third review: values the file may hold whose index or %
   // change no axis can step over (an index of a tiny base) are not drawn
   it("leaves a view whose values are too large to draw unavailable, never on a 0 to 1 axis", () => {
-    // An index forecast (its kind says nothing of the outturn's size), so
-    // the loader takes the file
+    // The outturn at the parliament's start, where no forecast but the
+    // November 2024 one is launched: without it, nothing sets the outturn
+    // there against an estimate, so the loader takes the file
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
+    v.level.vintages = v.level.vintages.filter((x) => x.launch !== "2024Q2");
     v.level.outturn["2024Q2"] = 1e-9;
     expect(forecastVintagesProblem(data)).toBeNull();
     for (const unit of ["index", "pct"]) {
@@ -358,10 +410,12 @@ describe("a forecast that cannot be drawn", () => {
       return { [key]: values[key] };
     };
     // One year of outturn (so no check over eight), and each forecast's
-    // launch year alone
+    // first two years
     delete v.level.check;
     v.level.outturn = only(v.level.outturn, -1);
-    for (const vintage of v.level.vintages) vintage.values = only(vintage.values, 0);
+    for (const vintage of v.level.vintages) {
+      vintage.values = Object.fromEntries(Object.entries(vintage.values).slice(0, 2));
+    }
     expect(forecastVintagesProblem(data)).toBeNull();
     const view = buildView(data, v, { unit: "pct" });
     expect(view.unavailable).toMatch(/cannot be drawn|too little outturn/);
@@ -464,9 +518,38 @@ describe("the outturn check, in words", () => {
       /^From 2017-18 to 2024-25, the ONS outturn is within 5% of the value of the outturn row of the OBR's database; the largest gap relative to the value is £2\.13 billion, in 2017-18\.$/,
     );
     const employment = variable("employment").level.check;
-    expect(checkSentence(employment, "calendar")).toMatch(/is within 2% of the value .* million people, in \d{4}\.$/);
+    expect(checkSentence(employment, "calendar")).toBe(
+      "From 2017 to 2024, the ONS outturn is within 2% of the value of the outturn row of the OBR's database; the largest gap relative to the value is 2,700 people, in 2022.",
+    );
     const rhdi = variable("rhdi_per_person").level.check;
     expect(checkSentence(rhdi, "quarterly")).toMatch(/^From Q4 2023 to Q3 2025, .* within 1\.5 percentage points of Table 1\.5 of the March 2026 forecast/);
+  });
+
+  // Found by the fourth review: a tolerance of 0.4% was written "0%"
+  it("writes no tolerance or gap that is not zero as 0, and every tolerance as a bound", () => {
+    const employment = variable("employment").level.check;
+    const share = (tolerance) => checkSentence({ ...employment, tolerance }, "calendar").match(/within (.+?)% of the value/)[1];
+    expect(share(0.004)).toBe("0.4");
+    expect(share(0.0047)).toBe("0.47");
+    expect(share(0.00471)).toBe("0.48");
+    const gdp = variable("real_gdp").level.check;
+    const written = (check) => checkSentence({ ...gdp, ...check }, "calendar").match(/within (.+?) percentage points?.*gap is (.+?) percentage points?/).slice(1);
+    expect(written({ tolerance: 0.0123, largest_gap: 0.0001 })).toEqual(["0.013", "0.0001"]);
+    const number = (text) => Number(text.replace(/,/g, ""));
+    fc.assert(
+      fc.property(fc.double({ min: 1e-4, max: 1e6, noNaN: true }), fc.double({ min: 1e-4, max: 1e6, noNaN: true }), (tolerance, gap) => {
+        const [bound, said] = written({ tolerance, largest_gap: gap }).map(number);
+        // A bound that still bounds (to the twelve figures it is read
+        // to), at most a tenth above; a gap to its nearest second figure;
+        // neither ever 0
+        expect(bound).toBeGreaterThanOrEqual(tolerance * (1 - 1e-12));
+        expect(bound).toBeLessThanOrEqual(tolerance * 1.1);
+        expect(Math.abs(said - gap)).toBeLessThanOrEqual(gap * 0.05);
+        expect(said).toBeGreaterThan(0);
+        const pct = number(share(Math.min(tolerance / 1e6, 0.99)));
+        expect(pct).toBeGreaterThanOrEqual(Math.min(tolerance / 1e6, 0.99) * 100 * (1 - 1e-12));
+      }),
+    );
   });
 
   it("says every measure's check, and nothing where there is none", () => {
@@ -576,10 +659,13 @@ describe("what the file says of itself", () => {
   });
 
   // Its figures cannot say which it is: drawn, it moves with the
-  // forecast from the outturn, as an index would
-  it("takes a forecast of levels marked as an index, where it is above zero and starts at its launch", () => {
+  // forecast from the outturn, as an index would. Its outturn check, in
+  // £ billion, says otherwise, so it passes only without one
+  it("takes a forecast of levels marked as an index, above zero, starting at its launch, with one base and no check", () => {
     const data = clone();
     byId(data, "nominal_gdp").level.kind = "index";
+    expect(forecastVintagesProblem(data)).toMatch(/outturn check is incomplete/);
+    delete byId(data, "nominal_gdp").level.check;
     expect(forecastVintagesProblem(data)).toBeNull();
   });
 });

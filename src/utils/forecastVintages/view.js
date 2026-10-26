@@ -148,9 +148,28 @@ export function stepDecimals(step) {
   return 6;
 }
 
-/** An amount in a check's units: "0.3 percentage points", "£2.1 billion". */
-function checkAmount(value, units) {
-  const n = gb(value < 10 ? 2 : 1).format(value).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+/**
+ * A check's figure as text: to two decimals below 10 and one above, or to
+ * two significant figures where that is finer, so no figure but zero is
+ * written "0". `up` rounds up, so a bound written is still a bound (to
+ * the twelve figures it is read to).
+ */
+function checkFigure(written, { up = false } = {}) {
+  // To twelve figures, so 0.0047 * 100, held as 0.47000000000000003, is
+  // the 0.47 it was written as, not taken up to 0.48
+  const value = Number(written.toPrecision(12));
+  if (value === 0) return "0";
+  const decimals = Math.max(value < 10 ? 2 : 1, 1 - Math.floor(Math.log10(value)));
+  const scale = 10 ** decimals;
+  let rounded = Math.round(value * scale) / scale;
+  if (up && rounded < value) rounded += 1 / scale;
+  return gb(decimals).format(rounded).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+/** An amount in a check's units: "0.3 percentage points", "£2.1 billion", "2,700 people". */
+function checkAmount(value, units, { up = false } = {}) {
+  if (units === "million people" && value < 0.1) return `${checkFigure(value * 1e6, { up })} people`;
+  const n = checkFigure(value, { up });
   if (units.startsWith("%")) return `${n} percentage point${n === "1" ? "" : "s"}`;
   if (units === "£ billion") return `£${n} billion`;
   if (units === "million people") return `${n} million people`;
@@ -166,7 +185,10 @@ export function checkSentence(check, frequency) {
   if (!check?.periods?.length) return null;
   const label = (key) => periodLabel(periodIndex(key, frequency), frequency);
   const share = Boolean(check.tolerance_is_share);
-  const tolerance = share ? `${gb(0).format(check.tolerance * 100)}% of the value` : checkAmount(check.tolerance, check.in);
+  // The tolerance rounded up: every gap is within it, so within that too
+  const tolerance = share
+    ? `${checkFigure(check.tolerance * 100, { up: true })}% of the value`
+    : checkAmount(check.tolerance, check.in, { up: true });
   const first = label(check.periods[0]);
   const last = label(check.periods[check.periods.length - 1]);
   const gap = checkAmount(Math.abs(check.largest_gap), check.in);
