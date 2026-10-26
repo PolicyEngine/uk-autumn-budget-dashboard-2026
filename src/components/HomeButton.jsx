@@ -5,41 +5,19 @@ import mark from "@/assets/policyengine-white-square.svg";
 import tealMark from "@/assets/policyengine-teal-square.svg";
 import "./HomeButton.css";
 
-// The bare address: the landing page
-const START = process.env.NEXT_PUBLIC_BASE_PATH || "/";
-
 /**
- * The band's home link, left of the title: PolicyEngine's mark alone, back
- * to the landing page in place (a new tab or window opens the bare
- * address). On the landing page itself it is marked current and does
- * nothing. What the dashboard is, is the edge tab's (EdgeAboutTab).
- *
- * @param {Object} props
- * @param {boolean} props.current - Whether the landing page is shown
- * @param {() => void} props.onHome - Go to the landing page (App's goHome)
+ * PolicyEngine's mark, left of the band's title: decoration only, not a
+ * control. The way to the overview is the rail button (EdgeAboutTab) and
+ * its drawer, which also leads back to the start.
  */
-export default function HomeButton({ current, onHome }) {
-  return (
-    <a
-      href={START}
-      className="home-button"
-      aria-label="Back to the start"
-      aria-current={current ? "page" : undefined}
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-        event.preventDefault();
-        if (!current) onHome();
-      }}
-    >
-      <Mark className="home-button-mark" />
-    </a>
-  );
+export default function TitleMark() {
+  return <Mark className="title-mark" hidden />;
 }
 
 /** PolicyEngine's square mark (@policyengine/ui-kit's white-square.svg). */
-function Mark({ className }) {
+function Mark({ className, hidden = false }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={mark.src ?? mark} alt="" className={className} />;
+  return <img src={mark.src ?? mark} alt="" className={className} aria-hidden={hidden ? "true" : undefined} />;
 }
 
 /** The edge tab's card: what the dashboard is, and what a click does. */
@@ -58,10 +36,11 @@ const CUE_KEY = "ab2026-about-cue";
 
 /**
  * An "About" tab pinned to the window's left edge on every view (App.jsx
- * leaves it off the landing page): a rail button in the view tabs bar's
- * left margin, the bar's own height, with the PolicyEngine mark and a
+ * leaves it off the landing page): a rail button in the left margin of
+ * the view tabs bar and any sub-tab band below it, their full height, with the PolicyEngine mark and a
  * panel-open icon; the card names it on hover or focus, and a click
- * that opens the overview drawer (OverviewDrawer.jsx), or closes it. It
+ * that opens the overview drawer (OverviewDrawer.jsx); it is hidden while
+ * the drawer is open. It
  * pulses softly once per session (not under reduced motion); on a narrow
  * screen it is the mark alone, and the bar makes room for it.
  *
@@ -72,8 +51,9 @@ const CUE_KEY = "ab2026-about-cue";
  */
 export function EdgeAboutTab({ open, onToggle, buttonRef }) {
   const own = useRef(null);
-  // Level with the view tabs bar, centred on its height, wherever it is:
-  // in the page at first, then stuck (and compact) under the band
+  // One block with the view tabs bar and the open view's sub-tab band,
+  // wherever they are: in the page at first, then stuck (and compact)
+  // under the title band
   useEffect(() => {
     let frame = 0;
     const place = () => {
@@ -81,9 +61,12 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
       const bar = document.querySelector(".view-tabs-bar");
       if (!bar || !own.current) return;
       const box = bar.getBoundingClientRect();
-      // Inside the bar's own top and bottom borders, its full height
+      // Down through the open view's sub-tab band, when it has one
+      const band = [...document.querySelectorAll(".sub-tabs-band")].find((node) => node.offsetParent !== null);
+      const bottom = band ? Math.max(box.bottom, band.getBoundingClientRect().bottom) : box.bottom;
+      // Inside the bar's top border and the last row's bottom border
       own.current.style.top = `${Math.round(box.top) + 1}px`;
-      own.current.style.height = `${Math.round(box.height) - 2}px`;
+      own.current.style.height = `${Math.round(bottom - box.top) - 2}px`;
     };
     const later = () => {
       if (!frame) frame = requestAnimationFrame(place);
@@ -91,9 +74,13 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
     place();
     window.addEventListener("scroll", later, { passive: true });
     window.addEventListener("resize", later);
+    // The bar and bands change height when they stick, and a view's
+    // change of tab adds or removes a band
     const bar = document.querySelector(".view-tabs-bar");
-    const observer = typeof ResizeObserver === "undefined" || !bar ? null : new ResizeObserver(later);
-    observer?.observe(bar);
+    const main = document.querySelector(".main-content");
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(later);
+    if (bar) observer?.observe(bar);
+    if (main) observer?.observe(main);
     return () => {
       window.removeEventListener("scroll", later);
       window.removeEventListener("resize", later);

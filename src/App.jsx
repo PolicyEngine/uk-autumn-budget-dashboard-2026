@@ -29,7 +29,7 @@ import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
+import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
@@ -402,7 +402,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
   };
-  // Back to the landing page (the band's home button), in place: the views
+  // Back to the landing page (the overview drawer's last link), in place: the views
   // stay mounted, the address goes back to the bare one (the selection
   // and year stay as chosen) and the page to its top
   const goHome = () => {
@@ -740,7 +740,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <div className="title-head">
-            <HomeButton current={landing} onHome={goHome} />
+            <TitleMark />
             <h1>UK Autumn Budget 2026</h1>
           </div>
 
@@ -893,6 +893,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               open={overviewOpen}
               onClose={closeOverview}
               onOpen={handleTabChange}
+              onHome={goHome}
               returnFocus={aboutTabRef}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>

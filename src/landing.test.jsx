@@ -43,7 +43,6 @@ const selectedViewTabs = () =>
   within(tabBar())
     .getAllByRole("tab")
     .filter((tab) => tab.getAttribute("aria-selected") === "true");
-const home = () => screen.getByRole("link", { name: "Back to the start" });
 const search = () => new URLSearchParams(window.location.search);
 
 describe("the landing page", () => {
@@ -51,7 +50,7 @@ describe("the landing page", () => {
     const { container } = await renderApp();
     const page = landing();
     expect(page).not.toBeNull();
-    expect(within(page).getByText("PolicyEngine UK", { selector: ".landing-eyebrow" })).toBeInTheDocument();
+    expect(page.querySelector(".landing-eyebrow")).toBeNull();
     expect(within(page).getByRole("heading", { level: 2 })).toHaveTextContent("Autumn Budget 2026: fiscal and distributional analysis");
     expect(within(page).getByText(/^Estimates from/)).toHaveTextContent(INTRO);
     expect(container).not.toHaveTextContent("Choose a year and policies");
@@ -172,41 +171,13 @@ describe("the landing page", () => {
   });
 });
 
-describe("the band's home link", () => {
-  it("is marked current on the landing page, where it does nothing", async () => {
-    await renderApp();
-    expect(home()).toHaveAttribute("aria-current", "page");
-    fireEvent.click(home());
-    expect(landing()).not.toBeNull();
-    expect(window.location.search).toBe("");
-  });
-
-  it("is the mark alone, a link to the bare address, with no card", async () => {
-    await renderApp();
-    expect(home()).toHaveAttribute("href", "/");
-    expect(home().querySelector("img")).toHaveAttribute("alt", "");
-    fireEvent.focus(home());
-    fireEvent.mouseEnter(home());
-    expect(screen.queryByRole("tooltip")).toBeNull();
-  });
-
-  it("goes back to the landing page from any view, in place", async () => {
-    window.history.replaceState({}, "", "/?tab=dashboard&sub=all&policies=alpha");
+describe("the mark beside the title", () => {
+  it("is decoration only: no link, no button, hidden from assistive tech", async () => {
     const { container } = await renderApp();
-    expect(home()).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("tab", { name: "All households" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(home());
-    expect(landing()).not.toBeNull();
-    expect(tabBar()).toBeNull();
-    expect(home()).toHaveAttribute("aria-current", "page");
-    // The bare address: a reload opens the landing page again
-    expect(window.location.search).toBe("");
-    // Behind it, the silhouette; the view is kept, hidden
-    expect(container.querySelector(".landing-backdrop")).not.toBeNull();
-    expect(screen.queryByRole("tabpanel")).toBeNull();
-    // The selection is kept, and comes back to the address with a view
-    fireEvent.click(box("household"));
-    expect([search().get("tab"), search().get("policies")]).toEqual(["household", "alpha"]);
+    const mark = container.querySelector(".title-head img");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark.closest("a, button")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Back to the start" })).toBeNull();
   });
 });
 
@@ -256,7 +227,7 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(search().get("tab")).toBe("methodology");
   });
 
-  it("closes by the close button, Esc, the backdrop or the tab, with focus back on the tab", async () => {
+  it("closes by the close button, Esc or the backdrop, with focus back on the tab", async () => {
     const { container } = await openDrawer();
     fireEvent.click(within(drawer()).getByRole("button", { name: "Close the overview" }));
     expect(drawer()).toBeNull();
@@ -271,10 +242,6 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     fireEvent.click(container.querySelector(".overview-backdrop"));
     expect(drawer()).toBeNull();
 
-    fireEvent.click(edge());
-    expect(drawer()).not.toBeNull();
-    fireEvent.click(edge());
-    expect(drawer()).toBeNull();
   });
 
   it("keeps Tab inside the drawer", async () => {
@@ -287,6 +254,29 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(close).toHaveFocus();
     fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
     expect(links.at(-1)).toHaveFocus();
+  });
+
+  it("leads back to the start, in place, keeping the selection", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard&sub=all&policies=alpha");
+    const { container } = await renderApp();
+    fireEvent.click(edge());
+    fireEvent.click(within(drawer()).getByRole("link", { name: "Back to the start" }));
+    expect(drawer()).toBeNull();
+    expect(landing()).not.toBeNull();
+    expect(tabBar()).toBeNull();
+    // The bare address: a reload opens the landing page again
+    expect(window.location.search).toBe("");
+    expect(container.querySelector(".landing-backdrop")).not.toBeNull();
+    expect(screen.queryByRole("tabpanel")).toBeNull();
+    // The selection comes back to the address with a view
+    fireEvent.click(box("household"));
+    expect([search().get("tab"), search().get("policies")]).toEqual(["household", "alpha"]);
+  });
+
+  it("names what it is built with, each link on its own row", async () => {
+    await openDrawer();
+    const built = within(drawer()).getByRole("list", { name: "Built with" });
+    expect(within(built).getAllByRole("link")[0]).toHaveTextContent(/^Replication code/);
   });
 
   it.each([

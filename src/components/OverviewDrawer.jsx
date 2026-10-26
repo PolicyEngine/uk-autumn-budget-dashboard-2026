@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { LandingBoxes, LandingIntro } from "./LandingPage";
-import { ReplicationSentence } from "./ReplicationLine";
+import { replicationLinks } from "./ReplicationLine";
 import Tip from "./Tip";
 import mark from "@/assets/policyengine-teal-square.svg";
 import "./OverviewDrawer.css";
+
+// The bare address: the landing page
+const START = process.env.NEXT_PUBLIC_BASE_PATH || "/";
 
 // A little over --motion-slide (250ms): the slide out has ended
 const SLIDE_MS = 300;
@@ -26,10 +29,11 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {(tab: string, sub?: string) => void} props.onOpen - Open a view (App's handleTabChange)
+ * @param {() => void} props.onHome - Go back to the landing page (App's goHome)
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
  * @param {{current: HTMLElement|null}} props.returnFocus - Where focus goes on closing
  */
-export default function OverviewDrawer({ open, onClose, onOpen, provisional, returnFocus }) {
+export default function OverviewDrawer({ open, onClose, onOpen, onHome, provisional, returnFocus }) {
   const panelRef = useRef(null);
   const closeRef = useRef(null);
   const wasOpen = useRef(false);
@@ -131,9 +135,34 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
               onClose();
             }}
           />
+          <a
+            className="overview-home"
+            href={START}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              event.preventDefault();
+              onClose();
+              onHome();
+            }}
+          >
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+            Back to the start
+          </a>
         </div>
         <footer className="overview-footer">
-          <ReplicationSentence className="replication-sentence overview-replication" />
+          <p id="overview-built" className="overview-built">Built with</p>
+          <ul className="overview-built-links" aria-labelledby="overview-built">
+            {replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION }).map(({ key, label, title, href, Icon }) => (
+              <li key={key}>
+                <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+                  <Icon size={14} strokeWidth={2} aria-hidden="true" />
+                  {/* A row's own start: "Replication code"; a package keeps its name */}
+                  {key === "code" ? "Replication code" : label}
+                  <span className="visually-hidden"> (opens in a new tab)</span>
+                </a>
+              </li>
+            ))}
+          </ul>
         </footer>
       </div>
     </div>

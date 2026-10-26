@@ -40,14 +40,13 @@ const BOXES = [
 ];
 
 /**
- * What the dashboard is: the eyebrow, the heading (its id given, as the
+ * What the dashboard is: the heading (its id given, as the
  * landing page and the overview drawer each name themselves by it), the
  * paragraph and the provisional notice. One source for both.
  */
 export function LandingIntro({ headingId, provisional, className = "landing-hero" }) {
   return (
     <div className={className}>
-      <p className="landing-eyebrow">PolicyEngine UK</p>
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how

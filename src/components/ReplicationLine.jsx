@@ -49,18 +49,10 @@ function SentenceLink({ label, title, href, Icon }) {
  * 6.10.2." (the second part only when the version is known).
  */
 function ReplicationLine() {
-  return (
-    <section id="replication" className="replication-line" aria-label="Reproduce these results">
-      <ReplicationSentence />
-    </section>
-  );
-}
-
-/** The sentence alone (also the overview drawer's footer). */
-export function ReplicationSentence({ className = "replication-sentence" }) {
   const [code, pkg] = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
   return (
-      <p className={className}>
+    <section id="replication" className="replication-line" aria-label="Reproduce these results">
+      <p className="replication-sentence">
         Built with our <SentenceLink label={code.label} title={code.title} href={code.href} Icon={code.Icon} />
         {pkg && (
           <>
@@ -70,6 +62,7 @@ export function ReplicationSentence({ className = "replication-sentence" }) {
         )}
         .
       </p>
+    </section>
   );
 }
 
