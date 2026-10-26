@@ -26,6 +26,9 @@ DURATIONS_FILE = Path(__file__).resolve().parent / "ci_durations.json"
 # The median test takes well under a second; a new test is assumed a little
 # heavier than that until a refresh records its real time.
 DEFAULT_SECONDS = 1.0
+# Recorded times round to 0.0 for the quickest tests; a floor spreads them
+# over the shards instead of giving them all to the first lightest one.
+MIN_SECONDS = 0.05
 
 
 def base_node_id(node_id: str) -> str:
@@ -52,7 +55,8 @@ def parse_shard(text: str) -> tuple[int, int]:
 
 
 def weight(node_id: str, durations: Mapping[str, float]) -> float:
-    return durations.get(base_node_id(node_id), DEFAULT_SECONDS)
+    seconds = durations.get(base_node_id(node_id), DEFAULT_SECONDS)
+    return max(seconds, MIN_SECONDS)
 
 
 def assign(

@@ -27,23 +27,23 @@ REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 
 
 def node_id(case: ET.Element) -> str:
-    """pytest's node id from an xunit1 test case (which records the file)."""
-    file = case.attrib["file"]
-    module = file.removesuffix(".py").replace("/", ".")
-    classname = case.attrib.get("classname", "")
-    parts = [file]
-    if classname.startswith(module + "."):
-        parts.extend(classname[len(module) + 1 :].split("."))
-    parts.append(case.attrib["name"])
-    return "::".join(parts)
+    """pytest's node id from an xunit1 test case.
+
+    The module comes from the class name where a test file matches it: a
+    Hypothesis state machine's ``runTest`` records hypothesis's own file.
+    """
+    names = case.attrib.get("classname", "").split(".")
+    for end in range(len(names), 0, -1):
+        path = "/".join(names[:end]) + ".py"
+        if (REPO / path).is_file():
+            return "::".join([path, *names[end:], case.attrib["name"]])
+    return "::".join([case.attrib["file"], case.attrib["name"]])
 
 
 def read_reports(directory: Path) -> dict[str, float]:
     durations: dict[str, float] = {}
     for report in sorted(directory.rglob("*.xml")):
         for case in ET.parse(report).getroot().iter("testcase"):
-            if "file" not in case.attrib:
-                continue
             node = node_id(case).split("@", 1)[0]
             seconds = float(case.attrib.get("time", 0.0))
             durations[node] = round(durations.get(node, 0.0) + seconds, 2)
