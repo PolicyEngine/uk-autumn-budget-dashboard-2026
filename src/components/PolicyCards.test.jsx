@@ -50,26 +50,28 @@ describe("the card details (policyDetails.js)", () => {
 });
 
 describe("PolicyCards", () => {
-  it("shows selected verified catalogue measures grouped and coloured like the charts", () => {
+  it("shows selected verified catalogue measures, raises first, each tagged and coloured like the charts", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA, HELD]} />);
-    for (const [heading, id] of [["Raises revenue", BETA], ["Costs revenue", ALPHA]]) {
-      const group = screen.getByRole("region", { name: heading });
+    const cards = screen.getAllByRole("listitem");
+    expect(cards.map((card) => card.querySelector("h4").textContent)).toEqual([
+      catalogue.byId.get(BETA).label, catalogue.byId.get(ALPHA).label,
+    ]);
+    for (const [tag, card, id] of [["Raises revenue", cards[0], BETA], ["Costs revenue", cards[1], ALPHA]]) {
       const measure = catalogue.byId.get(id);
-      expect(within(group).getAllByRole("listitem")).toHaveLength(1);
-      expect(group).toHaveTextContent(measure.label);
+      expect(card.querySelector(".policy-card-direction")).toHaveTextContent(tag);
       // No card details for a mock id: the published description
-      expect(group).toHaveTextContent(measure.description);
-      expect(within(group).getByRole("listitem").style.getPropertyValue("--policy-accent")).toBe(measure.color);
+      expect(card).toHaveTextContent(measure.description);
+      expect(card.style.getPropertyValue("--policy-accent")).toBe(measure.color);
     }
     expect(screen.queryByText(catalogue.byId.get(HELD).label)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Raises revenue" })).toBeNull();
   });
 
-  it("keeps neutral measures in their own group and leaves empty groups out", () => {
+  it("gives a neutral measure no direction tag, and its filter no segment", () => {
     const policy = { ...catalogue.byId.get(ALPHA), direction: "neutral" };
     render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} />);
-    expect(screen.getByRole("heading", { name: "Other measures" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Raises revenue" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Costs revenue" })).not.toBeInTheDocument();
+    expect(screen.getByRole("listitem").querySelector(".policy-card-direction")).toBeNull();
+    expect(within(screen.getByRole("group", { name: "Show measures" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["All 1"]);
   });
 
   it("shows no cards when the catalogue has no verified measures", () => {
@@ -85,7 +87,7 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
-    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitTemporary");
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitCosts revenueTemporary");
     expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
@@ -132,10 +134,28 @@ describe("PolicyCards", () => {
     expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
   });
 
-  it("counts each group's measures", () => {
+  it("filters by direction, counting each, and keeps the filter in the address", () => {
+    window.history.replaceState(null, "", "/?tab=policies");
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
-    expect(screen.getByRole("region", { name: "Raises revenue" })).toHaveTextContent("1 measure");
-    expect(screen.getByRole("region", { name: "Costs revenue" })).toHaveTextContent("1 measure");
+    const filter = screen.getByRole("group", { name: "Show measures" });
+    expect(within(filter).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "All 2", "Raises revenue 1", "Costs revenue 1",
+    ]);
+    // Each fact once: the badges give the counts, no summary line repeats them
+    expect(document.querySelector(".policy-filter-summary")).toBeNull();
+    expect(within(filter).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue 1" }));
+    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);
+    expect(new URLSearchParams(window.location.search).get("pf")).toBe("costs");
+    expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
+    fireEvent.click(within(filter).getByRole("button", { name: "All 2" }));
+    expect(window.location.search).toBe("?tab=policies");
+    cleanup();
+    // Read back from the address
+    window.history.replaceState(null, "", "/?tab=policies&pf=raises");
+    render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
+    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(BETA).label]);
+    window.history.replaceState(null, "", "/");
   });
 
   it("asks for only that measure's effect", () => {
@@ -399,18 +419,16 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 });
 
 describe("the card's frame", () => {
-  it("puts the source, how it is modelled and the effect on one footer line, and the arrow says no end date", () => {
+  it("stacks the footer: how it is modelled across the card, then the source and the effect; the arrow says no end date", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
+    expect([...foot.children].map((child) => child.className)).toEqual(["policy-card-modelling", "policy-card-actions"]);
+    expect(foot.querySelector(".policy-card-modelling .policy-card-details")).toBeTruthy();
     // A tip's wrapper (display: contents) is looked through
-    const named = ["policy-card-source", "policy-card-details", "policy-card-effect"];
-    expect(
-      [...foot.children].map((child) => {
-        const node = child.classList.contains("tip-anchor") ? child.firstElementChild : child;
-        return named.find((name) => node.classList.contains(name));
-      }),
-    ).toEqual(named);
+    const actions = [...foot.querySelector(".policy-card-actions").children].map((child) =>
+      (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className);
+    expect(actions).toEqual(["policy-card-source", "policy-card-effect"]);
     expect(within(foot).getByRole("link", { name: /^Source: Business Asset Disposal Relief/ })).toBeTruthy();
     const arrow = screen.getByRole("listitem").querySelector(".ptl-arrow");
     fireEvent.mouseEnter(arrow);

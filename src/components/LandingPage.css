@@ -147,7 +147,7 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 }
 
 .landing-heading {
-  margin: 0 0 clamp(6px, 1.2svh, 12px);
+  margin: 0 0 16px;
   font-size: clamp(1.5rem, 0.9rem + 1.5vw + 0.6svh, 2.25rem);
   font-weight: 700;
   line-height: 1.15;
@@ -177,7 +177,7 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 /* The provisional caveat: a small badge under the lead */
 .landing .publication-provisional {
   display: inline-block;
-  margin: clamp(8px, 1.4svh, 14px) 0 0;
+  margin: 18px 0 0;
   padding: 3px 12px;
   border-radius: 999px;
   font-size: var(--fs-caption);

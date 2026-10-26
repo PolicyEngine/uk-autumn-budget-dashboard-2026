@@ -27,3 +27,16 @@ export default function LoadingSkeleton({ cards = 2, height = 260, label = "Load
     </div>
   );
 }
+
+/**
+ * A placeholder for one chart or map while its data loads: a shimmering
+ * block of the plot's size, announced once by `label`.
+ */
+export function PlotSkeleton({ label, height = 320, className = "" }) {
+  return (
+    <div className={`skeleton-plot-block ${className}`.trim()} role="status" aria-busy="true">
+      <span className="visually-hidden">{label}</span>
+      <span className="skeleton-plot" style={{ height }} aria-hidden="true" />
+    </div>
+  );
+}

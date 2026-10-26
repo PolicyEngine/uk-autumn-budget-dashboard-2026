@@ -378,8 +378,18 @@ body {
   grid-area: policy;
 }
 
-/* A band control that does not apply to the current view keeps its place
-   (so the others do not move) but is not shown */
+/* A band control that does not apply to the current view stays in its
+   place, faded, and does not open; a Tip says why (App.jsx) */
+.title-row .band-control.is-inactive {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.title-row .band-control.is-inactive:hover {
+  background: var(--band-ink-hover);
+  border-color: var(--band-ink-border);
+}
+
 .title-row .is-hidden {
   visibility: hidden;
 }
@@ -1870,52 +1880,143 @@ body {
   padding: 4px 0 20px;
 }
 
-.policy-group + .policy-group {
-  margin-top: 40px;
-}
-
-.policy-group-head {
+/* The filter above the cards: All, Raises revenue, Costs revenue, each
+   with its direction's dot (the shared ViewSwitch) */
+.policy-filter {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--c-grid);
-}
-
-.policy-group-heading {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-section);
+  gap: 8px 12px;
+  margin: 0 0 16px;
+}
+
+.policy-filter-label {
+  font-size: var(--fs-small);
   font-weight: 600;
-  color: var(--pe-gray-900);
+  color: var(--pe-gray-600);
 }
 
-.policy-group-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+.policy-filter .obr-view-option {
+  height: 36px;
+  padding: 0 14px;
+}
+
+.policy-filter-count {
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
   border-radius: 999px;
 }
 
-.policy-group.is-raises .policy-group-icon {
+.obr-view-option[aria-pressed="true"] .policy-filter-count {
+  color: var(--pe-teal-800);
+  background: var(--c-highlight-band);
+}
+
+.policy-filter-arrow.is-revenue {
+  color: var(--c-loss-text);
+}
+
+.policy-filter-arrow.is-cost {
+  color: var(--c-gain-text);
+}
+
+/* Small muted icons beside the cards' labels, for scanning: never on a value */
+.policy-card-type,
+.policy-card-dates dt,
+.pchg-title,
+.pchg-more,
+.policy-card-effect,
+.ptl-budget-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.policy-card-type svg,
+.policy-card-dates dt svg,
+.pchg-title svg,
+.pchg-more svg,
+.policy-card-details .disclosure-title svg {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+.policy-card-details .disclosure-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.policy-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ptl-budget-icon {
+  flex: none;
+}
+
+/* Each segment on one line; on a narrow phone the switch scrolls sideways
+   rather than wrap "All (9)" */
+.policy-filter .obr-view-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.policy-filter .obr-view-option {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .policy-filter .obr-view-option {
+    gap: 4px;
+    padding-inline: 8px;
+    font-size: var(--fs-caption);
+  }
+
+  /* The switch needs the whole line on a phone */
+  .policy-filter-label {
+    display: none;
+  }
+}
+
+/* A card's tags: its direction, then Temporary */
+.policy-card-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.policy-card-direction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0;
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: 999px;
+}
+
+.policy-card-direction.is-revenue {
   color: var(--c-loss-text);
   background: var(--c-loss-soft);
 }
 
-.policy-group.is-costs .policy-group-icon {
+.policy-card-direction.is-cost {
   color: var(--c-gain-text);
   background: var(--c-highlight-band);
-}
-
-.policy-group-count {
-  font-size: var(--fs-small);
-  color: var(--pe-gray-500);
 }
 
 /* One size and structure for every card, two to a row: fixed slots
@@ -1953,7 +2054,7 @@ body {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 6px;
+  height: 3px;
   background: var(--policy-accent, var(--c-no-change));
 }
 
@@ -2273,23 +2374,35 @@ body {
 
 /* The footer: "How it is modelled" and "See its effect" on one line; the
    opened text runs the full width of the card beneath them, in full */
+/* The footer, stacked: "How it is modelled" across the card (the same
+   height on every card, so the rows line up), then the source on the left
+   and "See its effect" on the right */
 .policy-card-foot {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   margin-top: auto;
   padding-top: 14px;
   font-size: var(--fs-small);
   border-top: 1px solid var(--c-grid);
 }
 
+.policy-card-modelling {
+  min-height: 52px;
+}
+
 .policy-card-details {
-  flex: 1 1 auto;
   min-width: 0;
   padding: 0;
+}
+
+.policy-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
 }
 
 .policy-card-details summary {
@@ -2318,7 +2431,7 @@ body {
   border: 0;
 }
 
-.policy-card-foot > .policy-card-source {
+.policy-card-actions .policy-card-source {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2348,10 +2461,8 @@ body {
 }
 
 .policy-card-effect {
-  position: absolute;
-  top: 14px;
-  right: 0;
   display: inline-flex;
+  margin-left: auto;
   align-items: center;
   gap: 8px;
   min-height: 40px;
@@ -2382,23 +2493,13 @@ body {
    One line on the change, then its picture: a step plot of current law
    (grey, dashed) against the measure (its colour), the gap shaded in the
    gain or loss colour; or, for a change that holds, two bars to scale. */
-/* The "What changes" box: one height on every card; a plot fills it, a
-   before-and-after or a short table sits in its middle */
+/* The "What changes" box: as tall as its content, straight under its
+   heading, the card's 16px gap above and below. Cards in a row stretch to
+   the row's height; only the space above the footer grows. */
 .policy-card-spec {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 252px;
-}
-
-.policy-card-spec > .pchg {
-  flex: 1 1 auto;
-}
-
-.pchg > .pchg-ba,
-.pchg > .pchg-table {
-  margin-top: auto;
-  margin-bottom: auto;
 }
 
 .pchg {
@@ -2591,10 +2692,13 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* Both tiles one size: the row stretches them to the taller, and the
+   change sits in the last slot of the second, so the labels and values
+   line up across the two */
 .pchg-ba-tiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
   gap: 10px;
 }
 

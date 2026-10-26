@@ -1,0 +1,332 @@
+/* The overview drawer (OverviewDrawer.jsx): from the left, full height,
+   380px wide (the full width on a phone), over a dimmed page */
+.overview {
+  --overview-width: min(380px, 100vw);
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  visibility: hidden;
+  transition: visibility 0s linear var(--motion-slide);
+}
+
+.overview.is-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.overview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pe-gray-900) 32%, transparent);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity var(--motion-slide) ease;
+}
+
+.overview.is-open .overview-backdrop {
+  opacity: 1;
+}
+
+/* The panel: header, a body that fits without scrolling, a footer */
+.overview-panel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--overview-width);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--c-surface);
+  border-right: 1px solid var(--card-border);
+  box-shadow: 6px 0 24px var(--shadow-soft);
+  transform: translateX(-100%);
+  transition: transform var(--motion-slide) ease;
+}
+
+.overview.is-open .overview-panel {
+  transform: none;
+}
+
+.overview-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 10px 0 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.overview-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.overview-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.overview-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* A ghost icon button: no ring until focused by the keyboard */
+.overview-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--pe-gray-500);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.overview-close:hover {
+  color: var(--pe-gray-900);
+  background: var(--pe-gray-100);
+}
+
+.overview-close:focus {
+  outline: none;
+}
+
+.overview-close:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.overview-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  /* Spare height is shared above, between and below the intro and the
+     "Go to" group, so the panel is filled, not left with a gap at the foot */
+  justify-content: space-evenly;
+  gap: clamp(12px, 2.5svh, 24px);
+  padding: 8px 20px;
+}
+
+.overview-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The intro, compact for a 380px panel */
+.overview-intro .landing-heading {
+  margin: 0 0 clamp(10px, 2svh - 4px, 16px);
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.overview-intro .landing-intro {
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+
+.overview-intro .publication-provisional {
+  display: inline-block;
+  margin: 14px 0 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+.overview-goto {
+  margin: 0 0 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+/* The ways in, as a list of rows */
+.landing-rows {
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-rows > li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.landing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(8px, 1.6svh, 14px) 8px;
+  color: var(--c-text);
+  text-decoration: none;
+  border-radius: var(--pe-radius-md);
+  transition: background-color var(--motion-fast) ease;
+}
+
+.landing-row:hover {
+  background: var(--pe-teal-50);
+}
+
+.landing-row-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
+}
+
+.landing-row:hover .landing-row-icon {
+  background: var(--c-surface);
+}
+
+.landing-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.landing-row-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.landing-row-description {
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.landing-row-chevron {
+  flex: none;
+  color: var(--pe-gray-400);
+  transition: transform var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.landing-row:hover .landing-row-chevron {
+  color: var(--c-gain-text);
+  transform: translateX(2px);
+}
+
+/* What it is built with: two links, each on one line, clear of the
+   window's bottom corner */
+/* Pinned to the foot of the panel */
+.overview-footer {
+  flex: none;
+  margin-top: auto;
+  padding: 12px 20px 20px 72px;
+  border-top: 1px solid var(--card-border);
+}
+
+.overview-built {
+  margin: 0 0 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.overview-built-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overview-built-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.overview-built-links a:hover {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A short window: everything a little tighter, so it still fits */
+@media (max-height: 760px) {
+  .overview-header {
+    height: 48px;
+  }
+
+  .overview-intro .landing-heading {
+    font-size: var(--fs-section);
+  }
+
+  .overview-intro .landing-intro {
+    font-size: var(--fs-small);
+    line-height: 1.5;
+  }
+
+  .landing-row-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .overview-footer {
+    padding-top: 8px;
+    padding-bottom: 12px;
+  }
+}
+
+/* Shorter still: the rows and the intro's spacing tighten too */
+@media (max-height: 700px) {
+  .overview-body {
+    gap: 8px;
+  }
+
+  .landing-row {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .overview-intro .landing-heading {
+    margin-bottom: 8px;
+  }
+
+  .overview-intro .publication-provisional {
+    margin-top: 8px;
+  }
+}
+
+/* On a phone it takes the whole screen */
+@media (max-width: 600px) {
+  .overview {
+    --overview-width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview,
+  .overview-backdrop,
+  .overview-panel,
+  .overview-close,
+  .landing-row,
+  .landing-row-chevron {
+    transition: none;
+  }
+}
