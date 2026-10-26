@@ -27,6 +27,7 @@ import SectionHeading from "./SectionHeading";
 import Note from "./Note";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import PensionerTrendCard from "./pensioners/PensionerTrendCard";
 import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
@@ -152,153 +153,6 @@ function CardHeader({ icon, title, description, download, disabledReason }) {
         <p className="chart-description">{description}</p>
       </div>
       <ChartDownloadMenu download={download} chartTitle={title} disabledReason={disabledReason} />
-    </div>
-  );
-}
-
-/**
- * The average change per pensioner in every year shown, each policy's own
- * part stacked and the net change as a line, the selected year shaded.
- */
-function TrendCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
-  const chartRef = useRef(null);
-  const data = pensionerTrend(rows, policies, selectedPolicies, DISPLAY_YEARS);
-  const { domain, ticks } = divergingAxis(stackEnds(data, policies));
-  const members = useMemo(
-    () =>
-      legendMembership(catalogue, selectedPolicies, (id) => {
-        const name = policies.find((policy) => policy.id === id)?.name;
-        return data.some((point) => Math.abs(point[name] ?? 0) > 0);
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, policies, selectedPolicies],
-  );
-  const activeNames = drawnNames(members);
-  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
-  // The section's key lists the measures (MeasureKey); alone, the card's own
-  const key = useMeasureKey(members, netLabel);
-  const first = fiscalYearTick(DISPLAY_YEARS[0]);
-  const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
-  const title = `Change per pensioner by year, ${first} to ${last}`;
-  const description = "Average change per pensioner, £ a year; bars add each policy's own effect, the selected year shaded.";
-  const names = selectedNames(policies, selectedPolicies);
-  const unpublished = data.filter((point) => !point.published);
-  const thin = data.filter((point) => point.published && point.suppressed);
-  const download = {
-    chartRef,
-    name: "pensioners-change-by-year",
-    exportOptions: {
-      title,
-      description,
-      logo: CHART_LOGO,
-      reservedLegendHeight: 0,
-      legendItems: [
-        ...exportLegendItems(members, catalogue),
-        ...(activeNames.length > 1 ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }] : []),
-      ],
-    },
-    csv: () =>
-      buildChartCsv({
-        title: `Average change in household net income per pensioner by year, ${first} to ${last}`,
-        units: `${CSV_UNITS}; pensioners are aged 66 and over in 2026-27 and 67 and over from 2027-28`,
-        columns: [
-          { key: "yearLabel", label: "Year" },
-          ...names.map((name) => ({ key: name, label: name, decimals: 2 })),
-          { key: "netChange", label: "Net change", decimals: 2 },
-        ],
-        rows: data
-          .filter((point) => point.published && !point.suppressed)
-          .map((point) => ({ ...point, yearLabel: fiscalYearTick(point.year) })),
-        notes: [
-          ...unpublished.map((point) => `${fiscalYearTick(point.year)}: not yet published`),
-          ...thin.map((point) => `${fiscalYearTick(point.year)}: too few survey records`),
-        ],
-      }),
-    published: data.some((point) => point.published),
-  };
-  const yWidth = axisWidth(ticks, signedPounds);
-
-  return (
-    <div className="pensioners-trend">
-      <CardHeader icon="trend" title={title} description={description} download={download} />
-      <div ref={chartRef} className="chart-plot young-people-plot">
-        <ResponsiveContainer width="100%" height={height}>
-          <ComposedChart data={data} margin={plotMargin(narrow, { right: 8 })} stackOffset="sign">
-            <CartesianGrid {...GRID_PROPS} />
-            <ReferenceArea x1={Number(selectedYear)} x2={Number(selectedYear)} fill={HIGHLIGHT_FILL} ifOverflow="visible" />
-            <XAxis
-              dataKey="year"
-              tickFormatter={narrow ? shortFiscalYearTick : fiscalYearTick}
-              axisLine={AXIS_LINE}
-              tickLine={false}
-              interval={0}
-              tick={narrow ? { ...TICK_STYLE, fontSize: 10 } : TICK_STYLE}
-              height={X_AXIS_HEIGHT}
-            />
-            <YAxis
-              domain={domain}
-              ticks={ticks}
-              tickFormatter={signedPounds}
-              tick={TICK_STYLE}
-              width={yWidth}
-              axisLine={false}
-              tickLine={false}
-            />
-            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-            <Tooltip
-              {...TOOLTIP_PROPS}
-              cursor={HOVER_CURSOR}
-              content={
-                <ChartTooltip
-                  format={pounds}
-                  labelFormat={(year) => `Pensioners, ${fiscalYearTick(year)}`}
-                  netKey="netChange"
-                  netLabel="Net change"
-                />
-              }
-            />
-            {policyBars(catalogue, key.highlight)}
-            <Line
-              type="monotone"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              dataKey="netChange"
-              name="netChange"
-              stroke={CHART_COLOURS.net}
-              strokeWidth={2}
-              dot={false}
-              {...chartMotion()}
-              hide={activeNames.length <= 1}
-            />
-            <Scatter
-              dataKey="netChange"
-              shape={netDot}
-              legendType="none"
-              tooltipType="none"
-              {...chartMotion()}
-              hide={activeNames.length <= 1}
-            />
-            <Customized component={<ChartUnitLabel text={UNIT} />} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="chart-legend">
-        {!key.shared && (
-          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
-        )}
-      </div>
-      <Logo />
-      <div className="chart-footer">
-        {unpublished.length > 0 && (
-          <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
-        )}
-        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`}>
-          <p>
-            Pensioners are people at or over State Pension age: 66 and over in 2026-27, and 67 and over from 2027-28.
-            Each person counts their household&apos;s change in net income.
-          </p>
-        </ChartMoreInfo>
-      </div>
     </div>
   );
 }
@@ -969,7 +823,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         <section className="report-section young-people-section" aria-label="Change for pensioners">
           <SectionMeasureKey />
           <div className="charts-grid">
-            <TrendCard {...props} height={narrow ? 340 : 400} />
+            <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
             <AgeCard {...props} height={narrow ? 340 : 400} />
           </div>
         </section>

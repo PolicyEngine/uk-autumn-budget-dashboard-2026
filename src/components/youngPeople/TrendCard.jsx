@@ -83,13 +83,13 @@ const YEARS_OPTIONS = [
 ];
 
 /** "+£120", "−£180": a change with a true minus. */
-const signed = (value) => {
+export const signed = (value) => {
   const rounded = Math.round(value);
   if (rounded === 0) return "£0";
   return `${rounded > 0 ? "+" : "−"}£${Math.abs(rounded).toLocaleString("en-GB")}`;
 };
 /** "about £120": to the nearest £10 above £50, else to the pound. */
-const about = (value) => {
+export const about = (value) => {
   const size = Math.abs(value);
   const rounded = size >= 50 ? Math.round(size / 10) * 10 : Math.round(size);
   return `about £${rounded.toLocaleString("en-GB")}`;
@@ -99,7 +99,7 @@ const about = (value) => {
  * The selected year's shading, and each unpublished year's grey band with
  * "Not yet published" on two lines, under the lines.
  */
-function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
+export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis) return null;
@@ -154,7 +154,7 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
 }
 
 /** Where a year sits on the x axis (a band's centre for bars). */
-function xOf(xAxis, year) {
+export function xOf(xAxis, year) {
   const start = xAxis.scale(year);
   if (start === undefined || Number.isNaN(start)) return null;
   return start + (xAxis.scale.bandwidth?.() ?? 0) / 2;
@@ -165,7 +165,7 @@ function xOf(xAxis, year) {
  * two overlap; hovering a name brings its line forward, as hovering the
  * line does.
  */
-function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }) {
+export function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -213,7 +213,7 @@ function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }
  * moved past the £0 line rather than sitting on it, and flipped to the
  * other side when there is no room.
  */
-function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
+export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -283,7 +283,7 @@ function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
 }
 
 /** One year: the focus group, all ages and the focus group's top measures. */
-function TrendTooltip({ active, payload, label, focusSeries, allValue, nameOf, cumulative, selectedYear, groupValue, groupLabel }) {
+export function TrendTooltip({ active, payload, label, focusSeries, allValue, nameOf, cumulative, selectedYear, groupValue, groupLabel }) {
   if (!active || !payload?.length) return null;
   const year = Number(label);
   const point = focusSeries.find((each) => each.year === year);
@@ -414,7 +414,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     if (!selected || selected.net === null) return null;
     const verb = selected.net >= 0 ? "gain" : "lose";
     let text = `${FOCUS_LABEL}-year-olds ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
-    const later = notes.find((note) => note.year > selected.year);
+    // The biggest step after the selected year
+    const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {
       const flips = Math.sign(later.value) !== Math.sign(selected.net) && Math.abs(later.value) >= 1;
       text += flips
