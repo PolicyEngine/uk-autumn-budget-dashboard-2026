@@ -170,10 +170,11 @@ describe("MethodologyTab", () => {
     expect(about).toHaveAttribute("href", `?tab=household#${HOUSEHOLD_ABOUT_ID}`);
     fireEvent.click(about);
     expect(onShowTab).toHaveBeenLastCalledWith("household");
-    const young = screen.getByRole("link", { name: "Young people results" });
-    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    // By age, with 16 to 24 chosen (the Young people sub-tab was merged into it)
+    const young = screen.getByRole("link", { name: "results by age" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=age&age=16-24#young-people");
     fireEvent.click(young);
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "age", { age: "16-24" });
   });
 
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {

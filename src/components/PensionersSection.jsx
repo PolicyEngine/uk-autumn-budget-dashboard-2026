@@ -582,7 +582,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * people under State Pension age and all ages, from one run (a single
  * policy, or all of them).
  */
-function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -856,7 +856,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
       <section className="report-section young-people-section" aria-label="Who gains and from what">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
-          <SharesCard {...props} height={narrow ? 260 : 400} />
+          <PensionerSharesCard {...props} height={narrow ? 260 : 400} />
         </div>
       </section>
     </>

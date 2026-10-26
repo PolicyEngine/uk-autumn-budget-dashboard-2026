@@ -24,8 +24,8 @@ import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
 import GrowthWithMeasuresCard from "./components/livingStandards/GrowthWithMeasuresCard";
 import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections/ViewCards";
-import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
-import PensionersSection from "./components/PensionersSection";
+import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
@@ -126,6 +126,18 @@ export function opensDeciles({ hash }) {
   return hash === `#${DECILES_ANCHOR}`;
 }
 
+/**
+ * An old link to the Young people or Pensioners sub-tab (?sub=young,
+ * ?sub=pensioners), now By age (?sub=age) with that group chosen (?age=):
+ * the group, or null when the address is not one.
+ */
+export function oldAgeSubGroup({ search }) {
+  const sub = new URLSearchParams(search).get(SUB_TAB_PARAM);
+  if (sub === "young") return "16-24";
+  if (sub === "pensioners") return "pensioners";
+  return null;
+}
+
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
@@ -141,11 +153,12 @@ export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
-function dropSubTab(sub) {
+function dropSubTab(sub, extra = {}) {
   const params = new URLSearchParams(window.location.search);
   if (!sub && !params.has(SUB_TAB_PARAM)) return;
   if (sub) params.set(SUB_TAB_PARAM, sub);
   else params.delete(SUB_TAB_PARAM);
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
   const search = params.toString();
   window.history.replaceState(
     {},
@@ -249,7 +262,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
     const view = viewFromLocation(window.location);
-    if (opensYoungPeople(window.location)) dropSubTab("young");
+    // (By age, with 16 to 24 chosen; an old Pensioners sub-tab link opens
+    // By age with pensioners chosen)
+    const oldGroup = oldAgeSubGroup(window.location);
+    if (opensYoungPeople(window.location)) dropSubTab("age", { age: "16-24" });
+    else if (oldGroup) dropSubTab("age", { age: oldGroup });
     // A link to the decile pair opens All households, where it now is
     else if (opensDeciles(window.location)) dropSubTab("all");
     // An old Baseline outlook link opens the Pre-measures forecast tab's Living
@@ -334,7 +351,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
-        dropSubTab("young");
+        dropSubTab("age", { age: "16-24" });
         setLanding(false);
         setActiveTab(DEFAULT_VIEW);
       }
@@ -382,7 +399,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // Each view's scroll position when it was left, to return to it
   const tabScroll = useRef({});
   // `sub` opens the new view at one of its sub-tabs (Methodology's links).
-  const handleTabChange = (requested, sub) => {
+  const handleTabChange = (requested, sub, extra) => {
     const tab = viewKey(requested);
     // Leaving the landing page opens the view even when it is the one
     // behind it (a box, or the Population impact tab)
@@ -390,7 +407,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
     if (changing) {
-      dropSubTab(sub);
+      dropSubTab(sub, extra);
       if (!landing) tabScroll.current[activeTab] = window.scrollY;
     }
     setLanding(false);
@@ -608,20 +625,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         </div>
       );
     }
-    if (sub === "young") {
-      // Young people (16 to 24): results by age, #young-people
+    if (sub === "age") {
+      // By age: every age group, pensioners and all ages, one group chosen
+      // (?age=); the Young people and Pensioners sub-tabs were here
       return (
-        <YoungPeopleSection
-          selectedPolicies={selectedPolicies}
-          selectedYear={distributionalYear}
-          policies={POLICIES}
-        />
-      );
-    }
-    if (sub === "pensioners") {
-      // Pensioners (at or over State Pension age): results by age
-      return (
-        <PensionersSection
+        <AgeSection
           selectedPolicies={selectedPolicies}
           selectedYear={distributionalYear}
           policies={POLICIES}
