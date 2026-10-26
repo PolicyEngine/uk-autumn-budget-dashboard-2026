@@ -1,11 +1,9 @@
 import HouseholdCalculator from "./HouseholdCalculator";
-import IncomeCurveExamples from "./IncomeCurveExamples";
 import "./PersonalImpactTab.css";
 
 /**
  * Household impact: one household's answers, then its net income in the
- * year chosen in the title band before and after the selected policies;
- * below, how five fixed example households' net income changes with income.
+ * year chosen in the title band before and after the selected policies.
  */
 function PersonalImpactTab({ selectedPolicies, policies, year, active = true }) {
   return (
@@ -16,7 +14,6 @@ function PersonalImpactTab({ selectedPolicies, policies, year, active = true }) 
         year={year}
         active={active}
       />
-      <IncomeCurveExamples selectedPolicies={selectedPolicies} year={year} active={active} />
     </div>
   );
 }

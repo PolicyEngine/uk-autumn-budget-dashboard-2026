@@ -37,6 +37,7 @@ from uk_budget_data.living_standards.obr import (
     read_forecast,
 )
 from uk_budget_data.living_standards.projections import (
+    INCOME_GROUPINGS,
     baseline_year,
     decile_medians,
     family_type,
@@ -310,6 +311,73 @@ def test_decile_growth_runs_from_the_base_year(outlook):
         )
 
 
+def test_income_groups_match_the_decile_medians(projections):
+    year = projections[str(engine.BASE_YEAR)]
+    groups = year["income_groups"]
+    for basis in ("bhc", "ahc"):
+        assert (
+            groups["all"][basis]["decile"]["medians"]
+            == year[f"decile_medians_{basis}"]
+        )
+        assert (
+            groups["all"][basis]["quintile"]["medians"]
+            == year[f"quintile_medians_{basis}"]
+        )
+        for pop in ("all", "non_pensioners"):
+            for name, n in INCOME_GROUPINGS.items():
+                cell = groups[pop][basis][name]
+                assert len(cell["medians"]) == len(
+                    cell["unweighted_households"]
+                ) == n
+                assert cell["medians"] == sorted(cell["medians"])
+
+
+def test_growth_by_group_withholds_groupings_below_the_floor(outlook):
+    # 240 synthetic households: every grouping has cells under 100
+    block = outlook["income_growth_by_group"]
+    assert block["groupings"] == {}
+    assert set(block["withheld_groupings"]) == set(INCOME_GROUPINGS)
+    for pop in block["series"].values():
+        for basis in pop.values():
+            assert basis == {}
+
+
+def test_growth_by_group_annual_changes_chain_to_the_cumulative(projections):
+    from uk_budget_data.living_standards import build
+
+    big = {}
+    for y, r in projections.items():
+        if not y.isdigit():
+            continue
+        # Scale the household counts past the floor; the medians stay
+        groups = json.loads(json.dumps(r["income_groups"]))
+        for pop in groups.values():
+            for basis in pop.values():
+                for cell in basis.values():
+                    cell["unweighted_households"] = [
+                        c * 100 for c in cell["unweighted_households"]
+                    ]
+        big[y] = {"income_groups": groups}
+    years = list(range(engine.BASE_YEAR, engine.END_YEAR + 1))
+    block = build.growth_by_group(big, years, lambda v, y, b: v / 1.02 ** y)
+    assert list(block["groupings"]) == list(INCOME_GROUPINGS)
+    assert block["withheld_groupings"] == {}
+    rows = block["series"]["non_pensioners"]["ahc"]["vigintile"]["by_year"]
+    assert [r["year"] for r in rows][0] == "2027-28"
+    assert rows[0]["cumulative_growth"] == [0.0] * 20
+    for g in range(20):
+        chained = np.prod([1 + r["annual_growth"][g] for r in rows[1:]]) - 1
+        assert chained == pytest.approx(
+            rows[-1]["cumulative_growth"][g], abs=5e-5
+        )
+    # 2027-28's annual change is on 2026-27
+    first = big[str(engine.BASE_YEAR)]["income_groups"]["all"]["bhc"]
+    before = big[str(engine.BASE_YEAR - 1)]["income_groups"]["all"]["bhc"]
+    row = block["series"]["all"]["bhc"]["decile"]["by_year"][0]
+    expected = first["decile"]["medians"][0] / 1.02 / before["decile"]["medians"][0] - 1
+    assert row["annual_growth"][0] == pytest.approx(expected, abs=1e-5)
+
+
 def test_poverty_lines_are_shares_of_the_models_own_median(
     outlook, projections
 ):
@@ -385,6 +453,7 @@ CONTRACT_SECTIONS = (
     "deep_poverty",
     "poverty_by_group",
     "obr_rhdi",
+    "income_growth_by_group",
 )
 META_KEYS = (
     "generated_at",
@@ -451,6 +520,33 @@ def check_contract(doc: dict) -> None:
             d["year"] for d in dec[basis]["by_year"]
         ]
         assert all(len(q["real_median"]) == 5 for q in quintiles)
+    growth = doc["income_growth_by_group"]
+    assert growth["base_year"] == "2027-28" and growth["end_year"] == end
+    assert growth["measure"] == "median"
+    assert set(growth["populations"]) == {"all", "non_pensioners"}
+    assert set(growth["bases"]) == {"bhc", "ahc"}
+    assert set(growth["groupings"]) | set(growth["withheld_groupings"]) == {
+        "quintile",
+        "decile",
+        "vigintile",
+    }
+    for pop in growth["populations"]:
+        for basis in growth["bases"]:
+            cells = growth["series"][pop][basis]
+            assert set(cells) == set(growth["groupings"])
+            for name, n in growth["groupings"].items():
+                assert (
+                    cells[name]["min_unweighted_households"]
+                    >= growth["min_unweighted_households"]
+                )
+                rows = cells[name]["by_year"]
+                assert [r["year"] for r in rows] == [
+                    d["year"] for d in dec["bhc"]["by_year"]
+                ]
+                for r in rows:
+                    for key in ("real_median", "annual_growth", "cumulative_growth"):
+                        assert len(r[key]) == n
+                assert rows[0]["cumulative_growth"] == [0.0] * n
     for key in ("child_poverty_by_family", "deep_poverty"):
         block = doc[key]["projection"]
         first = next(iter(block.values()))

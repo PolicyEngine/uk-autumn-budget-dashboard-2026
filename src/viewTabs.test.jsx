@@ -111,9 +111,6 @@ describe("the view tabs", () => {
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
       ["/?tab=nonsense", "Population impact"],
-      // An old link to All households' example households: their income
-      // charts are now on Household impact
-      ["/?sub=all#household", "Household impact"],
     ]) {
       window.history.replaceState({}, "", url);
       const { unmount } = render(<App />);
@@ -125,12 +122,6 @@ describe("the view tabs", () => {
     expect(viewFromLocation({ search: "?tab=young", hash: "" })).toBe("dashboard");
     expect(opensYoungPeople({ search: "?tab=young", hash: "" })).toBe(true);
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
-    expect(viewFromLocation({ search: "?sub=all", hash: "#household" })).toBe("household");
-    expect(viewFromLocation({ search: "?tab=dashboard&sub=all", hash: "#household" })).toBe("household");
-    // Exact match only: the calculator's own #household-breakdown stays put
-    expect(viewFromLocation({ search: "?tab=household", hash: "#household-breakdown" })).toBe("household");
-    expect(viewFromLocation({ search: "?tab=policies", hash: "#household" })).toBe("policies");
-    expect(viewFromLocation({ search: "", hash: "#household-breakdown" })).toBe("dashboard");
   });
 
   it("describe every measure on Policies, whatever the selection, and link there from Population impact", async () => {
@@ -177,7 +168,7 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Methodology" })).toBeInTheDocument();
   });
 
-  it("split Population impact into five sub-tabs, Public finances first", async () => {
+  it("split Population impact into six sub-tabs, Public finances first", async () => {
     render(<App />);
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The pill sits directly under the view tabs, inside the view's panel
@@ -186,6 +177,7 @@ describe("the view tabs", () => {
       "Public finances",
       "All households",
       "Young people",
+      "Pensioners",
       "Living standards",
       "Poverty",
     ]);
@@ -210,6 +202,21 @@ describe("the view tabs", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+  });
+
+  it("open the Pensioners sub-tab from ?sub=pensioners, and write it on choosing it", async () => {
+    window.history.replaceState({}, "", "/?sub=pensioners");
+    const { unmount } = render(<App />);
+    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tabpanel", { name: "Pensioners" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
+    unmount();
+
+    window.history.replaceState({}, "", "/");
+    render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Pensioners" }));
+    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
   });
 
   it("open the Young people sub-tab from the old links, keeping the hash", () => {

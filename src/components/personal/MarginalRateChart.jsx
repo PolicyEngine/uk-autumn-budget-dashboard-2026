@@ -59,7 +59,7 @@ function RateTooltip({ yearLabel, ...props }) {
       grouped={false}
       showZero
       format={(value) => `${Math.round(value * 100)}%`}
-      labelFormat={(value) => `Salary ${formatPounds(value)}, ${yearLabel}`}
+      labelFormat={(value) => `Employment income ${formatPounds(value)}, ${yearLabel}`}
       payload={[
         { dataKey: "before", name: "Marginal rate before", value: point.beforeRaw, color: BEFORE_COLOUR },
         { dataKey: "after", name: "Marginal rate after", value: point.afterRaw, color: AFTER_COLOUR },
@@ -172,7 +172,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               // As the earnings chart beside it: axis line 44 px from the foot
               height={44}
               label={{
-                value: `Your salary in ${yearLabel}`,
+                value: "Employment income",
                 position: "insideBottom",
                 offset: 4,
                 style: AXIS_TITLE_STYLE,

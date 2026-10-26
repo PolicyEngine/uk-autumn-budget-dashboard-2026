@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
-import { legendLayout, subColumns } from "../utils/legendLayout";
+import { FLOW_BELOW, flowWidth, legendLayout, subColumns } from "../utils/legendLayout";
 import "./GroupedLegend.css";
 
 
@@ -66,6 +66,9 @@ const LABEL_FONT = { fontSize: 12.5, fontWeight: "400" };
 const HEADING_FONT = { fontSize: 11, fontWeight: "600" };
 // The swatch and its gap
 const ICON_WIDTH = 16;
+// A line key (20px) and its gap; the net line (14px) and its gap
+const LINE_ICON_WIDTH = 26;
+const NET_ICON_WIDTH = 20;
 
 /** Text widths from a canvas in the legend's font, or an estimate where
  * there is no canvas (tests). */
@@ -122,6 +125,23 @@ function GroupedLegend({ names, items, netLabel }) {
         measureHeading: measure.heading,
         iconWidth: ICON_WIDTH,
       });
+      // A narrow card flows the items into rows (GroupedLegend.css): the
+      // block takes the widest row's width, so it is centred under the
+      // chart with its rows left-aligned
+      const available = node.clientWidth;
+      next.flow = null;
+      if (available > 0 && available <= FLOW_BELOW) {
+        const widths = groups.map(([heading, groupItems], index) => {
+          const items = groupItems.map(
+            (item) => (item.type === "line" ? LINE_ICON_WIDTH : ICON_WIDTH) + measure.label(item.label),
+          );
+          if (netLabel && index === groups.length - 1) {
+            items.push(NET_ICON_WIDTH + measure.label(netLabel));
+          }
+          return Math.max(heading ? measure.heading(heading) : 0, flowWidth(items, available));
+        });
+        next.flow = Math.min(available, Math.ceil(Math.max(0, ...widths)) + 1);
+      }
       const key = JSON.stringify(next);
       setLayout((current) => (current && current.key === key ? current : { ...next, key }));
     };
@@ -158,7 +178,10 @@ function GroupedLegend({ names, items, netLabel }) {
   const mode = layout?.mode ?? "stacked";
   return (
     <div ref={ref} className={`grouped-legend is-${mode}`}>
-      <div className="grouped-legend-groups">
+      <div
+        className="grouped-legend-groups"
+        style={layout?.flow ? { width: `${layout.flow}px` } : undefined}
+      >
         {groups.map(([heading, groupItems], index) => {
           const laid = layout?.groups[index];
           const columns = laid ? subColumns(groupItems, laid.columns) : [groupItems];

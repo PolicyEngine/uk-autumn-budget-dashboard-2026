@@ -35,7 +35,7 @@ const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(va
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
-function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
+export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
   const [active, setActive] = useState(null);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;

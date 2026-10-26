@@ -51,7 +51,7 @@ const LOADED = {
   // App.jsx renders All households' sections only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
   // Population impact's other sub-tabs, by ?sub=
-  living: (panel) => within(panel).findAllByRole("heading", { name: "Households by income" }),
+  living: (panel) => within(panel).findAllByRole("heading", { name: "How the measures change incomes" }),
   poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
   finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The cards, "Your household" first; the form and results are checked
@@ -60,8 +60,11 @@ const LOADED = {
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
-  // The Incomes heading shows once the outlook is read.
-  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  // Population impact's Pensioners sub-tab (?sub=pensioners): the cards
+  // render once age_impact.csv is read.
+  pensioners: (panel) => within(panel).findAllByRole("heading", { name: /Change per pensioner by year/ }),
+  // The Incomes under current law heading shows once the outlook is read.
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
   // Every measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -125,12 +128,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Each tab by its address, and Population impact's Young people sub-tab:
+// Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
   // Population impact opens on Public finances; All households is ?sub=all
   ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+  ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
   ["Population impact: Public finances", "finances", "/", "Public finances"],
@@ -159,22 +163,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on the real da
         (r) => r.status !== 200 && !NOT_YET_PUBLISHED.has(r.url),
       );
       expect(missing).toEqual([]);
-      if (value === "dashboard") {
-        // The example households' income charts moved to Household impact:
-        // each fact once, so All households no longer shows them
-        expect(within(panel).queryByRole("heading", { name: "Example households" })).toBeNull();
-        expect(within(panel).queryAllByRole("heading", { name: /^Household net income/ })).toHaveLength(0);
-      }
       if (value === "household") {
-        // Below the calculator: the example households' income charts
-        expect(
-          within(panel).getByRole("heading", {
-            name: "How example households' net income changes with income",
-          }),
-        ).toBeInTheDocument();
-        expect(
-          await within(panel).findAllByRole("heading", { name: /^Household net income/ }, { timeout: 5000 }),
-        ).not.toHaveLength(0);
         // "Your household" opens the form; its first box is the head's
         // age, with its default
         fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
