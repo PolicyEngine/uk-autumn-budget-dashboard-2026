@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import OutcomeToggle from "./OutcomeToggle";
@@ -889,7 +890,7 @@ export default function ConstituencyMap({
         </div>
       </div>
 
-      <div className="chart-plot constituency-body">
+      <SwapTransition swapKey={panel} className="chart-plot constituency-body">
         {view.kind === "loading" && (
           <p className="constituency-loading">Loading map…</p>
         )}
@@ -1007,7 +1008,7 @@ export default function ConstituencyMap({
             </div>
           </div>
         )}
-      </div>
+      </SwapTransition>
 
       <div className="chart-legend">
         {/* While the results load, the scale without values (kept, unseen,

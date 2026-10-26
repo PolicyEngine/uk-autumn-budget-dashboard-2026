@@ -141,12 +141,7 @@ code {
   --landing-glass-blur: 10px;
   --landing-min-height: 620px;
   --landing-motion: 0.2s;
-  /* The sub-tab band (SubTabs.css) and the chosen view tab that opens into
-     it: one tint, a crisp rule under the band, muted teal-grey for the
-     tabs not chosen */
-  --c-subtab-band: color-mix(in srgb, var(--pe-teal-100) 45%, var(--pe-teal-50));
-  --c-subtab-rule: var(--pe-teal-200);
-  --c-subtab-active: color-mix(in srgb, var(--pe-teal-200) 75%, var(--pe-teal-100));
+  /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
@@ -435,7 +430,7 @@ body {
 }
 
 .app[data-sub-band] {
-  --sub-band-height: 57px;
+  --sub-band-height: 45px;
 }
 
 @media (min-width: 601px) {
@@ -444,7 +439,7 @@ body {
   }
 
   .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 45px;
+    --sub-band-height: 39px;
   }
 
   .app[data-tabs-stuck] .view-tabs-bar {
@@ -578,16 +573,10 @@ body {
     width 220ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
-   same tint and no rule between them, so the band reads as that tab's
-   own. Its underline stays: every chosen view tab is marked the same. */
+/* A view with sub-tabs: their row follows right under this one (SubTabs),
+   white too, one rule between them and no shadow over it */
 .view-tabs-bar.has-notch {
-  border-bottom-color: transparent;
   box-shadow: none;
-}
-
-.view-tabs-bar.has-notch .view-tabs-indicator {
-  background: var(--c-subtab-band);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -608,6 +597,10 @@ body {
 
   .app[data-tabs-stuck] {
     --view-tabs-height: 44px;
+  }
+
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 39px;
   }
 
   .view-tab {
@@ -988,10 +981,11 @@ body {
 
 }
 
-/* A source named in a section's intro reads as a link, as does the line
-   under a section pointing to another view */
+/* A source named in a section's intro reads as a link, as do the line
+   under a section and a card's subtitle link pointing to another view */
 .section-heading p a,
-.section-link a {
+.section-link a,
+.chart-description a.twin-link {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -2829,6 +2823,55 @@ body {
   }
 }
 
+
+/* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
+/* The new content of a card whose view changed: a fade and a 6px rise */
+.swap-transition-inner.swap-in {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A table that replaces a chart (Chart or table, on the OBR forecast's
+   cards) rises in as a swapped view does */
+.ls-table-wrapper {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+/* A view or sub-tab's content fades in when it is shown (they stay
+   mounted and are hidden, so the animation replays on each showing).
+   Opacity only: a transform would move the sticky parts inside. */
+.tab-panel:not([hidden]),
+.sub-panel:not([hidden]) {
+  animation: panel-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap-transition-inner.swap-in,
+  .ls-table-wrapper,
+  .tab-panel:not([hidden]),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SwapTransition from "./SwapTransition";
 import "./OBRComparisonTable.css";
 import PillSelect from "./PillSelect";
 import ViewToggle from "./ViewToggle";
@@ -198,6 +199,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         </span>
       </div>
 
+      {/* Chart or table: the new one fades in, the height eases */}
+      <SwapTransition swapKey={view}>
       {!showTable && (
         <OBRDumbbellChart
           policies={policies}
@@ -257,6 +260,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
           </tbody>
         </table>
       </div>
+      </SwapTransition>
 
       <p className="comparison-legend" hidden={!showTable}>
         Difference from OBR:{" "}
