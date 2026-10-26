@@ -562,7 +562,7 @@
 .household-card {
   --card-accent: var(--pe-teal-600);
   --card-tint: color-mix(in srgb, var(--card-accent) 10%, var(--pe-surface));
-  --card-ink: color-mix(in srgb, var(--card-accent) 55%, var(--pe-gray-900));
+  --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
   --card-line: 1.3em;
   position: relative;
   display: grid;
@@ -645,7 +645,7 @@
   height: 44px;
   margin-bottom: 14px;
   color: var(--card-ink);
-  background: color-mix(in srgb, var(--card-accent) 14%, var(--pe-surface));
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--pe-surface));
   border-radius: 12px;
 }
 
