@@ -243,7 +243,8 @@ describe("positionSummary", () => {
     expect(chip(s, "place")).toBe("unchanged (top 1%)");
     const bottom = { percentile: null, below: true, above: false, edge: 1 };
     const b = positionSummary({ before: bottom, after: at(1.4) }, -20, 5000);
-    expect(b.headline).toBe("You're in the bottom 2% of UK incomes.");
+    // The same whole percentile as the tile's "1st percentile" (not 2%)
+    expect(b.headline).toBe("You're in the bottom 1% of UK incomes.");
     expect(chip(b, "change")).toBe("−£20 a year");
     expect(chip(b, "share")).toBe("−0.40%");
     expect(chip(b, "place")).toBe("bottom 1% → 1st percentile");
@@ -251,5 +252,9 @@ describe("positionSummary", () => {
     expect(high.headline).toBe("You're in the top 4% of UK incomes.");
     expect(chip(high, "change")).toBe("£0 a year");
     expect(chip(high, "place")).toBe("unchanged (96th percentile)");
+    // 6.3%: "bottom 6%" and "6th percentile", never 7% beside 6th
+    const six = positionSummary({ before: at(6.3), after: at(6.3) }, 10, 9000);
+    expect(six.headline).toBe("You're in the bottom 6% of UK incomes.");
+    expect(chip(six, "place")).toBe("unchanged (6th percentile)");
   });
 });

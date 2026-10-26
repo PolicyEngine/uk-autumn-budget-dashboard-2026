@@ -319,8 +319,10 @@ export function positionSummary(position, change, netBefore) {
   let headline;
   if (after.above) headline = `You're in the top ${100 - (after.edge ?? HIGHEST_PERCENTILE)}% of UK incomes.`;
   else if (after.below) headline = `You're in the bottom ${after.edge ?? LOWEST_PERCENTILE}% of UK incomes.`;
-  else if (after.percentile >= 90) headline = `You're in the top ${Math.max(1, Math.ceil(100 - after.percentile))}% of UK incomes.`;
-  else if (after.percentile < 10) headline = `You're in the bottom ${Math.max(1, Math.ceil(after.percentile))}% of UK incomes.`;
+  // One rounding everywhere: the same whole percentile as "6th percentile"
+  // in the tiles, so the headline never says 7% beside it
+  else if (after.percentile >= 90) headline = `You're in the top ${Math.max(1, 100 - Math.round(after.percentile))}% of UK incomes.`;
+  else if (after.percentile < 10) headline = `You're in the bottom ${Math.max(1, Math.round(after.percentile))}% of UK incomes.`;
   else headline = `${Math.round(after.percentile)} in every 100 people in the UK have a lower income than you.`;
   const before = placeLabel(position.before);
   const now = placeLabel(after);
