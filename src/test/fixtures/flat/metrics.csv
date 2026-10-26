@@ -1,0 +1,3 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+ab2026_mock_alpha,"Mock, ""alpha""
+with a second line, £ and é",2026,-1.25,-1.25,-1.25,-1.25

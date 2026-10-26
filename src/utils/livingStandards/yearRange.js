@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 
 // The years two-year comparisons on Living standards run between, kept in
 // the address (?ls_from=2027&ls_to=2031) and shared by every card that
-// compares two years, so choosing a range in one changes it in all
+// compares two years, so choosing a range in one changes it in all (the
+// Living standards and Poverty sub-tabs of Population impact)
 const EVENT = "ls-year-range";
 const startOf = (fy) => Number(String(fy).slice(0, 4));
 

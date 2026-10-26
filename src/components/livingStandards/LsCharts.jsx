@@ -81,7 +81,7 @@ const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
  * is at least `height` tall and fills its row, so beside a taller plot
  * (a dot plot with many rows) its x axis still sits on the same line.
  */
-function ChartRows({ plotRef, children, legendItems, height }) {
+function ChartRows({ plotRef, children, legendItems, height, legendNote = null }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
@@ -89,6 +89,8 @@ function ChartRows({ plotRef, children, legendItems, height }) {
       </div>
       <div className="chart-legend">
         <GroupedLegend items={legendItems} />
+        {/* A line on what the chart leaves out, under the key */}
+        {legendNote && <p className="ls-legend-note">{legendNote}</p>}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -195,8 +197,10 @@ export function LsLineChart({
 
 /**
  * Bar chart in the same theme. Bars stack when `stacked`; with
- * `signColours` a single series is coloured by sign, and `legendItems`
- * names the colours.
+ * `signColours` a single series is coloured by sign, with `cellColours`
+ * (one per row) a single series is coloured by category, and
+ * `legendItems` names the colours. Several series side by side are
+ * grouped bars; `barGap` and `maxBarSize` set their spacing.
  */
 export function LsBarChart({
   data,
@@ -214,6 +218,12 @@ export function LsBarChart({
   signColours = null,
   legendItems,
   baseYear = BASE_YEAR,
+  cellColours = null,
+  barGap = 4,
+  barCategoryGap = "20%",
+  maxBarSize = 56,
+  tooltipLabelFormat = null,
+  legendNote = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -222,9 +232,9 @@ export function LsBarChart({
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
 
   return (
-    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={MARGIN} barCategoryGap="20%">
+        <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -249,7 +259,7 @@ export function LsBarChart({
           <Tooltip
             {...TOOLTIP_PROPS}
             cursor={HOVER_CURSOR}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+            content={<ChartTooltip format={tooltipFormat} labelFormat={tooltipLabelFormat ?? xFormat} grouped={false} showPlus={showPlus} />}
           />
           {series.map((s) => (
             <Bar
@@ -258,9 +268,10 @@ export function LsBarChart({
               name={s.name}
               fill={s.colour}
               stackId={stacked ? "stack" : undefined}
-              maxBarSize={56}
+              maxBarSize={maxBarSize}
               isAnimationActive={false}
             >
+              {cellColours && data.map((d, i) => <Cell key={i} fill={cellColours[i]} />)}
               {signColours &&
                 data.map((d, i) => (
                   <Cell key={i} fill={(d[s.key] ?? 0) < 0 ? signColours.negative : signColours.positive} />
