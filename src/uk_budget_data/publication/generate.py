@@ -351,7 +351,7 @@ def _run_identities(
             job.key,
             f"the measure changed after its identity was computed: its "
             f"{' and '.join(differing)} identity where it ran differs from "
-            "the one computed when the generation started",
+            "the one computed when the run was planned",
         )
     return live
 

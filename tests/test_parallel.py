@@ -547,6 +547,7 @@ def _artifacts(report) -> dict:
     return artifacts
 
 
+@pytest.mark.slow
 def test_artifacts_run_in_worker_processes_with_real_identities(
     world, tmp_path
 ):
@@ -703,13 +704,27 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
     assert report.refused["alpha"] == (
         "the measure changed after its identity was computed: its "
         f"{side} identity where it ran differs from the one computed when "
-        "the generation started"
+        "the run was planned"
     )
     assert not (tmp_path / "artifacts" / "alpha").exists()
 
 
+# Disjoint parameters, as members of a combined run must change
+# (combine._merge): each member's own, the first member's own baseline and
+# the configured baseline. None is uprated, so no scored year is refused.
+_MEMBER_PATHS = (
+    "gov.hmrc.income_tax.rates.uk[0].rate",
+    "gov.hmrc.income_tax.rates.uk[1].rate",
+)
+_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.uk[2].rate"
+_CONFIGURED_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[0].rate"
+
+
+@pytest.mark.slow
 @settings(
-    max_examples=25,
+    # A combined run checks its members' consistency on real parameter
+    # trees, about 10 s a case here, so few cases beyond the examples.
+    max_examples=5,
     deadline=None,
     suppress_health_check=[HealthCheck.function_scoped_fixture],
 )
@@ -718,21 +733,42 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
         st.floats(0.0, 0.6, allow_nan=False), min_size=1, max_size=2
     ),
     own_baseline=st.booleans(),
+    configured_baseline=st.booleans(),
     structural=st.booleans(),
 )
-# A combined run whose members mix an own baseline and the configured one,
-# and one with a module-level modifier, always.
-@example(rates=[0.1, 0.3], own_baseline=True, structural=False)
-@example(rates=[0.1, 0.3], own_baseline=False, structural=True)
+# Combined runs always among them: members mixing an own baseline with a
+# configured one, and a member with a module-level modifier.
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=True,
+    configured_baseline=True,
+    structural=False,
+)
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=False,
+    configured_baseline=True,
+    structural=True,
+)
+@example(
+    rates=[0.1, 0.3],
+    own_baseline=True,
+    configured_baseline=False,
+    structural=True,
+)
 def test_any_measure_s_runs_survive_pickling_unchanged(
-    world, tmp_path_factory, rates, own_baseline, structural
+    world,
+    tmp_path_factory,
+    rates,
+    own_baseline,
+    configured_baseline,
+    structural,
 ):
     """Every run the generation plans, single and combined, whatever its
-    measures' parameter changes, own baseline or module-level modifier,
-    can be pickled to a worker and gives what a serial run gives: no run is
-    refused for identities that differ where it ran."""
+    measures' parameter changes, own or configured baseline and
+    module-level modifier, is written, and the same from a copy pickled to
+    a worker as in this process."""
     from tests.fixed_shape_measures import module_level_modifier
-    from tests.publication_support import RATE_PATH
     from tests.test_publication_flow import YEARS, fake_process
     from uk_budget_data.publication import combine
     from uk_budget_data.publication.generate import generate_artifacts
@@ -741,9 +777,11 @@ def test_any_measure_s_runs_survive_pickling_unchanged(
         Reform(
             id=f"m{index}",
             name=f"M{index}",
-            parameter_changes={RATE_PATH: {str(y): rate for y in YEARS}},
+            parameter_changes={
+                _MEMBER_PATHS[index]: {str(y): rate for y in YEARS}
+            },
             baseline_parameter_changes=(
-                {RATE_PATH: {str(y): 0.2 for y in YEARS}}
+                {_OWN_BASELINE_PATH: {str(y): 0.4 for y in YEARS}}
                 if own_baseline and index == 0
                 else None
             ),
@@ -755,6 +793,14 @@ def test_any_measure_s_runs_survive_pickling_unchanged(
         )
         for index, rate in enumerate(rates)
     ]
+    config = DataConfig(
+        years=YEARS,
+        baseline_parameter_changes=(
+            {_CONFIGURED_BASELINE_PATH: {str(y): 0.1 for y in YEARS}}
+            if configured_baseline
+            else None
+        ),
+    )
     combined_sets = [measures] if len(measures) > 1 else []
     keys = [m.id for m in measures] + [
         combine.combined_key([m.id for m in members])
@@ -765,7 +811,7 @@ def test_any_measure_s_runs_survive_pickling_unchanged(
     def run(runner):
         return generate_artifacts(
             measures,
-            DataConfig(years=YEARS),
+            config,
             combined_sets=combined_sets,
             artifacts_root=tmp_path_factory.mktemp("artifacts"),
             generator_argv=["test"],
@@ -776,16 +822,11 @@ def test_any_measure_s_runs_survive_pickling_unchanged(
 
     serial = run(SerialRunner())
     pickled = run(PicklingRunner())
-    assert not any(
-        reason.startswith("the measure changed")
-        for reason in {**serial.refused, **pickled.refused}.values()
-    ), pickled.refused
-    assert pickled.refused == serial.refused
-    assert [r.key for r in pickled.written] == [r.key for r in serial.written]
+    assert serial.refused == {}, serial.refused
+    assert pickled.refused == {}, pickled.refused
+    assert [r.key for r in pickled.written] == keys
+    assert [r.key for r in serial.written] == keys
     assert _artifacts(pickled) == _artifacts(serial)
-    assert [r.key for r in serial.written] == [
-        key for key in keys if key not in serial.refused
-    ]
 
 
 # --- results by area: the same tables whatever the order ------------------
