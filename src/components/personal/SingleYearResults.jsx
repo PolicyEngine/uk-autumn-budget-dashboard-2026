@@ -497,16 +497,11 @@ export function SingleYearDetails({ result, year, policies, changed = false, sta
       />
       <section className="report-section">
         {data.sweep ? (
-          <div className="single-year-earnings">
-            {/* Net income and its change, a pair of cards as the
-                population charts are; the marginal rate below, full width */}
-            <div className="charts-grid single-year-chart-pair">
-              <EarningsChart panel="net" sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-              <EarningsChart panel="change" sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            </div>
-            <div className="charts-grid single-year-chart-pair">
-              <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            </div>
+          // Net income (with its Net income / Change switch) beside the
+          // marginal rate, a pair of cards whose rows line up; stacked on a phone
+          <div className="charts-grid single-year-chart-pair">
+            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
+            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
           </div>
         ) : detailFailed ? (
           <div className="card single-year-card">

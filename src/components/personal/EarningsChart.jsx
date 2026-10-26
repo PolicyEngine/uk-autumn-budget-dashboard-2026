@@ -10,6 +10,8 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import TitleIcon from "../TitleIcon";
+import ViewSwitch from "../ViewSwitch";
+import { EARNINGS_VIEWS } from "./chartViews";
 
 export const BEFORE_COLOUR = CHART_COLOURS.before;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
@@ -57,28 +59,33 @@ function valueAt(points, income, key) {
 }
 
 /**
- * Across earnings, as two cards: the household's net income before and
- * after the selected policies as the salary varies (`panel="net"`), and the
- * change (`panel="change"`), on the same salary axis. A dashed line marks
- * "You"; the figures at your salary are the headline tiles, so the label
- * says only "You". On the net income card, where net income after the
- * policies falls as salary rises by more than £100 a step, the band is
- * shaded, and a note says when the two lines coincide.
+ * Across earnings, one card with two views chosen above the plot (the
+ * marginal rate card's switch beside it): "Net income", the household's net
+ * income before and after the selected policies as the salary varies, and
+ * "Change", what the policies add or take at each salary. A dashed line
+ * marks "You" in both; the figures at your salary are the headline tiles,
+ * so the label says only "You". In the net income view, where net income
+ * after the policies falls as salary rises by more than £100 a step, the
+ * band is shaded, and a note says when the two lines coincide. The legend,
+ * tooltip and CSV/PNG download follow the view shown.
  *
  * @param {Object} props
- * @param {"net"|"change"} props.panel - Which card
+ * @param {"net"|"change"} [props.initialView] - The view it opens on
  * @param {Object} props.sweep - normaliseHouseholdImpact's sweep
  * @param {number|null} props.salary - The salary used, in the year
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function EarningsChart({ panel = "net", sweep, salary, yearLabel }) {
-  const isNet = panel === "net";
+export default function EarningsChart({ initialView = "net", sweep, salary, yearLabel }) {
+  const [view, setView] = useState(initialView);
+  const isNet = view === "net";
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const [hover, setHover] = useState(null);
   const width = measured > 0 ? measured : narrow ? 358 : 560;
-  const title = isNet ? `Household net income, ${yearLabel}` : `Net income change, ${yearLabel}`;
+  const title = `Household net income, ${yearLabel}`;
+  // The file and image name the view shown
+  const viewTitle = isNet ? title : `Net income change, ${yearLabel}`;
 
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
   const drops = useMemo(() => (isNet ? netIncomeDrops(points) : []), [isNet, points]);
@@ -126,13 +133,13 @@ export default function EarningsChart({ panel = "net", sweep, salary, yearLabel 
     : CHANGE_LEGEND_ITEMS;
   const description = isNet
     ? "Your household's net income as your salary varies, with partner income and everything else held fixed."
-    : "How much the selected policies add to or take from your household's net income at each salary.";
+    : "How much the selected policies add to or take from your household's net income at each salary, with partner income and everything else held fixed.";
 
   const download = {
     chartRef,
     name: `${isNet ? "household-net-income" : "net-income-change"}-${yearLabel}`,
     exportOptions: {
-      title,
+      title: viewTitle,
       description: isNet
         ? `Your household's net income in ${yearLabel} as your salary varies, before and after the selected policies.`
         : `The change in your household's net income in ${yearLabel} from the selected policies, as your salary varies.`,
@@ -143,7 +150,7 @@ export default function EarningsChart({ panel = "net", sweep, salary, yearLabel 
     },
     csv: () =>
       buildChartCsv({
-        title,
+        title: viewTitle,
         units: "£ a year",
         source: "PolicyEngine UK household calculation, UK Autumn Budget 2026 dashboard",
         columns: isNet
@@ -185,7 +192,10 @@ export default function EarningsChart({ panel = "net", sweep, salary, yearLabel 
           </h3>
           <p className="chart-description">{description}</p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={title} />
+        <ChartDownloadMenu download={download} chartTitle={viewTitle} />
+      </div>
+      <div className="chart-view-switch chart-controls">
+        <ViewSwitch options={EARNINGS_VIEWS} value={view} onChange={setView} label="Net income view" compact />
       </div>
       <div ref={wrapperRef} className="earnings-plot chart-plot">
         <div ref={chartRef} className="earnings-plot-inner">
@@ -194,10 +204,11 @@ export default function EarningsChart({ panel = "net", sweep, salary, yearLabel 
             width={width}
             height={height}
             role="img"
+            data-view={view}
             aria-label={
               isNet
-                ? `${title}. Net income before and after the selected policies, for employment incomes from £0 to ${formatPounds(xMax)}.`
-                : `${title}. The change in net income from the selected policies, for employment incomes from £0 to ${formatPounds(xMax)}.`
+                ? `${viewTitle}. Net income before and after the selected policies, for employment incomes from £0 to ${formatPounds(xMax)}.`
+                : `${viewTitle}. The change in net income from the selected policies, for employment incomes from £0 to ${formatPounds(xMax)}.`
             }
           >
             {/* Bands where net income falls as salary rises */}

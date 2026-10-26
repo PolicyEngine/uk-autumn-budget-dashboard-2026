@@ -278,23 +278,36 @@ describe("the household calculation, from the fixture", () => {
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
   });
 
-  it("shows net income and its change as a pair of cards marking you, with the marginal rate in its own card below", async () => {
+  it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
     toResults();
     await screen.findByRole("heading", { name: "Household net income, 2029-30" });
     // Always shown, not in an expander
     expect(screen.queryByRole("button", { name: "Marginal tax rate across earnings" })).not.toBeInTheDocument();
-    const [pair, rate] = container.querySelectorAll(".single-year-chart-pair");
+    // One pair in the charts grid: net income first, the marginal rate beside it
+    const pairs = container.querySelectorAll(".single-year-chart-pair");
+    expect(pairs).toHaveLength(1);
+    const [pair] = pairs;
+    expect(pair).toHaveClass("charts-grid");
     expect(pair.children).toHaveLength(2);
-    expect(within(pair).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
-    expect(within(pair).getByRole("heading", { name: "Net income change, 2029-30" })).toBeInTheDocument();
-    // Both cards mark you, at the same salary
-    expect(pair.querySelectorAll(".earnings-you")).toHaveLength(2);
-    pair.querySelectorAll(".earnings-you").forEach((you) => expect(you).toHaveTextContent("You"));
-    expect(within(pair).getByText("Higher net income")).toBeInTheDocument();
-    expect(rate.children).toHaveLength(1);
+    const [earnings, rate] = pair.children;
+    expect(within(earnings).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
     expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Net income change, 2029-30" })).not.toBeInTheDocument();
+    // Each card's switch sits in the controls row, so the pair's rows line up
+    expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    // Net income first: before and after, marking you
+    const net = within(earnings).getByRole("button", { name: "Net income" });
+    expect(net).toHaveAttribute("aria-pressed", "true");
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
+    expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
+    // Change: the gain and loss key, still marking you
+    fireEvent.click(within(earnings).getByRole("button", { name: "Change" }));
+    expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
+    expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
     expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });

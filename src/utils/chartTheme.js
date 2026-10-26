@@ -69,6 +69,14 @@ export const CHART_COLOURS = {
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
+  mtrIncomeTax: "#5FB3A8",
+  mtrChildBenefit: "#4FD1C5",
+  mtrAllowanceTaper: "#285E61",
+  mtrNationalInsurance: "#A7E3DA",
+  mtrStudentLoan: "#E8B66A",
+  mtrUniversalCredit: "#2F855A",
+  mtrOtherBenefits: "#9AE6B4",
+  mtrOther: "#D1D5DB",
 };
 
 /**
