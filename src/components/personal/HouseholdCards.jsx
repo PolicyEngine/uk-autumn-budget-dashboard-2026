@@ -27,6 +27,15 @@ export const EXAMPLE_ICONS = {
   briefcase: BriefcaseBusiness,
 };
 
+/**
+ * Whether the catalogue publishes every measure an example features: its
+ * tag and accent show only then, so a measure withdrawn on Budget day is
+ * never named on a card, alone or beside another (#104).
+ */
+export function featuresPublished(example, catalogue) {
+  return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
+}
+
 /** Each measure as a card's "+£50 from …" line names it. */
 const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
@@ -150,8 +159,6 @@ export default function HouseholdCards({
   yoursSelected = false,
 }) {
   const catalogue = useMeasureCatalogue();
-  // A card's measure only while the catalogue publishes it (#104)
-  const published = (id) => catalogue.byId.get(id)?.displayable === true;
   const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
@@ -244,7 +251,7 @@ export default function HouseholdCards({
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
-          const featured = published(example.measure);
+          const featured = featuresPublished(example, catalogue);
           const pressed = value === example.id;
           return (
             <button
@@ -308,8 +315,8 @@ export default function HouseholdCards({
  */
 function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
   const catalogue = useMeasureCatalogue();
-  // A chip's accent only while the catalogue publishes its measure (#104)
-  const accentOf = (id) => (catalogue.byId.get(id)?.displayable === true ? catalogue.byId.get(id).color : null);
+  // A chip's accent only while the catalogue publishes its measures (#104)
+  const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
   const items = [
     { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
     ...examples.map((example) => ({
@@ -318,7 +325,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       short: example.short ?? example.label,
       Icon: EXAMPLE_ICONS[example.icon] ?? House,
       change: presets ? (cardFigures(example, presets[example.id], year)?.change ?? null) : null,
-      accent: accentOf(example.measure),
+      accent: accentOf(example),
     })),
   ];
   const selected = yoursSelected ? 0 : items.findIndex((item) => item.id !== null && item.id === value);

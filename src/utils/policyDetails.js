@@ -3,8 +3,12 @@
  * does not carry yet (#185 on #104). The catalogue (measureCatalogue.jsx)
  * still decides which measures exist, their names, order and colours; an
  * entry here only adds a card's summary, timing and caveat when the
- * catalogue publishes that id, and is ignored otherwise. A measure without
- * an entry shows its published description and no timeline.
+ * catalogue publishes that id with the description the entry was written
+ * for (`writtenFor`, below), and is ignored otherwise. A measure without
+ * an entry, or changed since (on Budget day, say: its parameters and so its
+ * description), shows its published description and no timeline: an
+ * entry's figures and dates are never shown for a measure they may no
+ * longer describe.
  *
  * Fields:
  * - summary: one plain line on what changes;
@@ -18,7 +22,11 @@
  * - steps / stepsLabel: dated stages within a measure, drawn as diamonds,
  *   with one short label for them all;
  * - details: the main assumption or caveat (collapsed by default);
- * - source: a public page on the policy, where one exists.
+ * - source: a public page on the policy, where one exists;
+ * - writtenFor: the measure's description in reforms.py, which the
+ *   publication carries verbatim, when the entry was written. After
+ *   changing a measure in reforms.py, check its entry still holds, then copy
+ *   the new description here (or delete the entry).
  * Revenue figures stay in the charts and are not repeated here.
  *
  * TRIAL ONLY (review-edits-on-104): this belongs in the published manifest
@@ -29,6 +37,7 @@ export const POLICY_DETAILS = [
     id: "fuel_duty_rise_deferral",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
       "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
     starts: "January 2027",
@@ -51,6 +60,7 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose only income is the State Pension",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
     summary:
       "People whose only income is the full new State Pension pay no income tax.",
     starts: "April 2027",
@@ -64,6 +74,7 @@ export const POLICY_DETAILS = [
     name: "Warm Home Discount top-up",
     description:
       "Raise the Warm Home Discount from £150 to £250 for one winter",
+    writtenFor: "Candidate measure. The Warm Home Discount rises from £150 to £250 for winter 2026-27 only: £100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
     summary:
       "Raises the Warm Home Discount from £150 to £250 for winter 2026-27.",
     starts: "Winter 2026-27",
@@ -82,6 +93,7 @@ export const POLICY_DETAILS = [
     id: "domestic_electricity_zero_vat",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
+    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
     summary:
       "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to March 2028.",
     starts: "October 2026",
@@ -99,6 +111,7 @@ export const POLICY_DETAILS = [
     id: "employer_ni_relief_under_25s",
     name: "Employer NI relief for under-25s",
     description: "No employer National Insurance for employees under 25",
+    writtenFor: "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
     summary:
       "Employers pay no National Insurance on earnings up to £50,270 for employees under 25.",
     starts: "April 2027",
@@ -111,6 +124,7 @@ export const POLICY_DETAILS = [
     id: "threshold_freeze_2031_32",
     name: "Threshold freeze to 2031-32",
     description: "Keep income tax thresholds frozen in 2031-32",
+    writtenFor: "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year, 2031-32, instead of rising with inflation to £12,830 and £38,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at £12,570 and £50,270 too; the employer secondary threshold is not held.",
     summary:
       "Keeps the income tax personal allowance and basic rate band frozen for one more year, to 2031-32.",
     starts: "April 2031",
@@ -123,6 +137,7 @@ export const POLICY_DETAILS = [
     id: "badr_lifetime_limit_cut",
     name: "Business Asset Disposal Relief restricted",
     description: "Halve the Business Asset Disposal Relief lifetime limit",
+    writtenFor: "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
     summary:
       "Halves the lifetime limit on gains taxed at the 18% Business Asset Disposal Relief rate, from £1 million to £500,000.",
     starts: "April 2027",
@@ -139,6 +154,7 @@ export const POLICY_DETAILS = [
     id: "road_fuel_vat_cut",
     name: "VAT cut on road fuel",
     description: "Cut VAT on petrol and diesel to 15% for six months",
+    writtenFor: "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
     summary:
       "Cuts VAT on petrol and diesel from 20% to 15% from December 2026 to May 2027.",
     starts: "December 2026",
@@ -152,6 +168,7 @@ export const POLICY_DETAILS = [
     id: "plan_2_threshold_unfreeze",
     name: "Plan 2 student loan threshold unfrozen",
     description: "Uprate the Plan 2 repayment threshold with RPI again",
+    writtenFor: "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to £30,267 in 2027-28), reversing the freeze at £29,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
     summary:
       "Raises the Plan 2 student loan repayment threshold with RPI from April 2027, instead of freezing it at £29,385.",
     starts: "April 2027",
@@ -167,13 +184,19 @@ export const POLICY_DETAILS = [
 ];
 
 const DETAILS_BY_ID = Object.fromEntries(
-  POLICY_DETAILS.map(({ id, name: _name, description: _description, ...fields }) => [id, fields]),
+  POLICY_DETAILS.map(({ id, name: _name, description: _description, writtenFor, ...fields }) => [id, { writtenFor, fields }]),
 );
+
+/**
+ * The card details for a catalogue measure, or null: none unless the
+ * publication describes it exactly as when its entry was written.
+ */
+export function policyDetailsFor(measure) {
+  const entry = measure ? DETAILS_BY_ID[measure.id] : undefined;
+  return entry && entry.writtenFor === measure.description ? entry.fields : null;
+}
 
 /** A catalogue measure with its card details, where there are any. */
 export function withPolicyDetails(measure) {
-  return measure ? { ...(DETAILS_BY_ID[measure.id] ?? {}), ...measure } : measure;
+  return measure ? { ...(policyDetailsFor(measure) ?? {}), ...measure } : measure;
 }
-
-/** The card details for a measure id, or null. */
-export const policyDetails = (id) => DETAILS_BY_ID[id] ?? null;

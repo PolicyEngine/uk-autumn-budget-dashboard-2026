@@ -17,12 +17,15 @@ const detailsById = Object.fromEntries(POLICY_DETAILS.map((policy) => [policy.id
 
 // A published catalogue measure under a real id, so policyDetails.js adds
 // its card text (#185 on #104: the catalogue decides membership and names)
+// as the publication describes it (reforms.py's description, which the
+// entry records as `writtenFor`)
 const published = (id, name, direction = "cost") => ({
   ...catalogue.byId.get(ALPHA),
   id,
   seriesKey: `measure:${id}`,
   name,
   label: name,
+  description: detailsById[id]?.writtenFor ?? catalogue.byId.get(ALPHA).description,
   direction,
 });
 
@@ -103,6 +106,21 @@ describe("PolicyCards", () => {
     expect(timeline).toHaveTextContent("Budget");
     expect(timeline.textContent).not.toMatch(/BudgetContinues/);
     expect(timeline.querySelectorAll(".ptl-span")).toHaveLength(1);
+  });
+
+  it("shows a measure changed since its details were written as published, with none of their figures or dates", () => {
+    const id = "fuel_duty_rise_deferral";
+    const changed = { ...published(id, "Fuel duty rises deferred"), description: "Fuel duty stays at 52.95p a litre until April 2028." };
+    render(<PolicyCards policies={[changed]} selectedPolicies={[id]} />);
+    const card = screen.getByRole("listitem");
+    expect(card).toHaveTextContent(changed.description);
+    expect(card).not.toHaveTextContent(detailsById[id].summary);
+    // The rows stay, for the grid, but empty: as for a measure with no entry
+    expect(card.querySelector(".policy-card-start")).toBeEmptyDOMElement();
+    expect(card.querySelector(".policy-card-type")).toBeEmptyDOMElement();
+    expect(card).not.toHaveTextContent("Temporary");
+    expect(card.querySelector("details")).toBeNull();
+    expect(screen.queryByRole("img", { name: /^In force/ })).toBeNull();
   });
 
   it("shows fuel duty's two-step restore as diamonds", () => {

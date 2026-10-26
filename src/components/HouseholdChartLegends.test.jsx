@@ -6,7 +6,7 @@ import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
-import { policyDetails } from "../utils/policyDetails";
+import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // The household decile charts must list every selected measure in their
@@ -44,9 +44,12 @@ const budget = publishedRows("budgetary_impact.csv");
 const ALL = [...new Set(budget.map((row) => row.reform_id))].filter((id) => id !== COMBINED);
 const nameOf = (id) => budget.find((row) => row.reform_id === id).reform_name;
 const entry = (extra) => ({ status: "approved", years: YEARS, unsupported_years: [], ...extra });
+// A measure's card details, and the description the publication carries
+// for it (reforms.py's, which each entry records as `writtenFor`)
+const detailsOf = (id) => POLICY_DETAILS.find((policy) => policy.id === id);
 const catalogue = buildMeasureCatalogue({
   manifest: {
-    measures: Object.fromEntries(ALL.map((id) => [id, entry({ name: nameOf(id), outputs_sha256: "a".repeat(64) })])),
+    measures: Object.fromEntries(ALL.map((id) => [id, entry({ name: nameOf(id), description: detailsOf(id)?.writtenFor, outputs_sha256: "a".repeat(64) })])),
     combined: { [COMBINED]: entry({ name: nameOf(COMBINED), measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) }) },
   },
   budgetary: budget,
@@ -68,19 +71,28 @@ describe("legendMembership", () => {
 
   it("leaves out measures that are not selected", () => {
     const members = legendMembership(catalogue, [EMPLOYER_NI], () => false);
-    expect(members).toEqual([{ id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", muted: true }]);
+    expect(members).toEqual([
+      { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", description: detailsOf(EMPLOYER_NI).writtenFor, muted: true },
+    ]);
   });
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
     expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
-    const whd = policyDetails("warm_home_discount_top_up");
+    const whd = detailsOf("warm_home_discount_top_up");
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);
     expect(zeroReason(catalogue.byId.get("warm_home_discount_top_up"), 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
-    const freeze = policyDetails("threshold_freeze_2031_32");
+    const freeze = detailsOf("threshold_freeze_2031_32");
     expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
-    const fuelVat = policyDetails("road_fuel_vat_cut");
+    const fuelVat = detailsOf("road_fuel_vat_cut");
     expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
+  });
+
+  it("never calls a measure out of force from details written for another description of it", () => {
+    // Changed since its entry was written (on Budget day, say): its window
+    // may no longer hold, so it is not used
+    const changed = { ...catalogue.byId.get("warm_home_discount_top_up"), description: "The Warm Home Discount rises for two winters." };
+    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households shown" });
   });
 });
 

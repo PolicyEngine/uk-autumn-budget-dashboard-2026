@@ -9,7 +9,7 @@
  * same panel covers them.
  */
 import { isCatalogueRowDisplayable } from "./measureCatalogue";
-import { policyDetails } from "./policyDetails";
+import { policyDetailsFor } from "./policyDetails";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
 
@@ -49,12 +49,12 @@ export function inForceIn(policy, year) {
  * @param {(id: string) => boolean} hasEffect - Whether the measure moves
  *   any household in the year shown (strictly non-zero, never a threshold:
  *   a small measure is still a measure)
- * @returns {Array<{id: string, name: string, muted: boolean}>}
+ * @returns {Array<{id: string, name: string, description: string, muted: boolean}>}
  */
 export function legendMembership(catalogue, selectedPolicies, hasEffect) {
   return catalogue.displayable
     .filter((measure) => selectedPolicies.includes(measure.id))
-    .map((measure) => ({ id: measure.id, key: measure.seriesKey, name: measure.label ?? measure.name, muted: !hasEffect(measure.id) }));
+    .map((measure) => ({ id: measure.id, key: measure.seriesKey, name: measure.label ?? measure.name, description: measure.description, muted: !hasEffect(measure.id) }));
 }
 
 /**
@@ -115,7 +115,7 @@ export function inForceText(policy) {
 export function zeroReason(measure, year) {
   const employer = zeroForHouseholds(measure);
   if (employer) return { kind: "employer", text: employer };
-  const policy = policyDetails(measure?.id);
+  const policy = policyDetailsFor(measure);
   if (!inForceIn(policy, year)) return { kind: "not_in_force", text: inForceText(policy) };
   return { kind: "none", text: "no change for the households shown" };
 }
