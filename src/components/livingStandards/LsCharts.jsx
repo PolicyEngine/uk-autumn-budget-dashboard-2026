@@ -166,14 +166,16 @@ function YearPanel({ active, payload, describe, hoveredKey }) {
   );
 }
 
-export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true }) {
+export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true, keyContent = null }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
         <div className="ls-plot-canvas">{children}</div>
       </div>
+      {/* The card's own chips (SeriesToggle) under the plot, as every chart's key */}
+      {keyContent && <div className="chart-legend">{keyContent}</div>}
       {/* A chart whose lines are labelled on the plot has no key */}
-      {legend && (
+      {legend && !keyContent && (
         <div className="chart-legend">
           {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
           {/* A line on what the chart leaves out, under the key */}
@@ -264,6 +266,8 @@ export function LsLineChart({
   legend = true,
   // The key of a line to bring forward (a hovered chip); the others fade
   focusKey = null,
+  // The card's line chips (SeriesToggle), drawn under the plot as its key
+  keyContent = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -278,7 +282,7 @@ export function LsLineChart({
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
-    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend}>
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend} keyContent={keyContent}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={margin}>
           <CartesianGrid {...GRID_PROPS} />
