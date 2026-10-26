@@ -978,10 +978,11 @@ body {
 
 }
 
-/* A source named in a section's intro reads as a link, as does the line
-   under a section pointing to another view */
+/* A source named in a section's intro reads as a link, as do the line
+   under a section and a card's subtitle link pointing to another view */
 .section-heading p a,
-.section-link a {
+.section-link a,
+.chart-description a.twin-link {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
