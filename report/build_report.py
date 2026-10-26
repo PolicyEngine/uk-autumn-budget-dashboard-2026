@@ -473,7 +473,7 @@ class Report:
   <div class="tile"><div class="v">{rev_words}</div><div class="l">{'Cost to the government' if rev < 0 else 'Raised for the government'}, {fy(y)}</div></div>
   <div class="tile"><div class="v">{hh_text}</div><div class="l">Average change in household net income, £ a year, {fy(y)}</div></div>
   <div class="tile"><div class="v">{better_text} <span class="vs">better off</span><br>{worse_text} <span class="vs">worse off</span></div><div class="l">People in households whose net income rises or falls, {fy(y)}</div></div>
-  <div class="tile"><div class="v">{pov_text}</div><div class="l">Change in absolute poverty before housing costs, percentage points, {fy(y)}</div></div>
+  <div class="tile"><div class="v">{pov_text}</div><div class="l">Change in absolute poverty before housing costs, percentage points, {fy(y)}{' (less than 0.005 points either way)' if pov_text.lstrip('+' + MINUS).startswith('0.00') else ''}</div></div>
 </div>"""
         sentences = [
             f"In {fy(y)} the {what} {rev_sentence}.",
@@ -572,7 +572,7 @@ class Report:
             minus_ticks(ax, "x")
             style_axes(ax, "x")
             alt = "; ".join(f"{self.name(k)}: {t}" for k, t in zip(keys, labels))
-            parts.append(self.figure(svg_of(plt, fig), f"Each measure on its own, {fy(y)}", alt, "Each measure run on its own against current law; the measures' own effects do not add up to the combined run's, which includes how they interact."))
+            parts.append(self.figure(svg_of(plt, fig), f"Each measure on its own, {fy(y)}", alt, "Each measure run on its own against current law. The measures' own effects need not add up to the combined run's, which includes how they interact."))
 
         # Table: every year, and the period total
         head = "".join(f'<th scope="col" class="num">{fy(y)}</th>' for y in self.years)
