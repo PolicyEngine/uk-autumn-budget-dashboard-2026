@@ -117,17 +117,20 @@ function BarTooltip({ active, payload, describe }) {
   );
 }
 
-function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null }) {
+export function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null, legend = true }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
         <div className="ls-plot-canvas">{children}</div>
       </div>
-      <div className="chart-legend">
-        {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
-        {/* A line on what the chart leaves out, under the key */}
-        {legendNote && <p className="ls-legend-note">{legendNote}</p>}
-      </div>
+      {/* A chart whose lines are labelled on the plot has no key */}
+      {legend && (
+        <div className="chart-legend">
+          {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
+          {/* A line on what the chart leaves out, under the key */}
+          {legendNote && <p className="ls-legend-note">{legendNote}</p>}
+        </div>
+      )}
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />

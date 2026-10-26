@@ -176,14 +176,15 @@ const MAP_LOGO_CLASS = "map-logo";
  * the page, so on a wide screen it shows more than the drawing area, on
  * either side of the map.
  */
-const DRAWING_AREA = { left: 0, top: 0, right: WIDTH, bottom: HEIGHT };
+const DRAWING_AREA = { left: 0, top: 0, right: WIDTH, bottom: HEIGHT, perPx: 1 };
 
 function shownArea(width, height) {
   if (!(width > 0 && height > 0)) return DRAWING_AREA;
   const scale = Math.min(width / WIDTH, height / HEIGHT);
   const left = (WIDTH - width / scale) / 2;
   const top = (HEIGHT - height / scale) / 2;
-  return { left, top, right: WIDTH - left, bottom: HEIGHT - top };
+  // perPx: SVG units per screen pixel, so the logo keeps its on-screen size
+  return { left, top, right: WIDTH - left, bottom: HEIGHT - top, perPx: 1 / scale };
 }
 
 /** Put the legend in the top-left corner of what is shown, the logo in the
@@ -193,10 +194,15 @@ function placeInCorners(svg, area) {
     x: area.left + LEGEND_INSET,
     y: area.top + LEGEND_INSET,
   });
+  // The logo at the same size on screen as on every other card (80px wide,
+  // its own aspect ratio), however far the SVG is scaled
+  const k = area.perPx ?? 1;
   svg
     .select(`image.${MAP_LOGO_CLASS}`)
-    .attr("x", area.right - CHART_LOGO.width - CHART_LOGO.padding)
-    .attr("y", area.bottom - CHART_LOGO.height - CHART_LOGO.padding);
+    .attr("width", CHART_LOGO.width * k)
+    .attr("height", CHART_LOGO.height * k)
+    .attr("x", area.right - (CHART_LOGO.width + CHART_LOGO.padding) * k)
+    .attr("y", area.bottom - (CHART_LOGO.height + CHART_LOGO.padding) * k);
 }
 const SELECTED_STROKE = { stroke: CHART_COLOURS.highlight, strokeWidth: 0.6 };
 const HOVER_STROKE = { stroke: CHART_COLOURS.tick, strokeWidth: 0.3 };
@@ -538,7 +544,8 @@ export default function ConstituencyMap({
       const next = shownArea(entry.contentRect.width, entry.contentRect.height);
       setArea((previous) =>
         Math.abs(previous.left - next.left) < 0.5 &&
-        Math.abs(previous.top - next.top) < 0.5
+        Math.abs(previous.top - next.top) < 0.5 &&
+        Math.abs((previous.perPx ?? 1) - next.perPx) < 0.01
           ? previous
           : next,
       );

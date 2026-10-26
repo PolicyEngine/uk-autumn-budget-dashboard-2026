@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import { periodOption, yearsOption } from "../controlOptions";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
@@ -13,7 +14,6 @@ import {
   shortLabel,
   lineSeries,
   mergeSeries,
-  niceAxis,
   projectionStartYear,
   trimProjection,
   visibleRows,
@@ -54,7 +54,6 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       ),
     [outturn, projection, viewMode],
   );
-  const axis = niceAxis(Math.max(...chartData.flatMap((d) => [d.historical ?? 0, d.projection ?? 0])));
 
   const isAbsolute = measure.startsWith("absolute");
   const isAHC = measure.endsWith("ahc");
@@ -150,15 +149,13 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         </div>
       </div>
     ) : (
-      <LsLineChart
-          highlight={range}
+      <OverTimeChart
+        compare={range}
         data={chartData}
         series={series}
         yFormat={formatPctAxis}
         tooltipFormat={formatPct}
         yLabel="Poverty rate"
-        yDomain={axis.domain}
-        yTicks={axis.ticks}
       />
     ),
   };

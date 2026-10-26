@@ -3,7 +3,8 @@
 // The summary runs from 2027-28 (headlineSpan).
 
 import { useMemo, useState } from "react";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import {
   changeVerb,
   fyDash,
@@ -163,6 +164,8 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     // The card's one Options pill: the years compared, the average, then
     // the rest (ControlBar)
     controls: {
+      // The pill's face: the measure only; every choice is in its title
+      face: ["Average", "Housing costs", "Prices"],
       options: [
         yearsOption(rangeYears(data), range, setRange),
         {
@@ -204,15 +207,14 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
           <div className="plot-empty">No data for this metric.</div>
         </div>
       ) : (
-        <LsLineChart
-          highlight={range}
+        <OverTimeChart
+          compare={range}
           data={chartData}
           series={series}
           yFormat={yFormat}
           tooltipFormat={formatPounds}
+          valueFormat={poundsFull}
           yLabel={yLabel}
-          yDomain={axis.domain}
-          yTicks={axis.ticks}
         />
       ),
   };
