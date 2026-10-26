@@ -2250,3 +2250,14 @@
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
 }
+
+/* A phone: the heading keeps its width, the button goes under it */
+@media (max-width: 599px) {
+  .household-cards-head {
+    flex-wrap: wrap;
+  }
+
+  .household-cards-head .section-heading {
+    flex: 1 1 100%;
+  }
+}
