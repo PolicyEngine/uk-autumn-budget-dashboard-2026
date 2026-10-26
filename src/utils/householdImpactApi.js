@@ -668,9 +668,13 @@ export function consistentRound(values, total) {
  * both services at once, the first answer kept and the other request
  * stopped. A warm Modal answers in a run's time; while it is starting,
  * Cloud Run answers first, so the headline is never slower than Cloud
- * Run's. Both run the same code on the same engine, so either answer is
- * the same answer. An answer the API refuses as invalid is final; if both
- * fail, the Cloud Run error is thrown, as without a detail URL.
+ * Run's. An answer the API refuses as invalid is final; if both fail, the
+ * Cloud Run error is thrown, as without a detail URL.
+ *
+ * Not used by the page for now: its headline is Cloud Run's, the build
+ * the detail service's parts are checked against (useHouseholdImpact). A
+ * Modal headline can be used once it is checked against Cloud Run's
+ * commit, as the parts are.
  *
  * @param {Object} body - A request from buildHouseholdRequest
  * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: Function }} [options]
@@ -708,10 +712,11 @@ export async function postHouseholdHeadline(body, options = {}) {
 }
 
 /**
- * Whether the page asks for the headline, the sweep and the split by policy
+ * Whether the headline, the sweep and the split by policy can be asked for
  * all at once: only with a detail URL (Modal), where each run has its own
  * container. On Cloud Run alone the headline goes first, so it is not
- * queued behind the slower parts on the instance's worker slots.
+ * queued behind the slower parts on the instance's worker slots. Not used
+ * by the page for now (see postHouseholdHeadline).
  */
 export const askAllAtOnce = () => householdDetailApiUrl() !== null;
 
