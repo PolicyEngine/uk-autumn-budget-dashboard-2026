@@ -33,6 +33,7 @@ import MeasuresCard from "./youngPeople/MeasuresCard";
 import TrendCard from "./youngPeople/TrendCard";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -77,6 +78,10 @@ const OUTCOMES = [
   { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
   { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
 ];
+
+// The dashboard's bar style (chartTheme barShape): the 100% share bars
+// round both ends
+const SHARE_BAR_SHAPE = barShape(OUTCOMES.map((outcome) => outcome.key), { layout: "vertical", roundBase: true });
 
 const MEAN_DESCRIPTION =
   "Average change per person, £ a year, by age group; bars add each policy's own effect.";
@@ -504,7 +509,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" shape={barShape(ALL_POLICY_NAMES)} {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter
@@ -561,6 +566,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   fill={POLICY_COLORS[name]}
                   fillOpacity={measureOpacity(key.highlight, name)}
                   stackId="stack"
+                  shape={barShape(ALL_POLICY_NAMES)}
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
                   // starts in a later year grows in place instead of remounting
@@ -746,10 +752,10 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               layout="vertical"
               margin={plotMargin(narrow)}
               barCategoryGap={4}
-              barSize={13}
+              barSize={10}
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} ifOverflow="visible" />
+              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} fillOpacity={0.6} radius={6} ifOverflow="visible" />
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -782,6 +788,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   name={outcome.label}
                   fill={outcome.color}
                   stackId="share"
+                  shape={SHARE_BAR_SHAPE}
                   {...chartMotion()}
                 />
               ))}
@@ -793,7 +800,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               data={data}
               layout="vertical"
               margin={plotMargin(narrow)}
-              barCategoryGap="22%"
+              barCategoryGap="36%"
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               {/* The 16 to 24 row's highlight, as in "Average change by age" */}
@@ -801,6 +808,8 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
                 y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
                 fill={YOUNG_FILL}
+                fillOpacity={0.6}
+                radius={6}
                 ifOverflow="visible"
               />
               <XAxis
@@ -852,6 +861,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   name={outcome.label}
                   fill={outcome.color}
                   stackId="share"
+                  shape={SHARE_BAR_SHAPE}
                   {...chartMotion()}
                 >
                 </Bar>

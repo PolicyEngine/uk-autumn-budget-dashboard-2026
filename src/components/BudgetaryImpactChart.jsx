@@ -21,6 +21,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -372,6 +373,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 fillOpacity={measureOpacity(highlight, policyName)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
+                shape={barShape(orderedPolicies)}
                 {...chartMotion()}
                 // Always mounted (a zero series has no height), so a series that
                 // starts in a later year grows in place instead of remounting
