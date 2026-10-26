@@ -30,6 +30,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import PillSelect from "../PillSelect";
+import ControlBar from "../ControlBar";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import GroupedLegend from "../GroupedLegend";
@@ -749,22 +750,24 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       </dl>
       <div className="chart-view-switch chart-controls position-controls">
         {chooser}
-        {view === "where" && (
-          <ViewSwitch
-            compact
-            label="Before or after the selected policies"
-            value={side}
-            onChange={setSide}
-            options={[
-              { value: "before", label: "Before" },
-              { value: "after", label: "After" },
-            ]}
-          />
-        )}
-        {view === "moves" && <ViewSwitch compact label="Moving by" value={moveUnit} onChange={setMoveUnit} options={MOVE_UNITS} />}
-        {(view === "gains" || view === "compare") && (
-          <ViewSwitch compact label="Units" value={unit} onChange={setUnit} options={UNIT_OPTIONS} />
-        )}
+        {/* The view's own choice, if any, in one Options pill on the same
+            row as the view tabs */}
+        <ControlBar
+          name={title}
+          options={[
+            view === "where" && {
+              label: "Before or after the selected policies",
+              value: side,
+              onChange: setSide,
+              options: [
+                { value: "before", label: "Before", summary: "Before the policies" },
+                { value: "after", label: "After", summary: "After the policies" },
+              ],
+            },
+            view === "moves" && { label: "Moving by", value: moveUnit, onChange: setMoveUnit, options: MOVE_UNITS },
+            (view === "gains" || view === "compare") && { label: "Units", value: unit, onChange: setUnit, options: UNIT_OPTIONS },
+          ]}
+        />
       </div>
       {view === "among" && (
         <div className="position-among">
@@ -825,7 +828,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       <div className="chart-footer">
         <ChartMoreInfo year={year}>
           <p>
-            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the Pre-measures forecast's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
+            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the OBR forecast tab's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
           </p>
           <p>
             {"Everyone's income changes too, so your place before is ranked among everyone's income before the selected policies, and your place after among everyone's income after them."}

@@ -83,7 +83,7 @@ function choose(scope, name, option) {
 /** A card's Options summary ("Absolute · Before housing costs · …"). */
 const optionsSummary = (card) => within(card).getByRole("button", { name: /^Options:/ }).getAttribute("aria-label");
 
-describe("the Pre-measures forecast view", () => {
+describe("the OBR forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = await renderVerified();
     await screen.findByRole("tablist", { name: "Views" });
@@ -92,15 +92,15 @@ describe("the Pre-measures forecast view", () => {
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
-    expect(tabs[2]).toHaveTextContent("Pre-measures forecast");
+    expect(tabs[2]).toHaveTextContent("OBR forecast");
     fireEvent.click(tabs[2]);
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
-    const panel = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
+    const panel = screen.getByRole("tabpanel", { name: "OBR forecast" });
     // Its sub-tabs mirror Population impact's names: Living standards (the
-    // default), Poverty, then the OBR forecast
-    const subTabs = within(screen.getByRole("tablist", { name: "Pre-measures forecast sections" })).getAllByRole("tab");
-    expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "OBR forecast"]);
+    // default), Poverty, then Forecast changes
+    const subTabs = within(screen.getByRole("tablist", { name: "OBR forecast sections" })).getAllByRole("tab");
+    expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "Forecast changes"]);
     expect(subTabs[0]).toHaveAttribute("aria-selected", "true");
     expect(await within(panel).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(panel).queryByRole("heading", { name: "Forecast changes" })).toBeNull();
@@ -217,7 +217,7 @@ describe("the Pre-measures forecast view", () => {
     expect(panel).not.toHaveTextContent(/Without the measures \(current law\)|Without the measures:/);
     // The link opens the twin in place, the address following
     fireEvent.click(link);
-    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "OBR forecast" })).toHaveAttribute("aria-selected", "true");
     const twin = screen.getByRole("tabpanel", { name: label });
     expect(twin).not.toBe(panel);
     expect(await within(twin).findByRole("heading", { level: 2, name: `${label} under current law` }, { timeout: 5000 })).toBeInTheDocument();
@@ -262,17 +262,17 @@ describe("the Pre-measures forecast view", () => {
     // Poverty over time: Rate (its Poverty line, Housing costs, People and
     // Period under one Options button, worded as on Population impact) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    // The view is a "Show" pill (Rate or Depth); one row of controls
-    expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
-    // The same default as Population impact: absolute, before housing costs, all people
-    expect(optionsSummary(poverty)).toBe("Options: Absolute · Before housing costs · All people · Outturn and projection");
+    // One Options pill: the view first ("Show": Rate or Depth), then the
+    // same default as Population impact: absolute, before housing costs, all people
+    expect(within(poverty).queryByRole("button", { name: /^Poverty view:/ })).toBeNull();
+    expect(optionsSummary(poverty)).toBe("Options: Rate · Absolute · Before housing costs · All people · Outturn and projection");
     // The Options dialog: a radio group per choice, focus inside, Escape closes
     const optionsButton = within(poverty).getByRole("button", { name: /^Options:/ });
     expect(optionsButton).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(optionsButton);
     expect(optionsButton).toHaveAttribute("aria-expanded", "true");
     const dialog = within(poverty).getByRole("dialog", { name: "Poverty over time options" });
-    expect(within(dialog).getAllByRole("radiogroup").map((g) => g.textContent.length > 0)).toHaveLength(4);
+    expect(within(dialog).getAllByRole("radiogroup").map((g) => g.textContent.length > 0)).toHaveLength(5);
     expect(dialog).toContainElement(document.activeElement);
     fireEvent.keyDown(dialog, { key: "Escape" });
     expect(within(poverty).queryByRole("dialog")).toBeNull();
@@ -281,9 +281,11 @@ describe("the Pre-measures forecast view", () => {
     expect(optionsSummary(poverty)).toMatch(/· Children ·/);
     choose(poverty, "People", "All people");
     fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
-    choose(poverty, "Poverty view", "Depth");
+    choose(poverty, "Show", "Depth");
     poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
-    expect(within(poverty).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    // Depth has no choices of its own: the pill holds the view alone
+    expect(optionsSummary(poverty)).toBe("Options: Depth");
+    fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the
@@ -322,16 +324,23 @@ describe("the Pre-measures forecast view", () => {
     choose(inequality, "Inequality measure", "90/10 ratio");
     expect(within(inequality).getByText(/^The 90\/10 ratio \(BHC\)/)).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    // Year by year and vigintiles by default (Vahid, 26 October): the
-    // sentence by twentieths, from the second-lowest (vigintile 1 left out)
-    expect(within(growth).getByText(/second-lowest-income twentieth/)).toBeInTheDocument();
-    expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
+    // Year by year and vigintiles by default (Vahid, 26 October): one short
+    // line, from the second-lowest twentieth (vigintile 1 left out)
+    const headline = () => growth.querySelector(".chart-description > p:not(.ls-card-subtitle)").textContent;
+    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: \S+% to \S+% vs \S+% to \S+% a year\.$/);
+    // The full sentence and the vigintile note are in About this chart
+    expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
+    fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
+    expect(within(growth).getByText(/in the second-lowest-income twentieth/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Vigintile 1, the lowest-income 5% of people, is left out/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Without the measures \(current law\)/)).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).has("ls_groups")).toBe(false);
     // One Options pill, the view first: no separate View pill
     expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
     expect(optionsSummary(growth)).toBe("Options: Year by year · Vigintiles · Before housing costs · All people");
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth|fifth/)).not.toBeInTheDocument();
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     // Year by year, deciles, after housing costs, non-pensioners: each
     // choice in the address, the sentence following
     choose(growth, "View", "Year by year");
@@ -346,21 +355,29 @@ describe("the Pre-measures forecast view", () => {
       "non_pensioners",
     ]);
     expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32, real median income \(AHC\) among non-pensioners/)).toBeInTheDocument();
-    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
+    expect(headline()).toMatch(/^Lowest vs highest tenth: /);
+    // Decile 1 after housing costs: kept, with a short caution under the
+    // key and the fuller line in About this chart
+    expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Decile 1 after housing costs, the lowest-income tenth, is shown/)).toBeInTheDocument();
     // Vigintiles clear the household floor, so they are offered
     choose(growth, "Income groups", "Vigintiles");
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
-    // the second-lowest twentieth, the key at vigintile 2, with a note
+    // the second-lowest twentieth, the key at vigintile 2, the note in About
+    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: /);
     expect(within(growth).getByText(/second-lowest-income twentieth \(5th–10th percentile\)/)).toBeInTheDocument();
     expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
     expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
     expect(within(growth).queryByText(/^Vigintile 1\b/)).toBeNull();
-    expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
-    // Deciles and quintiles keep their bottom group, with no note
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
+    // Deciles and quintiles keep their bottom group; only deciles after
+    // housing costs carry the caution
     choose(growth, "Income groups", "Deciles");
-    expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
+    expect(within(growth).getByText(/^The lowest-income tenth after housing costs/)).toBeInTheDocument();
     choose(growth, "Income groups", "Quintiles");
+    expect(headline()).toMatch(/^Lowest vs highest fifth: /);
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     expect(new URLSearchParams(window.location.search).get("ls_groups")).toBe("quintile");
     // Back to vigintiles, the default, leaves ?ls_groups out
     choose(growth, "Income groups", "Vigintiles");
@@ -390,11 +407,11 @@ describe("the Pre-measures forecast view", () => {
     expect(document.body.textContent).not.toMatch(/(rises|falls) 0\.0/);
   });
 
-  it("opens the OBR forecast for an old Forecast changes link", async () => {
+  it("opens Forecast changes for an old Forecast changes link", async () => {
     // An old link (?tab=living): the view at its new address, ?sub= kept
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     await renderVerified();
-    const panel = await screen.findByRole("tabpanel", { name: "OBR forecast" });
+    const panel = await screen.findByRole("tabpanel", { name: "Forecast changes" });
     expect(await within(panel).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", "forecast"]);
@@ -418,7 +435,7 @@ describe("the Pre-measures forecast view", () => {
   it("opens its Living standards for an old Baseline outlook link", async () => {
     window.history.replaceState({}, "", "/?tab=outlook&sub=baseline&ls_from=2028");
     await renderVerified();
-    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "OBR forecast" })).toHaveAttribute("aria-selected", "true");
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
     expect(await within(living).findByRole("heading", { name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
@@ -431,7 +448,7 @@ describe("the Pre-measures forecast view", () => {
   it("states its engine, data, status, notes and gaps once, in Methodology", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderVerified();
-    const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
+    const section = await screen.findByRole("region", { name: "OBR forecast" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
@@ -458,7 +475,7 @@ describe("the Pre-measures forecast view", () => {
       expect(pill).toHaveAttribute("aria-hidden", "true");
       expect(pill).toHaveAttribute("inert");
     }
-    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "OBR forecast" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

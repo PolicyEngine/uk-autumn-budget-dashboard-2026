@@ -12,7 +12,6 @@ import LsCard from "../LsCard";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
-import PillSelect from "../../PillSelect";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
 import { useYearRange } from "../../../utils/livingStandards/yearRange";
@@ -218,17 +217,20 @@ export default function WhoIsInPovertySection({ data }) {
       }}
       controls={
         // The years compared are the section's (CurrentLawSection); the
-        // breakdown is the card's pill, the poverty measure under Options
-        <ControlBar name="Who is in poverty" options={povertyMeasureOptions(measure, b.measures, setMeasure)}>
-          <PillSelect
-            variant="light"
-            prefix="Breakdown"
-            name="Breakdown"
-            value={breakdown}
-            onChange={setBreakdown}
-            options={ids.map((id) => ({ value: id, label: breakdowns[id].label, badge: breakdowns[id].badge }))}
-          />
-        </ControlBar>
+        // card's one Options pill holds the breakdown first, then the
+        // poverty measure
+        <ControlBar
+          name="Who is in poverty"
+          options={[
+            {
+              label: "Breakdown",
+              value: breakdown,
+              onChange: setBreakdown,
+              options: ids.map((id) => ({ value: id, label: breakdowns[id].label, summary: breakdowns[id].badge ?? breakdowns[id].label })),
+            },
+            ...povertyMeasureOptions(measure, b.measures, setMeasure),
+          ]}
+        />
       }
     >
       <div className="chart-plot">

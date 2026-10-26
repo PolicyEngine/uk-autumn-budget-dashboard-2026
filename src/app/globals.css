@@ -508,7 +508,7 @@ body {
     gap: 4px;
     padding: 0 4px;
     font-size: 0.875rem;
-    /* "Pre-measures forecast" wraps rather than overflow on a small phone */
+    /* "OBR forecast" wraps rather than overflow on a small phone */
     white-space: normal;
     text-align: center;
     line-height: 1.2;
@@ -2086,25 +2086,22 @@ body {
   transform: translateX(3px);
 }
 
-/* ---------- What changes (PolicySpecTable) ----------
-   The model's parameters for a measure, current law beside the measure:
-   one compact table, a group per parameter with its sparkline (current
-   law grey and dashed, the measure teal), and each change as a chip in the
-   gain or loss colour. A hovered line marks its years on the timeline. */
+/* ---------- What changes (PolicyChange) ----------
+   One line on the change, then its picture: a step plot of current law
+   (grey, dashed) against the measure (its colour), the gap shaded in the
+   gain or loss colour; or, for a change that holds, two bars to scale. */
 .policy-card-spec {
   min-width: 0;
 }
 
-.pspec {
+.pchg {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px 10px;
-  border: 1px solid var(--c-grid);
-  border-radius: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
-.pspec-head {
+.pchg-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -2112,225 +2109,245 @@ body {
   gap: 4px 12px;
 }
 
-.pspec-title {
+.pchg-title {
   margin: 0;
   font-size: var(--fs-small);
   font-weight: 600;
   color: var(--pe-gray-700);
 }
 
-.pspec-key {
+.pchg-key {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  gap: 12px;
   margin: 0;
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);
 }
 
-.pspec-key-before::before,
-.pspec-key-after::before {
+.pchg-key-before::before,
+.pchg-key-after::before {
   content: "";
   display: inline-block;
-  width: 12px;
+  width: 14px;
   margin-right: 5px;
   vertical-align: middle;
   border-top: 2px dashed var(--c-before);
 }
 
-.pspec-key-after::before {
-  border-top-style: solid;
-  border-top-color: var(--c-after);
+.pchg-key-after::before {
+  border-top: 2.5px solid var(--policy-accent, var(--c-after));
 }
 
-/* On a narrow card the table scrolls inside it, never the page */
-.pspec-scroll {
-  overflow-x: auto;
-}
-
-.pspec-table {
-  width: 100%;
-  border-collapse: collapse;
+.pchg-summary,
+.pchg-also {
+  margin: 0;
   font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
   font-variant-numeric: tabular-nums;
 }
 
-.pspec-row-head th {
-  padding: 8px 0 2px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-.pspec-group:first-of-type .pspec-row-head th {
-  padding-top: 2px;
-}
-
-.pspec-label {
-  margin-right: 8px;
-}
-
-.pspec-unit {
-  margin-right: 8px;
-  white-space: nowrap;
-  font-size: var(--fs-micro);
-  font-weight: 400;
-  color: var(--pe-gray-500);
-}
-
-.pspec-note {
-  display: block;
-  font-size: var(--fs-micro);
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}
-
-.pspec-spark {
-  display: inline-block;
-  float: right;
-  margin: 1px 4px 0 8px;
-  overflow: visible;
-}
-
-.pspec-spark polyline {
-  fill: none;
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-.pspec-spark-before {
-  stroke: var(--c-before);
-  stroke-dasharray: 3 2;
-}
-
-.pspec-spark-after {
-  stroke: var(--c-after);
-}
-
-.pspec-spark-mark {
-  stroke: var(--c-grid);
-  stroke-width: 6;
-}
-
-.pspec-line > * {
-  padding: 4px 0;
-  border-top: 1px solid var(--pe-gray-100);
-  white-space: nowrap;
-}
-
-.pspec-line {
-  cursor: default;
-  outline: none;
-  transition: background-color 0.15s ease;
-}
-
-.pspec-line:hover,
-.pspec-line:focus-visible,
-.pspec-line.is-lit {
-  background: var(--c-hover);
-}
-
-.pspec-line:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--focus-ring, var(--c-gain-text));
-}
-
-.pspec-when {
-  padding-left: 4px;
-  padding-right: 10px;
-  text-align: left;
-  font-weight: 400;
+.pchg-also {
   color: var(--pe-gray-600);
 }
 
-.pspec-word {
-  white-space: nowrap;
-}
-
-.pspec-before {
-  text-align: right;
+.pchg-unit {
   color: var(--pe-gray-500);
 }
 
-.pspec-after {
-  padding-left: 6px;
+.pchg-plot {
+  position: relative;
+  min-width: 0;
+}
+
+.pchg-svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+  touch-action: pan-y;
+}
+
+.pchg-svg:focus-visible {
+  outline: 2px solid var(--c-gain-text);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pchg-grid {
+  stroke: var(--c-grid);
+  stroke-width: 1;
+}
+
+.pchg-axis {
+  stroke: var(--c-axis);
+  stroke-width: 1;
+}
+
+.pchg-tick,
+.pchg-year {
+  font-size: 11px;
+  fill: var(--c-tick);
+}
+
+.pchg-guide {
+  fill: var(--c-hover);
+}
+
+.pchg-gap {
+  fill: var(--c-no-change);
+  fill-opacity: 0.18;
+}
+
+.pchg-svg.is-gain .pchg-gap {
+  fill: var(--c-gain);
+}
+
+.pchg-svg.is-loss .pchg-gap {
+  fill: var(--c-loss);
+}
+
+.pchg-before,
+.pchg-after {
+  fill: none;
+  stroke-linejoin: round;
+}
+
+.pchg-before {
+  stroke: var(--c-before);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+
+.pchg-after {
+  stroke: var(--policy-accent, var(--c-after));
+  stroke-width: 2.5;
+}
+
+.pchg-after-casing {
+  fill: none;
+  stroke: var(--c-ink);
+  stroke-opacity: 0.35;
+  stroke-width: 4.5;
+  stroke-linejoin: round;
+}
+
+.pchg-gap-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--pe-gray-700);
+  paint-order: stroke;
+  stroke: var(--c-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.pchg-svg.is-gain .pchg-gap-label {
+  fill: var(--c-gain-text);
+}
+
+.pchg-svg.is-loss .pchg-gap-label {
+  fill: var(--c-loss-text);
+}
+
+.pchg-tip {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 5px 9px;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--c-ink);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--c-surface);
+  border: 1px solid var(--c-grid);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow-soft, transparent);
+  /* Over the plot's top edge, never over the words above it */
+  transform: translate(-50%, -2px);
+}
+
+/* A change that holds: two bars to scale */
+.pchg-pair {
+  display: grid;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pchg-pair-row {
+  display: grid;
+  grid-template-columns: 9em minmax(40px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-small);
+}
+
+.pchg-pair-name {
+  color: var(--pe-gray-500);
+}
+
+.pchg-bar-track {
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c-muted-fill);
+}
+
+.pchg-bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+}
+
+.is-before .pchg-bar {
+  background: var(--c-before);
+}
+
+.is-after .pchg-bar {
+  background: var(--policy-accent, var(--c-after));
+}
+
+.pchg-pair-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 7.5em;
   text-align: right;
-  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.is-after .pchg-pair-value {
+  font-size: var(--fs-body);
+  font-weight: 700;
   color: var(--pe-gray-900);
 }
 
-.pspec-arrow {
+.pchg-chip {
   display: inline-block;
-  margin-right: 6px;
-  vertical-align: -1px;
-  color: var(--pe-gray-300);
-}
-
-.pspec-change {
-  padding-left: 10px;
-  padding-right: 4px;
-  text-align: right;
-  width: 1%;
-}
-
-.pspec-chip {
-  display: inline-block;
-  min-width: 52px;
   padding: 1px 8px;
   font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 1.6;
-  text-align: center;
   border-radius: 999px;
-}
-
-.pspec-chip.is-gain {
-  color: var(--c-gain-text);
-  background: var(--c-highlight-band);
-}
-
-.pspec-chip.is-loss {
-  color: var(--c-loss-text);
-  background: var(--c-loss-soft);
-}
-
-.pspec-chip.is-neutral {
   color: var(--pe-gray-600);
   background: var(--pe-gray-100);
 }
 
-.pspec-chip.is-same {
-  font-weight: 400;
-  color: var(--pe-gray-500);
+.pchg-chip.is-gain {
+  color: var(--c-gain-text);
+  background: var(--c-highlight-band);
 }
 
-.pspec-line.is-same .pspec-after {
-  font-weight: 400;
-  color: var(--pe-gray-500);
+.pchg-chip.is-loss {
+  color: var(--c-loss-text);
+  background: var(--c-loss-soft);
 }
 
-.pspec-more {
-  align-self: flex-start;
-  min-height: 32px;
-  padding: 4px 0;
-  font: inherit;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  background: none;
-  border: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.pspec-more:hover {
-  text-decoration-color: currentColor;
-}
-
-/* The years a hovered line covers, on the timeline */
+/* The years a hovered step covers, on the timeline */
 .ptl-year-band {
   position: absolute;
   top: -4px;
@@ -2347,48 +2364,19 @@ body {
 }
 
 @media (max-width: 768px) {
-  .pspec {
-    padding: 10px 10px 8px;
+  .pchg-pair-row {
+    grid-template-columns: minmax(48px, 1fr) auto;
+    row-gap: 2px;
   }
 
-  /* On a phone each line stacks: when it applies, then the two values and
-     the change beneath, so nothing scrolls */
-  .pspec-table,
-  .pspec-table tbody,
-  .pspec-row-head,
-  .pspec-row-head th {
-    display: block;
-  }
-
-  .pspec-line {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    align-items: center;
-    column-gap: 6px;
-    border-top: 1px solid var(--pe-gray-100);
-  }
-
-  .pspec-line > * {
-    border-top: 0;
-  }
-
-  .pspec-when {
+  .pchg-pair-name {
     grid-column: 1 / -1;
-    padding-bottom: 0;
-    white-space: normal;
   }
 
-  .pspec-before {
-    padding-left: 4px;
-  }
-
-  .pspec-after {
-    padding-left: 0;
-  }
-
-  .pspec-chip {
+  .pchg-pair-value {
     min-width: 0;
   }
+
 }
 
 @media (max-width: 768px) {

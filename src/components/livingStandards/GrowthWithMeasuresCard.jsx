@@ -1,5 +1,5 @@
 // Growth across the distribution, with the selected measures: the
-// Pre-measures forecast's "Growth across the distribution" chart (current
+// OBR forecast's "Growth across the distribution" chart (current
 // law) with the same pills, read with the measures from
 // public/data/income_growth_with_measures.csv. Shown on Population impact's
 // Living standards sub-tab; its twin without the measures links here and
@@ -94,9 +94,12 @@ function LoadedCard({ data, rows, run, twinLink }) {
     !run.exact && run.reformId === COMBINED_REFORM_ID
       ? "With part of the package selected, this is the whole package (runs for part of it are not published)."
       : null;
+  // Only the link to the twin (and, rarely, which run this is); "with the
+  // measures" is said in About this chart
   const subtitle = (
     <>
-      With the measures: real growth of each group&apos;s median income.{packageNote ? ` ${packageNote}` : ""} {twinLink}
+      {twinLink}
+      {packageNote ? ` ${packageNote}` : ""}
     </>
   );
   if (noEffect || !view) {

@@ -7,7 +7,7 @@ import SiteFooter from '@/components/SiteFooter';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
-  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
+  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the OBR forecast.';
 
 export const metadata: Metadata = {
   title: TITLE,

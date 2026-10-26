@@ -3,79 +3,82 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   POLICY_PARAMETERS_SCHEMA,
+  describeSegment,
   formatChange,
   formatValue,
   loadPolicyParameters,
-  mergeRuns,
+  monthOf,
   parameterTableFor,
   resetPolicyParameters,
-  sparkline,
-  unitName,
-  visibleRows,
+  segmentsFor,
+  summaryFor,
+  visualFor,
 } from "./policyParameters";
 
 const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
-const point = (year, before, after) => ({ key: String(year), label: `${year}`, year, before, after });
+const rowsOf = (id) => Object.fromEntries(file.measures[id].rows.map((row) => [row.label, row]));
 
 describe("policy_parameters.json, as the page reads it", () => {
-  it("has the page's schema, a known unit and a timeline year for every value, and a source for each side", () => {
+  it("has the page's schema, and every measure a picture and a line of words", () => {
     expect(file.schema).toBe(POLICY_PARAMETERS_SCHEMA);
     for (const [id, table] of Object.entries(file.measures)) {
-      expect(table.description, id).toBeTruthy();
-      for (const row of table.rows) {
-        expect(unitName(row.unit), `${id} ${row.label}`).toBeTruthy();
-        expect(row.source.before.kind && row.source.after.kind).toBeTruthy();
-        for (const p of row.points) {
-          expect(p.year).toBeGreaterThanOrEqual(2026);
-          expect(p.year).toBeLessThanOrEqual(2031);
-        }
-      }
-      // Collapsed, every table shows something, in at most three lines
-      const { rows } = visibleRows(table.rows);
-      const lines = rows.reduce((n, row) => n + row.lines.length, 0);
-      expect(lines, id).toBeGreaterThan(0);
-      expect(lines, id).toBeLessThanOrEqual(3);
+      const main = table.rows.find((row) => row.primary && visualFor(row));
+      expect(main, id).toBeTruthy();
+      expect(summaryFor(main), id).toMatch(/\.$/);
+      expect(summaryFor(main), id).not.toMatch(/pp\b|NaN|undefined/);
+      for (const row of table.rows) expect(row.unit_words, `${id} ${row.label}`).not.toBe("pounds");
     }
   });
+
+  it("draws fuel duty on a time axis, stepping on each date", () => {
+    const segments = segmentsFor(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
+    expect(segments[0]).toMatchObject({ start: 0, before: 52.95, after: 52.95 });
+    const january = segments.find((s) => s.label === "From 1 January 2027");
+    expect(january.start).toBeCloseTo(9);
+    expect(january.end).toBeCloseTo(11);
+    expect(january).toMatchObject({ from: 2026, to: 2026 });
+    expect(segments[segments.length - 1].end).toBe(72);
+  });
+
+  it("draws a VAT window as current law either side of it", () => {
+    const segments = segmentsFor(rowsOf("road_fuel_vat_cut")["VAT on petrol and diesel"]);
+    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 8, 0.2], [8, 14, 0.15], [14, 72, 0.2]]);
+    expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
+  });
+
+  it("shows one-off changes as pairs and changes over time as plots", () => {
+    expect(visualFor(rowsOf("badr_lifetime_limit_cut")["Business Asset Disposal Relief lifetime limit"]).kind).toBe("pair");
+    expect(visualFor(rowsOf("warm_home_discount_top_up")["Warm Home Discount"]).kind).toBe("pair");
+    expect(visualFor(rowsOf("employer_ni_relief_under_25s")["Employer National Insurance rate, employees aged 21 to 24"]).kind).toBe("pair");
+    expect(visualFor(rowsOf("state_pension_income_tax_protection")["Income tax allowance over State Pension age"]).kind).toBe("plot");
+    expect(visualFor(rowsOf("plan_2_threshold_unfreeze")["Plan 2 repayment threshold"]).kind).toBe("plot");
+    expect(visualFor(rowsOf("threshold_freeze_2031_32")["Personal allowance"]).kind).toBe("plot");
+    expect(visualFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity in Great Britain"]).kind).toBe("plot");
+  });
 });
 
-describe("formatting", () => {
+describe("words", () => {
   it("writes values in their units", () => {
     expect(formatValue(0.05, "percent")).toBe("5%");
-    expect(formatValue(0.183425, "percent")).toBe("18.34%");
     expect(formatValue(52.95, "pence_per_litre")).toBe("52.95p");
     expect(formatValue(30060.87, "gbp")).toBe("£30,061");
-    expect(formatValue(null, "gbp")).toBe("None");
   });
 
-  it("signs a change", () => {
-    expect(formatChange(0.2, 0.15, "percent")).toBe("−5pp");
+  it("signs an amount's change, and gives a rate's as the two rates", () => {
+    expect(formatChange(0.15, 0, "percent")).toBe("15% → 0%");
     expect(formatChange(55.95, 52.95, "pence_per_litre")).toBe("−3p");
-    expect(formatChange(29385, 30267, "gbp")).toBe("+£882");
-    expect(formatChange(0.15, 0.15000000001, "percent")).toBe("No change");
-    expect(formatChange(null, 50270, "gbp")).toBe("New");
-  });
-});
-
-describe("the collapsed table", () => {
-  it("merges consecutive years with the same change", () => {
-    const lines = mergeRuns([point(2027, 1, 0), point(2028, 1, 0), point(2029, 2, 0), point(2031, 2, 0)]);
-    expect(lines.map(({ label, from, to }) => [label, from, to])).toEqual([
-      ["2027 to 2028", 2027, 2028], ["2029", 2029, 2029], ["2031", 2031, 2031],
-    ]);
+    expect(formatChange(12570, 13700, "gbp")).toBe("+£1,130");
+    expect(formatChange(0.15, 0.15000000001, "percent")).toBe("no change");
   });
 
-  it("keeps each primary row's first change within three lines", () => {
-    const row = (label, points, primary = true) => ({ label, unit: "gbp", primary, points });
-    const rows = [
-      row("A", [point(2026, 1, 2), point(2027, 1, 3), point(2028, 1, 4), point(2029, 1, 5)]),
-      row("B", [point(2031, 1, 2)]),
-      row("C", [point(2031, 1, 2)], false),
-    ];
-    const { rows: shown, more } = visibleRows(rows);
-    expect(shown.map((r) => [r.label, r.lines.length])).toEqual([["A", 2], ["B", 1]]);
-    expect(more).toBe(true);
-    expect(visibleRows(rows, { expanded: true }).rows.map((r) => r.lines.length)).toEqual([4, 1, 1]);
+  it("says a step for the tooltip", () => {
+    expect(describeSegment({ label: "2029-30", before: 12570, after: 13700 }, "gbp")).toBe("2029-30: £12,570 → £13,700 (+£1,130)");
+    expect(describeSegment({ label: "2026-27", before: 12570, after: 12570 }, "gbp")).toBe("2026-27: £12,570, as under current law");
+  });
+
+  it("puts a date on the timeline's months", () => {
+    expect(monthOf("2026-04-01")).toBe(0);
+    expect(monthOf("2027-01-01")).toBe(9);
   });
 });
 
@@ -86,15 +89,6 @@ describe("parameterTableFor", () => {
     expect(parameterTableFor(tables, { id: "a", description: "Changed." })).toBeNull();
     expect(parameterTableFor(tables, { id: "b", description: "As built." })).toBeNull();
     expect(parameterTableFor(null, { id: "a", description: "As built." })).toBeNull();
-  });
-});
-
-describe("sparkline", () => {
-  it("draws both sides across the years, and nothing for fewer than three points", () => {
-    const spark = sparkline([point(2026, 1, 1), point(2027, 1, 2), point(2028, 1, 3)]);
-    expect(spark.before.split(" ")).toHaveLength(3);
-    expect(spark.after.split(" ")).toHaveLength(3);
-    expect(sparkline([point(2026, 1, 2)])).toBeNull();
   });
 });
 
