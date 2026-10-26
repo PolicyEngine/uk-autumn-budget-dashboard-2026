@@ -345,7 +345,7 @@ describe("the OBR forecast view", () => {
     // Year by year and vigintiles by default (Vahid, 26 October): one short
     // line, from the second-lowest twentieth (vigintile 1 left out)
     const headline = () => growth.querySelector(".chart-description").textContent;
-    expect(headline()).toMatch(/^Under current law, real incomes grow (about as fast at the bottom as at the top|faster at the (top|bottom) than at the (bottom|top)) \(\S+% a year at the bottom, \S+% at the top\)\.$/);
+    expect(headline()).toMatch(/^Under current law, real incomes (grow|fall|barely) .+ \(\S+% a year at the bottom, \S+% at the top\)\.$/);
     // The full sentence and the vigintile note are in About this chart
     expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));

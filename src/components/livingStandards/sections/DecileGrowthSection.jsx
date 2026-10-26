@@ -251,16 +251,21 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     </>
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
+  // The finding in words, from the signs of the two ends
+  const trend = (bottom, top) => {
+    if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
+    if (bottom >= 0 && top >= 0) return top > bottom ? "grow faster at the top than at the bottom" : "grow faster at the bottom than at the top";
+    if (bottom <= 0 && top <= 0) return top > bottom ? "fall faster at the bottom than at the top" : "fall faster at the top than at the bottom";
+    return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
+  };
   const summary = diff ? (
     largest < 0.25 ? (
       <>The measures barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
     ) : (
       <>The measures change income growth {gap < 0.15 ? "about equally at both ends" : highMean > lowMean ? "more at the top" : "more at the bottom"} {ends}.</>
     )
-  ) : gap < 0.15 ? (
-    <>Under current law, real incomes grow about as fast at the bottom as at the top {ends}.</>
   ) : (
-    <>Under current law, real incomes grow faster at the {highMean > lowMean ? "top than at the bottom" : "bottom than at the top"} {ends}.</>
+    <>Under current law, real incomes {trend(lowMean, highMean)} {ends}.</>
   );
   // The ranges and exact groups, for About this chart
   const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
