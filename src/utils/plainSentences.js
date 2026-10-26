@@ -36,6 +36,8 @@ export function decileSentence(data, kind) {
 export function revenueSentence(net, yearLabel) {
   if (net == null || !Number.isFinite(net)) return null;
   const bn = Math.abs(net) >= 0.95 ? `£${Math.abs(net).toFixed(1)} billion` : `£${Math.round(Math.abs(net) * 1000).toLocaleString("en-GB")} million`;
+  // Exactly nothing (a measure not in force that year) is not "roughly balance"
+  if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected measures change no revenue.`;
   if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected measures roughly balance: they neither raise nor cost much revenue.`;
   return net > 0
     ? `In ${yearLabel}, the selected measures raise ${bn} for the government.`
