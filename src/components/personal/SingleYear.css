@@ -1258,3 +1258,40 @@
     padding-right: 16px;
   }
 }
+
+/* The result card, top to bottom: the three tiles, whose result it is,
+   the waterfall the card's width, About this result */
+.result-card .result-tiles {
+  margin: 0;
+  padding: 20px 28px 4px;
+}
+
+.result-card > .result-facts {
+  margin: 12px 28px 0;
+}
+
+.result-card .result-card-body {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 12px;
+}
+
+.result-policies-link {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-policies-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .result-card .result-tiles {
+    padding: 16px 16px 4px;
+  }
+
+  .result-card > .result-facts {
+    margin: 12px 16px 0;
+  }
+}

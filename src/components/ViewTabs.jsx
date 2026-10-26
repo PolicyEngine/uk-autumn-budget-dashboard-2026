@@ -49,7 +49,9 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
     const lead = row && bar
       ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
       : 0;
-    document.documentElement.style.setProperty("--view-tab-x", `${Math.max(0, lead + indicator.x - scrollLeft)}px`);
+    // (negative where the row is pulled into the margin to line its first
+    // tab's icon up with the page's content, HomeButton.css)
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
   }, [indicator.x, leading]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
