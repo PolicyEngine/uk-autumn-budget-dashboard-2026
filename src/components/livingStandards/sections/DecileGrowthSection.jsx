@@ -96,7 +96,7 @@ export function annualRange(values) {
 export default function useQuintileGrowthView(data, range = null, setRange = null) {
   const offer = available(data);
   const narrow = useNarrowViewport();
-  const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "period");
+  const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
   const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, offer.groupings[0]);
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");

@@ -183,8 +183,9 @@ describe("the Pre-measures forecast view", () => {
     choose(incomes, "Income view", "Inequality");
     expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    // Quintiles only: no view switch, the sentence and axis by fifths
+    // Year by year by default (Vahid, 26 October): quintiles, the sentence by fifths
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
+    expect(within(growth).getByRole("button", { name: /^Growth view:/ })).toHaveTextContent("Year by year");
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth/)).not.toBeInTheDocument();
     // Year by year, deciles, after housing costs, non-pensioners: each
@@ -195,7 +196,7 @@ describe("the Pre-measures forecast view", () => {
     choose(growth, "Population", "Non-pensioners");
     const chosen = new URLSearchParams(window.location.search);
     expect([chosen.get("ls_growth"), chosen.get("ls_groups"), chosen.get("ls_housing"), chosen.get("ls_pop")]).toEqual([
-      "annual",
+      null,
       "decile",
       "ahc",
       "non_pensioners",
@@ -205,8 +206,10 @@ describe("the Pre-measures forecast view", () => {
     // Vigintiles clear the household floor, so they are offered
     choose(growth, "Income groups", "Vigintiles");
     expect(within(growth).getByText(/lowest-income twentieth/)).toBeInTheDocument();
-    // Back to the defaults: nothing left in the address
+    // Whole period goes in the address; back to the defaults leaves nothing
     choose(growth, "Growth view", "Whole period");
+    expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");
+    choose(growth, "Growth view", "Year by year");
     choose(growth, "Income groups", "Quintiles");
     choose(growth, "Housing costs", "Before housing costs");
     choose(growth, "Population", "All people");
@@ -221,7 +224,7 @@ describe("the Pre-measures forecast view", () => {
     // Titles carry no years (the pill, axes and sentence do): the sentences follow
     expect(await heading(/^Who is in poverty$/)).toBeInTheDocument();
     expect(within(who).getByText(/since 2029-30/)).toBeInTheDocument();
-    expect(within(growth).getByText(/From 2029-30 to 2031-32/)).toBeInTheDocument();
+    expect(within(growth).getByText(/^Each year from 2030-31 to 2031-32/)).toBeInTheDocument();
 
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
     expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);
