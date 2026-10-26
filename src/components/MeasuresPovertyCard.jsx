@@ -108,7 +108,12 @@ function niceTicks(lo, hi) {
 export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const plotRef = useRef(null);
   const catalogue = useMeasureCatalogue();
-  const { poverty, controls } = usePovertyChoice();
+  const { poverty: chosen, controls } = usePovertyChoice();
+  // A file with only the headline column (absolute, before housing costs,
+  // all people) offers no choice: the card shows that measure, whatever
+  // ?poverty= says, as Change in the poverty rate does, never nothing
+  const wide = hasColumn(rows, "child_poverty_rel_ahc_change_pp");
+  const poverty = wide ? chosen : { basis: "absolute", housing: "bhc", group: "all" };
   const metric = povertyMetric(poverty);
   const { tip, handlers } = useFloatingTooltip(plotRef, `${metric.key}-${selectedYear}`);
   if (!hasColumn(rows, metric.key)) return null;
@@ -202,7 +207,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           }),
       }}
       // With the choice above the pair (PovertyMeasuresRow), none in the card
-      controls={!choiceAbove && <ControlBar name={metric.title} options={controls} />}
+      controls={!choiceAbove && wide && <ControlBar name={metric.title} options={controls} />}
       footer={
         <ChartMoreInfo members={members} year={selectedYear}>
           {/* The measures that move no one, and why, here rather than under
