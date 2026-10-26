@@ -11,6 +11,7 @@
 // beside it (usePovertyChoice, ?poverty=).
 
 import { useRef } from "react";
+import CountUpText from "./CountUpText";
 import MeasureRowLabel from "./MeasureRowLabel";
 import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
@@ -290,7 +291,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: fillOf(step) }} />
                 </span>
                 <span className="wf-value" role="cell">
-                  <span className="wf-main">{main(step)}</span>
+                  <span className="wf-main"><CountUpText text={main(step)} /></span>
                 </span>
               </div>
             );

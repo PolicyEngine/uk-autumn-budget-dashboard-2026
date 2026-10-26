@@ -11,6 +11,7 @@
 // arrow keys, for each year's value ("2028: 2.0%").
 
 import { useState } from "react";
+import CountUpText from "../CountUpText";
 import useElementWidth from "../../hooks/useElementWidth";
 import Tip, { InfoTip } from "../Tip";
 
@@ -140,7 +141,7 @@ export default function HeadlineTile({ icon: Icon, name, href, hrefTip, info, va
         )}
       </div>
       <div>
-        <p className="forecast-tile-value">{value}</p>
+        <p className="forecast-tile-value">{typeof value === "string" ? <CountUpText text={value} /> : value}</p>
         <p className="forecast-tile-sub">{caption}</p>
       </div>
       <TileTrend name={name} {...trend} />
