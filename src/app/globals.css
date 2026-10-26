@@ -111,6 +111,14 @@ code {
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* The landing page (LandingPage.css): how much the Public finances view
+     behind it is faded (the share of the page background over it; more
+     over its first 240px, under the paragraph) and blurred, and the least
+     height it shows of it */
+  --landing-fade: 80%;
+  --landing-fade-top: 92%;
+  --landing-blur: 4px;
+  --landing-min-height: 640px;
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
 
@@ -637,32 +645,6 @@ body {
 
 .title-row .policy-selector-icon {
   font-size: 0.625rem;
-}
-
-/* Standfirst: the full content width */
-/* 28px to the tab bar below (20px on a phone), with no banner between */
-.dashboard-intro {
-  font-size: var(--fs-lead);
-  color: var(--pe-gray-700);
-  line-height: 1.6;
-  margin: 24px 0 28px;
-}
-
-@media (max-width: 600px) {
-  .dashboard-intro {
-    margin-bottom: 20px;
-  }
-}
-
-.dashboard-intro a {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.dashboard-intro a:hover {
-  text-decoration-color: currentColor;
 }
 
 /* A view's own lede, above its first section (Living standards) */
@@ -1538,9 +1520,6 @@ body {
     margin-top: 3px;
   }
 
-  .dashboard-intro {
-    font-size: var(--fs-body-lg);
-  }
 
 
   .preset-buttons {

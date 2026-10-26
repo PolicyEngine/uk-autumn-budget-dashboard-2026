@@ -170,7 +170,8 @@ const CASES = [
   ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
   ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
-  ["Population impact: Public finances", "finances", "/", "Public finances"],
+  // The bare address is the landing page, over this view (landing.test.jsx)
+  ["Population impact: Public finances", "finances", "/?tab=dashboard", "Public finances"],
   ["OBR forecast: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
   ["OBR forecast: Forecast changes", "outlookForecast", "/?tab=outlook&sub=forecast", "Forecast changes"],
 ];
