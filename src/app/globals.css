@@ -111,6 +111,12 @@ code {
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* The sub-tab band (SubTabs.css) and the chosen view tab that opens into
+     it: one tint, a crisp rule under the band, muted teal-grey for the
+     tabs not chosen */
+  --c-subtab-band: color-mix(in srgb, var(--pe-teal-100) 45%, var(--pe-teal-50));
+  --c-subtab-rule: var(--pe-teal-200);
+  --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
 
@@ -359,10 +365,59 @@ body {
   display: none !important;
 }
 
+/* Switching view or sub-tab: the new content fades in, rising 8px. The
+   content moves, never the sub-tab band (it sticks), and nothing keeps a
+   transform afterwards (fill backwards only). None under reduced motion. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.tab-panel:not([hidden]) > :not(.sub-tabs-band):not(.sub-tabs-sentinel),
+.sub-panel:not([hidden]) {
+  animation: panel-in 180ms ease-out backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel:not([hidden]) > :not(.sub-tabs-band):not(.sub-tabs-sentinel),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
+
 /* The view tabs: an underline tab bar under the intro, the chosen view
    underlined in the band's teal. It sticks under the band. Its background
    spans the window so nothing shows beside it while it is stuck; the tabs
    and their one rule keep to the page column. */
+/* What the sticky bars cover, on .app so a view's own heights count: the
+   title row, the view tabs and, for a view with sub-tabs, their band.
+   Once stuck the view tabs and band are compact (App.jsx sets
+   data-tabs-stuck). */
+.app {
+  --sub-band-height: 0px;
+  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
+}
+
+.app[data-sub-band] {
+  --sub-band-height: 57px;
+}
+
+@media (min-width: 601px) {
+  .app[data-tabs-stuck] {
+    --view-tabs-height: 40px;
+  }
+
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 45px;
+  }
+
+  .app[data-tabs-stuck] .view-tabs-bar {
+    box-shadow: 0 2px 6px var(--shadow-faint);
+  }
+}
+
 .view-tabs-sentinel {
   height: 0;
 }
@@ -382,9 +437,11 @@ body {
 }
 
 .view-tabs {
+  position: relative;
   display: flex;
   gap: 4px;
   height: var(--view-tabs-height);
+  transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
   overflow-y: hidden;
@@ -416,6 +473,7 @@ body {
 
 .view-tab {
   position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -451,11 +509,25 @@ body {
 
 .view-tab[aria-selected="true"] {
   color: var(--band-teal);
-  background: var(--pe-teal-50);
 }
 
-/* The underline sits on the bar's rule */
-.view-tab[aria-selected="true"]::after {
+.view-tab[aria-selected="true"]:hover {
+  background: transparent;
+}
+
+/* The chosen tab's tint and underline: one element that slides from tab
+   to tab (ViewTabs.jsx). The underline sits on the bar's rule. */
+.view-tabs-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  background: var(--pe-teal-50);
+  pointer-events: none;
+}
+
+.view-tabs-indicator::after {
   content: "";
   position: absolute;
   left: 8px;
@@ -464,6 +536,35 @@ body {
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
+}
+
+.view-tabs-indicator.is-ready {
+  transition:
+    transform 220ms cubic-bezier(0.33, 1, 0.68, 1),
+    width 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
+   same tint, no rule and no underline between them, so the band reads as
+   that tab's own */
+.view-tabs-bar.has-notch {
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+
+.view-tabs-bar.has-notch .view-tabs-indicator {
+  background: var(--c-subtab-band);
+}
+
+.view-tabs-bar.has-notch .view-tabs-indicator::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-tabs-indicator.is-ready,
+  .view-tabs {
+    transition: none;
+  }
 }
 
 /* On a phone all five views show at once, two by two, and the bar
@@ -498,9 +599,11 @@ body {
 
   .view-tab[aria-selected="true"] {
     border-color: var(--band-teal);
+    background: var(--pe-teal-50);
   }
 
-  .view-tab[aria-selected="true"]::after {
+  /* Pills two by two: each chosen pill is its own tint */
+  .view-tabs-indicator {
     display: none;
   }
 }
@@ -1483,7 +1586,6 @@ body {
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {
     --title-row-height: 60px;
-    --sticky-offset: calc(60px + var(--view-tabs-height));
   }
 
   .app[data-band="compact"] .title-row {
@@ -1667,57 +1769,78 @@ body {
 }
 
 .replication-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  display: contents;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.replication-chip {
+/* Each link after the label, set off by a middle dot */
+.replication-links li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 10px;
+}
+
+.replication-links li::before {
+  content: "·";
+  margin-right: 12px;
+  color: var(--pe-gray-400);
+}
+
+/* A plain link with its icon, underlined on hover, a small arrow then */
+.replication-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-weight: 500;
-  color: var(--pe-gray-600);
+  color: var(--pe-teal-700);
   text-decoration: none;
   white-space: nowrap;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  border-radius: 4px;
 }
 
-.replication-chip svg {
+.replication-link-icon {
   flex: none;
-  color: var(--pe-gray-500);
-  transition: color 0.15s ease;
 }
 
-.replication-chip:hover {
-  color: var(--pe-teal-700);
-  background: var(--pe-teal-50);
-  border-color: var(--pe-teal-200);
+.replication-link:hover .replication-link-label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.replication-chip:hover svg {
-  color: var(--pe-teal-700);
+.replication-link-arrow {
+  flex: none;
+  opacity: 0;
+  transform: translate(-2px, 2px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
-.replication-chip:focus-visible {
+.replication-link:hover .replication-link-arrow,
+.replication-link:focus-visible .replication-link-arrow {
+  opacity: 1;
+  transform: none;
+}
+
+.replication-link:focus-visible {
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
 }
 
+/* A phone: the label on its own line, the two links below it */
+@media (max-width: 599px) {
+  .replication-title {
+    flex-basis: 100%;
+  }
+
+  .replication-links li:first-child::before {
+    content: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .replication-chip,
-  .replication-chip svg {
+  .replication-link-arrow {
     transition: none;
   }
 }

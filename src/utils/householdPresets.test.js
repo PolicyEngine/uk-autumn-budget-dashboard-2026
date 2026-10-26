@@ -95,15 +95,19 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const changes = presetChanges(file, published);
     const figures = (id, year) => cardFigures(HOUSEHOLD_EXAMPLES.find((example) => example.id === id), changes[id], year);
     // The apprentice's own measure (employer NI relief) gives the household
-    // nothing; the line under the result names where the change comes from
+    // nothing: its chip names the measure that gives most of the change
     const apprentice = figures("apprentice-19", 2027);
     expect(Math.round(apprentice.ownPart)).toBe(0);
-    expect(apprentice.source.name).toBe("zero VAT on electricity");
-    expect(Math.round(apprentice.source.part)).toBe(Math.round(changes["apprentice-19"][2027].byPolicy.domestic_electricity_zero_vat));
-    // The pensioner's own measure gives most of it: no second line
+    expect(apprentice.top).toMatchObject({ ids: ["domestic_electricity_zero_vat"], name: "Zero VAT on electricity", own: false });
+    expect(Math.round(apprentice.top.part)).toBe(Math.round(changes["apprentice-19"][2027].byPolicy.domestic_electricity_zero_vat));
+    // The pensioner's own measure gives most of it: the chip is its own
     const pensioner = figures("pensioner-70", 2027);
-    expect(pensioner.source).toBeNull();
-    expect(Math.round(pensioner.ownPart)).toBe(Math.round(changes["pensioner-70"][2027].byPolicy.state_pension_income_tax_protection));
+    expect(pensioner.top.own).toBe(true);
+    expect(Math.round(pensioner.top.part)).toBe(Math.round(changes["pensioner-70"][2027].byPolicy.state_pension_income_tax_protection));
+    // The higher earner's own measure (the threshold freeze) gives the most
+    // only in 2031-32
+    expect(figures("higher-earner", 2027).top.own).toBe(false);
+    expect(figures("higher-earner", 2031).top).toMatchObject({ own: true, name: "Threshold freeze, 2031-32" });
     // The driver's tag is both fuel measures
     const driver = changes.driver[2027].byPolicy;
     expect(figures("driver", 2027).ownPart).toBeCloseTo(driver.fuel_duty_rise_deferral + driver.road_fuel_vat_cut);

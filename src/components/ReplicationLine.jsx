@@ -1,10 +1,11 @@
-import { Github, Package } from "lucide-react";
+import { ArrowUpRight, Github, Package } from "lucide-react";
 
 /**
- * "Reproduce these results", above the site footer: a chip to the
- * repository and one to the policyengine.py release this build's uv.lock
+ * "Reproduce these results", above the site footer, on one centred line:
+ * a plain link (with its icon) to the repository and one to the
+ * policyengine.py release this build's uv.lock
  * pins (read in next.config.ts), each opening in a new tab. A missing
- * version leaves its chip out, never guessed.
+ * version leaves its link out, never guessed.
  */
 const REPO = "PolicyEngine/uk-autumn-budget-dashboard-2026";
 
@@ -41,9 +42,10 @@ function ReplicationLine() {
       <ul className="replication-links">
         {links.map(({ key, label, title, href, Icon }) => (
           <li key={key}>
-            <a className="replication-chip" href={href} title={title} target="_blank" rel="noopener noreferrer">
-              <Icon size={14} strokeWidth={2} aria-hidden="true" />
-              {label}
+            <a className="replication-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
+              <Icon className="replication-link-icon" size={14} strokeWidth={2} aria-hidden="true" />
+              <span className="replication-link-label">{label}</span>
+              <ArrowUpRight className="replication-link-arrow" size={12} strokeWidth={2.2} aria-hidden="true" />
               <span className="visually-hidden"> (opens in a new tab)</span>
             </a>
           </li>
