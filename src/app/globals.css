@@ -1880,52 +1880,63 @@ body {
   padding: 4px 0 20px;
 }
 
-.policy-group + .policy-group {
-  margin-top: 40px;
+/* The filter above the cards: All, Raises revenue, Costs revenue, each
+   with its direction's dot (the shared ViewSwitch) */
+.policy-filter {
+  margin: 0 0 16px;
 }
 
-.policy-group-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--c-grid);
-}
-
-.policy-group-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-section);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.policy-group-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+.policy-filter-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
 }
 
-.policy-group.is-raises .policy-group-icon {
+.policy-filter-dot.is-revenue {
+  background: var(--c-loss);
+}
+
+.policy-filter-dot.is-cost {
+  background: var(--c-gain);
+}
+
+/* A card's tags: its direction, then Temporary */
+.policy-card-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.policy-card-direction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0;
+  padding: 3px 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: 999px;
+}
+
+.policy-card-direction::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.policy-card-direction.is-revenue {
   color: var(--c-loss-text);
   background: var(--c-loss-soft);
 }
 
-.policy-group.is-costs .policy-group-icon {
+.policy-card-direction.is-cost {
   color: var(--c-gain-text);
   background: var(--c-highlight-band);
-}
-
-.policy-group-count {
-  font-size: var(--fs-small);
-  color: var(--pe-gray-500);
 }
 
 /* One size and structure for every card, two to a row: fixed slots
@@ -2601,10 +2612,13 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* Both tiles one size: the row stretches them to the taller, and the
+   change sits in the last slot of the second, so the labels and values
+   line up across the two */
 .pchg-ba-tiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
   gap: 10px;
 }
 
