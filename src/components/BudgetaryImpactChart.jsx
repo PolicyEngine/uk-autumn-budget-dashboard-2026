@@ -348,7 +348,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
 
               offset={16}
 
-              content={<SegmentTooltip labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
 
             />
             {orderedPolicies.map((policyName) => (
