@@ -286,6 +286,9 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         const h = Math.max(Math.abs(y(shown) - zeroY), 0.5);
         const mine = i + 1 === decile;
         const pounds = averages?.[i + 1];
+        // Your tenth's figures give way where your marker sits on them (on
+        // hover still, and in Households like you)
+        const crowded = mine && Math.abs(y(own * grow) - (v >= 0 ? y0 : y0 + h)) < 36;
         return (
           <g key={i}>
             {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
@@ -293,12 +296,12 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
               {/* On a phone the figures are on hover or tap only */}
               <title>{`Tenth ${i + 1}: ${fmt(v)}${pounds !== undefined && unit === "pct" ? ` (${signedPounds(pounds)})` : ""}`}</title>
             </rect>
-            {grow > 0.98 && !narrow && (
+            {grow > 0.98 && !narrow && !crowded && (
               <text x={cx} y={v >= 0 ? y0 - 6 : y0 + h + 13} textAnchor="middle" fontSize={narrow ? 9.5 : 11} fontWeight={mine ? 700 : 500} fill={TEXT}>
                 {fmt(v)}
               </text>
             )}
-            {grow > 0.98 && unit === "pct" && !narrow && pounds !== undefined && (
+            {grow > 0.98 && unit === "pct" && !narrow && !crowded && pounds !== undefined && (
               <text x={cx} y={v >= 0 ? y0 - 20 : y0 + h + 27} textAnchor="middle" fontSize={10.5} fill={CHART_COLOURS.tick}>
                 {signedPounds(pounds)}
               </text>
