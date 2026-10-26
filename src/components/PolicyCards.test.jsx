@@ -71,7 +71,7 @@ describe("PolicyCards", () => {
     const policy = { ...catalogue.byId.get(ALPHA), direction: "neutral" };
     render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} />);
     expect(screen.getByRole("listitem").querySelector(".policy-card-direction")).toBeNull();
-    expect(within(screen.getByRole("group", { name: "Show measures" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["All (1)"]);
+    expect(within(screen.getByRole("group", { name: "Show measures" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["All 1"]);
   });
 
   it("shows no cards when the catalogue has no verified measures", () => {
@@ -139,14 +139,15 @@ describe("PolicyCards", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
     const filter = screen.getByRole("group", { name: "Show measures" });
     expect(within(filter).getAllByRole("button").map((b) => b.textContent)).toEqual([
-      "All (2)", "Raises revenue (1)", "Costs revenue (1)",
+      "All 2", "Raises revenue 1", "Costs revenue 1",
     ]);
-    expect(within(filter).getByRole("button", { name: "All (2)" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue (1)" }));
+    expect(screen.getByText("2 measures: 1 raise revenue, 1 cost revenue")).toBeTruthy();
+    expect(within(filter).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue 1" }));
     expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);
     expect(new URLSearchParams(window.location.search).get("pf")).toBe("costs");
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
-    fireEvent.click(within(filter).getByRole("button", { name: "All (2)" }));
+    fireEvent.click(within(filter).getByRole("button", { name: "All 2" }));
     expect(window.location.search).toBe("?tab=policies");
     cleanup();
     // Read back from the address
