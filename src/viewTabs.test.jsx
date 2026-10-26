@@ -38,7 +38,7 @@ describe("the view tabs", () => {
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
       "Household impact",
-      "Before the Budget",
+      "Pre-measures forecast",
       "Policies",
       "Methodology",
     ]);
@@ -113,12 +113,12 @@ describe("the view tabs", () => {
       ["/?tab=household", "Household impact"],
       // An old link: the view it named, at its new address
       ["/?tab=personal", "Household impact"],
-      ["/?tab=outlook", "Before the Budget"],
-      // An old link: Before the Budget was Living standards
-      ["/?tab=living", "Before the Budget"],
+      ["/?tab=outlook", "Pre-measures forecast"],
+      // An old link: Pre-measures forecast was Living standards
+      ["/?tab=living", "Pre-measures forecast"],
       // Its old Baseline outlook sub-tab: now its Living standards
-      ["/?tab=outlook&sub=baseline", "Before the Budget"],
-      ["/?tab=living&sub=baseline", "Before the Budget"],
+      ["/?tab=outlook&sub=baseline", "Pre-measures forecast"],
+      ["/?tab=living&sub=baseline", "Pre-measures forecast"],
       ["/?tab=policies", "Policies"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
@@ -333,7 +333,7 @@ describe("the view tabs", () => {
       "Figures by area",
       "Young people",
       "Household impact",
-      "Before the Budget",
+      "Pre-measures forecast",
       "Limitations",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();

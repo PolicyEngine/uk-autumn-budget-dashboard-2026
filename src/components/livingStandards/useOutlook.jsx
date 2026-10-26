@@ -4,7 +4,7 @@ import { loadOutlook } from "../../utils/livingStandards/outlook";
 /**
  * The outlook data (public/data/living_standards_outlook.json) as
  * { loading, data, error }. loadOutlook fetches it once per page, so the
- * Before the Budget view and the Population impact sub-tabs share one
+ * Pre-measures forecast view and the Population impact sub-tabs share one
  * request, whichever opens first.
  */
 export function useOutlook() {

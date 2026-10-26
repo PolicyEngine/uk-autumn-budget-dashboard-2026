@@ -43,18 +43,18 @@ import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
-// but are hidden. Before the Budget is current law (incomes and poverty
+// but are hidden. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
-// PopulationImpactView; the Before the Budget tab's (Living standards,
+// PopulationImpactView; the Pre-measures forecast tab's (Living standards,
 // Poverty, Forecast changes) in LivingStandardsTab. Living standards and Poverty
 // are twins: with the selected measures on Population impact, without them
-// (current law) on Before the Budget.
+// (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },
-  { value: "outlook", label: "Before the Budget", year: false, policies: false },
+  { value: "outlook", label: "Pre-measures forecast", year: false, policies: false },
   { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
@@ -63,7 +63,7 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
-// (?tab=living was the Before the Budget tab's address; for its old
+// (?tab=living was the Pre-measures forecast tab's address; for its old
 // ?sub=baseline see oldOutlookBaseline)
 const VIEW_ALIASES = { personal: "household", living: "outlook" };
 const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
@@ -94,7 +94,7 @@ export function opensYoungPeople({ search, hash }) {
 }
 
 /**
- * Whether a page address is an old link to the Before the Budget tab's
+ * Whether a page address is an old link to the Pre-measures forecast tab's
  * former Baseline outlook sub-tab (?tab=outlook or ?tab=living, with
  * ?sub=baseline): incomes and poverty under current law, now its Living
  * standards sub-tab, the default.
@@ -197,7 +197,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (opensYoungPeople(window.location)) dropSubTab("young");
     // A link to the decile pair opens All households, where it now is
     else if (opensDeciles(window.location)) dropSubTab("all");
-    // An old Baseline outlook link opens the Before the Budget tab's Living
+    // An old Baseline outlook link opens the Pre-measures forecast tab's Living
     // standards, its default sub-tab (?sub=forecast is still its Forecast changes)
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setLanding(opensLanding(window.location));
@@ -477,7 +477,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const populationPanel = (sub) => {
     if (selectedPolicies.length === 0) return emptyState;
     // Living standards and Poverty show the selected measures' effect; their
-    // twins on Before the Budget (same names) show current law
+    // twins on the Pre-measures forecast (same names) show current law
     const twin = (twinSub) => <TwinLink tab="outlook" sub={twinSub} onShow={handleTabChange} />;
     if (sub === "living") {
       if (!results) return null;
@@ -707,6 +707,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
+              loading={Boolean(unavailable?.loading)}
+              noneReason={unavailable?.reason}
             />
           </div>
         </div>

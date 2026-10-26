@@ -8,7 +8,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
 const INTRO =
-  /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the outlook before the Budget\. Costings are our own; forecast: OBR, Economic and fiscal outlook – March 2026\.$/;
+  /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast\. Costings are our own; forecast: OBR, Economic and fiscal outlook – March 2026\.$/;
 
 const BOXES = {
   society: /^The Budget and society/,

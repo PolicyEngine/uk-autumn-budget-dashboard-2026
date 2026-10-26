@@ -167,3 +167,33 @@ describe("mergeMembers and measureOpacity", () => {
     expect(measureOpacity(keyOf(FUEL), keyOf(NI))).toBe(FADED_OPACITY);
   });
 });
+
+describe("the net chip", () => {
+  it("is chosen like a measure: alone it fades the measures, with them it stays", async () => {
+    const { netOpacity, NET_KEY } = await import("./MeasureKey");
+    function NetCard() {
+      const key = useMeasureKey([FUEL, NI], "Net change");
+      return (
+        <div data-testid="net" data-highlight={key.highlight ?? ""}>
+          <MeasureKey members={[FUEL, NI]} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
+        </div>
+      );
+    }
+    render(<NetCard />);
+    const card = screen.getByTestId("net");
+    const net = screen.getByRole("button", { name: "Net change" });
+    expect(net).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(net);
+    expect(net).toHaveAttribute("aria-pressed", "true");
+    expect(card.dataset.highlight).toBe(NET_KEY);
+    // Alone: the measures fade, the net line does not
+    expect(measureOpacity([NET_KEY], keyOf(FUEL))).toBe(FADED_OPACITY);
+    expect(netOpacity([NET_KEY])).toBe(1);
+    // With a measure: both stay
+    fireEvent.click(screen.getByRole("button", { name: FUEL.name }));
+    expect(card.dataset.highlight.split(",").sort()).toEqual([keyOf(FUEL), NET_KEY].sort());
+    // A measure alone fades the net line; nothing chosen fades nothing
+    expect(netOpacity([keyOf(FUEL)])).toBe(FADED_OPACITY);
+    expect(netOpacity(null)).toBe(1);
+  });
+});

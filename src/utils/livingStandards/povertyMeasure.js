@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-// The poverty measure Before the Budget's Poverty sub-tab shows, one choice
+// The poverty measure Pre-measures forecast's Poverty sub-tab shows, one choice
 // for its tiles and both cards (Poverty over time, Who is in poverty): a
 // change in either card's Options moves all of them. Kept in the address
 // (?ls_poverty=relative_ahc) as the years compared are (yearRange.js).

@@ -56,6 +56,7 @@ const TERM_ICONS = {
   "Age bands": Users,
   "Single year of age": Cake,
   "Who counts": UserCheck,
+  Pensioners: Users,
   "Better or worse off": ArrowUpDown,
   Data: Database,
   Status: CircleAlert,

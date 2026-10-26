@@ -1,7 +1,7 @@
 /**
  * The link from a sub-tab to its twin in the other view: Population
  * impact's Living standards and Poverty (with the selected measures) and
- * Before the Budget's sub-tabs of the same names (without the
+ * Pre-measures forecast's sub-tabs of the same names (without the
  * measures). A real link, so it opens in a new tab too; a plain click
  * switches the view in place.
  *

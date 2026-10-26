@@ -109,18 +109,35 @@ describe("published measure catalogue in population views", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
-  it("uses published descriptions in the selector and excludes unavailable measures", () => {
+  it("lists each published measure by its short name, grouped by revenue effect, with no description, and excludes unavailable ones", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
+    expect(screen.getByRole("button", { name: "Select policies" })).toHaveTextContent(/Policies\s*All 2 policies/);
     fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
     for (const measure of catalogue.displayable) {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
-      expect(screen.getByText(measure.description)).toBeInTheDocument();
+      expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
     }
+    expect(screen.getByRole("group", { name: "Raises revenue" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Costs revenue" })).toBeInTheDocument();
     expect(screen.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
+  });
+
+  it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
+    const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
+    const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));
+    const loading = screen.getByRole("button", { name: "Select policies: loading" });
+    expect(loading).toHaveTextContent("Policies");
+    expect(loading).not.toHaveTextContent(/0 of 0/);
+    expect(loading).toBeDisabled();
+    unmount();
+    render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
+    const none = screen.getByRole("button", { name: "Select policies: No Budget results are published yet" });
+    expect(none).toHaveTextContent("No policies yet");
+    expect(none).toBeDisabled();
   });
 
   it.each([

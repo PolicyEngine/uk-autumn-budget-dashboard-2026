@@ -82,7 +82,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 - `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; loads verified publication snapshots through the catalogue, receipted artifacts and release index; keeps tab, sub-tab, measures and Household impact answers in the address.
 - `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people, Living standards, Poverty, Public finances).
 - `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
-- `src/components/livingStandards/`: the Before the Budget tab (`?tab=outlook`).
+- `src/components/livingStandards/`: the Pre-measures forecast tab (`?tab=outlook`).
 - `src/components/MethodologyTab.jsx`: Methodology.
 - `src/components/SubTabs.jsx` and `ViewTabs.jsx`: tab and sub-tab bars (`?sub=`).
 
@@ -149,7 +149,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 ### Data files
 - Files under `public/data/` are written by `uk-budget-data` and served under `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/<file>`. Budget figures use verified artifacts through `src/utils/publication/load.js` and `loadVerifiedTable`, or verified flat files through `src/utils/publication/flat.js`; a raw Budget CSV is never publication authority. The Living standards baseline and March 2026 forecast use their independent outlook loader.
 - Every file under `public/` is a publication and needs a review row; see "Review and sign-off" in the README.
-- The Before the Budget file's shape is in `docs/DATA_CONTRACT.md`.
+- The Pre-measures forecast file's shape is in `docs/DATA_CONTRACT.md`.
 
 ## URL State Management
 - Sync state to URL: Update query params when policies/params change

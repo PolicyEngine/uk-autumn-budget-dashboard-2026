@@ -47,6 +47,18 @@ export function isHighlighted(highlight, seriesKey) {
   return Array.isArray(highlight) ? highlight.includes(seriesKey) : highlight === seriesKey;
 }
 
+/** The net line's key in the highlight: its chip is chosen like a measure's. */
+export const NET_KEY = "net";
+
+/**
+ * Opacity for the net line (or dots): full when nothing is chosen or the
+ * net is among the chosen, faded while only measures are.
+ */
+export function netOpacity(highlight) {
+  if (!highlight || highlight.length === 0) return 1;
+  return isHighlighted(highlight, NET_KEY) ? 1 : FADED_OPACITY;
+}
+
 /** Fill opacity for a measure's series given the highlighted series keys. */
 export function measureOpacity(highlight, seriesKey) {
   if (!highlight || highlight.length === 0) return 1;
@@ -198,6 +210,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
   // A pinned measure that leaves the key (deselected, or no effect this
   // year) no longer counts
   const live = new Set(members.filter((member) => !member.muted).map(keyOf));
+  if (netLabel) live.add(NET_KEY);
   const pinnedLive = pinned.filter((key) => live.has(key));
   // The charts follow the pinned set, with a hovered chip previewed on top;
   // null when nothing is pinned or hovered
@@ -252,12 +265,26 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
           <div className="measure-key-group measure-key-extra">
             <ul className="measure-key-chips">
               {netLabel && (
-                <li className="measure-key-chip is-net">
-                  <svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true" className="measure-key-net-icon">
-                    <line x1="0" y1="5" x2="18" y2="5" />
-                    <circle cx="9" cy="5" r="3" />
-                  </svg>
-                  <span className="measure-key-label">{netLabel}</span>
+                // The net line is chosen like a measure: alone, the measures
+                // fade; with measures, it stays with them
+                <li className="measure-key-chip-item" data-net="">
+                  <button
+                    type="button"
+                    className={`measure-key-chip is-net${pinnedLive.includes(NET_KEY) ? " is-active" : ""}`}
+                    aria-label={netLabel}
+                    aria-pressed={pinnedLive.includes(NET_KEY)}
+                    onMouseEnter={() => setHovered(NET_KEY)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setHovered(NET_KEY)}
+                    onBlur={() => setHovered(null)}
+                    onClick={() => pin(NET_KEY)}
+                  >
+                    <svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true" className="measure-key-net-icon">
+                      <line x1="0" y1="5" x2="18" y2="5" />
+                      <circle cx="9" cy="5" r="3" />
+                    </svg>
+                    <span className="measure-key-label">{netLabel}</span>
+                  </button>
                 </li>
               )}
               {pinnedLive.length > 0 && (
