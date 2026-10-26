@@ -2166,6 +2166,7 @@ body {
 
 .pspec-unit {
   margin-right: 8px;
+  white-space: nowrap;
   font-size: var(--fs-micro);
   font-weight: 400;
   color: var(--pe-gray-500);
@@ -2180,7 +2181,9 @@ body {
 }
 
 .pspec-spark {
-  vertical-align: middle;
+  display: inline-block;
+  float: right;
+  margin: 1px 4px 0 8px;
   overflow: visible;
 }
 
@@ -2248,6 +2251,7 @@ body {
 }
 
 .pspec-arrow {
+  display: inline-block;
   margin-right: 6px;
   vertical-align: -1px;
   color: var(--pe-gray-300);
@@ -2281,10 +2285,14 @@ body {
   background: var(--c-loss-soft);
 }
 
-.pspec-chip.is-neutral,
-.pspec-chip.is-same {
+.pspec-chip.is-neutral {
   color: var(--pe-gray-600);
   background: var(--pe-gray-100);
+}
+
+.pspec-chip.is-same {
+  font-weight: 400;
+  color: var(--pe-gray-500);
 }
 
 .pspec-line.is-same .pspec-after {
@@ -2317,14 +2325,15 @@ body {
   position: absolute;
   top: -4px;
   bottom: -4px;
-  background: var(--c-highlight-band);
+  background: var(--c-gain-light);
+  opacity: 0.35;
   border-radius: 4px;
   pointer-events: none;
 }
 
 .policy-timeline-labels > span.is-lit {
-  font-weight: 600;
-  color: var(--pe-gray-900);
+  font-weight: 700;
+  color: var(--c-gain-text);
 }
 
 @media (max-width: 768px) {
