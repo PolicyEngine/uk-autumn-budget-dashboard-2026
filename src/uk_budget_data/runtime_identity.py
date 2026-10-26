@@ -7,6 +7,7 @@ sits beside. The household API builds single-household simulations without a
 dataset, so its identity is the installed packages and the build's git SHA.
 """
 
+import hashlib
 import os
 import re
 import subprocess
@@ -45,7 +46,7 @@ def runtime_identity() -> dict:
     }
 
 
-FULL_COMMIT = re.compile(r"[0-9a-f]{40}")
+FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 # What a Modal deploy copies from the checkout into its image
 # (``modal_household.build_image``)
@@ -57,42 +58,117 @@ DEPLOYED_PATHS = (
     "src/uk_budget_data",
 )
 
+# Folders the image leaves out of a copied directory (``build_image``'s
+# ``ignore``), by the directory they are left out of
+IMAGE_LEAVES_OUT = {"src/uk_budget_data": "__pycache__"}
+
+_OBJECT_HASH = {"sha1": hashlib.sha1, "sha256": hashlib.sha256}
+
+
+def _git(root: Path, *args: str) -> bytes:
+    return subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, check=True
+    ).stdout
+
+
+def _blob_id(data: bytes, object_format: str) -> str:
+    """The id git gives a blob of exactly these bytes."""
+    digest = _OBJECT_HASH[object_format]()
+    digest.update(b"blob %d\0" % len(data))
+    digest.update(data)
+    return digest.hexdigest()
+
+
+def _copied_files(root: Path, paths: tuple[str, ...]):
+    """Every file under ``paths`` the image would copy, as repository paths,
+    and every symbolic link among them (which the comparison refuses: git
+    records a link, the upload its target's bytes)."""
+    files, links = [], []
+    for top in paths:
+        start = root / top
+        if start.is_symlink():
+            links.append(top)
+        elif start.is_file():
+            files.append(top)
+        elif start.is_dir():
+            skip = IMAGE_LEAVES_OUT.get(top)
+            for folder, dirs, names in os.walk(start):
+                here = Path(folder).relative_to(root).as_posix()
+                for name in list(dirs):
+                    if (Path(folder) / name).is_symlink():
+                        links.append(f"{here}/{name}")
+                        dirs.remove(name)
+                    elif name == skip:
+                        dirs.remove(name)
+                for name in names:
+                    path = f"{here}/{name}"
+                    (
+                        links if (Path(folder) / name).is_symlink() else files
+                    ).append(path)
+    return files, links
+
+
+def checkout_differences(
+    root: Path, paths: tuple[str, ...] = DEPLOYED_PATHS
+) -> Optional[list[str]]:
+    """The files a deploy from ``root`` would copy whose bytes are not
+    HEAD's: edited, added (untracked or ignored alike), missing, or a
+    symbolic link. An empty list means the copy is exactly HEAD's tree.
+    None when git can't say (no repository, no HEAD).
+
+    It reads the files themselves and HEAD's tree, never git's index or
+    status, so a file git has been told not to check (``assume-unchanged``,
+    ``skip-worktree``) is compared like any other.
+    """
+    try:
+        object_format = (
+            _git(root, "rev-parse", "--show-object-format").decode().strip()
+        )
+        tree = _git(root, "ls-tree", "-r", "-z", "HEAD", "--", *paths)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    if object_format not in _OBJECT_HASH:
+        return None
+    committed = {}
+    for entry in tree.split(b"\0"):
+        if not entry:
+            continue
+        meta, _, name = entry.partition(b"\t")
+        mode, kind, object_id = meta.decode().split()
+        # A link or submodule in the tree never equals uploaded bytes
+        committed[name.decode()] = (
+            object_id
+            if kind == "blob" and mode in ("100644", "100755")
+            else None
+        )
+    files, links = _copied_files(root, paths)
+    differ = set(links)
+    for path in files:
+        expected = committed.get(path)
+        if (
+            expected is None
+            or _blob_id((root / path).read_bytes(), object_format) != expected
+        ):
+            differ.add(path)
+    differ.update(path for path in committed if path not in files)
+    return sorted(differ)
+
 
 def checkout_commit(
     root: Path, paths: tuple[str, ...] = DEPLOYED_PATHS
 ) -> Optional[str]:
     """The commit a deploy from the checkout at ``root`` builds: HEAD, if
-    the files it copies (``paths``) are exactly HEAD's.
+    every file it copies (``paths``) has exactly HEAD's bytes and nothing
+    else is copied (``checkout_differences``).
 
-    None when any of them is edited, untracked or ignored (``__pycache__``
-    aside, which the image leaves out), or git can't say. A build from such
-    a checkout is no commit, so it reports none rather than one it doesn't
-    match, and the page then never uses its answers beside another build's.
+    Otherwise None. A build from such a checkout is no commit, so it reports
+    none rather than one it doesn't match, and the page then never uses its
+    answers beside another build's.
     """
-
-    def git(*args: str) -> str:
-        return subprocess.run(
-            ["git", "-C", str(root), *args],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
-
+    if checkout_differences(root, paths) != []:
+        return None
     try:
-        commit = git("rev-parse", "--verify", "HEAD").strip()
-        status = git(
-            "status",
-            "--porcelain",
-            "--untracked-files=all",
-            "--ignored",
-            "--",
-            *paths,
-        )
+        commit = _git(root, "rev-parse", "--verify", "HEAD").decode().strip()
     except (OSError, subprocess.CalledProcessError):
         return None
-    changed = [
-        line for line in status.splitlines() if "__pycache__/" not in line
-    ]
-    if changed or not FULL_COMMIT.fullmatch(commit):
-        return None
-    return commit
+    return commit if FULL_COMMIT.fullmatch(commit) else None

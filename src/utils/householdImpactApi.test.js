@@ -336,9 +336,99 @@ describe("the household answer's package versions", () => {
 
   it("keeps the build commit an answer reports, and none for a missing or empty one", () => {
     expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).build).toBe(A);
-    for (const git_sha of [undefined, null, "", 7]) {
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).builds).toEqual([A]);
+    for (const git_sha of [undefined, null, ""]) {
       expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).build).toBeNull();
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).builds).toEqual([]);
     }
+  });
+
+  // Review of e78fbf4: a malformed commit matched an identical malformed one
+  it("matches a malformed commit with nothing, not even itself", () => {
+    const headline = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null, sweep: null });
+    const part = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha });
+    for (const bad of [7, "abc", "A".repeat(40), "a".repeat(39), ` ${A}`]) {
+      expect(stageMismatch(headline(bad), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(A), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(bad), part(A)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(null), part(bad), { sameBuild: true }).packages).toEqual(["build"]);
+    }
+    // A 64-character commit (a SHA-256 repository) is well formed
+    const long = "f".repeat(64);
+    expect(stageMismatch(headline(long), part(long), { sameBuild: true })).toBeNull();
+  });
+
+  // Review of e78fbf4, finding 2: under a headline that reports no commit,
+  // a sweep from one Cloud Run revision and a split from another each
+  // passed against the headline's null, and made a complete result
+  it("never puts two parts from different commits together, under any headline", () => {
+    const parts = {
+      sweep: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null }),
+      byPolicy: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, sweep: null }),
+    };
+    for (const headlineBuild of [null, A]) {
+      const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineBuild, by_policy: null, sweep: null });
+      for (const [firstPart, secondPart] of [["sweep", "byPolicy"], ["byPolicy", "sweep"]]) {
+        for (const [one, two] of [[A, B], [B, A]]) {
+          if (headlineBuild !== null && one !== headlineBuild) {
+            expect(() => mergeStages(headline, parts[firstPart](one))).toThrow(StageMismatchError);
+            continue;
+          }
+          const half = mergeStages(headline, parts[firstPart](one));
+          // The headline's own commit is kept apart from what its parts reported
+          expect(half.build).toBe(headlineBuild);
+          expect(half.builds).toEqual([one]);
+          expect(() => mergeStages(half, parts[secondPart](two))).toThrow(StageMismatchError);
+          expect(stageMismatch(half, parts[secondPart](two)).packages).toEqual(["build"]);
+          // The same commit, or none, completes it
+          expect(mergeStages(half, parts[secondPart](one)).builds).toEqual([one]);
+          expect(mergeStages(half, parts[secondPart](null)).builds).toEqual([one]);
+        }
+      }
+    }
+  });
+
+  it("never lets a part's commit stand in for a headline that reports none", () => {
+    const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: null, by_policy: null, sweep: null });
+    const half = mergeStages(headline, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, by_policy: null }));
+    // A retry from this partial result still refuses the detail service
+    const modal = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, sweep: null });
+    expect(stageMismatch(half, modal, { sameBuild: true }).packages).toEqual(["build"]);
+    expect(stageMismatch(half, modal)).toBeNull();
+  });
+
+  // Every reported commit, the headline's and each part's in turn, must be
+  // one well-formed commit; answers that report none are compared on the
+  // rest. The oracle reads only the raw answers.
+  it("merges a sequence of parts exactly when every commit they report is one", () => {
+    const raw = fc.constantFrom(null, A, B, "not-a-commit");
+    fc.assert(fc.property(raw, fc.array(raw, { minLength: 1, maxLength: 4 }), (headlineSha, partShas) => {
+      let result = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineSha, by_policy: null, sweep: null });
+      let refused = false;
+      for (const git_sha of partShas) {
+        try {
+          result = mergeStages(result, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }));
+        } catch (error) {
+          expect(error).toBeInstanceOf(StageMismatchError);
+          refused = true;
+          break;
+        }
+      }
+      // Up to the first refusal, in order
+      const asked = [headlineSha, ...partShas];
+      let expectRefused = false;
+      const reported = [];
+      for (const sha of asked) {
+        if (sha === null) continue;
+        if (reported.length && !(reported.every((seen) => seen === sha) && /^[0-9a-f]{40}$/.test(sha) && /^[0-9a-f]{40}$/.test(reported[0]))) {
+          expectRefused = true;
+          break;
+        }
+        reported.push(sha);
+      }
+      expect(refused).toBe(expectRefused);
+      if (!refused) expect(result.build).toEqual(headlineSha === "not-a-commit" ? { malformed: headlineSha } : headlineSha);
+    }));
   });
 
   // The detail service's answers (sameBuild) must report the headline's

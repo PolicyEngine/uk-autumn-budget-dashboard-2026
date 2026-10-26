@@ -2,15 +2,23 @@
 
 Cloud Run's comes from the deploy (``_GIT_SHA``, checked against the
 uploaded source). A Modal deploy copies files from the checkout it runs in,
-so its commit is that checkout's HEAD, and only when the copied files are
-exactly HEAD's (``checkout_commit``).
+so its commit is that checkout's HEAD, and only when every copied file has
+exactly HEAD's bytes and nothing else is copied (``checkout_commit``). The
+comparison reads the files and HEAD's tree, never git's index or status:
+review of e78fbf4, finding 1.
 """
 
+import os
 import subprocess
 
 import pytest
 
-from uk_budget_data.runtime_identity import DEPLOYED_PATHS, checkout_commit
+from uk_budget_data.runtime_identity import (
+    DEPLOYED_PATHS,
+    IMAGE_LEAVES_OUT,
+    checkout_commit,
+    checkout_differences,
+)
 
 
 def _git(root, *args):
@@ -105,6 +113,86 @@ def test_files_the_image_leaves_out_do_not_count(checkout):
 
 def test_no_repository_reports_no_commit(tmp_path):
     assert checkout_commit(tmp_path) is None
+    assert checkout_differences(tmp_path) is None
+
+
+# Review of e78fbf4, finding 1: git status can be told not to look at a
+# tracked file, but Modal uploads the file's bytes all the same
+@pytest.mark.parametrize("flag", ["--assume-unchanged", "--skip-worktree"])
+def test_an_edit_git_has_been_told_to_ignore_still_counts(checkout, flag):
+    target = "src/uk_budget_data/reforms.py"
+    _git(checkout, "update-index", flag, target)
+    (checkout / target).write_text("X = 2\n")
+    # git itself no longer sees the edit
+    assert _git(checkout, "status", "--porcelain", "--", target) == ""
+    assert checkout_differences(checkout) == [target]
+    assert checkout_commit(checkout) is None
+
+
+def test_a_cache_folder_counts_where_the_image_copies_it(checkout):
+    # The image leaves __pycache__ out of src/uk_budget_data only; under
+    # data_inputs it is uploaded like any other folder
+    cache = checkout / "data_inputs" / "__pycache__"
+    cache.mkdir()
+    (cache / "x.pyc").write_bytes(b"\0")
+    assert checkout_differences(checkout) == ["data_inputs/__pycache__/x.pyc"]
+    assert checkout_commit(checkout) is None
+
+
+def test_a_rename_counts_both_ways(checkout):
+    old = checkout / "data_inputs" / "rates.csv"
+    old.rename(checkout / "data_inputs" / "__pycache__rates.csv")
+    assert checkout_differences(checkout) == [
+        "data_inputs/__pycache__rates.csv",
+        "data_inputs/rates.csv",
+    ]
+
+
+@pytest.mark.parametrize("kind", ["file", "folder"])
+def test_a_symbolic_link_counts(checkout, kind):
+    # git records a link; the upload carries what it points at
+    target = checkout / "docs"
+    link = checkout / "src" / "uk_budget_data" / "linked"
+    if kind == "file":
+        os.symlink(target / "runbook.md", link)
+    else:
+        os.symlink(target, link)
+    assert checkout_differences(checkout) == ["src/uk_budget_data/linked"]
+    assert checkout_commit(checkout) is None
+
+
+def test_a_committed_symbolic_link_counts(checkout):
+    os.symlink("reforms.py", checkout / "src" / "uk_budget_data" / "alias.py")
+    _git(checkout, "add", "-A")
+    _git(checkout, "commit", "-q", "-m", "link")
+    assert checkout_differences(checkout) == ["src/uk_budget_data/alias.py"]
+    assert checkout_commit(checkout) is None
+
+
+def test_a_mode_change_alone_does_not_count(checkout):
+    # The upload carries bytes, which a mode change leaves alone
+    head = _git(checkout, "rev-parse", "HEAD")
+    os.chmod(checkout / "src" / "uk_budget_data" / "reforms.py", 0o755)
+    assert checkout_commit(checkout) == head
+
+
+def test_an_identical_rewrite_does_not_count(checkout):
+    # Same bytes, new timestamp: still HEAD's
+    head = _git(checkout, "rev-parse", "HEAD")
+    target = checkout / "data_inputs" / "rates.csv"
+    target.write_bytes(target.read_bytes())
+    assert checkout_commit(checkout) == head
+
+
+def test_only_head_s_tree_matters_not_the_index(
+    checkout,
+):
+    # A committed file the image copies is now ignored and removed from the
+    # index: status shows it as deleted, the copy still has it. Compared
+    # with HEAD's tree it is the same file, so it doesn't count
+    head = _git(checkout, "rev-parse", "HEAD")
+    _git(checkout, "rm", "-q", "--cached", "data_inputs/rates.csv")
+    assert checkout_commit(checkout) == head
 
 
 def test_the_deployed_paths_are_what_the_modal_image_copies():
@@ -134,3 +222,7 @@ def test_the_deployed_paths_are_what_the_modal_image_copies():
     }
     assert '"GIT_SHA": commit or ""' in source
     assert "checkout_commit(root)" in source
+    # The folders the image leaves out are the ones the comparison skips
+    assert IMAGE_LEAVES_OUT == {"src/uk_budget_data": "__pycache__"}
+    assert source.count("ignore=") == 1
+    assert 'ignore=["**/__pycache__/**"]' in source

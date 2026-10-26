@@ -117,7 +117,7 @@ describe("Personal impact's live answers", () => {
     const BUILD = "c".repeat(40);
     const partOf = (body) => (body.include.length === 0 ? "headline" : body.include[0]);
     const fromMain = (body) => ({ ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine, git_sha: BUILD });
-    const twoServices = (calls, detailAnswer, mainAnswer = fromMain) => {
+    const twoServices = (calls, detailAnswer, mainAnswer = fromMain, { statusOf = () => 200 } = {}) => {
       vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
       vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
       vi.stubGlobal("fetch", async (url, init) => {
@@ -126,7 +126,8 @@ describe("Personal impact's live answers", () => {
         // and both services run the approved definitions (#136)
         const detail = String(url).split("?")[0] === DETAIL;
         calls.push(`${detail ? "detail" : "main"}:${partOf(body)}`);
-        return Response.json({ definitions: reportedDefinitions(url), ...(detail ? detailAnswer(body) : mainAnswer(body)) });
+        const answer = await (detail ? detailAnswer(body) : mainAnswer(body));
+        return Response.json({ definitions: reportedDefinitions(url), ...answer }, { status: statusOf(answer) });
       });
     };
     const fromDetail = (change = () => ({})) => (body) => {
@@ -180,6 +181,53 @@ describe("Personal impact's live answers", () => {
       const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
       expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+    });
+
+    // Review of e78fbf4, finding 2: under a headline with no commit, each
+    // Cloud Run part passed against that null, from whichever revision
+    for (const sweepFirst of [true, false]) {
+      it(`takes the whole answer away when Cloud Run's two parts report different commits under a headline with none (${sweepFirst ? "sweep" : "split"} first)`, async () => {
+        const calls = [];
+        twoServices(calls, fromDetail(), async (body) => {
+          const part = partOf(body);
+          if (part !== "headline") await new Promise((resolve) => setTimeout(resolve, (part === "sweep") === sweepFirst ? 0 : 60));
+          return { ...fromMain(body), git_sha: { headline: null, sweep: "d".repeat(40), by_policy: "e".repeat(40) }[part] };
+        });
+        const hook = renderHook(() => useHouseholdImpact(params));
+        await waitFor(() => expect(hook.result.current.status).toBe("error"));
+        expect(hook.result.current.error.packages).toEqual(["build"]);
+        expect(hook.result.current.data).toBeNull();
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        expect(hook.result.current.data).toBeNull();
+      });
+    }
+
+    it("refuses a retried part from another commit than the part already cached", async () => {
+      const calls = [];
+      let splits = 0;
+      twoServices(
+        calls,
+        () => ({ detail: "down" }),
+        (body) => {
+          const part = partOf(body);
+          if (part === "by_policy") {
+            splits += 1;
+            // Cloud Run fails the split once, then answers from another revision
+            if (splits === 1) return { status: 503 };
+          }
+          return { ...fromMain(body), git_sha: { headline: null, sweep: "d".repeat(40), by_policy: "e".repeat(40) }[part] };
+        },
+        { statusOf: (answer) => answer.status ?? (answer.detail === "down" ? 503 : 200) },
+      );
+      const hook = renderHook(() => useHouseholdImpact(params));
+      await waitFor(() => expect(hook.result.current.detailStatus).toBe("error"));
+      // The sweep from commit d is shown, and cached as a partial result
+      expect(hook.result.current.data.sweep).not.toBeNull();
+      expect(hook.result.current.data.byPolicy).toBeNull();
+      act(() => hook.result.current.retry());
+      await waitFor(() => expect(hook.result.current.status).toBe("error"));
+      expect(hook.result.current.error.packages).toEqual(["build"]);
+      expect(hook.result.current.data).toBeNull();
     });
 
     it("takes the whole answer away when the main API's breakdown reports another commit than its headline", async () => {
