@@ -271,15 +271,27 @@ def test_presets_recording_another_definition_fail_and_name_it(tmp_path):
     recorded = {**APPROVED, "vat": approval("2" * 40)}
     path = presets_with(tmp_path, IDS, recorded)
     (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records other definitions" in problem
     assert "for vat," in problem and "fuel" not in problem
-    # A measure missing from the record, or one the code could not bind
-    for other in (
-        {"fuel": APPROVED["fuel"]},
-        {**APPROVED, "vat": {"error": "x"}},
-    ):
-        path = presets_with(tmp_path, IDS, other)
+    # One the code could not bind records another definition
+    path = presets_with(tmp_path, IDS, {**APPROVED, "vat": {"error": "x"}})
+    (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records other definitions" in problem and "for vat," in problem
+
+
+def test_presets_leaving_a_measure_out_say_it_records_none_for_it(tmp_path):
+    # Review of 79ae9c12, P3: a measure missing from the record (or null)
+    # records no definition, not another one
+    for recorded in ({"fuel": APPROVED["fuel"]}, {**APPROVED, "vat": None}):
+        path = presets_with(tmp_path, IDS, recorded)
         (problem,) = check.preset_problems(path, IDS, PACKAGES, APPROVED)
-        assert "for vat," in problem
+        assert "records no definition for vat," in problem
+        assert "other definitions" not in problem and "fuel" not in problem
+    # Both at once: each named under its own
+    path = presets_with(tmp_path, IDS, {"fuel": approval("2" * 40)})
+    missing, other = check.preset_problems(path, IDS, PACKAGES, APPROVED)
+    assert "records no definition for vat," in missing
+    assert "records other definitions" in other and "for fuel," in other
 
 
 def test_an_answer_reporting_another_definition_is_counted(tmp_path):

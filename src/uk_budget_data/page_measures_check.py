@@ -179,10 +179,17 @@ def _definition_problems(
             f"will not use it; {rerun}"
         ]
     problems = []
+    missing = [key for key in checked if recorded.get(key) is None]
+    if missing:
+        problems.append(
+            f"{presets_file} records no definition for {', '.join(missing)}, "
+            f"so the page will not use it; {rerun}"
+        )
     differ = [
         key
         for key in checked
-        if definitions.differences(approved[key], recorded.get(key))
+        if key not in missing
+        and definitions.differences(approved[key], recorded[key])
     ]
     if differ:
         problems.append(

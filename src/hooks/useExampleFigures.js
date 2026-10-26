@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
+  DefinitionMismatchError,
   HEADLINE_INCLUDE,
+  UNREGISTERED_PROBLEM,
   buildHouseholdRequest,
   definitionRefusals,
   engineDifferences,
@@ -98,9 +100,25 @@ function storeList(key, list) {
 
 /**
  * The measures a refusal names as unknown to the API (its 422: "Unknown
- * measures: a, b" on `policies`), or null for any other error.
+ * measures: a, b" on `policies`), or null for any other error. The client
+ * gives that 422 as a DefinitionMismatchError when it names only measures
+ * the request asked with: unknown only if every measure it refuses is one
+ * the running code doesn't register, so a definition that differs is
+ * never dropped from the selection.
  */
 export function unknownMeasures(error) {
+  if (error instanceof DefinitionMismatchError) {
+    const unregistered =
+      !error.unchecked &&
+      error.refused.length > 0 &&
+      error.refused.every(
+        (item) =>
+          Array.isArray(item?.problems) &&
+          item.problems.length > 0 &&
+          item.problems.every((problem) => problem === UNREGISTERED_PROBLEM),
+      );
+    return unregistered ? error.refused.map((item) => item.id) : null;
+  }
   const messages = [error?.message ?? "", ...(error?.fields ?? []).map((field) => field?.message ?? "")];
   for (const message of messages) {
     const match = /Unknown measures?:\s*([^"\]]+)/.exec(message);

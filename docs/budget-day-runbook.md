@@ -973,7 +973,7 @@ git status --short public/data                                  # review the dif
 - **Before the page lists a new measure, every household API it calls must know it, and the examples must be recomputed.** The page sends every displayable measure in `public/data/manifest.json` to the household API. An API deployed from an older commit refuses the new ones ("Unknown measures: …"), so Household impact shows an error. The example cards don't call the API: they read `public/data/household_presets.json`, so stale presets show the previous measures' answers with no error at all. Drill 5 hit both (#144). So, in this order:
   1. Deploy the household API from the commit that registers the measures: Cloud Run ("Deploy the household API") and, if the page uses it, the Modal app (`modal deploy src/uk_budget_data/modal_household.py`).
   2. Recompute the examples on that commit: `bun scripts/household-preset-requests.mjs > /tmp/requests.json`, then `uv run python scripts/precompute_household_presets.py /tmp/requests.json`. Commit `household_presets.json` with its review row.
-  3. Check both before the page publishes. It exits 1, naming each refused measure or stale preset: one computed for other measures, on another engine, or recording other definitions than the receipts approved (the page would ignore it and ask the API for every card):
+  3. Check both before the page publishes. It exits 1, naming each refused measure or stale preset: one computed for other measures, on another engine, or recording no definition, or another one, for a measure the receipts approved (the page would ignore it and ask the API for every card):
 
      ```sh
      uv run python -m uk_budget_data.page_measures_check --base-url "$HOUSEHOLD_API" --base-url "$HOUSEHOLD_DETAIL_API"

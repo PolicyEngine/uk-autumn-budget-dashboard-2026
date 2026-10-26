@@ -250,6 +250,9 @@ export function requestKey(body) {
 /** How the API words a measure its code doesn't register (`uk_budget_data.definitions.UNREGISTERED`). */
 export const UNREGISTERED = contract.definition_unregistered;
 
+/** A DefinitionMismatchError's problem for a measure the running code doesn't register. */
+export const UNREGISTERED_PROBLEM = `the running code cannot bind it: ${UNREGISTERED}`;
+
 /**
  * The requested measures a 422 says the running code doesn't register
  * (`HouseholdImpactRequest._known_measures`: "Unknown measures: a, b" on
@@ -393,7 +396,7 @@ export async function postHouseholdImpact(
   const unregistered = response.status === 422 ? unregisteredMeasures(detail, body.policies) : [];
   if (unregistered.length) {
     throw new DefinitionMismatchError(
-      unregistered.map((id) => ({ id, problems: [`the running code cannot bind it: ${UNREGISTERED}`] })),
+      unregistered.map((id) => ({ id, problems: [UNREGISTERED_PROBLEM] })),
     );
   }
   if (response.status === 422 && Array.isArray(detail)) {

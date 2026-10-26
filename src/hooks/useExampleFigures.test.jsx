@@ -3,8 +3,15 @@ import fc from "fast-check";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import useExampleFigures, { EXAMPLE_FILL_CONCURRENCY, exampleKey, readStoredHeadline, runLimited, unknownMeasures } from "./useExampleFigures";
 import { clearHouseholdImpactCache, peekHouseholdImpact, seedHouseholdImpactCache } from "./useHouseholdImpact";
-import { HouseholdApiError, buildHouseholdRequest, normaliseHouseholdImpact } from "../utils/householdImpactApi";
-import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
+import {
+  DefinitionMismatchError,
+  HouseholdApiError,
+  UNREGISTERED_PROBLEM,
+  buildHouseholdRequest,
+  normaliseHouseholdImpact,
+  postHouseholdDetail,
+} from "../utils/householdImpactApi";
+import { APPROVED_COMMIT, approvedDefinition, reportedDefinitions, requestedDefinitions, route } from "../test/definitionsFixture";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import { presetInputs } from "../utils/householdPresets";
@@ -141,6 +148,56 @@ describe("the example cards' background figures", () => {
     await waitFor(() => expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]?.change).toBe(7));
     expect(result.current.reduced).toEqual(["fuel_duty_rise_deferral"]);
     expect(result.current.failed.size).toBe(0);
+  });
+
+  // Review of 79ae9c12, P2: the client gives this 422 as a
+  // DefinitionMismatchError, which the fill must still read as unknown
+  // measures, through the real client and with a detail URL, as the page
+  // asks
+  it("asks again without measures the running code does not register, from the API's own 422", async () => {
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = "https://detail.example/api/household-impact";
+    const asked = [];
+    const fetchImpl = vi.fn(async (url, init) => {
+      const body = JSON.parse(init.body);
+      asked.push({ url: String(url), policies: body.policies });
+      const reply = body.policies.includes("mock_measure")
+        ? {
+            status: 422,
+            value: {
+              detail: [{ type: "value_error", loc: ["body", "policies"], msg: "Value error, Unknown measures: mock_measure", input: body.policies, ctx: { error: {} } }],
+            },
+          }
+        : {
+            status: 200,
+            value: { year: body.year, net_income: { baseline: 100, reform: 107, change: 7 }, definitions: reportedDefinitions(url) },
+          };
+      return new Response(JSON.stringify(reply.value), { status: reply.status, headers: { "Content-Type": "application/json" } });
+    });
+    const post = (body, options) => postHouseholdDetail(body, { ...options, fetchImpl });
+    try {
+      const { result } = render({ post, policies: ["fuel_duty_rise_deferral", "mock_measure"] });
+      await waitFor(() => expect(result.current.pending.size).toBe(0), { timeout: 5000 });
+      expect(result.current.reduced).toEqual(["fuel_duty_rise_deferral"]);
+      expect(result.current.failed.size).toBe(0);
+      for (const example of EXAMPLES) {
+        for (const y of SELECTABLE_YEARS) expect(result.current.figures[example.id][y].change).toBe(7);
+      }
+      // The first cell alone with the measure (the detail URL, then the main
+      // API), then every cell without it, each from the detail URL
+      const withIt = asked.filter((call) => call.policies.includes("mock_measure"));
+      expect(withIt.map((call) => route(call.url))).toEqual([
+        "https://detail.example/api/household-impact",
+        "https://api.example/api/household-impact",
+      ]);
+      const without = asked.filter((call) => !call.policies.includes("mock_measure"));
+      expect(without).toHaveLength(CELLS);
+      for (const call of without) {
+        expect(route(call.url)).toBe("https://detail.example/api/household-impact");
+        expect(requestedDefinitions(call.url)).toEqual([["fuel_duty_rise_deferral", APPROVED_COMMIT]]);
+      }
+    } finally {
+      delete process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL;
+    }
   });
 
   it("asks nothing with no API, nothing selected, or while disabled", () => {
@@ -380,5 +437,35 @@ describe("the fill's helpers", () => {
   it("unknownMeasures reads the API's refusal, and nothing else", () => {
     expect(unknownMeasures({ message: "x", fields: [{ message: "Value error, Unknown measures: a_b, c" }] })).toEqual(["a_b", "c"]);
     expect(unknownMeasures(new Error("timeout"))).toBeNull();
+    // The client's form of the same 422
+    const unregistered = (id) => ({ id, problems: [UNREGISTERED_PROBLEM] });
+    expect(unknownMeasures(new DefinitionMismatchError([unregistered("a_b"), unregistered("c")]))).toEqual(["a_b", "c"]);
+    // A definition that differs is a refusal, never an unknown measure
+    const differs = { id: "c", problems: ["git_sha: approved cccc, reported eeee"] };
+    expect(unknownMeasures(new DefinitionMismatchError([differs]))).toBeNull();
+    expect(unknownMeasures(new DefinitionMismatchError([unregistered("a_b"), differs]))).toBeNull();
+    expect(unknownMeasures(new DefinitionMismatchError([{ id: "a_b", problems: [UNREGISTERED_PROBLEM, "git_sha: other"] }]))).toBeNull();
+    expect(unknownMeasures(new DefinitionMismatchError([{ id: "a_b", problems: [] }]))).toBeNull();
+    expect(unknownMeasures(new DefinitionMismatchError([unregistered("a_b")], { unchecked: true }))).toBeNull();
+    expect(unknownMeasures(new DefinitionMismatchError([]))).toBeNull();
+  });
+
+  it("unknownMeasures drops a measure only when every refusal says the running code does not register it", () => {
+    const problem = fc.oneof(
+      fc.constant(UNREGISTERED_PROBLEM),
+      fc.constant("git_sha: approved cccc, reported eeee"),
+      fc.constant("the running code cannot bind it: refused"),
+      fc.constant("the running code cannot bind it: no reason given"),
+    );
+    const item = fc.record({ id: fc.constantFrom("a", "b", "c"), problems: fc.array(problem, { maxLength: 3 }) });
+    fc.assert(
+      fc.property(fc.array(item, { maxLength: 4 }), fc.boolean(), (refused, unchecked) => {
+        const ids = unknownMeasures(new DefinitionMismatchError(refused, { unchecked }));
+        const everyUnregistered =
+          refused.length > 0 && refused.every((r) => r.problems.length > 0 && r.problems.every((p) => p === UNREGISTERED_PROBLEM));
+        expect(ids).toEqual(!unchecked && everyUnregistered ? refused.map((r) => r.id) : null);
+      }),
+      { numRuns: 300 },
+    );
   });
 });

@@ -30,16 +30,19 @@ const [CHANGED] = [...SUPPORTED].sort();
 const OTHER_DEFINITIONS = { ...DEFINITIONS, [CHANGED]: { ...DEFINITIONS[CHANGED], reform: { ...DEFINITIONS[CHANGED].reform, reform_sha256: "e".repeat(64) } } };
 
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
-const catalogue = buildMeasureCatalogue({
-  manifest: {
-    ...fixtureJson("manifest.json"),
-    measures: Object.fromEntries(
-      POLICIES_FOR_TEST.map((p) => [p.id, { ...baseEntry, ...p, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [] }]),
-    ),
-    combined: {},
-  },
-  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((p) => [p.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(p.id) }])),
-});
+// The page's catalogue, its receipts approving `definitionFor(id)`
+const catalogueApproving = (definitionFor) =>
+  buildMeasureCatalogue({
+    manifest: {
+      ...fixtureJson("manifest.json"),
+      measures: Object.fromEntries(
+        POLICIES_FOR_TEST.map((p) => [p.id, { ...baseEntry, ...p, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [] }]),
+      ),
+      combined: {},
+    },
+    tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((p) => [p.id, { engine: PUBLISHED_ENGINE, definition: definitionFor(p.id) }])),
+  });
+const catalogue = catalogueApproving((id) => approvedDefinition(id));
 const Wrapper = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 const headlineCard = () => document.querySelector(".result-card");
@@ -139,5 +142,25 @@ describe("the examples' precomputed answers and the receipts' definitions (PR 13
     await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), { timeout: 3000 });
     expect(household.length).toBeGreaterThan(0);
     expect(headlineCard().textContent).not.toContain("4,242");
+  });
+
+  // Review of 79ae9c12, P3: the cards' figures were the file's until it was
+  // read again for the new definitions, so the render in between showed
+  // figures checked against the old ones
+  it("shows none of the file's figures once a receipt approves another definition, not even before it is read again", async () => {
+    servePresets(PUBLISHED_ENGINE);
+    const page = (approving) => (
+      <MeasureCatalogueProvider catalogue={approving}>
+        <PersonalImpactTab selectedPolicies={SUPPORTED} policies={MEASURES} year={2029} />
+      </MeasureCatalogueProvider>
+    );
+    const cards = () => screen.getByRole("region", { name: "Choose a household" }).textContent;
+    const { rerender } = render(page(catalogue));
+    await waitFor(() => expect(cards()).toContain("4,242"), { timeout: 3000 });
+    rerender(page(catalogueApproving((id) => OTHER_DEFINITIONS[id] ?? approvedDefinition(id))));
+    // The render the change makes, before the file is read again
+    expect(cards()).not.toContain("4,242");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(cards()).not.toContain("4,242");
   });
 });

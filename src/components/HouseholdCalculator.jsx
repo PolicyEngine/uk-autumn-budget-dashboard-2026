@@ -319,6 +319,8 @@ const FORM_PANEL_ID = "household-form-panel";
  */
 // Each example's id and full answers, for the cards' background figures
 const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+// No figures from the file (one object, so it stays the same between renders)
+const NO_PRESET_CHANGES = Object.freeze({});
 
 function HouseholdCalculator({
   selectedPolicies = [],
@@ -371,11 +373,9 @@ function HouseholdCalculator({
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
   const [seeded, setSeeded] = useState(0);
-  // and each example's change in net income, for its card
-  const [presetChanges, setPresetChanges] = useState({});
-  // Whether the file has been read (until then the cards wait for it rather
-  // than ask the API)
-  const [presetsLoaded, setPresetsLoaded] = useState(false);
+  // and each example's change in net income, for its card, with the
+  // options (below) it was checked against
+  const [presetState, setPresetState] = useState({ key: null, changes: {} });
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
   // answers count only for exactly these, under the engine their receipts
@@ -387,6 +387,12 @@ function HouseholdCalculator({
     [policies],
   );
   const presetKey = presetPolicies.join(",");
+  const presetOptionsKey = JSON.stringify([presetKey, publicationKey, presetEngine, presetDefinitions]);
+  // Figures checked against other options (the definitions or engine just
+  // changed) count for nothing, not even for the render before the file is
+  // read again: the cards wait for that, as they do before the first read
+  const presetsLoaded = presetState.key === presetOptionsKey;
+  const presetChanges = presetsLoaded ? presetState.changes : NO_PRESET_CHANGES;
   useEffect(() => {
     let live = true;
     const options = {
@@ -402,8 +408,7 @@ function HouseholdCalculator({
     });
     loadPresetChanges(options).then((changes) => {
       if (!live) return;
-      setPresetChanges(changes);
-      setPresetsLoaded(true);
+      setPresetState({ key: presetOptionsKey, changes });
     });
     return () => {
       live = false;
