@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 # Check that links to the dashboard's former address, /uk/autumn-budget-2026,
-# still work on a served build: each answers a temporary redirect (307) to the
-# same path and query under /uk/budgets/autumn-2026, and that address answers
-# 200 (next.config.ts, `redirects`).
+# still work on a served build (next.config.ts, `redirects`):
+#   - each answers a temporary redirect (307) to the same path under
+#     /uk/budgets/autumn-2026, with the same query values;
+#   - with a trailing slash, Next first strips the slash (its own 308, as on
+#     every Next site), then the 307 follows, so following the redirects
+#     still ends at the same place;
+#   - wherever the redirects end answers 200.
+# Query values are compared decoded: Next writes a comma as %2C, which the
+# page reads back with URLSearchParams (src/App.jsx).
 #
 # Usage: scripts/check-former-address.sh [origin]
 #   default http://127.0.0.1:3000
@@ -16,39 +22,70 @@ FORMER=/uk/autumn-budget-2026
 CURRENT=/uk/budgets/autumn-2026
 read -r -a EXTRA <<<"${SMOKE_CURL_ARGS:-}"
 
-# The page, a tab with a measure selection, the Young people sub-tab and a
-# data file: everything below the former address moves as it is.
-TAILS=(
-  ""
-  "?tab=personal&policies=fuel_duty_rise_deferral,road_fuel_vat_cut"
-  "?tab=young#young-people"
-  "/data/living_standards_outlook.json"
+# Each case is "<tail of the former address>|<tail it should end at>". The
+# page, a tab with a measure selection, the Young people sub-tab, a data file,
+# and the two trailing-slash forms. A fragment is never sent, so none is here.
+CASES=(
+  "|"
+  "?tab=personal&policies=fuel_duty_rise_deferral,road_fuel_vat_cut|?tab=personal&policies=fuel_duty_rise_deferral,road_fuel_vat_cut"
+  "?tab=young|?tab=young"
+  "/data/living_standards_outlook.json|/data/living_standards_outlook.json"
+  "/|"
+  "/data/living_standards_outlook.json/|/data/living_standards_outlook.json"
 )
 
+# Whether two URLs have the same origin and path, and the same query values
+# in the same order once decoded.
+same_place() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+from urllib.parse import parse_qsl, unquote, urlsplit
+
+a, b = (urlsplit(url) for url in sys.argv[1:3])
+same = (a.scheme, a.netloc, unquote(a.path)) == (b.scheme, b.netloc, unquote(b.path)) and (
+    parse_qsl(a.query, keep_blank_values=True) == parse_qsl(b.query, keep_blank_values=True)
+)
+sys.exit(0 if same else 1)
+PY
+}
+
 failures=0
-for tail in "${TAILS[@]}"; do
-  sent="${tail%%#*}"
+fail() {
+  echo "FAIL $1"
+  failures=$((failures + 1))
+}
+for case in "${CASES[@]}"; do
+  sent="${case%%|*}"
+  expected="$ORIGIN$CURRENT${case#*|}"
   url="$ORIGIN$FORMER$sent"
+
+  # The first answer: a 307 straight to the new address, unless the slash
+  # comes off first.
   read -r code location < <(
     curl --silent --output /dev/null --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} \
       --write-out '%{http_code} %{redirect_url}\n' "$url" || echo "000 -"
   )
-  expected="$ORIGIN$CURRENT$sent"
-  if [ "$code" != 307 ]; then
-    echo "FAIL $url: HTTP $code, expected 307"
-    failures=$((failures + 1))
-  elif [ "$location" != "$expected" ]; then
-    echo "FAIL $url: redirects to $location, expected $expected"
-    failures=$((failures + 1))
+  if [ "${sent: -1}" = "/" ]; then
+    [ "$code" = 308 ] || [ "$code" = 307 ] || { fail "$url: HTTP $code, expected 308 or 307"; continue; }
+  elif [ "$code" != 307 ]; then
+    fail "$url: HTTP $code, expected 307"
+    continue
+  elif ! same_place "$location" "$expected"; then
+    fail "$url: redirects to $location, expected $expected"
+    continue
+  fi
+
+  # Where following the redirects ends.
+  read -r final landed < <(
+    curl --silent --output /dev/null --location --max-redirs 5 --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} \
+      --write-out '%{http_code} %{url_effective}\n' "$url" || echo "000 -"
+  )
+  if [ "$final" != 200 ]; then
+    fail "$url: ends at $landed with HTTP $final"
+  elif ! same_place "$landed" "$expected"; then
+    fail "$url: ends at $landed, expected $expected"
   else
-    final=$(curl --silent --output /dev/null --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} \
-      --write-out '%{http_code}' "$expected" || echo "000")
-    if [ "$final" != 200 ]; then
-      echo "FAIL $expected: HTTP $final"
-      failures=$((failures + 1))
-    else
-      echo "ok   $url -> $CURRENT$sent"
-    fi
+    echo "ok   $url -> ${landed#"$ORIGIN"}"
   fi
 done
 
@@ -56,4 +93,4 @@ if [ "$failures" -gt 0 ]; then
   echo "$failures check(s) failed."
   exit 1
 fi
-echo "The former address redirects ${#TAILS[@]} links to the same place under $CURRENT."
+echo "${#CASES[@]} links to the former address end at the same place under $CURRENT."

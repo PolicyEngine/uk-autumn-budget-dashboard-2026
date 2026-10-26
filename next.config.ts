@@ -39,9 +39,11 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   : '/uk/budgets/autumn-2026';
 
 // The address until 26 October. A link to it, or to anything below it,
-// redirects to the same place under the base path, query included. The
-// redirect is temporary (307) until after the Budget, so browsers don't cache
-// it while the route could still change.
+// redirects to the same place under the base path, with the same query
+// values (Next writes a comma as %2C, which URLSearchParams reads back). A
+// trailing slash comes off first, through Next's own 308. The redirect is
+// temporary (307) until after the Budget, so browsers don't cache it while
+// the route could still change. scripts/check-former-address.sh checks this.
 const FORMER_BASE_PATH = '/uk/autumn-budget-2026';
 
 
