@@ -676,6 +676,21 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A change in words ("Rises 0.1 points") leads in place of a number */
+.forecast-tile-value.is-text {
+  font-size: 1.5rem;
+}
+
+.poverty-tiles .forecast-tile-sub {
+  white-space: normal;
+}
+
+/* The model's levels, said small under a change-led tile */
+.forecast-tile-meaning.is-small {
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
 .forecast-tile-sub {
   margin: 2px 0 0;
   font-size: 0.75rem;
