@@ -553,7 +553,93 @@ function App() {
   // A Population impact sub-tab's content. With no policies chosen, each
   // offers the full Budget; the charts wait for the CSVs.
   const populationPanel = (sub) => {
-    if (selectedPolicies.length === 0) return emptyState;
+    // Living standards and Poverty end with incomes and poverty under
+    // current law, which need no policy: with none selected, only the
+    // measures' sections give way to the empty state
+    const noPolicies = selectedPolicies.length === 0;
+    const measures = !noPolicies && results;
+    if (sub === "living") {
+      return (
+        <div className="results-container">
+          {noPolicies && emptyState}
+          {measures && (
+            <>
+              <SectionHeading
+                title="How the measures change incomes"
+                subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures follow."
+              />
+              <section id="deciles" className="report-section distributional-section">
+                <div className="charts-grid">
+                  <WaterfallChart
+                    rawData={results.rawWinnersLosers}
+                    selectedPolicies={selectedPolicies}
+                    selectedYear={distributionalYear}
+                  />
+                  <DistributionalChart
+                    rawData={results.rawDistributional}
+                    selectedPolicies={selectedPolicies}
+                    selectedYear={distributionalYear}
+                  />
+                </div>
+              </section>
+            </>
+          )}
+          {/* Incomes without the measures, then inequality */}
+          <CurrentLawSection id="incomes" />
+          {/* Inequality: the measures' effect beside its level under
+              current law (side by side on a desktop, stacked on a phone) */}
+          <SectionHeading
+            title="Inequality"
+            subtitle={
+              measures
+                ? "With the selected measures: the change in inequality each year. Without the measures: inequality under current law."
+                : "Without the measures: inequality under current law."
+            }
+          />
+          <section id="inequality" className="report-section">
+            <div className="charts-grid">
+              {measures && (
+                <SummaryMetricChart
+                  metric={SUMMARY_METRICS.inequality}
+                  rows={results.rawMetrics}
+                  policies={POLICIES}
+                  selectedPolicies={selectedPolicies}
+                  selectedYear={distributionalYear}
+                />
+              )}
+              <CurrentLawInequalityCard />
+            </div>
+          </section>
+        </div>
+      );
+    }
+    if (sub === "poverty") {
+      return (
+        <div className="results-container">
+          {noPolicies && emptyState}
+          {measures && (
+            <>
+              <SectionHeading
+                title="How the measures change poverty"
+                subtitle="With the selected measures: how they change poverty rates in the selected year. Poverty without the measures is below."
+              />
+              <section id="poverty" className="report-section hero-chart">
+                <SummaryMetricChart
+                  metric={SUMMARY_METRICS.poverty}
+                  rows={results.rawMetrics}
+                  policies={POLICIES}
+                  selectedPolicies={selectedPolicies}
+                  selectedYear={distributionalYear}
+                />
+              </section>
+            </>
+          )}
+          {/* Poverty without the measures */}
+          <CurrentLawSection id="poverty" />
+        </div>
+      );
+    }
+    if (noPolicies) return emptyState;
     if (sub === "young") {
       // Young people (16 to 24): results by age, #young-people
       return (
@@ -575,71 +661,6 @@ function App() {
       );
     }
     if (!results) return null;
-    if (sub === "living") {
-      return (
-        <div className="results-container">
-          <SectionHeading
-            title="How the measures change incomes"
-            subtitle="With the selected measures: how they change net income across the income distribution in the selected year. Incomes without the measures follow."
-          />
-          <section id="deciles" className="report-section distributional-section">
-            <div className="charts-grid">
-              <WaterfallChart
-                rawData={results.rawWinnersLosers}
-                selectedPolicies={selectedPolicies}
-                selectedYear={distributionalYear}
-              />
-              <DistributionalChart
-                rawData={results.rawDistributional}
-                selectedPolicies={selectedPolicies}
-                selectedYear={distributionalYear}
-              />
-            </div>
-          </section>
-          {/* Incomes without the measures, then inequality */}
-          <CurrentLawSection id="incomes" />
-          {/* Inequality: the measures' effect beside its level under
-              current law (side by side on a desktop, stacked on a phone) */}
-          <SectionHeading
-            title="Inequality"
-            subtitle="With the selected measures: the change in inequality each year. Without the measures: inequality under current law."
-          />
-          <section id="inequality" className="report-section">
-            <div className="charts-grid">
-              <SummaryMetricChart
-                metric={SUMMARY_METRICS.inequality}
-                rows={results.rawMetrics}
-                policies={POLICIES}
-                selectedPolicies={selectedPolicies}
-                selectedYear={distributionalYear}
-              />
-              <CurrentLawInequalityCard />
-            </div>
-          </section>
-        </div>
-      );
-    }
-    if (sub === "poverty") {
-      return (
-        <div className="results-container">
-          <SectionHeading
-            title="How the measures change poverty"
-            subtitle="With the selected measures: how they change poverty rates in the selected year. Poverty without the measures is below."
-          />
-          <section id="poverty" className="report-section hero-chart">
-            <SummaryMetricChart
-              metric={SUMMARY_METRICS.poverty}
-              rows={results.rawMetrics}
-              policies={POLICIES}
-              selectedPolicies={selectedPolicies}
-              selectedYear={distributionalYear}
-            />
-          </section>
-          {/* Poverty without the measures */}
-          <CurrentLawSection id="poverty" />
-        </div>
-      );
-    }
     if (sub === "finances") {
       return (
         <div className="results-container">

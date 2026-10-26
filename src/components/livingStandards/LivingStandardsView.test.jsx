@@ -120,6 +120,27 @@ describe("the Pre-measures forecast view", () => {
     expect(poverty.querySelectorAll(".ls-card")).toHaveLength(2);
   });
 
+  it.each([
+    ["living", "Living standards", "How the measures change incomes", ["Incomes under current law", "Inequality"], [/^Incomes over time$/, /^Growth across the distribution$/, /^Inequality over time/]],
+    ["poverty", "Poverty", "How the measures change poverty", ["Poverty under current law"], [/^Poverty over time$/, /^Who is in poverty$/]],
+  ])("?sub=%s shows the current-law cards with no policy selected", async (sub, label, measures, headings, cards) => {
+    // A link whose policies are all unknown selects none
+    window.history.replaceState({}, "", `/?sub=${sub}&policies=not_a_measure`);
+    render(<App />);
+    const panel = await screen.findByRole("tabpanel", { name: label });
+    // The measures' sections give way to the empty state, alone
+    expect(await within(panel).findByText(/^Select policies to analyse/)).toBeInTheDocument();
+    expect(within(panel).queryByRole("heading", { name: measures })).toBeNull();
+    expect(within(panel).queryByRole("heading", { name: /^Change in (income inequality|the poverty rate)/ })).toBeNull();
+    for (const name of headings) {
+      expect(await within(panel).findByRole("heading", { level: 2, name }, { timeout: 5000 })).toBeInTheDocument();
+    }
+    for (const name of cards) {
+      expect(await within(panel).findByRole("heading", { level: 3, name })).toBeInTheDocument();
+    }
+    expect(panel).not.toHaveTextContent(/With the selected measures/);
+  });
+
   it("compares the years chosen in the range pill on Incomes and Poverty over time", async () => {
     window.history.replaceState({}, "", "/?sub=living&ls_from=2028&ls_to=2030");
     render(<App />);
