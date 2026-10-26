@@ -43,6 +43,31 @@ describe("the committed file", () => {
     expect(forecastVintagesProblem(unit)).toMatch(/units/);
     expect(forecastVintagesProblem(null)).toMatch(/not a/);
   });
+
+  // Every field the page reads: a file without one is refused, so it can
+  // never fail as it is drawn
+  it.each([
+    ["the list of what is left out", (d) => delete d.meta.left_out, /left out/],
+    ["an item's reason for being left out", (d) => delete d.meta.left_out[0].why, /left out/],
+    ["the gaps", (d) => delete d.meta.gaps, /gaps/],
+    ["the OBR sources", (d) => delete d.meta.sources.obr, /OBR sources/],
+    ["an ONS source's checksum", (d) => delete d.meta.sources.ons[0].sha256, /ONS sources/],
+    ["the House Price Index's page", (d) => delete d.meta.sources.hpi.page, /House Price Index/],
+    ["a launch rule", (d) => delete d.meta.launch_rules.fiscal, /launch rules/],
+    ["the parliament's end", (d) => delete d.meta.parliament.end.quarterly, /parliament/],
+    ["a unit's axis", (d) => delete d.variables[0].units.pct.axis, /incomplete unit/],
+    ["a unit's measure", (d) => (d.variables[0].units.pct.from = "rate"), /incomplete unit/],
+    ["a measure's sources", (d) => delete d.variables[1].level.outturn_source, /sources/],
+    ["a measure's check", (d) => delete d.variables[1].level.check.periods, /check/],
+    ["a forecast's name", (d) => delete d.variables[2].level.vintages[3].label, /date/],
+    ["the newest forecast", (d) => d.variables[3].level.vintages.pop(), /newest forecast is not/],
+    ["the forecasts' order", (d) => d.variables[4].level.vintages.reverse(), /order/],
+    ["notes as text", (d) => (d.variables[0].notes = [1]), /notes/],
+  ])("is refused without %s", (_, mutate, problem) => {
+    const data = clone();
+    mutate(data);
+    expect(forecastVintagesProblem(data)).toMatch(problem);
+  });
 });
 
 describe("every view", () => {
@@ -104,11 +129,92 @@ describe("every view", () => {
     });
   });
 
+  it("draws a rate or share as published in %, and only a unit marked as growth as a % change", () => {
+    const rates = DATA.variables.filter((v) => v.units.pct && v.units.pct.transform !== "growth");
+    expect(rates.map((v) => v.id)).toEqual(expect.arrayContaining(["unemployment", "psnd", "psni", "psnb"]));
+    for (const v of rates) {
+      const measure = v[v.units.pct.from];
+      const view = buildView(DATA, v, { unit: "pct", showPast: true });
+      expect([...view.outturn]).toEqual([...toSeries(measure.outturn, v.frequency)]);
+      measure.vintages.forEach((published, i) => {
+        for (const [t, value] of view.vintages[i].values) expect(value).toBe(toSeries(published.values, v.frequency).get(t));
+      });
+    }
+    // The latest unemployment outturn is the rate itself, not its change
+    const unemployment = buildView(DATA, variable("unemployment"), { unit: "pct" });
+    expect(unemployment.points.find((p) => p.role === "latest").y).toBe(variable("unemployment").level.outturn["2025"]);
+  });
+
   it("indexes every line to the outturn at the start of the parliament", () => {
     const view = buildView(DATA, variable("real_gdp"), { unit: "index" });
     const start = view.points.find((p) => p.role === "start");
     expect(start.x).toBe(2024);
     expect(start.y).toBeCloseTo(100, 9);
+  });
+});
+
+describe("a forecast that cannot be drawn", () => {
+  // Any one period taken out of a measure's newest forecast
+  const cutArb = fc.record({
+    view: fc.constantFrom(...VIEWS.filter((x) => x.showPast)),
+    which: fc.nat(),
+  });
+
+  it("is never replaced by an older one as the newest", () => {
+    fc.assert(
+      fc.property(cutArb, ({ view: { v, unit, annual }, which }) => {
+        const data = clone();
+        const variable = data.variables.find((x) => x.id === v.id);
+        const measure = variable[variable.units[unit].from];
+        const newest = measure.vintages[measure.vintages.length - 1];
+        const keys = Object.keys(newest.values);
+        delete newest.values[keys[which % keys.length]];
+        const view = buildView(data, variable, { unit, annual });
+        if (view.unavailable) expect(view.unavailable).toMatch(/March 2026 forecast/);
+        else expect(view.newest.label).toBe("March 2026");
+      }),
+    );
+  });
+
+  it("makes the view unavailable when it is the newest", () => {
+    const data = clone();
+    const v = data.variables.find((x) => x.id === "rhdi_per_person");
+    delete v.level.vintages.at(-1).values["2026Q2"];
+    expect(forecastVintagesProblem(data)).toBeNull();
+    expect(buildView(data, v, { unit: "level" }).unavailable).toBe(
+      "The March 2026 forecast of this measure cannot be drawn in this unit.",
+    );
+  });
+
+  it("is named when it is an earlier one, and the rest are drawn", () => {
+    const data = clone();
+    const v = data.variables.find((x) => x.id === "real_gdp");
+    // No outturn for 2009, where the two 2010 forecasts start
+    const launch = v.level.vintages[0].launch;
+    const starting = v.level.vintages.filter((x) => x.launch === launch).map((x) => x.label);
+    expect(starting).toEqual(["June 2010", "November 2010"]);
+    delete v.level.outturn[launch];
+    for (const unit of ["level", "index", "pct"]) {
+      const view = buildView(data, v, { unit });
+      expect(view.unavailable).toBeNull();
+      expect(view.undrawn).toEqual(starting);
+      expect(view.vintages.map((x) => x.label)).toEqual(v.level.vintages.slice(2).map((x) => x.label));
+    }
+  });
+
+  it("leaves a view with nothing to draw in its unit unavailable, never an empty chart", () => {
+    const data = clone();
+    const v = data.variables.find((x) => x.id === "employment");
+    const last = (values) => {
+      const key = Object.keys(values).sort().at(-1);
+      return { [key]: values[key] };
+    };
+    v.level.outturn = last(v.level.outturn);
+    for (const vintage of v.level.vintages) vintage.values = last(vintage.values);
+    expect(forecastVintagesProblem(data)).toBeNull();
+    const view = buildView(data, v, { unit: "pct" });
+    expect(view.unavailable).toMatch(/cannot be drawn|no outturn/);
+    expect(view.rows).toBeUndefined();
   });
 });
 
@@ -141,19 +247,32 @@ describe("real household disposable income per head", () => {
 });
 
 describe("axes and formats", () => {
-  it("cover the data with about five round steps, and 0 when asked", () => {
+  // Any finite value at any scale: a mantissa times a power of ten
+  const scaled = fc
+    .tuple(fc.double({ min: -10, max: 10, noNaN: true }), fc.integer({ min: -12, max: 12 }))
+    .map(([m, e]) => m * 10 ** e);
+
+  it("cover the data with about five round steps, and 0 when asked, at any scale", () => {
     fc.assert(
-      fc.property(fc.double({ min: -1e6, max: 1e6, noNaN: true }), fc.double({ min: 0, max: 1e6, noNaN: true }), fc.boolean(), (lo, span, zero) => {
-        const hi = lo + span;
+      fc.property(scaled, fc.oneof(scaled, fc.constant(0)), fc.boolean(), (lo, size, zero) => {
+        const hi = lo + Math.abs(size);
         const { domain, ticks, step } = niceAxis(lo, hi, { zero });
         expect(domain[0]).toBeLessThanOrEqual(zero ? Math.min(0, lo) : lo);
         expect(domain[1]).toBeGreaterThanOrEqual(zero ? Math.max(0, hi) : hi);
         expect(ticks.length).toBeGreaterThanOrEqual(2);
-        expect(ticks.length).toBeLessThanOrEqual(12);
+        expect(ticks.length).toBeLessThanOrEqual(10);
+        for (let i = 1; i < ticks.length; i += 1) expect(ticks[i]).toBeGreaterThan(ticks[i - 1]);
         if (zero) expect(ticks).toContain(0);
         expect([1, 2, 2.5, 5, 10].some((m) => Math.abs(step / 10 ** Math.floor(Math.log10(step)) - m) < 1e-9)).toBe(true);
       }),
     );
+  });
+
+  it("end on a span too small for rounding to nine decimals", () => {
+    // Once looped for ever: the last tick rounded back onto itself
+    expect(niceAxis(0, 1.1e-9).ticks).toEqual([0, 2.5e-10, 5e-10, 7.5e-10, 1e-9, 1.25e-9]);
+    expect(niceAxis(Number.NaN, 1).domain).toEqual([0, 1]);
+    expect(niceAxis(2, 1).domain).toEqual([0, 1]);
   });
 
   it("need as many decimals as the step", () => {
@@ -169,6 +288,10 @@ describe("axes and formats", () => {
     expect(formatterFor(variable("house_prices"), "level", variable("house_prices").level)(272146.4)).toBe("£272,146");
     expect(formatterFor(variable("cpi"), "pct", variable("cpi").level)(2.345)).toBe("2.3%");
     expect(formatterFor(variable("cpi"), "index", variable("cpi").level)(101.25)).toBe("101.3");
+    // A sign goes before the pound sign, as the % values' does before them
+    expect(formatterFor(variable("current_budget"), "level", variable("current_budget").level)(-23.61)).toBe("-£23.6bn");
+    expect(formatterFor(variable("rhdi_per_person"), "level", variable("rhdi_per_person").level)(-1234.4)).toBe("-£1,234");
+    expect(formatterFor(variable("current_budget"), "pct", variable("current_budget").share)(-1.24)).toBe("-1.2%");
   });
 
   it("keep the outturn under its own key", () => {

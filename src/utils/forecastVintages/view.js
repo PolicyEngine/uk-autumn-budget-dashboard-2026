@@ -28,7 +28,9 @@ export const UNIT_ORDER = ["level", "index", "pct"];
 /**
  * Levels for one measure: the outturn and each forecast carried on from
  * it, at the variable's own frequency or (annual, for a quarterly
- * variable) as calendar-year totals.
+ * variable) as calendar-year totals. A forecast that cannot be carried on
+ * (no outturn where it starts, or too few whole years) is in `undrawn`,
+ * by label, not left out unsaid.
  */
 export function measureLevels(variable, measure, { annual = false } = {}) {
   const frequency = variable.frequency;
@@ -36,35 +38,32 @@ export function measureLevels(variable, measure, { annual = false } = {}) {
   const outturn = toSeries(measure.outturn, frequency);
   const outturnEnd = lastIndex(outturn);
   const count = measure.vintages.length;
-  const vintages = measure.vintages
-    .map((vintage, i) => {
-      const values = toSeries(vintage.values, frequency);
-      const launch = periodIndex(vintage.launch, frequency);
-      const anchor = anchorFor({
-        kind: measure.kind,
-        launch,
-        newest: i === count - 1,
-        outturnEnd,
-        forecastEnd: lastIndex(values),
-      });
-      const levels = carryForward(measure.kind, values, outturn, anchor, { lag });
-      // reanchored: drawn from a later period than its launch (the newest)
-      return levels && { id: vintage.id, label: vintage.label, anchor, reanchored: anchor !== launch, levels, own: measure.kind === "level" };
-    })
-    .filter(Boolean);
-  if (!annual) return { frequency, outturn, vintages };
-  const yearly = annualSums(outturn);
-  return {
-    frequency: "calendar",
-    outturn: yearly,
-    vintages: vintages
-      .map((v) => {
-        const start = lastWholeYear(v.anchor);
-        const levels = from(annualSums(splice(outturn, v.levels, v.anchor)), start);
-        return levels.size > 1 && { ...v, anchor: start, levels };
-      })
-      .filter(Boolean),
-  };
+  const undrawn = [];
+  const vintages = [];
+  measure.vintages.forEach((vintage, i) => {
+    const values = toSeries(vintage.values, frequency);
+    const launch = periodIndex(vintage.launch, frequency);
+    const anchor = anchorFor({
+      kind: measure.kind,
+      launch,
+      newest: i === count - 1,
+      outturnEnd,
+      forecastEnd: lastIndex(values),
+    });
+    const levels = carryForward(measure.kind, values, outturn, anchor, { lag });
+    // reanchored: drawn from a later period than its launch (the newest)
+    if (levels) vintages.push({ id: vintage.id, label: vintage.label, anchor, reanchored: anchor !== launch, levels, own: measure.kind === "level" });
+    else undrawn.push(vintage.label);
+  });
+  if (!annual) return { frequency, outturn, vintages, undrawn };
+  const yearly = [];
+  for (const v of vintages) {
+    const start = lastWholeYear(v.anchor);
+    const levels = from(annualSums(splice(outturn, v.levels, v.anchor)), start);
+    if (levels.size > 1) yearly.push({ ...v, anchor: start, levels });
+    else undrawn.push(v.label);
+  }
+  return { frequency: "calendar", outturn: annualSums(outturn), vintages: yearly, undrawn };
 }
 
 /** The measures in the chosen unit; null where the unit cannot be drawn. */
@@ -80,7 +79,9 @@ export function inUnit(variable, unit, levels, { annual = false, start } = {}) {
     if (!base) return null;
     return map((s) => toIndex(s, base));
   }
-  if (spec.from === "share") return map((s) => s);
+  // A rate or share (unemployment, debt as a share of GDP) is shown as
+  // published; only a unit marked as growth is a % change
+  if (spec.transform !== "growth") return map((s) => s);
   // % change on a year earlier: a forecast's first change is on the
   // outturn, unless it is a level drawn as published
   const lag = levels.frequency === "quarterly" ? 4 : 1;
@@ -94,8 +95,13 @@ export function formatterFor(variable, unit, measure) {
   if (unit === "index") return (v, d = 1) => n(v, d);
   if (unit === "pct") return (v, d = 1) => `${n(v, d)}%`;
   const u = measure.unit;
-  if (spec.annualise || u.startsWith("£ a") || u.startsWith("£ av") || u.startsWith("£ per")) return (v) => `£${n(v, 0)}`;
-  if (u.startsWith("£ billion")) return (v, d = measure.decimals) => `£${n(v, d)}bn`;
+  // A sign goes before the pound sign: -£23.6bn
+  const pounds = (v, d, suffix = "") => {
+    const text = n(v, d);
+    return text.startsWith("-") ? `-£${text.slice(1)}${suffix}` : `£${text}${suffix}`;
+  };
+  if (spec.annualise || u.startsWith("£ a") || u.startsWith("£ av") || u.startsWith("£ per")) return (v) => pounds(v, 0);
+  if (u.startsWith("£ billion")) return (v, d = measure.decimals) => pounds(v, d, "bn");
   if (u === "million people") return (v, d = measure.decimals) => `${n(v, d)}m`;
   if (u.startsWith("%")) return (v, d = 1) => `${n(v, d)}%`;
   return (v, d = measure.decimals) => n(v, d);
@@ -108,7 +114,8 @@ export function formatterFor(variable, unit, measure) {
 export function niceAxis(lo, hi, { zero = false } = {}) {
   let a = zero ? Math.min(0, lo) : lo;
   let b = zero ? Math.max(0, hi) : hi;
-  if (!(Number.isFinite(a) && Number.isFinite(b))) return { domain: [0, 1], ticks: [0, 1], step: 1 };
+  const fallback = { domain: [0, 1], ticks: [0, 0.2, 0.4, 0.6, 0.8, 1], step: 0.2 };
+  if (!(Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(b - a)) || a > b) return fallback;
   // A span too small to step through (or none) is widened around it
   if (b - a <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b))) {
     const pad = Math.max(Math.abs(a), Math.abs(b)) * 0.05 || 1;
@@ -118,14 +125,18 @@ export function niceAxis(lo, hi, { zero = false } = {}) {
   const raw = (b - a) / 5;
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  const start = Math.floor(a / step) * step;
-  const end = Math.ceil(b / step) * step;
+  if (!(step > 0 && Number.isFinite(step))) return fallback;
+  // Ticks are counted in whole steps, so every one is a new value and the
+  // count is bounded: a step at least a fifth of the span gives at most
+  // seven, and the rounding fixes below add at most one at each end
+  const at = (i) => Number((i * step).toPrecision(12));
+  let first = Math.floor(a / step);
+  let last = Math.ceil(b / step);
+  // Rounding can leave an end just inside the data
+  if (at(first) > a) first -= 1;
+  if (at(last) < b) last += 1;
   const ticks = [];
-  const round = (v) => Math.round(v * 1e9) / 1e9;
-  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(round(v));
-  // Rounding (or a value next to 0) can leave an end just inside the data
-  while (ticks[0] > a) ticks.unshift(round(ticks[0] - step));
-  while (ticks[ticks.length - 1] < b) ticks.push(round(ticks[ticks.length - 1] + step));
+  for (let i = first; i <= last; i += 1) ticks.push(at(i));
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks, step };
 }
 
@@ -164,6 +175,14 @@ export function checkSentence(check, frequency) {
   );
 }
 
+/** The labelled points within the rows shown (the brush's range). */
+export function pointsIn(points, rows) {
+  if (!rows.length) return [];
+  const first = rows[0].x;
+  const last = rows[rows.length - 1].x;
+  return points.filter((p) => p.x >= first && p.x <= last);
+}
+
 export const OUTTURN_KEY = "outturn";
 export const vintageKey = (id) => `v_${id}`;
 
@@ -185,9 +204,19 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
   const endKey = parliament.end[frequency];
   const start = periodIndex(startKey, frequency);
   const end = periodIndex(endKey, frequency);
-  const shown = inUnit(variable, unit, levels, { annual: quarterlyAnnual, start });
-  if (!shown) return { unavailable: "There is no outturn for the start of this parliament, so no index can be drawn." };
-  if (!shown.vintages.length) return { unavailable: "No OBR forecast of this measure can be drawn." };
+  const transformed = inUnit(variable, unit, levels, { annual: quarterlyAnnual, start });
+  if (!transformed) return { unavailable: "There is no outturn for the start of this parliament, so no index can be drawn." };
+  // The newest forecast in the file is the one drawn bold and labelled at
+  // the end: if it cannot be drawn, no older one takes its place
+  const newestLabel = measure.vintages[measure.vintages.length - 1].label;
+  // A forecast with no values in this unit (a % change needs the period a
+  // year before) cannot be drawn either
+  const undrawn = [...levels.undrawn, ...transformed.vintages.filter((v) => !v.values.size).map((v) => v.label)];
+  const shown = { ...transformed, vintages: transformed.vintages.filter((v) => v.values.size) };
+  if (undrawn.includes(newestLabel) || !shown.vintages.length) {
+    return { unavailable: `The ${newestLabel} forecast of this measure cannot be drawn in this unit.` };
+  }
+  if (!shown.outturn.size) return { unavailable: "There is no outturn of this measure in this unit." };
 
   const newest = shown.vintages[shown.vintages.length - 1];
   const drawn = showPast ? shown.vintages : [newest];
@@ -233,6 +262,8 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
       values: v.values,
     })),
     newest: { key: vintageKey(newest.id), label: newest.label },
+    // Earlier forecasts that cannot be drawn in this unit, oldest first
+    undrawn: measure.vintages.map((v) => v.label).filter((label) => undrawn.includes(label)),
     points,
     start,
     end,
