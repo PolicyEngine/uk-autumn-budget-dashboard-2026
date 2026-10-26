@@ -297,6 +297,91 @@ class WinnersLosersCalculator(BaseCalculator):
         return results
 
 
+# Poverty measures published beside the headline (``poverty_change_*``,
+# absolute before housing costs, kept for older readers). Each is a
+# policyengine-uk household flag, read per person. The absolute lines are
+# 60% of the FYE 2025 median held constant in real terms; the relative
+# lines are 60% of the median in the same simulation, so under a reform the
+# line moves with the reform's own median (policyengine-uk 2.132.6,
+# in_relative_poverty_bhc / _ahc).
+POVERTY_MEASURES = {
+    "abs_bhc": "in_poverty_bhc",
+    "abs_ahc": "in_poverty_ahc",
+    "rel_bhc": "in_relative_poverty_bhc",
+    "rel_ahc": "in_relative_poverty_ahc",
+}
+# People in the poverty columns: everyone, and HBAI dependent children
+# (is_hbai_dependent_child: under 16, or 16-19 in non-advanced education and
+# living with a parent), as DWP's child poverty statistics count them.
+POVERTY_GROUPS = {"": None, "child_": "is_hbai_dependent_child"}
+
+
+def poverty_change(
+    baseline_flag: np.ndarray,
+    reformed_flag: np.ndarray,
+    person_weight: np.ndarray,
+    in_group: Optional[np.ndarray] = None,
+    label: str = "poverty",
+) -> tuple[float, float]:
+    """Change in a weighted poverty rate: (percentage points, % of baseline).
+
+    ``in_group`` restricts the rate to some people (children); the rate's
+    denominator is that group's weighted count.
+    """
+    weight = np.asarray(person_weight, dtype=float)
+    if in_group is not None:
+        weight = weight * np.asarray(in_group, dtype=bool)
+    total = weight.sum()
+    if total <= 0:
+        raise ValueError(f"No weighted people for {label}.")
+    baseline_rate = weight[np.asarray(baseline_flag, dtype=bool)].sum() / total
+    reformed_rate = weight[np.asarray(reformed_flag, dtype=bool)].sum() / total
+    if baseline_rate <= 0:
+        raise ValueError(
+            f"Baseline {label} rate is 0; a relative change is undefined."
+        )
+    change_pp = (reformed_rate - baseline_rate) * 100
+    return change_pp, (reformed_rate - baseline_rate) / baseline_rate * 100
+
+
+def inequality_measures(income: np.ndarray, weights: np.ndarray) -> dict:
+    """Gini, top 10% and top 1% shares and the 90/10 ratio of an income.
+
+    The income and weights are those of the headline Gini: equivalised
+    household net income floored at zero, each household weighted by its
+    people. The 90/10 ratio is the 90th percentile over the 10th.
+    """
+    series = MicroSeries(np.asarray(income, dtype=float), weights=weights)
+    p10 = series.quantile(0.1)
+    if p10 <= 0:
+        raise ValueError(
+            "The 10th percentile is 0; the 90/10 ratio is undefined."
+        )
+    return {
+        "gini": series.gini(),
+        "top_10_share": series.top_x_pct_share(0.1),
+        "top_1_share": series.top_x_pct_share(0.01),
+        "p90_p10": series.quantile(0.9) / p10,
+    }
+
+
+def inequality_changes(baseline: dict, reformed: dict) -> dict:
+    """Columns for metrics.csv: the shares' change in percentage points and
+    the 90/10 ratio's relative change (a fraction, as ``gini_change``)."""
+    return {
+        "top_10_share_change_pp": (
+            reformed["top_10_share"] - baseline["top_10_share"]
+        )
+        * 100,
+        "top_1_share_change_pp": (
+            reformed["top_1_share"] - baseline["top_1_share"]
+        )
+        * 100,
+        "p90_p10_change": (reformed["p90_p10"] - baseline["p90_p10"])
+        / baseline["p90_p10"],
+    }
+
+
 @dataclass
 class MetricsCalculator(BaseCalculator):
     """Calculates summary metrics (affected %, Gini, poverty)."""
@@ -400,17 +485,53 @@ class MetricsCalculator(BaseCalculator):
             )
         poverty_pct = (poverty_pp / baseline_rate) * 100
 
-        return [
-            {
-                "reform_id": reform_id,
-                "reform_name": reform_name,
-                "year": year,
-                "people_affected": percent_affected,
-                "gini_change": gini_change,
-                "poverty_change_pp": poverty_pp,
-                "poverty_change_pct": poverty_pct,
-            }
-        ]
+        row = {
+            "reform_id": reform_id,
+            "reform_name": reform_name,
+            "year": year,
+            "people_affected": percent_affected,
+            "gini_change": gini_change,
+            "poverty_change_pp": poverty_pp,
+            "poverty_change_pct": poverty_pct,
+        }
+
+        # Every poverty measure, for everyone and for children
+        groups = {
+            prefix: (
+                None
+                if flag is None
+                else baseline.calculate(
+                    flag, period=year, map_to="person"
+                ).values.astype(bool)
+            )
+            for prefix, flag in POVERTY_GROUPS.items()
+        }
+        for measure, variable in POVERTY_MEASURES.items():
+            before = baseline.calculate(
+                variable, period=year, map_to="person"
+            ).values
+            after = reformed.calculate(
+                variable, period=year, map_to="person"
+            ).values
+            for prefix, in_group in groups.items():
+                pp, pct = poverty_change(
+                    before,
+                    after,
+                    person_weight,
+                    in_group,
+                    label=f"{prefix}{variable} ({reform_id}, {year})",
+                )
+                row[f"{prefix}poverty_{measure}_change_pp"] = pp
+                row[f"{prefix}poverty_{measure}_change_pct"] = pct
+
+        # The other inequality measures, on the Gini's income and weights
+        row.update(
+            inequality_changes(
+                inequality_measures(baseline_equiv_values, adjusted_weights),
+                inequality_measures(reformed_equiv_values, adjusted_weights),
+            )
+        )
+        return [row]
 
     def calculate_from_values(
         self,
