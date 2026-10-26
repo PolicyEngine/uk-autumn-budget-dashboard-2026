@@ -472,25 +472,40 @@ def test_artifacts_are_the_same_whatever_order_they_run_in(world, tmp_path):
 # --- receipted artifacts in worker processes (#173) ------------------------
 
 
-class PicklingRunner:
-    """Runs each unit in this process from a pickled copy, as a worker
-    process is sent it. The test's build and process, closures over its
-    World, are put back after the copy (the generator's own are
+class TwiceRunner:
+    """Runs each unit in this process twice: as it is, and from a pickled
+    copy, as a worker process is sent it, writing under ``copy_root``. The
+    copies' outcomes are kept in ``copies``; the generation is given the
+    first. Planned once, so a combined run's consistency check, on real
+    parameter trees, is paid once. The test's build and process, closures
+    over its World, are put back after the copy (the generator's own are
     module-level functions)."""
 
     jobs = 2
 
+    def __init__(self, copy_root: Path):
+        self.copy_root = copy_root
+        self.copies = []
+
     def map(self, function, units, on_result=lambda i, r: None):
         results = []
         for index, unit in enumerate(units):
+            result = function(unit)
             sent = pickle.loads(
                 pickle.dumps(
-                    dataclasses.replace(unit, build=None, process=None)
+                    dataclasses.replace(
+                        unit,
+                        build=None,
+                        process=None,
+                        artifacts_root=self.copy_root,
+                    )
                 )
             )
-            result = function(
-                dataclasses.replace(
-                    sent, build=unit.build, process=unit.process
+            self.copies.append(
+                function(
+                    dataclasses.replace(
+                        sent, build=unit.build, process=unit.process
+                    )
                 )
             )
             results.append(result)
@@ -524,7 +539,7 @@ def _worker_runner() -> ProcessRunner:
     )
 
 
-def _artifacts(report) -> dict:
+def _artifacts(references) -> dict:
     """Each written artifact by key: its digest without the generation id
     and its tables' bytes. A run with a hand-written modifier records a
     fresh generation id each time (``receipt.build_receipt_document``), so
@@ -533,7 +548,7 @@ def _artifacts(report) -> dict:
     from uk_budget_data.publication.receipt import artifact_sha256
 
     artifacts = {}
-    for reference in report.written:
+    for reference in references:
         document = read_receipt(reference.path)
         document["dashboard"].pop("generation_id", None)
         artifacts[reference.key] = (
@@ -616,7 +631,7 @@ def test_artifacts_run_in_worker_processes_with_real_identities(
         "structural",
         "combined--alpha+beta",
     ]
-    assert _artifacts(workers) == _artifacts(serial)
+    assert _artifacts(workers.written) == _artifacts(serial.written)
     # Those without a hand-written modifier are the same bytes.
     assert [
         r.artifact_sha256 for r in workers.written if r.key != "structural"
@@ -808,25 +823,28 @@ def test_any_measure_s_runs_survive_pickling_unchanged(
     ]
     values = {key: {2027: -1.0, 2028: -2.0} for key in keys}
 
-    def run(runner):
-        return generate_artifacts(
-            measures,
-            config,
-            combined_sets=combined_sets,
-            artifacts_root=tmp_path_factory.mktemp("artifacts"),
-            generator_argv=["test"],
-            build=lambda dataset, scenario=None: world.sim(),
-            process=fake_process(values),
-            runner=runner,
-        )
-
-    serial = run(SerialRunner())
-    pickled = run(PicklingRunner())
-    assert serial.refused == {}, serial.refused
-    assert pickled.refused == {}, pickled.refused
-    assert [r.key for r in pickled.written] == keys
-    assert [r.key for r in serial.written] == keys
-    assert _artifacts(pickled) == _artifacts(serial)
+    runner = TwiceRunner(tmp_path_factory.mktemp("copies") / "artifacts")
+    report = generate_artifacts(
+        measures,
+        config,
+        combined_sets=combined_sets,
+        artifacts_root=tmp_path_factory.mktemp("serial") / "artifacts",
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+        runner=runner,
+    )
+    assert report.refused == {}, report.refused
+    assert [r.key for r in report.written] == keys
+    assert [copy.refused for copy in runner.copies] == [None] * len(keys)
+    copies = [copy.reference for copy in runner.copies]
+    assert [r.key for r in copies] == keys
+    # The copies wrote their own artifacts, under the copy root.
+    assert all(
+        Path(r.path).resolve().is_relative_to(runner.copy_root.resolve())
+        for r in copies
+    )
+    assert _artifacts(copies) == _artifacts(report.written)
 
 
 # --- results by area: the same tables whatever the order ------------------
