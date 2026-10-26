@@ -87,7 +87,9 @@ export function WholePanel({ width, height, before, after, position, windowBox }
   const plotH = height - top - bottom;
   const topIncome = Math.max(before[before.length - 1].income, after[after.length - 1].income);
   const reader = Math.max(position.incomeBefore, position.incomeAfter);
-  const xMax = niceMax(Math.max(topIncome, reader) * 1.04);
+  // The axis covers the published curve and you, unless you are past its
+  // end, where you are pinned to it
+  const xMax = niceMax(Math.max(topIncome, position.after.above || position.before.above ? 0 : reader) * 1.04);
   const x = (v) => left + (Math.max(0, Math.min(v, xMax)) / xMax) * plotW;
   const y = (p) => top + plotH - (p / 100) * plotH;
   const xTicks = ticksFor(xMax, width < 420 ? 3 : 5);
@@ -140,21 +142,42 @@ export function WholePanel({ width, height, before, after, position, windowBox }
         />
       )}
 
-      <line x1={x(position.incomeAfter)} x2={x(position.incomeAfter)} y1={top} y2={top + plotH} stroke={TEXT} strokeWidth={1} strokeDasharray={REFERENCE_DASH} opacity={0.6} />
-      <Marker x={x(position.incomeBefore)} y={y(youBefore)} color={BEFORE} hollow />
-      <Marker x={x(position.incomeAfter)} y={y(youAfter)} color={AFTER} />
-      <Label x={x(position.incomeAfter) + (labelLeft ? -12 : 12)} y={y(youAfter) + (youAfter > 85 ? 22 : -10)} anchor={labelLeft ? "end" : "start"}>
-        You
-      </Label>
+      {!youAfter.pinned && (
+        <line x1={x(youAfter.income)} x2={x(youAfter.income)} y1={top} y2={top + plotH} stroke={TEXT} strokeWidth={1} strokeDasharray={REFERENCE_DASH} opacity={0.6} />
+      )}
+      <Marker x={x(youBefore.income)} y={y(youBefore.percentile)} color={BEFORE} hollow />
+      <Marker x={x(youAfter.income)} y={y(youAfter.percentile)} color={AFTER} />
+      {youAfter.pinned ? (
+        <Label
+          x={x(youAfter.income) + (youAfter.pinned === "above" ? -12 : 12)}
+          y={y(youAfter.percentile) + (youAfter.pinned === "above" ? 22 : -12)}
+          anchor={youAfter.pinned === "above" ? "end" : "start"}
+        >
+          {youAfter.pinned === "above"
+            ? `You: above the ${ordinal(youAfter.percentile)} percentile →`
+            : `← You: below the ${ordinal(youAfter.percentile)} percentile`}
+        </Label>
+      ) : (
+        <Label x={x(youAfter.income) + (labelLeft ? -12 : 12)} y={y(youAfter.percentile) + (youAfter.percentile > 85 ? 22 : -10)} anchor={labelLeft ? "end" : "start"}>
+          You
+        </Label>
+      )}
     </svg>
   );
 }
 
 /** Where to draw a marker: on its curve, or at the edge of the published range. */
+/**
+ * Where to draw you: on the curve, or pinned to its end when your income
+ * is beyond the published range (never floating off it).
+ */
 function markerPoint(curve, pos, income) {
-  if (pos.below) return LOWEST_PERCENTILE / 2;
-  if (pos.above) return (100 + HIGHEST_PERCENTILE) / 2;
-  return pos.percentile ?? curve[0].percentile;
+  if (pos.below) return { income: curve[0].income, percentile: curve[0].percentile, pinned: "below" };
+  if (pos.above) {
+    const last = curve[curve.length - 1];
+    return { income: last.income, percentile: last.percentile, pinned: "above" };
+  }
+  return { income, percentile: pos.percentile, pinned: null };
 }
 
 function niceMax(value) {

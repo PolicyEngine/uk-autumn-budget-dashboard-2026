@@ -2,7 +2,7 @@
  * Where a household sits in the UK income distribution, before and after
  * the selected policies (public/data/income_distribution.csv).
  *
- * The file holds percentiles (5th to 95th) of equivalised household net
+ * The file holds percentiles (1st to 99th) of equivalised household net
  * income: household net income as the household calculator counts it
  * (uk_budget_data.calculators.comparable_net_income: no NHS spending in
  * kind, no attributed business rates or stamp duty) divided by the HBAI
@@ -16,8 +16,8 @@ import { COMBINED_REFORM_ID } from "./policyConfig";
 import { parseCsv } from "./publication/csv";
 
 export const DISTRIBUTION_FILE = "income_distribution.csv";
-export const LOWEST_PERCENTILE = 5;
-export const HIGHEST_PERCENTILE = 95;
+export const LOWEST_PERCENTILE = 1;
+export const HIGHEST_PERCENTILE = 99;
 
 // The HBAI modified OECD scale (BHC), as policyengine-uk's
 // household_equivalisation_bhc: 0.67 for the first adult, 0.33 for each
@@ -97,8 +97,8 @@ export function percentileOn(curve, income) {
   if (!curve.length || !Number.isFinite(income)) return { percentile: null, below: false, above: false };
   const first = curve[0];
   const last = curve[curve.length - 1];
-  if (income < first.income) return { percentile: null, below: true, above: false };
-  if (income > last.income) return { percentile: null, below: false, above: true };
+  if (income < first.income) return { percentile: null, below: true, above: false, edge: first.percentile };
+  if (income > last.income) return { percentile: null, below: false, above: true, edge: last.percentile };
   for (let i = 0; i < curve.length - 1; i += 1) {
     const a = curve[i];
     const b = curve[i + 1];
@@ -136,8 +136,8 @@ export function ordinal(n) {
 
 /** How a position reads: "the 47th percentile", "the bottom 5%", "the top 5%". */
 export function describePosition(position) {
-  if (position.below) return `the bottom ${LOWEST_PERCENTILE}%`;
-  if (position.above) return `the top ${100 - HIGHEST_PERCENTILE}%`;
+  if (position.below) return `the bottom ${position.edge ?? LOWEST_PERCENTILE}%`;
+  if (position.above) return `the top ${100 - (position.edge ?? HIGHEST_PERCENTILE)}%`;
   if (position.percentile === null) return null;
   return `the ${ordinal(position.percentile)} percentile`;
 }
@@ -267,4 +267,71 @@ export function logEdges(lo, hi, bands) {
   const a = Math.log(lo);
   const b = Math.log(hi);
   return Array.from({ length: bands + 1 }, (_, i) => Math.exp(a + ((b - a) * i) / bands));
+}
+
+export const MOBILITY_FILE = "income_mobility.csv";
+
+/**
+ * income_mobility.csv's rows for one run, year and unit ("percentile" or
+ * "decile"): { all: { up, down, same }, 1: {...}, ... 10: {...} }, each a
+ * % of people, null where the file leaves a share blank (too few survey
+ * households), or null when the run has no rows.
+ */
+export function mobilityOf(rows, { reformId, year, unit }) {
+  const own = rows.filter((row) => row.reform_id === reformId && Number(row.year) === year && row.unit === unit);
+  if (!own.length) return null;
+  const value = (text) => (text === "" || text === undefined || text === null ? null : Number(text));
+  return Object.fromEntries(
+    own.map((row) => [row.start_decile, { up: value(row.pct_up), down: value(row.pct_down), same: value(row.pct_same) }]),
+  );
+}
+
+const signedMoney = (value) => {
+  const rounded = Math.round(value);
+  const text = `£${Math.abs(rounded).toLocaleString("en-GB")}`;
+  return rounded > 0 ? `+${text}` : rounded < 0 ? `−${text}` : "£0";
+};
+
+/** A position's short name: "12th percentile", "top 1%", "bottom 1%". */
+export function placeLabel(pos) {
+  if (pos.above) return `top ${100 - (pos.edge ?? HIGHEST_PERCENTILE)}%`;
+  if (pos.below) return `bottom ${pos.edge ?? LOWEST_PERCENTILE}%`;
+  return `${ordinal(pos.percentile)} percentile`;
+}
+
+/**
+ * The card's text: a one-sentence headline and three labelled chips (your
+ * change, its share of your net income, your place before and after).
+ * Each fact once. The headline names the top or bottom tenth as "the top
+ * (bottom) N%" and anyone else by how many in every 100 people have a
+ * lower income.
+ */
+export function positionSummary(position, change, netBefore) {
+  const after = position.after;
+  let headline;
+  if (after.above) headline = `You're in the top ${100 - (after.edge ?? HIGHEST_PERCENTILE)}% of UK incomes.`;
+  else if (after.below) headline = `You're in the bottom ${after.edge ?? LOWEST_PERCENTILE}% of UK incomes.`;
+  else if (after.percentile >= 90) headline = `You're in the top ${Math.max(1, Math.ceil(100 - after.percentile))}% of UK incomes.`;
+  else if (after.percentile < 10) headline = `You're in the bottom ${Math.max(1, Math.ceil(after.percentile))}% of UK incomes.`;
+  else headline = `${Math.round(after.percentile)} in every 100 people in the UK have a lower income than you.`;
+  const before = placeLabel(position.before);
+  const now = placeLabel(after);
+  const moved = before !== now;
+  const share = netBefore > 0 ? (change / netBefore) * 100 : null;
+  const chips = [
+    { key: "change", label: "Your change", value: `${signedMoney(change)} a year` },
+    {
+      key: "share",
+      label: "Share of your income",
+      value: share === null ? "Not available" : `${share > 0 ? "+" : share < 0 ? "−" : ""}${Math.abs(share).toFixed(2)}%`,
+    },
+    {
+      key: "place",
+      label: "Your place",
+      value: moved
+        ? `${before.replace(" percentile", "")} → ${now}`
+        : `unchanged (${now})`,
+    },
+  ];
+  return { headline, chips, moved };
 }

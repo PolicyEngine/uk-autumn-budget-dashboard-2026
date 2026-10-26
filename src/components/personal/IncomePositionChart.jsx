@@ -17,9 +17,12 @@ import {
   householdPosition,
   incomeAt,
   logEdges,
+  MOBILITY_FILE,
+  mobilityOf,
   ordinal,
   overallAverage,
   parseDistribution,
+  positionSummary,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
 import { POLICIES } from "../../utils/policies";
@@ -45,7 +48,12 @@ export const POSITION_VIEWS = [
   { value: "where", label: "Where you sit" },
   { value: "gains", label: "Who gains" },
   { value: "compare", label: "You vs others" },
+  { value: "moves", label: "Who moves" },
   { value: "ranks", label: "Ranks" },
+];
+const MOVE_UNITS = [
+  { value: "percentile", label: "A percentile" },
+  { value: "decile", label: "A tenth" },
 ];
 const UNIT_OPTIONS = [
   { value: "pct", label: "% of net income" },
@@ -149,44 +157,6 @@ function niceTicks(min, max) {
   return ticks;
 }
 
-/** Where a position sits: people per 100 with a lower income, or the end it is off. */
-export function placeOf(pos) {
-  if (pos.below) return { lower: null, band: "bottom" };
-  if (pos.above) return { lower: null, band: "top" };
-  return { lower: Math.min(99, Math.max(0, Math.round(pos.percentile))), band: null };
-}
-
-const samePlace = (a, b) => a.band === b.band && a.lower === b.lower;
-const placeIn100 = (place) =>
-  place.band === "top"
-    ? `in the top ${100 - HIGHEST_PERCENTILE} in 100`
-    : place.band === "bottom"
-      ? `in the bottom ${LOWEST_PERCENTILE} in 100`
-      : `${place.lower} in 100`;
-
-/** The headline, and the result line under it. */
-export function headlineText(position, change, before) {
-  const placeBefore = placeOf(position.before);
-  const placeAfter = placeOf(position.after);
-  const lead =
-    placeAfter.band === "top"
-      ? `More than ${HIGHEST_PERCENTILE} in every 100 people in the UK live in households with a lower income than yours.`
-      : placeAfter.band === "bottom"
-        ? `Fewer than ${LOWEST_PERCENTILE} in every 100 people in the UK live in households with a lower income than yours.`
-        : `${placeAfter.lower} in every 100 people in the UK live in households with a lower income than yours.`;
-  const rounded = Math.round(change);
-  const share = before > 0 ? ` (${Math.abs((change / before) * 100).toFixed(2)}% of net income)` : "";
-  const money =
-    rounded === 0
-      ? "Your household: no change in income."
-      : `Your household ${rounded > 0 ? "gains" : "loses"} ${formatPounds(Math.abs(rounded))} a year${share}.`;
-  const moved = !samePlace(placeBefore, placeAfter);
-  const place = moved
-    ? `Your place: from ${placeIn100(placeBefore).replace(/ in 100$/, "")} to ${placeIn100(placeAfter)}.`
-    : `Your place: unchanged at ${placeIn100(placeAfter)}.`;
-  return { lead, result: `${money} ${place}`, moved };
-}
-
 /* ------------------------------------------------------------------ */
 /* Where you sit: one distribution, on a log income axis              */
 /* ------------------------------------------------------------------ */
@@ -244,7 +214,8 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
     p === 0 ? lo : p === 100 ? hi : incomeAt(side === "after" ? curves.after : curves.before, p),
   );
   const youX = x(youIncome);
-  const youShare = mix[Math.max(0, Math.min(mix.length - 1, edges.findIndex((e) => e > youIncome) - 1))] ?? 0;
+  const inside = youIncome >= edges[0] && youIncome <= edges[edges.length - 1];
+  const youShare = inside ? mix[Math.max(0, Math.min(mix.length - 1, edges.findIndex((e) => e > youIncome) - 1))] ?? 0 : 0;
   const onRight = youX > left + plotW * 0.6;
   const colour = side === "after" ? AFTER : BEFORE;
 
@@ -260,7 +231,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
         />
       )}
       {decile && x(bounds[decile]) - x(bounds[decile - 1]) > (narrow ? 50 : 96) && (
-        <text x={(x(bounds[decile - 1]) + x(bounds[decile])) / 2} y={top + plotH - 6} textAnchor="middle" fontSize={10.5} fill={CHART_COLOURS.highlight}>
+        <text x={x(bounds[decile - 1]) + 4} y={top + 12} textAnchor="start" fontSize={10.5} fill={CHART_COLOURS.highlight}>
           {narrow ? `${ordinal(decile)} tenth` : `Your tenth (${ordinal(decile)})`}
         </text>
       )}
@@ -289,7 +260,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
 
       <line x1={youX} x2={youX} y1={top + 8} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
       <circle cx={youX} cy={y(youShare)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
-      <Label x={youX + (onRight ? -8 : 8)} y={top + 20} anchor={onRight ? "end" : "start"} size={13}>
+      <Label x={youX + (onRight ? -8 : 8)} y={top + 34} anchor={onRight ? "end" : "start"} size={13}>
         {`You, ${formatPounds(youIncome)}`}
       </Label>
     </svg>
@@ -438,6 +409,109 @@ function CompareView({ rows, unit, grow }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Who moves: people changing place, and the shift in cut points       */
+/* ------------------------------------------------------------------ */
+
+function MovesView({ width, narrow, mobility, moveUnit, decile, cuts, grow }) {
+  const left = narrow ? 44 : 56;
+  const right = 12;
+  const plotW = Math.max(width - left - right, 80);
+  const top = 26;
+  const plotH = narrow ? 170 : 200;
+  const height = top + plotH + 52;
+  const rows = Array.from({ length: 10 }, (_, i) => mobility?.[i + 1] ?? { up: null, down: null });
+  const max = Math.max(0.01, ...rows.flatMap((r) => [r.up ?? 0, r.down ?? 0]));
+  const ticks = niceTicks(0, max).filter((t) => t > 0);
+  const scale = ticks[ticks.length - 1] >= max ? ticks[ticks.length - 1] : max;
+  const zeroY = top + plotH / 2;
+  const y = (v) => (v / scale) * (plotH / 2) * 0.92;
+  const slot = plotW / 10;
+  const barW = Math.min(slot * 0.6, 48);
+  const what = moveUnit === "percentile" ? "a percentile" : "a tenth";
+  return (
+    <div className="position-moves">
+      {mobility ? (
+        <svg className="position-moves-chart" width={width} height={height} aria-hidden="true">
+          <text x={left} y={12} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight} fill={AXIS_TITLE_STYLE.fill}>
+            {narrow ? "% of each tenth" : `People who move up or down ${what}, % of each tenth`}
+          </text>
+          {ticks.flatMap((t) => [t, -t]).map((t) => (
+            <g key={`t-${t}`}>
+              <line x1={left} x2={left + plotW} y1={zeroY - y(t)} y2={zeroY - y(t)} stroke={GRID_PROPS.stroke} />
+              <text x={left - 6} y={zeroY - y(t)} dy="0.35em" textAnchor="end" {...TICK_STYLE}>
+                {`${Number(Math.abs(t).toFixed(2))}%`}
+              </text>
+            </g>
+          ))}
+          {rows.map((r, i) => {
+            const cx = left + slot * (i + 0.5);
+            const mine = i + 1 === decile;
+            return (
+              <g key={i}>
+                {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
+                {r.up !== null && (
+                  <rect x={cx - barW / 2} y={zeroY - y(r.up * grow)} width={barW} height={Math.max(y(r.up * grow), 0.5)} fill={GAIN} fillOpacity={mine ? 1 : 0.55} />
+                )}
+                {r.down !== null && (
+                  <rect x={cx - barW / 2} y={zeroY} width={barW} height={Math.max(y(r.down * grow), 0.5)} fill={LOSS} fillOpacity={mine ? 1 : 0.55} />
+                )}
+                {r.up === null && (
+                  <text x={cx} y={zeroY - 6} textAnchor="middle" fontSize={9.5} fill={CHART_COLOURS.tick}>
+                    n/a
+                  </text>
+                )}
+                <text x={cx} y={top + plotH + 16} textAnchor="middle" fontSize={11} fontWeight={mine ? 700 : 400} fill={mine ? CHART_COLOURS.highlight : CHART_COLOURS.tick}>
+                  {i + 1}
+                </text>
+              </g>
+            );
+          })}
+          <line x1={left} x2={left + plotW} y1={zeroY} y2={zeroY} stroke={CHART_COLOURS.zeroLine} />
+          <Label x={left + 4} y={top + 12} size={11} weight={600} color={CHART_COLOURS.gainText}>
+            Up
+          </Label>
+          <Label x={left + 4} y={top + plotH - 4} size={11} weight={600} color={CHART_COLOURS.lossText}>
+            Down
+          </Label>
+          <text x={left} y={top + plotH + 34} fontSize={11} fill={CHART_COLOURS.tick}>
+            Bottom 10%
+          </text>
+          <text x={left + plotW / 2} y={top + plotH + 34} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
+            {narrow ? "Tenth before" : "Tenth of people by income, before the selected policies"}
+          </text>
+          <text x={left + plotW} y={top + plotH + 34} textAnchor="end" fontSize={11} fill={CHART_COLOURS.tick}>
+            Top 10%
+          </text>
+        </svg>
+      ) : (
+        <p className="single-year-quiet">Who moves is not available for this selection and year.</p>
+      )}
+      <table className="position-cuts">
+        <caption>Income at three points of the distribution, adjusted for household size</caption>
+        <thead>
+          <tr>
+            <th scope="col">Point</th>
+            <th scope="col">Before</th>
+            <th scope="col">After</th>
+            <th scope="col">Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cuts.map((cut) => (
+            <tr key={cut.p}>
+              <th scope="row">{cut.label}</th>
+              <td>{formatPounds(cut.before)}</td>
+              <td>{formatPounds(cut.after)}</td>
+              <td>{`${signedPounds(cut.after - cut.before)} (${signedPct(((cut.after - cut.before) / cut.before) * 100, 2)})`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* The card                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -464,9 +538,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [view, setView] = useState("where");
   const [side, setSide] = useState("after");
   const [unit, setUnit] = useState("pct");
+  const [moveUnit, setMoveUnit] = useState("percentile");
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const winners = useFile("winners_losers.csv", parseRecords);
   const relative = useFile("distributional_impact.csv", parseRecords);
+  const moves = useFile(MOBILITY_FILE, parseRecords);
   const run = distributionRunFor(policies, ALL_IDS);
   // Bars grow from zero each time their view opens
   const grow = useEased(1, { key: view, from: 0 });
@@ -484,6 +560,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   );
   const averages = useMemo(() => (winners.status === "ready" ? decileAverages(winners.rows, policies, year) : null), [winners, policies, year]);
   const ukAverage = useMemo(() => (winners.status === "ready" ? overallAverage(winners.rows, policies, year) : null), [winners, policies, year]);
+  const mobility = useMemo(
+    () => (moves.status === "ready" ? mobilityOf(moves.rows, { reformId: run.reformId, year, unit: moveUnit }) : null),
+    [moves, run.reformId, year, moveUnit],
+  );
   const percents = useMemo(() => (relative.status === "ready" ? decilePercents(relative.rows, policies, year) : null), [relative, policies, year]);
 
   const width = measured > 0 ? measured : narrow ? 326 : 1060;
@@ -504,7 +584,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const netBefore = Number(net?.before);
   const ownChange = Number(net?.after) - netBefore;
   const ownPct = netBefore > 0 ? (ownChange / netBefore) * 100 : 0;
-  const text = headlineText(position, ownChange, netBefore);
+  const text = positionSummary(position, ownChange, netBefore);
+  const textLine = `${text.headline} ${text.chips.map((c) => `${c.label}: ${c.value}.`).join(" ")}`;
   const decile = decileOf(position.before);
   const medianBefore = incomeAt(curves.before, 50);
   const medianChange = incomeAt(curves.after, 50) - medianBefore;
@@ -515,6 +596,12 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     { key: "median", label: "UK middle income, adjusted for household size", gbp: medianChange, pct: (medianChange / medianBefore) * 100 },
   ];
 
+  const cuts = [
+    { p: 10, label: narrow ? "10th" : "10th percentile" },
+    { p: 50, label: narrow ? "Median" : "Median (50th)" },
+    { p: 90, label: narrow ? "90th" : "90th percentile" },
+  ].map((cut) => ({ ...cut, before: incomeAt(curves.before, cut.p), after: incomeAt(curves.after, cut.p) }));
+  const everyone = mobility?.all ?? null;
   const viewOptions = POSITION_VIEWS;
   const chooser = narrow ? (
     <PillSelect variant="light" name="Show" prefix="Show" value={view} onChange={setView} options={viewOptions} />
@@ -527,6 +614,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     gains: `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => `${i + 1}: ${unit === "pct" ? (percents ? signedPct(percents[i + 1], 2) : "n/a") : averages ? signedPounds(averages[i + 1]) : "n/a"}`).join(", ")}. You, in the ${ordinal(decile)} tenth: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`,
     compare: compareRows.map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`).join("; "),
     ranks: `Your rank: ${describePosition(position.before)} before the selected policies, ${describePosition(position.after)} after.`,
+    moves: `${everyone ? `${everyone.up !== null ? `${everyone.up.toFixed(1)}%` : "Not published"} of people move up ${moveUnit === "percentile" ? "a percentile" : "a tenth"} and ${everyone.down !== null ? `${everyone.down.toFixed(1)}%` : "not published"} move down. ` : ""}${cuts.map((c) => `${c.label}: ${formatPounds(c.before)} before, ${formatPounds(c.after)} after`).join("; ")}.`,
   }[view];
 
   const csvFor = {
@@ -577,6 +665,18 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         ],
         rows: compareRows,
       }),
+    moves: () =>
+      buildChartCsv({
+        title: `People who move up or down ${moveUnit === "percentile" ? "a percentile" : "a tenth"}, by tenth before the selected policies, ${yearLabel}`,
+        units: "% of people in each tenth; blank where too few survey households move to publish",
+        columns: [
+          { key: "tenth", label: "Tenth before (1 = bottom 10%)" },
+          { key: "up", label: "Move up (%)", decimals: 3 },
+          { key: "down", label: "Move down (%)", decimals: 3 },
+        ],
+        rows: [...Array.from({ length: 10 }, (_, i) => String(i + 1)), "all"].map((k) => ({ tenth: k, up: mobility?.[k]?.up ?? null, down: mobility?.[k]?.down ?? null })),
+        notes: cuts.map((c) => `${c.label}: ${Math.round(c.before)} before, ${Math.round(c.after)} after (£ a year, adjusted for household size)`),
+      }),
     ranks: () =>
       buildChartCsv({
         title: `UK income distribution by percentile before and after the selected policies, ${yearLabel}`,
@@ -594,10 +694,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     name: `income-position-${view}-${yearLabel}`,
     exportOptions: {
       title: `${title}: ${POSITION_VIEWS.find((v) => v.value === view).label.toLowerCase()}`,
-      description: `${text.lead} ${text.result}`,
+      description: textLine,
       legendItems: [],
       logo: CHART_LOGO,
-      svgSelector: `svg.position-${view === "ranks" ? "whole" : view}`,
+      svgSelector: `svg.position-${view === "ranks" ? "whole" : view === "moves" ? "moves-chart" : view}`,
       reservedLegendHeight: 0,
     },
     csv: csvFor[view],
@@ -620,8 +720,15 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <p className="position-headline">{text.lead}</p>
-      <p className="position-result">{text.result}</p>
+      <p className="position-headline">{text.headline}</p>
+      <dl className="position-chips">
+        {text.chips.map((chip) => (
+          <div key={chip.key} className={`position-chip is-${chip.key}`}>
+            <dt>{chip.label}</dt>
+            <dd>{chip.value}</dd>
+          </div>
+        ))}
+      </dl>
       <div className="chart-view-switch chart-controls position-controls">
         {chooser}
         {view === "where" && (
@@ -636,6 +743,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             ]}
           />
         )}
+        {view === "moves" && <ViewSwitch compact label="Moving by" value={moveUnit} onChange={setMoveUnit} options={MOVE_UNITS} />}
         {(view === "gains" || view === "compare") && (
           <ViewSwitch compact label="Units" value={unit} onChange={setUnit} options={UNIT_OPTIONS} />
         )}
@@ -650,6 +758,16 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               <p className="single-year-quiet">The changes by tenth are not available for this selection and year.</p>
             ))}
           {view === "compare" && <CompareView rows={compareRows} unit={unit} grow={grow} />}
+          {view === "moves" && (
+            <>
+              {everyone && (
+                <p className="position-moves-lead">
+                  {`${everyone.up !== null ? `${everyone.up.toFixed(1)}%` : "Too few to publish"} of people move up ${moveUnit === "percentile" ? "at least a percentile" : "at least a tenth"}; ${everyone.down !== null ? `${everyone.down.toFixed(1)}%` : "too few to publish"} move down.`}
+                </p>
+              )}
+              <MovesView width={width} narrow={narrow} mobility={mobility} moveUnit={moveUnit} decile={decile} cuts={cuts} grow={grow} />
+            </>
+          )}
           {view === "ranks" && (
             <>
               <div className={`position-panels ${stacked ? "is-stacked" : ""}`}>
@@ -676,16 +794,19 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       <div className="chart-footer">
         <ChartMoreInfo year={year}>
           <p>
-            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. NHS spending in kind is left out for everyone.`}
+            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the Pre-measures forecast's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
           </p>
           <p>
             {"Everyone's income changes too, so your place before is ranked among everyone's income before the selected policies, and your place after among everyone's income after them."}
           </p>
           <p>
-            {`The UK distribution is published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide, so the lowest and highest 5% are not drawn.`}
+            {`The UK distribution is published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`}
           </p>
           <p>
             {"The tenths' average changes are the decile charts' own: they rank households by HBAI income, which leaves out fuel duty and VAT, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income."}
+          </p>
+          <p>
+            {"Who moves ranks everyone before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after than before. A share drawn from fewer than 10 survey households is not published."}
           </p>
           {!run.exact && (
             <p>

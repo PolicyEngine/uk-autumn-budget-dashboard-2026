@@ -58,8 +58,8 @@ describe("percentileOn", () => {
     expect(percentileOn(curve, 20000).percentile).toBeCloseTo(27.5);
   });
   it("says when an income is off the published range", () => {
-    expect(percentileOn(curve, 5000)).toEqual({ percentile: null, below: true, above: false });
-    expect(percentileOn(curve, 100000)).toEqual({ percentile: null, below: false, above: true });
+    expect(percentileOn(curve, 5000)).toEqual({ percentile: null, below: true, above: false, edge: 5 });
+    expect(percentileOn(curve, 100000)).toEqual({ percentile: null, below: false, above: true, edge: 95 });
     expect(describePosition(percentileOn(curve, 100000))).toBe("the top 5%");
     expect(describePosition(percentileOn(curve, 5000))).toBe("the bottom 5%");
   });
@@ -182,5 +182,56 @@ describe("decilePercents and overallAverage", () => {
 describe("logEdges", () => {
   it("spaces edges evenly on a log scale", () => {
     expect(logEdges(1000, 100000, 2).map(Math.round)).toEqual([1000, 10000, 100000]);
+  });
+});
+
+import { mobilityOf } from "./incomePosition";
+
+describe("mobilityOf", () => {
+  it("reads one run's shares, blank as null", () => {
+    const rows = [
+      { reform_id: "m", year: "2027", unit: "percentile", start_decile: "all", pct_up: "0.4", pct_down: "0.1", pct_same: "99.5" },
+      { reform_id: "m", year: "2027", unit: "percentile", start_decile: "1", pct_up: "", pct_down: "0.2", pct_same: "" },
+      { reform_id: "m", year: "2027", unit: "decile", start_decile: "all", pct_up: "0.1", pct_down: "0", pct_same: "99.9" },
+    ];
+    expect(mobilityOf(rows, { reformId: "m", year: 2027, unit: "percentile" })).toEqual({
+      all: { up: 0.4, down: 0.1, same: 99.5 },
+      1: { up: null, down: 0.2, same: null },
+    });
+    expect(mobilityOf(rows, { reformId: "m", year: 2028, unit: "decile" })).toBeNull();
+  });
+});
+
+import { positionSummary } from "./incomePosition";
+
+describe("positionSummary", () => {
+  const at = (percentile) => ({ percentile, below: false, above: false });
+  const chip = (summary, key) => summary.chips.find((c) => c.key === key).value;
+
+  it("says how many have a lower income in the middle, each fact once", () => {
+    const s = positionSummary({ before: at(11.7), after: at(11.8) }, 87.84, 18778.1);
+    expect(s.headline).toBe("12 in every 100 people in the UK have a lower income than you.");
+    const m = positionSummary({ before: at(29.2), after: at(29.6) }, 167.2, 25600);
+    expect(m.headline).toBe("30 in every 100 people in the UK have a lower income than you.");
+    expect(chip(m, "change")).toBe("+£167 a year");
+    expect(chip(m, "share")).toBe("+0.65%");
+    expect(chip(m, "place")).toBe("29th → 30th percentile");
+  });
+
+  it("names the top and the bottom without a stray 'at in'", () => {
+    const top = { percentile: null, below: false, above: true, edge: 99 };
+    const s = positionSummary({ before: top, after: top }, 87.84, 70000);
+    expect(s.headline).toBe("You're in the top 1% of UK incomes.");
+    expect(chip(s, "place")).toBe("unchanged (top 1%)");
+    const bottom = { percentile: null, below: true, above: false, edge: 1 };
+    const b = positionSummary({ before: bottom, after: at(1.4) }, -20, 5000);
+    expect(b.headline).toBe("You're in the bottom 2% of UK incomes.");
+    expect(chip(b, "change")).toBe("−£20 a year");
+    expect(chip(b, "share")).toBe("−0.40%");
+    expect(chip(b, "place")).toBe("bottom 1% → 1st percentile");
+    const high = positionSummary({ before: at(96.2), after: at(96.2) }, 0, 90000);
+    expect(high.headline).toBe("You're in the top 4% of UK incomes.");
+    expect(chip(high, "change")).toBe("£0 a year");
+    expect(chip(high, "place")).toBe("unchanged (96th percentile)");
   });
 });

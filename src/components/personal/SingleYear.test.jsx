@@ -115,7 +115,8 @@ describe("Household impact's results", () => {
           !url.endsWith("/household_scatter_binned.csv") &&
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
-          !url.endsWith("/distributional_impact.csv"),
+          !url.endsWith("/distributional_impact.csv") &&
+          !url.endsWith("/income_mobility.csv"),
       );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
