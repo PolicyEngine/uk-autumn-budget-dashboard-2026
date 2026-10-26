@@ -40,6 +40,7 @@ import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import LoadingSkeleton from "./components/publication/LoadingSkeleton";
+import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -767,11 +768,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </div>
         </div>
 
-        {updated && (
-          <p className="publication-updated" role="status">
-            Newer results were published while this page was open; it now shows them.
-          </p>
-        )}
+        {/* A newer publication replaced the figures: a passing note, once */}
+        <UpdateToast show={updated} />
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
             <p>{measure.description}</p>
