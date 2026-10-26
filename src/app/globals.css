@@ -1649,57 +1649,67 @@ body {
 }
 
 .replication-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  display: contents;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.replication-chip {
+/* Each link after the label, set off by a middle dot */
+.replication-links li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 10px;
+}
+
+.replication-links li::before {
+  content: "·";
+  margin-right: 12px;
+  color: var(--pe-gray-400);
+}
+
+/* A plain link with its icon, underlined on hover, a small arrow then */
+.replication-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-weight: 500;
-  color: var(--pe-gray-600);
+  color: var(--pe-teal-700);
   text-decoration: none;
   white-space: nowrap;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  border-radius: 4px;
 }
 
-.replication-chip svg {
+.replication-link-icon {
   flex: none;
-  color: var(--pe-gray-500);
-  transition: color 0.15s ease;
 }
 
-.replication-chip:hover {
-  color: var(--pe-teal-700);
-  background: var(--pe-teal-50);
-  border-color: var(--pe-teal-200);
+.replication-link:hover .replication-link-label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.replication-chip:hover svg {
-  color: var(--pe-teal-700);
+.replication-link-arrow {
+  flex: none;
+  opacity: 0;
+  transform: translate(-2px, 2px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
-.replication-chip:focus-visible {
+.replication-link:hover .replication-link-arrow,
+.replication-link:focus-visible .replication-link-arrow {
+  opacity: 1;
+  transform: none;
+}
+
+.replication-link:focus-visible {
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .replication-chip,
-  .replication-chip svg {
+  .replication-link-arrow {
     transition: none;
   }
 }
