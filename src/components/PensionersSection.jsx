@@ -266,7 +266,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         {unpublished.length > 0 && (
           <Note>Not yet published: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.</Note>
         )}
-        <ChartMoreInfo members={members} year={Number(selectedYear)} />
+        <ChartMoreInfo members={members} year={Number(selectedYear)} period={`in every year from ${first} to ${last}`} />
       </div>
     </div>
   );

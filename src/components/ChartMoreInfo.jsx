@@ -38,12 +38,12 @@ function EmployerReason({ id, year, text }) {
  * The selected measures that are £0 for households in the year shown, for a
  * card's "More info": a lead line, then one measure per line with why.
  */
-export function ZeroMeasuresDetail({ zero, year }) {
+export function ZeroMeasuresDetail({ zero, year, period }) {
   const count = zero.length === 1 ? "1 measure is" : `${zero.length} measures are`;
   return (
     <div className="zero-measures">
       <p className="zero-measures-lead">
-        {count} £0 for households in {fiscalYear(year)}:
+        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}:
       </p>
       <ul className="zero-measures-list">
         {zero.map((member) => {
@@ -72,16 +72,19 @@ export function ZeroMeasuresDetail({ zero, year }) {
  * and any other notes on reading the chart (`children`); nothing when it
  * would be empty.
  *
- * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, children?: React.ReactNode}} props
+ * `period` replaces "in 2027-28" for a chart over several years (its £0
+ * measures are £0 in all of them).
+ *
+ * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, period?: string, children?: React.ReactNode}} props
  */
-function ChartMoreInfo({ members = [], year, children }) {
+function ChartMoreInfo({ members = [], year, period, children }) {
   const zero = members.filter((member) => member.muted);
   const extra = Array.isArray(children) ? children.filter(Boolean) : children;
   const hasExtra = Array.isArray(extra) ? extra.length > 0 : Boolean(extra);
   if (!zero.length && !hasExtra) return null;
   return (
     <Disclosure inCard title="More info" className="chart-more-info" contentClassName="chart-more-info-content">
-      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} />}
+      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} period={period} />}
       {extra}
     </Disclosure>
   );
