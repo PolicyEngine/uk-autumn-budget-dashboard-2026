@@ -20,7 +20,8 @@ const TAB_ICONS = {
  *
  * @param {Object} props
  * @param {Array<{value: string, label: string}>} props.tabs
- * @param {string} props.value - The chosen tab's value
+ * @param {string|null} props.value - The chosen tab's value; null for none
+ *   (the landing page), when the first tab takes the Tab stop
  * @param {(value: string) => void} props.onChange
  * @param {(value: string) => string} props.tabId - The id of a tab's button
  * @param {(value: string) => string} props.panelId - The id of a tab's panel
@@ -81,7 +82,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
     const last = tabs.length - 1;
     const next = {
       ArrowRight: current === last ? 0 : current + 1,
-      ArrowLeft: current === 0 ? last : current - 1,
+      ArrowLeft: current <= 0 ? last : current - 1,
       Home: 0,
       End: last,
     }[event.key];
@@ -105,8 +106,10 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
           aria-hidden="true"
           style={{ width: indicator.width, transform: `translateX(${indicator.x}px)` }}
         />
-        {tabs.map((tab) => {
+        {tabs.map((tab, index) => {
           const selected = tab.value === value;
+          // With none chosen, the first tab is the row's Tab stop
+          const tabStop = selected || (index === 0 && !tabs.some((t) => t.value === value));
           return (
             <button
               key={tab.value}
@@ -119,12 +122,12 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
               aria-selected={selected}
               // Only the chosen view's panel is rendered
               aria-controls={selected ? panelId(tab.value) : undefined}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={tabStop ? 0 : -1}
               className="view-tab"
               onClick={() => onChange(tab.value)}
             >
               <TitleIcon name={TAB_ICONS[tab.value]} bare size={18} className="view-tab-icon" />
-              {tab.label}
+              <span className="view-tab-label">{tab.label}</span>
             </button>
           );
         })}

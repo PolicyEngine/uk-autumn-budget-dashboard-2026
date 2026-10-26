@@ -7,7 +7,10 @@
 // this chart" and downloads.
 
 import LsCard from "../LsCard";
+import { useState } from "react";
 import ViewToggle from "../../ViewToggle";
+import SeriesToggle from "../../SeriesToggle";
+import { useNarrowViewport } from "../../../utils/chartTheme";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH } from "../../../utils/livingStandards/baseline";
@@ -68,14 +71,19 @@ function cardSourceText(forecast, seriesList) {
 }
 
 function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
+  const narrow = useNarrowViewport();
+  // The lines drawn (chips, at least one on) and the one a chip's hover brings forward
+  const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
+  const [hovered, setHovered] = useState(null);
   const rows = joinRows(seriesList);
   if (!rows.length) return null;
-  const lines = seriesList.map((s, i) => ({
+  const allLines = seriesList.map((s, i) => ({
     key: s.key,
     name: seriesName(s),
     colour: LINE_STYLE[s.key]?.colour ?? FALLBACK_STYLES[i % FALLBACK_STYLES.length],
     dash: LINE_STYLE[s.key]?.dash,
   }));
+  const lines = allLines.filter((l) => shown.includes(l.key));
   const sourceText = cardSourceText(forecast, seriesList);
   const period = `${rows[0].year} to ${rows[rows.length - 1].year}`;
   const sentence = cardSentence(
@@ -87,7 +95,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       title: card.title,
       units: "Annual growth (%); calendar years",
       source: sourceText,
-      columns: [{ key: "year", label: "Year" }, ...lines.map((l) => ({ key: l.key, label: l.name, decimals: 4 }))],
+      columns: [{ key: "year", label: "Year" }, ...allLines.map((l) => ({ key: l.key, label: l.name, decimals: 4 }))],
       rows,
       notes: [],
     });
@@ -109,6 +117,18 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
     ),
     // Chart or table: one choice for every card, as icons in its header
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
+    // One chip per line, in its colour: the card's key, so no legend repeats
+    // the names. A card of one line needs none: its title names it.
+    controls: allLines.length > 1 && (
+      <SeriesToggle
+        series={allLines.map((l) => ({ key: l.key, label: l.name, colour: l.colour, dash: l.dash }))}
+        shown={shown}
+        onChange={setShown}
+        onHover={setHovered}
+        label="Lines"
+        narrow={narrow}
+      />
+    ),
   };
 
   if (view === "table") {
@@ -153,7 +173,9 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={lines.length > 1}
+        endLabels={allLines.length > 1}
+        legend={false}
+        focusKey={hovered}
       />
     </LsCard>
   );

@@ -89,7 +89,7 @@ export function useSlidingIndicator(rowRef, itemRefs, value) {
 /**
  * A view's sub-tabs: a band right under the view tabs, in the chosen view
  * tab's tint, so it reads as that tab opened out (the notch). Inside it, a
- * segmented control: icon and label, the chosen one on a white pill that
+ * segmented control: icon and label, the chosen one on a stronger tint that
  * slides to it. A WAI-ARIA tablist with automatic activation: Left/Right
  * (wrapping) and Home/End move to a tab and show it; only the chosen tab
  * is in the Tab order. On a phone the row scrolls sideways, faded at an

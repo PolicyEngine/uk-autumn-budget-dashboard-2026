@@ -1,5 +1,6 @@
 import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
+import ForecastFeedMethod from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
@@ -536,7 +537,10 @@ function MethodologyTab({ onShowTab }) {
             }
             details={<LivingStandardsMethod />}
             detailsLabel="Engine, data and gaps"
-          />
+          >
+            {/* Linked from the Forecast changes sub-tab, so not folded away */}
+            <ForecastFeedMethod />
+          </MethodSection>
 
         <MethodSection
             id={METHOD_SECTIONS.limitations}
