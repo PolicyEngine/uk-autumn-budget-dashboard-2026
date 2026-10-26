@@ -240,33 +240,200 @@ describe("the household answer's package versions", () => {
   // Review of e9d7c76, finding 1: the Modal build reports no uk_budget_data
   // version and Cloud Run reports one, so comparing it refused every
   // calculation. The stages compare the model packages only, and each must
-  // be reported.
+  // be reported. Review of d2ec6f2: the oracle names the three packages
+  // itself, so dropping one from STAGE_ENGINE_PACKAGES fails here.
+  const MODEL_PACKAGES = ["policyengine", "policyengine-core", "policyengine-uk"];
   const project = fc.option(fc.constantFrom("0.1.0", "0.2.0"), { nil: null });
   it("merges two stages exactly when they report the same model packages", () => {
+    expect([...STAGE_ENGINE_PACKAGES].sort()).toEqual(MODEL_PACKAGES);
     fc.assert(fc.property(versions, versions, fc.boolean(), project, project, (first, random, same, ownA, ownB) => {
       const second = same ? { ...first } : random;
       const headline = stage({ ...first, uk_budget_data: ownA }, 1, { by_policy: null, sweep: null });
       const detail = stage({ ...second, uk_budget_data: ownB }, 1, {});
-      const agree = STAGE_ENGINE_PACKAGES.every((name) => typeof first[name] === "string" && first[name] === second[name]);
+      const agree = MODEL_PACKAGES.every((name) => typeof first[name] === "string" && first[name] === second[name]);
       if (agree) expect(mergeStages(headline, detail).engine).toEqual(headline.engine);
       else expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
     }));
   });
 
-  // Review of e9d7c76, finding 3: an older build with the same package
-  // versions runs older measure definitions, and recomputes another net
-  // income for the same household
+  // Review of e9d7c76, finding 3, and of d2ec6f2, finding 2: net income is
+  // compared in whole pennies, so £10,000.00 and £10,000.01 agree although
+  // their float difference is just over 0.01
+  const full = { policyengine: "6.10.2", "policyengine-core": "3.33.3", "policyengine-uk": "2.132.6" };
+  const withNet = (baseline, reform, parts = {}) => normaliseHouseholdImpact({
+    ...HOUSEHOLD_FIXTURE,
+    engine: full,
+    net_income: { baseline, reform, change: reform - baseline },
+    ...parts,
+  });
+  it("accepts a breakdown within a penny of the headline's net income, either way, and refuses two pennies", () => {
+    const headline = withNet(10000, 10000, { by_policy: null, sweep: null });
+    for (const reform of [10000, 10000.01, 9999.99]) {
+      expect(stageMismatch(headline, withNet(10000, reform))).toBeNull();
+    }
+    for (const reform of [10000.02, 9999.98]) {
+      expect(stageMismatch(headline, withNet(10000, reform)).packages).toEqual(["net_income"]);
+    }
+    for (const baseline of [10000.01, 9999.99]) {
+      expect(stageMismatch(headline, withNet(baseline, 10000))).toBeNull();
+    }
+    for (const baseline of [10000.02, 9999.98]) {
+      expect(stageMismatch(headline, withNet(baseline, 10000)).packages).toEqual(["net_income"]);
+    }
+  });
+
   it("refuses a breakdown whose net income differs from the headline's by more than a penny", () => {
-    const full = { policyengine: "6.10.2", "policyengine-core": "3.33.3", "policyengine-uk": "2.132.6" };
-    fc.assert(fc.property(fc.double({ min: -5000, max: 5000, noNaN: true }), (shift) => {
-      const raw = { ...HOUSEHOLD_FIXTURE, engine: full };
-      const headline = normaliseHouseholdImpact({ ...raw, by_policy: null, sweep: null });
-      const detail = normaliseHouseholdImpact({ ...raw, net_income: { ...raw.net_income, change: raw.net_income.change + shift, reform: raw.net_income.reform + shift } });
-      if (Math.abs(shift) <= 0.01) expect(mergeStages(headline, detail).engine).toEqual(full);
+    const raw = { ...HOUSEHOLD_FIXTURE, engine: full };
+    const headline = normaliseHouseholdImpact({ ...raw, by_policy: null, sweep: null });
+    const shifted = (shift) => normaliseHouseholdImpact({ ...raw, net_income: { ...raw.net_income, change: raw.net_income.change + shift, reform: raw.net_income.reform + shift } });
+    // Whole pennies: one either way agrees, two or more doesn't
+    fc.assert(fc.property(fc.integer({ min: -500000, max: 500000 }), (n) => {
+      const detail = shifted(n / 100);
+      if (Math.abs(n) <= 1) expect(mergeStages(headline, detail).engine).toEqual(full);
       else {
         expect(() => mergeStages(headline, detail)).toThrow(StageMismatchError);
         expect(stageMismatch(headline, detail).packages).toEqual(["net_income"]);
       }
+    }));
+    // Any amount: under a penny agrees, two pennies or more doesn't
+    fc.assert(fc.property(fc.double({ min: -5000, max: 5000, noNaN: true }), (shift) => {
+      const detail = shifted(shift);
+      if (Math.abs(shift) < 0.01) expect(stageMismatch(headline, detail)).toBeNull();
+      if (Math.abs(shift) >= 0.02) expect(stageMismatch(headline, detail).packages).toEqual(["net_income"]);
+    }));
+  });
+
+  // Review of d2ec6f2, finding 1: two builds with the same package versions
+  // can agree on this household's net income and still differ elsewhere on
+  // its earnings sweep (a threshold change above its earnings). Only the
+  // build commit tells them apart.
+  const A = "a".repeat(40);
+  const B = "b".repeat(40);
+  const otherSweep = (sweep) => ({
+    ...sweep,
+    points: sweep.points.map((point, i) => (i === sweep.points.length - 1 ? { ...point, reform: point.reform - 250, change: point.change - 250 } : point)),
+  });
+  it("refuses a breakdown from another build commit even when net income agrees", () => {
+    const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, by_policy: null, sweep: null });
+    const older = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: B, sweep: otherSweep(HOUSEHOLD_FIXTURE.sweep) });
+    expect(older.net).toEqual(headline.net);
+    expect(older.engine).toEqual(headline.engine);
+    expect(stageMismatch(headline, older).packages).toEqual(["build"]);
+    expect(() => mergeStages(headline, older)).toThrow(StageMismatchError);
+    const same = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A });
+    expect(mergeStages(headline, same).sweep).toEqual(same.sweep);
+    expect(mergeStages(headline, same).build).toBe(A);
+  });
+
+  it("keeps the build commit an answer reports, and none for a missing or empty one", () => {
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).build).toBe(A);
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A }).builds).toEqual([A]);
+    for (const git_sha of [undefined, null, ""]) {
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).build).toBeNull();
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }).builds).toEqual([]);
+    }
+  });
+
+  // Review of e78fbf4: a malformed commit matched an identical malformed one
+  it("matches a malformed commit with nothing, not even itself", () => {
+    const headline = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null, sweep: null });
+    const part = (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha });
+    for (const bad of [7, "abc", "A".repeat(40), "a".repeat(39), ` ${A}`]) {
+      expect(stageMismatch(headline(bad), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(A), part(bad)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(bad), part(A)).packages).toEqual(["build"]);
+      expect(stageMismatch(headline(null), part(bad), { sameBuild: true }).packages).toEqual(["build"]);
+    }
+    // A 64-character commit (a SHA-256 repository) is well formed
+    const long = "f".repeat(64);
+    expect(stageMismatch(headline(long), part(long), { sameBuild: true })).toBeNull();
+  });
+
+  // Review of e78fbf4, finding 2: under a headline that reports no commit,
+  // a sweep from one Cloud Run revision and a split from another each
+  // passed against the headline's null, and made a complete result
+  it("never puts two parts from different commits together, under any headline", () => {
+    const parts = {
+      sweep: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, by_policy: null }),
+      byPolicy: (git_sha) => normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha, sweep: null }),
+    };
+    for (const headlineBuild of [null, A]) {
+      const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineBuild, by_policy: null, sweep: null });
+      for (const [firstPart, secondPart] of [["sweep", "byPolicy"], ["byPolicy", "sweep"]]) {
+        for (const [one, two] of [[A, B], [B, A]]) {
+          if (headlineBuild !== null && one !== headlineBuild) {
+            expect(() => mergeStages(headline, parts[firstPart](one))).toThrow(StageMismatchError);
+            continue;
+          }
+          const half = mergeStages(headline, parts[firstPart](one));
+          // The headline's own commit is kept apart from what its parts reported
+          expect(half.build).toBe(headlineBuild);
+          expect(half.builds).toEqual([one]);
+          expect(() => mergeStages(half, parts[secondPart](two))).toThrow(StageMismatchError);
+          expect(stageMismatch(half, parts[secondPart](two)).packages).toEqual(["build"]);
+          // The same commit, or none, completes it
+          expect(mergeStages(half, parts[secondPart](one)).builds).toEqual([one]);
+          expect(mergeStages(half, parts[secondPart](null)).builds).toEqual([one]);
+        }
+      }
+    }
+  });
+
+  it("never lets a part's commit stand in for a headline that reports none", () => {
+    const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: null, by_policy: null, sweep: null });
+    const half = mergeStages(headline, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, by_policy: null }));
+    // A retry from this partial result still refuses the detail service
+    const modal = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: A, sweep: null });
+    expect(stageMismatch(half, modal, { sameBuild: true }).packages).toEqual(["build"]);
+    expect(stageMismatch(half, modal)).toBeNull();
+  });
+
+  // Every reported commit, the headline's and each part's in turn, must be
+  // one well-formed commit; answers that report none are compared on the
+  // rest. The oracle reads only the raw answers.
+  it("merges a sequence of parts exactly when every commit they report is one", () => {
+    const raw = fc.constantFrom(null, A, B, "not-a-commit");
+    fc.assert(fc.property(raw, fc.array(raw, { minLength: 1, maxLength: 4 }), (headlineSha, partShas) => {
+      let result = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: headlineSha, by_policy: null, sweep: null });
+      let refused = false;
+      for (const git_sha of partShas) {
+        try {
+          result = mergeStages(result, normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha }));
+        } catch (error) {
+          expect(error).toBeInstanceOf(StageMismatchError);
+          refused = true;
+          break;
+        }
+      }
+      // Up to the first refusal, in order
+      const asked = [headlineSha, ...partShas];
+      let expectRefused = false;
+      const reported = [];
+      for (const sha of asked) {
+        if (sha === null) continue;
+        if (reported.length && !(reported.every((seen) => seen === sha) && /^[0-9a-f]{40}$/.test(sha) && /^[0-9a-f]{40}$/.test(reported[0]))) {
+          expectRefused = true;
+          break;
+        }
+        reported.push(sha);
+      }
+      expect(refused).toBe(expectRefused);
+      if (!refused) expect(result.build).toEqual(headlineSha === "not-a-commit" ? { malformed: headlineSha } : headlineSha);
+    }));
+  });
+
+  // The detail service's answers (sameBuild) must report the headline's
+  // commit. The main API's need only agree where both report one, as a build
+  // older than the commit field reports none.
+  it("matches build commits exactly as the stage rules say", () => {
+    const build = fc.constantFrom(null, A, B);
+    fc.assert(fc.property(build, build, fc.boolean(), (first, second, sameBuild) => {
+      const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: first, by_policy: null, sweep: null });
+      const detail = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, git_sha: second });
+      const agree = first !== null && second !== null ? first === second : !sameBuild;
+      const mismatch = stageMismatch(headline, detail, { sameBuild });
+      if (agree) expect(mismatch).toBeNull();
+      else expect(mismatch.packages).toEqual(["build"]);
     }));
   });
 });
