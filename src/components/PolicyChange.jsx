@@ -116,7 +116,7 @@ function StepPlot({ row, segments, tone, onHighlight, label }) {
     const index = picked ?? -1;
     set(event.key === "ArrowRight" ? Math.min(index + 1, segments.length - 1) : Math.max(index - 1, 0));
   };
-  const tipLeft = active ? Math.min(Math.max(x((active.start + active.end) / 2), 90), width - 90) : 0;
+  const tipLeft = active ? Math.min(Math.max(x((active.start + active.end) / 2), 135), width - 135) : 0;
   return (
     <div className="pchg-plot" ref={wrap}>
       <svg

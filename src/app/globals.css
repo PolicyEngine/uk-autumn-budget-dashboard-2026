@@ -2253,7 +2253,6 @@ body {
   position: absolute;
   top: 0;
   z-index: 2;
-  max-width: 260px;
   margin: 0;
   padding: 5px 9px;
   font-size: var(--fs-micro);
@@ -2266,7 +2265,8 @@ body {
   border: 1px solid var(--c-grid);
   border-radius: 6px;
   box-shadow: 0 4px 12px var(--shadow-soft, transparent);
-  transform: translate(-50%, -100%);
+  /* Over the plot's top edge, never over the words above it */
+  transform: translate(-50%, -2px);
 }
 
 /* A change that holds: two bars to scale */
@@ -2376,11 +2376,6 @@ body {
     min-width: 0;
   }
 
-  .pchg-tip {
-    white-space: normal;
-    width: max-content;
-    max-width: 220px;
-  }
 }
 
 @media (max-width: 768px) {

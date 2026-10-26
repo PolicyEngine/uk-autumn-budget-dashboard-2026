@@ -324,16 +324,23 @@ describe("the OBR forecast view", () => {
     choose(inequality, "Inequality measure", "90/10 ratio");
     expect(within(inequality).getByText(/^The 90\/10 ratio \(BHC\)/)).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    // Year by year and vigintiles by default (Vahid, 26 October): the
-    // sentence by twentieths, from the second-lowest (vigintile 1 left out)
-    expect(within(growth).getByText(/second-lowest-income twentieth/)).toBeInTheDocument();
-    expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
+    // Year by year and vigintiles by default (Vahid, 26 October): one short
+    // line, from the second-lowest twentieth (vigintile 1 left out)
+    const headline = () => growth.querySelector(".chart-description > p:not(.ls-card-subtitle)").textContent;
+    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: \S+% to \S+% vs \S+% to \S+% a year\.$/);
+    // The full sentence and the vigintile note are in About this chart
+    expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
+    fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
+    expect(within(growth).getByText(/in the second-lowest-income twentieth/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Vigintile 1, the lowest-income 5% of people, is left out/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Without the measures \(current law\)/)).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).has("ls_groups")).toBe(false);
     // One Options pill, the view first: no separate View pill
     expect(within(growth).queryByRole("button", { name: /^Growth view:/ })).toBeNull();
     expect(optionsSummary(growth)).toBe("Options: Year by year · Vigintiles · Before housing costs · All people");
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth|fifth/)).not.toBeInTheDocument();
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     // Year by year, deciles, after housing costs, non-pensioners: each
     // choice in the address, the sentence following
     choose(growth, "View", "Year by year");
@@ -348,21 +355,29 @@ describe("the OBR forecast view", () => {
       "non_pensioners",
     ]);
     expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32, real median income \(AHC\) among non-pensioners/)).toBeInTheDocument();
-    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
+    expect(headline()).toMatch(/^Lowest vs highest tenth: /);
+    // Decile 1 after housing costs: kept, with a short caution under the
+    // key and the fuller line in About this chart
+    expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
+    expect(within(growth).getByText(/Decile 1 after housing costs, the lowest-income tenth, is shown/)).toBeInTheDocument();
     // Vigintiles clear the household floor, so they are offered
     choose(growth, "Income groups", "Vigintiles");
     // Vigintile 1, the lowest-income 5%, is left out: the sentence starts at
-    // the second-lowest twentieth, the key at vigintile 2, with a note
+    // the second-lowest twentieth, the key at vigintile 2, the note in About
+    expect(headline()).toMatch(/^Second-lowest vs highest twentieth: /);
     expect(within(growth).getByText(/second-lowest-income twentieth \(5th–10th percentile\)/)).toBeInTheDocument();
     expect(within(growth).queryByText(/in the lowest-income twentieth/)).toBeNull();
     expect(within(growth).getByText(/^Vigintile 2 \(lowest shown/)).toBeInTheDocument();
     expect(within(growth).queryByText(/^Vigintile 1\b/)).toBeNull();
-    expect(within(growth).getByText(/^The lowest-income 5% are left out/)).toBeInTheDocument();
-    // Deciles and quintiles keep their bottom group, with no note
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
+    // Deciles and quintiles keep their bottom group; only deciles after
+    // housing costs carry the caution
     choose(growth, "Income groups", "Deciles");
-    expect(within(growth).queryByText(/^The lowest-income 5% are left out/)).toBeNull();
+    expect(within(growth).getByText(/^The lowest-income tenth after housing costs/)).toBeInTheDocument();
     choose(growth, "Income groups", "Quintiles");
+    expect(headline()).toMatch(/^Lowest vs highest fifth: /);
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
+    expect(within(growth).queryByText(/^The lowest-income tenth after housing costs/)).toBeNull();
     expect(new URLSearchParams(window.location.search).get("ls_groups")).toBe("quintile");
     // Back to vigintiles, the default, leaves ?ls_groups out
     choose(growth, "Income groups", "Vigintiles");
