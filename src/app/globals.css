@@ -64,10 +64,29 @@
   --pe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
-  /* Transitions */
-  --pe-transition-fast: 150ms ease;
-  --pe-transition-base: 200ms ease;
-  --pe-transition-slow: 300ms ease;
+  /* Motion: every change animates, short and eased out. --motion-fast for
+     small state changes (hover, a pill, a popover), --motion-base for
+     content swaps, disclosures and sliding indicators, --motion-chart for
+     chart data (the JS mirror is CHART_MOTION_MS and MOTION_EASE_OUT in
+     src/utils/chartMotion.jsx). All are 0ms with prefers-reduced-motion,
+     below; JS motion checks prefersReducedMotion() itself. */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-chart: 300ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Transitions (the ui-kit names, on the motion tokens) */
+  --pe-transition-fast: var(--motion-fast) var(--ease-out);
+  --pe-transition-base: var(--motion-base) var(--ease-out);
+  --pe-transition-slow: var(--motion-chart) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-chart: 0ms;
+  }
 }
 
 * {
