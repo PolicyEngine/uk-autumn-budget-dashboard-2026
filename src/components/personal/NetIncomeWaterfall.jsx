@@ -2,10 +2,46 @@ import useElementWidth from "../../hooks/useElementWidth";
 import { BAR_RADIUS, CHART_COLOURS } from "../../utils/chartTheme";
 import { money, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
+import TitleIcon from "../TitleIcon";
 
 const TEXT = CHART_COLOURS.text;
 const BEFORE_COLOUR = CHART_COLOURS.before;
 const AFTER_COLOUR = CHART_COLOURS.after;
+
+// A name mid-sentence: lower case first, unless it starts with an acronym
+const midSentence = (name) => (/^[A-Z]{2}/.test(name) ? name : name.charAt(0).toLowerCase() + name.slice(1));
+
+/**
+ * The card's one line, from the figures: where net income goes, then the
+ * policy that adds (or takes) the most; with gains and losses both, the
+ * largest of each. "Your net income rises from £70,050 to £70,159 in
+ * 2027-28; zero VAT on electricity adds the most (+£56)."
+ *
+ * @param {{before: number, after: number}} totals
+ * @param {Array<{name: string, label?: string, rounded: number}>|null} steps - null while split
+ * @param {string} yearLabel
+ */
+export function waterfallSentence(totals, steps, yearLabel) {
+  const change = Math.round(totals.after - totals.before);
+  const lead =
+    change === 0
+      ? `Your net income stays at ${money(totals.before)} in ${yearLabel}`
+      : `Your net income ${change > 0 ? "rises" : "falls"} from ${money(totals.before)} to ${money(totals.after)} in ${yearLabel}`;
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded) !== 0);
+  if (!moving.length) return `${lead}.`;
+  const nameOf = (step) => midSentence(step.label ?? step.name);
+  if (moving.length === 1) {
+    const [only] = moving;
+    return `${lead}; ${nameOf(only)} ${only.rounded > 0 ? "adds" : "takes"} ${money(Math.abs(only.rounded))} a year.`;
+  }
+  const gains = moving.filter((step) => step.rounded > 0).sort((a, b) => b.rounded - a.rounded);
+  const losses = moving.filter((step) => step.rounded < 0).sort((a, b) => a.rounded - b.rounded);
+  if (gains.length && losses.length) {
+    return `${lead}; ${nameOf(gains[0])} adds the most (${signedMoney(gains[0].rounded)}) and ${nameOf(losses[0])} takes the most (${signedMoney(losses[0].rounded)}).`;
+  }
+  const top = gains[0] ?? losses[0];
+  return `${lead}; ${nameOf(top)} ${top.rounded > 0 ? "adds" : "takes"} the most (${signedMoney(top.rounded)}).`;
+}
 
 /**
  * Net income from before to after: the starting net income, each policy's
@@ -68,6 +104,14 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
 
   return (
     <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? (splitFailed ? "unavailable" : "pending") : "ready"} data-year={yearLabel}>
+      {/* A title and one line, as every card has */}
+      <div className="waterfall-header">
+        <h3 className="waterfall-title">
+          <TitleIcon name="bars" />
+          <span className="title-text">How each policy changes your income</span>
+        </h3>
+        <p className="chart-description">{waterfallSentence(totals, pending ? null : shownSteps, yearLabel)}</p>
+      </div>
       <div ref={wrapperRef} style={{ position: "relative" }}>
         <svg
           width={width}
@@ -149,6 +193,10 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         </svg>
         <FloatingTooltip tip={tip} />
       </div>
+      {/* Why the totals' bars are cut short at their left */}
+      <p className="single-year-quiet waterfall-scale-note">
+        {`Bars start at ${money(Math.max(0, Math.floor(start / 100) * 100))}, not £0, so the changes are visible.`}
+      </p>
       {!pending && noEffect.length > 0 && (
         <p className="single-year-quiet waterfall-no-effect">
           No effect on you:{" "}

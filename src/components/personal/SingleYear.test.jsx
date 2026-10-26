@@ -1110,3 +1110,23 @@ describe("the breakdown's one line", () => {
     expect(breakdownSentence([group("income", 0), group("tax", 0)])).toBe("The selected policies leave your income, taxes and benefits unchanged.");
   });
 });
+
+describe("the waterfall's one line", () => {
+  it("says where net income goes and which policy moves it most, gains and losses alike", async () => {
+    const { waterfallSentence } = await import("./NetIncomeWaterfall");
+    const totals = { before: 70050, after: 70159 };
+    const step = (name, rounded) => ({ id: name, name, rounded });
+    expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56), step("Fuel duty deferral", 53)], "2027-28")).toBe(
+      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£56).",
+    );
+    expect(waterfallSentence(totals, [step("Zero VAT on electricity", 204), step("Threshold freeze", -95)], "2027-28")).toBe(
+      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+    );
+    expect(waterfallSentence({ before: 100, after: 80 }, [step("Threshold freeze", -20)], "2031-32")).toBe(
+      "Your net income falls from £100 to £80 in 2031-32; threshold freeze takes £20 a year.",
+    );
+    expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("Your net income stays at £100 in 2027-28.");
+    // While the split is calculated, the totals alone
+    expect(waterfallSentence(totals, null, "2027-28")).toBe("Your net income rises from £70,050 to £70,159 in 2027-28.");
+  });
+});
