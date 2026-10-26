@@ -9,10 +9,25 @@ time. The route builds one synthetic household from the answers: no survey
 data and no Hugging Face token, so the data licence question does not arise.
 
 Cost (Modal's published rates, 25 October 2026: $0.0473 per core-hour,
-$0.008 per GiB-hour): no container is kept warm by default
-(``MIN_CONTAINERS`` 0), so an idle app costs nothing; a container lives
-``SCALEDOWN_SECONDS`` after its last call. Keeping containers warm is a
-decision with a price (see the runbook), not a default.
+$0.008 per GiB-hour, so about $0.055 an hour for one 1-core, 1 GiB
+container). A container "kept warm" is one kept running, started and idle,
+so a call does not wait for a new container to start. The production app's
+``Household`` defaults:
+
+- ``MIN_CONTAINERS`` 2: two containers kept running even with no requests,
+  about $0.11 an hour. A deploy resets Modal's autoscaler to these
+  decorator values, and 2 is also the warm schedule's baseline, so a
+  deploy does not drop to 0 before the schedule's next run. A test app
+  (below) keeps 0.
+- ``BUFFER_CONTAINERS`` 4: while calls are in progress, Modal keeps 4 idle
+  containers beyond those the calls need, so the next page load does not
+  wait for new containers to start. Up to about $0.22 an hour more, only
+  while the function is in use.
+- ``MAX_CONTAINERS`` 80: a ceiling on a burst, about $4.4 an hour with all
+  80 running, nothing while idle.
+
+A container stops ``SCALEDOWN_SECONDS`` after its last call, down to the
+minimum.
 
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop uk-budget-household   # when done
@@ -35,6 +50,11 @@ the Monday 26 October rehearsal (09:00-18:00) and Budget day (Wednesday
 28 October, 08:00 to midnight), 6 on Tuesday 27 and Thursday 29 October
 (08:00-20:00), with the web endpoint kept at 1 only in those windows, and 0 from 4 November 00:00 (the hard stop). To switch it all off
 at once: ``modal app stop uk-budget-household``.
+
+The schedule sets only ``min_containers``. Modal keeps the other
+autoscaler settings (the buffer and the maximum) at their deployed values,
+and a deploy resets all of them, ``min_containers`` included, to the
+decorator values below until the schedule's next run (at most 10 minutes).
 """
 
 import os
@@ -56,15 +76,30 @@ CPU = float(os.environ.get("HOUSEHOLD_MODAL_CPU", "1.0"))
 MEMORY_MB = 1024
 # Cloud Run's request limit; a household run takes seconds.
 TIMEOUT_SECONDS = 300
-# A page load needs 9 to about 15 simulations, so this is roughly how many
-# visitors are served at once: a ceiling on what a burst can cost, not a
-# price while idle. 40, approved by Vahid for the 26-28 October 2026 Budget
-# window (the live app was raised to 40 at runtime on 26 October; a deploy
-# applies this value, so it must match). Back to 12 after 4 November.
-MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "40"))
-# 0: nothing runs, and nothing is paid, while no one asks. Raise only for a
-# set window (the webinar), knowing the price.
-MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
+# A page load needs 9 to about 15 simulations, so 80 containers serve about
+# 5 to 9 page loads at once: a ceiling on what a burst can cost (about
+# $4.4 an hour with all 80 running), not a price while idle. 80 was
+# proposed on 26 October 2026 and is not yet approved; Vahid approved 40
+# for the 26-28 October 2026 Budget window. A deploy applies this value.
+# The earlier plan was to return to 12 after 4 November.
+MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "80"))
+# 2 for the production app: the warm schedule's baseline, so a deploy,
+# which resets the autoscaler to this value, keeps 2 containers running
+# until the schedule's next run instead of dropping to 0. The schedule
+# then sets 2, 6 or 12, and 0 from 4 November. A test app has no schedule,
+# so it keeps 0 and costs nothing while idle.
+MIN_CONTAINERS = int(
+    os.environ.get(
+        "HOUSEHOLD_MODAL_MIN_CONTAINERS", "2" if PRODUCTION else "0"
+    )
+)
+# Idle containers Modal keeps beyond current demand while calls are in
+# progress, so a burst's next calls do not wait for a container to start.
+# Not applied while the function has no calls; the warm schedule leaves it
+# as deployed.
+BUFFER_CONTAINERS = int(
+    os.environ.get("HOUSEHOLD_MODAL_BUFFER_CONTAINERS", "4")
+)
 SCALEDOWN_SECONDS = 120
 # Memory snapshots (on by default): a container's start-up (the engine's
 # import and one run of every side, so its parameter caches are built) is
@@ -73,10 +108,13 @@ SCALEDOWN_SECONDS = 120
 # back to doing it in every new container.
 SNAPSHOT = os.environ.get("HOUSEHOLD_MODAL_SNAPSHOT", "1") == "1"
 # What the image carries so a container reads the same settings as the
-# deploy that built it (the decorators below are evaluated in both).
+# deploy that built it (the decorators below are evaluated in both, and
+# Modal rejects a minimum above the maximum when it evaluates them).
 DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_APP": APP_NAME,
     "HOUSEHOLD_MODAL_MAX_CONTAINERS": str(MAX_CONTAINERS),
+    "HOUSEHOLD_MODAL_MIN_CONTAINERS": str(MIN_CONTAINERS),
+    "HOUSEHOLD_MODAL_BUFFER_CONTAINERS": str(BUFFER_CONTAINERS),
     "HOUSEHOLD_MODAL_SNAPSHOT": "1" if SNAPSHOT else "0",
     "HOUSEHOLD_MODAL_CPU": str(CPU),
 }
@@ -150,6 +188,7 @@ def warm_jobs() -> list:
     timeout=TIMEOUT_SECONDS,
     max_containers=MAX_CONTAINERS,
     min_containers=MIN_CONTAINERS,
+    buffer_containers=BUFFER_CONTAINERS,
     scaledown_window=SCALEDOWN_SECONDS,
     # One retry: a run takes about 10 s, so a preempted container costs a
     # retry rather than a fall back to Cloud Run (Anthony, 26 October)
@@ -223,12 +262,19 @@ def fan_out(jobs: list) -> list:
     return [a["result"] for a in answers]
 
 
+# 1 when Household keeps any running (the production app's default), else
+# 0: the same rule as before, ``MIN_CONTAINERS and 1``, named. A deploy
+# therefore keeps one Web container running until the warm schedule's next
+# run, which sets 1 in its windows and 0 outside them; a test app keeps 0.
+WEB_MIN_CONTAINERS = 1 if MIN_CONTAINERS > 0 else 0
+
+
 @app.cls(
     cpu=1.0,
     memory=MEMORY_MB,
     timeout=TIMEOUT_SECONDS,
     max_containers=4,
-    min_containers=MIN_CONTAINERS and 1,
+    min_containers=WEB_MIN_CONTAINERS,
     scaledown_window=SCALEDOWN_SECONDS,
     enable_memory_snapshot=SNAPSHOT,
 )
