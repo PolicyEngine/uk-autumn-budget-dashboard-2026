@@ -12,6 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import TitleIcon from "../TitleIcon";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, money } from "../../utils/singleYear";
@@ -172,6 +173,10 @@ export default function HouseholdCards({
     <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-labelledby="household-cards-title">
       <div className="household-cards-head">
         <h2 className="household-cards-title" id="household-cards-title">
+          {/* The section icon every tab's headings carry (SectionHeading) */}
+          <span className="section-icon" aria-hidden="true">
+            <TitleIcon name="users" bare size={20} />
+          </span>
           Choose a household
         </h2>
         {chosen && (

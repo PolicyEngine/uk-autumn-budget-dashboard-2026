@@ -545,7 +545,7 @@
 
 .household-cards-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -787,8 +787,11 @@
 }
 
 .household-cards-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--fs-section);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--pe-gray-800);
