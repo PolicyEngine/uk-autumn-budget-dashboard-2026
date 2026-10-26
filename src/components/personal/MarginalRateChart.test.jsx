@@ -55,7 +55,7 @@ describe("marginal rate parts", () => {
   });
 
   it("puts your rate's parts in words, largest first", () => {
-    expect(describeParts(step(0.4, 0.2, 0.02))).toBe("income tax 40%, PA taper 20%, National Insurance 2%");
+    expect(describeParts(step(0.4, 0.2, 0.02))).toBe("income tax 40%, the personal allowance taper 20%, National Insurance 2%");
     expect(describeParts(null)).toBe("");
   });
 });
@@ -64,20 +64,20 @@ describe("MarginalRateChart", () => {
   it("stacks the parts in use, with a note behind an i for the Child Benefit clawback and the PA taper", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
-    expect(screen.getByText("PA taper")).toBeInTheDocument();
+    expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     // One view at a time: After first, with its total only
     expect(screen.getByRole("button", { name: "After" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Total rate after")).toBeInTheDocument();
     expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
     expect(screen.queryByText("Student loan")).not.toBeInTheDocument();
     // The parts are chips (shown, hidden or highlighted from the key)
-    expect(screen.getByRole("button", { name: "PA taper" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-pressed", "true");
     // One sentence: the rate, then the rate as money; its parts in More info
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/made up of income tax 40%, PA taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    expect(screen.getByText(/made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
-    expect(document.querySelector(".chart-more-info")).toHaveTextContent(/PA taper/);
+    expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
   });
 
   it("switches between before, after and the change, each with its own legend", () => {
@@ -86,10 +86,10 @@ describe("MarginalRateChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "Before" }));
     expect(screen.getByText("Total rate before")).toBeInTheDocument();
     expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
-    expect(screen.getByText("PA taper")).toBeInTheDocument();
+    expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
-    expect(screen.queryByText("PA taper")).not.toBeInTheDocument();
+    expect(screen.queryByText("Personal allowance taper")).not.toBeInTheDocument();
     expect(document.querySelector('[data-view="change"]')).not.toBeNull();
   });
 

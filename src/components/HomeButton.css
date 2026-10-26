@@ -1,5 +1,5 @@
-/* The band's home button (HomeButton.jsx): a translucent circle in the
-   family of the Year and Measures pills */
+/* The band's home button (HomeButton.jsx): PolicyEngine's white mark,
+   left of the title */
 .title-head {
   grid-area: title;
   display: flex;
@@ -8,44 +8,41 @@
   min-width: 0;
 }
 
+/* Just the mark: no box, tint or border */
 .title-row .home-button {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
   padding: 0;
-  color: var(--band-ink);
-  /* A light tint on the band, brighter than the pills, so it reads */
-  background: var(--band-ink-active);
-  border: 1px solid var(--band-ink-border-hover);
-  border-radius: 10px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
+  transition: opacity var(--landing-motion) ease, transform var(--landing-motion) ease;
 }
 
-.title-row .home-button:hover,
-.title-row .home-button[aria-current="page"] {
-  background: color-mix(in srgb, var(--band-ink) 28%, transparent);
-  border-color: var(--band-ink);
-}
-
-/* The square mark, whole and undistorted */
-.home-button-mark {
-  display: block;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
+.title-row .home-button:hover {
+  opacity: 0.85;
+  transform: scale(1.06);
 }
 
 .title-row .home-button[aria-current="page"] {
   cursor: default;
 }
 
+/* The ring goes round the mark only */
 .title-row .home-button:focus-visible {
   outline: 2px solid var(--band-ink);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+/* The square mark, whole and undistorted */
+.home-button-mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 /* Its tip, as a mini card above the band */
@@ -83,19 +80,18 @@
     gap: 10px;
   }
 
-  .title-row .home-button {
-    width: 34px;
-    height: 34px;
-  }
-
   .home-button-mark {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .title-row .home-button {
     transition: none;
+  }
+
+  .title-row .home-button:hover {
+    transform: none;
   }
 }

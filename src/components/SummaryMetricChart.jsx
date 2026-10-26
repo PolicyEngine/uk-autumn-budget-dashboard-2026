@@ -170,7 +170,7 @@ export function povertyMetric({ basis, housing, group }) {
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
-    // "Change in absolute poverty (BHC), pp": the card's short subtitle
+    // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
     // What the long description adds, for More info
     detail:
@@ -291,6 +291,27 @@ export function hasColumn(rows, key) {
 }
 
 /**
+ * The rows that decide whether a chart offers its choices: the shown run's,
+ * so a verified artifact written before the poverty and inequality measures
+ * shows its headline only, even when another run carries them; every run's
+ * while no run is shown or the run has no rows; with no whole-selection run,
+ * a selected measure's that lacks them.
+ */
+export function choiceRows(rows, run, selected = []) {
+  const own = run ? (rows ?? []).filter((row) => row.reform_id === run) : [];
+  if (own.length) return own;
+  // No whole-selection run: each selected measure's own run is drawn, so a
+  // choice is offered only when every one of them carries the measures (the
+  // rows of a measure without them come first, so its absence decides)
+  if (!run && selected.length > 1) {
+    const ofMeasure = (id) => (rows ?? []).filter((row) => row.reform_id === id);
+    const lacking = selected.map(ofMeasure).find((own) => own.length && !own.some((row) => row.top_10_share_change_pp !== undefined && row.top_10_share_change_pp !== ""));
+    if (lacking) return lacking;
+  }
+  return rows;
+}
+
+/**
  * The chosen measure for a chart with choices (poverty, inequality), and the
  * pill groups that choose it; none when the file predates the measures.
  */
@@ -353,7 +374,12 @@ export function metricByYear(rows, run, metric) {
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const chartRef = useRef(null);
-  const { metric, controls } = useMeasureChoice(family, rows);
+  // The whole selection's run: one measure's own, or the package's combined
+  // run (the catalogue's, #104) when every displayable measure is selected
+  const catalogue = useMeasureCatalogue();
+  const { combinedId } = catalogue;
+  const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
+  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run, selectedPolicies));
   // Each measure on its own: the selected year (default) or year by year
   const [effectView, setEffectView] = useState("year");
   // People behind a poverty change (pp × the population), where the
@@ -361,11 +387,6 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const peopleText = (year, value) =>
     metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
-  // The whole selection's run: one measure's own, or the package's combined
-  // run (the catalogue's, #104) when every displayable measure is selected
-  const catalogue = useMeasureCatalogue();
-  const { combinedId } = catalogue;
-  const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
   // No run for the whole selection: each selected measure's own, side by side
   const byMeasure = !run && selectedPolicies.length > 1
     ? policies

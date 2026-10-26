@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import LoadingSkeleton from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
 import {
   Bar,
@@ -354,7 +355,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
                 stroke={CHART_COLOURS.highlight}
                 strokeDasharray="4 3"
                 label={{
-                  value: narrow ? `SPA ${from}` : `State Pension age, ${from}`,
+                  value: narrow ? `Pension age ${from}` : `State Pension age, ${from}`,
                   position: "insideTopRight",
                   fill: CHART_COLOURS.highlight,
                   fontSize: TICK_STYLE.fontSize,
@@ -820,9 +821,11 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
   const props = { rows, policies, selectedPolicies, selectedYear, narrow, catalogue };
   if (status !== "ready") {
     return (
-      <p className="view-status" role="status">
-        {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
-      </p>
+      status === "loading" ? (
+        <LoadingSkeleton label="Loading results by age…" />
+      ) : (
+        <p className="view-status" role="status">Results by age are not available.</p>
+      )
     );
   }
   return (

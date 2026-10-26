@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
-import ChartUnitLabel from "../../utils/ChartUnitLabel";
+import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import useElementWidth from "../../hooks/useElementWidth";
 import {
@@ -75,7 +75,7 @@ const X_TITLE_HEIGHT = 18;
 // Shorter on a phone, where the forecast charts stack ten deep
 const plotHeight = (narrow) => (narrow ? 210 : 300);
 // Room for the unit label above the plot, and for the last x tick at the right
-const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
+const MARGIN = { top: UNIT_LABEL_TOP_MARGIN, right: 30, left: 0, bottom: 0 };
 
 /**
  * The card rows a chart fills: the plot, then its legend, then the logo

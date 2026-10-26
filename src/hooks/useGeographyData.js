@@ -216,8 +216,24 @@ function entryFor(key, name, catalogue) {
   return entry;
 }
 
+const keyFor = (name, catalogue) => `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
+
+/**
+ * Start loading the map's files before any view asks for them (the page's
+ * idle prefetch), under the keys the views read, through the same checks.
+ */
+export function prefetchGeography(catalogue) {
+  if (!catalogue?.manifest) return;
+  entryFor(keyFor("routing", catalogue), "routing", catalogue);
+  const published = publishedFiles();
+  for (const name of ["constituency", "regional"]) {
+    if (!published || published.includes(FILES[name].file)) entryFor(keyFor(name, catalogue), name, catalogue);
+  }
+  entryFor(keyFor("boundaries", undefined), "boundaries", undefined);
+}
+
 function useCachedResource(name, catalogue) {
-  const key = `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
+  const key = keyFor(name, catalogue);
   const subscribe = useCallback(
     (onChange) => {
       const entry = entryFor(key, name, catalogue);
