@@ -53,6 +53,7 @@ export const MEASURE_MODELLING = [
       "Removes the 5% VAT from electricity spending.",
       "For 182 days of 2026-27 and all of 2027-28.",
       "Gas and other reduced-rate goods are unchanged.",
+      "Great Britain only: Northern Ireland's households keep the 5%.",
     ],
     from: 2026,
   },
