@@ -1,8 +1,8 @@
 {
   "measure_id": "combined--a9ec07ba5efaef19",
-  "receipt_sha256": "430adefc5c2d0fbd25fc7abcf2edf5d366904ecee211f8828de5b5244b68727e",
-  "reason": "REHEARSAL MOCK, not a review: releases this rehearsal-branch combined run (14 Drill 5 measures, including the hand-written employer NI relief) so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
-  "checker": "REHEARSAL MOCK checker (Budget coordinator)",
-  "second": "REHEARSAL MOCK second (Budget coordinator)",
-  "released_at": "2026-10-26T10:00:00Z"
+  "receipt_sha256": "21fd272f6a036250778879f798be36111f2998b98395fe9980d3592548c3b47e",
+  "reason": "DRILL 5 MOCK, not a review: releases this Modal-generated combined run (14 Drill 5 measures, including the hand-written employer NI relief) on drill5-wednesday-path only so G4 can run end to end. On Budget day Vahid and Maria check it and attest.",
+  "checker": "DRILL 5 MOCK checker (Budget coordinator)",
+  "second": "DRILL 5 MOCK second (Budget coordinator)",
+  "released_at": "2026-10-26T13:15:00Z"
 }
