@@ -139,17 +139,30 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const top = measureSteps[0];
   const totalStep = steps.find((s) => s.kind === "total");
   const interaction = steps.find((s) => s.kind === "interaction");
+  // A plain sentence: no "≈" and no "pp" (the values are in the rows)
+  const about = (step) => {
+    const n = Math.abs(step.x);
+    return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+  };
+  const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
   const summary = top ? (
-    <>
-      Biggest: {top.name}, <strong>{main(top, true)}</strong>
-      {peopleMode && <> ({formatPp(top.pp)})</>}.
-      {totalStep && (
-        <>
-          {" "}
-          Package: <strong>{main(totalStep)}</strong>.
-        </>
-      )}
-    </>
+    peopleMode ? (
+      <>
+        {top.name} does most, {moves(top)}
+        {totalStep ? (
+          <>
+            ; all the measures together, {about(totalStep)}
+            {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
+          </>
+        ) : (
+          "."
+        )}
+      </>
+    ) : (
+      <>
+        {top.name} moves the rate most, by {formatPp(top.pp).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}.
+      </>
+    )
   ) : (
     <>No measure on its own moves anyone across this line in {year}.</>
   );
@@ -289,9 +302,10 @@ export function PovertyMeasuresRow({ rows, policies, selectedPolicies, selectedY
     <>
       {/* Each card's Options pill holds the poverty measure; the two share
           it (usePovertyChoice, ?poverty=), so choosing in one changes both */}
-      <div className="charts-grid">
-        <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} />
+      {/* Full width, one below the other: which measures first */}
+      <div className="charts-stack">
         <MeasuresPovertyCard {...props} />
+        <SummaryMetricChart metric={SUMMARY_METRICS.poverty} {...props} />
       </div>
     </>
   );
