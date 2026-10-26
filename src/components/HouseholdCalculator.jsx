@@ -732,6 +732,7 @@ function HouseholdCalculator({
         presets={allSelected ? presetChanges : null}
         yoursChange={yoursChange}
         year={year}
+        chosen={presetId !== null || formOpen || submitted !== null}
       />
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a

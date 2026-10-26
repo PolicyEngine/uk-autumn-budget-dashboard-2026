@@ -37,6 +37,8 @@ export const YOUNG_PERSON_PRESETS = [
   {
     id: "renter-22",
     label: "A 22-year-old renting",
+    // On its chip once the cards fold into a strip
+    short: "Renter, 22",
     description: "£25,000, renting at £900 a month, no student loan",
     icon: "key",
     measure: "domestic_electricity_zero_vat",
@@ -60,6 +62,8 @@ export const YOUNG_PERSON_PRESETS = [
   {
     id: "apprentice-19",
     label: "A 19-year-old apprentice",
+    // On its chip once the cards fold into a strip
+    short: "Apprentice, 19",
     description: "£23,600, renting a room at £600 a month",
     icon: "hardHat",
     measure: "employer_ni_relief_under_25s",

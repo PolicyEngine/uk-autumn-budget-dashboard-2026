@@ -63,6 +63,12 @@ function renderTab(props = {}) {
   );
 }
 
+/** A household's card in the grid, or its chip once the cards fold into a strip. */
+function householdItem(name) {
+  const region = screen.getByRole("region", { name: "Choose a household" });
+  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name });
+}
+
 // Nothing is asked until Calculate: every answer has a default, so one
 // press gives the results
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
@@ -353,7 +359,7 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example card shows its result without Calculate, and hides it
-    fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
     // Your household opens the form with its answers, and Calculate, to
@@ -405,14 +411,14 @@ describe("an example card", () => {
       .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     renderTab();
     openForm();
-    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
     expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: /^A 22-year-old renting/ }));
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     delete Element.prototype.scrollIntoView;
@@ -433,7 +439,7 @@ describe("an example card", () => {
       .spyOn(document.documentElement, "scrollHeight", "get")
       .mockImplementation(() => height);
     renderTab();
-    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
     height = 3200;
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
@@ -451,13 +457,13 @@ describe("an example card", () => {
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 140, bottom: 540, height: 400 });
     renderTab();
-    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" })));
     expect(scrollIntoView).not.toHaveBeenCalled();
     // Lower down, with reduced motion: an instant scroll
     rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     motion(true);
-    fireEvent.click(screen.getByRole("button", { name: /^A 22-year-old renting/ }));
+    fireEvent.click(householdItem(/^A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
     delete Element.prototype.scrollIntoView;
@@ -490,8 +496,7 @@ describe("switching from one household's card to another", () => {
     );
     return held;
   }
-  const card = (name) =>
-    within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: new RegExp(`^${name}`) });
+  const card = (name) => householdItem(new RegExp(`^${name}`));
 
   it("clears the previous card's result at once, shows the new one when it arrives, and ignores a late answer for the previous card", async () => {
     const held = serveHeld();
@@ -557,7 +562,7 @@ describe("the examples' precomputed results", () => {
       <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={POLICIES_FOR_TEST} year={2029} />,
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole("button", { name: /^A graduate on £35,000/ }));
+    fireEvent.click(householdItem(/^A graduate on £35,000/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
     expect(household).toEqual([]);

@@ -532,7 +532,210 @@
 }
 
 .household-cards-head {
-  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Once a household is chosen: the grid folds away and a strip of chips
+   takes its place (and back with "Show all households"). Each fold
+   animates its height (0fr to 1fr), opacity and a small slide */
+.household-cards-fold,
+.household-strip-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.28s;
+}
+
+.household-cards-fold.is-open,
+.household-strip-fold.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease 0.06s,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+
+.household-cards-fold-inner,
+.household-strip-fold-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Room for the cards' and chips' shadows and focus rings inside the fold */
+.household-cards-fold-inner {
+  padding: 4px 3px 3px;
+  margin: 0 -3px -3px;
+}
+
+.household-strip-fold-inner {
+  padding: 10px 0 0;
+}
+
+/* "Show all households" / "Show fewer", right of the title */
+.household-cards-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.household-cards-toggle:hover {
+  border-color: var(--pe-teal-300);
+  background: var(--pe-teal-50);
+}
+
+.household-cards-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-cards.is-folded {
+  margin-bottom: 16px;
+}
+
+/* The chips: one row; on a narrow screen it scrolls sideways, a chip at a
+   time, never the page */
+.household-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 3px 6px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 3px;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+/* A wide screen has room for every chip: they wrap rather than hide any
+   behind a sideways scroll */
+.household-strip-list {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 1024px) {
+  .household-strip {
+    overflow-x: visible;
+  }
+
+  .household-strip-list {
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
+.household-chip {
+  --card-accent: var(--pe-teal-600);
+  --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 6px;
+  font-size: var(--fs-caption);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  box-shadow: var(--pe-shadow-sm);
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.household-chip:hover {
+  border-color: color-mix(in srgb, var(--card-accent) 45%, var(--card-border));
+}
+
+.household-chip.is-yours {
+  font: inherit;
+  font-size: var(--fs-caption);
+}
+
+.household-chip:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+}
+
+.household-chip[aria-selected="true"],
+.household-chip.is-selected {
+  color: var(--pe-gray-900);
+  background: color-mix(in srgb, var(--card-accent) 10%, var(--pe-surface));
+  border-color: var(--card-accent);
+  box-shadow:
+    0 0 0 1px var(--card-accent),
+    var(--pe-shadow-sm);
+}
+
+.household-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--card-ink);
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--pe-surface));
+  border-radius: 50%;
+}
+
+.household-chip[aria-selected="true"] .household-chip-icon,
+.household-chip.is-selected .household-chip-icon {
+  color: var(--pe-surface);
+  background: var(--card-ink);
+}
+
+.household-chip-name {
+  font-weight: 600;
+}
+
+.household-chip-figure {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.household-chip-figure.is-gain {
+  color: var(--c-gain-text);
+}
+
+.household-chip-figure.is-loss {
+  color: var(--c-loss-text);
+}
+
+.household-chip-figure.is-none {
+  color: var(--pe-gray-500);
 }
 
 .household-cards-title {
@@ -544,7 +747,7 @@
 }
 
 .household-cards-subtitle {
-  margin: 4px 0 0;
+  margin: 0 0 14px;
   font-size: var(--fs-small);
   line-height: 1.5;
   color: var(--pe-gray-500);
@@ -909,16 +1112,6 @@
   transform: rotate(180deg);
 }
 
-/* An example's note, under the cards */
-.household-cards + .household-examples-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  margin: -8px 0 20px;
-  padding: 0 2px;
-}
-
 /* The form, opening below the cards */
 .household-form-panel > .expander-inner {
   /* Room for the card's shadow while it grows */
@@ -1073,13 +1266,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.household-examples-note {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--pe-gray-600);
 }
 
 /* Groups: a small spaced label, then a grid of boxes; hairlines between */
@@ -1529,6 +1715,16 @@
 
   .household-more {
     padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .household-cards-fold,
+  .household-cards-fold.is-open,
+  .household-strip-fold,
+  .household-strip-fold.is-open,
+  .household-chip {
+    transition: none;
   }
 }
 

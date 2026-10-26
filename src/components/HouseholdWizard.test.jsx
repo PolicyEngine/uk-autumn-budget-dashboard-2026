@@ -33,13 +33,20 @@ const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
 const pickSeat = (name) => {
   fireEvent.focus(seatBox());
   fireEvent.change(seatBox(), { target: { value: name } });
-  fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: (label) => label !== "Example households" })).getByRole("option", { name }));
 };
 /** The region the constituency sets, as shown under it. */
 const regionShown = () => document.getElementById("region-constituency").textContent;
 const cards = () => screen.getByRole("region", { name: "Choose a household" });
 const examples = cards;
-const exampleItem = (label) => within(examples()).getByRole("button", { name: new RegExp(`^${label}`) });
+// A card in the grid, or, once a household is chosen and the cards fold
+// into a strip, its chip
+const exampleItem = (label) => {
+  const name = new RegExp(`^${label}`);
+  return within(examples()).queryByRole("button", { name }) ?? within(examples()).getByRole("option", { name });
+};
+/** Whether an example's card (aria-pressed) or chip (aria-selected) is the one chosen. */
+const isChosen = (item) => (item.getAttribute("aria-pressed") ?? item.getAttribute("aria-selected")) === "true";
 const applyExample = (label) => fireEvent.click(exampleItem(label));
 const yoursCard = () => within(cards()).getByRole("button", { name: /^Your household/ });
 /** Open the form below the cards ("Your household"), unless it is open. */
@@ -252,7 +259,7 @@ describe("the personal impact form", () => {
     applyExample("A 22-year-old renting");
     // Chosen: the card is marked; no note or "Change these answers" under
     // the cards (the card says what the example is)
-    expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-pressed", "true");
+    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(true);
     expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
     // Its answers, in the form once opened from Your household
@@ -261,7 +268,7 @@ describe("the personal impact form", () => {
     expect(box("Salary in 2026")).toHaveValue(25000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     // Edited: no longer the example as given
-    expect(exampleItem("A 22-year-old renting")).toHaveAttribute("aria-pressed", "false");
+    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
     expect(yoursCard()).toHaveClass("is-selected");
   });
 
@@ -270,7 +277,7 @@ describe("the personal impact form", () => {
     applyExample("A pensioner on the State Pension");
     fireEvent.click(yoursCard());
     expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
-    expect(exampleItem("A pensioner on the State Pension")).toHaveAttribute("aria-pressed", "true");
+    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
     expect(box("Age")).toHaveValue(70);
     // Calculate is there, as for your own answers
     expect(screen.getByRole("button", { name: /^Calcul/ })).toBeVisible();
@@ -283,7 +290,54 @@ describe("the personal impact form", () => {
     expect(yoursCard()).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(yoursCard());
     expect(yoursCard()).toHaveAttribute("aria-expanded", "false");
-    expect(exampleItem("A pensioner on the State Pension")).toHaveAttribute("aria-pressed", "true");
+    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+  });
+
+  it("folds the cards into a strip of chips once a household is chosen, and opens them again from Show all households", () => {
+    render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
+    // Nothing chosen: the full grid, no strip, no toggle
+    expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
+    expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
+    applyExample("A 22-year-old renting");
+    // Folded: the grid's cards are hidden; Your household and seven chips
+    const strip = within(cards()).getByRole("listbox", { name: "Example households" });
+    const chips = within(strip).getAllByRole("option");
+    expect(chips).toHaveLength(7);
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Renter, 22",
+      "Apprentice, 19",
+      "Pensioner, 70",
+      "Family on UC",
+      "Graduate, £35k",
+      "Long commute",
+      "Earner, £110k",
+    ]);
+    expect(chips[0]).toHaveAttribute("aria-selected", "true");
+    expect(chips[0]).toHaveAttribute("tabindex", "0");
+    expect(within(cards()).queryByRole("button", { name: /^A 19-year-old apprentice/ })).not.toBeInTheDocument();
+    expect(yoursCard()).toHaveClass("household-chip");
+    // Another chip: switches, still folded
+    fireEvent.click(chips[2]);
+    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+    expect(within(cards()).getByRole("listbox", { name: "Example households" })).toBeInTheDocument();
+    // The arrow keys move between chips; Enter chooses
+    const pensioner = exampleItem("A pensioner on the State Pension");
+    fireEvent.keyDown(pensioner, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(exampleItem("A family on Universal Credit"));
+    fireEvent.keyDown(document.activeElement, { key: "End" });
+    expect(document.activeElement).toBe(exampleItem("A higher earner on £110,000"));
+    fireEvent.keyDown(document.activeElement, { key: "Enter" });
+    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(true);
+    // Show all households: the grid again; a card there folds it
+    const toggle = within(cards()).getByRole("button", { name: "Show all households" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(within(cards()).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
+    expect(exampleItem("A graduate on £35,000")).toHaveAttribute("aria-pressed", "false");
+    applyExample("A graduate on £35,000");
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
+    expect(within(cards()).getByRole("listbox", { name: "Example households" })).toBeInTheDocument();
   });
 
   it("closes the form when an example card is chosen", () => {
