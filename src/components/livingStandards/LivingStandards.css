@@ -640,8 +640,7 @@
   gap: 8px;
 }
 
-.forecast-tile-icon,
-.forecast-feed-icon {
+.forecast-tile-icon {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -810,34 +809,16 @@
   margin-bottom: 20px;
 }
 
-/* How the forecast feeds the baseline: a quiet card under the tiles */
-.forecast-feed {
-  margin-bottom: 8px;
-  padding: 14px 18px 4px;
-  border: 1px solid var(--pe-gray-200);
-  border-radius: 12px;
-  background: var(--c-surface);
-}
-
-.forecast-feed-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.forecast-feed-head h3 {
-  margin: 2px 0 4px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
-.forecast-feed-head p {
-  margin: 0;
+/* The line under the tiles linking to the forecast's method */
+.forecast-feed-link {
+  margin: 0 0 8px;
   font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
+}
+
+.forecast-feed-link a {
+  color: var(--c-gain-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .forecast-feed-params {
