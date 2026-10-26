@@ -281,8 +281,8 @@ PROGRAMMES = (
         "council_tax",
         "household",
         note=(
-            "Estimated from the band and the region's average Band D "
-            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
+            "Estimated from the band and the region's average Band D, "
+            "unless entered. No measure changes it."
         ),
     ),
     Programme(

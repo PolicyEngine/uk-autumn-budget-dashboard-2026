@@ -1,16 +1,19 @@
 import TitleIcon from "../TitleIcon";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
 import Tip, { InfoTip } from "../Tip";
-import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap } from "lucide-react";
+import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
+import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
 import NetIncomeWaterfall from "./NetIncomeWaterfall";
+import { layerRows, layersInUse } from "./netIncomeParts";
+import { partsInUse } from "./marginalRateParts";
+import { componentsInUse } from "./sweepComponents";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
 import IncomePositionChart from "./IncomePositionChart";
@@ -280,6 +283,7 @@ function AboutResult({ items, caution, bars }) {
   const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   const parts = [
+    caution && "Caveats",
     items.length > 0 && "Based on",
     noEffect.length > 0 && "No effect on you",
     (notes.length > 0 || under.length > 0) && "Notes",
@@ -297,9 +301,17 @@ function AboutResult({ items, caution, bars }) {
     <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
       <div className="info-sections result-about">
         {caution && (
-          <ul className="info-list result-about-caution">
-            <li>Most of the change comes from assumed fuel and electricity spending.</li>
-          </ul>
+          <section className="info-section info-section-caveat">
+            <h4 className="info-heading">
+              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+              Caveats
+            </h4>
+            <div className="info-body">
+              <ul className="info-list info-caveats result-about-caution">
+                <li>Most of the change comes from assumed fuel and electricity spending.</li>
+              </ul>
+            </div>
+          </section>
         )}
         <div className="result-about-columns">
           {items.length > 0 && (
@@ -439,7 +451,16 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const [hover, setHover] = useState(null);
   // The "+N with no effect for you" chip, open on both or neither
   const [expanded, setExpanded] = useState(false);
-  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded };
+  // The components that apply on either card: both keys show these alike
+  const union = useMemo(() => {
+    const points = sweepPoints(sweep);
+    const net = sweep.netParts
+      ? new Set(layersInUse([...layerRows(points, sweep.netParts, "before"), ...layerRows(points, sweep.netParts, "after")]).map((layer) => layer.key))
+      : new Set();
+    const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
+    return componentsInUse(net, rate);
+  }, [sweep]);
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union };
   return (
     <div className="charts-grid single-year-chart-pair">
       <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />

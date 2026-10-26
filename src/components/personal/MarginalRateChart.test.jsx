@@ -1,3 +1,4 @@
+import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MarginalRateChart, { RateTooltip } from "./MarginalRateChart";
@@ -66,7 +67,7 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     // One view at a time: After first, with its total only
-    expect(screen.getByRole("button", { name: "After" })).toHaveAttribute("aria-pressed", "true");
+    expect(optionsLabel(document.body)).toBe("After");
     expect(screen.getByText("Total rate after")).toBeInTheDocument();
     expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
     // Every shared component has a chip, so the two cards' keys line up;
@@ -87,11 +88,11 @@ describe("MarginalRateChart", () => {
   it("switches between before, after and the change, each with its own legend", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
-    fireEvent.click(screen.getByRole("button", { name: "Before" }));
+    chooseOption(document.body, "Before");
     expect(screen.getByText("Total rate before")).toBeInTheDocument();
     expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    chooseOption(document.body, "Change");
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
     expect(screen.queryByText("Personal allowance taper")).not.toBeInTheDocument();
     expect(document.querySelector('[data-view="change"]')).not.toBeNull();

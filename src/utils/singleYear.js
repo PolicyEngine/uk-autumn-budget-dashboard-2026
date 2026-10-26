@@ -507,9 +507,9 @@ export function areaName(brma) {
 }
 
 /**
- * How the single-year calculation works, in one place: Personal impact's
- * "About these figures" shows these, as [term, text]; the Methodology tab
- * links there.
+ * How the single-year calculation works, in one place: the Methodology
+ * view's Household impact section shows these, as [term, text]; the
+ * Household impact cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
