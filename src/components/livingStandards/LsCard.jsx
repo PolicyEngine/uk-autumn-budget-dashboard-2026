@@ -77,8 +77,16 @@ export default function LsCard({
                 sentence; the downloads keep them in their titles */}
             <span className="title-text">{title}</span>
           </h3>
-          {subtitle && <p className="ls-card-subtitle">{subtitle}</p>}
-          {summary && <p className="chart-description">{summary}</p>}
+          {/* The subtitle shares the description's row, so paired cards
+              (one grid row each) still line up */}
+          {subtitle ? (
+            <div className="chart-description">
+              <p className="ls-card-subtitle">{subtitle}</p>
+              {summary && <p>{summary}</p>}
+            </div>
+          ) : (
+            summary && <p className="chart-description">{summary}</p>
+          )}
         </div>
         {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={fullTitle} />}
       </div>

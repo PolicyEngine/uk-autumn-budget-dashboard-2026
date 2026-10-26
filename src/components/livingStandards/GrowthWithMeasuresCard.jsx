@@ -107,12 +107,14 @@ function LoadedCard({ data, rows, run, twinLink }) {
             <h3>
               <span className="title-text">{WITH_MEASURES_TITLE}</span>
             </h3>
-            <p className="ls-card-subtitle">{subtitle}</p>
-            <p className="chart-description">
-              {noEffect
-                ? "The selected measures do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
-                : "There are no results for this selection."}
-            </p>
+            <div className="chart-description">
+              <p className="ls-card-subtitle">{subtitle}</p>
+              <p>
+                {noEffect
+                  ? "The selected measures do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
+                  : "There are no results for this selection."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
