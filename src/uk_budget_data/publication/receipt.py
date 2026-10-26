@@ -56,8 +56,11 @@ MANIFEST_PATH = "public/data/manifest.json"
 PYTHON_SUFFIXES = (".py", ".pyc")
 # Suffixes of the Treasury reconciliation inputs under data_inputs/treasury/
 # (is_non_calculation_path): the sources, mapping, expected effects,
-# exceptions, policy and README. Only reconcile, responsiveness, publish and
-# exports read them; generation never does.
+# exceptions, policy and README. Only the publication commands interpret them
+# (reconcile, responsiveness, publish, exports); generation never reads them.
+# The household deploy still hashes and copies them with the rest of
+# data_inputs/ (runtime_identity.DEPLOYED_PATHS), so they must be committed
+# before a deploy, like any deployed file.
 TREASURY_SUFFIXES = (".csv", ".yaml", ".md")
 # Suffixes of the page's own files under src/, outside the Python package
 # (is_non_calculation_path). Python reads nothing there.
@@ -211,7 +214,8 @@ def is_non_calculation_path(path: str) -> bool:
     published files, the disclosure review, docs, the page, and the
     Treasury reconciliation inputs (G3 commits the Treasury entry, mapping
     and exceptions after G2 has generated the measures; only the
-    publication commands read them, never generation). Everything else,
+    publication commands interpret them, and generation never reads them).
+    Everything else,
     including any path not listed here, any Python file under ``public/``
     or ``docs/`` and any file under ``data_inputs/treasury/`` that isn't
     CSV, YAML or Markdown, could change a calculation. Inputs a command
