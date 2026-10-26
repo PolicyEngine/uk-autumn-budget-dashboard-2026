@@ -17,7 +17,7 @@ describe("the example households", () => {
       expect(example.note.length).toBeGreaterThan(0);
       // The measure it is for: a real one, named short enough for a tag
       expect(POLICIES.map((policy) => policy.id), example.id).toContain(example.measure);
-      expect(example.tag.length, example.id).toBeLessThanOrEqual(32);
+      expect(example.tag.length, example.id).toBeLessThanOrEqual(25);
       expect(Object.keys(EXAMPLE_ICONS), example.id).toContain(example.icon);
     }
   });

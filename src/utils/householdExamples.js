@@ -43,7 +43,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     description: "Aged 70, State Pension only, owns their home",
     icon: "armchair",
     measure: "state_pension_income_tax_protection",
-    tag: "State Pension tax protection",
+    tag: "State Pension protection",
     inputs: {
       ...RESET,
       current_age: 70,
@@ -102,7 +102,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     measure: "fuel_duty_rise_deferral",
     // The tag covers both fuel measures, and its figure is their parts
     measures: ["fuel_duty_rise_deferral", "road_fuel_vat_cut"],
-    tag: "Fuel duty and VAT on fuel",
+    tag: "Fuel duty and fuel VAT",
     inputs: {
       ...RESET,
       current_age: 40,
@@ -119,7 +119,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     description: "Aged 45, owns their home with a mortgage",
     icon: "briefcase",
     measure: "threshold_freeze_2031_32",
-    tag: "Threshold freeze from 2031-32",
+    tag: "Threshold freeze, 2031-32",
     inputs: {
       ...RESET,
       current_age: 45,

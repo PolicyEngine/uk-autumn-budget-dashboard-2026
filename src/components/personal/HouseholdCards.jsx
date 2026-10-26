@@ -26,7 +26,7 @@ export const EXAMPLE_ICONS = {
   briefcase: BriefcaseBusiness,
 };
 
-/** Each measure as a card's "Mainly from …" line names it. */
+/** Each measure as a card's "+£50 from …" line names it. */
 const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
   fuel_duty_rise_deferral: "the fuel duty deferral",
@@ -51,7 +51,7 @@ const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) <
  * What one example's card shows for `year`, from the precomputed results
  * (householdPresets.js presetChanges): its change in net income, the
  * change in each year for the sparkline, its own measures' part (on its
- * tag) and, when another measure gives most of the change, that one.
+ * tag) and, when another measure gives more of it than its own, that one.
  */
 export function cardFigures(example, byYear, year) {
   const current = byYear?.[year];
@@ -65,7 +65,7 @@ export function cardFigures(example, byYear, year) {
   );
   const source =
     mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
-      ? { name: sourceName(mainId), part: mainPart, most: Math.abs(mainPart) * 2 >= Math.abs(current.change) }
+      ? { name: sourceName(mainId), part: mainPart }
       : null;
   const series = Object.keys(byYear)
     .map(Number)
@@ -225,8 +225,7 @@ export default function HouseholdCards({
                 )}
               </span>
               <span className="household-card-source">
-                {figures?.source &&
-                  `${figures.source.most ? "Mainly" : "Largest part"} from ${figures.source.name}, ${signedMoney(figures.source.part)}`}
+                {figures?.source && `${signedMoney(figures.source.part)} from ${figures.source.name}`}
               </span>
               <span className="household-card-description">{example.description}</span>
               <span className="household-card-tag">
