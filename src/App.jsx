@@ -31,10 +31,12 @@ import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import HomeButton from "./components/HomeButton";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
-import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
+import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
+import { pruneVerifiedCache } from "./utils/publication/cache";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
+import LoadingSkeleton from "./components/publication/LoadingSkeleton";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -152,6 +154,19 @@ const NOTHING_PUBLISHED = Object.freeze({
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
 
+// The tables no first view waits for, loaded when the page is idle
+const IDLE_TABLES = ["age_impact", "household_scatter_binned"];
+
+function whenIdle(run) {
+  if (typeof window === "undefined") return undefined;
+  if (typeof window.requestIdleCallback === "function") {
+    const handle = window.requestIdleCallback(run, { timeout: 2000 });
+    return () => window.cancelIdleCallback?.(handle);
+  }
+  const handle = setTimeout(run, 200);
+  return () => clearTimeout(handle);
+}
+
 function Dashboard({ published, unavailable = null, updated = false }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
@@ -167,6 +182,15 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
   const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
+  // Once the first view has painted, every other view's tables load and
+  // verify while the page is idle, so a tab switch need not wait
+  useEffect(() => {
+    if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
+    return whenIdle(() => {
+      for (const table of IDLE_TABLES) loadVerifiedTablesOnce(catalogue, table).catch(() => {});
+      pruneVerifiedCache().catch(() => {});
+    });
+  }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
@@ -738,6 +762,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           hidden={landing}
         />
 
+        {/* A link to a view, before the page's code opens it: the landing
+            page is hidden (LandingPage.css), so placeholders show instead */}
+        {landing && (
+          <div className="deep-link-skeleton">
+            <LoadingSkeleton />
+          </div>
+        )}
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
@@ -760,11 +791,15 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
-        {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
+        {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
+          // Placeholders at once while the verified figures load; the
+          // "not published yet" line is only for an empty publication
+          <LoadingSkeleton cards={value === "household" ? 4 : 2} height={value === "household" ? 120 : 260} />
+        ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              unavailable.empty && <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -903,7 +938,7 @@ function App() {
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet" }
+      ? { reason: "No Budget results are published yet", empty: true }
       : null;
   const shown = unavailable ? NOTHING_PUBLISHED : published;
   // One snapshot per mount: a newer one starts the views afresh
