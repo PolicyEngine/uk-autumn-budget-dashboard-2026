@@ -28,6 +28,15 @@ const chosen = (name) => {
   return box.options[box.selectedIndex].textContent;
 };
 const box = (name) => screen.getByRole("spinbutton", { name });
+const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
+/** Pick a constituency by typing its name and choosing it from the list. */
+const pickSeat = (name) => {
+  fireEvent.focus(seatBox());
+  fireEvent.change(seatBox(), { target: { value: name } });
+  fireEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name }));
+};
+/** The region the constituency sets, as shown under it. */
+const regionShown = () => document.getElementById("region-constituency").textContent;
 const cards = () => screen.getByRole("region", { name: "Choose a household" });
 const examples = cards;
 const exampleItem = (label) => within(examples()).getByRole("button", { name: new RegExp(`^${label}`) });
@@ -83,7 +92,8 @@ describe("the personal impact form", () => {
     ]);
     expect(FORM_SECTIONS).toHaveLength(3);
     expect(box("Age")).toHaveValue(30);
-    expect(chosen("Region")).toBe("North West");
+    expect(seatBox()).toHaveValue("");
+    expect(regionShown()).toBe("North West, until you pick a constituency");
     expect(chosen("Partner")).toBe("No");
     expect(chosen("Housing")).toBe("Rent privately");
     expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
@@ -96,8 +106,9 @@ describe("the personal impact form", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
     expect(box("Age")).toHaveValue(31);
-    choose("Region", "London");
-    expect(chosen("Region")).toBe("London");
+    pickSeat("Holborn and St Pancras");
+    expect(seatBox()).toHaveValue("Holborn and St Pancras");
+    expect(regionShown()).toBe("London");
     // The rent follows the region until it is changed
     expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
     fireEvent.click(screen.getByRole("button", { name: "Rent: £25 more" }));
@@ -106,7 +117,6 @@ describe("the personal impact form", () => {
     expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
     fireEvent.change(box("Salary in 2026"), { target: { value: "52000" } });
     expect(box("Salary in 2026")).toHaveValue(52000);
-    expect(within(select("Region")).getAllByRole("option")).toHaveLength(12);
   });
 
   it("starts every answer at its default, with the sources said", () => {
@@ -185,7 +195,7 @@ describe("the personal impact form", () => {
     expect(box("Private or workplace pension")).toHaveValue(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
     expect(field("council_tax_band")).not.toBeNull();
-    choose("Region", "Northern Ireland");
+    pickSeat("Belfast South and Mid Down");
     expect(field("council_tax_band")).toBeNull();
   });
 
@@ -296,7 +306,7 @@ describe("the personal impact form", () => {
       choose("Partner", "Yes");
       choose("Children", "2");
       applyExample(label);
-      expect(chosen("Region")).toBe("North West");
+      expect(regionShown()).toMatch(/^North West/);
       expect(chosen("Housing")).toBe("Rent privately");
       expect(box("Rent")).toHaveValue(expected.rent);
       expect(chosen("Partner")).toBe("No");

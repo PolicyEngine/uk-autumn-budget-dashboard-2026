@@ -24,6 +24,7 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
 import { NumberField, SelectField } from "./personal/FormControls";
+import ConstituencyField from "./personal/ConstituencyField";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -83,6 +84,11 @@ export const REGION_OPTIONS = [
   ["NORTHERN_IRELAND", "Northern Ireland"],
 ];
 
+// The "region" question asks for a constituency (2024 boundaries), which
+// sets the region the calculation reads; the constituency itself is not sent
+const CONSTITUENCY_HINT =
+  "Your constituency sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent and Council Tax estimates and housing support follow the region.";
+
 const YES_NO = [
   { value: false, label: "No" },
   { value: true, label: "Yes" },
@@ -94,12 +100,6 @@ const NEW_CHILD_AGE = 5;
 
 // Choices shown as selects
 const CHOICE_CONFIGS = {
-  region: {
-    label: "Region",
-    layout: "grid",
-    options: REGION_OPTIONS.map(([value, label]) => ({ value, label })),
-    hint: "Scotland has its own income tax rates, and housing support follows local rents.",
-  },
   has_partner: {
     label: "Partner",
     question: "Do you live with a partner?",
@@ -139,7 +139,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "compact",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), grown with the OBR's forecast. Band D if you are not sure.",
+    hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), not your own council's, grown with the OBR's forecast. Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
@@ -544,6 +544,20 @@ function HouseholdCalculator({
           options={CHOICE_CONFIGS.children_count.options}
           value={childrenCount}
           onChange={setChildrenCount}
+        />
+      );
+    } else if (id === "region") {
+      field = (
+        <ConstituencyField
+          id="constituency"
+          label="Constituency"
+          value={inputs.constituency ?? null}
+          regionLabel={regionName(inputs.region)}
+          hint={CONSTITUENCY_HINT}
+          onChange={(seat) => {
+            setPresetId(null);
+            setInputs((prev) => ({ ...prev, constituency: seat.name, region: seat.region }));
+          }}
         />
       );
     } else if (CHOICE_CONFIGS[id]) {
