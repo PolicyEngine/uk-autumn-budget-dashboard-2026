@@ -126,6 +126,7 @@ export default function OverviewDrawer({ open, onClose, onOpen, onHome, provisio
         </header>
         <div className="overview-body">
           <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
+          <nav className="overview-nav" aria-labelledby="overview-goto">
           <p id="overview-goto" className="overview-goto">Go to</p>
           <LandingBoxes
             list
@@ -148,6 +149,7 @@ export default function OverviewDrawer({ open, onClose, onOpen, onHome, provisio
             <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
             Back to the start
           </a>
+          </nav>
         </div>
         <footer className="overview-footer">
           <p id="overview-built" className="overview-built">Built with</p>
