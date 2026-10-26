@@ -8,16 +8,18 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  MARGIN,
   boxesMeet,
   chartLayout,
   labelBoxes,
   labelGeometry,
   legendItems,
   pointLabels,
+  textWidth,
   xTicks,
   yAxisFor,
 } from "./VintageChart";
-import { buildView } from "../../utils/forecastVintages/view";
+import { buildView, pointsIn } from "../../utils/forecastVintages/view";
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
 const variable = (id) => DATA.variables.find((v) => v.id === id);
@@ -29,6 +31,35 @@ const pointsArb = fc
   .tuple(...ROLES.map(() => fc.record({ x: fc.integer({ min: 0, max: 600 }), y: fc.integer({ min: 0, max: 300 }) })))
   .map((ps) => ps.map((p, i) => ({ role: ROLES[i], x: p.x, y: 1000 + p.y })));
 const place = { px: (x) => x, py: (y) => 300 - (y - 1000) };
+
+// Found by the second review: on a phone, the whole history's decades
+// were 21px apart and their labels about 30px wide
+const TICK_GAP = 4;
+const labelOf = (frequency) => (x) =>
+  frequency === "quarterly" ? String(Math.floor(x / 4)) : frequency === "fiscal" ? `${x}-${String(x + 1).slice(-2)}` : String(x);
+const spacingProblems = (ticks, rows, plotWidth, label, edge) => {
+  const px = (x) => ((x - rows[0].x) / (rows[rows.length - 1].x - rows[0].x)) * plotWidth;
+  const width = (x) => textWidth(label(x), 12);
+  const found = [];
+  ticks.forEach((t, i) => {
+    if (px(t) - width(t) / 2 < -edge.left || px(t) + width(t) / 2 > plotWidth + edge.right) found.push(`${label(t)} past the edge`);
+    const next = ticks[i + 1];
+    if (next != null && px(next) - width(next) / 2 - (px(t) + width(t) / 2) < TICK_GAP) found.push(`${label(t)} and ${label(next)} too close`);
+  });
+  return found;
+};
+
+// Where the chart draws each labelled point's dot, from its layout
+function dotsOf(layout, rows) {
+  const [bottom, top] = layout.axis.domain;
+  const px = (x) => ((x - rows[0].x) / (rows[rows.length - 1].x - rows[0].x)) * layout.plotWidth;
+  const py = (y) => ((top - y) / (top - bottom)) * layout.plotHeight;
+  return layout.labels.map((l) => {
+    const x = px(l.x);
+    const y = py(l.y);
+    return { role: l.role, x, box: { left: x - 6, right: x + 6, top: y - 6, bottom: y + 6 } };
+  });
+}
 
 // Every pair of labels' text boxes, and every label's text and line
 // against the other labels' dots
@@ -99,7 +130,9 @@ describe("the labelled points' text", () => {
       { role: "end", x: 600, y: 1206 },
     ];
     const labels = pointLabels(points, { ...place, format });
-    expect(labels.find((l) => l.role === "end").lift).toBeGreaterThan(0);
+    // Lifted, or beside its line rather than centred on it
+    const end = labels.find((l) => l.role === "end");
+    expect(end.lift > 0 || end.anchor !== "middle").toBe(true);
     expect(collisions(labels)).toEqual([]);
   });
 
@@ -111,7 +144,12 @@ describe("the labelled points' text", () => {
       { role: "end", x: 590, y: 1050 },
     ];
     const labels = pointLabels(points, { ...place, format });
-    expect(labels.find((l) => l.role === "start").above).toBe(true);
+    const dots = points.map((p) => {
+      const [x, y] = [place.px(p.x), place.py(p.y)];
+      return { role: p.role, box: { left: x - 6, right: x + 6, top: y - 6, bottom: y + 6 } };
+    });
+    expect(collisions(labels, dots)).toEqual([]);
+    expect(labels.every((l) => l.conflicts === 0)).toBe(true);
   });
 
   it("anchors text at the plot's side rather than past it", () => {
@@ -156,27 +194,47 @@ describe("the chart's layout", () => {
     { canvasWidth: 254, narrow: true },
   ];
 
+  // The rows a card can show: the recent window, the whole history, and
+  // what the brush can pick, windows of 6, 12, 24 and 48 periods along it
+  // (each with a labelled point in it)
+  const windowsOf = (view) => {
+    const n = view.rows.length;
+    const ranges = [
+      [view.windowStart, n - 1],
+      [0, n - 1],
+    ];
+    for (const length of [6, 12, 24, 48]) {
+      for (let s = 0; s + length <= n; s += Math.max(1, Math.floor(length / 3))) ranges.push([s, s + length - 1]);
+    }
+    return ranges
+      .map(([lo, hi]) => ({ lo, hi, rows: view.rows.slice(lo, hi + 1) }))
+      .filter(({ rows }) => rows.length > 1 && pointsIn(view.points, rows).length > 0);
+  };
+  // Dots this close across share a column, where a label's leader line or
+  // text cannot always keep off the other dot: only the whole history on a
+  // phone puts them there
+  const CROWDED = 16;
+
   it("lays the labels out on the axis drawn, clear of each other, the other dots and the plot's edges", () => {
     const problems = [];
     let laidOut = 0;
+    let brushed = 0;
     for (const { v, unit, annual, showPast, view } of VIEWS) {
-      for (const rows of [view.rows.slice(view.windowStart), view.rows]) {
+      for (const { lo, hi, rows } of windowsOf(view)) {
+        brushed += 1;
         for (const canvas of CANVASES) {
           const layout = chartLayout(view, rows, canvas);
           const [bottom, top] = layout.axis.domain;
-          const px = (x) => ((x - rows[0].x) / (rows[rows.length - 1].x - rows[0].x)) * layout.plotWidth;
-          const py = (y) => ((top - y) / (top - bottom)) * layout.plotHeight;
-          const dots = layout.labels.map((l) => {
-            const x = px(l.x);
-            const y = py(l.y);
-            return { role: l.role, box: { left: x - 6, right: x + 6, top: y - 6, bottom: y + 6 } };
-          });
-          const where = `${v.id} ${unit}${annual ? " A" : ""}${showPast ? "" : " no F"} ${rows.length} rows at ${canvas.canvasWidth}px`;
-          // Text never on text. On a phone with the whole history the three
-          // dots can sit within 20px, where every place has one conflict:
-          // there a label may touch another dot, but no more than that
-          const found = collisions(layout.labels, canvas.narrow && canvas.canvasWidth < 600 ? [] : dots);
-          for (const c of found) problems.push(`${where}: ${c}`);
+          const dots = dotsOf(layout, rows);
+          const where = `${v.id} ${unit}${annual ? " A" : ""}${showPast ? "" : " no F"} rows ${lo}-${hi} at ${canvas.canvasWidth}px`;
+          // Text never on text, and no label on another dot unless the two
+          // dots are within CROWDED pixels across
+          for (const l of layout.labels) {
+            const own = dots.find((d) => d.role === l.role);
+            const apart = dots.filter((d) => Math.abs(d.x - own.x) >= CROWDED);
+            for (const c of collisions([l], apart)) problems.push(`${where}: ${c}`);
+          }
+          for (const c of collisions(layout.labels)) problems.push(`${where}: ${c}`);
           for (const l of layout.labels) if (l.conflicts > 1) problems.push(`${where}: ${l.role} has ${l.conflicts} conflicts`);
           for (const l of layout.labels) {
             for (const t of l.boxes.text) {
@@ -195,6 +253,38 @@ describe("the chart's layout", () => {
     }
     expect(problems).toEqual([]);
     expect(laidOut).toBeGreaterThan(VIEWS.length);
+    expect(brushed).toBeGreaterThan(5 * VIEWS.length);
+  });
+
+  it("spaces every committed view's years on every card", () => {
+    const problems = [];
+    for (const { v, unit, annual, showPast, view } of VIEWS) {
+      const label = (x) => (view.frequency === "quarterly" ? String(Math.floor(x / 4)) : view.label(x));
+      for (const rows of [view.rows.slice(view.windowStart), view.rows]) {
+        for (const canvas of CANVASES) {
+          const layout = chartLayout(view, rows, canvas);
+          const edge = { left: layout.yWidth, right: MARGIN.right };
+          const ticks = xTicks(rows, view.frequency, { plotWidth: layout.plotWidth, label, edge });
+          if (ticks.length < 2) problems.push(`${v.id} ${unit}${annual ? " A" : ""} ${rows.length} rows at ${canvas.canvasWidth}px: ${ticks.length} ticks`);
+          for (const p of spacingProblems(ticks, rows, layout.plotWidth, label, edge)) {
+            problems.push(`${v.id} ${unit}${annual ? " A" : ""}${showPast ? "" : " no F"} ${rows.length} rows at ${canvas.canvasWidth}px: ${p}`);
+          }
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("keeps employment's latest label off the start dot in %, brushed to 2017 to 2028 on a phone", () => {
+    // Found by the second review: two dots 42px apart, the latest caption
+    // on the start dot, with one conflict and no room made
+    const view = buildView(DATA, variable("employment"), { unit: "pct", showPast: true });
+    const rows = view.rows.slice(45, 57);
+    expect([view.label(rows[0].x), view.label(rows[rows.length - 1].x)]).toEqual(["2017", "2028"]);
+    const layout = chartLayout(view, rows, { canvasWidth: 254, narrow: true });
+    expect(layout.labels.map((l) => l.role)).toEqual(["start", "latest"]);
+    expect(collisions(layout.labels, dotsOf(layout, rows))).toEqual([]);
+    expect(layout.labels.every((l) => l.conflicts === 0)).toBe(true);
   });
 
   it("keeps CPI's latest and end labels apart in % with the whole history on a phone", () => {
@@ -245,6 +335,27 @@ describe("the axes", () => {
     );
     expect(xTicks([], "calendar")).toEqual([]);
   });
+
+  it("space the years so their labels never meet, at any plot width", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1950 * 4, max: 2030 * 4 }),
+        fc.integer({ min: 2, max: 320 }),
+        fc.constantFrom("quarterly", "calendar", "fiscal"),
+        fc.integer({ min: 120, max: 1000 }),
+        (start, length, frequency, plotWidth) => {
+          const from = frequency === "quarterly" ? start : Math.floor(start / 4);
+          const rows = Array.from({ length }, (_, i) => ({ x: from + i }));
+          const label = labelOf(frequency);
+          const edge = { left: 40, right: 24 };
+          const ticks = xTicks(rows, frequency, { plotWidth, label, edge });
+          expect(ticks.length).toBeLessThanOrEqual(9);
+          expect(spacingProblems(ticks, rows, plotWidth, label, edge)).toEqual([]);
+        },
+      ),
+    );
+  });
+
 
   it("keep headroom above the data when asked, and 0 in a % view", () => {
     const view = buildView(DATA, variable("rhdi_per_person"), { unit: "level" });

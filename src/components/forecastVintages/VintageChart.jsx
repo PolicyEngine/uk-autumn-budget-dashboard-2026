@@ -64,8 +64,9 @@ const DOT_REACH = 6;
 const ROOM_STEP = 0.3;
 const ROOM_ROUNDS = 3;
 
-// Room above the plot for the unit label and the labelled points' values
-const MARGIN = { top: 56, right: 24, left: 0, bottom: 0 };
+// Room above the plot for the unit label and the labelled points' values,
+// and to its right for half the last year's label ("2030-31", 49px)
+export const MARGIN = { top: 56, right: 28, left: 0, bottom: 0 };
 const X_AXIS_HEIGHT = 30;
 const BRUSH_HEIGHT = 26;
 // The chart's height, and the plot's within it (less the margin, the x
@@ -103,17 +104,54 @@ export function legendItems(view, showPast) {
   return items;
 }
 
-/** X-axis ticks at the start of whole years, at most eight across the rows. */
-export function xTicks(rows, frequency) {
+const YEAR_STEPS = [1, 2, 5, 10, 20, 25, 50, 100];
+// Tried only where none of those puts two years on a narrow plot
+const ODD_STEPS = [4, 3, 40, 30];
+// Clear space between two year labels on the x axis, over the room to
+// spare in textWidth
+const TICK_GAP = 4;
+
+/**
+ * X-axis ticks at the start of whole years, at most eight across the rows,
+ * every so many years (the first of YEAR_STEPS that gives two or more).
+ * Once the plot is measured (`plotWidth` pixels), the years are far enough
+ * apart for their labels (`label` gives a tick's text) to sit TICK_GAP
+ * apart, and a label that would pass the plot's left edge by more than
+ * `edge.left` or its right by more than `edge.right` is left off.
+ */
+export function xTicks(rows, frequency, { plotWidth = 0, label = String, edge = { left: Infinity, right: Infinity } } = {}) {
   if (!rows.length) return [];
   const perYear = frequency === "quarterly" ? 4 : 1;
-  const first = Math.ceil(rows[0].x / perYear);
-  const last = Math.floor(rows[rows.length - 1].x / perYear);
+  const x0 = rows[0].x;
+  const x1 = rows[rows.length - 1].x;
+  const first = Math.ceil(x0 / perYear);
+  const last = Math.floor(x1 / perYear);
   const years = last - first + 1;
-  const step = [1, 2, 5, 10, 20, 25, 50].find((s) => years / s <= 8) ?? 50;
-  const ticks = [];
-  for (let y = Math.ceil(first / step) * step; y <= last; y += step) ticks.push(y * perYear);
-  return ticks;
+  const measured = plotWidth > 0 && x1 > x0;
+  const px = (x) => ((x - x0) / (x1 - x0)) * plotWidth;
+  const width = (x) => textWidth(label(x), TICK_STYLE.fontSize);
+  let widest = 0;
+  if (measured) for (let y = first; y <= last; y += 1) widest = Math.max(widest, width(y * perYear));
+  const fits = (s) => years / s <= 8 && (!measured || s * perYear * (plotWidth / (x1 - x0)) >= widest + TICK_GAP);
+  const every = (step) => {
+    const ticks = [];
+    let clearFrom = -Infinity;
+    for (let y = Math.ceil(first / step) * step; y <= last; y += step) {
+      const x = y * perYear;
+      if (measured) {
+        const [left, right] = [px(x) - width(x) / 2, px(x) + width(x) / 2];
+        if (left < -edge.left || right > plotWidth + edge.right) continue;
+        // Where no step is wide enough (a very narrow plot), a year too
+        // close to the last is left off
+        if (left < clearFrom) continue;
+        clearFrom = right + TICK_GAP;
+      }
+      ticks.push(x);
+    }
+    return ticks;
+  };
+  const steps = [...YEAR_STEPS, ...ODD_STEPS].filter(fits);
+  return steps.map(every).find((ticks) => ticks.length >= 2) ?? every(steps[0] ?? YEAR_STEPS[YEAR_STEPS.length - 1]);
 }
 
 /**
@@ -217,16 +255,17 @@ const inside = (box, bounds) =>
 /**
  * The labelled points with where their text goes. Each label is tried on
  * its own side (start under the line, latest and end over it), then on
- * the other, then lifted a level at a time on either, and goes where its
- * text is clear of the labels already placed and of `obstacles`, with the
- * fewest of these: its text or leader line on another labelled dot, its
- * line across another label's text or its text across another's line, its
- * text outside `bounds` (which the chart then makes room for). Text never
- * overlaps text; the rest are kept off where any place avoids them. Text
- * anchored at its middle that would cross a side of `bounds` is anchored
- * at that side instead. `px` and `py` place a point in the plot (pixels
- * from its left and top); without them every label keeps its own side,
- * unlifted.
+ * the other, then lifted a level at a time on either; at each, with its
+ * own anchor, then starting or ending at its leader line. It goes where
+ * its text is clear of the labels already placed and of `obstacles`, with
+ * the fewest of these: its text or leader line on another labelled dot,
+ * its line across another label's text or its text across another's line,
+ * its text outside `bounds` (which the chart then makes room for). Text
+ * never overlaps text; the rest are kept off where any place avoids them.
+ * Text anchored at its middle that would cross a side of `bounds` is
+ * anchored at that side instead. `px` and `py` place a point in the plot
+ * (pixels from its left and top); without them every label keeps its own
+ * side, unlifted.
  */
 export function pointLabels(points, { px, py, format, narrow = false, bounds = null, obstacles = [] }) {
   const laidOut = Boolean(px && py);
@@ -262,13 +301,17 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
       if (left < bounds.left) anchor = "start";
       else if (anchor === "middle" && x + width / 2 > bounds.right) anchor = "end";
     }
-    const at = (above, level) =>
+    // Starting or ending at its line instead, where that keeps it inside
+    const across = (a) => (a === "end" ? [x - width, x] : a === "start" ? [x, x + width] : [x - width / 2, x + width / 2]);
+    const fitsAcross = (a) => !bounds || (across(a)[0] >= bounds.left && across(a)[1] <= bounds.right);
+    const anchors = [anchor, ...["start", "end"].filter((a) => a !== anchor && fitsAcross(a))];
+    const at = (above, level, textAnchor = anchor) =>
       labelBoxes({
         x,
         y,
         above,
         lift: level * LABEL_LIFT,
-        anchor,
+        anchor: textAnchor,
         value,
         caption: style.caption,
         narrow,
@@ -289,13 +332,15 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
       return onDots + crossings + outside;
     };
     let best = null;
-    for (let level = 0; level <= MAX_LEVEL && best?.conflicts !== 0; level += 1) {
+    search: for (let level = 0; level <= MAX_LEVEL; level += 1) {
       for (const above of [style.above, !style.above]) {
-        const boxes = at(above, level);
-        if (!textClear(boxes)) continue;
-        const count = conflicts(boxes);
-        if (!best || count < best.conflicts) best = { above, level, boxes, conflicts: count };
-        if (count === 0) break;
+        for (const textAnchor of anchors) {
+          const boxes = at(above, level, textAnchor);
+          if (!textClear(boxes)) continue;
+          const count = conflicts(boxes);
+          if (!best || count < best.conflicts) best = { above, level, anchor: textAnchor, boxes, conflicts: count };
+          if (count === 0) break search;
+        }
       }
     }
     // Lifted past every other label's text, which always ends the search
@@ -303,12 +348,13 @@ export function pointLabels(points, { px, py, format, narrow = false, bounds = n
     best ??= {
       above: style.above,
       level: MAX_LEVEL,
+      anchor,
       boxes: at(style.above, MAX_LEVEL),
     };
     const label = {
       ...point,
       ...style,
-      anchor,
+      anchor: best.anchor,
       above: best.above,
       level: best.level,
       lift: best.level * LABEL_LIFT,
@@ -341,7 +387,9 @@ const yWidthFor = (view, axis) =>
  * canvas `canvasWidth` pixels wide: the labels are laid out on the axis
  * that is drawn. Where a label would leave the plot (past the top margin,
  * under the plot's foot), room is made above or below the data and the
- * labels laid out again.
+ * labels laid out again; where a label has a conflict it could not avoid
+ * (its text on another dot, say), room above or below is tried, and kept
+ * if it leaves fewer. At most ROOM_ROUNDS rounds either way.
  */
 export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
   const plotHeight = PLOT_HEIGHT[narrow ? "narrow" : "wide"];
@@ -386,12 +434,27 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
       room,
     };
   };
+  const unavoided = (layout) => layout.labels.reduce((n, l) => n + (l.conflicts ?? 0), 0);
+  const fits = (layout) => !layout.overflow.top && !layout.overflow.bottom;
   let layout = layoutOn({ headroom: 0, footroom: 0 });
-  for (let round = 0; round < ROOM_ROUNDS && (layout.overflow.top || layout.overflow.bottom); round += 1) {
-    layout = layoutOn({
-      headroom: layout.room.headroom + (layout.overflow.top ? ROOM_STEP : 0),
-      footroom: layout.room.footroom + (layout.overflow.bottom ? ROOM_STEP : 0),
-    });
+  for (let round = 0; round < ROOM_ROUNDS; round += 1) {
+    const { headroom, footroom } = layout.room;
+    if (!fits(layout)) {
+      layout = layoutOn({
+        headroom: headroom + (layout.overflow.top ? ROOM_STEP : 0),
+        footroom: footroom + (layout.overflow.bottom ? ROOM_STEP : 0),
+      });
+      continue;
+    }
+    if (!unavoided(layout)) break;
+    const better = [
+      layoutOn({ headroom: headroom + ROOM_STEP, footroom }),
+      layoutOn({ headroom, footroom: footroom + ROOM_STEP }),
+    ]
+      .filter((l) => fits(l) && unavoided(l) < unavoided(layout))
+      .sort((a, b) => unavoided(a) - unavoided(b))[0];
+    if (!better) break;
+    layout = better;
   }
   return layout;
 }
@@ -504,9 +567,13 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
   const decimals = stepDecimals(axis.step);
   const tickFormat = (v) => view.format(v, decimals);
   const brushWidth = plotWidth > 3 * BRUSH_END_LABEL ? plotWidth - BRUSH_END_LABEL : undefined;
-  const ticks = xTicks(shownRows, view.frequency);
   // Quarterly ticks name the year only: each sits at its first quarter
   const tickLabel = (x) => (view.frequency === "quarterly" ? String(Math.floor(x / 4)) : view.label(x));
+  const ticks = xTicks(shownRows, view.frequency, {
+    plotWidth,
+    label: tickLabel,
+    edge: { left: yWidth, right: MARGIN.right },
+  });
   const past = view.vintages.filter((v) => !v.newest);
   const newest = view.vintages.find((v) => v.newest);
 
