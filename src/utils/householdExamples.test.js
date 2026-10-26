@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { buildHouseholdRequest } from "./householdImpactApi";
+import { SELECTABLE_YEARS } from "./displayYears";
+import { fiscalYearTick } from "./chartTheme";
 
 describe("the example households", () => {
   it("come in two groups, with unique ids, a name and a one-line description each", () => {
@@ -33,5 +35,19 @@ describe("the example households", () => {
   it("use neutral wording", () => {
     const text = HOUSEHOLD_EXAMPLES.map((example) => `${example.label} ${example.description} ${example.note}`).join(" ");
     expect(text).not.toMatch(/\\b(poor|rich|wealthy)\\b/i);
+  });
+
+  it("never point to a year the year pill does not offer", () => {
+    const offered = SELECTABLE_YEARS.map((year) => fiscalYearTick(year));
+    for (const example of HOUSEHOLD_EXAMPLES) {
+      const text = `${example.description} ${example.note}`;
+      for (const [, label] of text.matchAll(/choose (\d{4}-\d{2})/gi)) {
+        expect(offered, `${example.id} asks to choose ${label}`).toContain(label);
+      }
+      // The description names the measure it shows, in a year that can be chosen
+      for (const [label] of example.description.matchAll(/\d{4}-\d{2}/g)) {
+        expect(offered, `${example.id}: ${example.description}`).toContain(label);
+      }
+    }
   });
 });
