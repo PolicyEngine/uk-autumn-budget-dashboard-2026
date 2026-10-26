@@ -57,6 +57,31 @@ function ucHealthElementFix({ fix, engine }) {
   };
 }
 
+// In the data's notes, a policyengine-uk pull request ("policyengine-uk#2531")
+// and the HBAI statistics are named in words; each becomes a link
+const NOTE_LINKS = /(policyengine-uk ?#\d+|Households Below Average Income)/;
+function linkNote(note) {
+  if (typeof note !== "string" || !NOTE_LINKS.test(note)) return note;
+  return note.split(NOTE_LINKS).map((part, index) => {
+    const pr = part.match(/^policyengine-uk ?#(\d+)$/);
+    if (pr) {
+      return (
+        <ExternalLink key={index} href={`https://github.com/PolicyEngine/policyengine-uk/pull/${pr[1]}`}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    if (part === "Households Below Average Income") {
+      return (
+        <ExternalLink key={index} href={HBAI_URL}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    return part;
+  });
+}
+
 /**
  * The data's notes on each chart, moved here from the cards' About this
  * chart, which keep only what is needed to read the chart and link here.
@@ -71,7 +96,7 @@ function ChartNotes({ outlook, meta }) {
     ["Depth of poverty", outlook.deep_poverty?.notes],
     ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
   ]
-    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote)])
+    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote).map(linkNote)])
     .filter(([, notes]) => notes.length);
   if (!groups.length) return null;
   return (
@@ -148,7 +173,7 @@ export default function LivingStandardsMethod() {
                     ; <SourceLink id="obr_efo_current" />
                   </>
                 ),
-                more: notes.map(text),
+                more: notes.map((n) => linkNote(text(n))),
               },
             ],
           ].filter(Boolean)}
@@ -165,7 +190,7 @@ export default function LivingStandardsMethod() {
             {caveats.map((c) => (
               <li key={c}>
                 <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
-                <span>{text(c)}</span>
+                <span>{linkNote(text(c))}</span>
               </li>
             ))}
           </ul>
