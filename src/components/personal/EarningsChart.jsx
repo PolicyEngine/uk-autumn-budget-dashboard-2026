@@ -28,6 +28,7 @@ import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import { CHART_VIEWS } from "./chartViews";
 import { layerLegendItems, layerRows, layersInUse, stackLayers } from "./netIncomeParts";
+import { SWEEP_COMPONENTS, hiddenParts, sweepChips } from "./sweepComponents";
 
 export const BEFORE_COLOUR = CHART_COLOURS.before;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
@@ -104,9 +105,14 @@ function valueAt(points, income, key) {
  * @param {Object} props.sweep - normaliseHouseholdImpact's sweep
  * @param {number|null} props.salary - The salary used, in the year
  * @param {string} props.yearLabel - "2029-30"
+ * @param {Object} [props.sync] - Shared with the marginal rate card beside
+ *   it (SingleYearResults' AcrossEarnings): { view, setView, hidden (component
+ *   keys switched off), setHidden, hover: {income, card} | null, setHover }
  */
-export default function EarningsChart({ initialView = "after", sweep, salary, yearLabel }) {
-  const [view, setView] = useState(initialView);
+export default function EarningsChart({ initialView = "after", sweep, salary, yearLabel, sync = null }) {
+  const [ownView, setOwnView] = useState(initialView);
+  const view = sync?.view ?? ownView;
+  const setView = sync?.setView ?? setOwnView;
   const isChange = view === "change";
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
@@ -114,7 +120,15 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const [hover, setHover] = useState(null);
   // The layers (and the total line) hidden from the chips, and the one the
   // pointer or a chip is on, which comes forward while the rest dim
-  const [hidden, setHidden] = useState([]);
+  const [ownHidden, setOwnHidden] = useState([]);
+  // Components switched off (shared with the marginal rate card), as this
+  // card's layers, and the total line
+  const hiddenKeys = sync?.hidden ?? ownHidden;
+  const setHiddenKeys = sync?.setHidden ?? setOwnHidden;
+  const hidden = useMemo(
+    () => [...hiddenParts("net", hiddenKeys), ...(hiddenKeys.includes("total") ? ["total"] : [])],
+    [hiddenKeys],
+  );
   const [focus, setFocus] = useState(null);
   const width = measured > 0 ? measured : narrow ? 358 : 560;
   const title = `Household net income, ${yearLabel}`;
@@ -188,6 +202,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       if (Math.abs(p.income - income) < Math.abs(rows[best].income - income)) best = i;
     });
     setHover(best);
+    sync?.setHover({ income: rows[best].income, card: "net" });
     // The layer under the pointer, if any: its band at this salary holds
     // the pointer's value
     const value = yLo + ((top + plotH - py) / plotH) * (yHi - yLo);
@@ -199,20 +214,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   };
 
   const [pointerLayer, setPointerLayer] = useState(null);
-  // One chip per layer, but Child Benefit and its charge together (as the
-  // legend had them): a chip's key and the layers it stands for
-  const chips = useMemo(() => {
-    const keys = new Set(layers.map((layer) => layer.key));
-    const both = keys.has("child_benefit") && keys.has("child_benefit_charge");
-    return layers
-      .filter((layer) => !(both && layer.key === "child_benefit_charge"))
-      .map((layer) =>
-        both && layer.key === "child_benefit"
-          ? { key: layer.key, label: "Child Benefit and its charge", colour: layer.color, members: ["child_benefit", "child_benefit_charge"] }
-          : { key: layer.key, label: layer.label, colour: layer.color, members: [layer.key] },
-      );
-  }, [layers]);
-  const membersOf = (key) => chips.find((chip) => chip.key === key)?.members ?? [key];
+  // The chips: every component both cards share, in one order, those
+  // with nothing here disabled so the two keys line up
+  const chips = useMemo(
+    () => sweepChips("net", new Set(layers.map((layer) => layer.key)), { label: TOTAL_NAME[view], colour: TOTAL_COLOUR }),
+    [layers, view],
+  );
+  const membersOf = (key) => SWEEP_COMPONENTS.find((component) => component.key === key)?.net ?? [key];
   const highlightedKeys = focus ? membersOf(focus) : pointerLayer ? [pointerLayer] : [];
   const highlighted = highlightedKeys.length ? highlightedKeys : null;
   const hovered = hover !== null ? rows[hover] : null;
@@ -233,14 +241,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
+  // With no earnings there is no salary to name
+  const at = salary === 0 ? "With no earnings" : `At your ${formatPounds(salary)} salary`;
   const youSentence =
     youValue == null || salary === null
       ? null
       : isChange
         ? youRounded === 0
-          ? `At your ${formatPounds(salary)} salary, the selected policies barely change your household's net income.`
-          : `At your ${formatPounds(salary)} salary, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income.`
-        : `At your ${formatPounds(salary)} salary, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
+          ? `${at}, the selected policies barely change your household's net income.`
+          : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income.`
+        : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
     ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
     : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, with partner income and everything else held fixed.`;
@@ -444,6 +454,20 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
               </g>
             )}
 
+            {/* The salary hovered on the marginal rate card beside it */}
+            {sync?.hover && sync.hover.card !== "net" && sync.hover.income <= xMax && (
+              <line
+                className="earnings-synced-guide"
+                x1={x(sync.hover.income)}
+                x2={x(sync.hover.income)}
+                y1={top}
+                y2={top + plotH}
+                stroke={CHART_COLOURS.noChange}
+                strokeWidth={1}
+                pointerEvents="none"
+              />
+            )}
+
             {/* Hover guide */}
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
@@ -461,6 +485,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
               onMouseLeave={() => {
                 setHover(null);
                 setPointerLayer(null);
+                sync?.setHover(null);
               }}
             />
           </svg>
@@ -495,16 +520,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           <SeriesToggle
             lead="Show:"
             label="Layers"
-            series={[
-              ...chips.map((chip) => ({ key: chip.key, label: chip.label, colour: chip.colour, shape: "block" })),
-              { key: "total", label: TOTAL_NAME[view], colour: TOTAL_COLOUR },
-            ]}
-            shown={[...chips.map((chip) => chip.key), "total"].filter((key) => !membersOf(key).some((member) => hidden.includes(member)))}
-            onChange={(next) =>
-              setHidden(
-                [...chips.map((chip) => chip.key), "total"].filter((key) => !next.includes(key)).flatMap(membersOf),
-              )
-            }
+            series={chips}
+            shown={chips.filter((chip) => !chip.disabled && !hiddenKeys.includes(chip.key)).map((chip) => chip.key)}
+            onChange={(next) => {
+              // This card's chips decide only their own keys; the rest stay as the other card left them
+              const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
+              setHiddenKeys([...hiddenKeys.filter((key) => !mine.includes(key)), ...mine.filter((key) => !next.includes(key))]);
+            }}
             onHover={setFocus}
             narrow={narrow}
             extras={drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : []}

@@ -37,8 +37,9 @@ function markHintSeen() {
  *   <SeriesToggle series={series} shown={shown} onChange={setShown} onHover={setHovered} />
  *
  * @param {Object} props
- * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block"}>} props.series
- *   (`shape: "block"` for a filled layer: a square swatch)
+ * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block", disabled?: boolean, tip?: string}>} props.series
+ *   (`shape: "block"` for a filled layer: a square swatch; `disabled` for one
+ *   with nothing to draw, kept so two keys line up, with `tip` saying why)
  * @param {string[]} props.shown - The keys of the lines drawn
  * @param {(keys: string[]) => void} props.onChange - The next keys drawn, in `series` order
  * @param {(key: string|null) => void} [props.onHover]
@@ -55,8 +56,10 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
   useEffect(() => {
     setHint(!hintSeen());
   }, []);
-  const on = new Set(shown);
+  const off = new Set(series.filter((s) => s.disabled).map((s) => s.key));
+  const on = new Set(shown.filter((key) => !off.has(key)));
   const toggle = (key) => {
+    if (off.has(key)) return;
     if (hint) {
       markHintSeen();
       setHint(false);
@@ -80,13 +83,13 @@ export default function SeriesToggle({ series, shown, onChange, onHover, label =
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
-            <Tip key={s.key} content={last ? `${s.label}: at least one line stays on` : null}>
+            <Tip key={s.key} content={s.disabled ? s.tip ?? null : last ? `${s.label}: at least one line stays on` : null}>
             <button
               type="button"
-              className={`series-toggle-chip${active ? " is-on" : ""}`}
+              className={`series-toggle-chip${active ? " is-on" : ""}${s.disabled ? " is-disabled" : ""}`}
               style={{ "--chip-colour": s.colour }}
               aria-pressed={active}
-              aria-disabled={last || undefined}
+              aria-disabled={last || s.disabled || undefined}
               onClick={() => toggle(s.key)}
               onMouseEnter={() => onHover?.(active ? s.key : null)}
               onMouseLeave={() => onHover?.(null)}

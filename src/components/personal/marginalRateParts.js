@@ -16,7 +16,8 @@ export const RATE_PARTS = [
   },
   {
     name: "personal_allowance_taper",
-    label: "PA taper",
+    label: "Personal allowance taper",
+    phrase: "personal allowance taper",
     color: CHART_COLOURS.mtrAllowanceTaper,
     info: "The personal allowance falls by £1 for every £2 of income above £100,000, until it is gone at £125,140: each extra pound also makes 50p more taxable.",
   },

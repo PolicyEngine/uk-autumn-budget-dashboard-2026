@@ -390,6 +390,24 @@ export function householdSummary(data, { tenure = null, regionLabel = null, part
 }
 
 /**
+ * The two "Across earnings" cards, in step: one Before | After | Change
+ * choice, one set of components shown (a chip toggled on one is toggled on
+ * the other), and the salary hovered on one marked on the other.
+ */
+export function AcrossEarnings({ sweep, salary, yearLabel }) {
+  const [view, setView] = useState("after");
+  const [hidden, setHidden] = useState([]);
+  const [hover, setHover] = useState(null);
+  const sync = { view, setView, hidden, setHidden, hover, setHover };
+  return (
+    <div className="charts-grid single-year-chart-pair">
+      <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+      <MarginalRateChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+    </div>
+  );
+}
+
+/**
  * The result: one card. Its head names the figure and its year and
  * policies; the body has the change (said nowhere else), large and counted
  * up, with its share as a chip, beside the waterfall from net income
@@ -640,10 +658,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
         {data.sweep ? (
           // Net income (with its Net income / Change switch) beside the
           // marginal rate, a pair of cards whose rows line up; stacked on a phone
-          <div className="charts-grid single-year-chart-pair">
-            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-          </div>
+          <AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
