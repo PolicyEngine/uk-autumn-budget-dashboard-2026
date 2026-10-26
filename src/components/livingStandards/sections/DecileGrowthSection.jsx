@@ -74,13 +74,6 @@ const signed = (v, unit) => {
   const r = round1(v);
   return `${r > 0 ? "+" : r < 0 ? "−" : ""}${formatOneDp(Math.abs(r))}${unit}`;
 };
-/** "−0.9% to +0.1%", or one value when every year rounds the same. */
-const signedRange = (values, unit) => {
-  const r = values.map(round1);
-  const lo = Math.min(...r);
-  const hi = Math.max(...r);
-  return lo === hi ? signed(lo, unit) : `${signed(lo, unit)} to ${signed(hi, unit)}`;
-};
 
 /**
  * One series' rows, { year, real_median: [...], cumulative: [...],
@@ -221,42 +214,49 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const highAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[n - 1] * 100);
   const income = `real median income growth (${basisShort})${who}`;
 
-  // The card's one visible line: the lowest and highest group shown
-  const unit = diff ? "pp" : "%";
-  // Bottom is the lowest group shown (vigintile 2 for vigintiles)
-  const summary = annual ? (
-    <>
-      Bottom: <strong>{signedRange(lowAnnual, unit)}</strong> a year; top: <strong>{signedRange(highAnnual, unit)}</strong>.
-    </>
-  ) : (
-    <>
-      Bottom: <strong>{signed(periodRows[0].growth, unit)}</strong>; top: <strong>{signed(periodRows.at(-1).growth, unit)}</strong>.
-    </>
-  );
-  // The full sentence, in About this chart
-  const sentence = diff ? (
-    annual ? (
+  // One plain sentence, led by the finding, for the lowest group shown
+  // (vigintile 2 for vigintiles) and the highest
+  const shares = `${g.share}s`;
+  const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
+  const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
+  const between = (vals) => {
+    const r = vals.map(round1);
+    const lo = Math.min(...r);
+    const hi = Math.max(...r);
+    return lo === hi ? `${num(lo)}` : `between ${num(lo)} and ${num(hi)}`;
+  };
+  const lowVals = annual ? lowAnnual : [periodRows[0].growth];
+  const highVals = annual ? highAnnual : [periodRows.at(-1).growth];
+  const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
+  const per = annual ? " a year" : ` from ${fyDash(first.year)} to ${fyDash(end.year)}`;
+  let summary;
+  if (diff && largest < 0.25) {
+    // Under 0.1, 0.2: the smallest tenth of a point above the largest effect
+    const bound = Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10);
+    summary = (
       <>
-        Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, the measures&apos; effect on {income} in the {lowest} is{" "}
-        <strong>{ppRange(lowAnnual)}</strong>; in the highest-income {g.share} it is <strong>{ppRange(highAnnual)}</strong>.
+        The measures barely change income growth at either end: <strong>under {formatOneDp(bound)} points</strong>
+        {per} for the {skip ? "second-lowest" : "lowest"}- and highest-income {shares}.
       </>
-    ) : (
+    );
+  } else if (diff) {
+    summary = (
       <>
-        From {fyDash(first.year)} to {fyDash(end.year)}, the measures&apos; effect on {income} in the {lowest} is{" "}
-        <strong>{ppOne(periodRows[0].growth)}</strong>; in the highest-income {g.share} it is <strong>{ppOne(periodRows.at(-1).growth)}</strong>.
+        With the measures, income growth for the {low} changes by <strong>{between(lowVals)} points</strong>
+        {per}, and for the highest-income {g.share} by <strong>{between(highVals)} points</strong>.
       </>
-    )
-  ) : annual ? (
-    <>
-      Each year from {fyDash(annualYears[0].year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the {lowest}{" "}
-      <strong>{annualRange(lowAnnual)}</strong>; in the highest-income {g.share} it <strong>{annualRange(highAnnual)}</strong>.
-    </>
-  ) : (
-    <>
-      From {fyDash(first.year)} to {fyDash(end.year)}, real median income ({basisShort}){who} in the {lowest}{" "}
-      <strong>{say(periodRows[0].growth)}</strong>; in the highest-income {g.share} it <strong>{say(periodRows.at(-1).growth)}</strong>.
-    </>
-  );
+    );
+  } else {
+    const y0 = annual ? annualYears[0].year : first.year;
+    summary = (
+      <>
+        Under current law, from {fyDash(y0)} to {fyDash(end.year)}, income for the {low} changes by{" "}
+        <strong>{between(lowVals)}%</strong>
+        {annual ? " a year" : ""} after inflation, and for the highest-income {g.share} by{" "}
+        <strong>{between(highVals)}%</strong>.
+      </>
+    );
+  }
 
   // Under the key only the short decile-1 (AHC) caution; the vigintile
   // note is in About this chart, with the key starting at vigintile 2
@@ -308,7 +308,6 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     summary,
     about,
     notes: [
-      sentence,
       basis === "ahc" && data.meta.cpi_ahc_note,
       grouping === "vigintile" &&
         `The second-lowest-income twentieth's median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,

@@ -115,11 +115,11 @@ describe("the Poverty sub-tab's measures pair", () => {
     const measures = await card(/^Which measures move poverty/);
     expect(change.parentElement).toBe(measures.parentElement);
 
-    // The pair's one poverty choice sits above both cards, not in each
-    const choice = within(panel).getByRole("group", { name: "Poverty measure" });
-    expect(choice.nextElementSibling).toBe(change.parentElement);
+    // No bar above the pair: each card's own Options pill holds the
+    // poverty measure, the same in both
+    expect(within(panel).queryByRole("group", { name: "Poverty measure" })).toBeNull();
     for (const c of [change, measures]) {
-      expect(within(c).queryByRole("button", { name: /^Options:/ })).toBeNull();
+      expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
     await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/2027-28: −0\.008pp \(≈[\d,]+ fewer people\)/), { timeout: 5000 });
@@ -133,11 +133,11 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^≈[\d,]+ fewer$/);
     expect(measures.querySelector(".chart-description")).toHaveTextContent(/Biggest: Plan 2 threshold unfrozen, ≈[\d,]+ fewer people \(−0\.005pp\)/);
 
-    // One poverty choice for both cards
-    // One Options pill above the pair, its summary the measure
-    fireEvent.click(within(choice).getByRole("button", { name: /^Options:/ }));
-    fireEvent.click(within(within(choice).getByRole("radiogroup", { name: "Poverty line" })).getByRole("radio", { name: "Relative" }));
-    expect(within(choice).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
+    // Chosen in one card's pill, followed by the other's
+    fireEvent.click(within(change).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(change).getByRole("radiogroup", { name: "Poverty line" })).getByRole("radio", { name: "Relative" }));
+    expect(within(change).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
+    expect(within(measures).getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Relative · /);
     expect(new URLSearchParams(window.location.search).get("poverty")).toBe("relative-bhc-all");
     // The card's line is the figure; what it measures is in More info
     fireEvent.click(within(change).getByRole("button", { name: "More info" }));
