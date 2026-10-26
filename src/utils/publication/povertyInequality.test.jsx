@@ -5,7 +5,7 @@
  * Poverty and Inequality charts offer their pills from receipted data.
  */
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import contract from "./contract.json";
 import { FLAT_EXTRA_COLUMNS, TableError, parseTable, withPovertyInequality } from "./csv";
 import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
@@ -153,20 +153,20 @@ describe("the Poverty and Inequality pills from verified artifacts", () => {
   it("offers the poverty and inequality choices for a run whose artifact has the measures", async () => {
     const rows = await verifiedRows();
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={rows} policies={policies} selectedPolicies={["alpha"]} selectedYear={2027} />);
-    expect(screen.getByRole("group", { name: "Poverty line" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Relative" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Poverty line:/ }));
+    expect(screen.getByRole("option", { name: "Relative" })).toBeInTheDocument();
   });
 
   it("offers the inequality choices too", async () => {
     const rows = await verifiedRows();
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={rows} policies={policies} selectedPolicies={["alpha"]} selectedYear={2027} />);
-    expect(screen.getByRole("group", { name: "Inequality measure" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
   });
 
   it("shows the headline only for a run whose artifact predates them, even beside one that has them", async () => {
     const rows = await verifiedRows();
     expect(choiceRows(rows, "beta").every((row) => row.reform_id === "beta")).toBe(true);
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={rows} policies={policies} selectedPolicies={["beta"]} selectedYear={2027} />);
-    expect(screen.queryByRole("group", { name: "Poverty line" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Poverty line:/ })).toBeNull();
   });
 });

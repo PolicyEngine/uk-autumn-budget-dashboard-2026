@@ -36,6 +36,9 @@ function ChartTooltip({
   single,
   showPlus = false,
   showZero = false,
+  // A line under the rows from the hovered point (e.g. the people a
+  // poverty change is), or nothing
+  note,
 }) {
   const { bySeriesKey } = useMeasureCatalogue();
   if (!active || !payload?.length) return null;
@@ -72,6 +75,7 @@ function ChartTooltip({
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 
+  const noteText = note ? note(payload[0]?.payload) : null;
   const valueText = (value) =>
     showPlus && value > 0 ? `+${format(value)}` : signed(format(Math.abs(value)), value);
 
@@ -97,6 +101,7 @@ function ChartTooltip({
           <span className="chart-tooltip-value">{valueText(Number(net.value))}</span>
         </div>
       )}
+      {noteText && <p className="chart-tooltip-note">{noteText}</p>}
     </div>
   );
 }

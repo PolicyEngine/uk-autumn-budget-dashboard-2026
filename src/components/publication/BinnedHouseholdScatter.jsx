@@ -136,7 +136,7 @@ function BinnedHouseholdScatter({ series }) {
             }}
           />
           <ZAxis type="number" dataKey="households" range={[20, 400]} />
-          <ReferenceLine y={0} stroke={CHART_COLOURS.noChange} />
+          <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} />
           <Tooltip content={<CellTooltip />} trigger={TOOLTIP_PROPS.trigger} />
           <Scatter data={points} shape="circle" isAnimationActive={false}>
             {points.map((point) => (

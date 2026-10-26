@@ -60,7 +60,7 @@ export function ZeroMeasuresDetail({ zero, year, period }) {
           );
         })}
       </ul>
-      <p>They are greyed out in the key and left out of the tooltip.</p>
+      <p>They are folded under “with no effect” in the key and left out of the tooltip.</p>
     </div>
   );
 }

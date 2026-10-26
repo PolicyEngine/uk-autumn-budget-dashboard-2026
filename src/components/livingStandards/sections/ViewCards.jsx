@@ -1,5 +1,5 @@
-// The two-view cards of the Baseline outlook: Incomes over time (median
-// income or inequality), Growth across the distribution (by quintile,
+// The current-law cards (CurrentLawSection): Incomes over time (household
+// income), Inequality over time, Growth across the distribution (by quintile,
 // between two chosen years) and Poverty over time (rate or depth). Every view's
 // hook runs on each render, so each keeps its own pill choices while the
 // other is shown. The contract (docs/DATA_CONTRACT.md) requires every block
@@ -16,26 +16,39 @@ import { rangeYears, useYearRange } from "../../../utils/livingStandards/yearRan
 import { headlineStartYear, headlineYear } from "../../../utils/livingStandards/outlook";
 
 export function IncomesOverTimeCard({ data }) {
-  const [show, setShow] = useState("income");
   // The shared two-year range (?ls_from, ?ls_to) drives each view's sentence
   const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
   const income = useHouseholdIncomeView(data, range, setRange);
-  const inequality = useInequalityView(data, range, setRange);
+  // A single view: household income (inequality is its own card, beside
+  // the measures' effect on it); ViewCard shows no Show pill
   return (
     <ViewCard
       title="Incomes over time"
       icon="trend"
       name="Income view"
-      value={show}
-      onChange={setShow}
-      views={[
-        { value: "income", label: "Household income", badge: "Income", view: income },
-        { value: "inequality", label: "Inequality", view: inequality },
-      ]}
+      value="income"
+      onChange={() => {}}
+      views={[{ value: "income", label: "Household income", badge: "Income", view: income }]}
     />
   );
 }
 IncomesOverTimeCard.requires = "living_standards";
+
+export function InequalityOverTimeCard({ data }) {
+  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const inequality = useInequalityView(data, range, setRange);
+  return (
+    <ViewCard
+      title="Inequality over time (current law)"
+      icon="trend"
+      name="Inequality view"
+      value="inequality"
+      onChange={() => {}}
+      views={[{ value: "inequality", label: "Inequality", view: inequality }]}
+    />
+  );
+}
+InequalityOverTimeCard.requires = "inequality";
 
 export function GrowthCard({ data }) {
   // One year range for the card (and every card comparing two years)

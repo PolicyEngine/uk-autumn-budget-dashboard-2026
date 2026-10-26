@@ -1,8 +1,20 @@
 /* The measure pills above a summary chart (poverty, inequality): one
-   compact switch per choice, wrapping onto a second line when narrow. */
-.summary-metric-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 12px;
+   pill per choice under the description (.ls-controls, as the current-law
+   cards), wrapping onto a second line when narrow. */
+
+/* Paired with a card (Inequality: the measures' effect beside current
+   law): the pills take the controls row (3) and the chart, which draws
+   its plot and logo in one SVG, rows 4 to 6, so both cards' pills sit at
+   the same height and both plots start level. */
+@media (min-width: 1025px) {
+  .charts-grid > div:not(:only-child) > .summary-metric-choices {
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) > .summary-metric-plot {
+    grid-column: 1 / -1;
+    grid-row: 4 / span 3;
+    align-self: start;
+    min-width: 0;
+  }
 }

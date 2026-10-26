@@ -13,8 +13,8 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../Floating
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import PillSelect from "../../PillSelect";
-import PovertyMeasurePills from "../PovertyMeasurePills";
-import YearRangeSelect from "../YearRangeSelect";
+import { povertyMeasureOptions } from "../PovertyMeasurePills";
+import ControlBar from "../../ControlBar";
 import { useYearRange } from "../../../utils/livingStandards/yearRange";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -217,8 +217,9 @@ export default function WhoIsInPovertySection({ data }) {
           }),
       }}
       controls={
-        <>
-          {years.length > 2 && <YearRangeSelect years={years} from={from} to={to} onChange={setRange} />}
+        // The years compared are the section's (CurrentLawSection); the
+        // breakdown is the card's pill, the poverty measure under Options
+        <ControlBar name="Who is in poverty" options={povertyMeasureOptions(measure, b.measures, setMeasure)}>
           <PillSelect
             variant="light"
             prefix="Breakdown"
@@ -227,8 +228,7 @@ export default function WhoIsInPovertySection({ data }) {
             onChange={setBreakdown}
             options={ids.map((id) => ({ value: id, label: breakdowns[id].label, badge: breakdowns[id].badge }))}
           />
-          <PovertyMeasurePills measure={measure} available={b.measures} onChange={setMeasure} />
-        </>
+        </ControlBar>
       }
     >
       <div className="chart-plot">
