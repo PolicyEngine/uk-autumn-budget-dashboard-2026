@@ -2266,7 +2266,8 @@ body {
   border: 1px solid var(--c-grid);
   border-radius: 6px;
   box-shadow: 0 4px 12px var(--shadow-soft, transparent);
-  transform: translate(-50%, -100%);
+  /* Over the plot's top edge, never over the words above it */
+  transform: translate(-50%, -2px);
 }
 
 /* A change that holds: two bars to scale */
