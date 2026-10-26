@@ -119,7 +119,7 @@ describe("the OBR forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook");
   });
 
-  it("puts the current-law cards on its Living standards (one a row) and Poverty (a pair)", async () => {
+  it("puts the current-law cards one a row on Living standards and Poverty", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     await renderVerified();
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
@@ -186,7 +186,16 @@ describe("the OBR forecast view", () => {
     expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget measure\./);
     expect(within(poverty).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ });
-    expect(card(poverty, /^Poverty over time$/).closest(".charts-grid")).toBe(card(poverty, /^Who is in poverty$/).closest(".charts-grid"));
+    // One card a row, both on the same measure at first, under the age
+    // groups' tiles
+    const overTime = card(poverty, /^Poverty over time$/);
+    const who = card(poverty, /^Who is in poverty$/);
+    expect(overTime.closest(".charts-grid")).not.toBe(who.closest(".charts-grid"));
+    expect(overTime.closest(".charts-grid").children).toHaveLength(1);
+    for (const c of [overTime, who]) {
+      expect(c.querySelector(".control-bar-summary")).toHaveTextContent(/^Absolute · Before housing costs$/);
+    }
+    expect(poverty.querySelectorAll(".poverty-tiles .forecast-tile")).toHaveLength(3);
     // The two current-law cards only: Which measures move poverty is on
     // Population impact
     expect(poverty.querySelectorAll(".ls-card")).toHaveLength(2);
@@ -309,6 +318,12 @@ describe("the OBR forecast view", () => {
     // One short line on the card; the full sentence in About this chart
     expect(who.querySelector(".chart-description").textContent).toMatch(/^Under current law, [a-z].* have the highest .*: \d+\.\d% in \d{4}-\d{2}/);
     fireEvent.click(within(who).getByRole("button", { name: "About this chart" }));
+    // It opens on Poverty over time's measure; relative after housing costs
+    // from here
+    expect(optionsSummary(who)).toMatch(/· Absolute · Before housing costs$/);
+    choose(who, "Poverty line", "Relative");
+    choose(who, "Housing costs", "After housing costs");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     // Couples with children: 19.8% in both years, said once on the bar
     const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
     expect(couples).toHaveTextContent("Couples with children19.8%no change");
