@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -37,6 +37,7 @@ import {
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { chartMotion } from "../utils/chartMotion";
+import { peopleInPovertyText } from "../utils/povertyPeople";
 
 /**
  * The summary statistics from metrics.csv that Population impact charts,
@@ -141,6 +142,9 @@ export function povertyMetric({ basis, housing, group }) {
     csvUnits: `percentage points; ${people} in households below ${POVERTY_LINES[basis]}, ${HOUSING[housing]}`,
     file: `${children ? "child-" : ""}poverty-rate-change-${basis}-${housing}`,
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
+    // "the share of children in relative poverty after housing costs"
+    phrase: `the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ${HOUSING[housing]}`,
+    group,
   };
 }
 
@@ -219,6 +223,34 @@ export function parsePovertyChoice(text) {
   return choice;
 }
 
+// The poverty choice is one for the page: the Change in the poverty rate
+// chart and Which measures move poverty share it, so choosing in one
+// changes both (?poverty=)
+const POVERTY_EVENT = "poverty-choice";
+
+/** The poverty choice (line, housing costs, people), shared and kept in ?poverty=. */
+export function usePovertyChoice() {
+  const [poverty, setPoverty] = useState(() => parsePovertyChoice(readParam(PARAM.poverty)));
+  useEffect(() => {
+    const onChange = (event) => setPoverty(event.detail);
+    window.addEventListener(POVERTY_EVENT, onChange);
+    return () => window.removeEventListener(POVERTY_EVENT, onChange);
+  }, []);
+  const choose = (name) => (value) => {
+    const next = { ...poverty, [name]: value };
+    const text = POVERTY_CHOICES.map((group) => next[group.name]).join("-");
+    writeParam(PARAM.poverty, text === "absolute-bhc-all" ? null : text);
+    window.dispatchEvent(new CustomEvent(POVERTY_EVENT, { detail: next }));
+  };
+  const controls = POVERTY_CHOICES.map((group) => ({
+    label: group.label,
+    value: poverty[group.name],
+    onChange: choose(group.name),
+    options: group.options,
+  }));
+  return { poverty, controls };
+}
+
 /** Whether metrics.csv has a column (older files have only the headline ones). */
 export function hasColumn(rows, key) {
   return (rows ?? []).some((row) => row[key] !== undefined && row[key] !== "");
@@ -230,28 +262,14 @@ export function hasColumn(rows, key) {
  */
 function useMeasureChoice(metric, rows) {
   const family = metric.choices;
-  const [poverty, setPoverty] = useState(() => parsePovertyChoice(readParam(PARAM.poverty)));
+  const { poverty, controls: povertyControls } = usePovertyChoice();
   const [inequality, setInequality] = useState(() => {
     const value = readParam(PARAM.inequality);
     return INEQUALITY_METRICS[value] ? value : "gini";
   });
 
   if (family === "poverty" && hasColumn(rows, "child_poverty_rel_ahc_change_pp")) {
-    const choose = (name) => (value) => {
-      const next = { ...poverty, [name]: value };
-      setPoverty(next);
-      const text = POVERTY_CHOICES.map((group) => next[group.name]).join("-");
-      writeParam(PARAM.poverty, text === "absolute-bhc-all" ? null : text);
-    };
-    return {
-      metric: povertyMetric(poverty),
-      controls: POVERTY_CHOICES.map((group) => ({
-        label: group.label,
-        value: poverty[group.name],
-        onChange: choose(group.name),
-        options: group.options,
-      })),
-    };
+    return { metric: povertyMetric(poverty), controls: povertyControls, group: poverty.group };
   }
   if (family === "inequality" && hasColumn(rows, "p90_p10_change")) {
     return {
@@ -298,9 +316,13 @@ export function metricByYear(rows, run, metric) {
  * no single run (two or more policies, not all), it says to choose one
  * policy or all, as Young people's shares do.
  */
-function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear }) {
+function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population }) {
   const chartRef = useRef(null);
   const { metric, controls } = useMeasureChoice(family, rows);
+  // People behind a poverty change (pp × the population), where the
+  // population is known for the year (population(year, group) in millions)
+  const peopleText = (year, value) =>
+    metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
   const run = wholeSelectionRun(policies, selectedPolicies);
   const data = metricByYear(rows, run, metric);
@@ -315,6 +337,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;
   const tick = (value) => (value === 0 ? "0" : value.toFixed(decimals));
+  const selected = data.find((point) => point.year === selectedYear);
+  const selectedPeople = selected?.value != null ? peopleText(selectedYear, selected.value) : null;
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -342,7 +366,20 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <TitleIcon name={metric.icon} />
             <span className="title-text">{metric.title}</span>
           </h3>
-          <p className="chart-description">{metric.description}</p>
+          <p className="chart-description">
+            {metric.description}
+            {selectedPeople && (
+              <>
+                {" "}
+                In {fiscalYearTick(selectedYear)}:{" "}
+                <strong>
+                  {selected.value > 0 ? "+" : "−"}
+                  {metric.format(selected.value)}
+                </strong>
+                , {selectedPeople}.
+              </>
+            )}
+          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={metric.title} />
       </div>
@@ -414,6 +451,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     showPlus
                     showZero
                     grouped={false}
+                    note={(point) => (point?.value ? peopleText(point.year, point.value) : null)}
                   />
                 }
               />

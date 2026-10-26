@@ -1,0 +1,38 @@
+/* Which measures move poverty: one diverging bar per measure from a zero
+   line (falls left, rises right), the value on the right, the package last
+   under a rule. Rows and labels as Who is in poverty (.ls-bars). */
+.mp-bars {
+  grid-template-columns: minmax(140px, 36%) minmax(0, 1fr) 76px;
+}
+
+.mp-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--c-zero-line);
+}
+
+.mp-bar-fill {
+  position: absolute;
+  top: 50%;
+  height: 18px;
+  min-width: 2px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+}
+
+.mp-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-800);
+}
+
+.mp-package > * {
+  border-top: 1px solid var(--pe-gray-200);
+  font-weight: 600;
+}
+
+@container (max-width: 520px) {
+  .mp-bars {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+}

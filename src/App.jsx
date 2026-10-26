@@ -18,6 +18,7 @@ import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import CurrentLawSection, { CurrentLawInequalityCard } from "./components/livingStandards/CurrentLawSection";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
@@ -621,11 +622,12 @@ function App() {
             <>
               <SectionHeading
                 title="How the measures change poverty"
-                subtitle="With the selected measures: how they change poverty rates in the selected year. Poverty without the measures is below."
+                subtitle="With the selected measures: the change in the poverty rate each year, and each measure's part in the selected year. Poverty without the measures is below."
               />
-              <section id="poverty" className="report-section hero-chart">
-                <SummaryMetricChart
-                  metric={SUMMARY_METRICS.poverty}
+              {/* The change by year beside which measures move it, then
+                  current law: four cards, two a row on a desktop */}
+              <section id="poverty" className="report-section">
+                <PovertyMeasuresRow
                   rows={results.rawMetrics}
                   policies={POLICIES}
                   selectedPolicies={selectedPolicies}

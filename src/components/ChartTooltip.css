@@ -90,3 +90,12 @@
   outline: 2px solid var(--band-teal);
   outline-offset: 2px;
 }
+
+/* A line under the rows (the people a poverty change is) */
+.chart-tooltip-note {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--pe-gray-200);
+  color: var(--pe-gray-700);
+  font-size: var(--fs-micro);
+}
