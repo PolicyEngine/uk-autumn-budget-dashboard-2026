@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changesNothing, offerFor, parseGrowthWithMeasures, seriesFor } from "./growthWithMeasures";
+import { changesNothing, offerFor, parseGrowthWithMeasures, seriesFor, withMeasuresRows } from "./growthWithMeasures";
 
 const HEADER =
   "reform_id,reform_name,year,population,basis,grouping,group,baseline_real_median,reform_real_median,baseline_annual_growth,reform_annual_growth,growth_difference";
@@ -42,5 +42,23 @@ describe("income_growth_with_measures.csv", () => {
     expect(changesNothing(rows, "pkg")).toBe(false);
     expect(changesNothing(rows, "missing")).toBe(false);
     expect(seriesFor(rows, { reformId: "missing", population: "all", basis: "bhc", grouping: "decile" })).toBeNull();
+  });
+
+  it("adds the run's effect to current law, so with less without is the effect", () => {
+    const rows = parseGrowthWithMeasures(TEXT);
+    const s = seriesFor(rows, { reformId: "pkg", population: "all", basis: "bhc", grouping: "vigintile" });
+    const blank = Array(20).fill(0);
+    const twin = [
+      { year: "2027-28", real_median: blank.map(() => 9000), cumulative: blank, annual: blank.map(() => 0.005) },
+      { year: "2028-29", real_median: blank.map(() => 9100), cumulative: blank.map(() => 0.01), annual: blank.map(() => 0.01) },
+    ];
+    const w = withMeasuresRows(twin, s);
+    expect(w[1].annual[1]).toBeCloseTo(0.01 + 0.01, 10);
+    expect(w[1].annual[19]).toBeCloseTo(0.01, 10);
+    expect(w[1].annual[0]).toBeNull();
+    expect(w[1].real_median[1]).toBeCloseTo((9100 * 10403) / 10200, 6);
+    expect(w[1].cumulative[1]).toBeCloseTo(1.01 * (10403 / 10100) / (10200 / 10000) - 1, 10);
+    expect(w[1].twin_cumulative[1]).toBe(0.01);
+    expect(withMeasuresRows(twin, null)).toBeNull();
   });
 });

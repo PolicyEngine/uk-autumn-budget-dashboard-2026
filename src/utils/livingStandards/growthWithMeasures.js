@@ -71,6 +71,7 @@ export function seriesFor(rows, { reformId, population, basis, grouping }) {
   return years.map((year) => ({
     year: fyLabel(year),
     real_median: pick(year, "reform_real_median"),
+    base_median: pick(year, "baseline_real_median"),
     annual: pick(year, "reform_annual_growth"),
     difference: pick(year, "growth_difference"),
     cumulative: ratio(pick(year, "reform_real_median"), pick(first, "reform_real_median")),
@@ -82,4 +83,35 @@ export function seriesFor(rows, { reformId, population, basis, grouping }) {
 export function changesNothing(rows, reformId) {
   const mine = rows.filter((r) => r.reform_id === reformId);
   return mine.length > 0 && mine.every((r) => r.growth_difference === 0);
+}
+
+/**
+ * The growth chart's rows with the measures: the Pre-measures forecast's
+ * current-law rows (`twin`, DecileGrowthSection's growthRows) plus what
+ * the run does to growth (`series`, from seriesFor), so that with the
+ * measures less without is exactly the measures' effect. Annual growth is
+ * current law's plus the difference; each median and the growth since the
+ * first year are current law's scaled by the run's reform-to-baseline
+ * ratio. `twin_cumulative` keeps current law's, for the difference over a
+ * whole period. A year the run lacks is left out.
+ */
+export function withMeasuresRows(twin, series) {
+  if (!twin?.length || !series?.length) return null;
+  const byYear = new Map(series.map((r) => [r.year, r]));
+  const out = [];
+  for (const t of twin) {
+    const s = byYear.get(t.year);
+    if (!s) continue;
+    const ratio = (k) => (s.cumulative[k] == null || s.base_cumulative[k] == null ? null : (1 + s.cumulative[k]) / (1 + s.base_cumulative[k]));
+    const k0 = t.real_median.map((_, k) => k);
+    out.push({
+      year: t.year,
+      real_median: k0.map((k) => (s.real_median[k] == null || s.base_median?.[k] == null ? null : (t.real_median[k] * s.real_median[k]) / s.base_median[k])),
+      cumulative: k0.map((k) => (ratio(k) == null ? null : (1 + t.cumulative[k]) * ratio(k) - 1)),
+      twin_cumulative: t.cumulative,
+      annual: t.annual ? k0.map((k) => (s.difference[k] == null ? null : t.annual[k] + s.difference[k])) : null,
+      difference: s.difference,
+    });
+  }
+  return out.length ? out : null;
 }
