@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import MeasureRowLabel from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -6,13 +7,20 @@ import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
 import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
-import PillSelect from "../PillSelect";
+import ControlBar from "../ControlBar";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
+import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
+
+
+// The card's About this chart (the measures with no effect join its caveats)
+const MEASURES_INFO = {
+  method: AGE_METHOD,
+};
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -85,8 +93,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
-              <span className="measure-dumbbell-label">{row.name}</span>
+              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} />
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
@@ -182,7 +189,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's More info row, each with its colour. No reason
+  // No effect: in the card's About this chart, each with its colour. No reason
   // per measure: a list of them by id would be a measure list of the page's
   // own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
@@ -225,15 +232,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Compare"
-          name="Age group compared with all ages"
-          value={band}
-          onChange={setBand}
-          options={BAND_OPTIONS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Compare", value: band, onChange: setBand, options: BAND_OPTIONS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
@@ -271,11 +270,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {/* Notes and More info in the card's footer row, level across a pair */}
-      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+      {/* Notes and About this chart in the card's footer row, level across a pair */}
+      {published && (
         <div className="chart-footer">
           {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={MEASURES_INFO} />
         </div>
       )}
     </div>

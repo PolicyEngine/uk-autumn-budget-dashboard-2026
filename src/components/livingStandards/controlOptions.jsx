@@ -1,4 +1,6 @@
 import { VIEW_OPTIONS } from "../../utils/livingStandards/baseline";
+import { fyDash } from "../../utils/livingStandards/outlook";
+import YearRangeFields from "./YearRangeFields";
 
 // The summary words for the Period choice on a card's Options button
 // (ControlBar): "Both" alone would not say both of what
@@ -28,5 +30,20 @@ export function housingOption(value, onChange, ids = ["bhc", "ahc"]) {
     value,
     onChange,
     options: ids.map((id) => ({ value: id, label: id === "bhc" ? "Before housing costs" : "After housing costs" })),
+  };
+}
+
+/**
+ * The two years a card compares as the first Options group ("2027-28 →
+ * 2031-32"): two compact lists in the popover. Every card comparing two
+ * years reads and writes the same ?ls_from / ?ls_to (useYearRange), so
+ * they stay in step. Null when there is nothing to choose.
+ */
+export function yearsOption(years, range, onChange) {
+  if (!range || !onChange || years.length <= 2) return null;
+  return {
+    label: "Years compared",
+    summary: `${fyDash(range[0])} → ${fyDash(range[1])}`,
+    control: <YearRangeFields years={years} from={range[0]} to={range[1]} onChange={onChange} />,
   };
 }

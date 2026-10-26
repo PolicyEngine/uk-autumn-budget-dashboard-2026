@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import ViewSwitch from "../ViewSwitch";
+import Tip from "../Tip";
 import Disclosure from "../Disclosure";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import LsCard from "../livingStandards/LsCard";
@@ -163,19 +164,21 @@ export function vintageCsv({ title, units, view, rows, notes = [] }) {
 function Toggles({ toggles }) {
   return (
     <div className="obr-view-switch is-compact fv-toggles" role="group" aria-label="Chart options">
+      {/* Each letter's name, or why it is off, in a tip as the unit
+          switch's are (Tip) */}
       {toggles.map((t) => (
-        <button
-          key={t.letter}
-          type="button"
-          className="obr-view-option"
-          aria-pressed={t.on}
-          aria-label={t.label}
-          title={t.disabled ? t.disabledTitle : t.label}
-          disabled={t.disabled}
-          onClick={t.onToggle}
-        >
-          <span aria-hidden="true">{t.letter}</span>
-        </button>
+        <Tip key={t.letter} content={t.disabled ? t.disabledTitle : t.label}>
+          <button
+            type="button"
+            className="obr-view-option"
+            aria-pressed={t.on}
+            aria-label={t.label}
+            disabled={t.disabled}
+            onClick={t.onToggle}
+          >
+            <span aria-hidden="true">{t.letter}</span>
+          </button>
+        </Tip>
       ))}
     </div>
   );

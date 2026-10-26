@@ -4,7 +4,8 @@
  * Everything here is visual: grid, ticks, margins and legend layout. It never
  * touches the data a chart plots.
  */
-import { useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
+import { CHART_LOGO } from "./chartLogo";
 
 // At or below this width (the page's phone breakpoint) a chart tightens its
 // margins and puts the PolicyEngine logo under the legend, not beside it.
@@ -78,6 +79,13 @@ export const CHART_COLOURS = {
   mtrUniversalCredit: "#2F855A",
   mtrOtherBenefits: "#9AE6B4",
   mtrOther: "#D1D5DB",
+  // The net income card's layers the marginal rate card has not: benefits
+  // in greens, the household's other taxes in purples
+  netStatePension: "#22543D",
+  netWarmHomeDiscount: "#68D391",
+  netCouncilTax: "#8E7CC3",
+  netFuelDuty: "#553C9A",
+  netVat: "#B794F4",
 };
 
 /**
@@ -86,7 +94,7 @@ export const CHART_COLOURS = {
  * measures take its ramp in order of size (largest darkest), so a stack,
  * its legend and its tooltip shade monotonically. The JS mirror of the
  * --ramp-* tokens in src/app/globals.css (chartTheme.test.js keeps the two
- * equal). The measures' own colours are the catalogue's (MEASURE_PALETTES).
+ * equal). The catalogue samples them for any number of measures (measureRamp, below).
  */
 export const POLICY_RAMPS = {
   // Amber 900, 700, 500
@@ -98,17 +106,94 @@ export const POLICY_RAMPS = {
 };
 
 /**
- * The palettes the measure catalogue (measureCatalogue.jsx, #104) picks each
- * published measure's colour from, by its id and budgetary direction, so
- * adding or reordering measures never changes an existing measure's colour.
- * Revenue-raising measures take ambers, those that cost revenue teals, and a
- * measure with no published costing the no-change grey.
+ * How the measure catalogue (measureCatalogue.jsx, #104) colours the
+ * published measures: each direction's measures, ranked by budgetary size
+ * (largest first), take evenly spaced steps along that direction's ramp
+ * above, darkest first, so any number of measures get distinct shades.
+ * Revenue-raising measures take the raise ramp (ambers), those that cost
+ * revenue the cost ramp (teals), and a measure with no published costing
+ * the no-change grey. With more than `alternateAbove` measures in one
+ * direction, every second step turns its hue by `hue` degrees and scales
+ * its chroma by `chroma` (cost: blue-teal; revenue: brown), at the same
+ * lightness, so neighbours in a stack stay apart. Numbers, not colours: the
+ * colours are the POLICY_RAMPS tokens.
  */
-export const MEASURE_PALETTES = Object.freeze({
-  cost: Object.freeze(["#115E59", "#2DD4BF", "#0F766E", "#5EEAD4", "#0D9488", "#99F6E4", "#14B8A6"]),
-  revenue: Object.freeze(["#78350F", "#B45309", "#F59E0B"]),
+export const MEASURE_RAMPS = Object.freeze({
+  cost: Object.freeze({ stops: POLICY_RAMPS.cost, hue: 25, chroma: 1 }),
+  revenue: Object.freeze({ stops: POLICY_RAMPS.raise, hue: -8, chroma: 0.6 }),
+  alternateAbove: 8,
   neutral: CHART_COLOURS.noChange,
 });
+
+// sRGB <-> OKLab (Björn Ottosson's matrices), for even perceptual steps
+const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const fromLinear = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+
+/** A hex colour as OKLab [L, a, b]. */
+export function hexToOklab(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => toLinear(parseInt(hex.slice(i, i + 2), 16) / 255));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabToLinearRgb([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+/** An OKLab colour as hex; out of the sRGB gamut, chroma is reduced (lightness and hue kept). */
+function oklabToHex([L, a0, b0]) {
+  let [a, b] = [a0, b0];
+  for (let k = 0; k < 60; k += 1) {
+    if (oklabToLinearRgb([L, a, b]).every((v) => v >= -1e-4 && v <= 1 + 1e-4)) break;
+    a *= 0.95;
+    b *= 0.95;
+  }
+  return rgbToHex(oklabToLinearRgb([L, a, b]).map((v) => fromLinear(Math.min(1, Math.max(0, v))) * 255));
+}
+
+/**
+ * `n` colours for one direction's measures, largest first: evenly spaced in
+ * OKLab along the direction's ramp (by distance along it), from its darkest
+ * stop to its lightest, with every second step turned in hue when n is over
+ * MEASURE_RAMPS.alternateAbove. A neutral direction gives the grey.
+ */
+export function measureRamp(direction, n) {
+  const ramp = MEASURE_RAMPS[direction];
+  if (!ramp?.stops) return Array.from({ length: n }, () => MEASURE_RAMPS.neutral);
+  const labs = ramp.stops.map(hexToOklab);
+  const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  const alternate = n > MEASURE_RAMPS.alternateAbove;
+  return Array.from({ length: n }, (_, i) => {
+    let along = n === 1 ? 0 : (i / (n - 1)) * total;
+    let k = 0;
+    while (k < lengths.length - 1 && along > lengths[k]) {
+      along -= lengths[k];
+      k += 1;
+    }
+    const f = lengths[k] ? Math.min(1, along / lengths[k]) : 0;
+    let [L, a, b] = labs[k].map((v, j) => v + (labs[k + 1][j] - v) * f);
+    if (alternate && i % 2 === 1) {
+      const chroma = Math.hypot(a, b) * ramp.chroma;
+      const hue = Math.atan2(b, a) + (ramp.hue * Math.PI) / 180;
+      [a, b] = [chroma * Math.cos(hue), chroma * Math.sin(hue)];
+    }
+    return oklabToHex([L, a, b]);
+  });
+}
 
 /**
  * Income groups from the lowest-income to the highest-income end: a
@@ -175,11 +260,118 @@ export const UNSELECTED_OPACITY = 0.5;
 /** The hover cursor behind a bar or row, on every chart */
 export const HOVER_CURSOR = { fill: CHART_COLOURS.hover };
 
+/** Gridlines: light and dashed, behind every chart */
 export const GRID_PROPS = {
   vertical: false,
   stroke: CHART_COLOURS.grid,
-  strokeDasharray: "0",
+  strokeDasharray: "3 4",
 };
+
+// One bar style for the dashboard: rounded outer ends, flush inner joins
+// with a small gap between stacked segments.
+/** The radius of a bar's outer end, in px (capped at half its thickness) */
+export const BAR_RADIUS = 5;
+/** The gap between two stacked segments, in px */
+export const BAR_GAP = 1.5;
+
+/**
+ * An SVG path for a rectangle with its own radius at each corner, in the
+ * order top-left, top-right, bottom-right, bottom-left.
+ */
+export function roundedRectPath(x, y, width, height, [tl, tr, br, bl]) {
+  const w = Math.max(width, 0);
+  const h = Math.max(height, 0);
+  const cap = (r) => Math.max(0, Math.min(r, w / 2, h / 2));
+  const [a, b, c, d] = [cap(tl), cap(tr), cap(br), cap(bl)];
+  return [
+    `M${x + a},${y}`,
+    `H${x + w - b}`,
+    b ? `A${b},${b} 0 0 1 ${x + w},${y + b}` : "",
+    `V${y + h - c}`,
+    c ? `A${c},${c} 0 0 1 ${x + w - c},${y + h}` : "",
+    `H${x + d}`,
+    d ? `A${d},${d} 0 0 1 ${x},${y + h - d}` : "",
+    `V${y + a}`,
+    a ? `A${a},${a} 0 0 1 ${x + a},${y}` : "",
+    "Z",
+  ].join("");
+}
+
+const segmentValue = (payload, key) => {
+  const value = Number(payload?.[key]);
+  return Number.isFinite(value) ? value : 0;
+};
+
+/**
+ * A Recharts <Bar shape> in the dashboard's bar style. `keys` are the
+ * stack's dataKeys in the order the <Bar>s are drawn (one key for a plain
+ * bar). Each segment that ends its stack on its side of zero gets a
+ * rounded outer end; a segment followed by another of the same sign is cut
+ * short by BAR_GAP, so the joins read as separate and stay flush. With
+ * `roundBase` (a 100% bar, which has no zero line to sit on) the first
+ * segment's start is rounded too.
+ *
+ * @param {string[]} keys
+ * @param {{layout?: "horizontal"|"vertical", roundBase?: boolean, radius?: number}} [options]
+ *   `layout` as the chart's: "horizontal" for upright bars, "vertical" for
+ *   bars running across.
+ */
+export function barShape(keys, { layout = "horizontal", roundBase = false, radius = BAR_RADIUS } = {}) {
+  return function BarShape(props) {
+    const { x, y, width, height, fill, fillOpacity, opacity, payload, dataKey, value } = props;
+    if (![x, y, width, height].every(Number.isFinite) || (width === 0 && height === 0)) return null;
+    // The sign from the data (a stacked value's range is always low to high)
+    const raw = Number(payload?.[dataKey]);
+    const own = Number.isFinite(raw) ? raw : Array.isArray(value) ? value[1] - value[0] : Number(value) || 0;
+    const sign = own < 0 ? -1 : 1;
+    const index = keys.indexOf(dataKey);
+    const sameSign = (key) => {
+      const other = segmentValue(payload, key);
+      return other !== 0 && Math.sign(other) === sign;
+    };
+    const outer = index < 0 || !keys.slice(index + 1).some(sameSign);
+    const first = index < 0 || !keys.slice(0, index).some(sameSign);
+    const across = layout === "vertical";
+    let x0 = Math.min(x, x + width);
+    let y0 = Math.min(y, y + height);
+    let w = Math.abs(width);
+    let h = Math.abs(height);
+    // Cut a segment short at its outer side when another follows it (at
+    // most a third of it, so a thin segment still shows)
+    if (!outer) {
+      if (across) {
+        const cut = Math.min(BAR_GAP, w / 3);
+        w -= cut;
+        if (sign < 0) x0 += cut;
+      } else {
+        const cut = Math.min(BAR_GAP, h / 3);
+        h -= cut;
+        if (sign > 0) y0 += cut;
+      }
+    }
+    const r = (on) => (on ? radius : 0);
+    const end = outer;
+    const base = roundBase && first;
+    // Corners: top-left, top-right, bottom-right, bottom-left
+    let corners;
+    if (across) {
+      const right = sign > 0 ? end : base;
+      const left = sign > 0 ? base : end;
+      corners = [r(left), r(right), r(right), r(left)];
+    } else {
+      const top = sign > 0 ? end : base;
+      const bottom = sign > 0 ? base : end;
+      corners = [r(top), r(top), r(bottom), r(bottom)];
+    }
+    return createElement("path", {
+      className: "recharts-rectangle",
+      d: roundedRectPath(x0, y0, w, h, corners),
+      fill,
+      fillOpacity,
+      opacity,
+    });
+  };
+}
 
 export const TICK_STYLE = { fontSize: 12, fill: CHART_COLOURS.tick };
 export const AXIS_LINE = { stroke: CHART_COLOURS.axis };
@@ -215,10 +407,16 @@ export function axisWidth(ticks, format = String, { title = true } = {}) {
   return Math.ceil(longest * 7) + 10 + (title ? Y_TITLE_GUTTER : 0);
 }
 
+/** Height kept free under a legend: the logo, its padding and its clear space above. */
+export function logoClearance() {
+  return (CHART_LOGO.gap ?? 16) + CHART_LOGO.height + (CHART_LOGO.padding ?? 8);
+}
+
 /**
  * Legend wrapper: the full chart width, centred, with a row kept free below
  * it for the PolicyEngine logo (drawn at the bottom right), so the logo
- * never pushes the legend off centre.
+ * never pushes the legend off centre, with CHART_LOGO.gap of clear space
+ * between the legend's last row and the logo.
  */
 export function legendWrapperStyle(narrow) {
   return {
@@ -226,7 +424,8 @@ export function legendWrapperStyle(narrow) {
     width: "100%",
     boxSizing: "border-box",
     paddingTop: narrow ? 12 : 16,
-    paddingBottom: 30,
+    // The logo row, with clear space above it (CHART_LOGO.gap)
+    paddingBottom: logoClearance(),
     lineHeight: narrow ? "20px" : "22px",
   };
 }

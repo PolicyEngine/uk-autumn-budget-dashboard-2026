@@ -3,19 +3,21 @@
    so it keeps that class name. */
 .obr-view-switch {
   display: inline-flex;
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  overflow: hidden;
+  gap: 2px;
+  padding: 2px;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
 }
 
 .obr-view-option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* With the switch's 1px border, as tall as the 36px OBR basis pill */
-  height: 34px;
+  /* With the track's 2px padding, as tall as the 36px OBR basis pill */
+  height: 32px;
   padding: 0 14px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--pe-gray-600);
   font: inherit;
@@ -23,25 +25,30 @@
   cursor: pointer;
 }
 
-.obr-view-option + .obr-view-option {
-  border-left: 1px solid var(--card-border);
+.obr-view-option:hover {
+  color: var(--pe-gray-900);
 }
 
+/* The chosen view: white on the track, teal text (the thumb slides to it) */
 .obr-view-option[aria-pressed="true"] {
-  background: var(--band-teal);
-  color: var(--c-surface);
+  font-weight: 600;
+  color: var(--pe-teal-800);
+  background: var(--pe-surface);
+  box-shadow: 0 1px 2px var(--shadow-strong);
+}
+
+.obr-view-switch.has-thumb .obr-view-option[aria-pressed="true"] {
+  box-shadow: none;
 }
 
 .obr-view-option:focus-visible {
-  outline: 2px solid var(--band-teal);
-  outline-offset: -2px;
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 1px;
 }
 
 /* In-card size: as tall as the in-card pills (30px), no icons */
 .obr-view-switch.is-compact {
   flex: 0 0 auto;
-  border-color: var(--pe-gray-300);
-  border-radius: 999px;
 }
 
 .obr-view-switch.is-compact .obr-view-option {

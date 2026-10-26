@@ -180,3 +180,35 @@ export const PALETTE = {
   grey: CHART_COLOURS.noChange,
   amber: CHART_COLOURS.loss,
 };
+
+// Round steps: 1, 2 or 5 x 10^n, the smallest at least `raw` (no 2.5, so
+// a percentage tick never needs a second decimal: 12.5% would read "13%")
+const roundStep = (raw) => {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+};
+
+/**
+ * An axis fitted to the values, for a level over time (incomes, the Gini, a
+ * poverty rate), so a change of a few per cent is visible: the data's range
+ * padded by `pad` of itself each side, in about `steps` round steps, never
+ * below 0 for values that are not. `broken` is true when the axis does not
+ * start at 0, so the chart marks the break. Returns { domain, ticks, broken }.
+ */
+export function zoomAxis(values, { pad = 0.3, steps = 4 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  if (!vals.length) return { domain: [0, 1], ticks: [0, 1], broken: false };
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  // A flat series still gets a little room either side (5% of its level)
+  const span = Math.max(max - min, Math.abs(max) * 0.05, 1e-6);
+  let lo = min - span * pad;
+  const hi = max + span * pad;
+  if (min >= 0) lo = Math.max(0, lo);
+  const step = roundStep((hi - lo) / steps);
+  const start = Math.floor(lo / step + 1e-9) * step;
+  const end = Math.ceil(hi / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks, broken: ticks[0] > 0 };
+}

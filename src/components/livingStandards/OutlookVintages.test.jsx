@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../../App";
 
 const VINTAGES = readFileSync("public/data/obr_forecast_vintages.json", "utf8");
@@ -53,8 +53,7 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
   // The link's panel is hidden now, so focus moves to the tab it opened
   expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveFocus();
   expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(/Could not load outlook data/);
-  // Forecast changes is the default sub-tab, so ?sub= goes
-  expect(address()).toEqual({ tab: "outlook" });
+  expect(address()).toEqual({ tab: "outlook", sub: "forecast" });
 
   // Back on Forecast vintages, the measure left open stays
   fireEvent.click(screen.getByRole("tab", { name: "Forecast vintages" }));
@@ -69,10 +68,11 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
 it("keeps a ?variable= a link brought until Forecast vintages is first opened, which opens that measure", async () => {
   stubFetch();
   // Forecast vintages is not mounted until it is opened, so nothing reads
-  // or clears ?variable= on Forecast changes
+  // or clears ?variable= on Living standards, the default
   window.history.replaceState({}, "", "/?tab=outlook&variable=psnb");
   render(<App />);
-  expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
+  const view = await screen.findByRole("tabpanel", { name: "Pre-measures forecast" });
+  expect(await within(view).findByRole("tab", { name: "Living standards" })).toHaveAttribute("aria-selected", "true");
   expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(/Could not load outlook data/);
   expect(address()).toEqual({ tab: "outlook", variable: "psnb" });
 

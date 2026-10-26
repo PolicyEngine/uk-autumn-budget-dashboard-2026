@@ -56,6 +56,14 @@ const svgText = (container) => [...container.querySelectorAll(".recharts-surface
 const brushText = (container) => [...container.querySelectorAll(".recharts-brush-texts text")].map((t) => t.textContent);
 const lines = (container) => container.querySelectorAll(".recharts-line");
 const option = (name) => within(screen.getByRole("group", { name: "Chart options" })).getByRole("button", { name });
+// What a button's tip (Tip) says on hover; none open after
+function tipOf(button) {
+  fireEvent.mouseEnter(button);
+  const text = screen.getByRole("tooltip").textContent;
+  fireEvent.mouseLeave(button);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  return text;
+}
 const gbp = (v) => `£${Math.round(v).toLocaleString("en-GB")}`;
 
 describe("a forecasts file that cannot be shown", () => {
@@ -118,7 +126,7 @@ describe("the chart", () => {
   // axis, "% of GDP", on hover, under a chart that says what it is
   it("names each unit's button as its axis, as the chart would draw it", async () => {
     await renderView();
-    const titles = () => within(screen.getByRole("group", { name: "Unit" })).getAllByRole("button").map((b) => b.title);
+    const titles = () => within(screen.getByRole("group", { name: "Unit" })).getAllByRole("button").map(tipOf);
     expect(titles()).toEqual([RHDI.units.level.axis, "Index (Q2 2024 = 100)", GROWTH_AXIS]);
     fireEvent.click(option("Annual totals"));
     expect(titles()[1]).toBe("Index (2024 = 100)");
@@ -130,7 +138,7 @@ describe("the chart", () => {
     window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=receipts");
     render(<ForecastVintagesView />);
     const percent = await screen.findByRole("button", { name: "%" });
-    expect(percent).toHaveAttribute("title", GROWTH_AXIS);
+    expect(tipOf(percent)).toBe(GROWTH_AXIS);
     fireEvent.click(percent);
     expect(screen.getByRole("button", { name: "%" })).toHaveAttribute("aria-pressed", "true");
     expect(svgText(document.body)).toContain(GROWTH_AXIS);
@@ -211,6 +219,10 @@ describe("the chart", () => {
     expect(screen.getByRole("heading", { level: 3, name: PSNB.label })).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("variable")).toBe("psnb");
     expect(option("Annual totals")).toBeDisabled();
+    // Its tip says why; the others' say what they are
+    expect(tipOf(option("Annual totals"))).toBe("Annual totals: this measure is already annual");
+    expect(tipOf(option("Earlier forecasts"))).toBe("Earlier forecasts");
+    expect(option("Earlier forecasts")).not.toHaveAttribute("title");
     expect(screen.queryByText("Quarterly annualised (×4)")).toBeNull();
     const units = within(screen.getByRole("group", { name: "Unit" })).getAllByRole("button");
     expect(units.map((b) => b.textContent)).toEqual(["£", "%"]);
@@ -550,7 +562,7 @@ describe("the CSV download", () => {
 });
 
 describe("as another view's sub-tab", () => {
-  const SIBLING = { href: "?tab=outlook", label: "Forecast changes" };
+  const SIBLING = { href: "?tab=outlook&sub=forecast", label: "Forecast changes" };
   const choose = (variable) => {
     fireEvent.click(screen.getByRole("button", { name: /^Measure: / }));
     fireEvent.click(screen.getByRole("option", { name: variable.label }));
@@ -599,7 +611,7 @@ describe("as another view's sub-tab", () => {
     const onShow = vi.fn();
     const { unmount } = await renderView({ related: { ...SIBLING, onShow } });
     const link = screen.getByRole("link", { name: "Forecast changes" });
-    expect(link).toHaveAttribute("href", "?tab=outlook");
+    expect(link).toHaveAttribute("href", "?tab=outlook&sub=forecast");
     fireEvent.click(link);
     expect(onShow).toHaveBeenCalledTimes(1);
     unmount();
