@@ -133,6 +133,9 @@ code {
      translucent states */
   --band-ink: #ffffff;
   --band-ink-muted: color-mix(in srgb, var(--band-ink) 70%, transparent);
+  /* A label beside a value on a band control: muted, but still 4.5:1 on
+     the band under the control's translucent fill */
+  --band-ink-label: color-mix(in srgb, var(--band-ink) 90%, transparent);
   --band-ink-border: color-mix(in srgb, var(--band-ink) 60%, transparent);
   --band-ink-border-hover: color-mix(in srgb, var(--band-ink) 80%, transparent);
   --band-ink-hover: color-mix(in srgb, var(--band-ink) 12%, transparent);
@@ -697,10 +700,11 @@ body {
 /* The band's two controls (year, measures; YearSlider.jsx and
    PolicySelector.jsx): the card Options pill's shape (a full pill, a
    1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent white pill with white text. A small label sits over the
-   value. Their lists stay white. */
+   translucent white pill with white text. The label and the value share
+   one line, the label regular and muted, the value bold. Their lists stay
+   white. */
 .title-row .band-control {
-  height: 44px;
+  height: 40px;
   min-width: 0;
   padding: 0 14px 0 12px;
   gap: 8px;
@@ -738,22 +742,20 @@ body {
   color: var(--band-ink);
 }
 
-/* The label over the value, left-aligned */
+/* "Year 2027-28": the label and the value on one line */
 .band-control-text {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
-  line-height: 1.15;
-  text-align: left;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-/* White, not muted: muted white on the band is under 4.5:1 at this size */
 .band-control-label {
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--band-ink);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--band-ink-label);
 }
 
 .band-control-value {

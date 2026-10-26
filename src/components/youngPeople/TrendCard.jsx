@@ -170,7 +170,9 @@ function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
   const labels = [];
-  for (const line of lines) {
+  // In the focus view only the lines in colour are named; a grey context
+  // line is named while it is hovered
+  for (const line of lines.filter((each) => each.strong || each.key === hovered)) {
     const last = [...data].reverse().find((point) => point[line.key] !== null && point[line.key] !== undefined);
     if (!last) continue;
     const x = xOf(xAxis, last.year);
@@ -205,11 +207,21 @@ function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }
   );
 }
 
-/** The measure behind each big step, beside the focus line's point. */
+/**
+ * The measure behind each big step, in a small white label above or below
+ * the focus line's point with a short leader: below a fall, above a rise,
+ * moved past the £0 line rather than sitting on it, and flipped to the
+ * other side when there is no room.
+ */
 function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
+  const fontSize = narrow ? 10.5 : 11.5;
+  const boxHeight = fontSize + 8;
+  const top = yAxis.y + 2;
+  const bottom = yAxis.y + yAxis.height - 2;
+  const zero = yAxis.scale(0);
   return (
     <g className="trend-step-labels" aria-hidden="true">
       {notes.map((note) => {
@@ -217,25 +229,49 @@ function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
         const x = xOf(xAxis, note.year);
         if (value === null || x === null) return null;
         const y = yAxis.scale(value);
-        const below = note.step < 0;
-        const ty = below ? Math.min(y + 22, yAxis.y + yAxis.height - 4) : Math.max(y - 16, yAxis.y + 10);
-        // Near the right edge, the text ends at the point
-        const anchor = x > xAxis.x + xAxis.width * 0.7 ? "end" : "middle";
+        // An estimate of the text's width, for its box
+        const width = note.text.length * fontSize * 0.56 + 12;
+        const place = (below) => {
+          let boxTop = below ? y + 14 : y - 14 - boxHeight;
+          // Never on the £0 line: past it, in the same direction
+          if (Number.isFinite(zero) && boxTop < zero + 3 && boxTop + boxHeight > zero - 3) {
+            boxTop = below ? zero + 5 : zero - 5 - boxHeight;
+          }
+          return boxTop;
+        };
+        let below = note.step < 0;
+        let boxTop = place(below);
+        if (boxTop < top || boxTop + boxHeight > bottom) {
+          below = !below;
+          boxTop = Math.min(Math.max(place(below), top), bottom - boxHeight);
+        }
+        // Near the right edge the label ends at the point, near the left it starts there
+        const right = x > xAxis.x + xAxis.width * 0.7;
+        const left = x < xAxis.x + xAxis.width * 0.3;
+        // (clear of the line names at the right edge)
+        const boxLeft = right ? x - width - 4 : left ? x - 10 : x - width / 2;
+        const leaderEnd = below ? boxTop : boxTop + boxHeight;
         return (
           <g key={note.year}>
-            <line x1={x} x2={x} y1={y + (below ? 6 : -6)} y2={ty + (below ? -10 : 4)} stroke={CHART_COLOURS.tick} strokeWidth={1} />
-            {/* A halo in the card's colour, so the name reads over bars and lines */}
+            <line x1={x} x2={right ? x - 4 : x} y1={y + (below ? 5 : -5)} y2={leaderEnd} stroke={CHART_COLOURS.tick} strokeWidth={1} />
+            <rect
+              x={boxLeft}
+              y={boxTop}
+              width={width}
+              height={boxHeight}
+              rx={4}
+              fill={CHART_COLOURS.surface}
+              stroke={CHART_COLOURS.axis}
+              strokeWidth={1}
+            />
             <text
-              x={anchor === "end" ? x + 6 : x}
-              y={ty}
-              textAnchor={anchor}
-              fontSize={narrow ? 10.5 : 11.5}
+              x={boxLeft + width / 2}
+              y={boxTop + boxHeight / 2}
+              dy="0.35em"
+              textAnchor="middle"
+              fontSize={fontSize}
               fill={CHART_COLOURS.text}
               fontWeight={500}
-              stroke={CHART_COLOURS.surface}
-              strokeWidth={3.5}
-              strokeLinejoin="round"
-              paintOrder="stroke"
             >
               {note.text}
             </text>
@@ -565,7 +601,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               ))}
             {byMeasure && (
               <Line
-                type="linear"
+                type="monotoneX"
                 dataKey="net"
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
@@ -578,7 +614,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               ordered.filter((line) => !groupsView || shownGroups.includes(line.key)).map((line) => (
                 <Line
                   key={line.key}
-                  type="linear"
+                  type="monotoneX"
                   dataKey={line.key}
                   name={line.label}
                   stroke={line.colour}
@@ -630,11 +666,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           <p>
             Each point is the average change in household net income per person in the age group, the sum of each
             selected policy&apos;s own effect; each person counts their household&apos;s change (not equivalised).
-            Points are joined by straight lines: the results are for whole fiscal years, with nothing in between.
+            The curve between the annual points never goes past them: the results are for whole fiscal years, with nothing measured in between.
           </p>
           <p>
             {FOCUS_LABEL} is drawn in colour and all ages dashed; the other age groups are the grey lines behind (hover
-            one, or its name, to bring it forward), or all in colour with Compare set to all age groups. A label on the
+            one to bring it forward and see its name), or all in colour with Compare set to all age groups. A label on the
             line names the measure behind each of the largest year-on-year steps, worked out from each measure&apos;s
             own rows. The shaded year is the one chosen in the bar above.
           </p>

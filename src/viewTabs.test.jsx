@@ -182,12 +182,40 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Methodology" })).toBeInTheDocument();
   });
 
+  it("open a sub-tab band only on views with sub-tabs, and keep the view tabs a keyboard tablist", async () => {
+    await renderApp();
+    const bar = document.querySelector(".view-tabs-bar");
+    expect(bar).toHaveClass("has-notch");
+    // One sliding indicator, hidden from assistive tech, outside the tabs
+    const indicator = bar.querySelectorAll(".view-tabs-indicator");
+    expect(indicator).toHaveLength(1);
+    expect(indicator[0]).toHaveAttribute("aria-hidden", "true");
+    expect(tabs()).toHaveLength(VIEWS.length);
+    for (const name of ["Policies", "Methodology"]) {
+      fireEvent.click(within(viewList()).getByRole("tab", { name }));
+      const panel = screen.getByRole("tabpanel", { name });
+      expect(panel.querySelector(".sub-tabs-band")).toBeNull();
+      expect(bar).not.toHaveClass("has-notch");
+    }
+    // Roving tabindex: only the chosen view tab is in the Tab order
+    expect(tabs().filter((tab) => tab.tabIndex === 0)).toHaveLength(1);
+    fireEvent.keyDown(viewList(), { key: "Home" });
+    expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[0]).toHaveFocus();
+    expect(bar).toHaveClass("has-notch");
+  });
+
   it("split Population impact into six sub-tabs, Public finances first", async () => {
     window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
-    // The pill sits directly under the view tabs, inside the view's panel
-    expect(panel.firstElementChild).toBe(subList());
+    // The band sits directly under the view tabs, first in the view's
+    // panel (after its zero-height sentinel), and holds the sub-tabs
+    expect(panel.firstElementChild).toHaveClass("sub-tabs-sentinel");
+    expect(panel.firstElementChild.nextElementSibling).toHaveClass("sub-tabs-band");
+    expect(panel.firstElementChild.nextElementSibling).toContainElement(subList());
+    // The chosen view's tab opens into it
+    expect(document.querySelector(".view-tabs-bar")).toHaveClass("has-notch");
     expect(subTabs().map((tab) => tab.textContent)).toEqual([
       "Public finances",
       "All households",
