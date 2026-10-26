@@ -224,6 +224,29 @@ describe("normaliseHouseholdImpact", () => {
     expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
     expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
   });
+
+  it("reads net income's parts at each point when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.netParts).toBeNull();
+    const points = HOUSEHOLD_FIXTURE.sweep.points.map((point) => ({
+      employment_income: point.employment_income,
+      income_tax: -100,
+      other_taxes: point.reform - point.employment_income + 100,
+    }));
+    const withParts = (baseline) =>
+      normaliseHouseholdImpact({
+        ...HOUSEHOLD_FIXTURE,
+        sweep: {
+          ...HOUSEHOLD_FIXTURE.sweep,
+          net_income_parts: { parts: ["employment_income", "income_tax", "other_taxes"], baseline, reform: points },
+        },
+      }).sweep.netParts;
+    const parts = withParts(points);
+    expect(parts.names).toEqual(["employment_income", "income_tax", "other_taxes"]);
+    expect(parts.after).toHaveLength(HOUSEHOLD_FIXTURE.sweep.points.length);
+    expect(parts.before[1].income_tax).toBe(-100);
+    // A side with the wrong number of points is not drawn
+    expect(withParts(points.slice(1))).toBeNull();
+  });
 });
 
 // Review of 428d209, finding 2: a breakdown from one deployment was merged

@@ -99,11 +99,28 @@ const fileMatches = (file, { expectedEngine = null, expectedDefinitions = null }
   engineMatches(file, expectedEngine) && definitionsMatch(file, expectedDefinitions);
 
 /**
+ * One answer's definitions: the file's record, under any the answer itself
+ * reports. The precompute records them once, at the top; each answer keeps
+ * what the API reported beside it, which is nothing (`{}`) for a request
+ * that names no commits, as the precompute's don't. A definition an answer
+ * does report stands, and is checked as the file's are.
+ */
+function entryDefinitions(file, entry) {
+  const own = entry.response.definitions;
+  return { ...file.definitions, ...(own && typeof own === "object" && !Array.isArray(own) ? own : {}) };
+}
+
+/** Whether one answer, as well as the file, reports each measure's approved definition. */
+const entryMatches = (file, entry, expectedDefinitions) =>
+  definitionRefusals(expectedDefinitions, entryDefinitions(file, entry), file.policies).length === 0;
+
+/**
  * Each example's change in net income by year, with every measure, and
  * each measure's own part (that measure alone, as the breakdown shows it;
  * with interactions the parts need not add up to the change), from the file, for the cards' figures:
  * { [presetId]: { [year]: { change, byPolicy: { [measureId]: change } } } }.
- * An entry that no longer matches its example is left out, as above, and
+ * An entry that no longer matches its example is left out, as above, or
+ * that reports a definition of its own other than the approved one, and
  * the whole file unless its engine is `expectedEngine` and it reports each
  * measure's `expectedDefinitions`.
  */
@@ -111,6 +128,7 @@ export function presetChanges(file, { policies, expectedEngine = null, expectedD
   const changes = {};
   if (!fileMatches(file, { expectedEngine, expectedDefinitions })) return changes;
   for (const { entry } of currentEntries(file, policies)) {
+    if (!entryMatches(file, entry, expectedDefinitions)) continue;
     const change = Number(entry.response.net_income?.change);
     if (!Number.isFinite(change)) continue;
     const byPolicy = Object.fromEntries(
@@ -118,7 +136,15 @@ export function presetChanges(file, { policies, expectedEngine = null, expectedD
         .filter((measure) => Number.isFinite(Number(measure.change)))
         .map((measure) => [measure.id, Number(measure.change)]),
     );
-    (changes[entry.preset_id] ??= {})[entry.year] = { change, byPolicy };
+    // Net income before and after too, for where the household sits
+    const before = Number(entry.response.net_income?.baseline);
+    const after = Number(entry.response.net_income?.reform);
+    (changes[entry.preset_id] ??= {})[entry.year] = {
+      change,
+      byPolicy,
+      before: Number.isFinite(before) ? before : null,
+      after: Number.isFinite(after) ? after : null,
+    };
   }
   return changes;
 }
@@ -137,6 +163,7 @@ export function presetCacheEntries(
 ) {
   if (!fileMatches(file, { expectedEngine, expectedDefinitions })) return [];
   return currentEntries(file, policies).flatMap(({ key, entry }) => {
+    if (!entryMatches(file, entry, expectedDefinitions)) return [];
     // The file keeps the engine and the definitions once, at its top; each
     // answer gets them back, so the breakdown's "Versions" line shows as for
     // a live answer, and useHouseholdImpact checks its definitions as it
@@ -144,7 +171,7 @@ export function presetCacheEntries(
     const data = normaliseHouseholdImpact({
       ...entry.response,
       engine: entry.response.engine ?? file.engine,
-      definitions: entry.response.definitions ?? file.definitions,
+      definitions: entryDefinitions(file, entry),
     });
     if (data.byPolicy === null || data.sweep === null) return [];
     // useHouseholdImpact's key: the publication snapshot, then the request

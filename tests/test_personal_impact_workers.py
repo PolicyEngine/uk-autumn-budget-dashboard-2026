@@ -856,6 +856,7 @@ def test_a_later_calculation_starts_before_an_earlier_one_finishes():
         )
         started.setdefault(f"{name} done", time.monotonic())
 
+    first_started = time.monotonic()
     first = threading.Thread(target=calculation, args=("first", 4))
     first.start()
     time.sleep(0.1)
@@ -866,6 +867,12 @@ def test_a_later_calculation_starts_before_an_earlier_one_finishes():
     first.join(30)
     # The second's one run finished well before the first's four did
     assert started["second done"] < started["first done"]
-    # A loose bound: CI's shared runners spawn worker processes slowly (3.5 s
-    # seen), and the ordering above is what shows the fairness
-    assert started["second done"] - second_started < 5
+    # And it took less time than the first: it did not wait out the first's
+    # runs. Relative, not an absolute bound in seconds: CI's shared runners
+    # spawn worker processes slowly and unevenly (3.5 s seen, then 9 s on
+    # 26 October for the second's one run), so a fixed limit failed on
+    # slow runners while the ordering held
+    assert (
+        started["second done"] - second_started
+        < started["first done"] - first_started
+    )

@@ -10,7 +10,9 @@
  *   combined run of exactly the displayable measures in the approved
  *   manifest (`packageId`, the catalogue's combinedId). Nothing else is
  *   ever taken for it;
- * - anything else: nothing, and the page asks for one measure or all.
+ * - anything else ("pick", or "no-package" when every measure is selected
+ *   but no package is published): focusChoice shows one selected measure
+ *   at a time, chosen in the card's Measure picker.
  */
 
 /**
@@ -65,4 +67,25 @@ export function choiceMeasureNames(choice, policies) {
   }
   if (choice.kind === "measure") return [choiceLabel(choice, policies)];
   return [];
+}
+
+/**
+ * A selection with no single published reform ("pick", "no-package"): one
+ * selected measure at a time. `focusId` is the reader's choice; otherwise
+ * the measure with the largest `size` (e.g. the mean absolute change in the
+ * year). Measures the data does not carry are not offered.
+ *
+ * @returns {Object} the choice unchanged, or {kind: "measure", reform,
+ *   focus: {options: string[]}} (options: the offered measure ids, in the
+ *   page's order)
+ */
+export function focusChoice(choice, { selectedIds, policyIds, reforms, focusId = null, size = () => 0 }) {
+  if (choice.kind !== "pick" && choice.kind !== "no-package") return choice;
+  const carried = new Set(reforms ?? []);
+  const options = (policyIds ?? []).filter((id) => (selectedIds ?? []).includes(id) && carried.has(id));
+  if (!options.length) return choice;
+  const reform = options.includes(focusId)
+    ? focusId
+    : options.reduce((best, id) => (size(id) > size(best) ? id : best), options[0]);
+  return { kind: "measure", reform, focus: { options } };
 }

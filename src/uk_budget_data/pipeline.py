@@ -556,6 +556,7 @@ def generate_all_data(
 FLAT = frozenset({"flat"})
 AGE = frozenset({"age_impact"})
 DISTRIBUTION = frozenset({"income_distribution"})
+GROWTH = frozenset({"income_growth"})
 SCATTER = frozenset({"household_scatter"})
 
 
@@ -579,6 +580,7 @@ class FlatOutcome:
     distribution_rows: list = field(default_factory=list)
     mobility_rows: list = field(default_factory=list)
     scatter_cells: list = field(default_factory=list)
+    growth_rows: list = field(default_factory=list)
     messages: list = field(default_factory=list)
 
 
@@ -683,6 +685,18 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                         survey_households=survey,
                     )
                 )
+        elif "income_growth" in unit.tables:
+            from uk_budget_data.living_standards import measures_growth
+
+            years = list(config.years)
+            outcome.growth_rows = measures_growth.growth_rows(
+                reform.id,
+                reform.name,
+                measures_growth.group_cells(baseline, years),
+                measures_growth.group_cells(reformed, years),
+                years[1:],
+                measures_growth.deflator(),
+            )
         if survey is not None and "household_scatter" in unit.tables:
             outcome.scatter_cells = _scatter_cells(
                 reform, config, dataset_path, baseline, reformed, survey
@@ -853,6 +867,40 @@ def generate_income_distribution(
     path = config.output_dir / INCOME_MOBILITY_FILE
     save_csv(mobility, path)
     console.print(f"[green]Saved {len(mobility)} rows to {path}[/green]")
+    return frame
+
+
+INCOME_GROWTH_FILE = "income_growth_with_measures.csv"
+
+
+def generate_income_growth(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+    runner=None,
+) -> pd.DataFrame:
+    """Write only ``income_growth_with_measures.csv``: real growth of each
+    income group's median (HBAI income, as the Living standards outlook's
+    ``income_growth_by_group``) under each measure and under its own
+    baseline, and the difference, by year (see
+    ``living_standards.measures_growth``).
+
+    Builds the same two simulations per reform as the full run, on the same
+    baselines. ``uk-budget-data generate --only income_growth`` calls it;
+    the full run does not write this file. The first configured year is
+    read only, as the year before the first year published.
+    """
+    from uk_budget_data.living_standards.measures_growth import COLUMNS
+
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    outcomes = flat_units(reforms, config, dataset_path, GROWTH, runner)
+    frame = pd.DataFrame(
+        [row for o in outcomes for row in o.growth_rows], columns=COLUMNS
+    )
+    path = config.output_dir / INCOME_GROWTH_FILE
+    save_csv(frame, path)
+    console.print(f"[green]Saved {len(frame)} rows to {path}[/green]")
     return frame
 
 

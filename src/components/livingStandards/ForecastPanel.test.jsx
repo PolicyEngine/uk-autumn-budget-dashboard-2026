@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -70,7 +70,7 @@ async function renderForecast(data, props = {}) {
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
   render(<LivingStandardsTab {...props} />);
   if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
-  else await screen.findByRole("heading", { name: "Forecast changes" });
+  else await screen.findByRole("heading", { name: "OBR March 2026 economic forecast" });
 }
 
 const card = (name) => screen.getByRole("heading", { level: 3, name }).closest(".ls-card");
@@ -104,15 +104,52 @@ describe("the fixtures", () => {
 describe("Forecast changes with one forecast", () => {
   it("draws the one forecast, named from the sources config, and nothing about a later one", async () => {
     await renderForecast(unpublishedOutlook());
-    expect(screen.getByText(/The OBR forecast behind the baseline: calendar-year growth, from the/)).toBeInTheDocument();
+    expect(screen.getByText(/Calendar-year growth behind the baseline, from the/)).toBeInTheDocument();
+    // Named for the forecast, not the sub-tab's label again
+    expect(screen.queryByRole("heading", { level: 2, name: "Forecast changes" })).toBeNull();
     expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
-    const cpi = card(/^CPI inflation$/);
-    const legend = cpi.querySelector(".chart-legend");
-    expect(legend).toHaveTextContent("OBR, March 2026");
-    expect(legend).not.toHaveTextContent("Budget forecast");
+    // One comparable card per group: the four price measures on one chart
+    const prices = card(/^Inflation measures$/);
+    // Its chips are the key: one per line, all on, and no legend repeating them
+    const chips = within(within(prices).getByRole("group", { name: "Lines: show or hide" })).getAllByRole("button");
+    expect(chips.map((c) => c.textContent)).toEqual(["CPI", "CPIH", "CPI after housing costs", "RPI"]);
+    expect(chips.every((c) => c.getAttribute("aria-pressed") === "true")).toBe(true);
+    expect(prices.querySelector(".chart-legend")).toBeNull();
+    expect(prices).not.toHaveTextContent("Budget forecast");
+    // A chip hides its line; the last one on stays on
+    fireEvent.click(chips[3]);
+    expect(chips[3]).toHaveAttribute("aria-pressed", "false");
+    for (const chip of chips.slice(1, 3)) fireEvent.click(chip);
+    fireEvent.click(chips[0]);
+    expect(chips[0]).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(chips[3]);
+    for (const name of [/^Earnings and other income$/, /^House prices and rents$/, /^Mortgage interest payments$/]) {
+      expect(card(name)).toBeTruthy();
+    }
+    // No sentence repeats its series' name as a verb ("growth growing")
+    expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
+    // How the forecast feeds the figures is in Methodology, one link away
+    expect(screen.getByRole("link", { name: "How these forecasts feed our figures →" })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-forecast-feed",
+    );
+    expect(screen.queryByText(/What this means for the Budget figures/)).toBeNull();
     // The tile shows one value and no change
-    expect(screen.getByText(pct(cpiPre()))).toBeInTheDocument();
+    expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
+  });
+
+  it("switches every card to a table of the series by year", async () => {
+    await renderForecast(unpublishedOutlook());
+    const prices = card(/^Inflation measures$/);
+    // An icon switch in the header, left of Download; no Options pill
+    expect(within(prices).queryByRole("button", { name: /^Options:/ })).toBeNull();
+    const toggle = within(prices).getByRole("radiogroup", { name: "Show Inflation measures as" });
+    expect(toggle.closest(".chart-header-actions").lastElementChild).toHaveClass("chart-download");
+    fireEvent.click(within(toggle).getByRole("radio", { name: "Show as table" }));
+    const table = await within(card(/^Inflation measures$/)).findByRole("table");
+    expect(within(table).getByRole("columnheader", { name: "CPIH" })).toBeInTheDocument();
+    expect(within(table).getAllByRole("row")).toHaveLength(1 + REAL.forecast.sections[0].series[0].pre.length);
   });
 });
 
@@ -127,11 +164,13 @@ describe("Forecast changes once the Budget forecast is published", () => {
   });
 
   it("keeps the independent baseline available beside the held forecast", async () => {
-    // As App renders it while Population impact (the baseline's usual home)
-    // is unavailable
-    await renderForecast(publishedOutlook(), { withCurrentLaw: true });
-    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    // The held forecast's notice, then the Living standards and Poverty
+    // sub-tabs, which read only the independent outlook
+    await renderForecast(publishedOutlook());
     expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
+    expect(await screen.findByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
   });
 });

@@ -68,3 +68,6 @@ export const displayYearOr = (year, fallback = DEFAULT_DISPLAY_YEAR) =>
 
 /** Keep only the rows (with a `year` field) for years the dashboard shows. */
 export const displayRows = (rows) => rows.filter((row) => isDisplayYear(row.year));
+
+/** A fiscal year's label: 2027 is "2027-28". */
+export const yearLabel = (year) => `${year}-${(Number(year) + 1).toString().slice(-2)}`;

@@ -26,16 +26,16 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  height: 32px;
-  padding: 0 10px 0 10px;
+  min-height: 32px;
+  padding: 5px 10px;
+  text-align: left;
   font-family: inherit;
   font-size: var(--fs-micro);
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--pe-gray-300);
-  border-radius: 999px;
+  border-radius: 16px;
   cursor: pointer;
-  white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -67,10 +67,11 @@
   fill: var(--pe-surface);
 }
 
+/* The whole summary, wrapping to a second line rather than cut off */
 .control-bar-summary {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
   font-weight: 600;
   color: var(--pe-teal-800);
 }
@@ -146,6 +147,28 @@
   color: var(--pe-gray-500);
 }
 
+/* The years compared: a From row and a To row of segments; a phone shows
+   the years short ("27-28") so a row fits */
+.control-bar-years {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-bar-year-short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .control-bar-year-full {
+    display: none;
+  }
+
+  .control-bar-year-short {
+    display: inline;
+  }
+}
+
 .control-bar-segments {
   display: flex;
   flex-wrap: wrap;
@@ -205,7 +228,15 @@
     max-width: none;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
-    animation: control-bar-sheet 0.18s ease-out;
+  }
+
+  /* On a phone the dialog is a sheet: it rises from the foot, not scales */
+  .control-bar-dialog.popover-motion {
+    animation: control-bar-sheet var(--motion-base) var(--ease-out);
+  }
+
+  .control-bar-dialog.popover-motion.is-leaving {
+    animation: popover-out var(--motion-fast) ease-in forwards;
   }
 
   .control-bar-segment {
@@ -225,7 +256,9 @@
     transition: none;
   }
 
-  .control-bar-dialog {
+  .control-bar-dialog,
+  .control-bar-dialog.popover-motion,
+  .control-bar-dialog.popover-motion.is-leaving {
     animation: none;
   }
 }

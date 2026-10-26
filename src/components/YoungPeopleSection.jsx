@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import LoadingSkeleton from "./publication/LoadingSkeleton";
+import SwapTransition from "./SwapTransition";
 import {
   Bar,
   BarChart,
@@ -17,10 +19,10 @@ import {
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { loadVerifiedTable } from "../utils/loadDashboard";
+import { loadVerifiedTable, peekVerifiedTables } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -28,11 +30,12 @@ import UnavailableNotice from "./publication/UnavailableNotice";
 import SectionHeading from "./SectionHeading";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
 import Note from "./Note";
-import PillSelect from "./PillSelect";
+import ControlBar from "./ControlBar";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import TrendCard from "./youngPeople/TrendCard";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -57,6 +60,9 @@ import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { AGE_METHOD } from "./methodology/anchors";
+import MeasureSharesChart from "./MeasureSharesChart";
+import { SHARE_FILTER_OPTIONS, filterShareRows, sharesByMeasure } from "../utils/measureShares";
 import {
   legendMembership,
   exportLegendItems,
@@ -77,6 +83,10 @@ const OUTCOMES = [
   { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
   { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
 ];
+
+// The dashboard's bar style (chartTheme barShape): the 100% share bars
+// round both ends
+const SHARE_BAR_SHAPE = barShape(OUTCOMES.map((outcome) => outcome.key), { layout: "vertical", roundBase: true });
 
 const MEAN_DESCRIPTION =
   "Average change per person, £ a year, by age group; bars add each policy's own effect.";
@@ -110,30 +120,6 @@ const signedPounds = (value) =>
 const percent = formatShare;
 const OUTCOME_KEYS = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
 
-/** The split column's width, as the dumbbell's value column, and each half's. */
-const SPLIT_WIDTH = 112;
-const SPLIT_WIDTH_NARROW = 108;
-const SPLIT_COLUMN = 58;
-
-/** A row's better / worse split, at the bar's right: "▲ 62% ▼ <0.1%". */
-function SplitTick({ x, y, payload, data, narrow }) {
-  const row = data.find((point) => point.group === payload.value);
-  if (!row) return null;
-  // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
-  // (Recharts puts x 8px into the axis), as the dumbbell's value column
-  const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
-  return (
-    <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
-      <tspan x={end - SPLIT_COLUMN} textAnchor="end">
-        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
-      </tspan>
-      <tspan x={end} textAnchor="end">
-        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
-      </tspan>
-    </text>
-  );
-}
-
 /** The real shares of a hovered group, each to the page's rule. */
 function SharesTooltip({ active, payload, label, yearLabel }) {
   if (!active || !payload?.length) return null;
@@ -161,7 +147,11 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * PensionersSection.
  */
 export function useAgeImpactRows(catalogue) {
-  const [state, setState] = useState({ catalogue, status: "loading", rows: null });
+  // Already loaded (the other age view, or the idle prefetch): no wait
+  const [state, setState] = useState(() => {
+    const peeked = peekVerifiedTables(catalogue, "age_impact");
+    return peeked ? { catalogue, status: peeked.rows.length ? "ready" : "unavailable", rows: peeked.rows.length ? peeked.rows : null } : { catalogue, status: "loading", rows: null };
+  });
   useEffect(() => {
     let cancelled = false;
     loadVerifiedTable(catalogue, "age_impact")
@@ -455,17 +445,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Average change by age shown"
-          value={view}
-          onChange={setView}
-          options={AGE_VIEWS}
-          stableWidth
-        />
+        <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
       </div>
-      <div ref={chartRef} className="chart-plot young-people-plot">
+      <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
           <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
         )}
@@ -504,11 +486,12 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" shape={barShape(ALL_POLICY_NAMES)} {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
@@ -561,6 +544,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   fill={POLICY_COLORS[name]}
                   fillOpacity={measureOpacity(key.highlight, name)}
                   stackId="stack"
+                  shape={barShape(ALL_POLICY_NAMES)}
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
                   // starts in a later year grows in place instead of remounting
@@ -572,6 +556,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 name="netChange"
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
@@ -584,6 +569,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
+                opacity={netOpacity(key.highlight)}
                 shape={netDot}
                 legendType="none"
                 tooltipType="none"
@@ -594,7 +580,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
             </ComposedChart>
           </ResponsiveContainer>
         )}
-      </div>
+      </SwapTransition>
       <div className="chart-legend">
         {published && !key.shared && (
           <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
@@ -607,14 +593,17 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       {published && (
         <div className="chart-footer">
           {notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-          <ChartMoreInfo members={members} year={selectedYear}>
-            {single && (
-              <p>
-                Single years of age rest on fewer households; a few large changes, such as capital gains under
-                Business Asset Disposal Relief, can move one age&apos;s average.
-              </p>
-            )}
-          </ChartMoreInfo>
+          <ChartMoreInfo
+            members={members}
+            year={selectedYear}
+            info={{
+              caveats: [
+                single &&
+                  "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",
+              ],
+              method: AGE_METHOD,
+            }}
+          />
         </div>
       )}
     </div>
@@ -622,38 +611,33 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
 }
 
 /** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
-const ROW_LABEL_SIZE = 13;
 
-/** The group tick: 16 to 24 in bold, all ages after a gap, as usual. */
-function GroupTick({ x, y, payload, narrow }) {
-  const band = AGE_BANDS.find((candidate) => candidate.label === payload.value);
-  const young = band?.key === YOUNG_BAND;
-  const label = narrow ? (band ? band.short : "All") : payload.value;
-  return (
-    <text
-      x={x - 6}
-      y={y}
-      textAnchor="end"
-      dominantBaseline="middle"
-      fontSize={ROW_LABEL_SIZE}
-      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
-      fontWeight={young || !band ? 600 : 400}
-    >
-      {label}
-    </text>
-  );
-}
 
 function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId }) {
   const chartRef = useRef(null);
   // By age group or by single year of age, as "Average change by age"
   const [view, setView] = useState("band");
-  const single = view === "single";
-  const description = single ? SHARES_SINGLE_DESCRIPTION : SHARES_DESCRIPTION;
+  // With no run for the whole selection: one row per measure, for one age
+  // group (16 to 24 first)
+  const [groupKey, setGroupKey] = useState(YOUNG_BAND);
+  const [hide, setHide] = useState("hide");
+  const [order, setOrder] = useState("size");
+  const [direction, setDirection] = useState("both");
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const shares = (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
-  const data = shares
+  const perMeasure = sharesByMeasure(sharesByGroup, rows, policies, selectedPolicies, selectedYear, combinedId, groupKey);
+  const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "";
+  const single = !perMeasure && view === "single";
+  const description = perMeasure
+    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} better or worse off (a change over 0.01%), each selected measure on its own.`
+    : single
+      ? SHARES_SINGLE_DESCRIPTION
+      : SHARES_DESCRIPTION;
+  const shares = perMeasure ? null : (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
+  const filtered = perMeasure ? filterShareRows(perMeasure.rows, { hide, order, direction }) : null;
+  const data = perMeasure
+    ? filtered.rows.map((row) => visibleSegments({ group: row.name, key: row.id, ...pick(row.row) }, OUTCOME_KEYS))
+    : shares
     ? shares.groups
         .filter((group) => !group.suppressed)
         // Real shares kept on the row; a tiny non-zero share drawn at a
@@ -677,10 +661,12 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   };
   const csvText = () =>
     buildChartCsv({
-      title: `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
+      title: perMeasure
+        ? `People aged ${groupLabel} better off, unchanged and worse off, by measure on its own, ${yearLabel}`
+        : `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
-        { key: "group", label: single ? "Age" : "Age group" },
+        { key: "group", label: perMeasure ? "Measure" : single ? "Age" : "Age group" },
         ...OUTCOMES.map((outcome) => ({
           key: outcome.key,
           label: `${outcome.label} (%)`,
@@ -717,23 +703,29 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         <ChartDownloadMenu
           download={download}
           chartTitle={title}
-          disabledReason={
-            shares || !published ? undefined : "Choose one policy or all policies"
-          }
         />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Better and worse off shown"
-          value={view}
-          onChange={setView}
-          options={AGE_VIEWS}
-          stableWidth
-        />
+        {perMeasure ? (
+          <ControlBar
+            name={title}
+            options={[
+              {
+                label: "Age group",
+                value: groupKey,
+                onChange: setGroupKey,
+                options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
+              },
+              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
+              { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
+              { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
+            ]}
+          />
+        ) : (
+          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+        )}
       </div>
-      <div ref={chartRef} className="chart-plot young-people-plot">
+      <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length && single ? (
@@ -746,10 +738,10 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               layout="vertical"
               margin={plotMargin(narrow)}
               barCategoryGap={4}
-              barSize={13}
+              barSize={10}
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} ifOverflow="visible" />
+              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} fillOpacity={0.6} radius={6} ifOverflow="visible" />
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -782,92 +774,30 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   name={outcome.label}
                   fill={outcome.color}
                   stackId="share"
+                  shape={SHARE_BAR_SHAPE}
                   {...chartMotion()}
                 />
               ))}
             </BarChart>
           </ResponsiveContainer>
+        ) : perMeasure && data.length ? (
+          <MeasureSharesChart rows={filtered.rows} groupLabel={groupLabel} yearLabel={yearLabel} />
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={plotMargin(narrow)}
-              barCategoryGap="22%"
-            >
-              <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              {/* The 16 to 24 row's highlight, as in "Average change by age" */}
-              <ReferenceArea
-                y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                fill={YOUNG_FILL}
-                ifOverflow="visible"
-              />
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                ticks={[0, 25, 50, 75, 100]}
-                tickFormatter={(value) => `${value}%`}
-                tick={TICK_STYLE}
-                axisLine={AXIS_LINE}
-                tickLine={false}
-                height={X_AXIS_HEIGHT}
-                label={{
-                  value: "Share of people in the group",
-                  position: "insideBottom",
-                  offset: 0,
-                  style: AXIS_TITLE_STYLE,
-                }}
-              />
-              <YAxis
-                type="category"
-                dataKey="group"
-                tick={<GroupTick narrow={narrow} />}
-                width={narrow ? 52 : 96}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              {/* Each row's better / worse split, at its right */}
-              <YAxis
-                yAxisId="split"
-                orientation="right"
-                type="category"
-                dataKey="group"
-                tick={<SplitTick data={data} narrow={narrow} />}
-                width={narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <Tooltip
-                {...TOOLTIP_PROPS}
-                cursor={HOVER_CURSOR}
-                content={<SharesTooltip yearLabel={yearLabel} />}
-              />
-              {OUTCOMES.map((outcome) => (
-                <Bar
-                  key={outcome.key}
-                  dataKey={outcome.key}
-                  name={outcome.label}
-                  fill={outcome.color}
-                  stackId="share"
-                  {...chartMotion()}
-                >
-                </Bar>
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+          // The one run's groups, as the per-measure view: names, a 100% bar
+          // and the ▲/▼ shares in two fixed columns
+          <MeasureSharesChart
+            rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
+            groupLabel=""
+            yearLabel={yearLabel}
+            emphasis={YOUNG_BAND}
+            labelFor={({ name }) => `People aged ${name}, ${yearLabel}`}
+          />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>
-              These shares come from one simulation of the selected policies
-              together, so they are shown for a single policy or for all
-              policies.
-            </p>
+            <p>No shares are published for this selection in {yearLabel}.</p>
           </div>
         )}
-      </div>
+      </SwapTransition>
       <div className="chart-legend">{data.length > 0 && <RowLegend />}</div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -877,13 +807,27 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         {published && thin.length > 0 && (
           <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
         )}
+        {filtered?.hidden > 0 && (
+          <Note>
+            {filtered.hidden} {filtered.hidden === 1 ? "measure" : "measures"} with no effect hidden
+          </Note>
+        )}
         {/* The same foot as the card beside it, so the pair ends level */}
-        <ChartMoreInfo year={Number(selectedYear)}>
-          <p>
-            Each person counts their household&apos;s change in net income. The shares come from one simulation of
-            the selected policies together, so they are shown for a single policy or for all policies.
-          </p>
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          year={Number(selectedYear)}
+          info={{
+            how: perMeasure
+              ? [
+                  "No published run covers this selection together, so each row is one measure simulated on its own.",
+                  "The rows' shares can't be added up across measures.",
+                ]
+              : ["Shares come from one run of the whole selection, so they include how the measures interact."],
+            caveats: [
+              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
+            ],
+            method: AGE_METHOD,
+          }}
+        />
       </div>
     </div>
   );
@@ -927,6 +871,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
         <>
           <SectionHeading
             id={YOUNG_PEOPLE_ANCHOR}
+            icon="cake"
             title="Change by age"
             subtitle="How household net income changes for each age group, in the selected year and over time."
           />
@@ -942,6 +887,8 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             </section>
           </MeasureKeyProvider>
           <SectionHeading
+            id="young-people-who-gains"
+            icon="userPlus"
             title="Who gains and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."
           />
@@ -953,9 +900,11 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
           </section>
         </>
       ) : (
-        <p className="view-status" role="status">
-          {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
-        </p>
+        status === "loading" ? (
+          <LoadingSkeleton label="Loading results by age…" />
+        ) : (
+          <p className="view-status" role="status">Results by age are not available.</p>
+        )
       )}
     </>
   );

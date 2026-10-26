@@ -20,6 +20,7 @@
  */
 
 import { EXAMPLE_ANSWERS } from "./exampleAnswers";
+import { decileSpending, spendingInputs } from "./exampleSpending";
 
 // Inputs every example sets the same way: every answer fixed
 // (exampleAnswers.js: region, spending and council tax band at fixed
@@ -52,9 +53,15 @@ export const YOUNG_PERSON_PRESETS = [
       student_loan_plan: "NONE",
       // Illustrative, not a sourced average
       monthly_rent: 900,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£492 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(3),
     },
     note:
-      "Earns £25,000, between the 2025 full-time medians for ages 18 to 21 and 22 to 29 (ONS ASHE). No student loan. Rents privately at £900 a month, an illustrative figure.",
+      "Earns £25,000, between the 2025 full-time medians for ages 18 to 21 and 22 to 29 (ONS ASHE). No student loan. Rents privately at £900 a month, an illustrative figure. Spends £910 a year on electricity and £650 on petrol and diesel, the average for households in the third tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(3).source,
     // The salary's source, in the result's "Based on"
     salarySource:
       "£25,000 in 2026, between the 2025 full-time medians for ages 18 to 21 and 22 to 29 (ONS ASHE)",
@@ -76,9 +83,15 @@ export const YOUNG_PERSON_PRESETS = [
       student_loan_plan: "NONE",
       // A room in a shared house; illustrative, not a sourced average
       monthly_rent: 600,
+      // Electricity, petrol and diesel: the averages for its tenth by gross
+      // income (£465 a week in 2027-28), ONS Family Spending FYE
+      // 2025, Table A6 (exampleSpending.js)
+      ...spendingInputs(2),
     },
     note:
-      "Earns £23,600, the 2025 full-time median for ages 18 to 21 (ONS ASHE). That median covers all full-time employees of that age, not apprentices only, many of whom earn less. No student loan. Rents a room privately at £600 a month, an illustrative figure.",
+      "Earns £23,600, the 2025 full-time median for ages 18 to 21 (ONS ASHE). That median covers all full-time employees of that age, not apprentices only, many of whom earn less. No student loan. Rents a room privately at £600 a month, an illustrative figure. Spends £890 a year on electricity and £430 on petrol and diesel, the average for households in the second tenth by gross income (ONS Family Spending, FYE 2025).",
+    // The spending's source, in the result's "Based on"
+    spendingSource: decileSpending(2).source,
     // The salary's source, in the result's "Based on"
     salarySource:
       "£23,600 in 2026, the 2025 full-time median for ages 18 to 21 (ONS ASHE), for all full-time employees of that age, not apprentices only",

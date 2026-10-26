@@ -7,40 +7,40 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Customized,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { measureOpacity } from "./MeasureKey";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
+import MeasureKey, { measureOpacity, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   chartMargin,
-  legendWrapperStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
-  HOVER_CURSOR,
   divergingAxis,
-  orderBySize,
 } from "../utils/chartTheme";
 import {
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
-import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
+import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import { revenueSentence } from "../utils/plainSentences";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 
 // Net impact labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
@@ -72,9 +72,7 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
       fillOpacity={0.08}
       style={{
         transform: `translateX(${start}px)`,
-        transition: prefersReducedMotion()
-          ? undefined
-          : `transform ${CHART_MOTION_MS}ms ease-in-out`,
+        transition: chartTransition("transform"),
       }}
     />
   );
@@ -188,19 +186,16 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selecte
 }
 
 /**
- * The measures in the chart's order: raise revenue, then cost revenue, each
- * group by size (mean absolute £bn over the years shown), largest first.
+ * The measures in the chart's order: the catalogue's (#104), raise revenue,
+ * then cost revenue, each group by size (total absolute £bn over the
+ * published years), largest first, then measures with no published costing.
  * The stack (largest nearest zero), the legend and the tooltip all take
- * this order. The groups and series keys come from the catalogue (#104);
- * measures with no published costing ("neutral") come last.
+ * this order, which is also the order of the measures' shades (largest
+ * darkest), so a stack shades monotonically on every selection.
  */
 export function measureOrder(data, catalogue) {
-  const byDirection = (direction) =>
-    orderBySize(
-      catalogue.allPolicyNames.filter((key) => catalogue.bySeriesKey.get(key)?.direction === direction),
-      data,
-    );
-  return [...byDirection("revenue"), ...byDirection("cost"), ...byDirection("neutral")];
+  const order = (key) => catalogue.bySeriesKey.get(key)?.order ?? Number.MAX_SAFE_INTEGER;
+  return [...catalogue.allPolicyNames].sort((a, b) => order(a) - order(b));
 }
 
 // Chart metadata for export
@@ -208,11 +203,23 @@ const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
 
+// The card's "About this chart"
+const REVENUE_INFO = {
+  how: [
+    "Above zero the measures raise money; below zero they cost the Treasury.",
+    "The net line adds up the selected measures' separate figures.",
+    "The Plan 2 student loan measure is costed as the change in loan repayments.",
+  ],
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
+};
+
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
   const [highlight, setHighlight] = useState(null);
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable,
@@ -279,6 +286,8 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     description: CHART_DESCRIPTION,
     legendItems,
     logo: CHART_LOGO,
+    // The key is above the plot, not a Recharts legend: crop nothing
+    reservedLegendHeight: 0,
   };
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
@@ -296,13 +305,17 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <TitleIcon name="landmark" />
             <span className="title-text">Revenue impact</span>
           </h3>
-          <p className="chart-description">{CHART_DESCRIPTION}</p>
+          {/* One plain sentence for the selected year; what the chart
+              measures is in More info */}
+          <p className="chart-description">
+            {revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear)) ?? CHART_DESCRIPTION}
+          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 660 : 620}>
+        <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { top: 24 })}
@@ -332,46 +345,32 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               ticks={yAxisTicks}
             />
 
+            {/* One segment at a time, beside the cursor; the other measures dim */}
+
             <Tooltip
 
               {...TOOLTIP_PROPS}
 
-              cursor={HOVER_CURSOR}
+              shared={false}
 
-              content={
+              cursor={false}
 
-                <ChartTooltip
+              offset={16}
 
-                  format={(value) => `£${value.toFixed(1)}bn`}
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
 
-                  labelFormat={fiscalYearTick}
-
-                  netKey="netImpact"
-
-                />
-
-              }
-
-            />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              content={
-                <MeasureKey
-                  members={keyMembers}
-                  netLabel={netLabel}
-                  highlight={highlight}
-                  onHighlight={setHighlight}
-                />
-              }
             />
             {orderedPolicies.map((policyName) => (
               <Bar
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                fillOpacity={measureOpacity(highlight, policyName)}
+                fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(highlight, policyName)}
+                onMouseEnter={() => setHoveredMeasure(policyName)}
+                onMouseLeave={() => setHoveredMeasure(null)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
+                shape={barShape(orderedPolicies)}
                 {...chartMotion()}
                 // Always mounted (a zero series has no height), so a series that
                 // starts in a later year grows in place instead of remounting
@@ -383,6 +382,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               strokeLinejoin="round"
               strokeLinecap="round"
               dataKey="netImpact"
+              strokeOpacity={netOpacity(highlight)}
               stroke={CHART_COLOURS.net}
               strokeWidth={1.75}
               dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: DOT_RADIUS }}
@@ -403,9 +403,28 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               }
             />
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
-            <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* The measures' key under the plot (MeasureKey), unboxed in the card: click
+          chips to highlight several together. The logo below it. */}
+      <div className="revenue-key">
+        <MeasureKey
+          members={keyMembers}
+          netLabel={netLabel}
+          highlight={highlight}
+          onHighlight={setHighlight}
+          placement="section"
+          label="Measures"
+        />
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+      <div className="chart-footer">
+        <ChartMoreInfo year={selectedYear} info={REVENUE_INFO} />
       </div>
     </div>
   );

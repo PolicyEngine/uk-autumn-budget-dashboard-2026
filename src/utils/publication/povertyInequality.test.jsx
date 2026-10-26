@@ -5,7 +5,7 @@
  * Poverty and Inequality charts offer their pills from receipted data.
  */
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, within, render, screen } from "@testing-library/react";
 import contract from "./contract.json";
 import { FLAT_EXTRA_COLUMNS, TableError, parseTable, withPovertyInequality } from "./csv";
 import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
@@ -153,14 +153,23 @@ describe("the Poverty and Inequality pills from verified artifacts", () => {
   it("offers the poverty and inequality choices for a run whose artifact has the measures", async () => {
     const rows = await verifiedRows();
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={rows} policies={policies} selectedPolicies={["alpha"]} selectedYear={2027} />);
-    fireEvent.click(screen.getByRole("button", { name: /^Poverty line:/ }));
-    expect(screen.getByRole("option", { name: "Relative" })).toBeInTheDocument();
+    // The card's one Options pill holds the choices
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const line = screen.getByRole("radiogroup", { name: "Poverty line" });
+    expect(within(line).getByRole("radio", { name: "Relative" })).toBeInTheDocument();
   });
 
   it("offers the inequality choices too", async () => {
     const rows = await verifiedRows();
     withCatalogue(<SummaryMetricChart metric={SUMMARY_METRICS.inequality} rows={rows} policies={policies} selectedPolicies={["alpha"]} selectedYear={2027} />);
-    expect(screen.getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const measure = screen.getByRole("radiogroup", { name: "Inequality measure" });
+    expect(within(measure).getAllByRole("radio").map((option) => option.textContent)).toEqual([
+      "Gini",
+      "Top 10% share",
+      "Top 1% share",
+      "90/10 ratio",
+    ]);
   });
 
   it("shows the headline only for a run whose artifact predates them, even beside one that has them", async () => {
