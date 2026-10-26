@@ -30,6 +30,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import PillSelect from "../PillSelect";
+import ControlBar from "../ControlBar";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import GroupedLegend from "../GroupedLegend";
@@ -749,22 +750,24 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       </dl>
       <div className="chart-view-switch chart-controls position-controls">
         {chooser}
-        {view === "where" && (
-          <ViewSwitch
-            compact
-            label="Before or after the selected policies"
-            value={side}
-            onChange={setSide}
-            options={[
-              { value: "before", label: "Before" },
-              { value: "after", label: "After" },
-            ]}
-          />
-        )}
-        {view === "moves" && <ViewSwitch compact label="Moving by" value={moveUnit} onChange={setMoveUnit} options={MOVE_UNITS} />}
-        {(view === "gains" || view === "compare") && (
-          <ViewSwitch compact label="Units" value={unit} onChange={setUnit} options={UNIT_OPTIONS} />
-        )}
+        {/* The view's own choice, if any, in one Options pill on the same
+            row as the view tabs */}
+        <ControlBar
+          name={title}
+          options={[
+            view === "where" && {
+              label: "Before or after the selected policies",
+              value: side,
+              onChange: setSide,
+              options: [
+                { value: "before", label: "Before", summary: "Before the policies" },
+                { value: "after", label: "After", summary: "After the policies" },
+              ],
+            },
+            view === "moves" && { label: "Moving by", value: moveUnit, onChange: setMoveUnit, options: MOVE_UNITS },
+            (view === "gains" || view === "compare") && { label: "Units", value: unit, onChange: setUnit, options: UNIT_OPTIONS },
+          ]}
+        />
       </div>
       {view === "among" && (
         <div className="position-among">

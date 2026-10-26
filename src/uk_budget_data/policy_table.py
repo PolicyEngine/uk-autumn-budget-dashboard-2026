@@ -140,10 +140,21 @@ def _yearly(
     ]
 
 
-def _row(label, unit, points, source, *, primary=True, note=None) -> dict:
+# A row's unit in plain words, for the page: what one of its values is
+UNIT_WORDS = {
+    PERCENT: None,  # a rate reads as itself: "15% → 0%"
+    PENCE_A_LITRE: "pence a litre",
+    POUNDS: "£ a year",
+}
+
+
+def _row(
+    label, unit, points, source, *, primary=True, note=None, unit_words=None
+) -> dict:
     row = {
         "label": label,
         "unit": unit,
+        "unit_words": unit_words if unit_words is not None else UNIT_WORDS[unit],
         "primary": primary,
         "points": points,
         "source": source,
@@ -250,7 +261,7 @@ def _vat_rows(
     }
     return [
         _row(
-            f"{label} while in force",
+            label,
             PERCENT,
             [
                 _point(
@@ -297,8 +308,9 @@ def _fuel_duty(reform) -> list[dict]:
 
     # The dates on the page's timeline, April 2026 to March 2032
     first, last = date(POLICY_YEARS[0], 4, 1), date(POLICY_YEARS[-1] + 1, 3, 31)
+    # The rates in force on the timeline's first day, then each change
     days = sorted(
-        {d for d, _ in current + deferred if first <= d <= last}
+        {first} | {d for d, _ in current + deferred if first <= d <= last}
     )
     dated = [
         _point(
@@ -312,7 +324,7 @@ def _fuel_duty(reform) -> list[dict]:
     ]
     return [
         _row(
-            "Fuel duty from each date it changes",
+            "Fuel duty",
             PENCE_A_LITRE,
             dated,
             _source(
@@ -406,6 +418,7 @@ def _warm_home_discount(reform) -> list[dict]:
                     ],
                 },
             ),
+            unit_words="£ a household, once",
             note=f"Paid to {values['pension_credit_receipt_rate']:.0%} of "
             "eligible Pension Credit households and "
             f"{values['other_receipt_rate']:.0%} of other eligible "
@@ -562,6 +575,7 @@ def _badr(reform) -> list[dict]:
                 _engine_source(path),
                 _change_source(path, "_create_badr_lifetime_limit_cut()"),
             ),
+            unit_words="£ of gains over a lifetime",
         )
     ]
 

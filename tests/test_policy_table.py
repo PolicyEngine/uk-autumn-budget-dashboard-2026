@@ -54,17 +54,19 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
         for row in table["rows"]:
             assert row["source"]["before"]["kind"] and row["source"]["after"]["kind"]
             assert any(p["before"] != p["after"] for p in row["points"]), row["label"]
+            assert "unit_words" in row
             for point in row["points"]:
                 assert 2026 <= point["year"] <= 2031
 
 
 def test_fuel_duty_by_date(document):
-    dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty from each date it changes"])
+    dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
     assert dated["2027-09-01"] == (59.75, 55.95)
     assert dated["2027-12-01"] == (59.75, 57.95)
     assert "2032-04-01" not in dated  # after the timeline
+    assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 
 
 def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
@@ -99,10 +101,10 @@ def test_warm_home_discount(document):
 
 def test_vat_rates_while_in_force(document):
     electricity = rows(document, "domestic_electricity_zero_vat")
-    (point,) = electricity["VAT on domestic electricity in Great Britain while in force"]["points"]
+    (point,) = electricity["VAT on domestic electricity in Great Britain"]["points"]
     assert (point["label"], point["before"], point["after"]) == ("October 2026 to March 2028", 0.05, 0.0)
     fuel = rows(document, "road_fuel_vat_cut")
-    (point,) = fuel["VAT on petrol and diesel while in force"]["points"]
+    (point,) = fuel["VAT on petrol and diesel"]["points"]
     assert (point["label"], point["before"], point["after"]) == ("December 2026 to May 2027", 0.2, 0.15)
 
 
