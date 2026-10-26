@@ -667,14 +667,15 @@ function HouseholdScatter({
         </ul>
       )}
 
-      {ready && !embedded && <ScatterMoreInfo basisLabel={basisLabel} />}
-
       {!embedded && (
         <div className="chart-logo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={CHART_LOGO.href} alt="PolicyEngine" />
         </div>
       )}
+
+      {/* At the card's foot, under the logo, as on every card */}
+      {ready && !embedded && <ScatterMoreInfo basisLabel={basisLabel} />}
     </div>
   );
 }
