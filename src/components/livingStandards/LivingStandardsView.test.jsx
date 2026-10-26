@@ -90,6 +90,8 @@ const optionsSummary = (card) => within(card).getByRole("button", { name: /^Opti
 
 describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
+    // A view's address: the bare one is the landing page, with no tab bar
+    window.history.replaceState({}, "", "/?tab=dashboard");
     const { container } = await renderVerified();
     await screen.findByRole("tablist", { name: "Views" });
     // The Population view has the year and policy pills

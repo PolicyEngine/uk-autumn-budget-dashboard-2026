@@ -205,7 +205,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
  */
 export function NoEffectList({ items, title }) {
   return (
-    <Disclosure inCard title="More info" contentClassName="no-effect">
+    <Disclosure inCard title="About this chart" contentClassName="no-effect">
       <p className="no-effect-title">
         {title} ({items.length})
       </p>

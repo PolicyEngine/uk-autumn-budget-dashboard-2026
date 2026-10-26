@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import MeasureRowLabel from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -85,8 +86,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
-              <span className="measure-dumbbell-label">{row.name}</span>
+              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} />
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
