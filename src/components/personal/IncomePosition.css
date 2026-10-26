@@ -289,14 +289,33 @@
 }
 
 /* The summary card: one sentence in the cards' style, then the tiles */
-.position-summary .position-sentence {
-  margin: 4px 0 14px;
+/* The tiles keep one height; their contents start at the top */
+.position-tiles {
+  align-items: stretch;
 }
 
-.position-summary .position-sentence strong {
-  color: var(--pe-gray-900);
+.position-tiles .forecast-tile {
+  justify-content: flex-start;
 }
 
 .position-tiles {
   margin-bottom: 0;
+}
+
+/* The Your place tile's caption, the full sentence, wraps inside the
+   tile; its figure a little smaller, so "47th percentile" fits */
+.position-tiles .forecast-tile,
+.position-tiles .forecast-tile > div {
+  min-width: 0;
+}
+
+.position-tiles .forecast-tile-sub {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.position-tiles .forecast-tile-value {
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  overflow-wrap: anywhere;
 }

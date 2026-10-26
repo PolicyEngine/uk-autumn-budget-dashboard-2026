@@ -60,7 +60,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION = "Average change per person, £ a year.";
-const CUMULATIVE_DESCRIPTION = "Running total per person from 2026-27, £.";
+const CUMULATIVE_DESCRIPTION = `Running total per person from ${fiscalYearTick(DISPLAY_YEARS[0])}, £.`;
 
 
 // The focus group in the brand colour, all ages as the reference, the rest
