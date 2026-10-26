@@ -113,7 +113,8 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
       const pct = ((b - a) / a) * 100;
       const verb = changeVerb(pct, "%");
       const who = metric.startsWith("mean") ? "the average household's income" : "the typical household's income";
-      const real = adjustment === "real" ? ", after inflation, " : ", ";
+      // Prices (real or cash) are said in About this chart
+      const real = ", ";
       summary = verb ? (
         <>
           Under current law{real}{who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}

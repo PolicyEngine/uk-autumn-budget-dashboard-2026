@@ -36,7 +36,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(screen.getByText(/With the selected measures: each bar is the measures' effect/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
     expect(screen.getAllByText(/Difference from current law/).length).toBeGreaterThan(0);
-    expect(document.querySelector(".chart-description").textContent).toMatch(/^(The measures barely change income growth|With the measures, income growth)/);
+    expect(document.querySelector(".chart-description").textContent).toMatch(/^The measures (barely )?change income growth/);
   });
 
   it("says so, with no chart, when the measure does not move HBAI income", async () => {

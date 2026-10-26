@@ -164,27 +164,19 @@ export default function WhoIsInPovertySection({ data }) {
 
   const top = rows[0];
   const noun = b.children ? m.noun.replace(/ poverty rate$/, " child poverty rate") : m.noun;
-  // One short line on the card; the full sentence in About this chart
-  const change = top?.d == null ? "" : flat(top.d) ? ", unchanged" : `, ${top.d > 0 ? "up" : "down"} ${signedChange(Math.abs(top.d), "pp").slice(1)}`;
+  // One plain sentence on the card; the poverty line and family types are
+  // defined in About this chart
+  const change =
+    top?.d == null
+      ? ""
+      : flat(top.d)
+        ? `, the same as in ${fyDash(from)}`
+        : `, ${top.d > 0 ? "up" : "down"} ${Math.abs(round1(top.d)).toFixed(1)} points since ${fyDash(from)}`;
   const short = top && (
     <>
-      Highest: {top.subject.toLowerCase()}, <strong>{formatPct(top.z ?? top.a)}</strong>
+      Under current law, {top.subject.toLowerCase()} have the highest {noun}: <strong>{formatPct(top.z ?? top.a)}</strong> in{" "}
+      {fyDash(to)}
       {change}.
-    </>
-  );
-  const lead = top && (
-    <>
-      {top.subject} have the highest {noun} ({formatPct(top.z ?? top.a)} in {fyDash(to)})
-      {top.d != null && (
-        <>
-          ,{" "}
-          <strong>
-            {flat(top.d) ? "unchanged" : `${top.d > 0 ? "up" : "down"} ${signedChange(Math.abs(top.d), "pp").slice(1)}`}
-          </strong>{" "}
-          since {fyDash(from)}
-        </>
-      )}
-      .
     </>
   );
 
@@ -202,7 +194,7 @@ export default function WhoIsInPovertySection({ data }) {
       period={periodLabel(from, to)}
       about={about}
       summary={short}
-      notes={[lead, ...groupNotes]}
+      notes={groupNotes}
       source={<PeSource />}
       sourceText={CSV_SOURCES.pe}
       download={{
