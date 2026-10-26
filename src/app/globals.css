@@ -1992,6 +1992,11 @@ body {
     flex-basis: 100%;
     margin-left: 0;
   }
+
+  /* The switch needs the whole line on a phone */
+  .policy-filter-label {
+    display: none;
+  }
 }
 
 /* A card's tags: its direction, then Temporary */
