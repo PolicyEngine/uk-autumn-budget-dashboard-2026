@@ -1,2 +1,11 @@
 # Reviewed exceptions. See README.md for the fields.
-[]
+# REHEARSAL (MOCK DATA): this exception accepts a mock figure scaled to fail.
+- measure_id: cgt_main_rates_up_2pp
+  fiscal_year: "2028-29"
+  residual_bn: -0.161
+  explanation_class: behavioural
+  explanation: "MOCK: the rehearsal's mock costing for this year was scaled by 1.6 to exercise the exception path; not a real explanation."
+  reviewer: "REHEARSAL MOCK reviewer (Budget coordinator)"
+  accepted_at: "2026-10-26T09:44:00Z"
+  outputs_sha256: 46fa44beb06d27eef2e19fe6f65a65136062c700def089956ce0dad08533e480
+  comparator_sha256: 7aae4de8b2d77261db26796e23690d7d386a607fd298507f0fe49c2aa44da42d
