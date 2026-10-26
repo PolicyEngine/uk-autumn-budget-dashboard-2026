@@ -50,8 +50,8 @@ TIMEOUT_SECONDS = 300
 # Eleven simulations at most per request; a twelfth container lets two
 # requests overlap a little. A ceiling on what a burst can cost.
 MAX_CONTAINERS = 12
-# 0: nothing runs, and nothing is paid, while no one asks. Raise only for a
-# set window (the webinar), knowing the price.
+# The deploy itself keeps none warm; warm_schedule (below, every 10 minutes)
+# then sets the warm count from household_warm.WARM_WINDOWS until 4 November.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
 

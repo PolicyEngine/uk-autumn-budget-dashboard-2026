@@ -293,6 +293,26 @@ function fieldErrors(detail) {
 }
 
 /**
+ * The response's body as JSON, or null if it isn't JSON or can't be read;
+ * rejects with the signal's reason once the signal aborts, even if the body
+ * never ends.
+ */
+function readJson(response, signal) {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason ?? new DOMException("The read was aborted.", "AbortError"));
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    Promise.resolve()
+      .then(() => response.json())
+      .then(resolve, () => (signal.aborted ? onAbort() : resolve(null)))
+      .finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
+/**
  * POST one stage. Resolves with the parsed JSON; rejects with a
  * HouseholdApiError, or a DefinitionMismatchError naming any selected
  * measures the running code doesn't register (an abort by the caller
@@ -332,6 +352,7 @@ export async function postHouseholdImpact(
   // A signal aborted before this call never fires its event
   if (signal?.aborted) controller.abort();
   let response;
+  let payload;
   try {
     response = await doFetch(url, {
       method: "POST",
@@ -339,6 +360,10 @@ export async function postHouseholdImpact(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    // The timeout and the caller's abort hold until the body is read: a
+    // body that stalls is a timeout, so a detail service's stalled answer
+    // falls back to the main API instead of leaving the part loading
+    payload = await readJson(response, controller.signal);
   } catch (err) {
     if (timedOut) {
       throw new HouseholdApiError(
@@ -353,12 +378,6 @@ export async function postHouseholdImpact(
     signal?.removeEventListener("abort", onAbort);
   }
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
   if (response.ok) {
     if (!payload || typeof payload !== "object" || !payload.net_income) {
       throw new HouseholdApiError("server", "The calculation service sent an answer this page cannot read.", {

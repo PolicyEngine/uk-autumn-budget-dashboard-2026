@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import {
   DefinitionMismatchError,
@@ -1001,6 +1001,97 @@ describe("postHouseholdDetail", () => {
       postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(seen).toEqual([true]);
+  });
+
+  // Coordinator, 26 October (W5's reviewer on #104's code): the timeout and
+  // the caller's abort ended once the response arrived, so a body that never
+  // ended left the part loading instead of falling back to the main API
+  describe("a body that never ends", () => {
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const stalled = () => ({ ok: true, status: 200, json: () => new Promise(() => {}) });
+    // How the call settles, or "stalled" if it hasn't within `ms`
+    const within = (promise, ms = 2000) => {
+      let timer;
+      const stall = new Promise((resolve) => {
+        timer = setTimeout(() => resolve("stalled"), ms);
+      });
+      return Promise.race([promise.then((value) => ({ value }), (error) => ({ error })), stall]).finally(() =>
+        clearTimeout(timer),
+      );
+    };
+    let saved;
+    beforeEach(() => {
+      saved = { ...process.env };
+      process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+      process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    });
+    afterEach(() => {
+      process.env = saved;
+    });
+
+    it("is a timeout, whether the response came in time or after it", async () => {
+      const { postHouseholdImpact } = await import("./householdImpactApi");
+      const inTime = await within(postHouseholdImpact({ include: [] }, { fetchImpl: async () => stalled(), timeoutMs: 20 }));
+      expect(inTime.error).toBeInstanceOf(HouseholdApiError);
+      expect(inTime.error.kind).toBe("timeout");
+      // A fetch that ignores the abort and answers after the timeout
+      const late = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        return stalled();
+      };
+      const after = await within(postHouseholdImpact({ include: [] }, { fetchImpl: late, timeoutMs: 20 }));
+      expect(after.error).toBeInstanceOf(HouseholdApiError);
+      expect(after.error.kind).toBe("timeout");
+    });
+
+    it("from the detail URL, is asked again of the main API", async () => {
+      const { postHouseholdDetail } = await import("./householdImpactApi");
+      const asked = [];
+      const fetchImpl = async (url) => {
+        asked.push(url);
+        return url === detail ? stalled() : respond(200, ok);
+      };
+      // With a signal of the caller's own, as the page always passes
+      const { signal } = new AbortController();
+      const outcome = await within(postHouseholdDetail({ include: ["sweep"] }, { fetchImpl, signal, timeoutMs: 20 }));
+      expect(outcome).toEqual({ value: ok });
+      expect(asked).toEqual([detail, main]);
+    });
+
+    it("rejects with the AbortError when the caller aborts, and nothing more is asked", async () => {
+      const { postHouseholdDetail } = await import("./householdImpactApi");
+      const asked = [];
+      const controller = new AbortController();
+      const fetchImpl = async (url) => {
+        asked.push(url);
+        setTimeout(() => controller.abort(), 10);
+        return stalled();
+      };
+      const outcome = await within(postHouseholdDetail({ include: ["sweep"] }, { fetchImpl, signal: controller.signal }));
+      expect(outcome.error).toMatchObject({ name: "AbortError" });
+      expect(asked).toEqual([detail]);
+    });
+  });
+
+  it("reads a body that isn't JSON by the status alone", async () => {
+    const { postHouseholdImpact } = await import("./householdImpactApi");
+    const notJson = (status) => async () => ({
+      ok: status < 400,
+      status,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+    const url = "https://main.example/api/household-impact";
+    await expect(postHouseholdImpact({ include: [] }, { fetchImpl: notJson(504), url })).rejects.toMatchObject({
+      kind: "timeout",
+      status: 504,
+    });
+    await expect(postHouseholdImpact({ include: [] }, { fetchImpl: notJson(200), url })).rejects.toMatchObject({
+      kind: "server",
+      status: 200,
+    });
   });
 
   it("uses the main API alone when no detail URL is set", async () => {
