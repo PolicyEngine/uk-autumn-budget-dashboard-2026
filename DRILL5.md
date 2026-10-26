@@ -22,13 +22,16 @@ switch (`STATE_PENSION_PROTECTION_DESIGNS`), as on #182.
 ## Engine and data
 
 From 26 October the drill runs on the Budget pair's model and national data,
-ahead of their release: `policyengine` is pinned to
+ahead of their release: `policyengine` 6.11.0 is built from
 PolicyEngine/policyengine.py@324ecad6 (branch
 `uk-certify-microcosm-pair-2151`, the draft certification of the pair), which
 pins policyengine-uk 2.151.0 (policyengine-core 3.33.3) and certifies the
 Microcosm national `microcosm-uk-2024-25-national-20261025T091414Z-a6299504`
 as the bundle's default dataset. `pe.uk.managed_microsimulation()` resolves
-it from the bundle, as for a release.
+it from the bundle, as for a release. The wheel is vendored in `vendor/` and
+installed from there (`[tool.uv.sources]`), because policyengine certifies a
+receipt only for an index or archive install; from a git source every
+receipt is uncertified, so nothing could be staged provisional or approved.
 
 That commit is national-only: it routes no constituency or local-authority
 regions. When the local-area cut from the same spine is published (around

@@ -1021,7 +1021,7 @@ wheels = [
 [[package]]
 name = "policyengine"
 version = "6.11.0"
-source = { git = "https://github.com/PolicyEngine/policyengine.py?rev=324ecad65bc89bbddf20acc8bd748c0505627cf5#324ecad65bc89bbddf20acc8bd748c0505627cf5" }
+source = { path = "vendor/policyengine-6.11.0-py3-none-any.whl" }
 dependencies = [
     { name = "h5py" },
     { name = "jsonschema" },
@@ -1032,12 +1032,58 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
 ]
+wheels = [
+    { filename = "policyengine-6.11.0-py3-none-any.whl", hash = "sha256:31fb0556b891793b54e3ffc4d8d23fbd437c0193861f66c801d9e1d0b61ea22b" },
+]
 
 [package.optional-dependencies]
 uk = [
     { name = "policyengine-core" },
     { name = "policyengine-uk" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "autodoc-pydantic", marker = "extra == 'dev'" },
+    { name = "build", marker = "extra == 'dev'" },
+    { name = "furo", marker = "extra == 'dev'" },
+    { name = "h5py", specifier = ">=3.0.0" },
+    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100.0" },
+    { name = "itables", marker = "extra == 'dev'" },
+    { name = "jsonschema", specifier = ">=4.0.0" },
+    { name = "jupyter-book", marker = "extra == 'dev'" },
+    { name = "microdf-python", specifier = ">=1.3.0,<1.4" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
+    { name = "networkx", marker = "extra == 'graph'", specifier = ">=3.0" },
+    { name = "packaging", specifier = ">=23.0" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "plotly", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "plotly", marker = "extra == 'plotting'", specifier = ">=5.0.0" },
+    { name = "policyengine-core", marker = "extra == 'dev'", specifier = "==3.33.3" },
+    { name = "policyengine-core", marker = "extra == 'models'", specifier = "==3.33.3" },
+    { name = "policyengine-core", marker = "extra == 'uk'", specifier = "==3.33.3" },
+    { name = "policyengine-core", marker = "extra == 'us'", specifier = "==3.33.3" },
+    { name = "policyengine-uk", marker = "extra == 'dev'", specifier = "==2.151.0" },
+    { name = "policyengine-uk", marker = "extra == 'models'", specifier = "==2.151.0" },
+    { name = "policyengine-uk", marker = "extra == 'uk'", specifier = "==2.151.0" },
+    { name = "policyengine-us", marker = "extra == 'dev'", specifier = "==2.2.1" },
+    { name = "policyengine-us", marker = "extra == 'models'", specifier = "==2.2.1" },
+    { name = "policyengine-us", marker = "extra == 'us'", specifier = "==2.2.1" },
+    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "pydantic", specifier = ">=2.10.0" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.26.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "requests", specifier = ">=2.31.0" },
+    { name = "rfc8785", marker = "extra == 'dev'", specifier = ">=0.1.4" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9.0" },
+    { name = "spm-calculator", marker = "extra == 'dev'", specifier = "==1.0.0" },
+    { name = "spm-calculator", marker = "extra == 'models'", specifier = "==1.0.0" },
+    { name = "spm-calculator", marker = "extra == 'us'", specifier = "==1.0.0" },
+    { name = "towncrier", marker = "extra == 'dev'", specifier = ">=24.8.0" },
+    { name = "yaml-changelog", marker = "extra == 'dev'", specifier = ">=0.1.7" },
+]
+provides-extras = ["plotting", "graph", "models", "uk", "us", "dev"]
 
 [[package]]
 name = "policyengine-core"
@@ -1699,7 +1745,7 @@ requires-dist = [
     { name = "odfpy", specifier = ">=1.4.1" },
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pandas", specifier = ">=2.0.0" },
-    { name = "policyengine", extras = ["uk"], git = "https://github.com/PolicyEngine/policyengine.py?rev=324ecad65bc89bbddf20acc8bd748c0505627cf5" },
+    { name = "policyengine", extras = ["uk"], path = "vendor/policyengine-6.11.0-py3-none-any.whl" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
