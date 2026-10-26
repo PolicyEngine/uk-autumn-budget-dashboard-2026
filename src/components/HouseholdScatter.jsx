@@ -12,6 +12,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
+  CHANGE_AXIS_DOMAIN,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
@@ -26,11 +27,15 @@ import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
+import PillSelect from "./PillSelect";
+import { shortNameOf } from "../utils/policyDetails";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -81,8 +86,31 @@ const number = (value) =>
 const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
-const describe = (perDot, basisLabel) =>
-  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households.`;
+// One short line; the income basis and how dots follow across years are in About this chart
+const describe = (perDot) =>
+  `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
+
+/**
+ * The card's "About this chart": how to read a dot and the axes. The
+ * subtitle already gives the households per dot and the side of the line
+ * that gains; how the groups and bands are set is in Methodology.
+ */
+function ScatterMoreInfo({ basisLabel }) {
+  return (
+    <ChartMoreInfo
+      info={{
+        how: [
+          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the measures, fixed across years.`,
+          "So a dot moves only sideways when the year changes, and its row stays the same households.",
+          `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
+          "No change (under £1 either way) is an unfilled ring on £0.",
+        ],
+        caveats: ["Groups with too few survey households are left out."],
+        method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
+      }}
+    />
+  );
+}
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
 
 // Dots move between years and selections as the other charts' bars do:
@@ -362,6 +390,10 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * net income, the y axis's concept, in `incomeYear` (the basis year when
  * not given). The title is then `title`, and the line under it says what a
  * dot is and how households with incomes like the reader's changed.
+ *
+ * `embedded` draws it as one view of another card (the Household impact
+ * position card): no title, download menu or logo of its own; the card's
+ * menu takes this chart's download, handed up through `onDownload`.
  */
 function HouseholdScatter({
   selectedPolicies,
@@ -369,10 +401,16 @@ function HouseholdScatter({
   selectedYear = DEFAULT_DISPLAY_YEAR,
   you = null,
   title = CHART_TITLE,
+  embedded = false,
+  onDownload = null,
+  // A link on the subtitle line, after the sentence
+  descriptionLink = null,
 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
+  // Several measures and no single published reform: the measure shown
+  const [focusId, setFocusId] = useState(null);
   const data = useHouseholdScatterData();
   const { combinedId } = useMeasureCatalogue();
   const view = useMemo(
@@ -382,11 +420,15 @@ function HouseholdScatter({
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
       packageId: combinedId,
+      focusId,
     }),
-    [data, selectedPolicies, policies, selectedYear, combinedId],
+    [data, selectedPolicies, policies, selectedYear, combinedId, focusId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
-  const chartTitle = `${title}, ${yearLabel}`;
+  const focus = view.kind === "points" ? view.focus : null;
+  const focusName = (id) => shortNameOf((policies ?? []).find((policy) => policy.id === id) ?? { id });
+  // The title names the one measure shown when several are selected
+  const chartTitle = focus ? `${title}, ${yearLabel}: ${focusName(view.reform)}` : `${title}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
@@ -429,7 +471,7 @@ function HouseholdScatter({
           basisLabel,
           incomeMatches,
         })
-      : describe(householdsPerDot(view.basisPoints), basisLabel);
+      : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
 
   // A hovered dot's group belongs to the year and selection it was
@@ -457,13 +499,29 @@ function HouseholdScatter({
           scatterCsv(view.points, { title: chartTitle, basisYear: view.basisYear }),
       }
     : null;
+  // Embedded, the host card's menu downloads this chart
+  useEffect(() => {
+    if (onDownload) onDownload(download);
+    // The download changes with what it describes, not with every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onDownload, ready, view, description, chartTitle, exportName]);
   const incomeTitle = basisLabel
     ? `Household net income, ${basisLabel} (£k)`
     : "Household net income (£k)";
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
-  if (you && view.kind === "notice") {
+  if ((you || embedded) && view.kind === "notice") {
+    const reason = [view.reason, view.detail].filter(Boolean).join(" ");
+    if (embedded) {
+      return (
+        <div className="household-scatter-template is-embedded household-scatter-you-notice">
+          <p className="chart-description" role="status">
+            {reason}
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="household-scatter-template household-scatter-you-notice">
         <div className="chart-header">
@@ -475,7 +533,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description" role="status">
-              {[view.reason, view.detail].filter(Boolean).join(" ")}
+              {reason}
             </p>
           </div>
         </div>
@@ -483,25 +541,72 @@ function HouseholdScatter({
     );
   }
 
-  return (
-    <div className="household-scatter-template">
-      <div className="chart-header">
-        <div>
-          <h3>
-            <TitleIcon name="dots" />
-            <span className="title-text">
-              <NoBreakYear text={chartTitle} />
-            </span>
-          </h3>
-          <p className="chart-description">{description}</p>
+  // On its own, a selection the chart is not published for gets the
+  // reason in a compact panel under the title, not an empty plot
+  if (view.kind === "notice") {
+    return (
+      <div className="household-scatter-template household-scatter-empty-card">
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">{DESCRIPTION_LOADING}</p>
+          </div>
         </div>
-        <ChartDownloadMenu
-          download={download}
-          chartTitle={chartTitle}
-          disabledReason={ready ? undefined : "Available when results are published"}
-        />
+        <div className="chart-plot">
+          <div className="plot-empty household-scatter-empty" role="status">
+            <div>
+              <p className="household-scatter-empty-reason">{view.reason}</p>
+              {view.detail && <p className="household-scatter-empty-detail">{view.detail}</p>}
+            </div>
+          </div>
+        </div>
       </div>
+    );
+  }
 
+  return (
+    <div className={`household-scatter-template${embedded ? " is-embedded" : ""}`}>
+      {embedded ? (
+        <p className="chart-description">{description}</p>
+      ) : (
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">
+              {description}
+              {descriptionLink && <> {descriptionLink}</>}
+            </p>
+          </div>
+          <ChartDownloadMenu
+            download={download}
+            chartTitle={chartTitle}
+            disabledReason={ready ? undefined : "Available when results are published"}
+          />
+        </div>
+      )}
+
+      {focus && (
+        <div className="chart-controls household-scatter-controls">
+          <PillSelect
+            variant="light"
+            name="Measure shown"
+            prefix="Measure"
+            value={view.reform}
+            onChange={setFocusId}
+            options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
+          />
+        </div>
+      )}
       {/* The plot takes the rows the map beside it uses for its controls,
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">
@@ -539,7 +644,7 @@ function HouseholdScatter({
                 tick={TICK}
                 width={narrow ? 30 + Y_TITLE_GUTTER : 44 + Y_TITLE_GUTTER}
               />
-              <ReferenceLine x={0} stroke={CHART_COLOURS.tick} strokeWidth={2} />
+              <ReferenceLine x={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={2} />
               <Customized component={<DotLayer dots={shown} onHover={onHover} />} />
               {youShown && (
                 <Customized
@@ -557,9 +662,13 @@ function HouseholdScatter({
             yearLabel={yearLabel}
           />
         )}
-        {!ready && (
+        {/* While loading, the chart's grey template is the placeholder */}
+        {view.kind === "loading" && (
+          <span className="visually-hidden" role="status">Loading household results…</span>
+        )}
+        {!ready && view.kind !== "loading" && (
           <div className="household-scatter-template-note" role="status">
-            <p>{view.kind === "loading" ? "Loading household results…" : view.reason}</p>
+            <p>{view.reason}</p>
             {view.detail && <p className="household-scatter-template-detail">{view.detail}</p>}
           </div>
         )}
@@ -580,10 +689,15 @@ function HouseholdScatter({
         </ul>
       )}
 
-      <div className="chart-logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={CHART_LOGO.href} alt="PolicyEngine" />
-      </div>
+      {!embedded && (
+        <div className="chart-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={CHART_LOGO.href} alt="PolicyEngine" />
+        </div>
+      )}
+
+      {/* At the card's foot, under the logo, as on every card */}
+      {ready && !embedded && <ScatterMoreInfo basisLabel={basisLabel} />}
     </div>
   );
 }

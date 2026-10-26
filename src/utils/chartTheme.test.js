@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CHART_COLOURS } from "./chartTheme";
+import { BAR_GAP, BAR_RADIUS, CHART_COLOURS, barShape, roundedRectPath } from "./chartTheme";
 
 const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 const css = readFileSync(resolve(__dirname, "../app/globals.css"), "utf8");
@@ -23,6 +23,15 @@ describe("CHART_COLOURS", () => {
   it("gives each meaning one colour", () => {
     expect(CHART_COLOURS.after).toBe(CHART_COLOURS.gain);
     expect(CHART_COLOURS.before).toBe(CHART_COLOURS.noChange);
+    // The OBR's ring is the same grey as "before"; the zero line is the text ink
+    expect(CHART_COLOURS.obr).toBe(CHART_COLOURS.before);
+    expect(CHART_COLOURS.zeroLine).toBe(CHART_COLOURS.text);
+  });
+
+  it("draws outturn as before and the projection as after (docs/COLOURS.md)", async () => {
+    const { OUTTURN_COLOUR, PROJECTION_COLOUR } = await import("./livingStandards/baseline");
+    expect(OUTTURN_COLOUR).toBe(CHART_COLOURS.before);
+    expect(PROJECTION_COLOUR).toBe(CHART_COLOURS.after);
   });
 });
 
@@ -160,5 +169,39 @@ describe("divergingAxis", () => {
     const { divergingAxis, zeroBasedAxis } = await import("./chartTheme");
     expect(divergingAxis([-7.7, -1, 0])).toEqual(zeroBasedAxis([-7.7, -1, 0]));
     expect(divergingAxis([2, 5])).toEqual(zeroBasedAxis([2, 5]));
+  });
+});
+
+describe("barShape: one bar style", () => {
+  const corners = (d) => (d.match(/A/g) || []).length;
+  const draw = (keys, props, options) => barShape(keys, options)(props).props;
+
+  it("rounds only a stack's outer end and leaves a gap at each inner join", () => {
+    const payload = { a: 2, b: 3 };
+    // Upright bars: a sits on zero, b on top of it
+    const inner = draw(["a", "b"], { x: 0, y: 60, width: 20, height: 40, payload, dataKey: "a", fill: CHART_COLOURS.gain });
+    const outer = draw(["a", "b"], { x: 0, y: 0, width: 20, height: 60, payload, dataKey: "b", fill: CHART_COLOURS.gain });
+    expect(corners(inner.d)).toBe(0);
+    expect(inner.d.startsWith(`M0,${60 + BAR_GAP}`)).toBe(true);
+    expect(corners(outer.d)).toBe(2);
+  });
+
+  it("rounds both ends of a 100% bar running across", () => {
+    const payload = { a: 50, b: 50 };
+    const options = { layout: "vertical", roundBase: true };
+    const first = draw(["a", "b"], { x: 0, y: 0, width: 50, height: 12, payload, dataKey: "a" }, options);
+    const last = draw(["a", "b"], { x: 50, y: 0, width: 50, height: 12, payload, dataKey: "b" }, options);
+    expect(corners(first.d)).toBe(2);
+    expect(corners(last.d)).toBe(2);
+  });
+
+  it("treats negatives on their own side of zero", () => {
+    const payload = { a: -2, b: 3 };
+    const neg = draw(["a", "b"], { x: 0, y: 50, width: 20, height: 20, payload, dataKey: "a" });
+    expect(corners(neg.d)).toBe(2);
+  });
+
+  it("caps the radius at half the bar's thickness", () => {
+    expect(roundedRectPath(0, 0, 100, 4, [BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS])).toContain("A2,2");
   });
 });

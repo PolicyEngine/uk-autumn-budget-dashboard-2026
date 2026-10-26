@@ -68,7 +68,7 @@
   padding: 10px;
   font-size: 12px;
   color: var(--c-text);
-  background-color: white;
+  background-color: var(--c-surface);
   border: 1px solid var(--c-axis);
   border-radius: 4px;
   pointer-events: none;
@@ -113,4 +113,24 @@
   opacity: 1;
   border: 2px solid var(--c-net);
   background: radial-gradient(circle, var(--c-net) 0 2.5px, var(--c-surface) 3px);
+}
+
+/* A selection the chart is not published for: a compact panel, no plot */
+.household-scatter-empty {
+  min-height: 132px;
+  margin-top: 8px;
+}
+
+.household-scatter-empty .household-scatter-empty-reason {
+  max-width: 46ch;
+  margin: 0 auto;
+  color: var(--pe-gray-700);
+}
+
+.household-scatter-empty .household-scatter-empty-detail {
+  max-width: 60ch;
+  margin: 6px auto 0;
+  font-weight: 400;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
 }

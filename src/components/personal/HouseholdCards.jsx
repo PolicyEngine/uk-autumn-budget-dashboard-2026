@@ -1,5 +1,8 @@
+import CountUpText from "../CountUpText";
 import {
   Armchair,
+  ArrowRight,
+  Baby,
   BriefcaseBusiness,
   Car,
   Check,
@@ -12,9 +15,16 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import SectionHeading from "../SectionHeading";
+import useDataFile from "../../hooks/useDataFile";
+import { buildHouseholdRequest } from "../../utils/householdImpactApi";
+import { presetInputs } from "../../utils/householdPresets";
+import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
-import { fiscalYearTick } from "../../utils/chartTheme";
+import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
+import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
+import Tip from "../Tip";
 
 /** Each example's icon, by the name it gives (householdExamples.js). */
 export const EXAMPLE_ICONS = {
@@ -25,6 +35,7 @@ export const EXAMPLE_ICONS = {
   graduate: GraduationCap,
   car: Car,
   briefcase: BriefcaseBusiness,
+  baby: Baby,
 };
 
 /**
@@ -36,7 +47,7 @@ export function featuresPublished(example, catalogue) {
   return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
 }
 
-/** Each measure as a card's "+£50 from …" line names it. */
+/** Each measure's short name, as a card's chip names it (sentence case there). */
 const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
   fuel_duty_rise_deferral: "the fuel duty deferral",
@@ -45,11 +56,16 @@ const SOURCE_NAMES = {
   plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
   threshold_freeze_2031_32: "the threshold freeze",
   warm_home_discount_top_up: "the Warm Home Discount top-up",
-  employer_ni_relief_under_25s: "employer NI relief",
+  employer_ni_relief_under_25s: "employer National Insurance relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
 };
 // A short name where there is one, else the catalogue's published name
 const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
+// As a chip names it: "Zero VAT on electricity", "Fuel duty deferral"
+const chipName = (id, catalogue) => {
+  const name = sourceName(id, catalogue).replace(/^the /, "");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+};
 
 /** "+£88", "−£12" or "£0", from whole pounds. */
 export const signedMoney = (value) => {
@@ -60,75 +76,190 @@ const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) <
 
 /**
  * What one example's card shows for `year`, from the precomputed results
- * (householdPresets.js presetChanges): its change in net income, the
- * change in each year for the sparkline, its own measures' part (on its
- * tag) and, when another measure gives more of it than its own, that one.
+ * (householdPresets.js presetChanges) or the page's own (the headline
+ * alone): its change in net income, the change in each year for the bars,
+ * its own measures' part, and `top`, what its chip names: the measure
+ * giving the largest part of the year's change, with that part ({ ids,
+ * name, part, own }). Its own measures (the example's tag) when they give
+ * the most, or nothing does, or there is no split by measure (part null).
  */
 export function cardFigures(example, byYear, year, catalogue = null) {
   const current = byYear?.[year];
   if (!current) return null;
+  // The split by measure, from the precomputed file only: a figure the
+  // page asked for itself (useExampleFigures.js) is the headline alone, so
+  // its card names no measure's part
+  const split = current.byPolicy ?? null;
   const own = example.measures ?? [example.measure];
-  const ownPart = own.reduce((sum, id) => sum + (current.byPolicy[id] ?? 0), 0);
-  // The measure giving the largest part of the change, if not its own
-  const [mainId, mainPart] = Object.entries(current.byPolicy).reduce(
-    (best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best),
-    [null, 0],
-  );
-  const source =
-    mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
-      ? { name: sourceName(mainId, catalogue), part: mainPart }
-      : null;
-  const series = Object.keys(byYear)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map((y) => ({ year: y, change: byYear[y].change }));
-  return { change: current.change, ownPart, source, series };
+  const ownPart = split ? own.reduce((sum, id) => sum + (split[id] ?? 0), 0) : null;
+  // The other measure giving the largest part of the change
+  const [mainId, mainPart] = Object.entries(split ?? {})
+    .filter(([id]) => !own.includes(id))
+    .reduce((best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best), [null, 0]);
+  const top =
+    mainId && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
+      ? { ids: [mainId], name: chipName(mainId, catalogue), part: mainPart, own: false }
+      : { ids: own, name: example.tag, part: ownPart, own: true };
+  // Every year a reader can choose: one not yet in is null (its bar a stub)
+  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].filter(isDisplayYear).sort((a, b) => a - b);
+  const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
+  return { change: current.change, ownPart, top, series };
 }
 
-/** The change in each year as small bars, the year chosen in full colour. */
-function Sparkline({ series, year }) {
-  const max = Math.max(1, ...series.map((point) => Math.abs(point.change)));
-  const hasLoss = series.some((point) => point.change < 0);
-  const width = series.length * 9 - 3;
-  const height = 26;
-  const zero = hasLoss ? height / 2 : height;
-  const scale = (hasLoss ? height / 2 : height) / max;
+/**
+ * Where an example sits in the UK income distribution in `year`, after the
+ * measures its figures are with: the percentile of its net income adjusted
+ * for household size, on the same curves and equivalisation as "Where you
+ * sit" (utils/incomePosition.js). Null without the year's net income or a
+ * published distribution for those measures.
+ */
+export function examplePercentile(example, point, { year, policies, rows, catalogue }) {
+  if (!rows || !point || !Number.isFinite(point.before) || !Number.isFinite(point.after)) return null;
+  const run = distributionRunFor(
+    policies,
+    catalogue?.displayable?.map((measure) => measure.id) ?? [],
+    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
+  );
+  const before = curveOf(rows, { reformId: run.reformId, year, side: "baseline" });
+  const after = curveOf(rows, { reformId: run.reformId, year, side: "reform" });
+  if (before.length < 2 || after.length < 2) return null;
+  const { household } = buildHouseholdRequest(presetInputs(example), { year, policies });
+  const position = householdPosition({ net: point, household, before, after });
+  const percentile = position.after.percentile;
+  return percentile === null ? null : Math.min(99, Math.max(1, Math.round(percentile)));
+}
+
+/** A small strip with a dot where the example sits, and its percentile. */
+function PositionStrip({ percentile, yearLabel }) {
   return (
-    <svg
+    <Tip content={`${percentile} in 100 people in the UK have a lower household income than this household, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <span className="household-card-position">
+      <span className="household-card-position-track" aria-hidden="true">
+        <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
+      </span>
+      <span className="household-card-position-label">{`${ordinal(percentile)} percentile`}</span>
+    </span>
+    </Tip>
+  );
+}
+
+/** "+£12 a year", "No change", or "calculating" for a year not yet in. */
+const changeText = (change) =>
+  change === null ? "calculating" : Math.round(change) === 0 ? "No change" : `${signedMoney(change)} a year`;
+
+// The bars' geometry: each bar BAR wide, PITCH apart, in PLOT of height
+const BAR = 12;
+const PITCH = 17;
+const PLOT = 34;
+
+/**
+ * The change in each year as bars about a zero line, gains above it and
+ * losses below, with the first and last years under them. The year chosen
+ * is highlighted; hovering, tapping or (once focused) the arrow keys
+ * highlight another and show its figure in a small tooltip. One tab stop,
+ * labelled with every year's figure.
+ */
+export function YearBars({ series, year }) {
+  // The year shown in the tooltip: hovered, tapped or reached by the keys
+  const [active, setActive] = useState(null);
+  const highlighted = active ?? year;
+  const known = series.filter((point) => point.change !== null).map((point) => point.change);
+  const most = Math.max(0, ...known);
+  const least = Math.min(0, ...known);
+  const span = most - least || 1;
+  // The zero line: at the foot when nothing falls, at the top when nothing rises
+  const zero = (PLOT * most) / span;
+  const width = series.length * PITCH - (PITCH - BAR);
+  const point = series.find((item) => item.year === active);
+  const label = `Change in net income by year: ${series
+    .map((item) => `${fiscalYearTick(item.year)} ${changeText(item.change)}`)
+    .join(", ")}`;
+  const move = (step) => {
+    const index = series.findIndex((item) => item.year === highlighted);
+    const next = series[Math.min(series.length - 1, Math.max(0, (index < 0 ? 0 : index) + step))];
+    if (next) setActive(next.year);
+  };
+  const onKeyDown = (event) => {
+    const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key];
+    if (step !== undefined) {
+      event.preventDefault();
+      move(step);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setActive(series[event.key === "Home" ? 0 : series.length - 1].year);
+    } else if (event.key === "Escape") {
+      setActive(null);
+    }
+  };
+  return (
+    <span
       className="household-card-spark"
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden="true"
-      focusable="false"
+      role="group"
+      aria-label={label}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onFocus={() => setActive((current) => current ?? year)}
+      onBlur={() => setActive(null)}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") setActive(null);
+      }}
     >
-      {series.map((point, index) => {
-        const size = Math.max(1.5, Math.abs(point.change) * scale);
-        return (
-          <rect
-            key={point.year}
-            className={`${tone(point.change)} ${point.year === year ? "is-current" : ""}`.trim()}
-            x={index * 9}
-            y={point.change >= 0 ? zero - size : zero}
-            width={6}
-            height={size}
-            rx={1.5}
-          />
-        );
-      })}
-    </svg>
+      <span className={`household-card-spark-tip ${point ? "is-shown" : ""}`.trim()} aria-live="polite">
+        {point ? `${fiscalYearTick(point.year)}: ${changeText(point.change)}` : ""}
+      </span>
+      <svg width={width} height={PLOT} viewBox={`0 0 ${width} ${PLOT}`} aria-hidden="true" focusable="false">
+        {series.map((item, index) => {
+          // A year not yet in: a short stub on the zero line, shimmering
+          const waiting = item.change === null;
+          const size = waiting ? 3 : Math.max(1.5, (Math.abs(item.change) * PLOT) / span);
+          return (
+            <g key={item.year}>
+              <rect
+                className={`${waiting ? "is-pending" : tone(item.change)} ${item.year === highlighted ? "is-current" : ""}`.trim()}
+                x={index * PITCH}
+                y={waiting || item.change >= 0 ? zero - size : zero}
+                width={BAR}
+                height={size}
+                rx={2}
+              />
+              {/* The bar's whole column answers the pointer, not only the bar */}
+              <rect
+                className="household-card-spark-hit"
+                x={index * PITCH - (PITCH - BAR) / 2}
+                y={0}
+                width={PITCH}
+                height={PLOT}
+                onPointerEnter={() => setActive(item.year)}
+                onClick={() => setActive(item.year)}
+              />
+            </g>
+          );
+        })}
+        <line className="household-card-spark-zero" x1={0} x2={width} y1={zero} y2={zero} />
+      </svg>
+      <span className="household-card-spark-years" aria-hidden="true">
+        <span>{shortFiscalYearTick(series[0].year)}</span>
+        {series.length > 1 && <span>{shortFiscalYearTick(series[series.length - 1].year)}</span>}
+      </span>
+    </span>
   );
 }
 
 /**
- * The Household impact view's eight cards, all the same size: "Your
- * household", which opens the form below them, then the seven examples,
- * each of which fills the form and shows its result at once. Each example
- * names who it is and, on its tag, the measure it is for, in that
- * measure's colour. Once the precomputed results are in and every measure
- * is selected, it shows its change in net income in the year chosen, a
- * bar for each year, the part its own measure gives (on the tag) and, when
- * another measure gives more, which one.
+ * The Household impact view's cards: first one wide "Your household"
+ * card, which opens the form below the cards; then eight example
+ * households under "Example households", all the same size, each of which
+ * fills the form and shows its result at once. One section heading over
+ * them, the page's own (SectionHeading), as on every tab. Each example names who
+ * it is and, on its tag, the measure it is for, in that measure's colour.
+ * Once the precomputed results are in and every measure is selected, it
+ * shows its change in net income in the year chosen, a bar for each year,
+ * the part its own measure gives (on the tag) and, when another measure
+ * gives more, which one.
+ *
+ * An example card is a box with one button over it (its name, pressed
+ * when chosen), so that its year bars, a control of their own, sit outside
+ * the button.
  *
  * @param {Object} props
  * @param {Array} props.examples - householdExamples.js's HOUSEHOLD_EXAMPLES
@@ -137,7 +268,14 @@ function Sparkline({ series, year }) {
  * @param {string} props.formId - The form panel's id, for aria-controls
  * @param {() => void} props.onYours - "Your household" pressed
  * @param {(id: string) => void} props.onChoose - An example pressed
- * @param {Object|null} props.presets - presetChanges' map, or null to show no figures
+ * @param {Object|null} props.presets - The figures by example and year: the
+ *   precomputed file's (presetChanges, with the split by measure) or the
+ *   page's own (useExampleFigures, the headline only), or null for none
+ * @param {Object|null} [props.fill] - The page's own figures' progress, when
+ *   the file does not answer: { pending, failed (Sets of "id:year"), reduced
+ *   (the measures asked with, when the API did not know every selected one) }
+ * @param {string[]} [props.figurePolicies] - The measures the figures are
+ *   with (for where each example sits)
  * @param {number|null} props.yoursChange - Your household's change, once calculated
  * @param {number} props.year
  * @param {boolean} [props.yoursSelected] - Your household is the one chosen
@@ -153,13 +291,20 @@ export default function HouseholdCards({
   onYours,
   onChoose,
   presets,
+  fill = null,
+  figurePolicies = [],
   yoursChange = null,
   year,
   chosen = false,
   yoursSelected = false,
 }) {
   const catalogue = useMeasureCatalogue();
-  const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
+  const distribution = useDataFile(DISTRIBUTION_FILE, parseDistribution);
+  // The measures the figures are with: those the API took, when fewer
+  const positionPolicies = fill?.reduced ?? figurePolicies;
+  // What the figures are with, on hover (no line above the cards): every
+  // measure (the file), the selected ones, or those the calculator supports
+  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -169,25 +314,28 @@ export default function HouseholdCards({
     action();
   };
   return (
-    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-labelledby="household-cards-title">
+    <section className={`household-cards ${folded ? "is-folded" : ""}`.trim()} aria-label="Choose a household">
+      {/* The page's section heading, as on every tab, with "Show all
+          households" beside it once a household is chosen */}
       <div className="household-cards-head">
-        <h2 className="household-cards-title" id="household-cards-title">
-          Choose a household
-        </h2>
-        {chosen && (
+        <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
+        {/* Open again: back to the strip; folded, the button is at the
+            strip's start, where the eye begins */}
+        {chosen && !folded && (
           <button
             type="button"
             className="household-cards-toggle"
-            aria-expanded={!folded}
+            aria-expanded
             aria-controls="household-cards-grid"
-            onClick={() => setShowAll((open) => !open)}
+            onClick={() => setShowAll(false)}
           >
             <LayoutGrid size={14} strokeWidth={2} aria-hidden="true" />
-            {folded ? "Show all households" : "Show fewer"}
+            Show fewer
           </button>
         )}
       </div>
       <HouseholdStrip
+        onShowAll={() => setShowAll(true)}
         examples={examples}
         value={value}
         presets={presets}
@@ -202,70 +350,51 @@ export default function HouseholdCards({
       />
       <div className={`household-cards-fold ${folded ? "" : "is-open"}`.trim()} aria-hidden={folded || undefined} inert={folded || undefined}>
       <div className="household-cards-fold-inner">
-      <p className="household-cards-subtitle">
-        Enter your own, or start from an example.
-        {anyFigures &&
-          ` Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
-      </p>
-      <div className="household-cards-grid" id="household-cards-grid">
-        <button
-          type="button"
-          className={`household-card is-yours ${yoursSelected ? "is-selected" : ""} ${formOpen ? "is-open" : ""}`.replace(/\s+/g, " ").trim()}
-          style={{ "--i": 0 }}
-          aria-pressed={yoursSelected}
-          aria-controls={formId}
-          onClick={() => choose(onYours)}
-        >
-          <span className="household-card-icon" aria-hidden="true">
-            <House size={22} strokeWidth={1.8} />
-          </span>
-          <span className="household-card-name">Your household</span>
-          {/* After the name, so the card's name starts with it: a tick once
-              chosen, as on the examples, else "Start here" */}
-          {yoursSelected ? (
-            <span className="household-card-check" aria-hidden="true">
-              <Check size={14} strokeWidth={2.6} />
-            </span>
-          ) : (
-            <span className="household-card-badge">Start here</span>
-          )}
-          {Number.isFinite(yoursChange) ? (
-            <span className="household-card-result">
-              <span className={`household-card-figure ${tone(yoursChange)}`}>
-                {Math.round(yoursChange) === 0 ? "No change" : signedMoney(yoursChange)}
-                {Math.round(yoursChange) !== 0 && <span className="household-card-figure-unit"> a year</span>}
-              </span>
-            </span>
-          ) : (
-            <span className="household-card-result">
-              <span className="household-card-figure is-muted">Your result after Calculate</span>
-            </span>
-          )}
-          <span className="household-card-source" />
-          <span className="household-card-description">Every answer starts at a typical value</span>
-          <span className="household-card-tag is-start">
-            {formOpen ? "Hide your answers" : "Enter your answers"}
-            <ChevronDown className="household-card-chevron" size={14} strokeWidth={2} aria-hidden="true" />
-          </span>
-        </button>
+      <YourHouseholdCard
+        selected={yoursSelected}
+        formOpen={formOpen}
+        formId={formId}
+        change={yoursChange}
+        onClick={() => choose(onYours)}
+      />
+      <div className="household-cards-grid" id="household-cards-grid" role="group" aria-label="Example households">
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
+          const waiting = !figures && Boolean(fill?.pending.has(`${example.id}:${year}`));
+          const percentile = figures
+            ? examplePercentile(example, presets[example.id]?.[year], {
+                year,
+                policies: positionPolicies,
+                rows: distribution.status === "ready" ? distribution.rows : null,
+                catalogue,
+              })
+            : null;
           const featured = featuresPublished(example, catalogue);
+          // The chip: the top measure once the split is known, else the
+          // example's own; shown only while the catalogue publishes it
+          const chipFigures = figures?.top ?? { ids: example.measures ?? [example.measure], name: example.tag, part: null, own: true };
+          const chip = chipFigures.ids.every((id) => catalogue.byId.get(id)?.displayable === true) ? chipFigures : null;
           const pressed = value === example.id;
+          const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
           return (
-            <button
+            <div
               key={example.id}
-              type="button"
-              className="household-card"
-              aria-pressed={pressed}
-              onClick={() => choose(() => onChoose(example.id))}
+              className={`household-card ${pressed ? "is-selected" : ""}`.trim()}
               style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={1.8} />
               </span>
-              <span className="household-card-name">{example.label}</span>
+              <button
+                type="button"
+                className="household-card-hit"
+                aria-pressed={pressed}
+                aria-describedby={describedBy}
+                onClick={() => choose(() => onChoose(example.id))}
+              >
+                <span className="household-card-name">{example.label}</span>
+              </button>
               {pressed && (
                 <span className="household-card-check" aria-hidden="true">
                   <Check size={14} strokeWidth={2.6} />
@@ -274,28 +403,55 @@ export default function HouseholdCards({
               <span className="household-card-result">
                 {figures ? (
                   <>
-                    <span className={`household-card-figure ${tone(figures.change)}`}>
-                      {Math.round(figures.change) === 0 ? "No change" : signedMoney(figures.change)}
+                    <Tip content={`Change in net income in ${fiscalYearTick(year)} with ${figuresWith}`}>
+                    <span className={`household-card-figure ${tone(figures.change)}`} id={`household-card-${example.id}-result`}>
+                      {Math.round(figures.change) === 0 ? "No change" : <CountUpText text={signedMoney(figures.change)} />}
                       {Math.round(figures.change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
                     </span>
-                    <Sparkline series={figures.series} year={year} />
+                    </Tip>
+                    <YearBars series={figures.series} year={year} />
                   </>
+                ) : waiting ? (
+                  // Being calculated in the background: a shimmer where the
+                  // figure and bars will be
+                  <span className="household-card-shimmer" id={`household-card-${example.id}-result`} role="status">
+                    <span className="household-card-shimmer-figure" aria-hidden="true" />
+                    <span className="household-card-shimmer-bars" aria-hidden="true" />
+                    <span className="visually-hidden">Calculating</span>
+                  </span>
                 ) : (
-                  <span className="household-card-pending">Calculated when chosen</span>
+                  <span className="household-card-pending" id={`household-card-${example.id}-result`}>
+                    Calculated when chosen
+                  </span>
                 )}
               </span>
-              <span className="household-card-source">
-                {figures?.source && `${signedMoney(figures.source.part)} from ${figures.source.name}`}
+              {/* Where they sit: its own row, empty when not known, so every
+                  card keeps the same height */}
+              <span className="household-card-position-row">
+                {percentile !== null && <PositionStrip percentile={percentile} yearLabel={fiscalYearTick(year)} />}
               </span>
-              <span className="household-card-description">{example.description}</span>
-              {featured && (
-                <span className="household-card-tag">
+              <span className="household-card-description" id={`household-card-${example.id}-description`}>
+                {example.description}
+              </span>
+              {/* One chip: the measure giving most of the year's change, with
+                  its part, in its colour; the example's own measure in the
+                  chip's title when another gives more */}
+              {chip && (
+                <Tip
+                  content={
+                    !chip.own && featured && figures
+                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
+                      : null
+                  }
+                >
+                <span className="household-card-tag" style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}>
                   <span className="household-card-dot" aria-hidden="true" />
-                  <span className="household-card-tag-name">{example.tag}</span>
-                  {figures && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
+                  <span className="household-card-tag-name">{chip.name}</span>
+                  {chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>}
                 </span>
+                </Tip>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -306,14 +462,69 @@ export default function HouseholdCards({
 }
 
 /**
- * The cards folded: a chip for each card, in the cards' order and grid,
- * each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household first (choosing it
- * opens the form, which it controls; choosing it again while chosen
- * closes or reopens the form): the arrow keys (and Home, End) move between
- * chips, Enter or Space chooses one, a click chooses it at once.
+ * "Your household", above the examples, the width of the grid: an
+ * invitation to enter your own, with what the form asks first, and once
+ * calculated, your result. Pressing it opens the form below (pressed, with
+ * a tick, as an example is); pressing it again closes it.
  */
-function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
+function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
+  const calculated = Number.isFinite(change);
+  const action = formOpen ? "Hide your answers" : calculated ? "Change your answers" : "Enter your household";
+  return (
+    <button
+      type="button"
+      className={`household-yours ${selected ? "is-selected" : ""} ${formOpen ? "is-open" : ""}`.replace(/\s+/g, " ").trim()}
+      aria-pressed={selected}
+      aria-controls={formId}
+      onClick={onClick}
+    >
+      <span className="household-yours-art" aria-hidden="true">
+        <House size={24} strokeWidth={1.8} />
+      </span>
+      <span className="household-yours-words">
+        {/* The card's name, for the button's: the title says it on screen */}
+        <span className="household-card-name visually-hidden">Your household</span>
+        <span className="household-yours-title">Enter your own household</span>
+        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
+      </span>
+      <span className="household-yours-side">
+        {calculated && (
+          <span className="household-yours-result">
+            <span className="household-yours-result-label">Your result</span>
+            <span className={`household-card-figure ${tone(change)}`}>
+              {Math.round(change) === 0 ? "No change" : signedMoney(change)}
+              {Math.round(change) !== 0 && <span className="household-card-figure-unit"> a year</span>}
+            </span>
+          </span>
+        )}
+        <span className="household-yours-action">
+          {action}
+          {formOpen ? (
+            <ChevronDown className="household-card-chevron" size={16} strokeWidth={2.2} aria-hidden="true" />
+          ) : (
+            <ArrowRight className="household-yours-arrow" size={16} strokeWidth={2.2} aria-hidden="true" />
+          )}
+        </span>
+      </span>
+      {selected && (
+        <span className="household-card-check" aria-hidden="true">
+          <Check size={14} strokeWidth={2.6} />
+        </span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * The cards folded: a chip for each card, in the cards' order and grid
+ * (Your household the width of the grid, then the eight examples below
+ * it), each its icon, a short name and its change, the chosen one in its
+ * colour with a tick. One listbox, Your household first (choosing it opens
+ * the form, which it controls; choosing it again while chosen closes or
+ * reopens the form): the arrow keys (and Home, End) move between chips,
+ * Enter or Space chooses one, a click chooses it at once.
+ */
+function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose, onShowAll = null }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
   const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
@@ -360,6 +571,18 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
   return (
     <div className={`household-strip-fold ${shown ? "is-open" : ""}`.trim()} aria-hidden={!shown || undefined} inert={!shown || undefined}>
       <div className="household-strip-fold-inner">
+        {onShowAll && (
+          <button
+            type="button"
+            className="household-cards-back"
+            aria-expanded={false}
+            aria-controls="household-cards-grid"
+            onClick={onShowAll}
+          >
+            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
+            Show all households
+          </button>
+        )}
         <ul className="household-strip" role="listbox" aria-label="Households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
           {items.map((item, index) => {
             const isSelected = index === selected;
@@ -389,8 +612,8 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 <span className="household-chip-name">
                   {item.id === null ? (
                     <>
-                      <span className="household-chip-long">Your household</span>
-                      <span className="household-chip-short">Yours</span>
+                      Your household
+                      {!Number.isFinite(item.change) && <span className="household-chip-hint"> · enter your own</span>}
                     </>
                   ) : (
                     item.short

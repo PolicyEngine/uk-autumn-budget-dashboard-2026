@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./YearSlider.css";
+import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
-import { SELECTABLE_YEARS } from "../utils/displayYears";
+import { SELECTABLE_YEARS, yearLabel } from "../utils/displayYears";
 
 // The years a reader can choose (from 2027-28; see utils/displayYears.js)
 const YEARS = SELECTABLE_YEARS;
@@ -10,7 +12,13 @@ const YEARS = SELECTABLE_YEARS;
 // tween (utils/chartMotion.js) to settle and the year to be read
 export const PLAY_STEP_MS = 2250;
 
-function YearSlider({ selectedYear, onYearChange }) {
+/**
+ * @param {Object} props
+ * @param {string} [props.inactiveReason] - Why the year does not change the
+ *   view shown: the pill stays in place, faded, does not open; the reason
+ *   is in its accessible name only (no visible tip)
+ */
+function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const intervalRef = useRef(null);
 
@@ -43,13 +51,14 @@ function YearSlider({ selectedYear, onYearChange }) {
 
   const currentIndex = YEARS.indexOf(selectedYear);
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const [activeIndex, setActiveIndex] = useState(currentIndex);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const listRef = useRef(null);
   const listId = useId();
 
-  const label = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+  const label = yearLabel;
 
   const close = (returnFocus) => {
     setOpen(false);
@@ -84,7 +93,16 @@ function YearSlider({ selectedYear, onYearChange }) {
     close(true);
   };
 
+  // A view the year does not change: stop playing, close the list
+  useEffect(() => {
+    if (!inactiveReason) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the pill goes inactive
+    setIsPlaying(false);
+    setOpen(false);
+  }, [inactiveReason]);
+
   const handleToggle = () => {
+    if (inactiveReason) return;
     if (isPlaying) {
       // While playing, the button is the pause control
       setIsPlaying(false);
@@ -125,23 +143,28 @@ function YearSlider({ selectedYear, onYearChange }) {
       <button
         ref={buttonRef}
         type="button"
-        className="policy-selector-toggle year-picker-toggle"
+        className={`policy-selector-toggle band-control year-picker-toggle${inactiveReason ? " is-inactive" : ""}`}
+        aria-disabled={inactiveReason ? "true" : undefined}
         aria-haspopup={isPlaying ? undefined : "listbox"}
         aria-expanded={isPlaying ? undefined : open}
         aria-controls={open ? listId : undefined}
         aria-pressed={isPlaying ? true : undefined}
         aria-label={
-          isPlaying
+          inactiveReason
+            ? `Year, ${label(selectedYear)}: ${inactiveReason}`
+            : isPlaying
             ? `Playing, ${label(selectedYear)}: pause`
             : `Year, ${label(selectedYear)}`
         }
         onClick={handleToggle}
       >
-        {/* The same parts as the policy pill: badge, label, chevron */}
-        <span className="policy-selector-count year-picker-badge">
-          {label(selectedYear)}
+        {/* The band control's parts, as on the measures control: icon,
+            the label and value on one line, chevron */}
+        <CalendarDays className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
+        <span className="band-control-text">
+          <span className="band-control-label">{isPlaying ? "Playing" : "Year"}</span>
+          <span className="band-control-value year-picker-value">{label(selectedYear)}</span>
         </span>
-        <span className="policy-selector-label">{isPlaying ? "playing" : "year"}</span>
         {isPlaying ? (
           <span className="policy-selector-icon pill-chevron" aria-hidden="true">
             <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
@@ -159,8 +182,8 @@ function YearSlider({ selectedYear, onYearChange }) {
         )}
       </button>
 
-      {open && (
-        <div className="year-picker-dropdown">
+      {presence.mounted && (
+        <div className={`year-picker-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
           <button type="button" className="year-picker-play" onClick={startPlaying}>
             ▶ Play through years
           </button>

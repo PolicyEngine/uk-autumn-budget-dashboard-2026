@@ -8,7 +8,7 @@
   background: var(--c-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
-  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.1);
+  box-shadow: 0 4px 16px var(--shadow-soft);
 }
 
 .chart-tooltip p {
@@ -89,4 +89,13 @@
 .has-tooltip:focus-visible {
   outline: 2px solid var(--band-teal);
   outline-offset: 2px;
+}
+
+/* A line under the rows (the people a poverty change is) */
+.chart-tooltip-note {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--pe-gray-200);
+  color: var(--pe-gray-700);
+  font-size: var(--fs-micro);
 }

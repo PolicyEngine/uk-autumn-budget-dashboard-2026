@@ -1274,12 +1274,14 @@ def _estimate_all(
     levels: Sequence[str],
     packages: Mapping[str, Sequence[str]],
     settings: DisclosureSettings,
+    run_timings: Optional[dict[Run, float]] = None,
 ) -> dict[tuple[str, str, int], AreaEstimates]:
     """Every level's estimates for every reform, year and interaction.
 
     One set of area weights per level and year, and one source id array,
     serve every reform: the layer relates estimates only on the same
-    records, sources and areas.
+    records, sources and areas. ``run_timings``, if given, gets the seconds
+    each (reform, year) took, every level included.
     """
     n = collector.n_records
     national_codes = np.full(n, NATIONAL_CODE, dtype=object)
@@ -1299,6 +1301,7 @@ def _estimate_all(
             )
             runs.append((interaction_id(package), np.zeros(n), residual))
         for reform, baseline, reformed in runs:
+            start = time.perf_counter()
             for level, level_areas in areas.items():
                 estimates[(level, reform, year)] = estimate_change(
                     level=level,
@@ -1310,6 +1313,8 @@ def _estimate_all(
                     reformed=reformed,
                     settings=settings,
                 )
+            if run_timings is not None:
+                run_timings[(reform, year)] = time.perf_counter() - start
     return estimates
 
 
@@ -1321,6 +1326,7 @@ def build_release(
     packages: Optional[Mapping[str, Sequence[str]]] = None,
     prior_regional: Optional[pd.DataFrame] = None,
     settings: Optional[DisclosureSettings] = None,
+    run_timings: Optional[dict[Run, float]] = None,
 ) -> GeographyRelease:
     """Estimate every level and assemble the release.
 
@@ -1340,6 +1346,8 @@ def build_release(
         packages: Package reform to its measures; all must be collected.
         prior_regional: An already published regional table, if any.
         settings: Disclosure settings (the layer's defaults if None).
+        run_timings: If given, gets the seconds estimating each (reform,
+            year) took, as ``timings["estimate_s"]`` gets their total.
     """
     unknown = sorted(set(levels) - set(TABLE_FILES))
     if unknown or not levels:
@@ -1387,7 +1395,11 @@ def build_release(
 
     start = time.perf_counter()
     estimates = _estimate_all(
-        collector, levels=levels, packages=packages, settings=settings
+        collector,
+        levels=levels,
+        packages=packages,
+        settings=settings,
+        run_timings=run_timings,
     )
     timings = {"estimate_s": time.perf_counter() - start}
     for prior in priors:

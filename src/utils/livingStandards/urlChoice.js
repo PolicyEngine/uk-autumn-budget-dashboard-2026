@@ -1,14 +1,12 @@
 import { useCallback, useState } from "react";
-import { useScopedParam } from "./urlScope";
 
 /**
  * One pill's choice kept in the address (?<param>=<value>), as the year
  * range is: read on load if it is one of `options`, otherwise `fallback`;
  * the default is left out of the address. replaceState, so choosing adds no
- * history entry. `name` is scoped to its place (urlScope.js).
+ * history entry.
  */
-export function useUrlChoice(name, options, fallback) {
-  const param = useScopedParam(name);
+export function useUrlChoice(param, options, fallback) {
   const [value, setValue] = useState(() => {
     if (typeof window === "undefined") return fallback;
     const chosen = new URLSearchParams(window.location.search).get(param);

@@ -75,7 +75,7 @@ const STYLES = {
   colors: {
     title: CHART_COLOURS.text,
     description: CHART_COLOURS.axisTitle,
-    background: "white",
+    background: CHART_COLOURS.surface,
     cardBorder: CHART_COLOURS.grid,
     cardText: CHART_COLOURS.axisTitle,
     gain: CHART_COLOURS.gainText,
