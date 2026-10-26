@@ -16,7 +16,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 
 const INTRO =
-  /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the OBR forecast\. Costings are our own; forecast: OBR, Economic and fiscal outlook – March 2026\.$/;
+  /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the outlook before the Budget\. Costings are our own; forecast: OBR, Economic and fiscal outlook – March 2026\.$/;
 
 const BOXES = {
   society: /^What this Budget means for society/,
@@ -166,9 +166,9 @@ describe("the landing page", () => {
 
   it("leaves for whichever view the tab bar chooses", async () => {
     await renderApp();
-    fireEvent.click(viewTab("OBR forecast"));
+    fireEvent.click(viewTab("Before the Budget"));
     expect(landing()).toBeNull();
-    expect(viewTab("OBR forecast")).toHaveAttribute("aria-selected", "true");
+    expect(viewTab("Before the Budget")).toHaveAttribute("aria-selected", "true");
     expect(search().get("tab")).toBe("outlook");
   });
 
