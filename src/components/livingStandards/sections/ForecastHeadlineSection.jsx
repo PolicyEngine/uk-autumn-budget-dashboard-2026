@@ -1,10 +1,14 @@
-// Headline forecast figures as tiles: CPI, RPI and earnings growth in the
-// first forecast year (2027). Each tile has its full name, then the figure
-// with, on its right, a tag that waits for the Budget forecast; once it is published the tile reads
-// "March 2.0% → Budget 2.3%" with the change. The definition and source are
-// in the section's intro, once.
+// The forecast at a glance: one tile per headline series (forecast.headline:
+// CPI, RPI, earnings). Each has an icon, the series' name, its growth in
+// the first forecast year as a big figure, a small line of the forecast
+// years, and one plain line on what it means (forecastWords.tileMeaning),
+// which never repeats the figure. The basis and source are in the panel's
+// intro, once. The Budget-day forecast is held (ForecastPanel), so a tile
+// shows the one published forecast.
 
-import { changeClass, forecastName, heroYear, pctLabel, ppWords, toRows } from "../../../utils/livingStandards/forecast";
+import { Briefcase, Coins, House, KeyRound, Percent, Receipt, Tag } from "lucide-react";
+import { heroYear, pctLabel, toRows } from "../../../utils/livingStandards/forecast";
+import { tileMeaning } from "../../../utils/livingStandards/forecastWords";
 
 // ONS series pages for the tile names (checked 20 Oct 2026). Earnings is not
 // linked: the tile is OBR's calendar-year average earnings growth, and ONS
@@ -18,87 +22,112 @@ const NAMES = {
   cpi: "Consumer prices (CPI)",
   rpi: "Retail prices (RPI)",
   earnings: "Average earnings",
+  non_labour_income: "Non-labour income",
+  house_prices: "House prices",
+  rent: "Rents",
+  mortgage_interest: "Mortgage interest",
 };
 
-const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
 const ICONS = {
-  // A price tag
-  cpi: (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" {...stroke}>
-      <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
-      <circle cx="7.5" cy="7.5" r="1.5" />
-    </svg>
-  ),
-  // A receipt
-  rpi: (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" {...stroke}>
-      <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z" />
-      <path d="M9 8h6M9 12h6" />
-    </svg>
-  ),
-  // A briefcase
-  earnings: (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" {...stroke}>
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" />
-    </svg>
-  ),
+  cpi: Tag,
+  cpih: Tag,
+  rpi: Receipt,
+  earnings: Briefcase,
+  non_labour_income: Coins,
+  house_prices: House,
+  rent: KeyRound,
+  mortgage_interest: Percent,
 };
+
+// The sparkline's box (CSS scales it to the tile's width)
+const W = 120;
+const H = 32;
+const PAD = 4;
+
+/** A small line of a series' forecast years, its first and last points dotted. */
+export function Sparkline({ rows, label }) {
+  const points = rows.filter((r) => r.value != null);
+  if (points.length < 2) return null;
+  const vals = points.map((p) => p.value);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  // A flat series sits mid-height; otherwise the line spans the box
+  const y = (v) => (hi - lo < 1e-9 ? H / 2 : PAD + ((hi - v) / (hi - lo)) * (H - 2 * PAD));
+  const x = (i) => PAD + (i / (points.length - 1)) * (W - 2 * PAD);
+  const coords = points.map((p, i) => [x(i), y(p.value)]);
+  const ends = [coords[0], coords[coords.length - 1]];
+  return (
+    <figure className="forecast-spark">
+      {/* The dots sit over the line's box, not the years under it */}
+      <div className="forecast-spark-plot">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
+          <polyline points={coords.map((c) => c.join(",")).join(" ")} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+        {ends.map(([cx, cy], i) => (
+          <span key={i} className="forecast-spark-dot" style={{ left: `${(cx / W) * 100}%`, top: `${(cy / H) * 100}%` }} />
+        ))}
+      </div>
+      <figcaption className="forecast-spark-years">
+        <span>{points[0].year}</span>
+        <span>{points[points.length - 1].year}</span>
+      </figcaption>
+    </figure>
+  );
+}
 
 export default function ForecastHeadlineSection({ data }) {
   const forecast = data.forecast;
-  const published = Boolean(forecast.post_published);
   const year = heroYear(forecast);
   const byKey = {};
   forecast.sections.forEach((s) => s.series.forEach((series) => (byKey[series.key] = series)));
+  // Every series' rows as { year, value } in percent, for the comparisons
+  const rowsOf = (key) => (byKey[key] ? toRows(byKey[key], false).map((r) => ({ year: r.year, value: r.previous })) : null);
+  const allRows = Object.fromEntries(Object.keys(byKey).map((key) => [key, rowsOf(key)]));
 
   const tiles = (forecast.headline || [])
     .map((key) => {
-      const series = byKey[key];
-      if (!series) return null;
-      const rows = toRows(series, published);
-      const row = rows.find((r) => r.year === year);
-      if (!row) return null;
-      return { key, name: NAMES[key] ?? series.label, rows, ...row };
+      const rows = allRows[key];
+      const row = rows?.find((r) => r.year === year);
+      if (!row || row.value == null) return null;
+      return { key, name: NAMES[key] ?? byKey[key].label, rows, value: row.value };
     })
     .filter(Boolean);
 
   if (!tiles.length) return null;
-  const pre = forecastName(forecast.pre_label).replace(/^OBR /, "");
-  const post = forecastName(forecast.post_label).replace(/^OBR /, "");
 
   return (
     <div className="forecast-tiles">
-      {tiles.map((tile) => (
-        <div key={tile.key} className="forecast-tile">
-          <div className="forecast-tile-head">
-            <span className={`forecast-tile-icon is-${tile.key}`}>{ICONS[tile.key]}</span>
-            <span className="forecast-tile-name">
-              {ONS_SERIES[tile.key] ? (
-                <a href={ONS_SERIES[tile.key]} target="_blank" rel="noopener noreferrer" title="ONS series">
-                  {tile.name}
-                </a>
-              ) : (
-                tile.name
-              )}
-            </span>
-          </div>
-          <div className="forecast-tile-body">
-            <div>
-              <p className="forecast-tile-value">{pctLabel(published && tile.updated != null ? tile.updated : tile.previous)}</p>
-              <p className="forecast-tile-sub">growth in {year}</p>
+      {tiles.map((tile) => {
+        const Icon = ICONS[tile.key] ?? Tag;
+        const meaning = tileMeaning(tile.key, tile.rows, allRows);
+        const sparkLabel = `${tile.name}, ${tile.rows.map((r) => `${r.year}: ${pctLabel(r.value)}`).join(", ")}`;
+        return (
+          <div key={tile.key} className={`forecast-tile is-${tile.key}`}>
+            <div className="forecast-tile-head">
+              <span className="forecast-tile-icon" aria-hidden="true">
+                <Icon size={16} strokeWidth={1.8} />
+              </span>
+              <span className="forecast-tile-name">
+                {ONS_SERIES[tile.key] ? (
+                  <a href={ONS_SERIES[tile.key]} target="_blank" rel="noopener noreferrer" title="ONS series">
+                    {tile.name}
+                  </a>
+                ) : (
+                  tile.name
+                )}
+              </span>
             </div>
-            {published && tile.updated != null ? (
-              <p className="forecast-tile-compare">
-                {pre} {pctLabel(tile.previous)} → {post} {pctLabel(tile.updated)}{" "}
-                <span className={`forecast-tile-delta ${changeClass(tile.shownChange)}`}>
-                  {tile.shownChange > 0 ? "▲" : tile.shownChange < 0 ? "▼" : ""} {ppWords(tile.shownChange)}
-                </span>
-              </p>
-            ) : null}
+            <div className="forecast-tile-body">
+              <div>
+                <p className="forecast-tile-value">{pctLabel(tile.value)}</p>
+                <p className="forecast-tile-sub">growth in {year}</p>
+              </div>
+              <Sparkline rows={tile.rows} label={sparkLabel} />
+            </div>
+            {meaning && <p className="forecast-tile-meaning">{meaning}</p>}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

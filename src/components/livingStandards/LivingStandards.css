@@ -607,16 +607,16 @@
   }
 }
 
-/* Forecast headline tiles: icon and name, then the figure with the Budget
-   tag or comparison on its right */
+/* Forecast headline tiles: icon and name, the figure with a small line of
+   the forecast years on its right, then one line on what it means */
 .forecast-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-/* One tile a row below 900px, where three are too narrow for the tag */
+/* One tile a row below 900px */
 @media (max-width: 900px) {
   .forecast-tiles {
     grid-template-columns: minmax(0, 1fr);
@@ -627,7 +627,7 @@
 .forecast-tile {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   padding: 16px 18px;
   border: 1px solid var(--pe-gray-200);
   border-radius: 12px;
@@ -640,8 +640,10 @@
   gap: 8px;
 }
 
-.forecast-tile-icon {
+.forecast-tile-icon,
+.forecast-feed-icon {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 28px;
@@ -666,22 +668,16 @@
   text-decoration: underline;
 }
 
-/* The tag drops to its own row when it does not fit beside the figure */
 .forecast-tile-body {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px 12px;
-}
-
-.forecast-tile-sub {
-  white-space: nowrap;
+  gap: 16px;
 }
 
 .forecast-tile-value {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 600;
   line-height: 1.1;
   color: var(--pe-gray-800);
@@ -692,28 +688,100 @@
   margin: 2px 0 0;
   font-size: 0.75rem;
   color: var(--pe-gray-500);
+  white-space: nowrap;
 }
 
-.forecast-tile-tag {
-  flex-shrink: 0;
-  max-width: 100%;
-  margin: 0 0 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--pe-gray-100);
-  font-size: 0.75rem;
-  color: var(--pe-gray-500);
-}
-
-.forecast-tile-compare {
-  margin: 0 0 4px;
-  text-align: right;
-  font-size: 0.75rem;
+.forecast-tile-meaning {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pe-gray-100);
+  font-size: var(--fs-small);
+  line-height: 1.45;
   color: var(--pe-gray-600);
 }
 
-.forecast-tile-delta {
+/* The sparkline: a line of the forecast years, first and last dotted,
+   with those years underneath */
+.forecast-spark {
+  flex: 0 1 132px;
+  min-width: 96px;
+  margin: 0 0 2px;
+  color: var(--c-gain);
+}
+
+.forecast-spark-plot {
+  position: relative;
+}
+
+.forecast-spark svg {
+  display: block;
+  width: 100%;
+  height: 32px;
+  overflow: visible;
+}
+
+.forecast-spark-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--c-gain);
+}
+
+.forecast-spark-years {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.6875rem;
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* How the forecast feeds the baseline: a quiet card under the tiles */
+.forecast-feed {
+  margin-bottom: 8px;
+  padding: 14px 18px 4px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--c-surface);
+}
+
+.forecast-feed-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forecast-feed-head h3 {
+  margin: 2px 0 4px;
+  font-size: 0.9rem;
   font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.forecast-feed-head p {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.forecast-feed-params {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: circle;
+}
+
+.forecast-feed-params code {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* A section with one card: the card takes the full width */
+.charts-grid.forecast-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* Who is in poverty: a bar per group for the end year, a dark tick at the
