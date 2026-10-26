@@ -1,0 +1,8 @@
+{
+  "measure_id": "combined--17f31ec66fd044af",
+  "receipt_sha256": "780e80c9912429877eca561e6db64066d2df17b3c93595948da9eeddfd74ccca",
+  "reason": "Checked that this combined run composes its members as published, with no change to any member's modifier: it holds the hand-written employer_ni_relief_under_25s and plan_2_threshold_unfreeze, each released by its own attestation for its own receipt.",
+  "checker": "",
+  "second": "",
+  "released_at": ""
+}

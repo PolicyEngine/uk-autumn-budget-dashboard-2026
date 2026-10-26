@@ -1,0 +1,168 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": null,
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to \u00a330,267 in 2027-28), reversing the freeze at \u00a329,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "714c3fce5b4db00ee3cc48dc920a76647de41e3e2a1b1f85918825515e575f48",
+      "receipt_sha256": "da09d94d5db0e845522bf24f6110422f9886bf63c0b244f8add16068c4d53dbd"
+    },
+    "files": {
+      "age_impact.csv": "861a486e5b067e008b758f690c2dd6ce133b87d7e9c427bcb97e311809ac82ee",
+      "budgetary_impact.csv": "c603c63820099834cf4dacc1b1cb845c411f7396359c757cc78054e91161882d",
+      "distributional_impact.csv": "91e73e63687228d903cb943a1dbaf7ba37d4dcb2704b456a08975f730ca64186",
+      "household_scatter_binned.csv": "c3d179c403f65e51e321bfa1e71582e4a30e779c152b501403e84dfcdfd88319",
+      "income_curve.csv": "6c8d1b2244942d5a1db7b58623c494b6399a1d8800092980b695ee797939e39e",
+      "metrics.csv": "ab5327b1a01557db515bcdbd2dce5162e22de0bd09ebe18523833401c47cdbcf",
+      "poverty_inequality.csv": "eb157a6f701ac0fa8ed599057daf2062ca9bf4113d951789542861c21197eb99",
+      "winners_losers.csv": "29720293f9b3c59e935bffff47222ab65fac3e523dfadf0e6a7c19df21c28c41"
+    },
+    "generated_at": "2026-10-26T21:56:09.745732+00:00",
+    "generation_id": "0c588a7aa0204e88b94a960ac5244cd0",
+    "generator_argv": [
+      "/Users/vahid/.cache/uv/builds-v0/.tmpvoR9I4/bin/uk-budget-data",
+      "generate",
+      "--backend",
+      "modal",
+      "--artifacts",
+      "--reforms",
+      "plan_2_threshold_unfreeze"
+    ],
+    "git_sha": "0fc752f31af29bedd0e56243a9efad734fa51be5",
+    "key": "plan_2_threshold_unfreeze",
+    "measure_ids": [
+      "plan_2_threshold_unfreeze"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [
+        null
+      ],
+      "reform": [
+        null
+      ]
+    },
+    "name": "Plan 2 student loan threshold unfrozen",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "plan_2_threshold_unfreeze baseline",
+      "reform_sha256": "7bb7b527dd2b27c0c571b1dde4abd7cc793717b425b83b1c99b41042eb3fa5f9",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "714c3fce5b4db00ee3cc48dc920a76647de41e3e2a1b1f85918825515e575f48",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "plan_2_threshold_unfreeze",
+      "reform_sha256": "aba11dc7a0e9b2c8194153116161c0f0781a0e84123b0f99abfa43f43097a2a8",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

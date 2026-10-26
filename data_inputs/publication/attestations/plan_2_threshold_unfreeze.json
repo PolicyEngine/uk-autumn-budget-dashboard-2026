@@ -1,0 +1,8 @@
+{
+  "measure_id": "plan_2_threshold_unfreeze",
+  "receipt_sha256": "fa4781610766da2984c061b2ffbf7534a73746be903bcbb4b19fd943faf7c1b9",
+  "reason": "Checked budget_measures.connect_student_loan_repayments, applied on both sides: it replaces reported Plan 2 repayments with modelled ones in baseline and reform alike, so the measure's effect is the threshold change alone (RPI uprating from April 2027 instead of the freeze at £29,385). The receipt's outputs were compared with the published revenue path.",
+  "checker": "",
+  "second": "",
+  "released_at": ""
+}
