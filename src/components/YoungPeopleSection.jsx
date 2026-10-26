@@ -17,24 +17,21 @@ import {
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { parseTable } from "../utils/publication/csv";
+import { loadVerifiedTable } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import SectionHeading from "./SectionHeading";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
-import { getPolicyColor } from "../utils/policyConfig";
 import Note from "./Note";
 import PillSelect from "./PillSelect";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import TrendCard from "./youngPeople/TrendCard";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-} from "../utils/policyConfig";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -70,7 +67,6 @@ import {
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
 
-const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv`;
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
 // on white)
@@ -159,28 +155,29 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
 }
 
 
-/** Load age_impact.csv once per mount, typed by the publication contract. */
-export function useAgeImpactRows() {
-  const [state, setState] = useState({ status: "loading", rows: null });
+/**
+ * The age table from each verified artifact (#20's receipt route), typed by
+ * the publication contract. A measure whose artifact carries no age table
+ * has no rows, so its figures by age are unavailable. Exported for
+ * PensionersSection.
+ */
+export function useAgeImpactRows(catalogue) {
+  const [state, setState] = useState({ catalogue, status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
-    fetch(DATA_URL)
-      .then((response) => {
-        if (!response.ok) throw new Error(`age_impact.csv: ${response.status}`);
-        return response.text();
+    loadVerifiedTable(catalogue, "age_impact")
+      .then((rows) => {
+        // No verified age table at all reads as unavailable, not as empty charts
+        if (!cancelled) setState({ catalogue, status: rows.length ? "ready" : "unavailable", rows: rows.length ? rows : null });
       })
-      .then((text) => {
-        if (!cancelled) setState({ status: "ready", rows: parseTable("age_impact", text) });
-      })
-      .catch((error) => {
-        console.error("Error loading results by age:", error);
-        if (!cancelled) setState({ status: "error", rows: null });
+      .catch(() => {
+        if (!cancelled) setState({ catalogue, status: "error", rows: null });
       });
     return () => {
       cancelled = true;
     };
-  }, []);
-  return state;
+  }, [catalogue]);
+  return state.catalogue === catalogue ? state : { status: "loading", rows: null };
 }
 
 /** A legend of one row of swatches, in the grouped legend's style. */
@@ -239,7 +236,7 @@ function useBandDomain(rows, policies, selectedPolicies) {
         let up = 0;
         let down = 0;
         for (const policy of policies) {
-          const value = point[policy.name] ?? 0;
+          const value = point[policy.seriesKey ?? `measure:${policy.id}`] ?? 0;
           if (value > 0) up += value;
           else down += value;
         }
@@ -299,6 +296,7 @@ const singleSharesHeight = (rows) => rows * 17 + X_AXIS_HEIGHT + 24;
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
 /** An age's net change, then each policy's own part of it, largest first. */
 function SingleAgeTooltip({ active, payload, yearLabel }) {
+  const { policyColors } = useMeasureCatalogue();
   const point = payload?.[0]?.payload;
   if (!active || !point || point.netChange === null) return null;
   return (
@@ -315,7 +313,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
           .filter((part) => Math.round(part.value) !== 0)
           .map((part) => (
             <p key={part.id} className="chart-tooltip-row">
-              <span className="chart-tooltip-swatch" style={{ background: getPolicyColor(part.id) }} aria-hidden="true" />
+              <span className="chart-tooltip-swatch" style={{ background: policyColors[part.key] }} aria-hidden="true" />
               {part.name} {signedPounds(part.value)}
             </p>
           ))}
@@ -324,6 +322,12 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
 }
 
 function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const catalogue = useMeasureCatalogue();
+  const {
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = catalogue;
   const chartRef = useRef(null);
   const [view, setView] = useState("band");
   const single = view === "single";
@@ -350,7 +354,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   const singleDrawn = singleData.map((point) => {
     const drawn = { ...point };
     for (const part of point.parts) {
-      if (part.value !== 0 && Math.abs(part.value) < sliver) drawn[part.name] = Math.sign(part.value) * sliver;
+      if (part.value !== 0 && Math.abs(part.value) < sliver) drawn[part.key] = Math.sign(part.value) * sliver;
     }
     return drawn;
   });
@@ -362,16 +366,17 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   // chart says why (legendMembership)
   const members = useMemo(() => {
     const points = meanChangeByBand(rows, policies, selectedPolicies, selectedYear);
-    const nameOf = (id) => policies.find((policy) => policy.id === id)?.name;
-    return legendMembership(selectedPolicies, (id) =>
-      points.some((point) => Math.abs(point[nameOf(id)] ?? 0) > 0),
+    const keyOf = (id) => catalogue.byId.get(id)?.seriesKey;
+    return legendMembership(catalogue, selectedPolicies, (id) =>
+      points.some((point) => Math.abs(point[keyOf(id)] ?? 0) > 0),
     );
-  }, [rows, policies, selectedPolicies, selectedYear]);
+  }, [rows, policies, selectedPolicies, selectedYear, catalogue]);
   const activeNames = drawnNames(members);
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
   const description = single ? SINGLE_AGE_DESCRIPTION : MEAN_DESCRIPTION;
+  const incomplete = data.some((point) => point.incomplete);
 
   const title = `Average change by age, ${yearLabel}`;
   const exportName = single
@@ -383,7 +388,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     logo: CHART_LOGO,
     reservedLegendHeight: 0,
     legendItems: [
-          ...exportLegendItems(members),
+          ...exportLegendItems(members, catalogue),
           ...(activeNames.length > 1
             ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
@@ -391,7 +396,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   };
   const selectedNames = policies
     .filter((policy) => selectedPolicies.includes(policy.id))
-    .map((policy) => policy.name);
+    .map((policy) => ({ key: policy.seriesKey ?? `measure:${policy.id}`, label: policy.label ?? policy.name, decimals: 2 }));
   const units =
     "£ per person per year; each person counts their household's change in net income (not equivalised)";
   const csvText = () =>
@@ -401,7 +406,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           units: `${units}; the sum of each selected policy's own effect`,
           columns: [
             { key: "label", label: "Age" },
-            ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
+            ...selectedNames,
             { key: "netChange", label: "Net change", decimals: 2 },
           ],
           // The real values, not the slivers drawn
@@ -415,7 +420,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           units,
           columns: [
             { key: "label", label: "Age" },
-            ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
+            ...selectedNames,
             { key: "netChange", label: "Net change", decimals: 2 },
           ],
           rows: published ? data.filter((point) => !point.suppressed) : [],
@@ -460,6 +465,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
+        {published && incomplete && (
+          <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
+        )}
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : single ? (
@@ -495,7 +503,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter
@@ -548,7 +556,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 <Bar
                   key={name}
                   dataKey={name}
-                  name={name}
+                  name={bySeriesKey.get(name)?.label ?? name}
                   fill={POLICY_COLORS[name]}
                   stackId="stack"
                   {...chartMotion()}
@@ -587,7 +595,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       </div>
       <div className="chart-legend">
         {published &&
-          <GroupedLegend items={membershipItems(members)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
+          <GroupedLegend items={membershipItems(members, catalogue)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -633,7 +641,7 @@ function GroupTick({ x, y, payload, narrow }) {
   );
 }
 
-function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId }) {
   const chartRef = useRef(null);
   // By age group or by single year of age, as "Average change by age"
   const [view, setView] = useState("band");
@@ -641,7 +649,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const description = single ? SHARES_SINGLE_DESCRIPTION : SHARES_DESCRIPTION;
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const shares = (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear);
+  const shares = (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
   const data = shares
     ? shares.groups
         .filter((group) => !group.suppressed)
@@ -875,13 +883,17 @@ const pick = (row) =>
 /**
  * "Young people (16 to 24)": how the selected policies change household
  * incomes by age group (ONS age bands) and single year of age, with young
- * people aged 16 to 24 highlighted. It loads
- * public/data/age_impact.csv itself and follows the page's policy and
- * year pills.
+ * people aged 16 to 24 highlighted. It loads age tables from verified
+ * artifacts and follows the page's policy and year pills.
  */
 function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
-  const { status, rows } = useAgeImpactRows();
+  const catalogue = useMeasureCatalogue();
+  const { status, rows: publishedRows } = useAgeImpactRows(catalogue);
+  const { combinedId } = catalogue;
+  const rows = useMemo(() => publishedRows?.filter((row) =>
+    isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+  ) ?? null, [publishedRows, catalogue]);
 
   // A link to #young-people: the section renders after the page's data
   // loads, too late for the browser's own jump, so scroll once it is here.
@@ -894,7 +906,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
     }
   }, [status]);
 
-  const props = { rows, policies, selectedPolicies, selectedYear, narrow };
+  const props = { rows, policies, selectedPolicies, selectedYear, narrow, combinedId };
   return (
     <>
       {/* Two sections of two cards each, as All households pairs its

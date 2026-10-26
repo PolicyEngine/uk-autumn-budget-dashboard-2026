@@ -11,3 +11,15 @@ function UnavailableNotice({ reason, children }) {
 }
 
 export default UnavailableNotice;
+
+/**
+ * Takes selected measures that are no longer available out of the reader's
+ * selection, at the reader's request. Totals are never narrowed silently.
+ */
+export function RemoveUnavailable({ names, onRemove }) {
+  return (
+    <button type="button" className="publication-unavailable-action" onClick={onRemove}>
+      Remove {names.join(", ")} from the selection
+    </button>
+  );
+}

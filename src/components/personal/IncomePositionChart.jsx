@@ -25,7 +25,7 @@ import {
   positionSummary,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
-import { POLICIES } from "../../utils/policies";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
@@ -41,7 +41,6 @@ const AFTER = CHART_COLOURS.after;
 const TEXT = CHART_COLOURS.text;
 const GAIN = CHART_COLOURS.gain;
 const LOSS = CHART_COLOURS.loss;
-const ALL_IDS = POLICIES.map((policy) => policy.id);
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const POSITION_VIEWS = [
@@ -543,7 +542,14 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const winners = useFile("winners_losers.csv", parseRecords);
   const relative = useFile("distributional_impact.csv", parseRecords);
   const moves = useFile(MOBILITY_FILE, parseRecords);
-  const run = distributionRunFor(policies, ALL_IDS);
+  // Every measure the catalogue publishes: the package's run is exact only
+  // when all of them are selected, and it was run with exactly those
+  const catalogue = useMeasureCatalogue();
+  const run = distributionRunFor(
+    policies,
+    catalogue.displayable.map((measure) => measure.id),
+    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
+  );
   // Bars grow from zero each time their view opens
   const grow = useEased(1, { key: view, from: 0 });
   const title = `Where you sit in the UK income distribution, ${yearLabel}`;
@@ -810,7 +816,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           </p>
           {!run.exact && (
             <p>
-              {"With part of the package selected, the UK distribution after is all the measures together; your own income after uses only the measures you selected."}
+              {"The UK distribution after is the whole package's run, with measures beyond those selected (or, after one is withdrawn, no longer published); your own income after uses only the measures you selected."}
             </p>
           )}
         </ChartMoreInfo>

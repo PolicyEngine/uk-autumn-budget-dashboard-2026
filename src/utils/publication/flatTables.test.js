@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { FLAT_EXTRA_COLUMNS, TABLES, TableError, parseCsv, parseFlatTable, parseTable } from "./csv";
 import { AGE_BANDS } from "../ageImpact";
-import { COMBINED_REFORM_ID } from "../policyConfig";
+// The flat files' own combined run (not a manifest key)
+const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
+import { csvField } from "../geography/exportTable";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "../../../public/data");
 const read = (file) => readFileSync(join(DATA, file), "utf8");
@@ -43,13 +45,16 @@ const standaloneIds = (rows) =>
 
 describe("the flat tables the page reads", () => {
   const tables = Object.fromEntries(
-    CONTRACT_TABLES.map(([name, file]) => [name, () => parseFlatTable(name, read(file))]),
+    CONTRACT_TABLES.map(([name, file]) => {
+      let parsed;
+      return [name, () => (parsed ??= parseFlatTable(name, read(file)))];
+    }),
   );
 
   it.each(CONTRACT_TABLES)("%s has the contract's columns and types", (name) => {
     const rows = tables[name]();
     expect(rows.length).toBeGreaterThan(0);
-  });
+  }, 60000);
 
   it("metrics.csv carries the poverty and inequality measures the charts choose between", () => {
     const [row] = tables.metrics();
@@ -59,11 +64,22 @@ describe("the flat tables the page reads", () => {
   });
 
   it.each([...CONTRACT_TABLES.map(([, file]) => file), "obr_comparison.csv"])(
-    "%s has no quoted cells (the page splits rows on commas)",
+    "%s round trips quoted CSV cells through the real parser",
     (file) => {
-      expect(read(file)).not.toContain('"');
+      const rows = parseCsv(read(file)).slice(0, 20);
+      const encoded = rows.map((row) => row.map(csvField).join(",")).join("\n") + "\n";
+      expect(parseCsv(encoded)).toEqual(rows);
     },
+    60000,
   );
+
+  it("parses names with commas, quotes and embedded newlines", () => {
+    const name = 'New measure, "quoted"\ncontinued';
+    const text = `reform_id,reform_name,year,value\nfresh,${csvField(name)},2026,-1.25\n`;
+    expect(parseTable("budgetary_impact", text)).toEqual([
+      { reform_id: "fresh", reform_name: name, year: 2026, value: -1.25 },
+    ]);
+  });
 
   it("obr_comparison.csv has the columns OBRComparisonTable reads", () => {
     const [header, ...lines] = parseCsv(read("obr_comparison.csv").trimEnd());

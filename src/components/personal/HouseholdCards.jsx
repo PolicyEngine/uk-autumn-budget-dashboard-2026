@@ -12,8 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import { POLICIES } from "../../utils/policies";
-import { POLICY_COLORS_BY_KEY } from "../../utils/policyConfig";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, money } from "../../utils/singleYear";
 
@@ -28,6 +27,15 @@ export const EXAMPLE_ICONS = {
   briefcase: BriefcaseBusiness,
 };
 
+/**
+ * Whether the catalogue publishes every measure an example features: its
+ * tag and accent show only then, so a measure withdrawn on Budget day is
+ * never named on a card, alone or beside another (#104).
+ */
+export function featuresPublished(example, catalogue) {
+  return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
+}
+
 /** Each measure as a card's "+£50 from …" line names it. */
 const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
@@ -40,7 +48,8 @@ const SOURCE_NAMES = {
   employer_ni_relief_under_25s: "employer NI relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
 };
-const sourceName = (id) => SOURCE_NAMES[id] ?? POLICIES.find((policy) => policy.id === id)?.name ?? id;
+// A short name where there is one, else the catalogue's published name
+const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
 
 /** "+£88", "−£12" or "£0", from whole pounds. */
 export const signedMoney = (value) => {
@@ -55,7 +64,7 @@ const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) <
  * change in each year for the sparkline, its own measures' part (on its
  * tag) and, when another measure gives more of it than its own, that one.
  */
-export function cardFigures(example, byYear, year) {
+export function cardFigures(example, byYear, year, catalogue = null) {
   const current = byYear?.[year];
   if (!current) return null;
   const own = example.measures ?? [example.measure];
@@ -67,7 +76,7 @@ export function cardFigures(example, byYear, year) {
   );
   const source =
     mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
-      ? { name: sourceName(mainId), part: mainPart }
+      ? { name: sourceName(mainId, catalogue), part: mainPart }
       : null;
   const series = Object.keys(byYear)
     .map(Number)
@@ -149,6 +158,7 @@ export default function HouseholdCards({
   chosen = false,
   yoursSelected = false,
 }) {
+  const catalogue = useMeasureCatalogue();
   const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
@@ -240,7 +250,8 @@ export default function HouseholdCards({
         </button>
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
-          const figures = presets ? cardFigures(example, presets[example.id], year) : null;
+          const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
+          const featured = featuresPublished(example, catalogue);
           const pressed = value === example.id;
           return (
             <button
@@ -249,7 +260,7 @@ export default function HouseholdCards({
               className="household-card"
               aria-pressed={pressed}
               onClick={() => choose(() => onChoose(example.id))}
-              style={{ "--card-accent": POLICY_COLORS_BY_KEY[example.measure], "--i": index + 1 }}
+              style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={1.8} />
@@ -277,11 +288,13 @@ export default function HouseholdCards({
                 {figures?.source && `${signedMoney(figures.source.part)} from ${figures.source.name}`}
               </span>
               <span className="household-card-description">{example.description}</span>
-              <span className="household-card-tag">
-                <span className="household-card-dot" aria-hidden="true" />
-                <span className="household-card-tag-name">{example.tag}</span>
-                {figures && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
-              </span>
+              {featured && (
+                <span className="household-card-tag">
+                  <span className="household-card-dot" aria-hidden="true" />
+                  <span className="household-card-tag-name">{example.tag}</span>
+                  {figures && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
+                </span>
+              )}
             </button>
           );
         })}
@@ -301,6 +314,9 @@ export default function HouseholdCards({
  * chips, Enter or Space chooses one, a click chooses it at once.
  */
 function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
+  const catalogue = useMeasureCatalogue();
+  // A chip's accent only while the catalogue publishes its measures (#104)
+  const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
   const items = [
     { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
     ...examples.map((example) => ({
@@ -309,7 +325,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       short: example.short ?? example.label,
       Icon: EXAMPLE_ICONS[example.icon] ?? House,
       change: presets ? (cardFigures(example, presets[example.id], year)?.change ?? null) : null,
-      accent: POLICY_COLORS_BY_KEY[example.measure],
+      accent: accentOf(example),
     })),
   ];
   const selected = yoursSelected ? 0 : items.findIndex((item) => item.id !== null && item.id === value);

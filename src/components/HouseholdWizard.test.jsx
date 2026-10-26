@@ -248,7 +248,9 @@ describe("the personal impact form", () => {
       "A higher earner on £110,000",
     ]);
     expect(buttons.every((item) => item.querySelector(".household-card-description").textContent.length > 0)).toBe(true);
-    expect(buttons.slice(1).every((item) => item.querySelector(".household-card-tag").textContent.length > 0)).toBe(true);
+    // No catalogue here: no example features a measure it does not publish
+    // (#185 on #104), so no tag
+    expect(buttons.slice(1).every((item) => item.querySelector(".household-card-tag") === null)).toBe(true);
     // Every card is chosen the same way (aria-pressed); your household
     // also opens the form it controls
     expect(buttons.every((item) => item.getAttribute("aria-pressed") === "false")).toBe(true);
