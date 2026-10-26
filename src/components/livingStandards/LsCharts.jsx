@@ -81,7 +81,7 @@ const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
  * is at least `height` tall and fills its row, so beside a taller plot
  * (a dot plot with many rows) its x axis still sits on the same line.
  */
-function ChartRows({ plotRef, children, legendItems, height }) {
+function ChartRows({ plotRef, children, legendItems, height, legendNote = null }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
@@ -89,6 +89,8 @@ function ChartRows({ plotRef, children, legendItems, height }) {
       </div>
       <div className="chart-legend">
         <GroupedLegend items={legendItems} />
+        {/* A line on what the chart leaves out, under the key */}
+        {legendNote && <p className="ls-legend-note">{legendNote}</p>}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -221,6 +223,7 @@ export function LsBarChart({
   barCategoryGap = "20%",
   maxBarSize = 56,
   tooltipLabelFormat = null,
+  legendNote = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -229,7 +232,7 @@ export function LsBarChart({
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
 
   return (
-    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />

@@ -23,6 +23,15 @@ describe("CHART_COLOURS", () => {
   it("gives each meaning one colour", () => {
     expect(CHART_COLOURS.after).toBe(CHART_COLOURS.gain);
     expect(CHART_COLOURS.before).toBe(CHART_COLOURS.noChange);
+    // The OBR's ring is the same grey as "before"; the zero line is the text ink
+    expect(CHART_COLOURS.obr).toBe(CHART_COLOURS.before);
+    expect(CHART_COLOURS.zeroLine).toBe(CHART_COLOURS.text);
+  });
+
+  it("draws outturn as before and the projection as after (docs/COLOURS.md)", async () => {
+    const { OUTTURN_COLOUR, PROJECTION_COLOUR } = await import("./livingStandards/baseline");
+    expect(OUTTURN_COLOUR).toBe(CHART_COLOURS.before);
+    expect(PROJECTION_COLOUR).toBe(CHART_COLOURS.after);
   });
 });
 

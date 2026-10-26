@@ -20,7 +20,7 @@ import { buildChartCsv } from "../utils/chartCsv";
 import { loadVerifiedTable } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -59,7 +59,6 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import {
   legendMembership,
-  legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
 } from "../utils/legendMembership";
@@ -372,6 +371,8 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     );
   }, [rows, policies, selectedPolicies, selectedYear, catalogue]);
   const activeNames = drawnNames(members);
+  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
+  const key = useMeasureKey(members, netLabel);
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
@@ -494,7 +495,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}
@@ -503,7 +504,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               {/* Each policy's own part, gains stacked above zero and losses
                   below, in the policy colours */}
               {ALL_POLICY_NAMES.map((name) => (
-                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} stackId="stack" {...chartMotion()} />
+                <Bar key={name} dataKey={name} name={bySeriesKey.get(name)?.label ?? name} fill={POLICY_COLORS[name]} fillOpacity={measureOpacity(key.highlight, name)} stackId="stack" {...chartMotion()} />
               ))}
               {/* The net change: a dark dot per age */}
               <Scatter
@@ -539,7 +540,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}
@@ -558,6 +559,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   dataKey={name}
                   name={bySeriesKey.get(name)?.label ?? name}
                   fill={POLICY_COLORS[name]}
+                  fillOpacity={measureOpacity(key.highlight, name)}
                   stackId="stack"
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
@@ -594,8 +596,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         )}
       </div>
       <div className="chart-legend">
-        {published &&
-          <GroupedLegend items={membershipItems(members, catalogue)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
+        {published && !key.shared && (
+          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -870,9 +873,18 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {published && thin.length > 0 && (
-        <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
-      )}
+      <div className="chart-footer">
+        {published && thin.length > 0 && (
+          <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
+        )}
+        {/* The same foot as the card beside it, so the pair ends level */}
+        <ChartMoreInfo year={Number(selectedYear)}>
+          <p>
+            Each person counts their household&apos;s change in net income. The shares come from one simulation of
+            the selected policies together, so they are shown for a single policy or for all policies.
+          </p>
+        </ChartMoreInfo>
+      </div>
     </div>
   );
 }
@@ -918,12 +930,17 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             title="Change by age"
             subtitle="How household net income changes for each age group, in the selected year and over time."
           />
-          <section className="report-section young-people-section" aria-label="Change by age">
-            <div className="charts-grid">
-              <MeanChangeCard {...props} height={narrow ? 360 : 400} />
-              <TrendCard {...props} height={narrow ? 340 : 400} />
-            </div>
-          </section>
+          {/* The measures' key above the pair (MeasureKey), not a long
+              legend squeezing one card beside the other's short one */}
+          <MeasureKeyProvider>
+            <section className="report-section young-people-section" aria-label="Change by age">
+              <SectionMeasureKey />
+              <div className="charts-grid">
+                <MeanChangeCard {...props} height={narrow ? 360 : 400} />
+                <TrendCard {...props} height={narrow ? 340 : 400} />
+              </div>
+            </section>
+          </MeasureKeyProvider>
           <SectionHeading
             title="Who gains and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."

@@ -550,7 +550,7 @@ describe("the CSV download", () => {
 });
 
 describe("as another view's sub-tab", () => {
-  const SIBLING = { href: "?tab=outlook&sub=forecast", label: "Forecast changes" };
+  const SIBLING = { href: "?tab=outlook", label: "Forecast changes" };
   const choose = (variable) => {
     fireEvent.click(screen.getByRole("button", { name: /^Measure: / }));
     fireEvent.click(screen.getByRole("option", { name: variable.label }));
@@ -599,7 +599,7 @@ describe("as another view's sub-tab", () => {
     const onShow = vi.fn();
     const { unmount } = await renderView({ related: { ...SIBLING, onShow } });
     const link = screen.getByRole("link", { name: "Forecast changes" });
-    expect(link).toHaveAttribute("href", "?tab=outlook&sub=forecast");
+    expect(link).toHaveAttribute("href", "?tab=outlook");
     fireEvent.click(link);
     expect(onShow).toHaveBeenCalledTimes(1);
     unmount();

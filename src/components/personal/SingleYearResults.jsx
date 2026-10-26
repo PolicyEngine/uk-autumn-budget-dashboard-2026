@@ -6,7 +6,7 @@ import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
-import PolicyBars from "./PolicyBars";
+import NetIncomeWaterfall from "./NetIncomeWaterfall";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
 import IncomePositionChart from "./IncomePositionChart";
@@ -248,38 +248,22 @@ function scrollToSection(event, id) {
 }
 
 /**
- * Net income before and after on one scale: two thin bars, the after bar's
- * difference from before marked at its end. They grow in on arrival.
+ * What the waterfall's steps leave out: policies worth under £1 and notes
+ * on a policy's figure (an employer cost's says why it is £0). The
+ * policies with no effect are one line in the waterfall itself.
  */
-function BeforeAfterBars({ totals }) {
-  const top = Math.max(totals.before, totals.after, 1);
-  const lower = Math.min(totals.before, totals.after);
-  const share = (value) => `${Math.max(0, (value / top) * 100)}%`;
-  const [grown, setGrown] = useState(prefersReducedMotion());
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setGrown(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  const rows = [
-    { key: "before", label: "Before", value: totals.before },
-    { key: "after", label: "After", value: totals.after },
-  ];
+function PolicyNotes({ bars }) {
+  const notes = bars.notes;
+  if (bars.underAPound.length === 0 && notes.length === 0) return null;
   return (
-    <div className={`result-bars ${grown ? "is-grown" : ""}`.trim()}>
-      {rows.map((row) => (
-        <div key={row.key} className={`result-bar-row is-${row.key}`}>
-          <span className="result-bar-label">{row.label}</span>
-          <span className="result-bar-track" aria-hidden="true">
-            <span className="result-bar-fill" style={{ width: share(row.key === "after" ? lower : row.value) }} />
-            {row.key === "after" && totals.change !== 0 && (
-              <span
-                className="result-bar-diff"
-                style={{ left: share(lower), width: share(Math.abs(totals.change)) }}
-              />
-            )}
-          </span>
-          <span className="result-bar-value">{money(row.value)}</span>
-        </div>
+    <div className="result-card-notes">
+      {bars.underAPound.length > 0 && (
+        <p className="single-year-quiet">Less than £1 a year: {bars.underAPound.join(", ")}.</p>
+      )}
+      {notes.map((note) => (
+        <p key={note.id} className="single-year-quiet" data-note={note.kind}>
+          <strong>{note.name}</strong>: {note.text}
+        </p>
       ))}
     </div>
   );
@@ -288,11 +272,13 @@ function BeforeAfterBars({ totals }) {
 /**
  * The result: one card. Its head names the figure and its year and
  * policies; the body has the change (said nowhere else), large and counted
- * up, with its share as a chip, beside net income before and after as
- * bars; under the figure, what it is based on, each note behind an "i". The
- * figure is one element, so it reads (and copies) once.
+ * up, with its share as a chip, beside the waterfall from net income
+ * before, through each policy's change, to net income after (each
+ * policy's change is said there only); under the figure, what it is
+ * based on, each note behind an "i". The figure is one element, so it
+ * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false }) {
   const shown = Math.round(useCountUp(totals.change));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
@@ -360,8 +346,15 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) 
             </div>
           )}
         </div>
-        <BeforeAfterBars totals={totals} />
+        <NetIncomeWaterfall
+          totals={totals}
+          steps={bars ? bars.rows : null}
+          noEffect={bars ? bars.noEffectItems : []}
+          yearLabel={yearLabel}
+          splitFailed={splitFailed}
+        />
       </div>
+      {bars && <PolicyNotes bars={bars} />}
     </section>
   );
 }
@@ -430,6 +423,8 @@ export function SingleYearHeadline({
             policyCount={policyCount}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
+            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
       )}
@@ -476,7 +471,7 @@ function PendingSkeleton({ kind, startedAt }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, household = null, selected = null, changed = false, startedAt = null }) {
+export function SingleYearDetails({ result, year, policies, household = null, selected = null, you = null, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Never an earlier result: nothing while the headline is calculated
   // again, or once the answers differ from the result's
@@ -506,61 +501,36 @@ export function SingleYearDetails({ result, year, policies, household = null, se
               year={data.year ?? year}
               policies={selected ?? []}
               yearLabel={yearLabel}
+              you={you}
             />
           </section>
         </>
       )}
 
-      {/* The breakdown and the split by policy side by side on a wide
-          screen, stacked on a narrow one */}
-      <div className="single-year-pair">
-        <div className="single-year-pair-col">
-          <SectionHeading
-            title="Breakdown of household net income"
-            subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
+      <SectionHeading
+        title="Breakdown of household net income"
+        subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
+      />
+      <section className="report-section" id="household-breakdown">
+        {data.programmes ? (
+          <ProgrammeTable
+            programmes={data.programmes}
+            totals={totals}
+            bars={bars?.all}
+            yearLabel={yearLabel}
+            engine={data.engine}
           />
-          <section className="report-section" id="household-breakdown">
-            {data.programmes ? (
-              <ProgrammeTable
-                programmes={data.programmes}
-                totals={totals}
-                bars={bars?.all}
-                yearLabel={yearLabel}
-                engine={data.engine}
-              />
-            ) : (
-              <div className="card single-year-card">
-                <p className="single-year-quiet">The breakdown is not available for this answer.</p>
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="single-year-pair-col">
-          <SectionHeading
-            title="Change by policy"
-            subtitle="How much each selected policy adds to or takes from your household's net income."
-          />
-          <section className="report-section" id="change-by-policy">
-            {bars ? (
-              <PolicyBars
-                rows={bars.rows}
-                noEffect={bars.noEffect}
-                noEffectItems={bars.noEffectItems}
-                underAPound={bars.underAPound}
-                notes={bars.notes}
-                yearLabel={yearLabel}
-              />
-            ) : detailFailed ? (
-              <div className="card single-year-card">
-                <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
-              </div>
-            ) : (
-              <PendingSkeleton kind="policies" startedAt={startedAt} />
-            )}
-          </section>
-        </div>
-      </div>
+        ) : (
+          <div className="card single-year-card">
+            <p className="single-year-quiet">The breakdown is not available for this answer.</p>
+          </div>
+        )}
+        {detailFailed && !bars && (
+          <div className="card single-year-card">
+            <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
+          </div>
+        )}
+      </section>
 
       <SectionHeading
         title="Across earnings"

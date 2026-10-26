@@ -77,8 +77,8 @@ const LOADED = {
   // the fixture's carry none, so both say so (#104)
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
   pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
-  // The Incomes under current law heading shows once the outlook is read.
-  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
+  // The OBR forecast's heading shows once the outlook is read.
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Forecast changes" }),
   // Its Forecast vintages sub-tab (?sub=vintages): the chart card shows
   // once the forecasts file is read.
   vintages: (panel) => within(panel).findAllByRole("heading", { name: "Real household disposable income per head" }),
@@ -211,7 +211,9 @@ describe("each of the five tabs, Population impact's sub-tabs and Forecast vinta
         expect(
           await within(panel).findByText(/^Change in your net income$/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
-        await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
+        await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
+          timeout: 5000,
+        });
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
@@ -228,8 +230,8 @@ describe("each of the five tabs, Population impact's sub-tabs and Forecast vinta
     15000,
   );
 
-  // Living standards and Poverty also show the Pre-measures forecast's
-  // cards for the same thing, below the measures' effect, opened by
+  // Living standards and Poverty also show incomes and poverty under
+  // current law, below the measures' effect, opened by
   // address (?sub=living, ?sub=poverty) with the outlook read once
   it.each([
     ["living", "Living standards", "How the measures change incomes", "Incomes under current law", ["Incomes over time", "Growth across the distribution"]],
@@ -254,39 +256,19 @@ describe("each of the five tabs, Population impact's sub-tabs and Forecast vinta
     expect(consoleErrors).toEqual([]);
   }, 15000);
 
-  it("keeps the sub-tab's current-law cards apart from the Pre-measures forecast's", async () => {
+  it("reads the outlook once for the sub-tab and the Pre-measures forecast", async () => {
     window.history.replaceState({}, "", "/?sub=living");
     render(<App />);
     const living = await screen.findByRole("tabpanel", { name: "Living standards" });
-    const card = async (panel, name) =>
-      (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".ls-card");
-    const subTabCard = await card(living, /^Incomes over time$/);
-    // A range chosen here goes in its own parameters (?pop_ls_from)
-    fireEvent.click(within(subTabCard).getByRole("button", { name: /^Compare from:/ }));
-    fireEvent.click(within(subTabCard).getByRole("option", { name: "2029-30" }));
-    let params = new URLSearchParams(window.location.search);
-    expect(params.get("pop_ls_from")).toBe("2029");
-    expect(params.has("ls_from")).toBe(false);
-
-    // The Pre-measures forecast: same cards, its own default range, and
-    // the outlook not fetched again
+    await within(living).findByRole("heading", { level: 3, name: /^Incomes over time$/ }, { timeout: 5000 });
+    // The Pre-measures forecast: the OBR forecast only, the outlook not
+    // fetched again
     fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
     const outlook = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
-    const outlookCard = await card(outlook, /^Incomes over time$/);
-    expect(within(outlookCard).getByRole("button", { name: /^Compare from:/ })).not.toHaveTextContent("2029-30");
-    expect(within(subTabCard).getByRole("button", { name: /^Compare from:/, hidden: true })).toHaveTextContent("2029-30");
+    expect(await within(outlook).findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(within(outlook).queryByRole("heading", { name: "Incomes under current law" })).toBeNull();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
-    // Both mounted, no id twice
-    for (const id of ["living-incomes", "current-law-incomes"]) {
-      expect(document.querySelectorAll(`#${id}`)).toHaveLength(1);
-    }
-    // Its own range leaves the sub-tab's alone
-    fireEvent.click(within(outlookCard).getByRole("button", { name: /^Compare to:/ }));
-    fireEvent.click(within(outlookCard).getByRole("option", { name: "2030-31" }));
-    params = new URLSearchParams(window.location.search);
-    expect(params.get("ls_to")).toBe("2030");
-    expect(params.get("pop_ls_from")).toBe("2029");
-    expect(params.get("pop_ls_to")).toBe("2031");
+    expect(document.querySelectorAll("#current-law-incomes")).toHaveLength(1);
   }, 15000);
 
   it("fails the Household impact tab when the API URL is not set", async () => {
@@ -343,7 +325,7 @@ describe("each of the five tabs, Population impact's sub-tabs and Forecast vinta
     fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
     expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
-    await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
+    await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });

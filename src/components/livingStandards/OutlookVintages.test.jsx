@@ -52,8 +52,9 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
   expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
   // The link's panel is hidden now, so focus moves to the tab it opened
   expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveFocus();
-  expect(await screen.findByRole("alert")).toHaveTextContent(/Could not load outlook data/);
-  expect(address()).toEqual({ tab: "outlook", sub: "forecast" });
+  expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(/Could not load outlook data/);
+  // Forecast changes is the default sub-tab, so ?sub= goes
+  expect(address()).toEqual({ tab: "outlook" });
 
   // Back on Forecast vintages, the measure left open stays
   fireEvent.click(screen.getByRole("tab", { name: "Forecast vintages" }));
@@ -68,11 +69,11 @@ it("shows the forecast vintages when the outlook cannot be read, and links to Fo
 it("keeps a ?variable= a link brought until Forecast vintages is first opened, which opens that measure", async () => {
   stubFetch();
   // Forecast vintages is not mounted until it is opened, so nothing reads
-  // or clears ?variable= on Baseline outlook
+  // or clears ?variable= on Forecast changes
   window.history.replaceState({}, "", "/?tab=outlook&variable=psnb");
   render(<App />);
-  expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
-  expect(await screen.findByRole("alert")).toHaveTextContent(/Could not load outlook data/);
+  expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
+  expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(/Could not load outlook data/);
   expect(address()).toEqual({ tab: "outlook", variable: "psnb" });
 
   fireEvent.click(screen.getByRole("tab", { name: "Forecast vintages" }));

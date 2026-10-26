@@ -75,6 +75,20 @@ class GenerationReport:
     refused: dict[str, str] = field(default_factory=dict)
 
 
+def _columns(rows: list[dict], table: str) -> list[dict]:
+    """The rows cut to one table's columns. A row from before the poverty
+    and inequality measures (none of them) gives no poverty_inequality row;
+    one with only some of them is refused when the table is written."""
+    names = TABLES[table].column_names
+    if table == "poverty_inequality":
+        extra = set(names) - {"reform_id", "reform_name", "year"}
+        rows = [row for row in rows if extra & set(row)]
+    return [
+        {column: row[column] for column in names if column in row}
+        for row in rows
+    ]
+
+
 def result_tables(
     result: ReformResult, years: Optional[list[int]] = None
 ) -> dict[str, list[dict]]:
@@ -89,13 +103,12 @@ def result_tables(
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
-        # The flat metrics.csv also carries the poverty and inequality
-        # measures the charts choose between; a receipted artifact keeps its
-        # contracted columns (TABLES["metrics"]) until the contract adds them.
-        "metrics": [
-            {column: row[column] for column in TABLES["metrics"].column_names}
-            for row in result.metrics
-        ],
+        # The flat metrics.csv carries the poverty and inequality measures
+        # beside the headline ones; a receipted artifact splits them: the
+        # headline columns in metrics (TABLES["metrics"]), the rest in
+        # poverty_inequality, so older artifacts' metrics.csv stays valid.
+        "metrics": _columns(result.metrics, "metrics"),
+        "poverty_inequality": _columns(result.metrics, "poverty_inequality"),
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,
@@ -236,13 +249,53 @@ def _refuse_unscored_years(
         raise ReceiptUnavailable(subject, " ".join(gap.reason for gap in gaps))
 
 
+def _identity_data(identities) -> tuple:
+    """Identities as plain data, as a run carries them to where it runs.
+
+    policyengine attaches a re-check handle to each identity it computes, a
+    lambda local to the process, which cannot be pickled to a worker (#173).
+    """
+    return tuple(identity.model_dump(mode="json") for identity in identities)
+
+
+def _combined_run_identities(
+    combined: Reform,
+    ordered: list,
+    config: DataConfig,
+    revision,
+    uses_config,
+    member_revisions: Optional[dict] = None,
+):
+    """A combined run's (baseline, reform) identities, member records and
+    composition (``receipt.combined_identities``), each side bound with the
+    phase its combined Scenario runs in and each member read from the
+    manifest at the revision in ``member_revisions``."""
+    baseline = combined.baseline_scenario_for(config, uses_config)
+    return combined_identities(
+        ordered,
+        config,
+        revision,
+        reform_applied_before_data_load=(
+            combined.to_scenario().applied_before_data_load
+        ),
+        baseline_applied_before_data_load=(
+            baseline.applied_before_data_load
+            if baseline is not None
+            else False
+        ),
+        member_revisions=member_revisions,
+    )
+
+
 @dataclass
 class ArtifactRun:
     """One artifact's run: everything needed to make it, here or in a
     worker process (``--jobs``). The measure is carried as
     ``parallel.portable`` gives it; a combined run carries its members and
     is composed again where it runs, since a composed measure's modifiers
-    cannot be pickled."""
+    cannot be pickled. Its identities are carried as data
+    (:func:`_identity_data`) and computed again where it runs
+    (:func:`_run_identities`)."""
 
     reform: object
     key: str
@@ -262,6 +315,9 @@ class ArtifactRun:
     uses_config_baseline: bool = False
     modifier_templates: object = None
     combine_members: Optional[list] = None
+    # A combined run's members read from the manifest, by id, with the
+    # revision each is bound at (``receipt.approved_revision``).
+    member_revisions: Optional[dict] = None
 
 
 @dataclass
@@ -274,16 +330,64 @@ class ArtifactOutcome:
     progress: list = field(default_factory=list)
 
 
-def _run_reform(job: ArtifactRun) -> Reform:
+def _run_reform(job: ArtifactRun) -> tuple[Reform, Optional[list]]:
+    """The measure the run simulates, and a combined run's members in
+    application order (None for a single measure)."""
     from uk_budget_data.parallel import resolve_reform
 
     if job.combine_members is None:
-        return resolve_reform(job.reform)
+        return resolve_reform(job.reform), None
     from uk_budget_data.publication import combine
 
     ordered = [resolve_reform(member) for member in job.combine_members]
     combined = combine.combine_measures(ordered, job.config)
-    return combined.model_copy(update={"id": job.key})
+    return combined.model_copy(update={"id": job.key}), ordered
+
+
+def _run_identities(
+    job: ArtifactRun, reform: Reform, members: Optional[list]
+) -> tuple:
+    """The run's (baseline, reform) identities, computed where it runs.
+
+    The receipt builder re-checks each identity through its handle, to
+    refuse a modifier changed since the identity was computed; the handle
+    cannot travel (:func:`_identity_data`), so the run computes its own,
+    as the generation computed the ones it carries, and the receipt binds
+    these. A run whose identities differ from those it carries is refused:
+    the measure changed between the two.
+    """
+    if members is None:
+        live = _scenarios(
+            job.key,
+            lambda: measure_identities(reform, job.config, job.revision),
+        )
+    else:
+        live = _scenarios(
+            job.key,
+            lambda: _combined_run_identities(
+                reform,
+                members,
+                job.config,
+                job.revision,
+                job.uses_config_baseline,
+                member_revisions=job.member_revisions,
+            ),
+        )[:2]
+    differing = [
+        side
+        for side, computed, carried in zip(
+            ("baseline", "reform"), _identity_data(live), job.identities
+        )
+        if computed != carried
+    ]
+    if differing:
+        raise ReceiptUnavailable(
+            job.key,
+            f"the measure changed after its identity was computed: its "
+            f"{' and '.join(differing)} identity where it ran differs from "
+            "the one computed when the run was planned",
+        )
+    return live
 
 
 def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
@@ -308,9 +412,9 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
 
 def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     config = job.config
-    reform = _run_reform(job)
+    reform, members = _run_reform(job)
     key = job.key
-    baseline_identity, reform_identity = job.identities
+    baseline_identity, reform_identity = _run_identities(job, reform, members)
     baseline_scenario = _scenarios(
         key,
         lambda: reform.baseline_scenario_for(config, job.uses_config_baseline),
@@ -585,7 +689,7 @@ def generate_artifacts(
             ArtifactRun(
                 reform=portable(reform, runner),
                 key=reform.id,
-                identities=identities,
+                identities=_identity_data(identities),
                 members=None,
                 measure_ids=[reform.id],
                 uses_config_baseline=not reform.has_custom_baseline(),
@@ -623,31 +727,29 @@ def generate_artifacts(
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
             )
-            # Bind each side with the phase its combined Scenario runs in.
-            combined_baseline = combined.baseline_scenario_for(
-                config, uses_config
-            )
-            return combined, combined_identities(
-                ordered,
-                config,
-                revision,
-                reform_applied_before_data_load=(
-                    combined.to_scenario().applied_before_data_load
+            return (
+                combined,
+                revisions,
+                _combined_run_identities(
+                    combined,
+                    ordered,
+                    config,
+                    revision,
+                    uses_config,
+                    member_revisions=revisions,
                 ),
-                baseline_applied_before_data_load=(
-                    combined_baseline.applied_before_data_load
-                    if combined_baseline is not None
-                    else False
-                ),
-                member_revisions=revisions,
             )
 
         try:
-            combined, (
-                baseline_identity,
-                reform_identity,
-                records,
-                composition,
+            (
+                combined,
+                revisions,
+                (
+                    baseline_identity,
+                    reform_identity,
+                    records,
+                    composition,
+                ),
             ) = _scenarios(key, prepare)
             snapshot = {
                 member: written_outputs.get(member)
@@ -663,7 +765,9 @@ def generate_artifacts(
                     reform=None,
                     combine_members=[portable(m, runner) for m in ordered],
                     key=key,
-                    identities=(baseline_identity, reform_identity),
+                    identities=_identity_data(
+                        (baseline_identity, reform_identity)
+                    ),
                     members=records,
                     measure_ids=ids,
                     member_outputs=(
@@ -671,6 +775,7 @@ def generate_artifacts(
                     ),
                     composition=composition,
                     uses_config_baseline=uses_config,
+                    member_revisions=revisions,
                     modifier_templates=combined_templates_proof(
                         ordered, config, revision
                     ),

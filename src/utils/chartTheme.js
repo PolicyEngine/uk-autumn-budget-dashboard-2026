@@ -86,7 +86,7 @@ export const CHART_COLOURS = {
  * measures take its ramp in order of size (largest darkest), so a stack,
  * its legend and its tooltip shade monotonically. The JS mirror of the
  * --ramp-* tokens in src/app/globals.css (chartTheme.test.js keeps the two
- * equal); policyConfig.js assigns them to the measures.
+ * equal). The measures' own colours are the catalogue's (MEASURE_PALETTES).
  */
 export const POLICY_RAMPS = {
   // Amber 900, 700, 500
@@ -96,6 +96,19 @@ export const POLICY_RAMPS = {
   // lightest is 1.75:1)
   cost: ["#0D4359", "#016768", "#088075", "#00997F", "#28B084", "#4AC685", "#75D987"],
 };
+
+/**
+ * The palettes the measure catalogue (measureCatalogue.jsx, #104) picks each
+ * published measure's colour from, by its id and budgetary direction, so
+ * adding or reordering measures never changes an existing measure's colour.
+ * Revenue-raising measures take ambers, those that cost revenue teals, and a
+ * measure with no published costing the no-change grey.
+ */
+export const MEASURE_PALETTES = Object.freeze({
+  cost: Object.freeze(["#115E59", "#2DD4BF", "#0F766E", "#5EEAD4", "#0D9488", "#99F6E4", "#14B8A6"]),
+  revenue: Object.freeze(["#78350F", "#B45309", "#F59E0B"]),
+  neutral: CHART_COLOURS.noChange,
+});
 
 /**
  * Income groups from the lowest-income to the highest-income end: a
@@ -153,8 +166,14 @@ export const BEFORE_DASH = "6 4";
 /** A reference line or series (all people, all ages, "You"): one dashed style */
 export const REFERENCE_DASH = "4 3";
 
+/**
+ * The selected year (or group) is drawn at full strength, the others at
+ * this opacity, in the same colour: a tint, not a different colour.
+ */
+export const UNSELECTED_OPACITY = 0.5;
+
 /** The hover cursor behind a bar or row, on every chart */
-export const HOVER_CURSOR = { fill: "#EEF6F6" };
+export const HOVER_CURSOR = { fill: CHART_COLOURS.hover };
 
 export const GRID_PROPS = {
   vertical: false,
@@ -221,10 +240,10 @@ export function legendLabelStyle(narrow) {
 }
 
 export const TOOLTIP_CONTENT_STYLE = {
-  background: "white",
+  background: CHART_COLOURS.surface,
   border: `1px solid ${CHART_COLOURS.grid}`,
   borderRadius: "6px",
-  boxShadow: "0 4px 12px rgba(17, 24, 39, 0.08)",
+  boxShadow: "0 4px 12px var(--shadow-soft)",
   fontSize: "13px",
 };
 

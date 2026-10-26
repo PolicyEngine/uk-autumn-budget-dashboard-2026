@@ -263,7 +263,7 @@
 .select-input:focus {
   outline: none;
   border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .wizard-fields .control-group.is-check label {
@@ -1114,4 +1114,25 @@
 .chart-view-switch {
   display: flex;
   margin: 0 0 12px;
+}
+
+/* Under the waterfall: policies under £1, notes, and those with no effect */
+.result-card-notes {
+  padding: 0 28px 16px;
+}
+
+.result-card-notes .single-year-quiet {
+  margin: 0 0 8px;
+}
+
+.waterfall-pending,
+.waterfall-no-effect {
+  margin: 4px 0 0;
+}
+
+@media (max-width: 600px) {
+  .result-card-notes {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

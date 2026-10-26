@@ -18,7 +18,7 @@ The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-ta
 |---|---|
 | Population impact | The selected measures' effects, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** (results by constituency, the household scatter, example households), **Young people** (results by age), **Pensioners** (people at or over State Pension age, from the same results by age), **Living standards** (change by income decile, and inequality), **Poverty** (change in the poverty rate) and **Public finances** (revenue impact, and the OBR comparison once published). |
 | Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Pre-measures forecast | The outlook before the Budget's measures (`?tab=outlook`; old `?tab=living` links still open it). Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series), Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance) and Forecast vintages (`?sub=vintages`: the OBR's forecasts since June 2010 beside the ONS outturn, for 16 economy and public finance measures, with the measure in `?variable=`; no PolicyEngine figures). Sub-tabs: **Baseline outlook**, **Forecast changes** and **Forecast vintages**. |
+| Pre-measures forecast | The OBR's forecasts before the Budget's measures (`?tab=outlook`; old `?tab=living` links still open it). Sub-tabs: **Forecast changes** (the OBR economic forecast behind the current-law baseline, as calendar-year growth; while no Budget publication verifies, incomes and poverty under current law follow it) and **Forecast vintages** (`?sub=vintages`: the OBR's forecasts since June 2010 beside the ONS outturn, for 16 economy and public finance measures, with the measure in `?variable=`; no PolicyEngine figures). An old Baseline outlook link (`?sub=baseline`) opens Population impact's Living standards. |
 | Policies | Every published measure in one place: its published name and description, and, where [`src/utils/policyDetails.js`](src/utils/policyDetails.js) has an entry for its id, when it starts and is in force, its type, and its main modelling assumption and source behind "Details". Population impact links here rather than repeating it. |
 | Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
@@ -173,7 +173,7 @@ Settings, service limits and fallbacks are under "Production setup" in [`docs/bu
 
 ## Contributing
 
-Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens. Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
+Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens ([`docs/COLOURS.md`](docs/COLOURS.md), enforced by `src/colourGuard.test.js` and ESLint). Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
 
 ## Licence
 

@@ -294,7 +294,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
                 }}
               />
             )}
-            {isChange && <ReferenceLine y={0} stroke={CHART_COLOURS.text} />}
+            {isChange && <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} />}
             <Line
               type="stepAfter"
               dataKey={isChange ? "change" : view}
