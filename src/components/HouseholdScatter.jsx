@@ -59,12 +59,15 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 const STACKED_HEIGHT = 400;
 
 // The dots' colours, as colourFor draws them; the key under the plot
-// carries them. Groups beyond the axis sit at its edge, coloured alike
+// carries them. Groups beyond the axis sit at its edge, coloured alike.
+// Only gain and loss are keyed (Vahid, 26 October): a group with no
+// change, (−£1, £1), is drawn as an unfilled ring on £0 and its tooltip
+// says "No change".
 const KEY = [
   { label: "Gain", color: CHART_COLOURS.gain },
   { label: "Loss", color: CHART_COLOURS.loss },
-  { label: "Little change", color: CHART_COLOURS.noChange },
 ];
+const isNoChange = (dot) => colourFor(dot) === CHART_COLOURS.noChange;
 
 const number = (value) =>
   new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
@@ -153,10 +156,11 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             cx={cx}
             cy={cy}
             r={DOT_RADIUS}
-            fill={colourFor(dot)}
+            fill={isNoChange(dot) ? "none" : colourFor(dot)}
             fillOpacity={DOT_OPACITY}
             opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
-            strokeWidth={0}
+            stroke={isNoChange(dot) ? CHART_COLOURS.noChange : undefined}
+            strokeWidth={isNoChange(dot) ? 1 : 0}
             onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
           />
         );
