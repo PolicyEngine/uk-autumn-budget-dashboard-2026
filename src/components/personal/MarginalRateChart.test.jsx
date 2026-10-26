@@ -74,7 +74,8 @@ describe("MarginalRateChart", () => {
     expect(screen.queryByRole("button", { name: "About Income tax" })).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "At £110,000 your marginal tax rate is 62% before and 62% after: income tax 40%, PA taper 20%, National Insurance 2%.",
+        // Then, on its own line, the rate as money (keepSentence)
+        /^At £110,000 your marginal tax rate is 62% before and 62% after: income tax 40%, PA taper 20%, National Insurance 2%\.Of your next/,
       ),
     ).toBeInTheDocument();
   });
@@ -122,6 +123,6 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep(null)} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("After the selected policies")).toBeInTheDocument();
     expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
-    expect(screen.getByText("At £110,000 your marginal tax rate is 62% before and 62% after.")).toBeInTheDocument();
+    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62% before and 62% after\.Of your next/)).toBeInTheDocument();
   });
 });

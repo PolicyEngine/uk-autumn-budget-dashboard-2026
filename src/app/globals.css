@@ -165,13 +165,13 @@ code {
   --ramp-raise-1: #78350f;
   --ramp-raise-2: #b45309;
   --ramp-raise-3: #f59e0b;
-  --ramp-cost-1: #115e59;
-  --ramp-cost-2: #0f766e;
-  --ramp-cost-3: #0d9488;
-  --ramp-cost-4: #14b8a6;
-  --ramp-cost-5: #2dd4bf;
-  --ramp-cost-6: #5eead4;
-  --ramp-cost-7: #99f6e4;
+  --ramp-cost-1: #0d4359;
+  --ramp-cost-2: #016768;
+  --ramp-cost-3: #088075;
+  --ramp-cost-4: #00997f;
+  --ramp-cost-5: #28b084;
+  --ramp-cost-6: #4ac685;
+  --ramp-cost-7: #75d987;
   /* Income groups, lowest to highest income: amber through a grey
      midpoint to teal (chartTheme.js INCOME_RAMP) */
   --income-ramp-1: #8a3a0c;

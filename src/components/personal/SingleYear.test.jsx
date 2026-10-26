@@ -6,6 +6,7 @@ import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { PRESET_POLICIES, presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 
@@ -276,6 +277,9 @@ describe("the household calculation, from the fixture", () => {
     expect(terms).toContain("Change by policy");
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
+    // The marginal rate's known limits
+    expect(within(panel).getByText(/^Known limits: Council Tax Reduction/)).toBeInTheDocument();
+    expect(within(panel).getByText(/policyengine-uk 2\.134\.3 fixes this/)).toBeInTheDocument();
   });
 
   it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
@@ -308,7 +312,11 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
     expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
-    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
+    // The rate, then on a line of its own the rate as money, said once
+    // when before and after round the same
+    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68% before and 68% after\./);
+    expect(sentence).toHaveTextContent(/after\.Of your next £1,000 of earnings, you keep £324\.$/);
+    expect(sentence.querySelector("br")).not.toBeNull();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
@@ -758,5 +766,27 @@ describe("the fixture", () => {
       ].sort(),
     );
     expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});
+
+describe("keepSentence: the marginal rate as money", () => {
+  it("keeps of the next £1,000, before and after, once when they round the same", () => {
+    expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 before and keep £350 after.");
+  });
+
+  it("says a loss as a loss", () => {
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
+  });
+
+  it("turns to the next £100 at a cliff, where £1,000 would overstate it", () => {
+    // Net income falls £2,140 over the next £100 before, £32 kept after
+    expect(keepSentence(22.4, 0.68)).toBe("Of your next £100 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(22.4, 22.4)).toBe("Of your next £100 of earnings, you would lose £2,140.");
+  });
+
+  it("is null without both rates", () => {
+    expect(keepSentence(null, 0.4)).toBeNull();
+    expect(keepSentence(0.4, undefined)).toBeNull();
   });
 });

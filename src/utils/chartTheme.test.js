@@ -63,6 +63,19 @@ describe("POLICY_RAMPS", () => {
       expect(levels).toEqual([...levels].sort((a, b) => a - b));
     }
   });
+
+  it("keeps the lightest cost step visible on a white card (a floor of 1.7:1, not 3:1: seven steps do not fit)", async () => {
+    const { POLICY_RAMPS } = await import("./chartTheme");
+    const linear = (channel) => {
+      const c = channel / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const contrast = (hex) => {
+      const [r, g, b] = [1, 3, 5].map((i) => linear(parseInt(hex.slice(i, i + 2), 16)));
+      return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
+    };
+    expect(contrast(POLICY_RAMPS.cost.at(-1))).toBeGreaterThanOrEqual(1.7);
+  });
 });
 
 describe("INCOME_RAMP", () => {
