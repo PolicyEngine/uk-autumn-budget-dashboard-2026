@@ -27,7 +27,9 @@ otherwise it asks Cloud Run for them.
 After a deploy, send one request (any household) and wait for it: the
 first containers take the memory snapshots (about two minutes), and later
 cold starts restore them. A deploy's change-over leaves containers of the
-previous version answering for a while; ``fan_out`` takes their answers too.
+previous version answering for a while; ``fan_out`` refuses a request any
+of whose runs they answered, and the page asks Cloud Run for that part
+(``household_runs``).
 
 A test app (same code, no warm schedule, scales to zero):
 
@@ -88,6 +90,11 @@ DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_CPU": str(CPU),
 }
 
+from uk_budget_data.household_runs import (  # noqa: E402
+    OtherBuildError,
+    kept_results,
+    run_answer,
+)
 from uk_budget_data.household_warm import warm_target  # noqa: E402
 from uk_budget_data.runtime_identity import (  # noqa: E402
     checkout_commit,
@@ -215,40 +222,38 @@ class Household:
 
         started = time.perf_counter()
         result = hi.run_scenario(*job)
-        # The run's own time and container, for fan_out's log line; fan_out
-        # takes them off, so the answer is run_scenario's alone.
-        return {
-            "result": result,
-            "seconds": time.perf_counter() - started,
-            "container": os.environ.get("MODAL_TASK_ID", ""),
-        }
+        # The run's own time and container, for fan_out's log line, and the
+        # container's build, which fan_out checks; it takes them all off, so
+        # the answer is run_scenario's alone.
+        return run_answer(
+            result,
+            time.perf_counter() - started,
+            os.environ.get("MODAL_TASK_ID", ""),
+            os.environ.get("GIT_SHA") or None,
+        )
 
 
 def fan_out(jobs: list) -> list:
-    """Each job in its own ``Household`` container, at once, in order."""
+    """Each job in its own ``Household`` container, at once, in order.
+
+    Raises:
+        OtherBuildError: when a container of another build (a deploy's
+            change-over) answered any run; the page then asks Cloud Run.
+    """
     started = time.perf_counter()
-    # A container still on the previous deploy answers with the bare
-    # result: take either, so a deploy's change-over drops no request.
-    answers = [
-        (
-            a
-            if isinstance(a, dict) and "seconds" in a and "result" in a
-            else {
-                "result": a,
-                "seconds": float("nan"),
-                "container": "previous",
-            }
+    try:
+        results, detail = kept_results(
+            list(Household().run.map(jobs)),
+            os.environ.get("GIT_SHA") or None,
         )
-        for a in Household().run.map(jobs)
-    ]
-    runs = ", ".join(f"{a['seconds']:.1f}" for a in answers)
-    containers = len({a["container"] for a in answers})
+    except OtherBuildError as error:
+        print(f"household fan-out refused: {error}")
+        raise
     print(
         f"household fan-out: {len(jobs)} runs in "
-        f"{time.perf_counter() - started:.1f} s on {containers} containers "
-        f"(each run, s: {runs})"
+        f"{time.perf_counter() - started:.1f} s {detail}"
     )
-    return [a["result"] for a in answers]
+    return results
 
 
 @app.cls(
