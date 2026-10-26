@@ -102,9 +102,10 @@ function MethodSection({ id, title, summary, details, children, detailsLabel = "
 }
 
 /** A link to another view (at one of its sub-tabs), switched to in place. */
-function ViewLink({ tab, sub, hash, onShowTab, children }) {
+function ViewLink({ tab, sub, hash, onShowTab, className, children }) {
   return (
     <a
+      className={className}
       href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
@@ -170,7 +171,7 @@ function MethodologyTab({ onShowTab }) {
           title="At a glance"
           summary={
             <p>
-              We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink> on a
+              We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
               representative survey of UK households, with and without each measure, and weight
               the difference up to the whole country.
             </p>
@@ -237,22 +238,17 @@ function MethodologyTab({ onShowTab }) {
           id={METHOD_SECTIONS.model}
           title="Model and measures"
           summary={
-            <>
-              <p>
-                <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink> works out each
-                household&apos;s taxes, benefits and <Term id="netIncome">net income</Term> under
-                current law, then again with a measure; the difference between the two runs is the
-                measure&apos;s effect. The estimates are <Term id="static">static</Term>: households
-                do not change their behaviour in response.
-              </p>
-              <p className="method-pointer">
-                What each measure does and how it is modelled is on{" "}
-                <ViewLink tab="policies" onShowTab={onShowTab}>
-                  Policies
-                  <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-                </ViewLink>
-              </p>
-            </>
+            <p>
+              <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
+              household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
+              current law, then again with a measure; the difference is the measure&apos;s effect.
+              Estimates are <Term id="static">static</Term>: households do not change their
+              behaviour. What each measure does and how it is modelled is on{" "}
+              <ViewLink tab="policies" onShowTab={onShowTab} className="method-pointer">
+                Policies
+                <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+              </ViewLink>
+            </p>
           }
           details={
             <>
@@ -262,7 +258,7 @@ function MethodologyTab({ onShowTab }) {
                     "Model",
                     <>
                       PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), run
-                      through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink> on
+                      through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                       the <SectionLink id={METHOD_SECTIONS.data}>dataset above</SectionLink>.
                     </>,
                   ],
@@ -276,8 +272,8 @@ function MethodologyTab({ onShowTab }) {
                     "Prices",
                     <>
                       <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
-                      <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink> figures
-                      are in <Term id="real">cash terms</Term> for the year shown, not adjusted for
+                      <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink>{" "}figures
+                      are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
                       inflation.
                     </>,
                   ],
@@ -314,11 +310,11 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <p>
               The national charts on{" "}
-              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> add up
+              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}add up
               every household&apos;s change with its weight: the{" "}
-              <ViewLink tab="dashboard" sub="finances" onShowTab={onShowTab}>revenue chart</ViewLink> as
+              <ViewLink tab="dashboard" sub="finances" onShowTab={onShowTab}>revenue chart</ViewLink>{" "}as
               the change in the government&apos;s balance, the{" "}
-              <ViewLink tab="dashboard" sub="all" onShowTab={onShowTab}>decile charts</ViewLink> by
+              <ViewLink tab="dashboard" sub="all" onShowTab={onShowTab}>decile charts</ViewLink>{" "}by
               income group, and the household scatter for the spread behind the averages. Counts
               are rounded and no household is ever shown on its own.
             </p>
@@ -368,7 +364,7 @@ function MethodologyTab({ onShowTab }) {
                       value: "Ten groups of equal numbers of people, by household income.",
                       more: [
                         <>
-                          Ranked by baseline <Term id="equivalised">equivalised</Term> household net
+                          Ranked by baseline <Term id="equivalised">equivalised</Term>{" "}household net
                           income <Term id="housingCosts">before housing costs</Term> (the{" "}
                           <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
                         </>,
@@ -390,7 +386,7 @@ function MethodologyTab({ onShowTab }) {
                       value: (
                         <>
                           The share of people in households below the{" "}
-                          <Term id="absolutePoverty">absolute poverty</Term> line before housing costs
+                          <Term id="absolutePoverty">absolute poverty</Term>{" "}line before housing costs
                           (60% of the 2024-25 <Term id="median">median</Term>, held in real terms), with
                           and without the policies.
                         </>
@@ -680,7 +676,7 @@ function MethodologyTab({ onShowTab }) {
                   Each measure is also simulated on its own. Where several are selected, the
                   revenue, decile and age charts add up their separate effects, so they leave out
                   interactions between measures (<Term id="ownRuns">measures run on their own</Term>);
-                  the <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink> and the
+                  the <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
                   shares better and worse off come from a run of the whole selection, so they include them, and show
                   nothing for a selection with no such run.
                 </Callout>
