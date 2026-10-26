@@ -121,12 +121,15 @@ export function fromIndex(series, base) {
   return out;
 }
 
-/** % change on `lag` periods earlier, where both values exist. */
+/**
+ * % change on `lag` periods earlier, where both values exist and the
+ * earlier is above zero (a change on zero or less has no meaning as a %).
+ */
 export function pctChange(series, lag) {
   const out = new Map();
   for (const [t, v] of series) {
     const prior = series.get(t - lag);
-    if (prior) out.set(t, (v / prior - 1) * 100);
+    if (prior > 0) out.set(t, (v / prior - 1) * 100);
   }
   return out;
 }

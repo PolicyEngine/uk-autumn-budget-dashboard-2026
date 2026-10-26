@@ -75,8 +75,9 @@ export function inUnit(variable, unit, levels, { annual = false, start } = {}) {
     return spec.annualise && !annual ? map((s) => annualise(s)) : map((s) => s);
   }
   if (unit === "index") {
+    // An index of a value that is not above zero would turn the line over
     const base = outturn.get(start);
-    if (!base) return null;
+    if (!(base > 0)) return null;
     return map((s) => toIndex(s, base));
   }
   // A rate or share (unemployment, debt as a share of GDP) is shown as
@@ -109,13 +110,14 @@ export function formatterFor(variable, unit, measure) {
 
 /**
  * Round y-axis ticks over [lo, hi]: about five steps of 1, 2, 2.5 or 5 x
- * 10^n. With `zero`, 0 is kept inside the axis.
+ * 10^n. With `zero`, 0 is kept inside the axis. Null where no axis can be
+ * stepped over them (an end not finite, or a span too large to hold),
+ * never an axis that does not cover them.
  */
 export function niceAxis(lo, hi, { zero = false } = {}) {
   let a = zero ? Math.min(0, lo) : lo;
   let b = zero ? Math.max(0, hi) : hi;
-  const fallback = { domain: [0, 1], ticks: [0, 0.2, 0.4, 0.6, 0.8, 1], step: 0.2 };
-  if (!(Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(b - a)) || a > b) return fallback;
+  if (!(Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(b - a)) || a > b) return null;
   // A span too small to step through (or none) is widened around it
   if (b - a <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b))) {
     const pad = Math.max(Math.abs(a), Math.abs(b)) * 0.05 || 1;
@@ -125,7 +127,7 @@ export function niceAxis(lo, hi, { zero = false } = {}) {
   const raw = (b - a) / 5;
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  if (!(step > 0 && Number.isFinite(step))) return fallback;
+  if (!(step > 0 && Number.isFinite(step))) return null;
   // Ticks are counted in whole steps, so every one is a new value and the
   // count is bounded: a step at least a fifth of the span gives at most
   // seven, and the rounding fixes below add at most one at each end
@@ -183,6 +185,27 @@ export function pointsIn(points, rows) {
   return points.filter((p) => p.x >= first && p.x <= last);
 }
 
+// The largest value a view draws, in its unit. The file's own figures are
+// far below it (load.js refuses any above MAX_VALUE), but an index of a
+// small base or a % change on a small value can be far larger: such a line
+// is not drawn, so every axis over a view's values can be stepped
+export const DRAW_LIMIT = 1e12;
+
+/**
+ * Whether a series can be drawn as a line: at least two values, one
+ * period after another with none missing between (a value with no
+ * neighbour would be drawn as nothing), every one finite and within
+ * DRAW_LIMIT.
+ */
+export function drawable(series) {
+  const periods = [...series.keys()].sort((a, b) => a - b);
+  return (
+    periods.length >= 2 &&
+    periods.every((t, i) => i === 0 || t === periods[i - 1] + 1) &&
+    [...series.values()].every((v) => Number.isFinite(v) && Math.abs(v) <= DRAW_LIMIT)
+  );
+}
+
 export const OUTTURN_KEY = "outturn";
 export const vintageKey = (id) => `v_${id}`;
 
@@ -205,24 +228,21 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
   const start = periodIndex(startKey, frequency);
   const end = periodIndex(endKey, frequency);
   const transformed = inUnit(variable, unit, levels, { annual: quarterlyAnnual, start });
-  if (!transformed) return { unavailable: "There is no outturn for the start of this parliament, so no index can be drawn." };
+  if (!transformed) return { unavailable: "There is no outturn above zero at the start of this parliament, so no index can be drawn." };
   // The newest forecast in the file is the one drawn bold and labelled at
   // the end: if it cannot be drawn, no older one takes its place
   const newestLabel = measure.vintages[measure.vintages.length - 1].label;
-  // Each series is drawn as a line, so it needs two points; a value that
-  // is not finite (a sum too large to hold) is no point. A forecast with
-  // fewer in this unit (a % change needs the period a year before; one
-  // that stops at its anchor has only that) cannot be drawn either
-  const finite = (series) => new Map([...series].filter(([, v]) => Number.isFinite(v)));
-  const drawable = (series) => series.size >= 2;
-  const outturn = finite(transformed.outturn);
-  const forecasts = transformed.vintages.map((v) => ({ ...v, values: finite(v.values) }));
+  // Each series is drawn whole as a line or not at all (drawable): a
+  // forecast that cannot be in this unit (a % change needs the period a
+  // year before; one that stops at its anchor has only that) is listed
+  // as undrawn, never drawn in part
+  const forecasts = transformed.vintages;
   const undrawn = [...levels.undrawn, ...forecasts.filter((v) => !drawable(v.values)).map((v) => v.label)];
-  const shown = { outturn, vintages: forecasts.filter((v) => drawable(v.values)) };
+  const shown = { outturn: transformed.outturn, vintages: forecasts.filter((v) => drawable(v.values)) };
   if (undrawn.includes(newestLabel) || !shown.vintages.length) {
     return { unavailable: `The ${newestLabel} forecast of this measure cannot be drawn in this unit.` };
   }
-  if (!drawable(shown.outturn)) return { unavailable: "There is too little outturn of this measure to draw in this unit." };
+  if (!drawable(shown.outturn)) return { unavailable: "The outturn of this measure cannot be drawn in this unit." };
 
   const newest = shown.vintages[shown.vintages.length - 1];
   const drawn = showPast ? shown.vintages : [newest];
@@ -252,6 +272,12 @@ export function buildView(data, variable, { unit, annual = false, showPast = tru
     measure,
     unit,
     spec,
+    // What the unit does to the figures (notes say it): none where they
+    // are shown as published
+    shownAs: [
+      quarterlyAnnual ? "annual" : unit === "level" && spec.annualise ? "annualised" : null,
+      unit === "index" ? "index" : unit === "pct" && spec.transform === "growth" ? "growth" : null,
+    ].filter(Boolean),
     // An index names its base period: the start of the parliament
     axisLabel: unit === "index" ? `Index (${periodLabel(start, frequency)} = 100)` : spec.axis,
     format: formatterFor(variable, unit, measure),

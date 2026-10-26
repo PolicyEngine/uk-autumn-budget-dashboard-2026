@@ -1,9 +1,19 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { NEWEST_SHOWN, forecastVintagesProblem } from "./load";
-import { periodIndex, toSeries } from "./transforms";
-import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, formatterFor, niceAxis, stepDecimals } from "./view";
+import { MAX_VALUE, NEWEST_SHOWN, earliestForecast, forecastVintagesProblem, launchPeriod } from "./load";
+import { pctChange, periodIndex, toSeries } from "./transforms";
+import {
+  DRAW_LIMIT,
+  OUTTURN_KEY,
+  UNIT_ORDER,
+  buildView,
+  checkSentence,
+  drawable,
+  formatterFor,
+  niceAxis,
+  stepDecimals,
+} from "./view";
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
 const variable = (id) => DATA.variables.find((v) => v.id === id);
@@ -70,8 +80,8 @@ describe("the committed file", () => {
     ["decimals of at least 0", (d) => (byId(d, "psnb").level.decimals = -1), /decimals/],
     ["decimals of at most 6", (d) => (byId(d, "psnb").level.decimals = 7), /decimals/],
     ["whole decimals", (d) => (byId(d, "psnb").level.decimals = 1.5), /decimals/],
-    ["a launch that is a period", (d) => (byId(d, "rhdi_per_person").level.vintages[0].launch = "2009Q5"), /date/],
-    ["a launch written as the data writes it", (d) => (byId(d, "psnd").level.vintages[0].launch = "2009-99"), /date/],
+    ["a launch that is a period", (d) => (byId(d, "rhdi_per_person").level.vintages[0].launch = "2009Q5"), /launch/],
+    ["a launch written as the data writes it", (d) => (byId(d, "psnd").level.vintages[0].launch = "2009-99"), /launch/],
     ["a month in the year", (d) => (byId(d, "cpi").level.vintages[0].month = 0), /date/],
     ["an outturn period that is a period", (d) => (byId(d, "cpi").level.outturn.garbage = 1), /outturn/],
     ["a forecast's period that is a period", (d) => (byId(d, "cpi").level.vintages[0].values["2011.0"] = 1), /values/],
@@ -85,6 +95,56 @@ describe("the committed file", () => {
       },
       /parliament/,
     ],
+    // Found by the third review: these passed, then changed a figure or a
+    // sentence, or drew nothing
+    ["a default unit that is its own unit's name, not a list", (d) => (byId(d, "rhdi_per_person").default_unit = ["level"]), /default unit/],
+    ["a default unit it does not inherit", (d) => (byId(d, "rhdi_per_person").default_unit = "toString"), /default unit/],
+    ["a default unit that is no prototype", (d) => (byId(d, "rhdi_per_person").default_unit = "__proto__"), /default unit/],
+    ["a default unit it offers", (d) => (byId(d, "cpi").default_unit = "level"), /default unit/],
+    ["a check's share flag that is true or false", (d) => (byId(d, "real_gdp").level.check.tolerance_is_share = "false"), /check/],
+    [
+      "a forecast with no gap in its periods",
+      (d) => {
+        const newest = byId(d, "psnd").level.vintages.at(-1);
+        newest.values = { "2024-25": newest.values["2024-25"], "2026-27": newest.values["2026-27"] };
+      },
+      /values/,
+    ],
+    ["an outturn with no gap in its periods", (d) => delete byId(d, "real_gdp").level.outturn["2009"], /outturn/],
+    [
+      "values a sum can hold",
+      (d) => {
+        const outturn = byId(d, "unemployment").level.outturn;
+        Object.keys(outturn).forEach((k, i) => (outturn[k] = i % 2 ? -1e308 : 1e308));
+      },
+      /outturn/,
+    ],
+    ["a value no larger than any figure the file holds", (d) => (byId(d, "cpi").level.outturn["2020"] = MAX_VALUE * 2), /outturn/],
+    ["an annual rate only for a quarterly measure's £", (d) => (byId(d, "real_gdp").units.level.annualise = true), /transform/],
+    ["an annual-rate flag that is true or false", (d) => (byId(d, "rhdi_per_person").units.level.annualise = "true"), /transform/],
+    ["a % change only in %", (d) => (byId(d, "real_gdp").units.level.transform = "growth"), /transform/],
+    ["a check's largest gap within its tolerance", (d) => (byId(d, "real_gdp").level.check.largest_gap = 1.5), /beyond its tolerance/],
+    ["a check's largest gap within its share", (d) => (byId(d, "nominal_gdp").level.check.largest_gap = 200), /beyond its tolerance/],
+    ["check periods in the outturn", (d) => (byId(d, "real_gdp").level.check.periods[0] = "1900"), /check/],
+    ["check periods in order", (d) => byId(d, "real_gdp").level.check.periods.reverse(), /check/],
+    ["a forecast named for its month", (d) => (byId(d, "real_gdp").level.vintages[0].label = "July 2010"), /named for its date/],
+    ["a launch period by the launch rules", (d) => (byId(d, "real_gdp").level.vintages[0].launch = 2010), /launch rules/],
+    ["a forecast that starts at its launch", (d) => delete byId(d, "rhdi_per_person").level.vintages[0].values["2016Q2"], /start at its launch/],
+    ["a parliament that ends after it starts", (d) => (d.meta.parliament.end.fiscal = "2023-24"), /parliament/],
+    ["a source address on the web", (d) => (d.meta.sources.obr[0].url = "javascript:alert(1)"), /OBR sources/],
+    ["a checksum that is one", (d) => (d.meta.sources.ons[0].sha256 = "garbage"), /ONS sources/],
+    ["each OBR source once", (d) => (d.meta.sources.obr[1].id = d.meta.sources.obr[0].id), /OBR sources/],
+    ["a variable id fit for an address", (d) => (d.variables[0].id = "Real GDP"), /label or frequency/],
+    // Found by the field audit and the schema sweep: a kind or a unit's
+    // measure that its figures contradict
+    ["growth rates marked as growth", (d) => (byId(d, "real_gdp").level.kind = "level"), /do not read as levels/],
+    ["levels marked as levels", (d) => (byId(d, "employment").level.kind = "growth"), /do not read as growth rates/],
+    ["an index marked as an index", (d) => (byId(d, "rhdi_per_person").level.kind = "growth"), /do not read as growth rates/],
+    ["an index above zero", (d) => (byId(d, "real_gdp").level.kind = "index"), /launch period|do not read as an index/],
+    ["a level that starts near the outturn", (d) => (byId(d, "nominal_gdp").level.vintages[0].values["2009-10"] *= 3), /do not read as levels/],
+    ["a growth rate under 100%", (d) => (byId(d, "cpi").level.vintages.at(-1).values["2027"] = 150), /do not read as growth rates/],
+    ["a % shown as published that reads a measure in %", (d) => (byId(d, "psnb").units.pct.from = "level"), /reads a measure in other units/],
+    ["£ that reads no measure in %", (d) => (byId(d, "psnb").units.level.from = "share"), /reads a measure in other units/],
   ])("is refused without %s", (_, mutate, problem) => {
     const data = clone();
     mutate(data);
@@ -189,8 +249,13 @@ describe("a forecast that cannot be drawn", () => {
         const variable = data.variables.find((x) => x.id === v.id);
         const measure = variable[variable.units[unit].from];
         const newest = measure.vintages[measure.vintages.length - 1];
+        // Periods cut from its start or its end: one taken from between
+        // would leave a gap, which the loader refuses
         const keys = Object.keys(newest.values);
-        delete newest.values[keys[which % keys.length]];
+        const count = 1 + ((which >> 1) % (keys.length - 1));
+        const cut = which % 2 ? keys.slice(0, count) : keys.slice(-count);
+        for (const key of cut) delete newest.values[key];
+        if (forecastVintagesProblem(data) !== null) return;
         const view = buildView(data, variable, { unit, annual });
         if (view.unavailable) expect(view.unavailable).toMatch(/March 2026 forecast/);
         else expect(view.newest.label).toBe("March 2026");
@@ -223,10 +288,15 @@ describe("a forecast that cannot be drawn", () => {
     );
   });
 
+  // The newest's figures cut back to the latest outturn (Q2 2026), where
+  // it is re-anchored: a line of one point
+  const cutAfter = (values, last) => Object.fromEntries(Object.entries(values).filter(([k]) => periodIndex(k, "quarterly") <= last));
+
   it("is unavailable as the newest when it stops at its anchor", () => {
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
-    delete v.level.vintages.at(-1).values["2026Q3"];
+    const newest = v.level.vintages.at(-1);
+    newest.values = cutAfter(newest.values, periodIndex("2026Q2", "quarterly"));
     expect(forecastVintagesProblem(data)).toBeNull();
     for (const showPast of [true, false]) {
       expect(buildView(data, v, { unit: "level", showPast }).unavailable).toBe(
@@ -235,19 +305,27 @@ describe("a forecast that cannot be drawn", () => {
     }
   });
 
-  it("leaves a view whose sums are too large to hold unavailable, never an empty chart", () => {
+  // Found by the third review: values the file may hold whose index or %
+  // change no axis can step over (an index of a tiny base) are not drawn
+  it("leaves a view whose values are too large to draw unavailable, never on a 0 to 1 axis", () => {
+    // An index forecast (its kind says nothing of the outturn's size), so
+    // the loader takes the file
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
-    for (const key of Object.keys(v.level.outturn)) v.level.outturn[key] = 1e308;
+    v.level.outturn["2024Q2"] = 1e-9;
     expect(forecastVintagesProblem(data)).toBeNull();
-    const view = buildView(data, v, { unit: "level" });
-    expect(view.unavailable).toMatch(/cannot be drawn|too little outturn/);
+    for (const unit of ["index", "pct"]) {
+      expect(buildView(data, v, { unit }).unavailable).toMatch(/^The (March 2026 forecast|outturn) of this measure cannot be drawn in this unit\.$/);
+    }
+    // In £ every value is the file's own, so the view is drawn
+    expect(buildView(data, v, { unit: "level" }).unavailable).toBeNull();
   });
 
-  it("makes the view unavailable when it is the newest", () => {
+  it("makes the view unavailable when its figures stop before the latest outturn", () => {
     const data = clone();
     const v = data.variables.find((x) => x.id === "rhdi_per_person");
-    delete v.level.vintages.at(-1).values["2026Q2"];
+    const newest = v.level.vintages.at(-1);
+    newest.values = cutAfter(newest.values, periodIndex("2026Q1", "quarterly"));
     expect(forecastVintagesProblem(data)).toBeNull();
     expect(buildView(data, v, { unit: "level" }).unavailable).toBe(
       "The March 2026 forecast of this measure cannot be drawn in this unit.",
@@ -257,11 +335,13 @@ describe("a forecast that cannot be drawn", () => {
   it("is named when it is an earlier one, and the rest are drawn", () => {
     const data = clone();
     const v = data.variables.find((x) => x.id === "real_gdp");
-    // No outturn for 2009, where the two 2010 forecasts start
+    // No outturn before 2010, so none for 2009, where the two 2010
+    // forecasts start
     const launch = v.level.vintages[0].launch;
     const starting = v.level.vintages.filter((x) => x.launch === launch).map((x) => x.label);
     expect(starting).toEqual(["June 2010", "November 2010"]);
-    delete v.level.outturn[launch];
+    for (const key of Object.keys(v.level.outturn)) if (Number(key) <= launch) delete v.level.outturn[key];
+    expect(forecastVintagesProblem(data)).toBeNull();
     for (const unit of ["level", "index", "pct"]) {
       const view = buildView(data, v, { unit });
       expect(view.unavailable).toBeNull();
@@ -273,12 +353,15 @@ describe("a forecast that cannot be drawn", () => {
   it("leaves a view with nothing to draw in its unit unavailable, never an empty chart", () => {
     const data = clone();
     const v = data.variables.find((x) => x.id === "employment");
-    const last = (values) => {
-      const key = Object.keys(values).sort().at(-1);
+    const only = (values, at) => {
+      const key = Object.keys(values).sort().at(at);
       return { [key]: values[key] };
     };
-    v.level.outturn = last(v.level.outturn);
-    for (const vintage of v.level.vintages) vintage.values = last(vintage.values);
+    // One year of outturn (so no check over eight), and each forecast's
+    // launch year alone
+    delete v.level.check;
+    v.level.outturn = only(v.level.outturn, -1);
+    for (const vintage of v.level.vintages) vintage.values = only(vintage.values, 0);
     expect(forecastVintagesProblem(data)).toBeNull();
     const view = buildView(data, v, { unit: "pct" });
     expect(view.unavailable).toMatch(/cannot be drawn|too little outturn/);
@@ -339,8 +422,10 @@ describe("axes and formats", () => {
   it("end on a span too small for rounding to nine decimals", () => {
     // Once looped for ever: the last tick rounded back onto itself
     expect(niceAxis(0, 1.1e-9).ticks).toEqual([0, 2.5e-10, 5e-10, 7.5e-10, 1e-9, 1.25e-9]);
-    expect(niceAxis(Number.NaN, 1).domain).toEqual([0, 1]);
-    expect(niceAxis(2, 1).domain).toEqual([0, 1]);
+    // Where no axis can be stepped, none: never a 0 to 1 axis in its place
+    expect(niceAxis(Number.NaN, 1)).toBeNull();
+    expect(niceAxis(2, 1)).toBeNull();
+    expect(niceAxis(-1e308, 1e308)).toBeNull();
   });
 
   it("need as many decimals as the step", () => {
@@ -390,5 +475,111 @@ describe("the outturn check, in words", () => {
     }
     expect(checkSentence(null, "calendar")).toBeNull();
     expect(checkSentence({ periods: [] }, "calendar")).toBeNull();
+  });
+});
+
+describe("what a line needs", () => {
+  const series = (entries) => new Map(entries);
+
+  it("is two values, one period after another, every one finite and drawable", () => {
+    expect(drawable(series([[2020, 1], [2021, 2]]))).toBe(true);
+    expect(drawable(series([[2020, 1]]))).toBe(false);
+    // Found by the third review: two values with a period missing between
+    // are two lone points, drawn as nothing
+    expect(drawable(series([[2024, 1], [2026, 2]]))).toBe(false);
+    expect(drawable(series([[2020, 1], [2021, 2], [2023, 3]]))).toBe(false);
+    expect(drawable(series([[2020, 1], [2021, Number.NaN]]))).toBe(false);
+    expect(drawable(series([[2020, 1], [2021, DRAW_LIMIT * 2]]))).toBe(false);
+  });
+
+  it("draws every series of every view whole: each of its periods next to another of its own", () => {
+    for (const { v, unit, annual, showPast } of VIEWS) {
+      const view = buildView(DATA, v, { unit, annual, showPast });
+      for (const values of [view.outturn, ...view.vintages.map((x) => x.values)]) {
+        expect(drawable(values)).toBe(true);
+        // So on the chart's rows, each value has a neighbour in the next row
+        const keys = [...values.keys()];
+        for (const t of keys) expect(values.has(t - 1) || values.has(t + 1)).toBe(true);
+      }
+    }
+  });
+
+  it("is drawn whole or not at all, and the view says which forecasts are not, whatever is cut from the newest", () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...VIEWS), fc.nat(), fc.nat(), ({ v, unit, annual, showPast }, from, length) => {
+        const data = clone();
+        const variable = data.variables.find((x) => x.id === v.id);
+        const measure = variable[variable.units[unit].from];
+        const newest = measure.vintages.at(-1);
+        const keys = Object.keys(newest.values);
+        const start = from % keys.length;
+        newest.values = Object.fromEntries(keys.slice(start, start + 1 + (length % keys.length)).map((k) => [k, newest.values[k]]));
+        if (forecastVintagesProblem(data) !== null) return;
+        const view = buildView(data, variable, { unit, annual, showPast });
+        if (view.unavailable) return;
+        for (const values of [view.outturn, ...view.vintages.map((x) => x.values)]) expect(drawable(values)).toBe(true);
+      }),
+    );
+  });
+});
+
+describe("an index or a % change", () => {
+  it("is taken only on values above zero", () => {
+    expect([...pctChange(new Map([[2020, -2], [2021, 1], [2022, 2]]), 1)]).toEqual([[2022, 100]]);
+    expect([...pctChange(new Map([[2020, 0], [2021, 1]]), 1)]).toEqual([]);
+  });
+
+  it("leaves an index unavailable where the outturn at the start of the parliament is not above zero", () => {
+    for (const value of [0, -5]) {
+      const data = clone();
+      const v = byId(data, "rhdi_per_person");
+      v.level.outturn["2024Q2"] = value;
+      expect(forecastVintagesProblem(data)).toBeNull();
+      expect(buildView(data, v, { unit: "index" }).unavailable).toBe(
+        "There is no outturn above zero at the start of this parliament, so no index can be drawn.",
+      );
+    }
+  });
+});
+
+describe("what the file says of itself", () => {
+  it("names each forecast's launch period by the launch rules", () => {
+    for (const v of DATA.variables) {
+      for (const name of ["level", "share"].filter((n) => v[n])) {
+        for (const x of v[name].vintages) expect(launchPeriod(v.frequency, x.year, x.month)).toBe(periodIndex(x.launch, v.frequency));
+      }
+    }
+    // Two quarters before the quarter of publication; the year before; the
+    // last fiscal year complete before publication (a March forecast's
+    // own year ends that month)
+    expect(launchPeriod("quarterly", 2026, 3)).toBe(periodIndex("2025Q3", "quarterly"));
+    expect(launchPeriod("quarterly", 2025, 11)).toBe(periodIndex("2025Q2", "quarterly"));
+    expect(launchPeriod("calendar", 2026, 3)).toBe(2025);
+    expect(launchPeriod("fiscal", 2026, 3)).toBe(2024);
+    expect(launchPeriod("fiscal", 2025, 4)).toBe(2024);
+  });
+
+  it("gives the earliest forecast it holds for the page to name", () => {
+    expect(earliestForecast(DATA)).toBe("June 2010");
+    const data = clone();
+    for (const v of data.variables) for (const name of ["level", "share"].filter((n) => v[n])) v[name].vintages.splice(0, 2);
+    expect(earliestForecast(data)).toBe("March 2011");
+  });
+
+  // Found by the schema sweep: a measure no unit reads is not checked, so
+  // it is not read either
+  it("names it from the measures a unit reads", () => {
+    const data = clone();
+    byId(data, "real_gdp").share = {};
+    expect(forecastVintagesProblem(data)).toBeNull();
+    expect(earliestForecast(data)).toBe("June 2010");
+  });
+
+  // Its figures cannot say which it is: drawn, it moves with the
+  // forecast from the outturn, as an index would
+  it("takes a forecast of levels marked as an index, where it is above zero and starts at its launch", () => {
+    const data = clone();
+    byId(data, "nominal_gdp").level.kind = "index";
+    expect(forecastVintagesProblem(data)).toBeNull();
   });
 });
