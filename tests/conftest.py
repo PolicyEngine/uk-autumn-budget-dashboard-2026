@@ -26,7 +26,12 @@ import os
 
 import pytest
 
-from tests import ci_shards
+try:
+    from tests import ci_shards
+except ImportError:
+    # tests/test_certified_data.py runs a copy of this file on its own in a
+    # temporary directory, where there are no shards to split.
+    ci_shards = None
 
 CERTIFIED_DATA = "certified_data"
 SLOW = "slow"
@@ -100,6 +105,12 @@ def pytest_collection_modifyitems(config, items):
     order.
     """
     shard_option = config.getoption("--ci-shard")
+    if ci_shards is None:
+        if shard_option:
+            raise pytest.UsageError("--ci-shard needs tests/ci_shards.py")
+        if is_xdist_worker(config):
+            items.sort(key=lambda item: item.get_closest_marker(SLOW) is None)
+        return
     durations = ci_shards.load_durations()
     if shard_option:
         shard, count = ci_shards.parse_shard(shard_option)
