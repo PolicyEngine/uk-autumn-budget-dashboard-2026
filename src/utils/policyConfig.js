@@ -11,8 +11,12 @@ import { POLICY_RAMPS } from "./chartTheme";
 // Measures that raise revenue (the rest of ALL_POLICY_NAMES cost revenue),
 // for the legends' two groups
 export const REVENUE_RAISING_NAMES = new Set([
+  "Dividend tax rates up 1 point",
   "Threshold freeze to 2031-32",
   "Business Asset Disposal Relief restricted",
+  "UC standard allowance uprated below CPI",
+  "Capital gains tax main rates up 2 points",
+  "Council tax surcharge from £1.5m",
 ]);
 
 // Order: revenue raisers first (positive for gov), then costs (negative for
@@ -23,16 +27,22 @@ export const REVENUE_RAISING_NAMES = new Set([
 // the order against the published file, so a re-run that changes the
 // ranking fails until this list is updated.
 export const ALL_POLICY_NAMES = [
-  // Raise revenue
-  "Threshold freeze to 2031-32", // £0.69bn a year on average
+  // Raise revenue (DRILL 5 new pair, mean £bn a year, 2026-27 to 2031-32)
+  "Dividend tax rates up 1 point", // £0.77bn
+  "Threshold freeze to 2031-32", // £0.68bn
   "Business Asset Disposal Relief restricted", // £0.32bn
+  "UC standard allowance uprated below CPI", // £0.21bn
+  "Capital gains tax main rates up 2 points", // £0.16bn
+  "Council tax surcharge from £1.5m", // £0.16bn
   // Cost revenue
-  "Employer NI relief for under-25s", // £5.46bn
-  "Fuel duty rises deferred", // £0.57bn
-  "Zero VAT on domestic electricity", // £0.36bn
-  "Plan 2 student loan threshold unfrozen", // £0.35bn
-  "State Pension income tax protection", // £0.16bn
-  "VAT cut on road fuel", // £0.13bn
+  "Employer NI relief for under-25s", // £5.32bn
+  "Employer NI threshold raised by £1,000", // £3.62bn
+  "State Pension income tax protection, extended", // £1.80bn
+  "Local Housing Allowance reset in April 2027", // £1.26bn
+  "Fuel duty rises deferred", // £0.60bn
+  "Zero VAT on domestic electricity", // £0.37bn
+  "Zero VAT on domestic gas", // £0.16bn
+  "State Pension income tax protection", // £0.14bn
   "Warm Home Discount top-up", // £0.09bn
 ];
 
@@ -80,7 +90,14 @@ export const POLICY_ICONS = {
   warm_home_discount_top_up: POLICY_TYPE_ICONS.energyBenefit,
   state_pension_income_tax_protection: POLICY_TYPE_ICONS.pension,
   employer_ni_relief_under_25s: POLICY_TYPE_ICONS.employerNi,
-  plan_2_threshold_unfreeze: POLICY_TYPE_ICONS.studentLoan,
+  uc_standard_allowance_below_cpi: POLICY_TYPE_ICONS.energyBenefit,
+  state_pension_income_tax_protection_extended: POLICY_TYPE_ICONS.pension,
+  employer_ni_secondary_threshold_raised: POLICY_TYPE_ICONS.employerNi,
+  cgt_main_rates_up_2pp: POLICY_TYPE_ICONS.capitalGainsTax,
+  council_tax_surcharge_from_1_5m: POLICY_TYPE_ICONS.incomeTax,
+  lha_reset_april_2027: POLICY_TYPE_ICONS.energyBenefit,
+  dividend_rates_up_1pp: POLICY_TYPE_ICONS.incomeTax,
+  domestic_gas_zero_vat: POLICY_TYPE_ICONS.vat,
 };
 
 // The id of the run that simulates every measure together
@@ -90,17 +107,7 @@ export const POLICY_ICONS = {
 export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 
 // Household impact (household API) policy order: the candidate measures
-export const PERSONAL_IMPACT_POLICY_ORDER = [
-  "fuel_duty_rise_deferral",
-  "state_pension_income_tax_protection",
-  "warm_home_discount_top_up",
-  "domestic_electricity_zero_vat",
-  "employer_ni_relief_under_25s",
-  "threshold_freeze_2031_32",
-  "badr_lifetime_limit_cut",
-  "road_fuel_vat_cut",
-  "plan_2_threshold_unfreeze",
-];
+export const PERSONAL_IMPACT_POLICY_ORDER = POLICIES.map((policy) => policy.id);
 
 // Helper to get color by policy key
 export function getPolicyColor(key) {

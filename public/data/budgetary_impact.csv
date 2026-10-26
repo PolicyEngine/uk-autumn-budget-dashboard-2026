@@ -1,61 +1,97 @@
 reform_id,reform_name,year,value
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,-2.015446616948613
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,-8.88884660567911
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,-6.920891151278313
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,-7.3453212342252225
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2030,-7.647465291765178
-autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2031,-3.8369681574513974
-fuel_duty_rise_deferral,Fuel duty rises deferred,2026,-0.28254192538522244
-fuel_duty_rise_deferral,Fuel duty rises deferred,2027,-1.187783454697637
-fuel_duty_rise_deferral,Fuel duty rises deferred,2028,-0.49517165152285597
-fuel_duty_rise_deferral,Fuel duty rises deferred,2029,-0.49211349523096415
-fuel_duty_rise_deferral,Fuel duty rises deferred,2030,-0.4786072504102358
-fuel_duty_rise_deferral,Fuel duty rises deferred,2031,-0.490776579189537
-state_pension_income_tax_protection,State Pension income tax protection,2026,0.0
-state_pension_income_tax_protection,State Pension income tax protection,2027,-0.06497117184095579
-state_pension_income_tax_protection,State Pension income tax protection,2028,-0.1207594549508923
-state_pension_income_tax_protection,State Pension income tax protection,2029,-0.19271200229313176
-state_pension_income_tax_protection,State Pension income tax protection,2030,-0.28184630760512164
-state_pension_income_tax_protection,State Pension income tax protection,2031,-0.3129366676151599
-warm_home_discount_top_up,Warm Home Discount top-up,2026,-0.5191219913741401
-warm_home_discount_top_up,Warm Home Discount top-up,2027,0.0
-warm_home_discount_top_up,Warm Home Discount top-up,2028,0.0
-warm_home_discount_top_up,Warm Home Discount top-up,2029,0.0
-warm_home_discount_top_up,Warm Home Discount top-up,2030,0.0
-warm_home_discount_top_up,Warm Home Discount top-up,2031,0.0
-domestic_electricity_zero_vat,Zero VAT on domestic electricity,2026,-0.7070322249658617
-domestic_electricity_zero_vat,Zero VAT on domestic electricity,2027,-1.4231931086853484
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2026,0.0
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2027,0.3636746113266754
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2028,0.37672012070256
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2029,0.38839082841586675
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2030,0.4003120352215687
+badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,0.4120871372539495
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2026,0.0
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2027,0.1913767586593977
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2028,0.19312933184579184
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2029,0.19470952604575914
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2030,0.19631344065540268
+cgt_main_rates_up_2pp,Capital gains tax main rates up 2 points,2031,0.19794648470180648
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2026,0.0
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2027,0.0
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2028,0.2290621891389693
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2029,0.23467125981835502
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2030,0.2404412941725971
+council_tax_surcharge_from_1_5m,Council tax surcharge from £1.5m,2031,0.24630476067317864
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2026,0.0
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2027,0.8590580975214678
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2028,0.8893097433599647
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2029,0.9197211195288187
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2030,0.952928115253158
+dividend_rates_up_1pp,Dividend tax rates up 1 point,2031,0.986333886742007
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2026,-0.7329935155032824
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2027,-1.5049600150537195
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2028,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2029,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2030,0.0
 domestic_electricity_zero_vat,Zero VAT on domestic electricity,2031,0.0
+domestic_gas_zero_vat,Zero VAT on domestic gas,2026,0.0
+domestic_gas_zero_vat,Zero VAT on domestic gas,2027,-0.9756634142643386
+domestic_gas_zero_vat,Zero VAT on domestic gas,2028,0.0
+domestic_gas_zero_vat,Zero VAT on domestic gas,2029,0.0
+domestic_gas_zero_vat,Zero VAT on domestic gas,2030,0.0
+domestic_gas_zero_vat,Zero VAT on domestic gas,2031,0.0
 employer_ni_relief_under_25s,Employer NI relief for under-25s,2026,0.0
-employer_ni_relief_under_25s,Employer NI relief for under-25s,2027,-6.1587222435229805
-employer_ni_relief_under_25s,Employer NI relief for under-25s,2028,-6.336401313349174
-employer_ni_relief_under_25s,Employer NI relief for under-25s,2029,-6.521640374183725
-employer_ni_relief_under_25s,Employer NI relief for under-25s,2030,-6.734301622014073
-employer_ni_relief_under_25s,Employer NI relief for under-25s,2031,-7.002619152700669
+employer_ni_relief_under_25s,Employer NI relief for under-25s,2027,-6.010749738907296
+employer_ni_relief_under_25s,Employer NI relief for under-25s,2028,-6.179306496314483
+employer_ni_relief_under_25s,Employer NI relief for under-25s,2029,-6.355896156238679
+employer_ni_relief_under_25s,Employer NI relief for under-25s,2030,-6.558256927428177
+employer_ni_relief_under_25s,Employer NI relief for under-25s,2031,-6.817243759441033
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2026,0.0
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2027,-4.303960096832415
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2028,-4.324497651516203
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2029,-4.34638489857849
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2030,-4.368933340259138
+employer_ni_secondary_threshold_raised,"Employer NI threshold raised by £1,000",2031,-4.389658137118534
+fuel_duty_rise_deferral,Fuel duty rises deferred,2026,-0.29797783485397084
+fuel_duty_rise_deferral,Fuel duty rises deferred,2027,-1.2526801996935244
+fuel_duty_rise_deferral,Fuel duty rises deferred,2028,-0.5222231968231136
+fuel_duty_rise_deferral,Fuel duty rises deferred,2029,-0.5190007772939531
+fuel_duty_rise_deferral,Fuel duty rises deferred,2030,-0.5047564345702004
+fuel_duty_rise_deferral,Fuel duty rises deferred,2031,-0.5175919168145954
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2026,0.0
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2027,-1.4141071937996272
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2028,-1.4547880434652705
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2029,-1.5017476081095955
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2030,-1.5683018109069522
+lha_reset_april_2027,Local Housing Allowance reset in April 2027,2031,-1.6203046640136394
+state_pension_income_tax_protection,State Pension income tax protection,2026,0.0
+state_pension_income_tax_protection,State Pension income tax protection,2027,-0.06674243832078812
+state_pension_income_tax_protection,State Pension income tax protection,2028,-0.10494635142534516
+state_pension_income_tax_protection,State Pension income tax protection,2029,-0.1732473200980989
+state_pension_income_tax_protection,State Pension income tax protection,2030,-0.23971526719214584
+state_pension_income_tax_protection,State Pension income tax protection,2031,-0.24190260397530539
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2026,0.0
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2027,-0.9137603423699022
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2028,-1.5447498982415284
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2029,-2.22207314697381
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2030,-2.9410151926879062
+state_pension_income_tax_protection_extended,"State Pension income tax protection, extended",2031,-3.169318643110239
 threshold_freeze_2031_32,Threshold freeze to 2031-32,2026,0.0
 threshold_freeze_2031_32,Threshold freeze to 2031-32,2027,0.0
 threshold_freeze_2031_32,Threshold freeze to 2031-32,2028,0.0
 threshold_freeze_2031_32,Threshold freeze to 2031-32,2029,0.0
 threshold_freeze_2031_32,Threshold freeze to 2031-32,2030,0.0
-threshold_freeze_2031_32,Threshold freeze to 2031-32,2031,4.157274821677502
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2026,0.0
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2027,0.362753305966942
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2028,0.3749233903351569
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2029,0.3866473171370677
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2030,0.39888543751170974
-badr_lifetime_limit_cut,Business Asset Disposal Relief restricted,2031,0.411263385649347
-road_fuel_vat_cut,VAT cut on road fuel,2026,-0.5067516077936846
-road_fuel_vat_cut,VAT cut on road fuel,2027,-0.24861428345172984
-road_fuel_vat_cut,VAT cut on road fuel,2028,0.0
-road_fuel_vat_cut,VAT cut on road fuel,2029,0.0
-road_fuel_vat_cut,VAT cut on road fuel,2030,0.0
-road_fuel_vat_cut,VAT cut on road fuel,2031,0.0
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2026,0.0
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2027,-0.16831505591175752
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2028,-0.3434830714700442
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2029,-0.5255032796835157
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2030,-0.5515947724467886
-plan_2_threshold_unfreeze,Plan 2 student loan threshold unfrozen,2031,-0.5191766884396567
+threshold_freeze_2031_32,Threshold freeze to 2031-32,2031,4.099576978452883
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2026,0.0
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2027,0.22970185413345162
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2028,0.2418287869072217
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2029,0.25389892508231865
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2030,0.2583216525764151
+uc_standard_allowance_below_cpi,UC standard allowance uprated below CPI,2031,0.2625897882909202
+warm_home_discount_top_up,Warm Home Discount top-up,2026,-0.5467799175258633
+warm_home_discount_top_up,Warm Home Discount top-up,2027,0.0
+warm_home_discount_top_up,Warm Home Discount top-up,2028,0.0
+warm_home_discount_top_up,Warm Home Discount top-up,2029,0.0
+warm_home_discount_top_up,Warm Home Discount top-up,2030,0.0
+warm_home_discount_top_up,Warm Home Discount top-up,2031,0.0
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2026,-1.5777518876281915
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2027,-13.601647888300231
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2028,-10.370972873079563
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2029,-10.618752464852431
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2030,-10.902469284729476
+autumn_budget_2026_combined,Autumn Budget 2026 candidates (combined),2031,-7.146594097267514
