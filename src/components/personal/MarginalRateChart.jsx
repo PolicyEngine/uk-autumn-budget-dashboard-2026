@@ -29,6 +29,7 @@ import {
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
 import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -331,9 +332,12 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
       {/* What makes up your rate, out of the one-line sentence */}
       {yourParts && (
         <div className="chart-footer">
-          <ChartMoreInfo>
-            <p>At {formatPounds(salary)}, your marginal rate is made up of {yourParts}.</p>
-          </ChartMoreInfo>
+          <ChartMoreInfo
+            info={{
+              how: [`At ${formatPounds(salary)}, your marginal rate is made up of ${yourParts}.`],
+              method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
+            }}
+          />
         </div>
       )}
     </div>

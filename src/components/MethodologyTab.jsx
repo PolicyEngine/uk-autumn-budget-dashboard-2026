@@ -3,6 +3,7 @@ import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import ForecastFeedMethod from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
 import MethodGlossary from "./methodology/MethodGlossary";
+import { HIGHEST_PERCENTILE, LOWEST_PERCENTILE, ordinal } from "../utils/incomePosition";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
@@ -541,6 +542,37 @@ function MethodologyTab({ onShowTab }) {
                   .
                 </p>
               </div>
+            }
+            details={
+              <>
+                <h3 id={METHOD_ANCHORS.incomePosition} className="method-details-title method-anchor">
+                  Your place in the UK
+                </h3>
+                <FactList
+                  items={[
+                    [
+                      "Income",
+                      "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone.",
+                    ],
+                    [
+                      "Tenths",
+                      "The tenths' average changes are the decile charts' own, ranked by HBAI income without VAT and fuel duty, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income.",
+                    ],
+                    [
+                      "Distribution",
+                      `Published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`,
+                    ],
+                    [
+                      "Who moves",
+                      "Everyone is ranked before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. A share from fewer than 10 survey households is not published.",
+                    ],
+                    [
+                      "Among all households",
+                      "The Population impact scatter: each household sits by its 2027-28 net income before the policies, not adjusted for household size, in every year, and you by yours. Each dot is a group of households.",
+                    ],
+                  ]}
+                />
+              </>
             }
           />
 

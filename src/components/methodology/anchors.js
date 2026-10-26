@@ -11,6 +11,7 @@ export const METHOD_ANCHORS = {
   area: "method-area",
   young: "method-young",
   personal: "method-personal",
+  incomePosition: "method-income-position",
   living: "method-living",
   forecastFeed: "method-forecast-feed",
   lsNotes: "method-ls-notes",
