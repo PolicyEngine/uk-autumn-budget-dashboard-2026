@@ -164,8 +164,6 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     // The card's one Options pill: the years compared, the average, then
     // the rest (ControlBar)
     controls: {
-      // The pill's face: the measure only; every choice is in its title
-      face: ["Average", "Housing costs", "Prices"],
       options: [
         yearsOption(rangeYears(data), range, setRange),
         {

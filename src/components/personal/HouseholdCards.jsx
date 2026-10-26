@@ -46,7 +46,7 @@ export function featuresPublished(example, catalogue) {
   return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
 }
 
-/** Each measure as a card's "+£50 from …" line names it. */
+/** Each measure's short name, as a card's chip names it (sentence case there). */
 const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
   fuel_duty_rise_deferral: "the fuel duty deferral",
@@ -60,6 +60,11 @@ const SOURCE_NAMES = {
 };
 // A short name where there is one, else the catalogue's published name
 const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
+// As a chip names it: "Zero VAT on electricity", "Fuel duty deferral"
+const chipName = (id, catalogue) => {
+  const name = sourceName(id, catalogue).replace(/^the /, "");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+};
 
 /** "+£88", "−£12" or "£0", from whole pounds. */
 export const signedMoney = (value) => {
@@ -70,9 +75,12 @@ const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) <
 
 /**
  * What one example's card shows for `year`, from the precomputed results
- * (householdPresets.js presetChanges): its change in net income, the
- * change in each year for the sparkline, its own measures' part (on its
- * tag) and, when another measure gives more of it than its own, that one.
+ * (householdPresets.js presetChanges) or the page's own (the headline
+ * alone): its change in net income, the change in each year for the bars,
+ * its own measures' part, and `top`, what its chip names: the measure
+ * giving the largest part of the year's change, with that part ({ ids,
+ * name, part, own }). Its own measures (the example's tag) when they give
+ * the most, or nothing does, or there is no split by measure (part null).
  */
 export function cardFigures(example, byYear, year, catalogue = null) {
   const current = byYear?.[year];
@@ -83,19 +91,18 @@ export function cardFigures(example, byYear, year, catalogue = null) {
   const split = current.byPolicy ?? null;
   const own = example.measures ?? [example.measure];
   const ownPart = split ? own.reduce((sum, id) => sum + (split[id] ?? 0), 0) : null;
-  // The measure giving the largest part of the change, if not its own
-  const [mainId, mainPart] = Object.entries(split ?? {}).reduce(
-    (best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best),
-    [null, 0],
-  );
-  const source =
-    mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
-      ? { name: sourceName(mainId, catalogue), part: mainPart }
-      : null;
+  // The other measure giving the largest part of the change
+  const [mainId, mainPart] = Object.entries(split ?? {})
+    .filter(([id]) => !own.includes(id))
+    .reduce((best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best), [null, 0]);
+  const top =
+    mainId && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
+      ? { ids: [mainId], name: chipName(mainId, catalogue), part: mainPart, own: false }
+      : { ids: own, name: example.tag, part: ownPart, own: true };
   // Every year a reader can choose: one not yet in is null (its bar a stub)
   const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
-  return { change: current.change, ownPart, source, series };
+  return { change: current.change, ownPart, top, series };
 }
 
 /**
@@ -361,6 +368,10 @@ export default function HouseholdCards({
               })
             : null;
           const featured = featuresPublished(example, catalogue);
+          // The chip: the top measure once the split is known, else the
+          // example's own; shown only while the catalogue publishes it
+          const chipFigures = figures?.top ?? { ids: example.measures ?? [example.measure], name: example.tag, part: null, own: true };
+          const chip = chipFigures.ids.every((id) => catalogue.byId.get(id)?.displayable === true) ? chipFigures : null;
           const pressed = value === example.id;
           const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
           return (
@@ -418,17 +429,25 @@ export default function HouseholdCards({
               <span className="household-card-position-row">
                 {percentile !== null && <PositionStrip percentile={percentile} yearLabel={fiscalYearTick(year)} />}
               </span>
-              <span className="household-card-source">
-                {figures?.source && `${signedMoney(figures.source.part)} from ${figures.source.name}`}
-              </span>
               <span className="household-card-description" id={`household-card-${example.id}-description`}>
                 {example.description}
               </span>
-              {featured && (
-                <span className="household-card-tag">
+              {/* One chip: the measure giving most of the year's change, with
+                  its part, in its colour; the example's own measure in the
+                  chip's title when another gives more */}
+              {chip && (
+                <span
+                  className="household-card-tag"
+                  style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}
+                  title={
+                    !chip.own && featured && figures
+                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
+                      : undefined
+                  }
+                >
                   <span className="household-card-dot" aria-hidden="true" />
-                  <span className="household-card-tag-name">{example.tag}</span>
-                  {figures?.ownPart != null && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
+                  <span className="household-card-tag-name">{chip.name}</span>
+                  {chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>}
                 </span>
               )}
             </div>

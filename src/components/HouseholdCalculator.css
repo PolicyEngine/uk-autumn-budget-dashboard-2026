@@ -810,13 +810,12 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto auto 1fr;
   grid-template-areas:
     "icon"
     "name"
     "result"
     "position"
-    "source"
     "description"
     "tag";
   align-items: start;
@@ -1250,18 +1249,6 @@
   transform: translate(-50%, -50%);
 }
 
-.household-card-source {
-  grid-area: source;
-  min-height: 1.45em;
-  margin-top: 2px;
-  overflow: hidden;
-  font-size: var(--fs-micro);
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--pe-gray-600);
-}
-
 .household-card-description {
   grid-area: description;
   display: -webkit-box;
@@ -1291,8 +1278,10 @@
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
-  color: var(--card-ink);
-  background: var(--card-tint);
+  /* The chip's measure's colour (the top contributor's), else the card's */
+  --chip-accent-fallback: var(--card-accent);
+  color: color-mix(in oklab, var(--chip-accent, var(--chip-accent-fallback)) 50%, var(--pe-gray-900));
+  background: color-mix(in srgb, var(--chip-accent, var(--chip-accent-fallback)) 10%, var(--pe-surface));
   border-radius: 999px;
 }
 
@@ -1306,7 +1295,7 @@
   flex: none;
   padding-left: 7px;
   font-variant-numeric: tabular-nums;
-  border-left: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--chip-accent, var(--card-accent)) 35%, transparent);
 }
 
 .household-card.is-selected .household-card-tag {
@@ -1317,7 +1306,7 @@
   flex: none;
   width: 7px;
   height: 7px;
-  background: var(--card-accent);
+  background: var(--chip-accent, var(--card-accent));
   border-radius: 50%;
 }
 
@@ -1624,12 +1613,11 @@
 
   .household-card {
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
     grid-template-areas:
       "icon name"
       "icon result"
       "icon position"
-      "icon source"
       "icon description"
       "icon tag";
     column-gap: 14px;
@@ -2257,4 +2245,9 @@
   display: inline-flex;
   flex: none;
   color: var(--pe-gray-500);
+}
+
+/* The form, scrolled to from "Your household": clear of the sticky bars */
+.household-form {
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
 }

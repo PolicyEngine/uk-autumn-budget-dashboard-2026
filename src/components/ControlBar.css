@@ -26,16 +26,16 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  height: 32px;
-  padding: 0 10px 0 10px;
+  min-height: 32px;
+  padding: 5px 10px;
+  text-align: left;
   font-family: inherit;
   font-size: var(--fs-micro);
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--pe-gray-300);
-  border-radius: 999px;
+  border-radius: 16px;
   cursor: pointer;
-  white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -67,10 +67,11 @@
   fill: var(--pe-surface);
 }
 
+/* The whole summary, wrapping to a second line rather than cut off */
 .control-bar-summary {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
   font-weight: 600;
   color: var(--pe-teal-800);
 }

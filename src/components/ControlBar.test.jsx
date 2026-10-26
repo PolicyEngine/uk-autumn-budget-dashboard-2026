@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import ControlBar from "./ControlBar";
+import ControlBar, { optionsSummary } from "./ControlBar";
+import { expectCompletePills } from "../test/optionsPills";
 
 function Harness() {
   const [prices, setPrices] = useState("real");
@@ -71,4 +72,14 @@ describe("ControlBar", () => {
     render(<ControlBar><button type="button">Primary</button></ControlBar>);
     expect(screen.queryByRole("button", { name: /^Options/ })).toBeNull();
   });
+
+  it("labels the pill with every choice, in the dialog's order, a show/hide only when not at its default", () => {
+    const group = (label, value, extra = {}) => ({ label, value, onChange: () => {}, options: [{ value: "a", label: "A" }, { value: "b", label: "B" }], ...extra });
+    expect(optionsSummary([group("One", "a"), group("Two", "b")])).toBe("A · B");
+    expect(optionsSummary([group("One", "a"), group("Hide", "a", { omitAtDefault: "a" })])).toBe("A");
+    expect(optionsSummary([group("One", "a"), group("Hide", "b", { omitAtDefault: "a" })])).toBe("A · B");
+    const { container } = render(<Harness />);
+    expect(expectCompletePills(container)).toBe(1);
+  });
 });
+

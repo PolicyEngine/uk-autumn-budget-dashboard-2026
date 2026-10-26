@@ -16,6 +16,7 @@
  * What jsdom cannot show (that the built site serves the page and these
  * files with HTTP 200) the "Built site" CI job checks against `next start`.
  */
+import { expectCompletePills } from "./test/optionsPills";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -190,6 +191,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.
       await new Promise((resolve) => setTimeout(resolve, 50));
+      // Every Options pill on the tab names every choice its dialog holds
+      expectCompletePills(panel);
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);

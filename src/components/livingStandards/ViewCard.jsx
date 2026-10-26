@@ -35,7 +35,6 @@ export default function ViewCard({ id, title, subtitle, icon, views, value, onCh
         // view's own choices; a view's primary control, if any, beside it
         <ControlBar
           name={title}
-          face={view.controls?.face}
           options={[
             // The years compared lead, then the view, then its other choices
             ...(view.controls?.options ?? []).filter((group) => group?.control),

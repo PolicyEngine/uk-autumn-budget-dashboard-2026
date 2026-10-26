@@ -224,7 +224,6 @@ export default function WhoIsInPovertySection({ data }) {
         // then the poverty measure
         <ControlBar
           name="Who is in poverty"
-          face={["Poverty line", "Housing costs"]}
           options={[
             yearsOption(years, [from, to], setRange),
             {
