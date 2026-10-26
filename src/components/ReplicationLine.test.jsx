@@ -5,7 +5,7 @@ import ReplicationLine, { replicationLinks } from "./ReplicationLine";
 describe("Reproduce these results", () => {
   it("links the code, and the policyengine.py release the lockfile pins", () => {
     expect(replicationLinks({ policyengine: "6.10.0" }).map(({ label, href }) => [label, href])).toEqual([
-      ["Replication code", "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026"],
+      ["replication code", "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026"],
       ["policyengine.py 6.10.0", "https://pypi.org/project/policyengine/6.10.0/"],
     ]);
   });
@@ -19,9 +19,12 @@ describe("Reproduce these results", () => {
     vi.stubEnv("NEXT_PUBLIC_POLICYENGINE_VERSION", "6.10.2");
     render(<ReplicationLine />);
     const section = screen.getByRole("region", { name: "Reproduce these results" });
+    expect(section.textContent.replace(/ \(opens in a new tab\)/g, "")).toBe(
+      "Reproduce these results with our replication code, built on policyengine.py 6.10.2.",
+    );
     const links = screen.getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
-      "Replication code (opens in a new tab)",
+      "replication code (opens in a new tab)",
       "policyengine.py 6.10.2 (opens in a new tab)",
     ]);
     for (const link of links) {

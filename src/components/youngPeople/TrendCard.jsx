@@ -42,7 +42,7 @@ import {
   stepAnnotations,
   topParts,
 } from "./youngPeopleData";
-import { CHART_MOTION_MS, prefersReducedMotion } from "../../utils/chartMotion";
+import { chartTransition } from "../../utils/chartMotion";
 import { legendMembership } from "../../utils/legendMembership";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
@@ -130,9 +130,7 @@ export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears
           fill={SELECTED_FILL}
           style={{
             transform: `translateX(${selected.x}px)`,
-            transition: prefersReducedMotion()
-              ? undefined
-              : `transform ${CHART_MOTION_MS}ms ease-in-out, width ${CHART_MOTION_MS}ms ease-in-out`,
+            transition: chartTransition("transform", "width"),
           }}
         />
       )}

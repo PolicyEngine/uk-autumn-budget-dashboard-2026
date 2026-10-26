@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import "./YearSlider.css";
 import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
-import { SELECTABLE_YEARS } from "../utils/displayYears";
+import { SELECTABLE_YEARS, yearLabel } from "../utils/displayYears";
 
 // The years a reader can choose (from 2027-28; see utils/displayYears.js)
 const YEARS = SELECTABLE_YEARS;
@@ -50,7 +50,7 @@ function YearSlider({ selectedYear, onYearChange }) {
   const listRef = useRef(null);
   const listId = useId();
 
-  const label = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+  const label = yearLabel;
 
   const close = (returnFocus) => {
     setOpen(false);

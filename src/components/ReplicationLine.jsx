@@ -1,8 +1,8 @@
 import { ArrowUpRight, Github, Package } from "lucide-react";
 
 /**
- * "Reproduce these results", above the site footer, on one centred line:
- * a plain link (with its icon) to the repository and one to the
+ * "Reproduce these results", above the site footer, as one centred
+ * sentence with a link (and its icon) to the repository and one to the
  * policyengine.py release this build's uv.lock
  * pins (read in next.config.ts), each opening in a new tab. A missing
  * version leaves its link out, never guessed.
@@ -14,7 +14,7 @@ export function replicationLinks({ policyengine } = {}) {
   const links = [
     {
       key: "code",
-      label: "Replication code",
+      label: "replication code",
       title: `${REPO} on GitHub`,
       href: `https://github.com/${REPO}`,
       Icon: Github,
@@ -32,25 +32,36 @@ export function replicationLinks({ policyengine } = {}) {
   return links;
 }
 
-function ReplicationLine() {
-  const links = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
+/** One link in the sentence: its icon, its words, an arrow on hover. */
+function SentenceLink({ label, title, href, Icon }) {
   return (
-    <section id="replication" className="replication-line" aria-labelledby="replication-title">
-      <span className="replication-title" id="replication-title">
-        Reproduce these results
-      </span>
-      <ul className="replication-links">
-        {links.map(({ key, label, title, href, Icon }) => (
-          <li key={key}>
-            <a className="replication-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
-              <Icon className="replication-link-icon" size={14} strokeWidth={2} aria-hidden="true" />
-              <span className="replication-link-label">{label}</span>
-              <ArrowUpRight className="replication-link-arrow" size={12} strokeWidth={2.2} aria-hidden="true" />
-              <span className="visually-hidden"> (opens in a new tab)</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+    <a className="replication-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
+      <Icon className="replication-link-icon" size={14} strokeWidth={2} aria-hidden="true" />
+      <span className="replication-link-label">{label}</span>
+      <ArrowUpRight className="replication-link-arrow" size={12} strokeWidth={2.2} aria-hidden="true" />
+      <span className="visually-hidden"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
+/**
+ * One sentence: "Reproduce these results with our replication code, built
+ * on policyengine.py 6.10.2." (the second clause only when the version is
+ * known).
+ */
+function ReplicationLine() {
+  const [code, pkg] = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
+  return (
+    <section id="replication" className="replication-line" aria-label="Reproduce these results">
+      <p className="replication-sentence">
+        Reproduce these results with our <SentenceLink label={code.label} title={code.title} href={code.href} Icon={code.Icon} />
+        {pkg && (
+          <>
+            , built on <SentenceLink label={pkg.label} title={pkg.title} href={pkg.href} Icon={pkg.Icon} />
+          </>
+        )}
+        .
+      </p>
     </section>
   );
 }

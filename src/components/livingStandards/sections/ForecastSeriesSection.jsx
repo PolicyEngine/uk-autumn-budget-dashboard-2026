@@ -48,6 +48,9 @@ const LINE_STYLE = {
 };
 const FALLBACK_STYLES = [CHART_COLOURS.gain, CHART_COLOURS.highlight, CHART_COLOURS.marketIncome, CHART_COLOURS.reference];
 
+// Chip labels on a phone, for the long names
+const SHORT_NAMES = { cpi_ahc: "CPI AHC", non_labour_income: "Non-labour", social_rent: "Social rent" };
+
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
 
@@ -121,7 +124,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
     // the names. A card of one line needs none: its title names it.
     controls: allLines.length > 1 && (
       <SeriesToggle
-        series={allLines.map((l) => ({ key: l.key, label: l.name, colour: l.colour, dash: l.dash }))}
+        series={allLines.map((l) => ({ key: l.key, label: l.name, short: SHORT_NAMES[l.key], colour: l.colour, dash: l.dash }))}
         shown={shown}
         onChange={setShown}
         onHover={setHovered}

@@ -30,7 +30,9 @@ const band = (container) => container.querySelector(".title-row");
 const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
 
 describe("the view tabs", () => {
-  it("are five tabs under the intro, in order, with no view pill in the band", async () => {
+  it("are five tabs under the band, in order, with no view pill in the band", async () => {
+    // The bare address is the landing page (landing.test.jsx)
+    window.history.replaceState({}, "", "/?tab=dashboard");
     const { container } = await renderApp();
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
@@ -44,14 +46,10 @@ describe("the view tabs", () => {
     expect(tabs()[1]).toHaveAttribute("tabindex", "-1");
     expect(band(container).querySelector(".band-view")).toBeNull();
     expect(screen.queryByRole("button", { name: /^View:/ })).toBeNull();
-    // The intro holds for every view, and sits above the tabs
-    const intro = container.querySelector(".dashboard-intro");
-    expect(intro).toHaveTextContent(
-      /^This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the OBR forecast\. Costings are our own; forecast: .+\. Choose a year and policies in the bar above\.$/,
-    );
-    expect(intro.compareDocumentPosition(viewList())).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    // The intro is on the landing page only, never over a view
+    expect(container.querySelector(".dashboard-intro")).toBeNull();
+    expect(container.querySelector(".landing")).toBeNull();
+    expect(container).not.toHaveTextContent("This dashboard uses");
     expect(screen.getByRole("tabpanel", { name: "Population impact" })).toBeInTheDocument();
   });
 
@@ -94,7 +92,7 @@ describe("the view tabs", () => {
     // Review of 15439f4, finding 2: the default follows the publication,
     // and a chosen selection survives a view without the policy pill
     const search = () => new URLSearchParams(window.location.search);
-    const tabParam = { dashboard: null, household: "household", outlook: "outlook", policies: "policies", methodology: "methodology" };
+    const tabParam = { dashboard: "dashboard", household: "household", outlook: "outlook", policies: "policies", methodology: "methodology" };
     const { unmount } = await renderApp();
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
@@ -164,11 +162,12 @@ describe("the view tabs", () => {
       "true",
     );
     const params = new URLSearchParams(window.location.search);
-    expect(params.has("tab")).toBe(false);
+    expect(params.get("tab")).toBe("dashboard");
     expect(params.get("policies")).toBe("alpha");
   });
 
   it("move with the arrow keys, Home and End", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const list = viewList();
     fireEvent.keyDown(list, { key: "ArrowRight" });
@@ -184,6 +183,7 @@ describe("the view tabs", () => {
   });
 
   it("open a sub-tab band only on views with sub-tabs, and keep the view tabs a keyboard tablist", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const bar = document.querySelector(".view-tabs-bar");
     expect(bar).toHaveClass("has-notch");
@@ -207,6 +207,7 @@ describe("the view tabs", () => {
   });
 
   it("split Population impact into six sub-tabs, Public finances first", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The band sits directly under the view tabs, first in the view's
@@ -256,7 +257,7 @@ describe("the view tabs", () => {
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
     unmount();
 
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     fireEvent.click(screen.getByRole("tab", { name: "Pensioners" }));
     expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
@@ -281,7 +282,7 @@ describe("the view tabs", () => {
       );
       const params = new URLSearchParams(window.location.search);
       expect([params.get("tab"), params.get("sub"), window.location.hash]).toEqual([
-        null,
+        "dashboard",
         "young",
         hash,
       ]);

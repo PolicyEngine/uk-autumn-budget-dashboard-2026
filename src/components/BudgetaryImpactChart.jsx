@@ -36,7 +36,7 @@ import {
 import {
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
-import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
+import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import { revenueSentence } from "../utils/plainSentences";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -71,9 +71,7 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
       fillOpacity={0.08}
       style={{
         transform: `translateX(${start}px)`,
-        transition: prefersReducedMotion()
-          ? undefined
-          : `transform ${CHART_MOTION_MS}ms ease-in-out`,
+        transition: chartTransition("transform"),
       }}
     />
   );
