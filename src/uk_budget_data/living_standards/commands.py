@@ -167,7 +167,9 @@ def run_living_standards_modal(parsed: argparse.Namespace) -> int:
         )
         return 1
     if parsed.inputs_dir != INPUTS_DIR:
-        console.print("[red]--backend modal reads the committed inputs only[/red]")
+        console.print(
+            "[red]--backend modal reads the committed inputs only[/red]"
+        )
         return 1
     from uk_budget_data.living_standards.modal_run import run_remote
 

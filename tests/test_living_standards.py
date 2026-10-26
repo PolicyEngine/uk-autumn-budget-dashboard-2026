@@ -326,9 +326,11 @@ def test_income_groups_match_the_decile_medians(projections):
         for pop in ("all", "non_pensioners"):
             for name, n in INCOME_GROUPINGS.items():
                 cell = groups[pop][basis][name]
-                assert len(cell["medians"]) == len(
-                    cell["unweighted_households"]
-                ) == n
+                assert (
+                    len(cell["medians"])
+                    == len(cell["unweighted_households"])
+                    == n
+                )
                 assert cell["medians"] == sorted(cell["medians"])
 
 
@@ -359,7 +361,7 @@ def test_growth_by_group_annual_changes_chain_to_the_cumulative(projections):
                     ]
         big[y] = {"income_groups": groups}
     years = list(range(engine.BASE_YEAR, engine.END_YEAR + 1))
-    block = build.growth_by_group(big, years, lambda v, y, b: v / 1.02 ** y)
+    block = build.growth_by_group(big, years, lambda v, y, b: v / 1.02**y)
     assert list(block["groupings"]) == list(INCOME_GROUPINGS)
     assert block["withheld_groupings"] == {}
     rows = block["series"]["non_pensioners"]["ahc"]["vigintile"]["by_year"]
@@ -374,7 +376,10 @@ def test_growth_by_group_annual_changes_chain_to_the_cumulative(projections):
     first = big[str(engine.BASE_YEAR)]["income_groups"]["all"]["bhc"]
     before = big[str(engine.BASE_YEAR - 1)]["income_groups"]["all"]["bhc"]
     row = block["series"]["all"]["bhc"]["decile"]["by_year"][0]
-    expected = first["decile"]["medians"][0] / 1.02 / before["decile"]["medians"][0] - 1
+    expected = (
+        first["decile"]["medians"][0] / 1.02 / before["decile"]["medians"][0]
+        - 1
+    )
     assert row["annual_growth"][0] == pytest.approx(expected, abs=1e-5)
 
 
@@ -544,7 +549,11 @@ def check_contract(doc: dict) -> None:
                     d["year"] for d in dec["bhc"]["by_year"]
                 ]
                 for r in rows:
-                    for key in ("real_median", "annual_growth", "cumulative_growth"):
+                    for key in (
+                        "real_median",
+                        "annual_growth",
+                        "cumulative_growth",
+                    ):
                         assert len(r[key]) == n
                 assert rows[0]["cumulative_growth"] == [0.0] * n
     for key in ("child_poverty_by_family", "deep_poverty"):

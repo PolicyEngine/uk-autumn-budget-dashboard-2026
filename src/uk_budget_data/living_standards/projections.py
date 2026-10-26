@@ -127,7 +127,9 @@ def group_medians_and_households(values, weights, hh_ids, groups):
     cw = np.cumsum(w) / w.sum()
     group = np.minimum((cw * groups - 1e-12).astype(int), groups - 1)
     return {
-        "medians": [wmedian(v[group == d], w[group == d]) for d in range(groups)],
+        "medians": [
+            wmedian(v[group == d], w[group == d]) for d in range(groups)
+        ],
         "unweighted_households": [
             int(len(np.unique(h[group == d]))) for d in range(groups)
         ],
@@ -146,7 +148,10 @@ def income_groups(a):
         pop: {
             basis: {
                 name: group_medians_and_households(
-                    a[f"eq_{basis}"][mask], a["weight"][mask], a["hh_id"][mask], n
+                    a[f"eq_{basis}"][mask],
+                    a["weight"][mask],
+                    a["hh_id"][mask],
+                    n,
                 )
                 for name, n in INCOME_GROUPINGS.items()
             }
