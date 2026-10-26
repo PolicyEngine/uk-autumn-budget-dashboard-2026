@@ -5,6 +5,7 @@ import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+import { assumptionItems } from "./SingleYearResults";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 
@@ -175,9 +176,9 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
-    // The spending the fuel and electricity measures act on (the form's
-    // prefilled averages: petrol £620 and diesel £340, electricity £1,040)
-    expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
+    // No spending item: none of these policies acts on fuel or electricity
+    // spending (when it shows: "the spending item under the headline")
+    expect(box("Spending a year")).toBeUndefined();
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -589,5 +590,40 @@ describe("the fixture", () => {
       ].sort(),
     );
     expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});
+
+describe("the spending item under the headline", () => {
+  const spending = { petrol: 620, diesel: 340, electricity: 1040 };
+  const data = (year) => ({ year, salaryUsed: 0, partnerSalaryUsed: null, notModelled: [] });
+  const item = (year, selected) =>
+    assumptionItems(data(year), String(year), { spending, selected }).find((entry) => entry.id === "spending");
+
+  it("names fuel and electricity while a measure acts on each, in 2027-28", () => {
+    const all = ["fuel_duty_rise_deferral", "road_fuel_vat_cut", "domestic_electricity_zero_vat"];
+    expect(item(2027, all)).toMatchObject({
+      value: "fuel £960, electricity £1,040",
+      detail: "petrol, diesel and electricity, from More details",
+    });
+    expect(item(2027, ["domestic_electricity_zero_vat"]).value).toBe("electricity £1,040");
+    expect(item(2027, ["road_fuel_vat_cut"]).value).toBe("fuel £960");
+  });
+
+  it("leaves electricity out from 2028-29, when its zero VAT has ended", () => {
+    expect(item(2028, ["fuel_duty_rise_deferral", "domestic_electricity_zero_vat"])).toMatchObject({
+      value: "fuel £960",
+      detail: "petrol and diesel, from More details",
+    });
+    expect(item(2028, ["domestic_electricity_zero_vat"])).toBeUndefined();
+  });
+
+  it("leaves fuel out from 2028-29 when only the road fuel VAT cut is selected; the duty deferral runs on", () => {
+    expect(item(2028, ["road_fuel_vat_cut"])).toBeUndefined();
+    expect(item(2031, ["fuel_duty_rise_deferral"]).value).toBe("fuel £960");
+  });
+
+  it("is not shown when no fuel or electricity measure is selected", () => {
+    expect(item(2027, ["state_pension_income_tax_protection", "plan_2_threshold_unfreeze"])).toBeUndefined();
+    expect(item(2027, [])).toBeUndefined();
   });
 });

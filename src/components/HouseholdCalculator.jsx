@@ -690,6 +690,7 @@ function HouseholdCalculator({
               diesel: (submitted?.inputs ?? inputs).diesel_spending_per_year,
               electricity: (submitted?.inputs ?? inputs).electricity_spending_per_year,
             }}
+            selected={submitted?.policies ?? householdPolicies}
             submitted={submitted !== null}
             changed={changed}
             policyCount={submitted?.policies.length ?? householdPolicies.length}

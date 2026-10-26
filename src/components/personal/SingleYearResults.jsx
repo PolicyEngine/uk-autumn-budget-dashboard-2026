@@ -90,7 +90,38 @@ export function showDependantsNote(data) {
  * chosen) for one line under the headline. The full explanations are in
  * "About these figures".
  */
-export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null } = {}) {
+/**
+ * The measures that act on the spending entered in More details, and the
+ * last policy year each changes a household's net income (null: every
+ * year). From their modifiers in src/uk_budget_data/budget_measures/: the
+ * road fuel VAT cut runs to May 2027 and the zero VAT on electricity to
+ * March 2028, so neither changes anything from 2028-29
+ * (household_impact.provably_unaffected skips both from 2028).
+ */
+export const SPENDING_MEASURES = [
+  { id: "fuel_duty_rise_deferral", spending: "fuel", lastYear: null },
+  { id: "road_fuel_vat_cut", spending: "fuel", lastYear: 2027 },
+  { id: "domestic_electricity_zero_vat", spending: "electricity", lastYear: 2027 },
+];
+
+/**
+ * Whether a selected measure acts on this kind of spending ("fuel" or
+ * "electricity") in `year`.
+ */
+export function spendingCounts(kind, selected, year) {
+  return SPENDING_MEASURES.some(
+    (measure) =>
+      measure.spending === kind &&
+      selected.includes(measure.id) &&
+      (measure.lastYear === null || year <= measure.lastYear),
+  );
+}
+
+export function assumptionItems(
+  data,
+  yearLabel,
+  { renting = false, policies = [], spending = null, selected = [] } = {},
+) {
   const items = [];
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
@@ -114,9 +145,12 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
     });
   }
   // The spending the fuel and electricity measures act on: prefilled with
-  // the average household's, so a default answer's gain comes from it
-  const fuel = (spending?.petrol ?? 0) + (spending?.diesel ?? 0);
-  const electricity = spending?.electricity ?? 0;
+  // the average household's, so a default answer's gain comes from it.
+  // Each part only while a selected measure acts on it in the result's year
+  const fuel = spendingCounts("fuel", selected, data.year)
+    ? (spending?.petrol ?? 0) + (spending?.diesel ?? 0)
+    : 0;
+  const electricity = spendingCounts("electricity", selected, data.year) ? (spending?.electricity ?? 0) : 0;
   if (fuel > 0 || electricity > 0) {
     const parts = [];
     if (fuel > 0) parts.push(`fuel ${money(fuel)}`);
@@ -125,7 +159,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: "spending",
       label: "Spending a year",
       value: parts.join(", "),
-      detail: "petrol, diesel and electricity, from More details",
+      detail: `${fuel > 0 && electricity > 0 ? "petrol, diesel and electricity" : fuel > 0 ? "petrol and diesel" : "electricity"}, from More details`,
     });
   }
   if (showDependantsNote(data)) {
@@ -383,6 +417,7 @@ export function SingleYearHeadline({
   noPolicies,
   renting = false,
   spending = null,
+  selected = [],
   submitted = true,
   changed = false,
   policyCount = 0,
@@ -437,7 +472,7 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             policyCount={policyCount}
-            items={assumptionItems(data, yearLabel, { renting, policies, spending })}
+            items={assumptionItems(data, yearLabel, { renting, policies, spending, selected })}
           />
         </div>
       )}
