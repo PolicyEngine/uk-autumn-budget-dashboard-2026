@@ -231,6 +231,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
   );
+  // Only measures that change no household's income this year: the plot's
+  // note says so, and the card's sentence does not repeat it as "almost no
+  // change" at both ends
+  const nothingChanges = published && activePolicies.length === 0 && !hasIncompleteResults;
   const exportName = `absolute-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -264,7 +268,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           </h3>
           {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {decileSentence(data, "absolute") ?? CHART_DESCRIPTION}
+            {(nothingChanges ? null : decileSentence(data, "absolute")) ?? CHART_DESCRIPTION}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -274,7 +278,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published && activePolicies.length === 0 && !hasIncompleteResults ? (
+        {nothingChanges ? (
           // Only measures that change no household's income this year (an
           // employer cost): a note, not an empty plot of zero ticks. A
           // measure with no published result is not 'no change': the
