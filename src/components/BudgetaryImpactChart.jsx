@@ -38,6 +38,7 @@ import {
 } from "../utils/displayYears";
 import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import SelectedYearShade from "./SelectedYearShade";
 import { revenueSentence } from "../utils/plainSentences";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
@@ -50,33 +51,6 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 const formatNetLabel = (value) =>
   value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
 
-/**
- * The selected year's shading behind its bars. One rect, moved by a
- * transform, so a year change (or Play) slides it to the new year.
- */
-function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
-  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
-  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!xAxis?.scale || !yAxis) return null;
-  const start = xAxis.scale(selectedYear);
-  if (start === undefined || Number.isNaN(start)) return null;
-  const width = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
-  return (
-    <rect
-      className="revenue-year-highlight"
-      x={0}
-      y={yAxis.y}
-      width={width}
-      height={yAxis.height}
-      fill={CHART_COLOURS.gain}
-      fillOpacity={0.08}
-      style={{
-        transform: `translateX(${start}px)`,
-        transition: chartTransition("transform"),
-      }}
-    />
-  );
-}
 
 // The net line's dot radius (the Line's dot below)
 const DOT_RADIUS = 4;
@@ -324,7 +298,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <CartesianGrid {...GRID_PROPS} />
             {/* The year chosen in the title band, shaded behind its bars */}
             {data.some((point) => point.year === selectedYear) && (
-              <Customized component={<YearHighlight selectedYear={selectedYear} />} />
+              <Customized component={<SelectedYearShade value={selectedYear} />} />
             )}
             <XAxis
               dataKey="year"

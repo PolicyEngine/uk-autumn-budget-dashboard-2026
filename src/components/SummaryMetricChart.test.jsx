@@ -5,6 +5,7 @@ import SummaryMetricChart, {
   metricByYear,
   parsePovertyChoice,
   povertyMetric,
+  tightAxis,
 } from "./SummaryMetricChart";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
@@ -167,5 +168,12 @@ describe("povertyMetric and parsePovertyChoice", () => {
     expect(povertyMetric(parsePovertyChoice("relative-ahc-children")).key).toBe("child_poverty_rel_ahc_change_pp");
     expect(povertyMetric(parsePovertyChoice("absolute-ahc-all")).key).toBe("poverty_abs_ahc_change_pp");
     expect(parsePovertyChoice("nonsense-ahc")).toEqual({ basis: "absolute", housing: "ahc", group: "all" });
+  });
+});
+
+describe("tightAxis", () => {
+  it("fits the bars: symmetric with round ticks when they go both ways, from zero when one way", () => {
+    expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.05, 0.05], ticks: [-0.05, -0.025, 0, 0.025, 0.05] });
+    expect(tightAxis([-0.007, -0.004]).domain).toEqual([-0.01, 0]);
   });
 });
