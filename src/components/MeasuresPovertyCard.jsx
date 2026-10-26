@@ -167,6 +167,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     <LsCard
       title="Which measures move poverty"
       icon="bars"
+      className="mp-card"
       period={year}
       summary={
         <>
