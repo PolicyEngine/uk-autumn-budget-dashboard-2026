@@ -551,3 +551,75 @@ export function panelDots(
   });
   return dots;
 }
+
+/**
+ * How households with income like one household's changed: the cells of
+ * the income bands whose middle is within `window` of `income` (two £5,000
+ * bands), and the change bands that hold their middle `share` of
+ * households (by weighted count, from the 10th to the 90th percentile by
+ * default). The range is the outer edges of those two change bands, so at
+ * least `share` of the band's published households fall inside it.
+ *
+ * Null when there is nothing honest to say: the income is off the
+ * published bands, no cells fall in them, or the range reaches an
+ * open-ended band beyond ±£5,000.
+ *
+ * @param {Array<{incomeBand: number, changeBand: number,
+ *   changeBandUpper: number, households: number}>} cells - The year's cells.
+ * @param {number} income - The household's income on the scatter's basis.
+ * @returns {{incomeLow: number, incomeHigh: number, low: number,
+ *   high: number, share: number} | null} `low` and `high` in £ a year
+ *   (the no-change band counts as £0).
+ */
+export function incomeLikeYours(
+  cells,
+  income,
+  { window = 5000, share = 0.8, bins = SCATTER_BINS } = {},
+) {
+  if (!Number.isFinite(income) || income < bins.income_min || income >= bins.income_max) {
+    return null;
+  }
+  const width = bins.income_band_width;
+  const near = cells.filter(
+    (cell) => Math.abs(cell.incomeBand + width / 2 - income) <= window && cell.households > 0,
+  );
+  const total = near.reduce((sum, cell) => sum + cell.households, 0);
+  if (!(total > 0)) return null;
+  const sorted = [...near].sort(
+    (a, b) => a.changeBand - b.changeBand || a.changeBandUpper - b.changeBandUpper,
+  );
+  // Merge cells of the same change band across the income bands
+  const bands = [];
+  for (const cell of sorted) {
+    const last = bands[bands.length - 1];
+    if (last && last.changeBand === cell.changeBand && last.changeBandUpper === cell.changeBandUpper) {
+      last.households += cell.households;
+    } else {
+      bands.push({ ...cell });
+    }
+  }
+  const at = (q) => {
+    const target = q * total;
+    let before = 0;
+    for (const band of bands) {
+      before += band.households;
+      if (before > target) return band;
+    }
+    return bands[bands.length - 1];
+  };
+  const tail = (1 - share) / 2;
+  const lowBand = at(tail);
+  const highBand = at(1 - tail);
+  if (openEdge(lowBand.changeBand, lowBand.changeBandUpper)) return null;
+  if (openEdge(highBand.changeBand, highBand.changeBandUpper)) return null;
+  // The no-change band (−£1, £1) counts as £0 at either end
+  const edge = (value) => (Math.abs(value) <= 1 ? 0 : value);
+  const incomeBands = near.map((cell) => cell.incomeBand);
+  return {
+    incomeLow: Math.min(...incomeBands),
+    incomeHigh: Math.min(Math.max(...incomeBands) + width, bins.income_max),
+    low: edge(lowBand.changeBand),
+    high: edge(highBand.changeBandUpper),
+    share,
+  };
+}

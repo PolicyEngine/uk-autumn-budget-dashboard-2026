@@ -15,6 +15,19 @@ import {
 // the policies back shows them at once
 const cache = new Map();
 
+/**
+ * A result already in the session cache for a request key (fetched, or a
+ * precomputed example), or null. Its headline may be all it has.
+ */
+export function peekHouseholdImpact(key) {
+  return cache.get(key)?.data ?? null;
+}
+
+/** Remember a headline answer (its detail parts are null) for a key. */
+export function rememberHouseholdHeadline(key, data) {
+  if (!cache.has(key)) cache.set(key, { data, complete: false });
+}
+
 /** Empty the session cache (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();

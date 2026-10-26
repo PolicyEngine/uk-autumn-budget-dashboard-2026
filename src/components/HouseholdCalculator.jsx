@@ -6,6 +6,9 @@ import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import HouseholdCards from "./personal/HouseholdCards";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
+import useBasisIncome from "../hooks/useBasisIncome";
+import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
+import HouseholdScatter from "./HouseholdScatter";
 import { PRESET_POLICIES, loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
@@ -720,6 +723,48 @@ function HouseholdCalculator({
     );
   };
 
+  // The result among all UK households: the Population impact scatter
+  // with this household on it, for the year and policies the result was
+  // asked with, once it is back and while the answers stand. The scatter's
+  // y axis is baseline household net income in its basis year (2027-28),
+  // so the household is placed by its own baseline income in that year.
+  const scatterData = useHouseholdScatterData();
+  const basisYear = scatterData.status === "ready" ? (scatterData.rows[0]?.income_basis_year ?? null) : null;
+  const placed =
+    submitted !== null &&
+    !noneSelected &&
+    !changed &&
+    householdResult.status === "ready" &&
+    !householdResult.stale &&
+    householdResult.data
+      ? householdResult.data
+      : null;
+  const basisIncome = useBasisIncome({
+    inputs: submitted?.inputs ?? null,
+    policies: submitted?.policies ?? [],
+    basisYear,
+    enabled: placed !== null,
+  });
+  const you = placed
+    ? {
+        change: placed.net.change,
+        // Until the basis year's income is known no ring is drawn; if it
+        // cannot be had, the ring goes by this year's income and says so
+        income:
+          basisIncome.status === "ready"
+            ? basisIncome.income
+            : basisIncome.status === "error"
+              ? placed.net.before
+              : null,
+        incomeYear: basisIncome.status === "error" ? submitted.year : (basisYear ?? submitted.year),
+        label: "You",
+        note:
+          placed.notModelled.length > 0
+            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one measure" : `${placed.notModelled.length} measures`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
+            : null,
+      }
+    : null;
+
   return (
     <div className="household-calculator">
       <HouseholdCards
@@ -806,6 +851,19 @@ function HouseholdCalculator({
         </div>
         )}
       </div>
+
+      {/* Where the result sits among all UK households, under the result */}
+      {you && (
+        <section className="report-section charts-stack household-among" aria-label="Your household among all UK households">
+          <HouseholdScatter
+            selectedPolicies={submitted.policies}
+            policies={policies}
+            selectedYear={submitted.year}
+            you={you}
+            title="Your household among all UK households"
+          />
+        </section>
+      )}
 
       {/* The results' sections, below the form and headline, once asked */}
       {submitted !== null && !noneSelected && (
