@@ -20,19 +20,31 @@ import "./ControlBar.css";
  *   | {label: string, summary: string, control: React.ReactNode}>} [props.options] - A
  *   group with `control` shows that control in place of segments (the years compared)
  * @param {string} [props.name] - What the options are for, for the dialog's name
- * @param {string[]} [props.face] - Labels of the groups whose choices the
- *   button's face shows (compact, e.g. just the poverty measure); its
- *   accessible name and hover title keep every choice. All groups if unset,
- *   or if none of these is offered.
  */
-export default function ControlBar({ children, options = [], name = "Chart", face }) {
+export default function ControlBar({ children, options = [], name = "Chart" }) {
   const groups = options.filter(Boolean);
   return (
     <div className="control-bar">
       {children}
-      {groups.length > 0 && <OptionsButton groups={groups} name={name} face={face} />}
+      {groups.length > 0 && <OptionsButton groups={groups} name={name} />}
     </div>
   );
+}
+
+/**
+ * The pill's label: every group's current choice, in the dialog's order,
+ * so it cannot drift from what the dialog holds. A show/hide group
+ * (`omitAtDefault`: its default value) is left out while at that default.
+ */
+const inSummary = (group) => !("omitAtDefault" in group) || group.value !== group.omitAtDefault;
+
+export function optionsSummary(groups) {
+  return groups
+    .filter(Boolean)
+    .filter(inSummary)
+    .map(chosenText)
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** The short form of a group's chosen option, for the summary. */
@@ -43,16 +55,14 @@ function chosenText(group) {
   return option?.summary ?? option?.label ?? "";
 }
 
-function OptionsButton({ groups, name, face }) {
+function OptionsButton({ groups, name }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const dialogRef = useRef(null);
   const dialogId = useId();
   const titleId = useId();
-  const summary = groups.map(chosenText).join(" · ");
-  const faceGroups = face ? groups.filter((group) => face.includes(group.label)) : [];
-  const faceText = faceGroups.length ? faceGroups.map(chosenText).join(" · ") : summary;
+  const summary = optionsSummary(groups);
 
   const close = (returnFocus = true) => {
     setOpen(false);
@@ -121,7 +131,7 @@ function OptionsButton({ groups, name, face }) {
           <circle cx="10" cy="12" r="2" />
           <circle cx="18" cy="18" r="2" />
         </svg>
-        <span className="control-bar-summary">{faceText}</span>
+        <span className="control-bar-summary">{summary}</span>
         <PillChevron />
       </button>
       {open && (
@@ -145,7 +155,7 @@ function OptionsButton({ groups, name, face }) {
               </button>
             </div>
             {groups.map((group) => (
-              group.control ? <CustomGroup key={group.label} group={group} /> : <Segmented key={group.label} group={group} />
+              group.control ? <CustomGroup key={group.label} group={group} /> : <Segmented key={group.label} group={group} inSummary={inSummary(group)} />
             ))}
           </div>
         </>
@@ -158,7 +168,7 @@ function OptionsButton({ groups, name, face }) {
 function CustomGroup({ group }) {
   const labelId = useId();
   return (
-    <div className="control-bar-group" role="group" aria-labelledby={labelId}>
+    <div className="control-bar-group" role="group" aria-labelledby={labelId} data-summary={group.summary ?? ""}>
       <span id={labelId} className="control-bar-group-label">
         {group.label}
       </span>
@@ -171,7 +181,7 @@ function CustomGroup({ group }) {
  * One choice as a segmented toggle: a radio group whose options sit side
  * by side; the arrow keys move between them and choose, as radios do.
  */
-export function Segmented({ group }) {
+export function Segmented({ group, inSummary: summarised = true }) {
   const labelId = useId();
   const enabled = group.options.filter((option) => !option.disabled);
   const move = (event, step) => {
@@ -186,7 +196,8 @@ export function Segmented({ group }) {
     requestAnimationFrame(() => target?.focus());
   };
   return (
-    <div className="control-bar-group">
+    // data-in-summary: whether the pill's label carries this choice
+    <div className="control-bar-group" data-in-summary={summarised}>
       <span id={labelId} className="control-bar-group-label">
         {group.label}
       </span>
@@ -207,6 +218,7 @@ export function Segmented({ group }) {
               type="button"
               role="radio"
               data-value={option.value}
+              data-summary={typeof (option.summary ?? option.label) === "string" ? option.summary ?? option.label : undefined}
               aria-checked={checked}
               // One tab stop per group: its chosen option
               tabIndex={checked ? 0 : -1}
