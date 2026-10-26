@@ -1039,6 +1039,7 @@ UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
   - **Cost** (Modal's billing report): $0.70 for the ten-unit run, $0.51 for the six-plus-release run.
   - **Peaks are under 43 GB,** so 48 GiB containers would do. That would cut the memory part of the cost by a quarter; not changed here.
   - **Main publishes no `constituency.csv`,** so there is no published table to compare with.
+- **Measured again from `main`, 26 October** (`main` at 9305d80 with #142 merged in, no #104; a timing-only scratch manifest built from `main`'s measures, marked "TIMING ONLY, not an approval"; scratch `--out-dir` and audit directory; nothing published): the six admissible measures, then the release, **14:32 end to end**, 3:48–6:32 per measure, 7:32 for the release, peak resident 33.3–39.5 GB. `validate_public` found 0 problems in `constituency.csv`. The laptop's process stayed under 0.4 GB.
 
 ## Data and model limitations: say these wherever a measure depends on them
 
