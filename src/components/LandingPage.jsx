@@ -44,14 +44,15 @@ export default function LandingPage({ onOpen, provisional }) {
   return (
     <section className="landing" aria-labelledby="landing-heading">
       <div className="landing-hero">
-      <h2 id="landing-heading" className="landing-heading">What Autumn Budget 2026 means</h2>
+      <p className="landing-eyebrow">PolicyEngine UK</p>
+      <h2 id="landing-heading" className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
-        This dashboard uses <SourceLink source="policyengine_uk_model" /> to
-        show how Autumn Budget 2026 measures would affect the public
-        finances and households: by income, area and age, and
-        for your own household, alongside the pre-measures forecast.
-        Costings are our own; forecast:{" "}
-        <SourceLink source="obr_efo_current" />.
+        Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
+        Autumn Budget 2026 measures affect the public finances and household
+        incomes across the income distribution, regions and age groups, set
+        against the pre-measures forecast. Costings are our own; the economic
+        forecast is the OBR&rsquo;s{" "}
+        <SourceLink source="obr_efo_current">Economic and fiscal outlook, March 2026</SourceLink>.
       </p>
       {provisional}
       </div>

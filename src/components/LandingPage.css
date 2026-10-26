@@ -146,6 +146,16 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   border-radius: var(--pe-radius-lg);
 }
 
+/* A small line above the heading: who the analysis is from */
+.landing-eyebrow {
+  margin: 0 0 clamp(2px, 0.6svh, 6px);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-gain-text);
+}
+
 .landing-heading {
   margin: 0 0 clamp(6px, 1.2svh, 12px);
   font-size: clamp(1.5rem, 0.9rem + 1.5vw + 0.6svh, 2.25rem);
