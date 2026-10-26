@@ -27,9 +27,10 @@ DATA_FILES=(
   uk_constituencies_2024.geojson
 )
 # Results by area, once published: the build ships whichever of them
-# public/data holds (next.config.ts), and the area views fetch them.
+# public/data holds (next.config.ts), and the area views fetch them, with
+# the area run's record of what they were made from.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-for file in regional.csv constituency.csv; do
+for file in regional.csv constituency.csv area_provenance.json; do
   if [ -f "$ROOT/public/data/$file" ]; then
     DATA_FILES+=("$file")
   fi
