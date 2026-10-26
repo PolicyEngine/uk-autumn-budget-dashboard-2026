@@ -117,6 +117,8 @@ def test_comparable_income_leaves_out_what_the_calculator_never_counts():
     values = {
         "household_net_income": 50_000,
         "nhs_spending": 7_000,
+        "dfe_education_spending": 0,
+        "dft_subsidy_spending": 0,
         "business_rates": 1_000,
         "corporate_sdlt": 100,
         "expected_sdlt": 600,

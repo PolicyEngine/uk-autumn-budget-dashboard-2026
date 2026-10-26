@@ -1171,10 +1171,15 @@ DISTRIBUTION_BAND = 1.0
 DISTRIBUTION_SIDES = ("baseline", "reform")
 # Items in the survey data's household net income that the household
 # calculator never gives a household it builds from the form, so a reader
-# can be placed on the distribution: NHS spending in kind (a benefit in
-# household_benefits), and the business rates and stamp duty the model
-# attributes to households (taxes in household_tax).
-NOT_IN_CALCULATOR_BENEFITS = ("nhs_spending",)
+# can be placed on the distribution: public spending in kind on health,
+# education and transport subsidies (benefits in household_benefits), and
+# the business rates and stamp duty the model attributes to households
+# (taxes in household_tax).
+NOT_IN_CALCULATOR_BENEFITS = (
+    "nhs_spending",
+    "dfe_education_spending",
+    "dft_subsidy_spending",
+)
 NOT_IN_CALCULATOR_TAXES = (
     "business_rates",
     "corporate_sdlt",
@@ -1186,8 +1191,9 @@ NOT_IN_CALCULATOR_TAXES = (
 
 def comparable_net_income(sim, year: int) -> np.ndarray:
     """Household net income as the household calculator counts it, by
-    household: ``household_net_income`` less NHS spending in kind, plus the
-    attributed business rates and stamp duty (NOT_IN_CALCULATOR_*). What
+    household: ``household_net_income`` less public spending in kind
+    (NHS, schools, transport subsidies), plus the attributed business
+    rates and stamp duty (NOT_IN_CALCULATOR_*). What
     stays is earnings and other market income, cash benefits and free
     childcare, less income tax, National Insurance, council tax, fuel duty,
     VAT changes, student loan repayments and pension contributions."""
