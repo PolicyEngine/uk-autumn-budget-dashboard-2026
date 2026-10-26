@@ -127,7 +127,10 @@
     }
   },
   "flat_aliases": {},
-  "flat_files": {},
+  "flat_files": {
+    "constituency.csv": "38b62c8b9f7d561b9eabeaa88e3dd2cecc45fc9ad1b5301a4d56c246d7db756c"
+  },
+  "flat_provenance_sha256": "1238675a9b8eaebbdf264f101c2a0eaf2cbb814bd94a59be9ab9ad2a7be50b93",
   "measures": {
     "badr_lifetime_limit_cut": {
       "approval": {
@@ -597,7 +600,7 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 89,
+  "revision": 90,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [
     {
@@ -1896,5 +1899,5 @@
       "superseded_at": "2026-10-26T13:55:00.143259+00:00"
     }
   ],
-  "updated_at": "2026-10-26T13:55:02.597171+00:00"
+  "updated_at": "2026-10-26T14:42:04.433392+00:00"
 }
