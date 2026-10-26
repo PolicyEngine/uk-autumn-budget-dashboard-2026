@@ -469,7 +469,7 @@ A measure that cannot be bound is refused at generation: the command prints `REF
 ```sh
 git switch main && git pull
 uv sync --locked --extra dev
-mkdir -p receipts
+mkdir -p ~/private/uk-budget-2026/receipts
 uv run python -m uk_budget_data.certified_data \
   --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
@@ -535,7 +535,8 @@ uv run uk-budget-data publish check
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `~/private/uk-budget-2026/receipts/<id>-households.json`.
   - **Keep the receipts outside the checkout.** As for `reconciliation.json` below, an untracked file in the tree makes every later receipt dirty. `publish approve --household-receipt` reads the file from any path and copies it into the manifest, so it never needs committing.
-  - **Commit fixtures before generating, or after G4's runs.** A fixture under `data_inputs/` counts as code to the commit binding. A member with a modifier generated before a fixture commit can't join the combined run or the area run until it is regenerated, restaged and, if hand-written, attested again ("Which later commits an area run accepts", G4).
+  - **Commit fixtures before generating.** A fixture under `data_inputs/` counts as code to the commit binding, and an uncommitted one makes the tree dirty: every later receipt is unpublishable and the area run refuses. A member with a modifier generated before a fixture commit can't join the combined run or the area run until it is regenerated, restaged and, if hand-written, attested again ("Which later commits an area run accepts", G4).
+  - **A fixture ready only after G2** stays outside the generating checkout until G4's runs are done, for example in `~/private/uk-budget-2026/fixtures/<id>/`. Pass that folder to `household_route --fixtures`, which reads every `*.json` in the folder it is given. Commit the fixture after G4.
 - **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **outside the checkout**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
   - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
   - **Why outside the checkout:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
