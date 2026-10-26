@@ -40,6 +40,7 @@ describe("chart motion", () => {
     expect(reduced?.[1]).toMatch(/--motion-fast: 0ms;/);
     expect(reduced?.[1]).toMatch(/--motion-base: 0ms;/);
     expect(reduced?.[1]).toMatch(/--motion-chart: 0ms;/);
+    expect(reduced?.[1]).toMatch(/--motion-slide: 0ms;/);
   });
 
   it("turns animation off for prefers-reduced-motion", () => {

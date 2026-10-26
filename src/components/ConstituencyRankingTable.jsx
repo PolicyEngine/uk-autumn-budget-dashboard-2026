@@ -1,5 +1,6 @@
 import { RANK_METRICS, describeList } from "../utils/constituencyRanking";
 import { OUTCOME_LABELS, formatFigure } from "../utils/geography/format";
+import Tip from "./Tip";
 
 export const APPROXIMATE_MARK = "≈";
 export const APPROXIMATE_NOTE =
@@ -16,10 +17,12 @@ function Figure({ row, outcome }) {
   return (
     <>
       {row.tier === "approximate" && (
-        <span className="ranking-approximate" title={APPROXIMATE_NOTE}>
-          <span aria-hidden="true">{APPROXIMATE_MARK} </span>
-          <span className="visually-hidden">approximately </span>
-        </span>
+        <Tip content={APPROXIMATE_NOTE}>
+          <span className="ranking-approximate">
+            <span aria-hidden="true">{APPROXIMATE_MARK} </span>
+            <span className="visually-hidden">approximately </span>
+          </span>
+        </Tip>
       )}
       {formatFigure(outcome, row.value)}
     </>

@@ -49,17 +49,15 @@ function ForecastPanel({ forecast, data, onShowTab }) {
         title={`${forecastName(forecast.pre_label) || "OBR"} economic forecast`}
         subtitle={
           <>
-            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.
+            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.{" "}
+            <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
+              How these forecasts feed our figures →
+            </ViewLink>
           </>
         }
       />
       <section id="living-forecast" className="report-section">
         <ForecastHeadlineSection data={data} />
-        <p className="forecast-feed-link">
-          <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
-            How these forecasts feed our figures → Methodology
-          </ViewLink>
-        </p>
       </section>
       <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} />
     </>

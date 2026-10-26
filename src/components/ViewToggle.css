@@ -21,7 +21,8 @@
   cursor: pointer;
 }
 
-.view-toggle-button + .view-toggle-button {
+.view-toggle-button + .view-toggle-button,
+.tip-anchor + .tip-anchor > .view-toggle-button {
   border-left: 1px solid var(--pe-gray-200);
 }
 

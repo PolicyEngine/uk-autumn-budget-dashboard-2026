@@ -68,10 +68,16 @@ export default function ForecastHeadlineSection({ data }) {
           icon={ICONS[tile.key] ?? Tag}
           name={tile.name}
           href={ONS_SERIES[tile.key]}
+          hrefTip={ONS_SERIES[tile.key] && "The ONS series this measures"}
           value={pctLabel(tile.value)}
           caption={`annual growth, ${year}`}
-          rows={tile.rows.map((r) => ({ label: r.year, official: null, projection: r.value }))}
-          format={pctLabel}
+          trend={{
+            rows: tile.rows.map((r) => ({ label: r.year, value: r.value })),
+            format: pctLabel,
+            seriesLabel: "OBR forecast",
+            highlight: year,
+            minSpan: 1,
+          }}
           meaning={tileMeaning(tile.key, tile.rows, allRows)}
         />
       ))}

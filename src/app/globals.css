@@ -73,6 +73,8 @@
   --motion-fast: 150ms;
   --motion-base: 220ms;
   --motion-chart: 300ms;
+  /* A segmented control's chosen pill sliding to a new choice */
+  --motion-slide: 250ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Transitions (the ui-kit names, on the motion tokens) */
@@ -86,6 +88,7 @@
     --motion-fast: 0ms;
     --motion-base: 0ms;
     --motion-chart: 0ms;
+    --motion-slide: 0ms;
   }
 }
 
@@ -130,20 +133,18 @@ code {
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
-  /* The landing page (LandingPage.css): how much the Public finances view
-     behind it is faded (the share of the page background over it; more
-     over its first 240px, under the paragraph) and blurred, and the least
-     height it shows of it */
-  --landing-fade: 80%;
-  --landing-fade-top: 92%;
-  --landing-blur: 4px;
-  --landing-min-height: 640px;
-  /* The sub-tab band (SubTabs.css) and the chosen view tab that opens into
-     it: one tint, a crisp rule under the band, muted teal-grey for the
-     tabs not chosen */
-  --c-subtab-band: color-mix(in srgb, var(--pe-teal-100) 45%, var(--pe-teal-50));
-  --c-subtab-rule: var(--pe-teal-200);
-  --c-subtab-active: color-mix(in srgb, var(--pe-teal-200) 75%, var(--pe-teal-100));
+  /* The landing page (LandingPage.css): how much of the page background
+     lies over the Public finances view behind it (more at the top, behind
+     the heading and paragraph; less around and below the boxes), its blur,
+     the glass panels' blur, the least height of the view it shows, and the
+     boxes' hover motion */
+  --landing-fade: 58%;
+  --landing-fade-top: 80%;
+  --landing-blur: 2px;
+  --landing-glass-blur: 10px;
+  --landing-min-height: 620px;
+  --landing-motion: 0.2s;
+  /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
@@ -432,7 +433,7 @@ body {
 }
 
 .app[data-sub-band] {
-  --sub-band-height: 57px;
+  --sub-band-height: 45px;
 }
 
 @media (min-width: 601px) {
@@ -441,7 +442,7 @@ body {
   }
 
   .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 45px;
+    --sub-band-height: 39px;
   }
 
   .app[data-tabs-stuck] .view-tabs-bar {
@@ -575,16 +576,10 @@ body {
     width 220ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
-   same tint and no rule between them, so the band reads as that tab's
-   own. Its underline stays: every chosen view tab is marked the same. */
+/* A view with sub-tabs: their row follows right under this one (SubTabs),
+   white too, one rule between them and no shadow over it */
 .view-tabs-bar.has-notch {
-  border-bottom-color: transparent;
   box-shadow: none;
-}
-
-.view-tabs-bar.has-notch .view-tabs-indicator {
-  background: var(--c-subtab-band);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -605,6 +600,10 @@ body {
 
   .app[data-tabs-stuck] {
     --view-tabs-height: 44px;
+  }
+
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 39px;
   }
 
   .view-tab {
@@ -985,10 +984,11 @@ body {
 
 }
 
-/* A source named in a section's intro reads as a link, as does the line
-   under a section pointing to another view */
+/* A source named in a section's intro reads as a link, as do the line
+   under a section and a card's subtitle link pointing to another view */
 .section-heading p a,
-.section-link a {
+.section-link a,
+.main-content .chart-description a.twin-link {
   color: var(--c-gain-text);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -2826,6 +2826,157 @@ body {
   }
 }
 
+
+/* ---------- Popovers and menus (usePresence.js) ---------- */
+/* In: a fade and a scale from 0.98, from the edge it opens from. Out: a
+   fade, while the hook keeps it mounted for --motion-fast. */
+.popover-motion {
+  transform-origin: top center;
+  animation: popover-in var(--motion-fast) var(--ease-out);
+}
+
+.popover-motion.is-leaving {
+  pointer-events: none;
+  animation: popover-out var(--motion-fast) ease-in forwards;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover-motion,
+  .popover-motion.is-leaving {
+    animation: none;
+  }
+}
+
+/* ---------- Segmented controls: the chosen pill slides (useSegmentThumb) ---------- */
+/* The thumb sits under the options; once it has a place, the chosen
+   option's own background gives way to it, and it slides to a new choice */
+.control-bar-segments,
+.view-toggle,
+.obr-view-switch {
+  position: relative;
+}
+
+.segment-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment-thumb.is-ready {
+  opacity: 1;
+  transition:
+    transform var(--motion-slide) var(--ease-out),
+    width var(--motion-slide) var(--ease-out),
+    height var(--motion-slide) var(--ease-out);
+}
+
+.has-thumb > button {
+  position: relative;
+  z-index: 1;
+  transition: color var(--motion-slide) var(--ease-out);
+}
+
+/* Options popovers: the white pill on the grey track */
+.control-bar-segments > .segment-thumb {
+  border-radius: 6px;
+  background: var(--pe-surface);
+  box-shadow: 0 1px 2px var(--shadow-strong);
+}
+
+.control-bar-segments.has-thumb > .control-bar-segment.is-checked {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Chart or table */
+.view-toggle > .segment-thumb {
+  background: var(--pe-teal-50);
+}
+
+.view-toggle.has-thumb > .view-toggle-button.is-checked {
+  background: transparent;
+}
+
+/* The household charts' view switches */
+.obr-view-switch > .segment-thumb {
+  background: var(--band-teal);
+}
+
+.obr-view-switch.has-thumb > .obr-view-option[aria-pressed="true"] {
+  background: transparent;
+}
+
+/* ---------- Content swaps (SwapTransition.jsx) and panels ---------- */
+/* The new content of a card whose view changed: a fade and a 6px rise */
+.swap-transition-inner.swap-in {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A table that replaces a chart (Chart or table, on the OBR forecast's
+   cards) rises in as a swapped view does */
+.ls-table-wrapper {
+  animation: swap-in var(--motion-base) var(--ease-out);
+}
+
+/* A view or sub-tab's content fades in when it is shown (they stay
+   mounted and are hidden, so the animation replays on each showing).
+   Opacity only: a transform would move the sticky parts inside. */
+.tab-panel:not([hidden]),
+.sub-panel:not([hidden]) {
+  animation: panel-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap-transition-inner.swap-in,
+  .ls-table-wrapper,
+  .tab-panel:not([hidden]),
+  .sub-panel:not([hidden]) {
+    animation: none;
+  }
+}
 
 /* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
 .expander-body {
