@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SectionHeading from "./SectionHeading";
-import ViewSwitch from "./ViewSwitch";
 import { MeasureKeyProvider, SectionMeasureKey } from "./MeasureKey";
 import TrendCard from "./youngPeople/TrendCard";
 import MeasuresCard from "./youngPeople/MeasuresCard";
-import SingleAgeCard from "./age/SingleAgeCard";
-import { MeanChangeCard, SharesCard, YOUNG_PEOPLE_ANCHOR, useAgeImpactRows } from "./YoungPeopleSection";
+import AgeChangeCard from "./age/AgeChangeCard";
+import { SharesCard, YOUNG_PEOPLE_ANCHOR, useAgeImpactRows } from "./YoungPeopleSection";
 import { PENSIONERS_ANCHOR, PensionerSharesCard } from "./PensionersSection";
 import { useNarrowViewport } from "../utils/chartTheme";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -67,45 +66,40 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
       </p>
     );
   }
-  const props = { rows, policies, selectedPolicies, selectedYear, narrow, combinedId, catalogue, group };
+  // One Age group choice, in every card's Options pill and in sync: choosing
+  // it in any card changes all four (and ?age=)
+  const groupOption = {
+    label: "Age group",
+    value: group,
+    onChange: choose,
+    options: AGE_GROUP_OPTIONS.map((option) => ({
+      value: option.key,
+      label: option.label,
+      summary: option.key === PENSIONERS ? "Pensioners" : option.label,
+    })),
+  };
+  const props = { rows, policies, selectedPolicies, selectedYear, narrow, combinedId, catalogue, group, extraOptions: [groupOption] };
   const subject = groupSubject(group);
   return (
     <>
       {/* The old sub-tabs' anchors, so their links still land here */}
       <span id={YOUNG_PEOPLE_ANCHOR} aria-hidden="true" />
       <span id={PENSIONERS_ANCHOR} aria-hidden="true" />
-      <SectionHeading
-        icon="cake"
-        title="By age"
-        subtitle={
-          group === PENSIONERS
-            ? "Pensioners are people at State Pension age or over: 66 and over in 2026-27, 67 and over from 2027-28."
-            : "How household net income changes for each age group. Choose the group the cards focus on."
-        }
-      />
-      <div className="section-controls age-group-control" role="group" aria-label="Age group">
-        <span className="section-controls-label">Age group</span>
-        <ViewSwitch
-          options={AGE_GROUP_OPTIONS.map((option) => ({
-            value: option.key,
-            label: narrow ? option.short : option.key === PENSIONERS ? "Pensioners" : option.label,
-            title: option.label,
-          }))}
-          value={group}
-          onChange={choose}
-          label="Age group"
-          compact
-        />
-      </div>
       <MeasureKeyProvider>
-        <section className="report-section young-people-section" aria-label="Change by age">
+        <SectionHeading
+          icon="ages"
+          title="How much each age group gains"
+          subtitle={
+            group === PENSIONERS
+              ? "Pensioners are people at State Pension age or over: 66 and over in 2026-27, 67 and over from 2027-28."
+              : "The average change for each age group, this year and over time; choose the group in any card's Options."
+          }
+        />
+        <section className="report-section young-people-section" aria-label="How much each age group gains">
           <SectionMeasureKey />
           <div className="charts-grid">
-            <MeanChangeCard {...props} bandsOnly height={narrow ? 360 : 400} />
+            <AgeChangeCard {...props} height={narrow ? 360 : 400} />
             <TrendCard key={group} {...props} height={narrow ? 340 : 400} />
-          </div>
-          <div className="charts-grid">
-            <SingleAgeCard {...props} height={narrow ? 340 : 400} />
           </div>
         </section>
       </MeasureKeyProvider>

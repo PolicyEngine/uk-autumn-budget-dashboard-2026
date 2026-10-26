@@ -121,7 +121,7 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * section's measure key highlights them). One axis for every year, so Play
  * shows the change between years.
  */
-export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS }) {
+export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age" }) {
   const chartRef = useRef(null);
   const [show, setShow] = useState("net");
   const byMeasure = show === "measures";
@@ -167,7 +167,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const showSpa = spa >= window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
   const ends = group === ALL_BAND ? [] : [singleAgeKey(groupFirst), singleAgeKey(groupLast)];
   const tickEnds = [...ends, ...(showSpa ? [singleAgeKey(spa)] : [])];
-  const title = `Change by single year of age, ${yearLabel}`;
+  const title = `${titleBase}, ${yearLabel}`;
   const description =
     group === ALL_BAND
       ? "Average change per person, £ a year, at each age."
@@ -224,7 +224,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[{ label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]} />
+        <ControlBar name={title} options={[...extraOptions, { label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (

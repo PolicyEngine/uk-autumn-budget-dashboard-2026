@@ -32,3 +32,32 @@ describe("By age's age groups", () => {
     expect(oldAgeSubGroup({ search: "?sub=age" })).toBeNull();
   });
 });
+
+describe("By age's cards share one age group", async () => {
+  const { vi } = await import("vitest");
+  const { fireEvent, render, screen, within } = await import("@testing-library/react");
+  vi.mock("./YoungPeopleSection", async (original) => ({
+    ...(await original()),
+    useAgeImpactRows: () => ({ status: "ready", rows: [] }),
+  }));
+  vi.mock("recharts", async () => {
+    const actual = await vi.importActual("recharts");
+    return { ...actual, ResponsiveContainer: ({ children }) => <div style={{ width: 800, height: 400 }}>{children}</div> };
+  });
+
+  it("chosen in any card's Options, it changes all four and the address", async () => {
+    const { default: AgeSection } = await import("./AgeSection");
+    window.history.replaceState({}, "", "/?sub=age&age=16-24");
+    render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
+    const pills = () => screen.getAllByRole("button", { name: /^Options:/ });
+    expect(pills()).toHaveLength(4);
+    for (const pill of pills()) expect(pill.getAttribute("aria-label")).toMatch(/^Options: 16 to 24/);
+    // Choose 50 to 64 in the second card (Change by year)
+    fireEvent.click(pills()[1]);
+    const dialog = screen.getByRole("dialog");
+    const group = within(dialog).getAllByRole("radiogroup")[0];
+    fireEvent.click(within(group).getByRole("radio", { name: /50 to 64/ }));
+    for (const pill of pills()) expect(pill.getAttribute("aria-label")).toMatch(/^Options: 50 to 64/);
+    expect(new URLSearchParams(window.location.search).get("age")).toBe("50-64");
+  });
+});
