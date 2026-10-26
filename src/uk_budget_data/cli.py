@@ -189,6 +189,22 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
 
+    # What each measure changes, current law beside the measure: parameter
+    # lookups only, no dataset or simulation
+    policy_table_parser = subparsers.add_parser(
+        "policy-table",
+        help=(
+            "Write only policy_parameters.json: each measure's policy "
+            "parameters before and after, from the model (no dataset needed)"
+        ),
+    )
+    policy_table_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("./public/data"),
+        help="Output directory (default: ./public/data)",
+    )
+
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
     add_living_standards_parsers(subparsers)
@@ -399,6 +415,11 @@ def main(args: list[str] = None) -> int:
         return run_generate(parsed)
     elif parsed.command == "income-curve":
         return run_income_curve(parsed)
+    elif parsed.command == "policy-table":
+        from uk_budget_data.policy_table import write
+
+        console.print(f"Wrote {write(parsed.output_dir)}")
+        return 0
     elif parsed.command == "publish":
         return run_publish(parsed)
     elif parsed.command == "geography":
@@ -415,6 +436,9 @@ def main(args: list[str] = None) -> int:
             "  generate  - Generate dashboard data from microsimulation"
         )
         console.print("  income-curve - The example households' curves only")
+        console.print(
+            "  policy-table - Each measure's parameters, before and after"
+        )
         console.print(
             "  publish   - Reconcile, stage, approve and check publications"
         )
