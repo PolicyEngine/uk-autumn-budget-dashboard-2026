@@ -115,6 +115,44 @@ function ChartTooltip({
 const TOUCH =
   typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches;
 
+/**
+ * One stacked segment's tooltip, for a chart whose Tooltip has
+ * shared={false}: the bar's label, the hovered measure and its value, then
+ * the bar's net under a hairline. Beside the cursor, so it never covers the
+ * whole bar (Vahid, 26 October).
+ *
+ * @param {Object} props
+ * @param {(row: Object) => string} props.labelOf - The bar's label from its row
+ * @param {(value: number) => string} props.format - Absolute value text
+ * @param {string} [props.netKey] - The row's net, shown under the measure
+ * @param {string} [props.netLabel]
+ */
+export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change" }) {
+  if (!active || !payload?.length) return null;
+  const entry = payload.find((item) => item.dataKey !== netKey) ?? payload[0];
+  const row = entry.payload ?? {};
+  const value = Number(entry.value);
+  const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);
+  const net = netKey ? Number(row[netKey]) : NaN;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{labelOf(row)}</p>
+      <div className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
+        <span className="chart-tooltip-name">{entry.name}</span>
+        <span className="chart-tooltip-value">{text(value)}</span>
+      </div>
+      {Number.isFinite(net) && (
+        <div className="chart-tooltip-row chart-tooltip-net">
+          <span className="chart-tooltip-swatch chart-tooltip-swatch-line" />
+          <span className="chart-tooltip-name">{netLabel}</span>
+          <span className="chart-tooltip-value">{text(net)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const TOOLTIP_PROPS = {
   trigger: TOUCH ? "click" : "hover",
   offset: 12,
