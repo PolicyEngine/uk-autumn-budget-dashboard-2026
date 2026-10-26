@@ -58,8 +58,8 @@ import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
-import MeasureShareTick from "./MeasureShareTick";
-import { sharesByMeasure } from "../utils/measureShares";
+import MeasureSharesChart from "./MeasureSharesChart";
+import { SHARE_FILTER_OPTIONS, filterShareRows, sharesByMeasure } from "../utils/measureShares";
 import {
   legendMembership,
   exportLegendItems,
@@ -651,6 +651,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
   const [groupKey, setGroupKey] = useState(YOUNG_BAND);
+  const [hide, setHide] = useState("hide");
+  const [order, setOrder] = useState("size");
+  const [direction, setDirection] = useState("both");
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
   const perMeasure = sharesByMeasure(sharesByGroup, rows, policies, selectedPolicies, selectedYear, combinedId, groupKey);
@@ -662,8 +665,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
       ? SHARES_SINGLE_DESCRIPTION
       : SHARES_DESCRIPTION;
   const shares = perMeasure ? null : (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
+  const filtered = perMeasure ? filterShareRows(perMeasure.rows, { hide, order, direction }) : null;
   const data = perMeasure
-    ? perMeasure.rows.map((row) => visibleSegments({ group: row.name, key: row.id, ...pick(row.row) }, OUTCOME_KEYS))
+    ? filtered.rows.map((row) => visibleSegments({ group: row.name, key: row.id, ...pick(row.row) }, OUTCOME_KEYS))
     : shares
     ? shares.groups
         .filter((group) => !group.suppressed)
@@ -743,6 +747,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
+              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide },
+              { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
+              { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}
           />
         ) : (
@@ -804,8 +811,10 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               ))}
             </BarChart>
           </ResponsiveContainer>
+        ) : perMeasure && data.length ? (
+          <MeasureSharesChart rows={filtered.rows} groupLabel={groupLabel} yearLabel={yearLabel} />
         ) : data.length ? (
-          <ResponsiveContainer width="100%" height={perMeasure ? Math.max(height, data.length * 36 + 60) : height}>
+          <ResponsiveContainer width="100%" height={height}>
             <BarChart
               data={data}
               layout="vertical"
@@ -814,16 +823,14 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
               {/* The 16 to 24 row's highlight, as in "Average change by age" */}
-              {!perMeasure && (
-                <ReferenceArea
-                  y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                  y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
-                  fill={YOUNG_FILL}
-                  fillOpacity={0.6}
-                  radius={6}
-                  ifOverflow="visible"
-                />
-              )}
+              <ReferenceArea
+                y1={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
+                y2={AGE_BANDS.find((band) => band.key === YOUNG_BAND).label}
+                fill={YOUNG_FILL}
+                fillOpacity={0.6}
+                radius={6}
+                ifOverflow="visible"
+              />
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -843,8 +850,8 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               <YAxis
                 type="category"
                 dataKey="group"
-                tick={perMeasure ? <MeasureShareTick narrow={narrow} size={ROW_LABEL_SIZE} /> : <GroupTick narrow={narrow} />}
-                width={perMeasure ? (narrow ? 104 : 190) : narrow ? 52 : 96}
+                tick={<GroupTick narrow={narrow} />}
+                width={narrow ? 52 : 96}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
@@ -894,6 +901,11 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
       <div className="chart-footer">
         {published && thin.length > 0 && (
           <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
+        )}
+        {filtered?.hidden > 0 && (
+          <Note>
+            {filtered.hidden} {filtered.hidden === 1 ? "measure" : "measures"} with no effect hidden
+          </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
         <ChartMoreInfo year={Number(selectedYear)}>
