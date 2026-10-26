@@ -289,12 +289,13 @@
 }
 
 /* The summary card: one sentence in the cards' style, then the tiles */
-.position-summary .position-sentence {
-  margin: 4px 0 14px;
+/* The tiles keep one height; their contents start at the top */
+.position-tiles {
+  align-items: stretch;
 }
 
-.position-summary .position-sentence strong {
-  color: var(--pe-gray-900);
+.position-tiles .forecast-tile {
+  justify-content: flex-start;
 }
 
 .position-tiles {
