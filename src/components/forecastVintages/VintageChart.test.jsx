@@ -6,7 +6,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { legendItems, pointLabels, xTicks, yAxisFor } from "./VintageChart";
+import {
+  boxesMeet,
+  chartLayout,
+  labelBoxes,
+  labelGeometry,
+  legendItems,
+  pointLabels,
+  xTicks,
+  yAxisFor,
+} from "./VintageChart";
 import { buildView } from "../../utils/forecastVintages/view";
 
 const DATA = JSON.parse(readFileSync("public/data/obr_forecast_vintages.json", "utf8"));
@@ -20,21 +29,49 @@ const pointsArb = fc
   .map((ps) => ps.map((p, i) => ({ role: ROLES[i], x: p.x, y: 1000 + p.y })));
 const place = { px: (x) => x, py: (y) => 300 - (y - 1000) };
 
+// Every pair of labels' text boxes, and every label's text and line
+// against the other labels' dots
+function collisions(labels, dots = []) {
+  const found = [];
+  for (const [i, a] of labels.entries()) {
+    for (const b of labels.slice(i + 1)) {
+      for (const t of a.boxes.text) for (const u of b.boxes.text) if (boxesMeet(t, u)) found.push(`${a.role} text on ${b.role} text`);
+    }
+    for (const d of dots) {
+      if (d.role === a.role) continue;
+      for (const t of [...a.boxes.text, a.boxes.line]) if (boxesMeet(t, d.box)) found.push(`${a.role} on the ${d.role} dot`);
+    }
+  }
+  return found;
+}
+
 describe("the labelled points' text", () => {
-  it("keeps one label per point, in order, and no two on one side and level overlap", () => {
+  it("keeps one label per point, in order, with no two labels' text overlapping at any level or side", () => {
     fc.assert(
       fc.property(pointsArb, fc.boolean(), (points, narrow) => {
         const labels = pointLabels(points, { ...place, format, narrow });
         expect(labels.map((l) => l.role)).toEqual(ROLES);
-        for (const [i, a] of labels.entries()) {
-          expect(a.level).toBeGreaterThanOrEqual(0);
-          expect(a.lift).toBe(a.level * 34);
-          for (const b of labels.slice(i + 1)) {
-            if (a.above === b.above && a.level === b.level) {
-              expect(a.span[1] <= b.span[0] || b.span[1] <= a.span[0]).toBe(true);
-            }
-          }
+        for (const l of labels) {
+          expect(l.level).toBeGreaterThanOrEqual(0);
+          expect(l.lift).toBe(l.level * 34);
         }
+        expect(collisions(labels)).toEqual([]);
+      }),
+    );
+  });
+
+  it("draws each label where it was laid out", () => {
+    fc.assert(
+      fc.property(fc.boolean(), fc.boolean(), fc.nat({ max: 200 }), (above, narrow, lift) => {
+        const g = labelGeometry({ above, lift, narrow });
+        const boxes = labelBoxes({ x: 0, y: 0, above, lift, anchor: "middle", value: "£1", caption: "end", narrow });
+        // The value's baseline, its caption's under it, and the line from the dot
+        expect(boxes.text[0].top).toBeLessThan(g.valueY);
+        expect(boxes.text[1].top).toBeLessThan(g.captionY);
+        expect(g.captionY).toBeGreaterThan(g.valueY);
+        expect(boxes.line.top).toBe(Math.min(g.lineStart, g.lineEnd));
+        // Out from the dot, on its side, the further for a lift
+        for (const t of boxes.text) expect(above ? t.bottom < 0 : t.top > 0).toBe(true);
       }),
     );
   });
@@ -61,8 +98,8 @@ describe("the labelled points' text", () => {
       { role: "end", x: 600, y: 1206 },
     ];
     const labels = pointLabels(points, { ...place, format });
-    const end = labels.find((l) => l.role === "end");
-    expect(end.lift).toBeGreaterThan(0);
+    expect(labels.find((l) => l.role === "end").lift).toBeGreaterThan(0);
+    expect(collisions(labels)).toEqual([]);
   });
 
   it("moves a label off a neighbouring dot it would cover", () => {
@@ -76,6 +113,17 @@ describe("the labelled points' text", () => {
     expect(labels.find((l) => l.role === "start").above).toBe(true);
   });
 
+  it("anchors text at the plot's side rather than past it", () => {
+    const points = [
+      { role: "start", x: 0, y: 1100 },
+      { role: "latest", x: 600, y: 1150 },
+    ];
+    const bounds = { left: 0, right: 610, top: -50, bottom: 400 };
+    const labels = pointLabels(points, { ...place, format, bounds });
+    expect(labels.map((l) => l.anchor)).toEqual(["start", "end"]);
+    for (const l of labels) for (const t of l.boxes.text) expect(t.left >= 0 && t.right <= 610).toBe(true);
+  });
+
   it("keeps each label's own side where the plot is not laid out yet", () => {
     const points = ROLES.map((role) => ({ role, x: 0, y: 0 }));
     const labels = pointLabels(points, { format });
@@ -84,6 +132,93 @@ describe("the labelled points' text", () => {
       [true, 0],
       [true, 0],
     ]);
+  });
+});
+
+describe("the chart's layout", () => {
+  // Every measure, unit and option, over the recent window and the whole
+  // history, on a desktop card and a phone
+  const VIEWS = DATA.variables.flatMap((v) =>
+    Object.keys(v.units).flatMap((unit) =>
+      [false, true].flatMap((annual) =>
+        annual && v.frequency !== "quarterly"
+          ? []
+          : [true, false].map((showPast) => ({ v, unit, annual, showPast, view: buildView(DATA, v, { unit, annual, showPast }) })),
+      ),
+    ),
+  );
+  // A desktop card, then cards on a tablet and on 375px and 320px phones
+  const CANVASES = [
+    { canvasWidth: 926, narrow: false },
+    { canvasWidth: 600, narrow: true },
+    { canvasWidth: 309, narrow: true },
+    { canvasWidth: 254, narrow: true },
+  ];
+
+  it("lays the labels out on the axis drawn, clear of each other, the other dots and the plot's edges", () => {
+    const problems = [];
+    let laidOut = 0;
+    for (const { v, unit, annual, showPast, view } of VIEWS) {
+      for (const rows of [view.rows.slice(view.windowStart), view.rows]) {
+        for (const canvas of CANVASES) {
+          const layout = chartLayout(view, rows, canvas);
+          const [bottom, top] = layout.axis.domain;
+          const px = (x) => ((x - rows[0].x) / (rows[rows.length - 1].x - rows[0].x)) * layout.plotWidth;
+          const py = (y) => ((top - y) / (top - bottom)) * layout.plotHeight;
+          const dots = layout.labels.map((l) => {
+            const x = px(l.x);
+            const y = py(l.y);
+            return { role: l.role, box: { left: x - 6, right: x + 6, top: y - 6, bottom: y + 6 } };
+          });
+          const where = `${v.id} ${unit}${annual ? " A" : ""}${showPast ? "" : " no F"} ${rows.length} rows at ${canvas.canvasWidth}px`;
+          // Text never on text. On a phone with the whole history the three
+          // dots can sit within 20px, where every place has one conflict:
+          // there a label may touch another dot, but no more than that
+          const found = collisions(layout.labels, canvas.narrow && canvas.canvasWidth < 600 ? [] : dots);
+          for (const c of found) problems.push(`${where}: ${c}`);
+          for (const l of layout.labels) if (l.conflicts > 1) problems.push(`${where}: ${l.role} has ${l.conflicts} conflicts`);
+          for (const l of layout.labels) {
+            for (const t of l.boxes.text) {
+              const b = layout.bounds;
+              if (t.left < b.left || t.right > b.right || t.top < b.top || t.bottom > b.bottom) {
+                problems.push(`${where}: ${l.role} leaves the plot`);
+              }
+            }
+            laidOut += 1;
+          }
+          // Every value covers the rows' data, room or not
+          const values = rows.flatMap((r) => Object.entries(r).filter(([k]) => k !== "x").map(([, y]) => y));
+          if (Math.min(...values) < bottom || Math.max(...values) > top) problems.push(`${where}: data off the axis`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+    expect(laidOut).toBeGreaterThan(VIEWS.length);
+  });
+
+  it("keeps CPI's latest and end labels apart in % with the whole history on a phone", () => {
+    // Found by the review: the latest value and the end caption 5px apart
+    const view = buildView(DATA, variable("cpi"), { unit: "pct", showPast: true });
+    const layout = chartLayout(view, view.rows, { canvasWidth: 350, narrow: true });
+    expect(collisions(layout.labels)).toEqual([]);
+  });
+
+  it("makes no room where every label fits", () => {
+    const view = buildView(DATA, variable("rhdi_per_person"), { unit: "level" });
+    const layout = chartLayout(view, view.rows.slice(view.windowStart), { canvasWidth: 900 });
+    expect(layout.room).toEqual({ headroom: 0, footroom: 0 });
+    expect(layout.labels.map((l) => [l.role, l.above, l.lift])).toEqual([
+      ["start", false, 0],
+      ["latest", true, 0],
+      ["end", true, 0],
+    ]);
+  });
+
+  it("leaves the labels unplaced until the canvas is measured", () => {
+    const view = buildView(DATA, variable("rhdi_per_person"), { unit: "level" });
+    const layout = chartLayout(view, view.rows, { canvasWidth: 0 });
+    expect(layout.labels.every((l) => l.boxes === null)).toBe(true);
+    expect(layout.room).toEqual({ headroom: 0, footroom: 0 });
   });
 });
 

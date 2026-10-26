@@ -11,7 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import ForecastVintagesView, { pointsSentence, startsSentence, vintageCsv } from "./ForecastVintagesView";
 import { resetForecastVintages } from "../../utils/forecastVintages/load";
-import { buildView } from "../../utils/forecastVintages/view";
+import { periodIndex } from "../../utils/forecastVintages/transforms";
+import { buildView, pointsIn } from "../../utils/forecastVintages/view";
 
 // jsdom lays nothing out, so ResponsiveContainer would draw nothing: give
 // the chart a fixed size
@@ -119,6 +120,21 @@ describe("the chart", () => {
     expect(text).toContain("£ per head a year (chained volume measure)");
   });
 
+  it("draws every leader line under every label's text", async () => {
+    const { container } = await renderView();
+    const parts = [...container.querySelectorAll(".fv-point-line, .fv-point-label")];
+    expect(parts.map((el) => `${el.classList.contains("fv-point-line") ? "line" : "text"} ${el.dataset.role}`)).toEqual([
+      "line start",
+      "line latest",
+      "line end",
+      "text start",
+      "text latest",
+      "text end",
+    ]);
+    // One dot for each point, not one for its line and another for its text
+    expect(container.querySelectorAll(".recharts-reference-dot circle")).toHaveLength(3);
+  });
+
   it("draws the outturn, the March 2026 forecast and each earlier forecast; F hides the earlier ones", async () => {
     const { container } = await renderView();
     expect(lines(container)).toHaveLength(1 + RHDI.level.vintages.length);
@@ -216,6 +232,9 @@ describe("the page's text", () => {
     expect(await screen.findByText(/^Outturn: ONS CRXX/)).toBeInTheDocument();
     expect(screen.getByText(/^Forecasts: OBR, Economic and fiscal outlook/)).toBeInTheDocument();
     expect(screen.getByText(/starts from the latest outturn it reaches, Q2 2026/)).toBeInTheDocument();
+    // The March 2026 forecast is re-anchored, so the launch periods are the
+    // earlier forecasts' only
+    expect(screen.getByText(/^Each earlier forecast's dashed line starts at its launch period/)).toBeInTheDocument();
     expect(screen.getByText(/^From Q4 2023 to Q3 2025, the ONS outturn's % change on a year earlier is within 1\.5 percentage points/)).toBeInTheDocument();
   });
 
@@ -234,6 +253,28 @@ describe("the page's text", () => {
     );
   });
 
+  it("says where the lines start only for the lines drawn", async () => {
+    await renderView();
+    fireEvent.click(option("Earlier forecasts"));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(await screen.findByText(/starts from the latest outturn it reaches, Q2 2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/launch period/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/in the period it was made|drawn from the period/);
+  });
+
+  it("names an earlier forecast it cannot draw", async () => {
+    const data = JSON.parse(TEXT);
+    const gdp = data.variables.find((v) => v.id === "real_gdp");
+    delete gdp.level.outturn["2009"];
+    vi.stubGlobal("fetch", respond(data));
+    window.history.replaceState({}, "", "/?tab=forecasts&variable=real_gdp");
+    render(<ForecastVintagesView />);
+    fireEvent.click(await screen.findByRole("button", { name: "About this chart" }));
+    expect(
+      await screen.findByText("June 2010 and November 2010 forecasts cannot be drawn in this view, so they are left out."),
+    ).toBeInTheDocument();
+  });
+
   it("lists what it leaves out", async () => {
     await renderView();
     fireEvent.click(screen.getByRole("button", { name: "What this view leaves out" }));
@@ -245,11 +286,33 @@ describe("the page's text", () => {
 
 describe("the chart's sentences", () => {
   it("name each forecast's start from the file's launch rules", () => {
-    expect(startsSentence(DATA.meta.launch_rules, "calendar", false)).toBe(
-      "Each dashed line is one OBR forecast, from its launch period: the calendar year before the forecast was published.",
+    const rules = DATA.meta.launch_rules;
+    expect(startsSentence(rules, "calendar", false)).toBe(
+      "Each forecast's dashed line starts at its launch period, or where its figures start if that is later. The launch period is the calendar year before the forecast was published.",
     );
+    expect(startsSentence(rules, "calendar", false, { earlier: false })).toMatch(/^The forecast's dashed line/);
     expect(startsSentence({}, "calendar", false)).toBeNull();
-    expect(startsSentence(DATA.meta.launch_rules, "quarterly", true)).toMatch(/last whole calendar year/);
+    expect(startsSentence(rules, "quarterly", true)).toMatch(/last whole calendar year/);
+  });
+
+  it("leave a re-anchored newest forecast to its own note", () => {
+    const rules = DATA.meta.launch_rules;
+    expect(startsSentence(rules, "quarterly", false, { reanchored: true })).toMatch(/^Each earlier forecast's dashed line/);
+    expect(startsSentence(rules, "quarterly", false, { reanchored: true, earlier: false })).toBeNull();
+  });
+
+  it("are true of the committed lines: an earlier forecast starts at its launch period or later", () => {
+    for (const variable of DATA.variables) {
+      for (const unit of Object.keys(variable.units)) {
+        const view = buildView(DATA, variable, { unit });
+        for (const v of view.vintages) {
+          const launch = periodIndex(view.measure.vintages.find((x) => x.id === v.id).launch, variable.frequency);
+          expect(Math.min(...v.values.keys())).toBeGreaterThanOrEqual(v.anchor);
+          if (v.newest && v.reanchored) expect(v.anchor).toBeGreaterThan(launch);
+          else expect(v.anchor).toBe(launch);
+        }
+      }
+    }
   });
 
   it("name only the points drawn", () => {
@@ -261,6 +324,16 @@ describe("the chart's sentences", () => {
       "The labelled points are the latest outturn (Q2 2026).",
     );
     expect(pointsSentence({ ...view, points: [] })).toBeNull();
+  });
+
+  it("name only the points in the periods the brush shows", () => {
+    const view = buildView(DATA, RHDI, { unit: "level" });
+    const before2024 = view.rows.filter((r) => r.x < view.start);
+    expect(pointsSentence(view, pointsIn(view.points, before2024))).toBeNull();
+    const toLatest = view.rows.filter((r) => r.x <= view.points.find((p) => p.role === "latest").x);
+    expect(pointsSentence(view, pointsIn(view.points, toLatest))).toBe(
+      "The labelled points are the outturn at the start of this parliament (Q2 2024) and the latest outturn (Q2 2026).",
+    );
   });
 });
 

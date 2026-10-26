@@ -1,6 +1,7 @@
 // The forecast vintages view: for each of the OBR's headline measures,
-// every OBR forecast since June 2010 beside the ONS outturn, each forecast
-// drawn from the period it was made in. It reads
+// the OBR's forecasts since June 2010 beside the ONS outturn, each earlier
+// forecast drawn from its launch period and the newest from the latest
+// outturn it reaches. It reads
 // public/data/obr_forecast_vintages.json (utils/forecastVintages/load.js),
 // which holds only the OBR's forecasts and the ONS's outturn: no
 // PolicyEngine figure is shown here. A file that cannot be read, or that
@@ -24,7 +25,7 @@ import { useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { NEWEST_SHOWN, loadForecastVintages } from "../../utils/forecastVintages/load";
-import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence } from "../../utils/forecastVintages/view";
+import { OUTTURN_KEY, UNIT_ORDER, buildView, checkSentence, pointsIn } from "../../utils/forecastVintages/view";
 import "../livingStandards/LivingStandards.css";
 import "./ForecastVintages.css";
 
@@ -52,20 +53,28 @@ export const SOURCE_LINE = "ONS (outturn), OBR (forecast)";
 // How each kind of OBR forecast is drawn (utils/forecastVintages/transforms.js)
 const DRAWN = {
   growth:
-    "The OBR forecasts this measure as growth, so each forecast's line starts on the outturn in the period it was made and grows at that forecast's rates.",
+    "The OBR forecasts this measure as growth, so each forecast's line starts on the outturn and grows at that forecast's rates.",
   index:
-    "The OBR forecasts this measure as an index, so each forecast's line starts on the outturn in the period it was made and moves with that forecast's index.",
+    "The OBR forecasts this measure as an index, so each forecast's line starts on the outturn and moves with that forecast's index.",
   level: "Each forecast is drawn as the OBR published it.",
 };
 
 const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 
-/** Where each forecast's line starts, from the file's launch rules. */
-export function startsSentence(rules, frequency, annual) {
+/**
+ * Where the forecasts' lines start, from the file's launch rules. A
+ * re-anchored newest forecast starts elsewhere (its own note says where),
+ * so then this is about the earlier forecasts only, and says nothing when
+ * they are hidden.
+ */
+export function startsSentence(rules, frequency, annual, { reanchored = false, earlier = true } = {}) {
   const rule = annual
     ? "The last whole calendar year up to the quarter it starts from in the quarterly view."
     : rules?.[frequency];
-  return rule ? `Each dashed line is one OBR forecast, from its launch period: ${lowerFirst(rule)}` : null;
+  if (!rule) return null;
+  const whose = reanchored ? earlier && "Each earlier forecast's" : earlier ? "Each forecast's" : "The forecast's";
+  if (!whose) return null;
+  return `${whose} dashed line starts at its launch period, or where its figures start if that is later. The launch period is ${lowerFirst(rule)}`;
 }
 
 const POINT_NAMES = {
@@ -74,12 +83,14 @@ const POINT_NAMES = {
   end: (view) => `the ${view.newest.label} forecast at the end of this parliament (${view.label(view.end)})`,
 };
 
-/** What the labelled points are, for those the view has. */
-export function pointsSentence(view) {
-  const names = view.points.map((p) => POINT_NAMES[p.role](view, p));
+/** "A", "A and B", "A, B and C". */
+const listOf = (items) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0]);
+
+/** What the labelled points are, for those shown (`points`, in the brush's range). */
+export function pointsSentence(view, points = view.points) {
+  const names = points.map((p) => POINT_NAMES[p.role](view, p));
   if (!names.length) return null;
-  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
-  return `The labelled points are ${list}.`;
+  return `The labelled points are ${listOf(names)}.`;
 }
 
 /**
@@ -199,6 +210,7 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
   const measure = view.measure;
   const shownRows = view.rows.slice(range[0], range[1] + 1);
   const newest = view.vintages[view.vintages.length - 1];
+  const earlier = view.vintages.length > 1;
   const csvUnits = `${view.axisLabel}${annualised ? ", quarterly annualised (×4)" : ""}`;
   const notes = [
     ...(variable.notes || []),
@@ -207,12 +219,18 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
     DRAWN[measure.kind],
     newest.reanchored &&
       `The ${newest.label} forecast starts from the latest outturn it reaches, ${view.label(newest.anchor)}, and is carried on from there by its own ${measure.kind === "index" ? "index" : "growth"}.`,
+    showPast &&
+      view.undrawn.length > 0 &&
+      `${listOf(view.undrawn)} ${view.undrawn.length > 1 ? "forecasts" : "forecast"} cannot be drawn in this view, so ${view.undrawn.length > 1 ? "they are" : "it is"} left out.`,
     checkSentence(measure.check, variable.frequency),
     quarterly &&
       unit === "level" &&
       "In £, each quarter's amount is shown at an annual rate (times four); with A, each calendar year is the total of its four quarters.",
   ].filter(Boolean);
-  const about = [startsSentence(data.meta.launch_rules, variable.frequency, annualOn), pointsSentence(view)]
+  const about = [
+    startsSentence(data.meta.launch_rules, variable.frequency, annualOn, { reanchored: newest.reanchored, earlier }),
+    pointsSentence(view, pointsIn(view.points, shownRows)),
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -330,7 +348,7 @@ function ForecastsView({ data, active, related }) {
     <div className="results-container fv-view">
       <SectionHeading
         title="OBR forecasts beside the outturn"
-        subtitle={`Each OBR forecast from June 2010 to ${NEWEST_LABEL}, drawn from the period it was made in, beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.`}
+        subtitle={`The OBR's forecasts from June 2010 to ${NEWEST_LABEL}, beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.`}
       />
       <section id="forecasts-chart" className="report-section ls-section">
         <div className="charts-grid">
