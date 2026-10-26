@@ -4,9 +4,29 @@ import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import Tip from "./Tip";
+import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
+import Tip, { InfoTip } from "./Tip";
 
-function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason }) {
+// The menu's groups, in the catalogue's order
+const GROUPS = [
+  { direction: "revenue", label: "Raises revenue" },
+  { direction: "cost", label: "Costs revenue" },
+  { direction: "neutral", label: "No published costing" },
+];
+
+/**
+ * The band's policies control: "Policies All 9 policies" or "Policies 3 of
+ * 9 policies"; while the publication loads, "Policies" with no count; with
+ * none published, "No policies yet", disabled, its reason in a Tip. Its
+ * menu is one compact row per policy (checkbox, colour, short name, the
+ * one-line summary in a Tip), grouped by revenue effect, with Select all,
+ * Clear and Done.
+ *
+ * @param {Object} props
+ * @param {boolean} [props.loading] - The publication is still loading
+ * @param {string} [props.noneReason] - Why none are published, if none are
+ */
+function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason, loading = false, noneReason }) {
   const { displayable } = useMeasureCatalogue();
   const policies = (providedPolicies ?? displayable).filter(
     (policy) => policy.displayable !== false,
@@ -33,28 +53,44 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   }, [isExpanded]);
 
   const selectedCount = selectedPolicies.length;
+  const none = !loading && policies.length === 0;
+  const reason = disabledReason ?? (none ? noneReason ?? "No policies are published yet" : undefined);
+  const disabled = loading || Boolean(reason);
+  const unit = (n) => (n === 1 ? "policy" : "policies");
 
   return (
     <div className="policy-selector" ref={dropdownRef}>
-      <Tip content={disabledReason}>
+      <Tip content={reason}>
       <button
         className="policy-selector-toggle band-control"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
-        aria-label={disabledReason ? `Select policies: ${disabledReason}` : "Select policies"}
-        disabled={Boolean(disabledReason)}
+        aria-label={
+          loading ? "Select policies: loading" : reason ? `Select policies: ${reason}` : "Select policies"
+        }
+        aria-busy={loading || undefined}
+        disabled={disabled}
       >
         <ListChecks className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
         <span className="band-control-text">
-          <span className="band-control-label">Measures</span>
-          {/* "All 9 measures" or "9 of 15 measures"; on a phone "All 9" or
-              "9 of 15" (the unit is hidden) */}
-          <span className="band-control-value">
-            {selectedCount === policies.length && selectedCount > 0 ? "All " : ""}
-            <span className="policy-selector-count">{selectedCount}</span>
-            {selectedCount === policies.length && selectedCount > 0 ? "" : ` of ${policies.length}`}
-            <span className="band-control-unit"> {policies.length === 1 ? "measure" : "measures"}</span>
-          </span>
+          {loading ? (
+            // While the publication loads: the label alone, never "0 of 0"
+            <span className="band-control-value">Policies</span>
+          ) : none ? (
+            <span className="band-control-value">No policies yet</span>
+          ) : (
+            <>
+              <span className="band-control-label">Policies</span>
+              {/* "All 9 policies" or "3 of 9 policies"; on a phone "All 9"
+                  or "3 of 9" (the unit is hidden) */}
+              <span className="band-control-value">
+                {selectedCount === policies.length ? "All " : ""}
+                <span className="policy-selector-count">{selectedCount}</span>
+                {selectedCount === policies.length ? "" : ` of ${policies.length}`}
+                <span className="band-control-unit"> {unit(policies.length)}</span>
+              </span>
+            </>
+          )}
         </span>
         <PillChevron />
       </button>
@@ -62,22 +98,34 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
 
       {presence.mounted && (
         <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
-          <div className="policy-list">
-            {policies.map((policy) => (
-              <label key={policy.id} className="policy-item">
-                <input
-                  type="checkbox"
-                  checked={selectedPolicies.includes(policy.id)}
-                  onChange={() => onPolicyToggle(policy.id)}
-                />
-                <div className="policy-info">
-                  <span className="policy-name">{policy.name}</span>
-                  <span className="policy-description">
-                    {policy.description}
-                  </span>
+          <div className="policy-list" role="group" aria-label="Policies">
+            {GROUPS.map(({ direction, label }) => {
+              const members = policies.filter((policy) => (policy.direction ?? "neutral") === direction);
+              if (!members.length) return null;
+              return (
+                <div key={direction} className="policy-group" role="group" aria-label={label}>
+                  <p className="policy-group-label" aria-hidden="true">{label}</p>
+                  {members.map((policy) => {
+                    const summary = policyDetailsFor(policy)?.summary;
+                    return (
+                      // The info button sits outside the label, so it never ticks the box
+                      <div key={policy.id} className="policy-item">
+                        <label className="policy-item-label">
+                          <input
+                            type="checkbox"
+                            checked={selectedPolicies.includes(policy.id)}
+                            onChange={() => onPolicyToggle(policy.id)}
+                          />
+                          <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
+                          <span className="policy-name">{shortNameOf(policy)}</span>
+                        </label>
+                        {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
+                      </div>
+                    );
+                  })}
                 </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
           {/* Select all, clear and close: on a phone the list fills the
               screen, so it needs its own way out */}
