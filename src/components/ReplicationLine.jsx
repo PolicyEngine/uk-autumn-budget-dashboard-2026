@@ -45,19 +45,19 @@ function SentenceLink({ label, title, href, Icon }) {
 }
 
 /**
- * One sentence: "Reproduce these results with our replication code, built
- * on policyengine.py 6.10.2." (the second clause only when the version is
- * known).
+ * One sentence: "Built with our replication code on policyengine.py
+ * 6.10.2." (the second part only when the version is known).
  */
 function ReplicationLine() {
   const [code, pkg] = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
   return (
     <section id="replication" className="replication-line" aria-label="Reproduce these results">
       <p className="replication-sentence">
-        Reproduce these results with our <SentenceLink label={code.label} title={code.title} href={code.href} Icon={code.Icon} />
+        Built with our <SentenceLink label={code.label} title={code.title} href={code.href} Icon={code.Icon} />
         {pkg && (
           <>
-            , built on <SentenceLink label={pkg.label} title={pkg.title} href={pkg.href} Icon={pkg.Icon} />
+            {" on "}
+            <SentenceLink label={pkg.label} title={pkg.title} href={pkg.href} Icon={pkg.Icon} />
           </>
         )}
         .
