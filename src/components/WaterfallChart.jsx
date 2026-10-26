@@ -115,7 +115,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   const key = useMeasureKey(members, netLabel);
   // The legend took about 160px (300 on a phone) of the chart's height;
   // with the section's key above the pair, the plot keeps its own size
-  const plotHeight = key.shared ? (narrow ? 360 : 380) : narrow ? 620 : 480;
+  // With no legend under the plot, room below the axis for the logo
+  const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
+  const plotHeight = key.shared ? (narrow ? 390 : 410) : narrow ? 620 : 480;
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -251,7 +253,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
-              margin={chartMargin(narrow)}
+              margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
               stackOffset="sign"
             >
               <CartesianGrid {...GRID_PROPS} />
