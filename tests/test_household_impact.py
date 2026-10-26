@@ -965,6 +965,10 @@ def test_the_net_income_parts_add_up_to_net_income():
         "pension_contributions": [0.0, 1_500.0],
         "child_benefit": [2_500.0, 2_500.0],
         "council_tax": [2_000.0, 2_000.0],
+        "state_pension": [0.0, 0.0],
+        "cost_of_living_support_payment": [150.0, 0.0],
+        "fuel_duty": [0.0, 300.0],
+        "vat_change": [0.0, -50.0],
     }
     net = [
         market + benefits - tax - pension
@@ -991,10 +995,13 @@ def test_the_net_income_parts_add_up_to_net_income():
     assert high["student_loan"] == -1_000
     assert high["council_tax"] == -2_000
     assert high["pension_contributions"] == -1_500
-    # £14,200 of tax less the £14,000 listed (income tax with its charge,
-    # National Insurance, student loan and Council Tax)
-    assert high["other_taxes"] == -200
-    assert parts[0]["other_benefits"] == 500
+    assert high["fuel_duty"] == -300
+    assert high["vat_change"] == 50
+    # £14,200 of tax less the £14,250 listed (income tax with its charge,
+    # National Insurance, student loan, Council Tax, fuel duty and VAT)
+    assert high["other_taxes"] == 50
+    assert parts[0]["warm_home_discount_top_up"] == 150
+    assert parts[0]["other_benefits"] == 350
     # A run kept from before the levels were read has no parts
     old = {k: v for k, v in components.items() if k != "council_tax"}
     assert household_impact.sweep_net_income_parts(grid, net, old) is None
@@ -1010,12 +1017,19 @@ def test_the_sweep_splits_net_income_into_its_parts():
         tenure="RENT_PRIVATELY",
         monthly_rent=900,
         children=(household_impact.Child(age=4), household_impact.Child(8)),
+        petrol_spending=1_500,
     )
     result = calculate(
         answers, ["threshold_freeze_2031_32"], include=("sweep",)
     )
     sweep = result["sweep"]
     split = sweep["net_income_parts"]
+    # Fuel duty, from the petrol entered, is its own part at every salary,
+    # as in the programme table
+    fuel_duty = programme(result, "fuel_duty")["baseline"]
+    assert fuel_duty > 0
+    for step in split["baseline"]:
+        assert step["fuel_duty"] == pytest.approx(-fuel_duty, abs=0.01)
     assert split["parts"] == list(household_impact.NET_INCOME_PARTS)
     for side in ("baseline", "reform"):
         assert len(split[side]) == len(sweep["points"])

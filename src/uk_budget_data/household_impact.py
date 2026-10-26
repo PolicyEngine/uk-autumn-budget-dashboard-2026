@@ -637,22 +637,33 @@ NET_INCOME_LEVEL_VARIABLES = (
     "pension_contributions",
     "child_benefit",
     "council_tax",
+    "state_pension",
+    "cost_of_living_support_payment",
+    "fuel_duty",
+    "vat_change",
 )
 
 # The parts of net income at each sweep point, in stacking order, each in £
 # with its sign (taxes negative): the head's employment income, the rest of
-# market income, the benefits, then the taxes and deductions. "other_taxes"
-# is the rest, so the parts add up to net income to the penny.
+# market income, the benefits, then the taxes and deductions; named as the
+# programme table's rows, and besides the main programmes, each one a
+# measure moves (the Warm Home Discount top-up, fuel duty and VAT). The
+# "other" benefits are the rest of household_benefits, and "other_taxes"
+# the rest of net income, so the parts add up to it to the penny.
 NET_INCOME_PARTS = (
     "employment_income",
     "other_income",
     "universal_credit",
     "child_benefit",
+    "state_pension",
+    "warm_home_discount_top_up",
     "other_benefits",
     "income_tax",
     "national_insurance",
     "student_loan",
     "council_tax",
+    "fuel_duty",
+    "vat_change",
     "child_benefit_charge",
     "pension_contributions",
     "other_taxes",
@@ -1515,19 +1526,29 @@ def net_income_parts(employment_income: float, net: float, levels: dict):
         + levels["national_insurance"]
         + levels["student_loan_repayments"]
         + levels["council_tax"]
+        + levels["fuel_duty"]
+        + levels["vat_change"]
+    )
+    named_benefits = (
+        levels["universal_credit"]
+        + levels["child_benefit"]
+        + levels["state_pension"]
+        + levels["cost_of_living_support_payment"]
     )
     part = {
         "employment_income": employment_income,
         "other_income": levels["household_market_income"] - employment_income,
         "universal_credit": levels["universal_credit"],
         "child_benefit": levels["child_benefit"],
-        "other_benefits": levels["household_benefits"]
-        - levels["universal_credit"]
-        - levels["child_benefit"],
+        "state_pension": levels["state_pension"],
+        "warm_home_discount_top_up": levels["cost_of_living_support_payment"],
+        "other_benefits": levels["household_benefits"] - named_benefits,
         "income_tax": -(levels["income_tax"] - charge),
         "national_insurance": -levels["national_insurance"],
         "student_loan": -levels["student_loan_repayments"],
         "council_tax": -levels["council_tax"],
+        "fuel_duty": -levels["fuel_duty"],
+        "vat_change": -levels["vat_change"],
         "child_benefit_charge": -charge,
         "pension_contributions": -levels["pension_contributions"],
         "other_taxes": -(levels["household_tax"] - taxes),
