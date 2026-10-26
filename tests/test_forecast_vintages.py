@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 import openpyxl
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from uk_budget_data.cli import parse_args
@@ -751,6 +751,8 @@ def _committed_measures():
     ]
 
 
+# Each example parses the committed document; its time is not what is tested.
+@settings(deadline=None)
 @given(
     st.sampled_from(_committed_measures()),
     st.integers(0, 32),
@@ -1302,6 +1304,8 @@ def _kind_verdict(data: dict, variable_id: str, name: str) -> bool:
     return True
 
 
+# Each example parses the committed document; its time is not what is tested.
+@settings(deadline=None)
 @given(st.sampled_from(KIND_CASES), st.integers(0, 64), st.data())
 def test_figures_after_the_launch_never_change_the_verdict(case, which, draw):
     # From any shared case, taken or refused: two sets of figures after a
@@ -1328,6 +1332,8 @@ def test_figures_after_the_launch_never_change_the_verdict(case, which, draw):
     assert len(verdicts) == 1
 
 
+# Each example parses the committed document; its time is not what is tested.
+@settings(deadline=None)
 @given(
     st.sampled_from(
         [m for m in _committed_measures() if m[0] in ("cpi", "real_gdp")]
@@ -1353,6 +1359,8 @@ def test_a_figure_past_its_bounds_is_always_refused(target, which, draw):
     assert not _kind_verdict(data, variable_id, name)
 
 
+# Each example parses the committed document; its time is not what is tested.
+@settings(deadline=None)
 @given(
     st.sampled_from(
         [
