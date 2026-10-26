@@ -3,8 +3,11 @@
 
 import { useMemo, useState } from "react";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
-import { periodOption } from "../controlOptions";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { periodOption, yearsOption } from "../controlOptions";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
@@ -12,13 +15,13 @@ import {
   shortLabel,
   lineSeries,
   mergeSeries,
-  niceAxis,
   projectionStartYear,
   trimProjection,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource } from "../sources";
+import { CSV_SOURCES, HBAI_SOURCE, HbaiSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const GROUP_SUFFIX = {
   all: "",
@@ -32,18 +35,16 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
-  // The default, as on Population impact's Poverty sub-tab: absolute,
-  // before housing costs, all people
-  const [measure, setMeasure] = useState(measureIds.includes("absolute_bhc") ? "absolute_bhc" : measureIds[0]);
+  // Absolute, before housing costs, at first, as on Population impact's
+  // Poverty sub-tab; shared with the sub-tab's tiles and Who is in poverty (usePovertyMeasure)
+  const [chosenMeasure, setMeasure] = usePovertyMeasure();
+  const measure = measureIds.includes(chosenMeasure) ? chosenMeasure : measureIds[0];
   const [group, setGroup] = useState(groupIds[0]);
   const [viewMode, setViewMode] = useState("both");
 
   const startYear = useMemo(() => projectionStartYear(data), [data]);
   const outturn = poverty.outturn?.[measure]?.[group] || EMPTY;
-  const projection = useMemo(
-    () => trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data)),
-    [poverty, measure, group, startYear, data],
-  );
+  const projection = trimProjection(poverty.projection?.[measure]?.[group], startYear, chartEndYear(data));
 
   const chartData = useMemo(
     () =>
@@ -53,36 +54,33 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       ),
     [outturn, projection, viewMode],
   );
-  const axis = niceAxis(Math.max(...chartData.flatMap((d) => [d.historical ?? 0, d.projection ?? 0])));
 
   const isAbsolute = measure.startsWith("absolute");
   const isAHC = measure.endsWith("ahc");
   const groupName = poverty.groups[group].toLowerCase();
 
+  // One plain sentence on the card; the poverty line and housing costs
+  // are defined in About this chart
   let summary = null;
   const span = headlineSpan(projection, data, range);
   if (span && span[0].rate != null && span[1].rate != null) {
     const [first, last] = span;
     const a = round1(first.rate * 100);
     const b = round1(last.rate * 100);
-    const verb = changeVerb(b - a, "pp");
-    const kind = isAbsolute ? "Absolute" : "Relative";
-    const line = isAbsolute ? "fixed real-terms line" : "60% of current median";
-    summary = (
-      <>
-        {kind} poverty{GROUP_SUFFIX[group] ?? ""} ({isAHC ? "AHC" : "BHC"}, {line}){" "}
-        {verb ? (
-          <>
-            <strong>{verb}</strong>, from {formatPct(a)} in {fyDash(first.year)} to {formatPct(b)} by{" "}
-            {fyDash(last.year)}.
-          </>
-        ) : (
-          <>
-            <strong>stays flat</strong> at {formatPct(a)} from {fyDash(first.year)} to {fyDash(last.year)}.
-          </>
-        )}
-      </>
-    );
+    const who = group === "all" ? "people" : groupName;
+    const kind = isAbsolute ? "absolute" : "relative";
+    summary =
+      a === b ? (
+        <>
+          Under current law, the share of {who} in {kind} poverty <strong>stays at {formatPct(a)}</strong> from{" "}
+          {fyDash(first.year)} to {fyDash(last.year)}.
+        </>
+      ) : (
+        <>
+          Under current law, the share of {who} in {kind} poverty <strong>{b > a ? "rises" : "falls"}</strong> from{" "}
+          {formatPct(a)} in {fyDash(first.year)} to {formatPct(b)} in {fyDash(last.year)}.
+        </>
+      );
   }
 
   const noOutturn = outturn.length === 0;
@@ -110,6 +108,19 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     ],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,
+    info: {
+      how: [
+        isAbsolute
+          ? "The absolute line is 60% of the 2024-25 median income, held fixed in real terms."
+          : "The relative line is 60% of each year's median income.",
+      ],
+      caveats: [
+        !visibleEmpty && noOutturn && viewMode === "both" && `No official series for ${groupName} on this measure; projection only.`,
+        "Our 2024-25 incomes sit above official ones, so rates are below official figures: read changes, not levels.",
+      ],
+      sources: [HBAI_SOURCE],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+    },
     download: visibleEmpty
       ? null
       : {
@@ -128,6 +139,7 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     // choice sits under the card's Options (ControlBar)
     controls: {
       options: [
+        yearsOption(rangeYears(data), range, setRange),
         ...povertyMeasureOptions(measure, measureIds, setMeasure),
         {
           label: "People",
@@ -147,15 +159,15 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
         </div>
       </div>
     ) : (
-      <LsLineChart
-          highlight={range}
+      <OverTimeChart
+        compare={range}
         data={chartData}
         series={series}
-        yFormat={formatPctAxis}
+        // A fitted axis can step by half a point: one decimal where a tick
+        // is not whole, so no two ticks read alike
+        yFormat={(v) => (Math.abs(v - Math.round(v)) < 1e-9 ? formatPctAxis(v) : formatPct(v))}
         tooltipFormat={formatPct}
         yLabel="Poverty rate"
-        yDomain={axis.domain}
-        yTicks={axis.ticks}
       />
     ),
   };

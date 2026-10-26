@@ -1,5 +1,5 @@
 import useElementWidth from "../../hooks/useElementWidth";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { BAR_RADIUS, CHART_COLOURS } from "../../utils/chartTheme";
 import { money, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 
@@ -109,7 +109,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
                   {/* The short name on the bar; the full one in the tooltip */}
                   {row.label ?? row.name}
                 </text>
-                <rect x={x0} y={y} width={Math.max(x1 - x0, 2)} height={barHeight} rx={2} fill={row.color} />
+                <rect x={x0} y={y} width={Math.max(x1 - x0, 2)} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
                 {row.total && (
                   // The scale does not start at zero: a break at the bar's left
                   <path

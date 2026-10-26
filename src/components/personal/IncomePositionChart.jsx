@@ -27,9 +27,12 @@ import {
 import { parseCsv } from "../../utils/publication/csv";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import useElementWidth from "../../hooks/useElementWidth";
+import useDataFile from "../../hooks/useDataFile";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
 import PillSelect from "../PillSelect";
+import ControlBar from "../ControlBar";
 import TitleIcon from "../TitleIcon";
 import ViewSwitch from "../ViewSwitch";
 import GroupedLegend from "../GroupedLegend";
@@ -42,7 +45,6 @@ const AFTER = CHART_COLOURS.after;
 const TEXT = CHART_COLOURS.text;
 const GAIN = CHART_COLOURS.gain;
 const LOSS = CHART_COLOURS.loss;
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const POSITION_VIEWS = [
   { value: "where", label: "Where you sit" },
@@ -61,32 +63,7 @@ const UNIT_OPTIONS = [
   { value: "gbp", label: "£ a year" },
 ];
 
-// Each file is loaded once per page: every household and year reads it
-const files = {};
-function useFile(name, parse) {
-  const [state, setState] = useState(() => files[name] ?? { status: "loading", rows: null });
-  useEffect(() => {
-    if (files[name]) return undefined;
-    let cancelled = false;
-    fetch(`${BASE}/data/${name}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`${name}: ${response.status}`);
-        return response.text();
-      })
-      .then((text) => {
-        files[name] = { status: "ready", rows: parse(text) };
-        if (!cancelled) setState(files[name]);
-      })
-      .catch((error) => {
-        console.error(`Error loading ${name}:`, error);
-        if (!cancelled) setState({ status: "error", rows: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [name, parse]);
-  return state;
-}
+const useFile = useDataFile;
 
 function parseRecords(text) {
   const [header, ...body] = parseCsv(text).filter((row) => row.length > 1);
@@ -749,22 +726,24 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       </dl>
       <div className="chart-view-switch chart-controls position-controls">
         {chooser}
-        {view === "where" && (
-          <ViewSwitch
-            compact
-            label="Before or after the selected policies"
-            value={side}
-            onChange={setSide}
-            options={[
-              { value: "before", label: "Before" },
-              { value: "after", label: "After" },
-            ]}
-          />
-        )}
-        {view === "moves" && <ViewSwitch compact label="Moving by" value={moveUnit} onChange={setMoveUnit} options={MOVE_UNITS} />}
-        {(view === "gains" || view === "compare") && (
-          <ViewSwitch compact label="Units" value={unit} onChange={setUnit} options={UNIT_OPTIONS} />
-        )}
+        {/* The view's own choice, if any, in one Options pill on the same
+            row as the view tabs */}
+        <ControlBar
+          name={title}
+          options={[
+            view === "where" && {
+              label: "Before or after the selected policies",
+              value: side,
+              onChange: setSide,
+              options: [
+                { value: "before", label: "Before", summary: "Before the policies" },
+                { value: "after", label: "After", summary: "After the policies" },
+              ],
+            },
+            view === "moves" && { label: "Moving by", value: moveUnit, onChange: setMoveUnit, options: MOVE_UNITS },
+            (view === "gains" || view === "compare") && { label: "Units", value: unit, onChange: setUnit, options: UNIT_OPTIONS },
+          ]}
+        />
       </div>
       {view === "among" && (
         <div className="position-among">
@@ -823,31 +802,21 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         <p className="position-note">The curves before and after overlap almost exactly: the changes are small next to incomes. Switch Before and After to compare, or see Who gains.</p>
       )}
       <div className="chart-footer">
-        <ChartMoreInfo year={year}>
-          <p>
-            {`Income is household net income as this calculator counts it (after taxes, including fuel duty and VAT, with benefits), divided by ${position.factor.toFixed(2)} for your household's size on the HBAI scale. Public spending in kind (the NHS, schools, transport subsidies) is left out for everyone. Unlike the HBAI income behind the decile charts and the Pre-measures forecast's median, it takes off fuel duty and VAT, so the two medians differ slightly.`}
-          </p>
-          <p>
-            {"Everyone's income changes too, so your place before is ranked among everyone's income before the selected policies, and your place after among everyone's income after them."}
-          </p>
-          <p>
-            {`The UK distribution is published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`}
-          </p>
-          <p>
-            {"The tenths' average changes are the decile charts' own: they rank households by HBAI income, which leaves out fuel duty and VAT, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income."}
-          </p>
-          <p>
-            {"Who moves ranks everyone before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after than before. A share drawn from fewer than 10 survey households is not published."}
-          </p>
-          <p>
-            {"Among all households is the Population impact scatter: there each household sits by its household net income before the selected policies in 2027-28, not adjusted for household size, in every year, and you by yours. Each dot is a group of households, never one survey household."}
-          </p>
-          {!run.exact && (
-            <p>
-              {"The UK distribution after is the whole package's run, with measures beyond those selected (or, after one is withdrawn, no longer published); your own income after uses only the measures you selected."}
-            </p>
-          )}
-        </ChartMoreInfo>
+        <ChartMoreInfo
+          year={year}
+          info={{
+            how: [
+              `Your income is household net income after all taxes, divided by ${position.factor.toFixed(2)} for your household's size.`,
+              "Your place before ranks among everyone's income before the policies; after, among everyone's after.",
+            ],
+            caveats: [
+              "The decile charts rank by HBAI income, without VAT and fuel duty, so the two medians differ slightly.",
+              !run.exact &&
+                "The UK distribution after is the whole package's run; your own income after uses only your selection.",
+            ],
+            method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your place in the UK is worked out" },
+          }}
+        />
       </div>
     </div>
   );

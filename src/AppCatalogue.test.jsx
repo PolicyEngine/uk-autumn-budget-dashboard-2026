@@ -23,16 +23,18 @@ vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
-// #185 added CurrentLawSection, which Population impact's Living standards
-// sub-tab shows beside the decile charts
 vi.mock("./components/livingStandards/LivingStandardsTab", () => ({
   default: () => <div data-testid="living-view" />,
-  CurrentLawSection: () => <div data-testid="current-law" />,
+}));
+// The current-law cards (Living standards and Poverty) read the outlook,
+// which these tests do not serve
+vi.mock("./components/livingStandards/CurrentLawSection", () => ({
+  default: () => <div data-testid="current-law" />,
 }));
 
-// The decile charts are on Population impact's Living standards sub-tab
-// since #185 (Public finances is the default)
-beforeEach(() => { window.history.replaceState({}, "", "/?sub=living"); });
+// The decile charts are under All households, By income (Public finances
+// is the default sub-tab)
+beforeEach(() => { window.history.replaceState({}, "", "/?sub=all"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("the page's verified publication catalogue", () => {
@@ -89,7 +91,7 @@ describe("the page's verified publication catalogue", () => {
   });
 
   it.each(["epsilon", "never_published"])("does not replace the requested unavailable selection %s with zeros", async (id) => {
-    window.history.replaceState({}, "", `/?sub=living&policies=${id}`);
+    window.history.replaceState({}, "", `/?sub=all&policies=${id}`);
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     render(<App />);
     expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
@@ -125,7 +127,7 @@ describe("an open page follows the publication", () => {
   const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
 
   it("takes a chosen selection's figures away when one of its measures is withdrawn", async () => {
-    window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -145,7 +147,7 @@ describe("an open page follows the publication", () => {
   it("lets the reader remove a withdrawn measure and keep the rest", async () => {
     // Review of 62febdd, finding 4: the selector cannot offer a withdrawn
     // measure, so the notice must, or a chosen selection never recovers
-    window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -252,7 +254,7 @@ describe("an open page follows the publication", () => {
       fc.constantFrom("receipt.json", "distributional_impact.csv"),
       fc.constantFrom(500, 503, 404),
       async (file, status) => {
-        window.history.replaceState({}, "", "/?sub=living&policies=alpha,beta");
+        window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
         const manifest = twoMeasures();
         const unchanged = { "manifest.json": JSON.stringify(manifest) };
         const failing = `${manifest.measures.beta.artifact}/${file}`;

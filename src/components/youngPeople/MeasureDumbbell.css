@@ -5,7 +5,7 @@
    every Recharts axis (TICK_STYLE). The value column is as wide as the
    pair's split column (112px), so both cards' numbers end on one edge. */
 .measure-dumbbell {
-  --md-label: 172px;
+  --md-label: 200px;
   --md-values: 112px;
   --md-gap: 12px;
   --md-cols: var(--md-label) minmax(0, 1fr) var(--md-values);
@@ -30,17 +30,14 @@
   .charts-grid:has(> div + div) .measure-dumbbell {
     flex: 1 1 auto;
     box-sizing: border-box;
-    min-height: var(--md-height, 0);
     padding: 16px 0 6px;
   }
 
-  .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
-    flex: 1 1 auto;
-  }
+  /* Rows keep their own 44px height (no stretching into tall gaps); the
+     axis stays at the bottom */
 
-  .charts-grid:has(> div + div) .measure-dumbbell-axis {
-    margin-top: auto;
-  }
+  /* The axis follows the last row, not the card's foot, so no empty band
+     opens between them */
 }
 
 .measure-dumbbell-row {
@@ -49,7 +46,7 @@
   grid-template-columns: var(--md-cols);
   align-items: center;
   column-gap: var(--md-gap);
-  min-height: 46px;
+  min-height: 44px;
   padding: 0 6px;
   border-radius: 6px;
   outline: none;
@@ -152,7 +149,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 1px;
+  justify-content: center;
+  align-self: center;
+  gap: 2px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -162,17 +161,24 @@
   font-weight: 600;
 }
 
+/* The gap to all ages as a compact pill */
 .measure-dumbbell-gap {
+  padding: 1px 6px;
+  border-radius: 999px;
   font-size: var(--fs-micro);
-  color: var(--pe-gray-500);
+  line-height: 1.4;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
 }
 
 .measure-dumbbell-gap.more {
   color: var(--c-gain-text);
+  background: color-mix(in srgb, var(--c-gain) 12%, transparent);
 }
 
 .measure-dumbbell-gap.less {
   color: var(--c-loss-text);
+  background: var(--c-loss-soft);
 }
 
 /* The x axis: ticks on an axis line, then the unit centred under the

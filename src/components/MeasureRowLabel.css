@@ -1,0 +1,49 @@
+/* A measure's row label: tinted icon circle, short name, muted category */
+.mrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mrl-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--mrl-colour) 16%, transparent);
+  color: var(--mrl-colour);
+}
+
+.mrl-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+  outline: none;
+}
+
+.mrl-text:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
+  border-radius: 3px;
+}
+
+.mrl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.mrl-caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
