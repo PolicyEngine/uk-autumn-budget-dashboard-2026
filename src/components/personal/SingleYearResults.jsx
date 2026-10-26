@@ -16,7 +16,7 @@ import { partsInUse } from "./marginalRateParts";
 import { componentsInUse } from "./sweepComponents";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
-import IncomePositionChart from "./IncomePositionChart";
+import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 
@@ -478,49 +478,35 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, facts = [], onEdit = null }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, facts = [], onEdit = null, requestHousehold = null, year, selected = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
-  const tone = changeClass(totals.change);
-  const share = totals.change === 0 ? null : signedPercent(Math.abs(totals.change), totals.before);
   return (
-    <section className={`card result-card ${tone}`} aria-label="Your result">
-      <div className="result-card-head">
-        <p className="result-card-label">Change in your net income</p>
-        <div className="result-card-pills">
-          <span className="result-pill">{yearLabel}</span>
-          <a
-            className="result-pill is-link"
-            href="#change-by-policy"
-            onClick={(event) => scrollToSection(event, "change-by-policy")}
-          >
-            {policyCount} {policyCount === 1 ? "policy" : "policies"}
-          </a>
-        </div>
-      </div>
+    <section className={`card result-card ${changeClass(totals.change)}`} aria-label="Your result">
+      {/* The three tiles on top, then whose result it is, the waterfall
+          from net income before through each measure with an effect to
+          after, and About this result. Each fact once */}
+      <ResultTiles
+        totals={totals}
+        changeValue={
+          <span className="result-value" aria-busy={counting || undefined}>
+            {signedPounds(counting ? shown : totals.change)}
+          </span>
+        }
+        changeNote={
+          <>
+            {`In ${yearLabel}, with `}
+            <a className="result-policies-link" href="#change-by-policy" onClick={(event) => scrollToSection(event, "change-by-policy")}>
+              {policyCount} {policyCount === 1 ? "policy" : "policies"}
+            </a>
+          </>
+        }
+        household={requestHousehold}
+        year={year}
+        policies={selected}
+      />
+      {facts.length > 0 && <HouseholdFacts facts={facts} onEdit={onEdit} />}
       <div className="result-card-body">
-        {/* The left column: the figure; the right: net income before,
-            each measure with an effect, and after. The rest is under
-            "About this result" */}
-        <div className="result-card-side">
-          <div className="result-card-hero">
-            <p className="result-figure">
-              <span className="result-value" aria-busy={counting || undefined}>
-                {signedPounds(counting ? shown : totals.change)}
-              </span>
-              {totals.change !== 0 && <span className="result-unit"> a year</span>}
-            </p>
-            {share && (
-              <p className={`result-chip ${tone}`}>
-                <span aria-hidden="true">{totals.change > 0 ? "▲" : "▼"} </span>
-                <span className="visually-hidden">{totals.change > 0 ? "Up " : "Down "}</span>
-                {share.replace(/^[+−]/, "")} of net income
-              </p>
-            )}
-            {/* Whose result it is, as chips that wrap whole */}
-            {facts.length > 0 && <HouseholdFacts facts={facts} onEdit={onEdit} />}
-          </div>
-        </div>
         <NetIncomeWaterfall
           totals={totals}
           steps={bars ? bars.rows : null}
@@ -555,6 +541,8 @@ export function SingleYearHeadline({
   spendingSource = null,
   household = null,
   onEdit = null,
+  requestHousehold = null,
+  selected = [],
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -594,6 +582,13 @@ export function SingleYearHeadline({
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
       {totals && status !== "error" && (
         <div className="single-year-result">
+          {/* The section's heading above the result card, then the two
+              Where you sit cards below it */}
+          <SectionHeading
+            icon="pin"
+            title="Your place in the income distribution"
+            subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
+          />
           <ResultCard
             totals={totals}
             yearLabel={yearLabel}
@@ -602,6 +597,9 @@ export function SingleYearHeadline({
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             facts={household ? householdFacts(data, household, spending) : []}
             onEdit={onEdit}
+            requestHousehold={requestHousehold}
+            year={data.year ?? year}
+            selected={selected}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
@@ -669,11 +667,6 @@ export function SingleYearDetails({ result, year, policies, household = null, se
     <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
       {household && (
         <>
-          <SectionHeading
-            icon="pin"
-            title="Your place in the income distribution"
-            subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
-          />
           <section className="report-section" id="income-position">
             <IncomePositionChart
               net={data.net}
