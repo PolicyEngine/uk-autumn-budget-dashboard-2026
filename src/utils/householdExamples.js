@@ -122,8 +122,6 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
     short: "High earner",
     description: "Aged 45, owns their home with a mortgage",
     icon: "briefcase",
-    measure: "threshold_freeze_2031_32",
-    tag: "Threshold freeze, 2031-32",
     inputs: {
       ...RESET,
       current_age: 45,

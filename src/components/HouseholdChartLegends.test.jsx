@@ -77,8 +77,10 @@ describe("legendMembership", () => {
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);
     expect(zeroReason(catalogue.byId.get("warm_home_discount_top_up"), 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
-    const freeze = policyDetails("threshold_freeze_2031_32");
-    expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
+    // (the 2031-32 measure's entry is not kept here: the frontend names no
+    // such measure, measureCatalogue.test.jsx)
+    const employer = policyDetails(EMPLOYER_NI);
+    expect(inForceText(employer)).toBe("in force from April 2027");
     const fuelVat = policyDetails("road_fuel_vat_cut");
     expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
   });

@@ -6,7 +6,6 @@ import {
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
-import { PRESET_POLICIES } from "../utils/householdPresets";
 import { peekHouseholdImpact, rememberHouseholdHeadline } from "./useHouseholdImpact";
 
 /**
@@ -27,11 +26,13 @@ import { peekHouseholdImpact, rememberHouseholdHeadline } from "./useHouseholdIm
  * @returns {{ status: "idle"|"loading"|"ready"|"error", income: number|null }}
  */
 export default function useBasisIncome({ inputs, policies, basisYear, enabled }) {
-  const policySets = [policies, PRESET_POLICIES];
+  // #185 on #104: the page keeps no list of measures, so only the selection
+  // itself is looked up (the examples' file covers its own measures)
+  const policySets = [policies];
   const keys =
     enabled && inputs && basisYear
       ? policySets
-          .filter((set) => set.length > 0)
+          .filter((set) => Array.isArray(set) && set.length > 0)
           .map((set) => requestKey(buildHouseholdRequest(inputs, { year: basisYear, policies: set })))
       : [];
   const primary = keys[0] ?? null;

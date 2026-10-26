@@ -108,18 +108,6 @@ export const POLICY_DETAILS = [
       "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
   },
   {
-    id: "threshold_freeze_2031_32",
-    name: "Threshold freeze to 2031-32",
-    description: "Keep income tax thresholds frozen in 2031-32",
-    summary:
-      "Keeps the income tax personal allowance and basic rate band frozen for one more year, to 2031-32.",
-    starts: "April 2031",
-    type: "Income tax",
-    inForce: { from: "2031-04" },
-    details:
-      "The personal allowance stays at £12,570 and the higher rate threshold at £50,270, instead of rising with inflation to £12,830 and £51,330. The National Insurance primary threshold and upper earnings limit, which the model ties to them from 2031-32, stay at the same levels; the employer threshold is not held.",
-  },
-  {
     id: "badr_lifetime_limit_cut",
     name: "Business Asset Disposal Relief restricted",
     description: "Halve the Business Asset Disposal Relief lifetime limit",

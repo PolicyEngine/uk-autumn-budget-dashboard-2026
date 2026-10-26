@@ -34,7 +34,6 @@ const SOURCE_NAMES = {
   road_fuel_vat_cut: "the VAT cut on road fuel",
   state_pension_income_tax_protection: "State Pension tax protection",
   plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
-  threshold_freeze_2031_32: "the threshold freeze",
   warm_home_discount_top_up: "the Warm Home Discount top-up",
   employer_ni_relief_under_25s: "employer NI relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",

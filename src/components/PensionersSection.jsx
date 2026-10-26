@@ -28,7 +28,7 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
-import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
 import PillSelect from "./PillSelect";
@@ -61,10 +61,23 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
 import {
   legendMembership,
+  zeroReason,
   legendItems as membershipItems,
   exportLegendItems,
   drawnNames,
 } from "../utils/legendMembership";
+
+/**
+ * Why a measure has no effect in a year, in a few words, or null (#185 on
+ * #104: told by zeroReason from the measure's published name and its
+ * policyDetails, so the page keeps no list of measures).
+ */
+function noEffectReason(measure, year) {
+  const reason = zeroReason(measure, year);
+  if (reason.kind === "employer") return "Employer cost; wages held fixed";
+  if (reason.kind === "not_in_force" && reason.text) return reason.text.charAt(0).toUpperCase() + reason.text.slice(1);
+  return null;
+}
 import "./YoungPeopleSection.css";
 import "./PensionersSection.css";
 
