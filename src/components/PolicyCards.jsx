@@ -18,7 +18,7 @@ const FactIcon = ({ name }) => (
 );
 
 /**
- * "About selected policies": a card per selected policy, grouped by whether
+ * The Policies view: a card per policy given, grouped by whether
  * it raises or costs revenue, in the legends' order. Each card gives what
  * changes, when it starts and what kind of measure it is, with its main
  * assumption behind "Details" and a source where one exists. Revenue

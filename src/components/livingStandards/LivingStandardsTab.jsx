@@ -1,4 +1,5 @@
-// The Living standards view: the pre-Budget baseline outlook for UK
+// The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
+// outlook before the Budget's measures, the pre-Budget baseline for UK
 // household incomes and poverty, and the OBR forecast it is built on.
 // Ported from PolicyEngine/uk-living-standards-outlook (branch
 // review-1-fixes, db0c8e4): its two tabs are this view's two sub-tabs,
@@ -165,7 +166,7 @@ export default function LivingStandardsTab({ active = true }) {
             tabs={SUB_TABS}
             value={sub}
             onChange={setSub}
-            ariaLabel="Living standards sections"
+            ariaLabel="Pre-measures forecast sections"
             idPrefix="living"
           />
           {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (

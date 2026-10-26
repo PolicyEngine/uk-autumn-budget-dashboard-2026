@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import SubTabs, { SubTabPanel, useSubTabParam } from "./SubTabs";
 import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 
-/** Population impact's sub-tabs; the first, All households, is the default. */
+/** Population impact's sub-tabs; the first, Public finances, is the default. */
 export const POPULATION_SUB_TABS = [
+  { value: "finances", label: "Public finances", icon: "landmark" },
   { value: "all", label: "All households", icon: "users" },
   { value: "young", label: "Young people", icon: "cap" },
+  { value: "living", label: "Living standards", icon: "coins" },
+  { value: "poverty", label: "Poverty", icon: "percent" },
 ];
 
 const SUB_TAB_VALUES = POPULATION_SUB_TABS.map((tab) => tab.value);
@@ -20,7 +23,7 @@ function dropYoungHash() {
 
 function PopulationSubTabs({ note, active = true, children }) {
   const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
-  // Sub-tabs opened so far stay mounted, hidden while the other is shown
+  // Sub-tabs opened so far stay mounted, hidden while another is shown
   const [visited, setVisited] = useState([sub]);
   if (!visited.includes(sub)) setVisited([...visited, sub]);
 
@@ -60,11 +63,12 @@ function PopulationSubTabs({ note, active = true, children }) {
 }
 
 /**
- * The Population impact view: All households (the Budget's public
- * finances, distribution, places and example households) and Young people
- * (results by age), as pill sub-tabs under the view tabs. The open sub-tab
- * is ?sub= (useSubTabParam): All households has no parameter, Young people
- * is ?sub=young. App.jsx turns the old links (?tab=young, #young-people)
+ * The Population impact view: Public finances first, then All households
+ * (places, how changes vary, example households), Young people (results by
+ * age), Living standards (income changes by decile, inequality) and Poverty,
+ * as pill sub-tabs under the view tabs. The open sub-tab is ?sub=
+ * (useSubTabParam): Public finances has no parameter, the others are
+ * ?sub=all, young, living and poverty. App.jsx turns the old links (?tab=young, #young-people)
  * into ?sub=young before this view first reads the address.
  *
  * The sub-tab is read from the address, which the server does not have, so
@@ -72,7 +76,7 @@ function PopulationSubTabs({ note, active = true, children }) {
  * the browser's first render agree, and App.jsx has read the address.
  *
  * @param {Object} props
- * @param {React.ReactNode} [props.note] - A line under the sub-tabs, over both panels
+ * @param {React.ReactNode} [props.note] - A line under the sub-tabs, over every panel
  * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
  * @param {(sub: string) => React.ReactNode} props.children - A sub-tab's content
  */

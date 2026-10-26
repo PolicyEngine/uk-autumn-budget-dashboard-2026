@@ -402,7 +402,7 @@ body {
   background: var(--band-teal);
 }
 
-/* On a phone all four views show at once, two by two, and the bar
+/* On a phone all five views show at once, two by two, and the bar
    scrolls with the page: only the band sticks */
 @media (max-width: 600px) {
   :root {
@@ -443,9 +443,13 @@ body {
 
 @media (max-width: 400px) {
   .view-tab {
-    gap: 6px;
-    padding: 0 6px;
+    gap: 4px;
+    padding: 0 4px;
     font-size: 0.875rem;
+    /* "Pre-measures forecast" wraps rather than overflow on a small phone */
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
   }
 }
 
@@ -607,6 +611,18 @@ body {
   font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--pe-gray-700);
+}
+
+/* Population impact's pointer to the Policies view */
+.policies-link-line {
+  margin: 24px 0 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.policies-link-line a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
 }
 
 .showing-line {
@@ -1487,7 +1503,7 @@ body {
   }
 }
 
-/* About selected policies: compact cards, grouped by revenue effect
+/* The Policies view: compact cards, grouped by revenue effect
    (PolicyCards.jsx) */
 .policy-details-content {
   padding: 4px 0 20px;
