@@ -2946,7 +2946,7 @@ body {
   }
 }
 
-/* A table that replaces a chart (Chart or table, on Before the Budget's
+/* A table that replaces a chart (Chart or table, on the Pre-measures forecast's
    cards) rises in as a swapped view does */
 .ls-table-wrapper {
   animation: swap-in var(--motion-base) var(--ease-out);

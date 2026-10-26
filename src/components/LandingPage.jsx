@@ -46,7 +46,7 @@ export default function LandingPage({ onOpen, provisional }) {
         This dashboard uses <SourceLink source="policyengine_uk_model" /> to
         show how Autumn Budget 2026 measures would affect the public
         finances and households: by income, area and age, and
-        for your own household, alongside the outlook before the Budget.
+        for your own household, alongside the pre-measures forecast.
         Costings are our own; forecast:{" "}
         <SourceLink source="obr_efo_current" />.
       </p>

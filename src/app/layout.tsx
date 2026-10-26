@@ -8,7 +8,7 @@ import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
-  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the outlook before the Budget.';
+  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
 
 export const metadata: Metadata = {
   title: TITLE,

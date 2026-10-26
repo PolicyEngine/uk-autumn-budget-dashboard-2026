@@ -1,4 +1,4 @@
-// Poverty at a glance, on Before the Budget's Poverty sub-tab: one tile
+// Poverty at a glance, on the Pre-measures forecast's Poverty sub-tab: one tile
 // (HeadlineTile) per age group (children, working-age adults, pensioners)
 // on the sub-tab's measure (usePovertyMeasure: the same choice as both
 // cards' Options, so a switch to relative or after housing costs moves the
