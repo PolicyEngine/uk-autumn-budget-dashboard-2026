@@ -915,10 +915,10 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
           <SectionHeading
             id="young-people-who-gains"
             icon="userPlus"
-            title="Who gains and from what"
+            title="Who is better or worse off, and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."
           />
-          <section className="report-section young-people-section" aria-label="Who gains and from what">
+          <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
             <div className="charts-grid">
               <MeasuresCard {...props} height={narrow ? 460 : 400} />
               <SharesCard {...props} height={narrow ? 340 : 400} />

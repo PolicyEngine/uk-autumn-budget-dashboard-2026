@@ -72,7 +72,7 @@ export const GLOSSARY = {
   statePensionAge: {
     term: "State Pension age",
     meaning:
-      "Rises from 66 to 67 between April 2026 and March 2028, by date of birth. In the years shown, pensioners are people aged 67 or over.",
+      "Rises from 66 to 67 between April 2026 and March 2028, by date of birth. Pensioners here are people aged 66 or over in 2026-27 and 67 or over from 2027-28.",
   },
 };
 
