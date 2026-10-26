@@ -16,8 +16,7 @@ import { useOutlook } from "./useOutlook";
 import { COMBINED_REFORM_ID, distributionRunFor } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { GROWTH_WITH_MEASURES_FILE, changesNothing, parseGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
-import { rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
-import { headlineStartYear, headlineYear } from "../../utils/livingStandards/outlook";
+import { defaultRange, rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -87,7 +86,7 @@ function LoadedCard({ data, rows, run, twinLink }) {
   // The difference reads best: a measure moves growth by hundredths of a
   // point, too little to see beside growth of a percent or two
   const [show, setShow] = useState("difference");
-  const [range, setRange] = useYearRange(rangeYears(data), [headlineStartYear(data), headlineYear(data)]);
+  const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show });
   const noEffect = changesNothing(rows, run.reformId);
   const packageNote =
