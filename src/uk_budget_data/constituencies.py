@@ -301,12 +301,20 @@ def resolve_cut(tag: Optional[str], *, api, token: str) -> Cut:
             f"release manifest records {sha256}"
         )
     problems = _incompatible(manifest)
+    pin = bundle_pin()
     if problems:
+        # A newer cut published for the next pair stops a run on the
+        # installed one: name the cut the installed bundle routes to.
+        hint = (
+            f" Pass --cut {pin['revision']}, the cut the installed bundle "
+            "routes constituencies to."
+            if not explicit and pin and pin.get("revision") != tag
+            else ""
+        )
         raise ConstituencyRunError(
             f"The cut {tag} was built for {'; '.join(problems)}. Run it on "
-            "the bundle that pairs them."
+            f"the bundle that pairs them.{hint}"
         )
-    pin = bundle_pin()
     pinned = (
         pin is not None
         and pin.get("revision") == tag

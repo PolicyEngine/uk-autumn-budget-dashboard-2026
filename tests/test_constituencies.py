@@ -169,6 +169,27 @@ def test_a_cut_the_bundle_does_not_pin_runs_only_when_named(
     assert c.resolve_cut(TAG, api=hub, token="token").pinned
 
 
+def test_a_newer_cut_for_another_model_names_the_pinned_one(
+    monkeypatch, tmp_path
+):
+    """26 October: a cut for the next pair was published while the
+    installed bundle still pinned the earlier one."""
+    files = {tag: local_file(tmp_path / f"{tag}.h5") for tag in (TAG, NEWER)}
+    manifests = {
+        tag: release_manifest(
+            tag, c.sha256_file(path), model="==0.0.1" if tag == NEWER else None
+        )
+        for tag, path in files.items()
+    }
+    hub = FakeHub(files, manifests=manifests)
+    pin(monkeypatch, TAG, files[TAG])
+    with pytest.raises(c.ConstituencyRunError) as refused:
+        c.resolve_cut(None, api=hub, token="token")
+    assert f"The cut {NEWER} was built for" in str(refused.value)
+    assert f"Pass --cut {TAG}" in str(refused.value)
+    assert c.resolve_cut(TAG, api=hub, token="token").pinned
+
+
 @pytest.mark.parametrize(
     ("tag", "message"),
     [
