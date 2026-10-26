@@ -509,6 +509,14 @@ def test_the_runs_it_asks_for(monkeypatch):
     )
     assert len(calls) == 8
     assert result["engine"] == runtime_identity()["packages"]
+    assert result["git_sha"] == runtime_identity()["git_sha"]
+
+    # Each answer carries the build's commit, which the page compares
+    # between the headline and a breakdown from another deployment
+    monkeypatch.setenv("GIT_SHA", "b" * 40)
+    assert calculate(Answers(), measures)["git_sha"] == "b" * 40
+    monkeypatch.delenv("GIT_SHA")
+    assert calculate(Answers(), measures)["git_sha"] is None
 
 
 def test_parameter_change_measures_match_policyengine_py_household_calc():

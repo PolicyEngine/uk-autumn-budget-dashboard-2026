@@ -29,12 +29,12 @@ export default defineConfig([
         {
           selector:
             'Literal[value=/(^|[^\\w&])(#|%23)(?!\\d{4}(?![\\da-fA-F]))([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\\w-])|\\b(rgba?|hsla?)\\(\\s*[-\\d.]/]',
-          message: 'Colour literal: use a token from src/utils/chartTheme.js or policyConfig.js (docs/COLOURS.md).',
+          message: 'Colour literal: use a token from src/utils/chartTheme.js (docs/COLOURS.md).',
         },
         {
           selector:
             'TemplateElement[value.raw=/(^|[^\\w&])(#|%23)(?!\\d{4}(?![\\da-fA-F]))([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\\w-])|\\b(rgba?|hsla?)\\(\\s*[-\\d.]/]',
-          message: 'Colour literal: use a token from src/utils/chartTheme.js or policyConfig.js (docs/COLOURS.md).',
+          message: 'Colour literal: use a token from src/utils/chartTheme.js (docs/COLOURS.md).',
         },
         {
           selector:
@@ -45,6 +45,7 @@ export default defineConfig([
     },
   },
   globalIgnores([
+    '.venv/**',
     '.next/**',
     'out/**',
     'build/**',

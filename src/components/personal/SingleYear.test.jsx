@@ -1,15 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
+import { fixtureJson } from "../../test/publicationFixture";
 import { mostlyFromSpending } from "./SingleYearResults";
 import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
-import { PRESET_POLICIES, presetRequests, resetPresetResults } from "../../utils/householdPresets";
+import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
+import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
+// The receipts' model versions, which the household fixture's answer runs:
+// Household impact shows nothing when the two differ.
+const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
+const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
+const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
 
 let household;
 
@@ -35,6 +43,7 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  clearBasisIncomeCache();
   resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
@@ -52,14 +61,30 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const baseEntry = fixtureJson("manifest.json").measures.alpha;
+const testCatalogue = buildMeasureCatalogue({
+  manifest: {
+    ...fixtureJson("manifest.json"),
+    measures: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, {
+      ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
+    }])),
+    combined: {},
+  },
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE }])),
+});
+function PublishedMeasures({ children }) {
+  return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;
+}
+
 function renderTab(props = {}) {
   return render(
     <PersonalImpactTab
-      selectedPolicies={POLICIES_FOR_TEST.map((policy) => policy.id)}
+      selectedPolicies={SUPPORTED_POLICY_IDS}
       policies={POLICIES_FOR_TEST}
       year={2029}
       {...props}
     />,
+    { wrapper: PublishedMeasures },
   );
 }
 
@@ -159,8 +184,13 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  it("with a detail URL, asks for all three parts at once and races the headline across both services", async () => {
+  // #170 asked for all three parts at once and raced the headline across
+  // both services. Merged with #104, the headline stays Cloud Run's: it is
+  // what the detail service's parts are checked against (same build), and
+  // a Modal headline would have nothing to be checked against.
+  it("with a detail URL, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
     const DETAIL_API = "https://modal.test/api/household-impact";
+    const BUILD = "b".repeat(40);
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
     const asked = [];
     let release;
@@ -175,32 +205,32 @@ describe("the household calculation, from the fixture", () => {
         }
         const body = JSON.parse(init.body);
         asked.push([url, body.include]);
-        // Nothing answers until all the requests are out: none waits for
-        // another's answer
-        await gate;
-        return json(householdAnswerFor(body));
+        // The headline waits: nothing else is asked until it answers
+        if (body.include.length === 0) await gate;
+        return json({ ...householdAnswerFor(body), git_sha: BUILD });
       }),
     );
     renderTab();
     toResults();
-    await waitFor(() => expect(asked).toHaveLength(4));
-    expect(asked).toEqual(
-      expect.arrayContaining([
-        [HOUSEHOLD_API, []],
-        [DETAIL_API, []],
-        [DETAIL_API, ["sweep"]],
-        [DETAIL_API, ["by_policy"]],
-      ]),
-    );
+    await waitFor(() => expect(asked).toHaveLength(1));
+    expect(asked).toEqual([[HOUSEHOLD_API, []]]);
     release();
     await splitShown();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    expect(asked).toHaveLength(3);
+    expect(asked.slice(1)).toEqual(
+      expect.arrayContaining([
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
   });
 
-  it("with a detail URL, shows the headline from the detail answers when the headline itself fails", async () => {
+  it("with a detail URL, shows no headline from the detail service when Cloud Run's fails", async () => {
     const DETAIL_API = "https://modal.test/api/household-impact";
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
@@ -208,14 +238,17 @@ describe("the household calculation, from the fixture", () => {
           return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
         }
         const body = JSON.parse(init.body);
-        return body.include.length === 0 ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body));
+        asked.push([url, body.include]);
+        return url === HOUSEHOLD_API && body.include.length === 0
+          ? json({ detail: "boom" }, 503)
+          : json(householdAnswerFor(body));
       }),
     );
     renderTab();
     toResults();
-    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
-    await splitShown();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
+    expect(asked.filter(([url]) => url === DETAIL_API)).toEqual([]);
   });
 
   it("shows the result card and breakdown once only the headline has resolved", async () => {
@@ -248,7 +281,7 @@ describe("the household calculation, from the fixture", () => {
     expect(card.querySelector(".result-card-label")).toHaveTextContent("Change in your net income");
     // The year and the number of policies as pills
     const pills = [...card.querySelectorAll(".result-pill")].map((pill) => pill.textContent);
-    expect(pills).toEqual(["2029-30", `${POLICIES_FOR_TEST.length} policies`]);
+    expect(pills).toEqual(["2029-30", `${SUPPORTED_POLICY_IDS.length} policies`]);
     expect(changeValue()).toBe("+£3,765");
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
@@ -272,7 +305,10 @@ describe("the household calculation, from the fixture", () => {
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
-    expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
+    // A supported selection has nothing left out: an unmodelled measure
+    // makes the whole selection unavailable instead (#104)
+    expect(assumptions).not.toHaveTextContent("not shown");
+    expect(assumptions).not.toHaveTextContent("not modelled");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // The spending the fuel and electricity measures act on (the form's
@@ -428,7 +464,7 @@ describe("the household calculation, from the fixture", () => {
     expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     rerender(
-      <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
+      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);
@@ -635,7 +671,13 @@ describe("the examples' precomputed results", () => {
   it("show an example's result from the published file, with no request to the API", async () => {
     // The file as the precompute writes it: the API's answer for each
     // example's own request (here the fixture's answer)
-    const entries = presetRequests().map(({ preset_id, year, request }) => ({
+    // #185 on #104: the file names its own measures; here every measure
+    // the page is given, so the cards' figures and answers apply
+    // the household API models (an unmodelled one makes the selection
+    // unavailable, #104)
+    const PRESET_POLICIES = SUPPORTED_POLICY_IDS;
+    const presetMeasures = POLICIES_FOR_TEST.filter((policy) => PRESET_POLICIES.includes(policy.id));
+    const entries = presetRequests(PRESET_POLICIES).map(({ preset_id, year, request }) => ({
       preset_id,
       year,
       request,
@@ -645,13 +687,14 @@ describe("the examples' precomputed results", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url.endsWith("/data/household_presets.json")) return json({ entries });
+        if (url.endsWith("/data/household_presets.json")) return json({ policies: PRESET_POLICIES, engine: PUBLISHED_ENGINE, entries });
         household.push(JSON.parse(init.body));
         return json(householdAnswerFor(JSON.parse(init.body)));
       }),
     );
     render(
-      <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={POLICIES_FOR_TEST} year={2029} />,
+      <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={presetMeasures} year={2029} />,
+      { wrapper: PublishedMeasures },
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     fireEvent.click(householdItem(/^A graduate on £35,000/));
@@ -662,14 +705,16 @@ describe("the examples' precomputed results", () => {
 });
 
 describe("a change in the title bar after a result", () => {
+  // Published measures the household API answers for: an unmodelled one
+  // makes the selection unavailable (#104)
   const props = {
-    selectedPolicies: POLICIES_FOR_TEST.map((policy) => policy.id),
+    selectedPolicies: SUPPORTED_POLICY_IDS,
     policies: POLICIES_FOR_TEST,
   };
 
   it("reruns the same household for the new year, without a second Calculate", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     const asked = household.length;
@@ -684,7 +729,7 @@ describe("a change in the title bar after a result", () => {
 
   it("does not rerun while the answers are being edited", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
@@ -698,7 +743,7 @@ describe("a change in the title bar after a result", () => {
 
   it("waits until the view is shown again when the year changes elsewhere", async () => {
     serve((body) => json(householdAnswerFor(body)));
-    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />);
+    const { rerender } = render(<PersonalImpactTab {...props} year={2029} />, { wrapper: PublishedMeasures });
     toResults();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2029-30"));
     const asked = household.length;
@@ -737,7 +782,7 @@ describe("while a new answer loads", () => {
     await splitShown();
     expect(headlineCard()).toHaveTextContent("2029-30");
     server.slowDown();
-    const ids = POLICIES_FOR_TEST.map((p) => p.id);
+    const ids = SUPPORTED_POLICY_IDS;
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
     toResults();
     // The button is busy and cannot send twice
@@ -897,6 +942,34 @@ describe("the household calculation's errors", () => {
       kind: "timeout",
       message: expect.stringMatching(/took longer than/),
     });
+  });
+});
+
+describe("an unavailable household calculation", () => {
+  it.each(["mixed", "only unmodelled"])("keeps the wizard but suppresses %s aggregate results", async (selection) => {
+    const unmodelledId = HOUSEHOLD_FIXTURE.not_modelled[0].id;
+    const ids = selection === "mixed" ? [...SUPPORTED_POLICY_IDS, unmodelledId] : [unmodelledId];
+    serve((body) => {
+      const answer = structuredClone(householdAnswerFor(body));
+      // An API label never overrides the publication catalogue's label.
+      answer.not_modelled[0].name = "A different API label";
+      if (selection === "only unmodelled") {
+        answer.net_income.reform = answer.net_income.baseline;
+        answer.net_income.change = 0;
+      }
+      return json(answer);
+    });
+    renderTab({ selectedPolicies: ids });
+    toResults();
+    const panel = await results();
+    expect(await within(panel).findByText("Household impact is unavailable for this selection")).toBeInTheDocument();
+    expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
+    expect(panel).not.toHaveTextContent("A different API label");
+    expect(panel).not.toHaveTextContent("£0");
+    expect(screen.queryByText(HEADLINE)).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
+    expect(screen.getByRole("heading", { name: /^More details/ })).toBeInTheDocument();
+    expect(household.length).toBeGreaterThan(0);
   });
 });
 

@@ -47,7 +47,7 @@ export function ZeroMeasuresDetail({ zero, year, period }) {
       </p>
       <ul className="zero-measures-list">
         {zero.map((member) => {
-          const reason = zeroReason(member.id, year);
+          const reason = zeroReason(member, year);
           return (
             <li key={member.id} data-zero-measure={member.id}>
               <strong>{member.name}</strong>:{" "}

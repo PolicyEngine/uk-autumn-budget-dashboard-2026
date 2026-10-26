@@ -1,4 +1,7 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { loadVerifiedFlat, SnapshotChangedError } from "../utils/publication/flat";
+import { indexRows } from "../utils/geography/rows";
 import { FILES } from "../utils/geography/columns";
 import { parseGeographyTable } from "../utils/geography/parse";
 
@@ -78,26 +81,22 @@ const failure = (status, error) =>
  */
 export async function loadGeographyFile(
   name,
-  { fetchImpl = fetch, base = basePath(), published = publishedFiles() } = {},
+  { fetchImpl = fetch, base = basePath(), published = publishedFiles(), catalogue } = {},
 ) {
   const { file, level } = FILES[name];
   // Not in this build: not published, and not requested
   if (published && !published.includes(file)) return failure("unavailable", null);
-  const url = `${base}/data/${file}`;
-  let response;
   try {
-    response = await fetchImpl(url, { cache: "no-cache" });
-  } catch {
-    return failure("error", `${file} could not be fetched`);
-  }
-  if (response.status === 404) return failure("unavailable", null);
-  if (!response.ok) return failure("error", `${file}: HTTP ${response.status}`);
-  try {
-    const bytes = await response.arrayBuffer();
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    const table = parseGeographyTable(text, { level });
+    const { text, aliases } = await loadVerifiedFlat(file, catalogue, { fetchImpl, basePath: base });
+    const parsed = parseGeographyTable(text, { level });
+    // The area run names a package by its alias; the index says which
+    // manifest key (the combined run) it stands for
+    const table = Object.keys(aliases).length
+      ? indexRows(level, parsed.rows.map((row) => (Object.hasOwn(aliases, row.reform) ? { ...row, reform: aliases[row.reform] } : row)))
+      : parsed;
     return Object.freeze({ status: "ready", table, features: null, error: null });
   } catch (error) {
+    if (error instanceof SnapshotChangedError) return failure("stale", error.message);
     return failure("error", `${file}: ${error.message}`);
   }
 }
@@ -179,8 +178,8 @@ export async function loadAreaRouting({
 }
 
 const LOADERS = {
-  regional: () => loadGeographyFile("regional"),
-  constituency: () => loadGeographyFile("constituency"),
+  regional: (catalogue) => loadGeographyFile("regional", { catalogue }),
+  constituency: (catalogue) => loadGeographyFile("constituency", { catalogue }),
   boundaries: () => loadBoundaries(),
   routing: () => loadAreaRouting(),
 };
@@ -188,8 +187,18 @@ const LOADERS = {
 // One entry per resource and base path: its settled state, and who to tell.
 const entries = new Map();
 
-function entryFor(key, name) {
+// A failure is kept only while something shows it: the next view to mount
+// loads the file again, so one network error does not last the session. A
+// missing routing file is tried again too: it may be mid-deploy.
+const RETRY = new Set(["error", "stale"]);
+const retries = (name, status) => RETRY.has(status) || (name === "routing" && status === "unavailable");
+
+function entryFor(key, name, catalogue) {
   let entry = entries.get(key);
+  if (entry && retries(name, entry.state?.status) && entry.listeners.size === 0) {
+    entries.delete(key);
+    entry = undefined;
+  }
   if (!entry) {
     entry = { state: null, listeners: new Set() };
     entries.set(key, entry);
@@ -200,22 +209,22 @@ function entryFor(key, name) {
     const load = Object.hasOwn(LOADERS, name)
       ? LOADERS[name]
       : async () => failure("error", `${name} is not a geography resource`);
-    load().then(settle, () =>
+    load(catalogue).then(settle, () =>
       settle(failure("error", "the file could not be loaded")),
     );
   }
   return entry;
 }
 
-function useCachedResource(name) {
-  const key = `${basePath()}|${name}`;
+function useCachedResource(name, catalogue) {
+  const key = `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
   const subscribe = useCallback(
     (onChange) => {
-      const entry = entryFor(key, name);
+      const entry = entryFor(key, name, catalogue);
       entry.listeners.add(onChange);
       return () => entry.listeners.delete(onChange);
     },
-    [key, name],
+    [key, name, catalogue],
   );
   const getSnapshot = () => entries.get(key)?.state ?? LOADING;
   return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
@@ -229,7 +238,16 @@ function useCachedResource(name) {
  *   table: Object|null, error: string|null}}
  */
 export function useGeographyData(name) {
-  return useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`);
+  const catalogue = useMeasureCatalogue();
+  const state = useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`, catalogue);
+  return useMemo(() => {
+    if (!catalogue.manifest) return failure("unavailable", "No Budget results are published yet");
+    if (state.status !== "ready") return state;
+    const rows = state.table.rows.filter((row) =>
+      isCatalogueRowDisplayable(catalogue, row.reform, row.year),
+    );
+    return { ...state, table: indexRows(state.table.level, rows) };
+  }, [state, catalogue]);
 }
 
 /** The constituency boundaries: `{status, features, error}`. */
@@ -237,9 +255,9 @@ export const useConstituencyBoundaries = () => useCachedResource("boundaries");
 
 /**
  * Whether the release routes results by area: `{status, routing, error}`,
- * fetched once and shared.
+ * fetched once per publication snapshot and shared.
  */
-export const useAreaRouting = () => useCachedResource("routing");
+export const useAreaRouting = () => useCachedResource("routing", useMeasureCatalogue());
 
 /** Forget every fetched file (for tests). */
 export function resetGeographyCache() {

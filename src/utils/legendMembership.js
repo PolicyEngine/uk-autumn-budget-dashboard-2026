@@ -1,15 +1,15 @@
 /**
  * Which measures a household chart's legend lists, and which it greys out.
  *
- * Every selected measure is in the legend, in the legends' order
- * (ALL_POLICY_NAMES), in every year, so no measure silently disappears and
+ * Every selected measure is in the legend, in the catalogue's order
+ * (measureCatalogue.jsx), in every year, so no measure silently disappears and
  * the legend holds still when the year changes. A measure that moves no
  * household in the year shown is greyed out (`muted`), and the card's
  * "More info" (ChartMoreInfo) says why. Tooltips leave out £0 rows; the
  * same panel covers them.
  */
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "./policyConfig";
-import { POLICIES } from "./policies";
+import { isCatalogueRowDisplayable } from "./measureCatalogue";
+import { policyDetailsFor } from "./policyDetails";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
 
@@ -20,16 +20,19 @@ import { DISPLAY_YEARS } from "./displayYears";
  * the engine's wage pass-through reads the unchanged NI parameters, so
  * wages and household incomes are fixed.
  */
-export const ZERO_FOR_HOUSEHOLDS = {
-  employer_ni_relief_under_25s:
-    "Wages are held fixed in this model, so no household's income changes",
-};
+// (#185 on #104: told by the published name, so the page keeps no list
+// of measures)
+export function zeroForHouseholds(measure) {
+  return /^employer\b/i.test(measure?.name ?? "")
+    ? "Wages are held fixed in this model, so no household's income changes"
+    : null;
+}
 
 // The swatch of a greyed-out measure, in the export too
 export const MUTED_SWATCH = CHART_COLOURS.noChange;
 
 /** Whether a measure is in force at any point in fiscal year `year` (April
- * to March), from its `inForce` months in policies.js. */
+ * to March), from its `inForce` months in policyDetails.js. */
 export function inForceIn(policy, year) {
   const window = policy?.inForce;
   if (!window) return true;
@@ -46,12 +49,12 @@ export function inForceIn(policy, year) {
  * @param {(id: string) => boolean} hasEffect - Whether the measure moves
  *   any household in the year shown (strictly non-zero, never a threshold:
  *   a small measure is still a measure)
- * @returns {Array<{id: string, name: string, muted: boolean}>}
+ * @returns {Array<{id: string, name: string, description: string, muted: boolean}>}
  */
-export function legendMembership(selectedPolicies, hasEffect) {
-  return ALL_POLICY_NAMES.map((name) => POLICIES.find((policy) => policy.name === name))
-    .filter((policy) => policy && selectedPolicies.includes(policy.id))
-    .map((policy) => ({ id: policy.id, name: policy.name, muted: !hasEffect(policy.id) }));
+export function legendMembership(catalogue, selectedPolicies, hasEffect) {
+  return catalogue.displayable
+    .filter((measure) => selectedPolicies.includes(measure.id))
+    .map((measure) => ({ id: measure.id, key: measure.seriesKey, name: measure.label ?? measure.name, description: measure.description, muted: !hasEffect(measure.id) }));
 }
 
 /**
@@ -59,18 +62,19 @@ export function legendMembership(selectedPolicies, hasEffect) {
  * decile (winners_losers.csv, distributional_impact.csv): a measure has an
  * effect when any decile's `valueKey` is non-zero in `year`.
  */
-export function decileMembership(rows, valueKey, selectedPolicies, year) {
+export function decileMembership(catalogue, rows, valueKey, selectedPolicies, year) {
   const ids = new Set(
     (rows ?? [])
       .filter(
         (row) =>
           row.decile !== "all" &&
           parseInt(row.year) === year &&
+          isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
           Math.abs(parseFloat(row[valueKey])) > 0,
       )
       .map((row) => row.reform_id),
   );
-  return legendMembership(selectedPolicies, (id) => ids.has(id));
+  return legendMembership(catalogue, selectedPolicies, (id) => ids.has(id));
 }
 
 const MONTHS = [
@@ -84,7 +88,7 @@ const fiscalYear = (year) => `${year}-${String(year + 1).slice(-2)}`;
 
 /**
  * When a measure is in force, in words, from its `inForce` months in
- * policies.js: "winter 2026-27 only" for one October-to-March winter,
+ * policyDetails.js: "winter 2026-27 only" for one October-to-March winter,
  * otherwise "in force from April 2031" or "in force December 2026 to May
  * 2027", with "(2031-32 only)" when that is the one year shown it is in
  * force.
@@ -104,36 +108,42 @@ export function inForceText(policy) {
 
 /**
  * Why a greyed-out measure is £0 for households in `year`, as
- * {kind, text}: "employer" (ZERO_FOR_HOUSEHOLDS: £0 by construction),
+ * {kind, text}: "employer" (zeroForHouseholds: £0 by construction),
  * "not_in_force" (when it is in force instead) or "none" (in force, but no
  * household shown is changed).
  */
-export function zeroReason(id, year) {
-  if (ZERO_FOR_HOUSEHOLDS[id]) return { kind: "employer", text: ZERO_FOR_HOUSEHOLDS[id] };
-  const policy = POLICIES.find((entry) => entry.id === id);
+export function zeroReason(measure, year) {
+  const employer = zeroForHouseholds(measure);
+  if (employer) return { kind: "employer", text: employer };
+  const policy = policyDetailsFor(measure);
   if (!inForceIn(policy, year)) return { kind: "not_in_force", text: inForceText(policy) };
   return { kind: "none", text: "no change for the households shown" };
 }
 
 /** The legend items (GroupedLegend `items`), greyed out where muted. */
-export function legendItems(members) {
-  return members.map(({ name, muted }) => ({
+export function legendItems(members, catalogue) {
+  return members.map(({ key, name, muted }) => ({
+    key,
     label: name,
-    color: muted ? MUTED_SWATCH : POLICY_COLORS[name],
-    raises: REVENUE_RAISING_NAMES.has(name),
+    color: muted ? MUTED_SWATCH : catalogue.policyColors[key],
+    raises: catalogue.revenueRaisingNames.has(key),
+    direction: catalogue.bySeriesKey.get(key)?.direction,
     muted,
   }));
 }
 
 /** The same items for the PNG/SVG export legend. */
-export function exportLegendItems(members) {
-  return members.map(({ name, muted }) => ({
-    color: muted ? MUTED_SWATCH : POLICY_COLORS[name],
-    label: name,
-    type: "rect",
-    group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
-  }));
+export function exportLegendItems(members, catalogue) {
+  return members.map(({ key, name, muted }) => {
+    const direction = catalogue.bySeriesKey.get(key)?.direction;
+    return {
+      color: muted ? MUTED_SWATCH : catalogue.policyColors[key],
+      label: name,
+      type: "rect",
+      group: direction === "revenue" ? "raise" : direction === "cost" ? "cost" : "other",
+    };
+  });
 }
 
-/** The names drawn with a value this year (for the net line). */
-export const drawnNames = (members) => members.filter((member) => !member.muted).map((member) => member.name);
+/** The series keys drawn with a value this year (for the net line). */
+export const drawnNames = (members) => members.filter((member) => !member.muted).map((member) => member.key);

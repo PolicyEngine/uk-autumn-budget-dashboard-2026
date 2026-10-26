@@ -40,11 +40,11 @@ export const EVERY_POLICY_NOTE = (
   <Note
     icon="receipt"
     lead="Your household is simulated in policyengine-uk with the selected policies applied, as in the national figures."
+    // Lines true whatever is selected: a note about one measure would stay
+    // on the page when that measure changes or isn't published (#104)
     points={[
-      "Fuel duty deferral: includes the VAT on the lower pump price.",
-      "VAT changes: apply to the petrol, diesel and electricity spending you enter.",
-      "Employer NI relief: an employer cost, £0 for households (wages held fixed).",
-      "Warm Home Discount top-up: paid in 2026-27 only, so not in the selectable years.",
+      "Fuel duty acts on the petrol and diesel spending you enter, and VAT on that and the electricity spending.",
+      "A policy with no effect in the chosen year shows no change.",
     ]}
   />
 );
@@ -73,7 +73,6 @@ export const COUNCIL_TAX_NOTE = (
       </>,
       "Starts from 2026-27 averages, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
       "Northern Ireland has domestic rates, which are not modelled.",
-      "No selected policy changes it.",
     ]}
   />
 );

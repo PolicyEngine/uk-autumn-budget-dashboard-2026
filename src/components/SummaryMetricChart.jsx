@@ -37,6 +37,7 @@ import {
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
 import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -333,7 +334,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   const peopleText = (year, value) =>
     metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
-  const run = wholeSelectionRun(policies, selectedPolicies);
+  // The whole selection's run: one measure's own, or the package's combined
+  // run (the catalogue's, #104) when every displayable measure is selected
+  const { combinedId } = useMeasureCatalogue();
+  const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
   const data = metricByYear(rows, run, metric);
   const shown = data.filter((point) => point.value !== null);
   // Every shown value reads as zero at the tooltip's precision (a measure

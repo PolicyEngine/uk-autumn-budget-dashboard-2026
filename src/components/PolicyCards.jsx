@@ -1,15 +1,14 @@
 import { ArrowRight, ExternalLink } from "lucide-react";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  POLICY_ICONS,
-  REVENUE_RAISING_NAMES,
-} from "../utils/policyConfig";
+import { withPolicyDetails } from "../utils/policyDetails";
 import TitleIcon from "./TitleIcon";
 
+// Each group's heading and arrow, by the direction the catalogue gives a
+// measure's budgetary effect. Cards carry no icon per measure: a map by
+// measure id would be a measure list of the page's own.
 const GROUPS = [
-  { heading: "Raises revenue", raises: true, arrow: "arrowUp" },
-  { heading: "Costs revenue", raises: false, arrow: "arrowDown" },
+  { heading: "Raises revenue", direction: "revenue", arrow: "arrowUp" },
+  { heading: "Costs revenue", direction: "cost", arrow: "arrowDown" },
+  { heading: "Other measures", direction: "neutral", arrow: null },
 ];
 
 // The timeline runs over the charts' years: April 2026 to March 2032
@@ -178,22 +177,21 @@ function PolicyCard({ policy, onShowEffect }) {
   return (
     <li
       className="policy-card"
-      style={{ "--policy-accent": POLICY_COLORS[policy.name] }}
+      style={{ "--policy-accent": policy.color }}
     >
       <div className="policy-card-head">
-        <span className="policy-card-icon">
-          <TitleIcon name={POLICY_ICONS[policy.id]} bare size={22} />
-        </span>
+        {/* No icon per measure: a map by id would be a measure list of the
+            page's own (#104) */}
         <div className="policy-card-titles">
           <div className="policy-card-topline">
             <p className="policy-card-type">{policy.type}</p>
             {temporary && <span className="policy-card-badge">Temporary</span>}
           </div>
-          <h4 className="policy-card-name">{policy.name}</h4>
+          <h4 className="policy-card-name">{policy.label ?? policy.name}</h4>
         </div>
       </div>
 
-      <p className="policy-card-summary">{policy.summary}</p>
+      <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
 
       <div className="policy-card-when">
         <dl className="policy-card-dates">
@@ -242,7 +240,7 @@ function PolicyCard({ policy, onShowEffect }) {
             type="button"
             className="policy-card-effect"
             onClick={() => onShowEffect(policy.id)}
-            aria-label={`See the effect of ${policy.name} on Population impact`}
+            aria-label={`See the effect of ${policy.label ?? policy.name} on Population impact`}
           >
             See its effect
             <ArrowRight size={16} aria-hidden="true" />
@@ -254,34 +252,34 @@ function PolicyCard({ policy, onShowEffect }) {
 }
 
 /**
- * The Policies view: a large card per policy given, grouped by whether it
- * raises or costs revenue, in the legends' order. Each card gives what
+ * The Policies view: a large card per published measure given, grouped by
+ * the catalogue's direction (raises, costs, or no published costing), in
+ * the catalogue's order; card text beyond the published name and
+ * description comes from policyDetails.js where it has the id. Each card gives what
  * changes, what kind of measure it is, when it starts and ends (with a
  * timeline over the charts' years), how it is modelled and a source where
  * one exists. Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
  */
 function PolicyCards({ policies, selectedPolicies, onShowEffect }) {
-  return GROUPS.map(({ heading, raises, arrow }) => {
-    const items = ALL_POLICY_NAMES.map((name) =>
-      policies.find((policy) => policy.name === name),
-    ).filter(
-      (policy) =>
-        policy &&
-        selectedPolicies.includes(policy.id) &&
-        REVENUE_RAISING_NAMES.has(policy.name) === raises,
-    );
+  return GROUPS.map(({ heading, direction, arrow }) => {
+    const items = policies
+      .filter((policy) =>
+        policy.displayable === true && selectedPolicies.includes(policy.id) && policy.direction === direction,
+      )
+      .sort((a, b) => a.order - b.order)
+      .map(withPolicyDetails);
     if (!items.length) return null;
-    const headingId = `policy-group-${raises ? "raises" : "costs"}`;
+    const headingId = `policy-group-${direction}`;
     return (
       <section
         key={heading}
-        className={`policy-group ${raises ? "is-raises" : "is-costs"}`}
+        className={`policy-group is-${direction}`}
         aria-labelledby={headingId}
       >
         <div className="policy-group-head">
           <h3 id={headingId} className="policy-group-heading">
-            <TitleIcon name={arrow} bare size={16} className="policy-group-icon" />
+            {arrow && <TitleIcon name={arrow} bare size={16} className="policy-group-icon" />}
             {heading}
           </h3>
           <span className="policy-group-count">

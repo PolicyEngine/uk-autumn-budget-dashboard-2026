@@ -1,25 +1,21 @@
 /**
  * The example households, as cards beside "Your household" on the
  * Household impact view: two young people (youngPersonPresets.js), then
- * other households, each chosen to show one measure clearly. Each has a
- * name, a one-line description of who they are, the measure it is for
- * (`measure`, which gives the card its colour, and `tag`, its short name
- * on the card) and an icon (named in personal/HouseholdCards.jsx). An
- * example fills every answer of the form (exampleAnswers.js, never the
- * form's defaults) and shows its result at once; every value stays
- * editable.
+ * other households. Each has a name, a one-line description of who they
+ * are, the measure its card features (`measure`, which gives the card its
+ * colour, and `tag`, its short name on the card; shown only while the
+ * catalogue publishes that measure, #104) and an icon (named in
+ * personal/HouseholdCards.jsx). An example fills every answer of the form
+ * (exampleAnswers.js, never the form's defaults) and shows its result at
+ * once; every value stays editable.
  *
- * Each example after the young people was checked against the live household
- * API on 25 October 2026 with every measure selected; the measure it is for
- * changes its net income in the year named:
- *   pensioner: State Pension income tax protection +£93 in 2027-28
- *   family: zero VAT on domestic electricity +£62 in 2027-28 (the Warm
- *     Home Discount top-up is 2026-27 only, a year the form does not offer)
- *   graduate: Plan 2 threshold unfrozen +£79 in 2027-28
- *   driver: fuel duty rises deferred +£89, VAT cut on road fuel +£18, 2027-28
- *   higher earner: threshold freeze to 2031-32 −£221 in 2031-32
- * No example shows Business Asset Disposal Relief: the form asks no capital
- * gains.
+ * Each "Other households" example was chosen, and checked against the live
+ * household API on 25 October 2026, so that a measure then published
+ * changes its net income in a year the page offers (ea665c3 lists which).
+ * The description and note describe the household, never a measure: which
+ * measures change its income is the calculation's answer, and the published
+ * measures can change, so a name there could name one the page no longer
+ * shows (#104).
  */
 import { EXAMPLE_ANSWERS } from "./exampleAnswers";
 import { YOUNG_PERSON_PRESETS } from "./youngPersonPresets";
@@ -76,7 +72,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       monthly_rent: 975,
       electricity_spending_per_year: 1300,
     },
-    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is for winter 2026-27 only, before the years offered here.",
+    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household.",
   },
   {
     id: "graduate-35k",
@@ -134,7 +130,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       current_salary: 110000,
       tenure: "OWNED_WITH_MORTGAGE",
     },
-    note: "Aged 45, earns £110,000 and owns with a mortgage. The threshold freeze extension changes their income tax from 2031-32: choose that year to see it.",
+    note: "Aged 45, earns £110,000 and owns with a mortgage.",
   },
 ];
 

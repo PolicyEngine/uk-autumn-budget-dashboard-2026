@@ -157,8 +157,8 @@ export function pensionerMeasures(rows, policies, selected, year) {
  * row, suppressed, when any age is thin), or null when the selection has
  * no such run or the year no rows.
  */
-export function pensionerSharesBySingleAge(rows, policies, selected, year) {
-  const run = wholeSelectionRun(policies, selected);
+export function pensionerSharesBySingleAge(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
   if (!run) return null;
   if (!lookup(rows, run, year, ALL_BAND)) return null;
   const groups = [];
@@ -180,8 +180,8 @@ export function pensionerSharesBySingleAge(rows, policies, selected, year) {
  * row }] }`, or null when the selection has no such run, the year no rows,
  * or the pensioners' rows are thin.
  */
-export function pensionerShares(rows, policies, selected, year) {
-  const run = wholeSelectionRun(policies, selected);
+export function pensionerShares(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
   if (!run) return null;
   const all = lookup(rows, run, year, ALL_BAND);
   const pensioners = pensionerRow(rows, run, year);

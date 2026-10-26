@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import SummaryMetricChart, {
   SUMMARY_METRICS,
   metricByYear,
   parsePovertyChoice,
   povertyMetric,
 } from "./SummaryMetricChart";
-import { POLICIES } from "../utils/policies";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+
+// #185 on #104: the measures come from the catalogue, and its combined run
+// is the package's (the run read when every measure is selected)
+const POLICIES = [
+  { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" },
+  { id: "road_fuel_vat_cut", name: "VAT cut on road fuel" },
+  { id: "plan_2_threshold_unfreeze", name: "Plan 2 student loan threshold unfrozen" },
+];
+const catalogue = { ...buildMeasureCatalogue(), combinedId: "autumn_budget_2026_combined" };
+const render = (ui) => rtlRender(ui, {
+  wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>,
+});
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
 const ROWS = [

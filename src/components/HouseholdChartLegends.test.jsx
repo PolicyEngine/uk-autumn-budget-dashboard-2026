@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { POLICIES } from "../utils/policies";
 import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
+import { POLICY_DETAILS } from "../utils/policyDetails";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // The household decile charts must list every selected measure in their
 // legend, £0 ones too (greyed out, with the reason under the chart): a
@@ -24,7 +25,6 @@ vi.mock("recharts", async () => {
   };
 });
 
-const ALL = POLICIES.map((policy) => policy.id);
 const EMPLOYER_NI = "employer_ni_relief_under_25s";
 
 /** A published CSV under public/data, as rows of strings. */
@@ -36,6 +36,29 @@ function publishedRows(file) {
   return lines.map((line) => Object.fromEntries(line.split(",").map((value, i) => [keys[i], value])));
 }
 
+// #185 on #104: a catalogue built from the flat files' own measures, as a
+// manifest with every one approved and every artifact verified (test only)
+const COMBINED = "autumn_budget_2026_combined";
+const YEARS = [2026, 2027, 2028, 2029, 2030, 2031];
+const budget = publishedRows("budgetary_impact.csv");
+const ALL = [...new Set(budget.map((row) => row.reform_id))].filter((id) => id !== COMBINED);
+const nameOf = (id) => budget.find((row) => row.reform_id === id).reform_name;
+const entry = (extra) => ({ status: "approved", years: YEARS, unsupported_years: [], ...extra });
+// A measure's card details, and the description the publication carries
+// for it (reforms.py's, which each entry records as `writtenFor`)
+const detailsOf = (id) => POLICY_DETAILS.find((policy) => policy.id === id);
+const catalogue = buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(ALL.map((id) => [id, entry({ name: nameOf(id), description: detailsOf(id)?.writtenFor, outputs_sha256: "a".repeat(64) })])),
+    combined: { [COMBINED]: entry({ name: nameOf(COMBINED), measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) }) },
+  },
+  budgetary: budget,
+  tablesByKey: Object.fromEntries([...ALL, COMBINED].map((id) => [id, { budgetary_impact: budget.filter((row) => row.reform_id === id) }])),
+});
+const render = (element) => renderReact(
+  <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
+);
+
 // The measure key's chips (MeasureKey): one per measure, its full name in
 // the title; muted ones folded under "with no effect" but still listed
 const keyChips = (container) => [...container.querySelectorAll(".measure-key [data-measure]")];
@@ -43,26 +66,35 @@ const legendLabels = (container) => keyChips(container).map((node) => node.title
 
 describe("legendMembership", () => {
   it("lists every selected measure, in the legends' order, muted where it has no effect", () => {
-    const members = legendMembership(ALL, (id) => id !== EMPLOYER_NI);
+    const members = legendMembership(catalogue, ALL, (id) => id !== EMPLOYER_NI);
     expect(members.map((member) => member.id).sort()).toEqual([...ALL].sort());
     expect(members.filter((member) => member.muted).map((member) => member.id)).toEqual([EMPLOYER_NI]);
   });
 
   it("leaves out measures that are not selected", () => {
-    const members = legendMembership([EMPLOYER_NI], () => false);
-    expect(members).toEqual([{ id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true }]);
+    const members = legendMembership(catalogue, [EMPLOYER_NI], () => false);
+    expect(members).toEqual([
+      { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", description: detailsOf(EMPLOYER_NI).writtenFor, muted: true },
+    ]);
   });
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
-    expect(zeroReason(EMPLOYER_NI, 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
-    const whd = POLICIES.find((policy) => policy.id === "warm_home_discount_top_up");
+    expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
+    const whd = detailsOf("warm_home_discount_top_up");
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);
-    expect(zeroReason(whd.id, 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
-    const freeze = POLICIES.find((policy) => policy.id === "threshold_freeze_2031_32");
+    expect(zeroReason(catalogue.byId.get("warm_home_discount_top_up"), 2027)).toEqual({ kind: "not_in_force", text: "winter 2026-27 only" });
+    const freeze = detailsOf("threshold_freeze_2031_32");
     expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
-    const fuelVat = POLICIES.find((policy) => policy.id === "road_fuel_vat_cut");
+    const fuelVat = detailsOf("road_fuel_vat_cut");
     expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
+  });
+
+  it("never calls a measure out of force from details written for another description of it", () => {
+    // Changed since its entry was written (on Budget day, say): its window
+    // may no longer hold, so it is not used
+    const changed = { ...catalogue.byId.get("warm_home_discount_top_up"), description: "The Warm Home Discount rises for two winters." };
+    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households shown" });
   });
 });
 
@@ -74,7 +106,7 @@ describe.each([
 
   it.each([2027, 2028, 2029, 2030, 2031])("lists all nine selected measures in %s", (year) => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={year} />);
-    expect(legendLabels(container).sort()).toEqual(POLICIES.map((policy) => policy.name).sort());
+    expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
   });
 
   it("greys out the employer NI relief and says why under the chart", () => {
@@ -114,8 +146,8 @@ describe.each([
 
 describe("ChartMoreInfo", () => {
   const members = [
-    { id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true },
-    { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
+    { id: EMPLOYER_NI, key: `measure:${EMPLOYER_NI}`, name: "Employer NI relief for under-25s", muted: true },
+    { id: "fuel_duty_rise_deferral", key: "measure:fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
   ];
 
   it("says one measure in the singular, and lists only the £0 ones", () => {
@@ -148,12 +180,9 @@ describe("ChartMoreInfo", () => {
 describe("ChartMoreInfo's employer NI revenue", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("quotes the published revenue for the year shown", async () => {
-    const csv = readFileSync(path.join(process.cwd(), "public", "data", "budgetary_impact.csv"), "utf8");
-    const value = Number(
-      csv.split("\n").find((line) => line.startsWith(`${EMPLOYER_NI},`) && line.split(",")[2] === "2027").split(",")[3],
-    );
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, text: () => Promise.resolve(csv) })));
+  it("quotes the verified revenue for the year shown", async () => {
+    // From the catalogue's verified budgetary_impact rows (#104), no fetch
+    const value = Number(budget.find((row) => row.reform_id === EMPLOYER_NI && row.year === "2027").value);
     render(
       <ChartMoreInfo
         members={[{ id: EMPLOYER_NI, name: "Employer NI relief for under-25s", muted: true }]}

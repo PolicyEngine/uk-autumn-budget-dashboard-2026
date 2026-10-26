@@ -4,7 +4,7 @@ One colour template for the dashboard. Every colour has a role, and each role ha
 
 - **CSS** takes the `--c-*`, `--ramp-*` and `--income-ramp-*` tokens in [`src/app/globals.css`](../src/app/globals.css) (over `@policyengine/ui-kit/theme.css`).
 - **JS and charts** take the mirror in [`src/utils/chartTheme.js`](../src/utils/chartTheme.js) (`CHART_COLOURS`, `POLICY_RAMPS`, `INCOME_RAMP`), because SVG and PNG exports need literal values. `chartTheme.test.js` keeps the two equal.
-- **Measures** take their colour from [`src/utils/policyConfig.js`](../src/utils/policyConfig.js), which assigns the ramps below.
+- **Measures** take their colour from the measure catalogue ([`src/utils/measureCatalogue.jsx`](../src/utils/measureCatalogue.jsx), #104): each published measure's id and budgetary direction pick one colour from `MEASURE_PALETTES` in `chartTheme.js` (ambers for raising revenue, teals for costing it), so adding a measure never recolours another.
 
 ## Roles
 
@@ -32,13 +32,14 @@ One colour template for the dashboard. Every colour has a role, and each role ha
 | Surface (cards, tooltips, exports) | `--c-surface` | `CHART_COLOURS.surface` | ![](swatches/FFFFFF.svg) `#FFFFFF` |
 | Area with no data | `--c-muted-fill` | `CHART_COLOURS.mutedFill` | ![](swatches/F3F4F6.svg) `#F3F4F6` |
 | Accent (links, buttons) / hover / dark | `--pe-accent` / `--pe-accent-hover` / `--pe-accent-dark` (ui-kit) | — (CSS only) | ![](swatches/319795.svg) `#319795` / ![](swatches/0D9488.svg) `#0D9488` / ![](swatches/0F766E.svg) `#0F766E` |
-| Each measure's accent on its card | `--policy-accent` (set inline) | `getPolicyColor(key)` | its ramp step, below |
+| Each measure's accent on its card | `--policy-accent` (set inline) | the catalogue's `measure.color` | its ramp step, below |
 | Selection / highlight (the selected group, the title band) | `--c-highlight` (`--band-teal`) | `CHART_COLOURS.highlight` | ![](swatches/285E61.svg) `#285E61` |
 | "Your household" tint (behind your group) | `--c-highlight-band` | `CHART_COLOURS.highlightBand` | ![](swatches/EAF5F4.svg) `#EAF5F4` |
 | "Your household" marker | `--c-net` | `YOU_COLOUR` (= `.net`) | ![](swatches/000000.svg) `#000000` |
 | Hover cursor behind a bar or row | `--c-hover` | `HOVER_CURSOR` (= `.hover`) | ![](swatches/EEF6F6.svg) `#EEF6F6` |
 | Measure ramp, raise revenue (largest darkest) | `--ramp-raise-1…3` | `POLICY_RAMPS.raise` | ![](swatches/78350F.svg) ![](swatches/B45309.svg) ![](swatches/F59E0B.svg) `#78350F #B45309 #F59E0B` |
 | Measure ramp, cost revenue (largest darkest) | `--ramp-cost-1…7` | `POLICY_RAMPS.cost` | ![](swatches/0D4359.svg) ![](swatches/016768.svg) ![](swatches/088075.svg) ![](swatches/00997F.svg) ![](swatches/28B084.svg) ![](swatches/4AC685.svg) ![](swatches/75D987.svg) `#0D4359 … #75D987` |
+| Each published measure (the catalogue picks one per id and direction) | set inline | `MEASURE_PALETTES.revenue` / `.cost` / `.neutral` | `#78350F #B45309 #F59E0B`; `#115E59 #2DD4BF #0F766E #5EEAD4 #0D9488 #99F6E4 #14B8A6`; `#9CA3AF` |
 | Income groups, low (amber) → high (teal) | `--income-ramp-1…7` | `INCOME_RAMP`, `incomeGroupColours(n)` | ![](swatches/8A3A0C.svg) ![](swatches/B8641C.svg) ![](swatches/E0954A.svg) ![](swatches/9CA3AF.svg) ![](swatches/5FB3AA.svg) ![](swatches/2A8C84.svg) ![](swatches/0F5F59.svg) `#8A3A0C … #9CA3AF … #0F5F59` |
 | Poverty / inequality change | a fall `--c-gain`, a rise `--c-loss` | `.gain` / `.loss`; other years at `UNSELECTED_OPACITY` (0.5) | the selected year full strength, other years the same colour tinted |
 
@@ -69,7 +70,7 @@ Page chrome, never drawn in a chart, so these have no JS name. All in the `:root
 
 ## The rule, and how it is enforced
 
-Colour literals (`#hex`, `rgb()`/`rgba()`/`hsl()`, and named colours such as `white` or `black`) are written in two places only: a `:root` block of `src/app/globals.css`, and `src/utils/chartTheme.js`. Everywhere else takes a token: `var(--c-…)` in CSS, `CHART_COLOURS.…` / `POLICY_RAMPS` / `INCOME_RAMP` / `getPolicyColor()` in JS. `transparent`, `currentColor`, `inherit`, `none` and masks are always allowed.
+Colour literals (`#hex`, `rgb()`/`rgba()`/`hsl()`, and named colours such as `white` or `black`) are written in two places only: a `:root` block of `src/app/globals.css`, and `src/utils/chartTheme.js`. Everywhere else takes a token: `var(--c-…)` in CSS, `CHART_COLOURS.…` / `POLICY_RAMPS` / `INCOME_RAMP` / `MEASURE_PALETTES` (through the catalogue) in JS. `transparent`, `currentColor`, `inherit`, `none` and masks are always allowed.
 
 - `src/colourGuard.test.js` (run by `bun run test`) scans every `.js`, `.jsx`, `.ts`, `.tsx` and `.css` file under `src/`, tests included, and fails with each `file:line`. It also rejects inline `fill="…"` / `stroke="…"` literals in JSX.
 - ESLint (`no-restricted-syntax` in `eslint.config.mjs`) flags the same literals in JS/JSX as you type.

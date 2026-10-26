@@ -20,7 +20,8 @@ import { formatPp, outlookPopulation } from "../utils/povertyPeople";
 import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { COMBINED_REFORM_ID, POLICY_COLORS, shortName } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import { legendMembership } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
@@ -28,13 +29,9 @@ import "./MeasuresPovertyCard.css";
 
 // Why a measure moves no one across the poverty line, where the model says
 // so by construction: poverty is measured on household income (HBAI), which
-// counts neither prices nor capital gains
-const NO_EFFECT_REASON = {
-  fuel_duty_rise_deferral: "prices",
-  road_fuel_vat_cut: "prices",
-  domestic_electricity_zero_vat: "prices",
-  badr_lifetime_limit_cut: "gains",
-};
+// counts neither prices nor capital gains (policyDetails.js's
+// povertyNoEffect, used only while it describes the published measure)
+const noEffectReason = (measure) => policyDetailsFor(measure)?.povertyNoEffect ?? null;
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -42,19 +39,21 @@ const NO_EFFECT_REASON = {
  * muted), and the package's (the combined run) when one run covers the
  * selection.
  */
-export function measurePovertyRows(rows, policies, selectedPolicies, year, key) {
+export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
-  const members = legendMembership(selectedPolicies, (id) => Number(rowFor(id)?.people_affected) > 0);
+  const members = legendMembership(catalogue, selectedPolicies, (id) => Number(rowFor(id)?.people_affected) > 0);
   const measures = members
     .filter((member) => !member.muted)
     .map((member) => ({
       id: member.id,
-      name: shortName(member.id),
+      name: shortNameOf(member),
+      description: member.description,
       value: Number(rowFor(member.id)?.[key]) || 0,
-      colour: POLICY_COLORS[member.name],
+      colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange,
     }));
-  const run = wholeSelectionRun(policies, selectedPolicies);
-  const total = run === COMBINED_REFORM_ID ? Number(rowFor(run)?.[key]) : NaN;
+  const combinedId = catalogue.combinedId;
+  const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
+  const total = combinedId && run === combinedId ? Number(rowFor(run)?.[key]) : NaN;
   return { members, measures, total: Number.isFinite(total) ? total : null };
 }
 
@@ -86,7 +85,7 @@ export function povertyWaterfall(measures, total, millions) {
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
     const x = toX(total);
-    steps.push({ id: COMBINED_REFORM_ID, name: "Package", pp: total, x, start: 0, end: x, colour: CHART_COLOURS.reference, kind: "total" });
+    steps.push({ id: "package", name: "Package", pp: total, x, start: 0, end: x, colour: CHART_COLOURS.reference, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
@@ -108,13 +107,14 @@ function niceTicks(lo, hi) {
 
 export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const plotRef = useRef(null);
+  const catalogue = useMeasureCatalogue();
   const { poverty, controls } = usePovertyChoice();
   const metric = povertyMetric(poverty);
   const { tip, handlers } = useFloatingTooltip(plotRef, `${metric.key}-${selectedYear}`);
   if (!hasColumn(rows, metric.key)) return null;
 
   const year = fiscalYearTick(selectedYear);
-  const { members, measures, total } = measurePovertyRows(rows, policies, selectedPolicies, selectedYear, metric.key);
+  const { members, measures, total } = measurePovertyRows(rows, catalogue, selectedPolicies, selectedYear, metric.key);
   const millions = population ? population(selectedYear, poverty.group) : null;
   const { steps, zero, peopleMode } = povertyWaterfall(measures, total, millions);
   const who = poverty.group === "children" ? "children" : "people";
@@ -154,11 +154,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     <>No measure on its own moves anyone across this line in {year}.</>
   );
 
-  const reasons = [...new Set(zero.map((m) => NO_EFFECT_REASON[m.id]).filter(Boolean))];
+  const reasons = [...new Set(zero.map((m) => noEffectReason(m)).filter(Boolean))];
   const zeroInfo = [
     reasons.includes("prices") && "VAT and fuel duty change prices, which the household income poverty is measured on does not count.",
     reasons.includes("gains") && "Business Asset Disposal Relief taxes capital gains, which that income leaves out too.",
-    zero.some((m) => !NO_EFFECT_REASON[m.id]) && `The others change incomes in ${year} but move no one across this line on their own.`,
+    zero.some((m) => !noEffectReason(m)) && `The others change incomes in ${year} but move no one across this line on their own.`,
   ]
     .filter(Boolean)
     .join(" ");

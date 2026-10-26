@@ -28,7 +28,7 @@ import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
-import { niceRange, noEffectReason, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
 import PillSelect from "./PillSelect";
@@ -41,7 +41,7 @@ import {
   pensionerSharesBySingleAge,
   pensionerTrend,
 } from "./pensioners/pensionersData";
-import { ALL_POLICY_NAMES, POLICY_COLORS, getPolicyColor } from "../utils/policyConfig";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -102,15 +102,17 @@ function stackEnds(points, policies) {
   return values;
 }
 
-/** The policy bars, always mounted (a zero series has no height). */
-const policyBars = (highlight) =>
-  ALL_POLICY_NAMES.map((name) => (
+/** The policy bars, always mounted (a zero series has no height): the
+ * catalogue's displayable measures, keyed by name as pensionersData is;
+ * the others fade while one is highlighted from the key (MeasureKey). */
+const policyBars = (catalogue, highlight) =>
+  catalogue.displayable.map((measure) => (
     <Bar
-      key={name}
-      dataKey={name}
-      name={name}
-      fill={POLICY_COLORS[name]}
-      fillOpacity={measureOpacity(highlight, name)}
+      key={measure.id}
+      dataKey={measure.name}
+      name={measure.name}
+      fill={measure.color}
+      fillOpacity={measureOpacity(highlight, measure.seriesKey)}
       stackId="stack"
       {...chartMotion()}
     />
@@ -148,13 +150,13 @@ function CardHeader({ icon, title, description, download, disabledReason }) {
  * The average change per pensioner in every year shown, each policy's own
  * part stacked and the net change as a line, the selected year shaded.
  */
-function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function TrendCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const data = pensionerTrend(rows, policies, selectedPolicies, DISPLAY_YEARS);
   const { domain, ticks } = divergingAxis(stackEnds(data, policies));
   const members = useMemo(
     () =>
-      legendMembership(selectedPolicies, (id) => {
+      legendMembership(catalogue, selectedPolicies, (id) => {
         const name = policies.find((policy) => policy.id === id)?.name;
         return data.some((point) => Math.abs(point[name] ?? 0) > 0);
       }),
@@ -181,7 +183,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
       legendItems: [
-        ...exportLegendItems(members),
+        ...exportLegendItems(members, catalogue),
         ...(activeNames.length > 1 ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }] : []),
       ],
     },
@@ -245,7 +247,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 />
               }
             />
-            {policyBars(key.highlight)}
+            {policyBars(catalogue, key.highlight)}
             <Line
               type="monotone"
               strokeLinejoin="round"
@@ -322,7 +324,7 @@ function AgeTick({ x, y, payload, from }) {
  * dot, the pensioners' ages shaded. One axis for every year, so Play
  * shows the change between years.
  */
-function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -339,7 +341,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
   }, [rows, policies, selectedPolicies]);
   const members = useMemo(
     () =>
-      legendMembership(selectedPolicies, (id) =>
+      legendMembership(catalogue, selectedPolicies, (id) =>
         data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,7 +364,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
       legendItems: [
-        ...exportLegendItems(members),
+        ...exportLegendItems(members, catalogue),
         ...(activeNames.length > 1 ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }] : []),
       ],
     },
@@ -429,7 +431,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
                   />
                 }
               />
-              {policyBars(key.highlight)}
+              {policyBars(catalogue, key.highlight)}
               <Scatter
                 dataKey="netChange"
                 shape={netDot}
@@ -465,7 +467,7 @@ function AgeCard({ rows, policies, selectedPolicies, selectedYear, narrow, heigh
  * Each selected policy's average change per pensioner beside its all-ages
  * figure in the selected year: the Young people dumbbell, for pensioners.
  */
-function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, height }) {
+function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYear, height }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -478,10 +480,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, height }
   const title = `Effect of each policy, ${yearLabel}`;
   const description = "Each policy's average change per person: pensioners vs all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
+  // No reason per measure, as in MeasuresCard: a list of them by id would
+  // be a measure list of the page's own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: getPolicyColor(policy.id),
-    reason: noEffectReason(policy.id, year),
+    color: catalogue.byId.get(policy.id)?.color ?? CHART_COLOURS.noChange,
   }));
   const download = {
     chartRef,
@@ -654,7 +657,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * people under State Pension age and all ages, from one run (a single
  * policy, or all of them).
  */
-function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -664,7 +667,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
   const [view, setView] = useState("band");
   const single = view === "single";
   const from = pensionerAge(year);
-  const shares = (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year);
+  const shares = (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year, catalogue.combinedId);
   const data = shares
     ? shares.groups
         .filter((group) => !group.suppressed)
@@ -869,8 +872,12 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
  */
 function PensionersSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
-  const { status, rows } = useAgeImpactRows();
-  const props = { rows, policies, selectedPolicies, selectedYear, narrow };
+  const catalogue = useMeasureCatalogue();
+  const { status, rows: publishedRows } = useAgeImpactRows(catalogue);
+  const rows = useMemo(() => publishedRows?.filter((row) =>
+    isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+  ) ?? null, [publishedRows, catalogue]);
+  const props = { rows, policies, selectedPolicies, selectedYear, narrow, catalogue };
   if (status !== "ready") {
     return (
       <p className="view-status" role="status">

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from "react";
-import { POLICY_COLORS, REVENUE_RAISING_NAMES, shortName } from "../utils/policyConfig";
-import { POLICIES } from "../utils/policies";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { shortNameOf } from "../utils/policyDetails";
 import { MUTED_SWATCH } from "../utils/legendMembership";
 import "./MeasureKey.css";
 
@@ -10,7 +10,9 @@ import "./MeasureKey.css";
  *
  * - Each chip is a measure's colour and short name (its full name in the
  *   tooltip and accessible name), grouped "Raises revenue" then "Costs
- *   revenue", then the net line.
+ *   revenue", then the net line. The colour, group and order are the
+ *   catalogue's (#104); the short name is policyDetails.js's, while it
+ *   describes the published measure, else the published name.
  * - Measures with no effect in the year shown (`muted`, legendMembership)
  *   are folded into one "+N with no effect" chip that opens them; they stay
  *   in the key, so no measure silently disappears. Why each is £0 stays in
@@ -30,14 +32,17 @@ const KeyContext = createContext(null);
 /** The opacity of a measure's bars while `highlight` is set. */
 export const FADED_OPACITY = 0.18;
 
-/** Fill opacity for a measure's series given the highlighted measure name. */
-export function measureOpacity(highlight, name) {
-  return highlight && highlight !== name ? FADED_OPACITY : 1;
+/** A member's highlight key: the series key its charts draw it under. */
+const keyOf = (member) => member.key ?? `measure:${member.id}`;
+
+/** Fill opacity for a measure's series given the highlighted series key. */
+export function measureOpacity(highlight, seriesKey) {
+  return highlight && highlight !== seriesKey ? FADED_OPACITY : 1;
 }
 
 /** Members from several cards as one list: a measure is muted only when it
  * is muted in every card that lists it; the order is the first card's. */
-export function mergeMembers(lists) {
+export function mergeMembers(lists, catalogue) {
   const byId = new Map();
   for (const list of lists) {
     for (const member of list) {
@@ -46,13 +51,14 @@ export function mergeMembers(lists) {
       else if (!member.muted) seen.muted = false;
     }
   }
-  // Keep the legends' order (every list is in it already)
-  const order = POLICIES.map((policy) => policy.id);
-  return [...byId.values()].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  // Keep the catalogue's order (every list is in it already)
+  const order = (id) => catalogue?.byId.get(id)?.order ?? Number.MAX_SAFE_INTEGER;
+  return [...byId.values()].sort((a, b) => order(a.id) - order(b.id));
 }
 
 /** A section's shared key and highlight. */
 export function MeasureKeyProvider({ children }) {
+  const catalogue = useMeasureCatalogue();
   const [entries, setEntries] = useState({});
   const [highlight, setHighlight] = useState(null);
   const register = useCallback((key, value) => {
@@ -74,17 +80,17 @@ export function MeasureKeyProvider({ children }) {
       register,
       highlight,
       setHighlight,
-      members: mergeMembers(list.map((entry) => entry.members)),
+      members: mergeMembers(list.map((entry) => entry.members), catalogue),
       netLabel: list.find((entry) => entry.netLabel)?.netLabel,
     };
-  }, [entries, highlight, register]);
+  }, [entries, highlight, register, catalogue]);
   return <KeyContext.Provider value={value}>{children}</KeyContext.Provider>;
 }
 
 /**
  * A card's hook: registers its measures with the section's key when there
  * is one. Returns whether the key is shared (so the card draws none of its
- * own), the highlighted measure's name, and its setter.
+ * own), the highlighted measure's series key, and its setter.
  */
 export function useMeasureKey(members, netLabel) {
   const shared = useContext(KeyContext);
@@ -119,12 +125,11 @@ export function SectionMeasureKey({ label = "Measures" }) {
   );
 }
 
-function Chip({ member, pinned, onHover, onPin }) {
-  const color = member.muted ? MUTED_SWATCH : POLICY_COLORS[member.name];
+function Chip({ member, color, pinned, onHover, onPin }) {
   const face = (
     <>
       <span className="measure-key-swatch" style={{ "--swatch": color }} aria-hidden="true" />
-      <span className="measure-key-label" aria-hidden="true">{shortName(member.id)}</span>
+      <span className="measure-key-label" aria-hidden="true">{shortNameOf(member)}</span>
       {/* The full name for screen readers (the short one is for the eye) */}
       <span className="measure-key-full">
         {member.name}
@@ -146,11 +151,11 @@ function Chip({ member, pinned, onHover, onPin }) {
         type="button"
         className={`measure-key-chip${pinned ? " is-active" : ""}`}
         aria-pressed={pinned}
-        onMouseEnter={() => onHover(member.name)}
+        onMouseEnter={() => onHover(keyOf(member))}
         onMouseLeave={() => onHover(null)}
-        onFocus={() => onHover(member.name)}
+        onFocus={() => onHover(keyOf(member))}
         onBlur={() => onHover(null)}
-        onClick={() => onPin(member.name)}
+        onClick={() => onPin(keyOf(member))}
       >
         {face}
       </button>
@@ -163,19 +168,23 @@ function Chip({ member, pinned, onHover, onPin }) {
  * revenue, the net line, and the measures with no effect folded away.
  *
  * @param {Object} props
- * @param {Array<{id: string, name: string, muted?: boolean}>} props.members
+ * @param {Array<{id: string, key?: string, name: string, description?: string, muted?: boolean}>} props.members
+ *   (legendMembership's)
  * @param {string} [props.netLabel] - The net line's label ("Net change")
  * @param {string|null} [props.highlight]
- * @param {(name: string|null) => void} [props.onHighlight]
+ * @param {(seriesKey: string|null) => void} [props.onHighlight]
  * @param {"section"|"card"} [props.placement]
  */
 export function MeasureKey({ members, netLabel, highlight = null, onHighlight, placement = "card", label }) {
+  const catalogue = useMeasureCatalogue();
+  const colorOf = (member) => (member.muted ? MUTED_SWATCH : catalogue.byId.get(member.id)?.color ?? MUTED_SWATCH);
+  const raises = (member) => catalogue.byId.get(member.id)?.direction === "revenue";
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(null);
   const [hovered, setHovered] = useState(null);
   // A pinned measure that leaves the key (deselected, or no effect this
   // year) no longer counts
-  const pinnedLive = pinned && members.some((member) => member.name === pinned && !member.muted) ? pinned : null;
+  const pinnedLive = pinned && members.some((member) => keyOf(member) === pinned && !member.muted) ? pinned : null;
   // The charts follow the hovered chip, else the pinned one
   const wanted = hovered ?? pinnedLive;
   useEffect(() => {
@@ -183,13 +192,13 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
     // Only a change of chip moves the highlight
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wanted]);
-  const pin = (name) => setPinned(pinnedLive === name ? null : name);
+  const pin = (key) => setPinned(pinnedLive === key ? null : key);
   const listId = useId();
   const active = members.filter((member) => !member.muted);
   const muted = members.filter((member) => member.muted);
   const groups = [
-    ["Raises revenue", active.filter((member) => REVENUE_RAISING_NAMES.has(member.name))],
-    ["Costs revenue", active.filter((member) => !REVENUE_RAISING_NAMES.has(member.name))],
+    ["Raises revenue", active.filter(raises)],
+    ["Costs revenue", active.filter((member) => !raises(member))],
   ].filter(([, items]) => items.length > 0);
   return (
     <div
@@ -207,7 +216,8 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                 <Chip
                   key={member.id}
                   member={member}
-                  pinned={pinnedLive === member.name}
+                  color={colorOf(member)}
+                  pinned={pinnedLive === keyOf(member)}
                   onHover={setHovered}
                   onPin={pin}
                 />
@@ -249,7 +259,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
         // always in the key
         <ul id={listId} className="measure-key-chips measure-key-muted" hidden={!open}>
           {muted.map((member) => (
-            <Chip key={member.id} member={member} />
+            <Chip key={member.id} member={member} color={colorOf(member)} />
           ))}
         </ul>
       )}

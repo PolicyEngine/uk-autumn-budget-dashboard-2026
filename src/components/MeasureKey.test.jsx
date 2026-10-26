@@ -8,10 +8,13 @@ import MeasureKey, {
   mergeMembers,
   useMeasureKey,
 } from "./MeasureKey";
+import { POLICY_DETAILS } from "../utils/policyDetails";
 
 const FUEL = { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false };
 const FREEZE = { id: "threshold_freeze_2031_32", name: "Threshold freeze to 2031-32", muted: true };
 const NI = { id: "employer_ni_relief_under_25s", name: "Employer NI relief for under-25s", muted: true };
+// The series key every chart draws a measure under (the catalogue's, #104)
+const keyOf = (member) => `measure:${member.id}`;
 
 /** A card that reads the key: its highlight, and whether it draws a key. */
 function Card({ members, label }) {
@@ -44,12 +47,12 @@ describe("MeasureKey", () => {
     const card = screen.getByTestId("alone");
     const chip = screen.getByRole("button", { name: FUEL.name });
     fireEvent.mouseEnter(chip);
-    expect(card.dataset.highlight).toBe(FUEL.name);
+    expect(card.dataset.highlight).toBe(keyOf(FUEL));
     fireEvent.mouseLeave(chip);
     expect(card.dataset.highlight).toBe("");
     fireEvent.click(chip);
     expect(chip).toHaveAttribute("aria-pressed", "true");
-    expect(card.dataset.highlight).toBe(FUEL.name);
+    expect(card.dataset.highlight).toBe(keyOf(FUEL));
   });
 
   it("shares one key and one highlight across a section's cards", () => {
@@ -64,8 +67,20 @@ describe("MeasureKey", () => {
     expect(container.querySelectorAll(".measure-key")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /with no effect/ })).toBeNull();
     fireEvent.mouseEnter(screen.getByRole("button", { name: NI.name }));
-    expect(screen.getByTestId("a").dataset.highlight).toBe(NI.name);
-    expect(screen.getByTestId("b").dataset.highlight).toBe(NI.name);
+    expect(screen.getByTestId("a").dataset.highlight).toBe(keyOf(NI));
+    expect(screen.getByTestId("b").dataset.highlight).toBe(keyOf(NI));
+  });
+});
+
+describe("the chips' names", () => {
+  it("show policyDetails.js's short name only while it describes the published measure", () => {
+    const { writtenFor } = POLICY_DETAILS.find((entry) => entry.id === FUEL.id);
+    const { rerender } = render(<MeasureKey members={[{ ...FUEL, description: writtenFor }]} />);
+    const chip = screen.getByRole("button", { name: FUEL.name });
+    expect(chip.querySelector(".measure-key-label")).toHaveTextContent("Fuel duty deferral");
+    // Changed since (on Budget day, say): its published name
+    rerender(<MeasureKey members={[{ ...FUEL, description: "Fuel duty rises are deferred for two years." }]} />);
+    expect(screen.getByRole("button", { name: FUEL.name }).querySelector(".measure-key-label")).toHaveTextContent(FUEL.name);
   });
 });
 
@@ -77,8 +92,8 @@ describe("mergeMembers and measureOpacity", () => {
   });
 
   it("fades every measure but the highlighted one", () => {
-    expect(measureOpacity(null, FUEL.name)).toBe(1);
-    expect(measureOpacity(FUEL.name, FUEL.name)).toBe(1);
-    expect(measureOpacity(FUEL.name, NI.name)).toBe(FADED_OPACITY);
+    expect(measureOpacity(null, keyOf(FUEL))).toBe(1);
+    expect(measureOpacity(keyOf(FUEL), keyOf(FUEL))).toBe(1);
+    expect(measureOpacity(keyOf(FUEL), keyOf(NI))).toBe(FADED_OPACITY);
   });
 });

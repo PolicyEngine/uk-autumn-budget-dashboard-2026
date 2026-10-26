@@ -3,6 +3,19 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../../App";
+import { dashboardFixtureFetch } from "../../test/dashboardFixture";
+
+// The receipt fixture's supported year follows the engine's projection end;
+// show Population impact in that verified year (as tabsSmoke.test.jsx does)
+vi.mock("../../utils/displayYears", async (original) => {
+  const actual = await original();
+  const { IN_DATA } = await import("../../test/publicationFixture");
+  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+});
+
+// A verified publication (the receipt fixture), so Population impact and
+// its sub-tabs render (#104)
+const publicationFetch = dashboardFixtureFetch();
 
 const OUTLOOK = readFileSync(
   join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"),
@@ -17,10 +30,12 @@ beforeEach(() => {
   // render; an empty CSV for anything else
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url) => {
+    vi.fn(async (url, init) => {
       if (String(url).endsWith("living_standards_outlook.json")) {
         return new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } });
       }
+      const { pathname } = new URL(String(url), "http://localhost");
+      if (pathname === "/data/manifest.json" || pathname.startsWith("/data/artifacts/")) return publicationFetch(String(url), init);
       const path = join(PUBLIC, new URL(String(url), "http://localhost").pathname);
       return existsSync(path) && path.endsWith(".csv")
         ? new Response(readFileSync(path), { status: 200 })
@@ -61,6 +76,7 @@ const optionsSummary = (card) => within(card).getByRole("button", { name: /^Opti
 describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     // The Population view has the year and policy pills
     expect(band(container).querySelector(".band-year")).not.toHaveAttribute("aria-hidden");
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
@@ -370,9 +386,10 @@ describe("the Pre-measures forecast view", () => {
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 
-  it("hides the year and policy pills but keeps the band's layout", () => {
+  it("hides the year and policy pills but keeps the band's layout", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     for (const selector of [".band-year", ".band-policy"]) {
       const pill = band(container).querySelector(selector);
       // Still in the band, holding its place, but hidden and out of reach

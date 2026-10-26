@@ -2,13 +2,13 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
+import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
 import ExpandableText from "./methodology/ExpandableText";
 import {
@@ -145,6 +145,10 @@ function SectionLink({ id, children }) {
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
+  const catalogue = useMeasureCatalogue();
+  const MEASURE_MODELLING = measureModelling(catalogue);
+  const UNAVAILABLE = unavailableMeasures(catalogue);
+  const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="policies" onShowTab={onShowTab}>
       {text}
@@ -255,13 +259,13 @@ function MethodologyTab({ onShowTab }) {
           }
         >
           <div className="card method-card method-table-card">
-            <h3 className="method-card-title">How each measure is modelled</h3>
+            <h3 className="method-card-title">Published measure descriptions</h3>
             <table className="method-measures">
               <thead>
                 <tr>
                   <th scope="col">Measure</th>
-                  <th scope="col">How it is modelled</th>
-                  <th scope="col">From</th>
+                  <th scope="col">Published description</th>
+                  <th scope="col">Results from</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,31 +274,49 @@ function MethodologyTab({ onShowTab }) {
                     <th scope="row">
                       <span
                         className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.name] }}
+                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
                         aria-hidden="true"
                       />
                       {measure.name}
                     </th>
                     <td>
                       <ExpandableText text={measure.how} />
-                      {measure.sources && (
-                        <span className="method-sources">
-                          Sources:{" "}
-                          {measure.sources.map((id, index) => (
-                            <span key={id}>
-                              {index > 0 && "; "}
-                              <SourceLink id={id} />
-                            </span>
-                          ))}
-                        </span>
+                      {measure.note && (
+                        <p className="method-measure-note">
+                          <span className="method-measure-note-label">Modelling note: </span>
+                          {measure.note}
+                        </p>
                       )}
                     </td>
                     <td className="method-measure-year">
                       <Tag tone="teal">
-                        <span className="method-cell-label">From </span>
-                        {fiscalYearTick(measure.from)}
+                        <span className="method-cell-label">Results from </span>
+                        {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
                       </Tag>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card method-card method-table-card">
+            <h3 className="method-card-title">Unavailable measures</h3>
+            <p className="method-more">
+              These measures have no verified results in the current publication.
+            </p>
+            <table className="method-measures">
+              <thead>
+                <tr>
+                  <th scope="col">Measure</th>
+                  <th scope="col">Why results are unavailable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNAVAILABLE.map((measure) => (
+                  <tr key={measure.name}>
+                    <th scope="row">{measure.name}</th>
+                    <td>{measure.why}</td>
                   </tr>
                 ))}
               </tbody>
@@ -353,17 +375,8 @@ function MethodologyTab({ onShowTab }) {
                   [
                     "Exceptions",
                     {
-                      value: "Two measures are counted differently.",
-                      more: [
-                        <>
-                          The Plan 2 student loan measure counts the change in loan repayments (
-                          <SourceLink id="student_loan_thresholds">repayment thresholds</SourceLink>).
-                        </>,
-                        <>
-                          The employer National Insurance relief changes revenue only (see{" "}
-                          <SectionLink id={METHOD_SECTIONS.model}>Model and measures</SectionLink>).
-                        </>,
-                      ],
+                      value: "A measure whose published description says it is costed another way follows that description.",
+                      more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
                     },
                   ],
                   ["Years", `Fiscal years ${yearRange}.`],

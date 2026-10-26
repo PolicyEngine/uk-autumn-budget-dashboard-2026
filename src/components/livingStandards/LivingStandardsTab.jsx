@@ -11,18 +11,33 @@
 import { useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
+import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
 import { ForecastSource } from "./sources";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
 import { forecastName } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
+import CurrentLawSection from "./CurrentLawSection";
 import "./LivingStandards.css";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
 function ForecastPanel({ forecast, data }) {
   // Charts or tables
   const [forecastView, setForecastView] = useState("chart");
+  // `obr-forecast` updates an independent baseline JSON. Its Budget-day
+  // extract has no receipt or release-index binding yet, so publication of
+  // that JSON alone cannot authorise the new forecast figures.
+  if (forecast?.post_published) {
+    return (
+      <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
+        <p>
+          Incomes and poverty under current law, on the forecast they were built from, remain on Population impact&apos;s
+          Living standards and Poverty sub-tabs.
+        </p>
+      </UnavailableNotice>
+    );
+  }
   return (
     <>
       <SectionHeading
@@ -54,7 +69,15 @@ function ForecastPanel({ forecast, data }) {
   );
 }
 
-export default function LivingStandardsTab() {
+/**
+ * @param {Object} props
+ * @param {boolean} [props.withCurrentLaw] - Also show incomes and poverty
+ *   under current law, below the forecast. App sets it while no Budget
+ *   publication verifies (#104): Population impact, their usual home, is
+ *   unavailable then, and these cards read only the independent outlook,
+ *   so they stay reachable.
+ */
+export default function LivingStandardsTab({ withCurrentLaw = false }) {
   const { loading, data, error } = useOutlook();
   return (
     <>
@@ -62,6 +85,12 @@ export default function LivingStandardsTab() {
       {data?.forecast && (
         <div className="results-container">
           <ForecastPanel forecast={data.forecast} data={data} />
+        </div>
+      )}
+      {withCurrentLaw && (
+        <div className="results-container">
+          <CurrentLawSection id="incomes" />
+          <CurrentLawSection id="poverty" />
         </div>
       )}
     </>

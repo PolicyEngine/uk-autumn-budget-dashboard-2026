@@ -138,7 +138,8 @@ code {
   /* Chart colours by meaning, the same on every tab. The JS mirror is
      CHART_COLOURS in src/utils/chartTheme.js (SVG exports need literal
      values); src/utils/chartTheme.test.js keeps the two equal. Policy
-     colours are per measure, in src/utils/policyConfig.js. */
+     colours are per measure, from the measure catalogue
+     (src/utils/measureCatalogue.jsx). */
   --c-gain: #319795; /* better off, rise in income, after the Budget */
   --c-gain-text: #0f766e; /* a gain written as text */
   --c-loss: #d97706; /* worse off, fall in income */
