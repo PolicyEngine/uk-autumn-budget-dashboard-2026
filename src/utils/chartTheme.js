@@ -4,7 +4,7 @@
  * Everything here is visual: grid, ticks, margins and legend layout. It never
  * touches the data a chart plots.
  */
-import { useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 import { CHART_LOGO } from "./chartLogo";
 
 // At or below this width (the page's phone breakpoint) a chart tightens its
@@ -259,11 +259,117 @@ export const UNSELECTED_OPACITY = 0.5;
 /** The hover cursor behind a bar or row, on every chart */
 export const HOVER_CURSOR = { fill: CHART_COLOURS.hover };
 
+/** Gridlines: light and dashed, behind every chart */
 export const GRID_PROPS = {
   vertical: false,
   stroke: CHART_COLOURS.grid,
-  strokeDasharray: "0",
+  strokeDasharray: "3 4",
 };
+
+// One bar style for the dashboard: rounded outer ends, flush inner joins
+// with a small gap between stacked segments.
+/** The radius of a bar's outer end, in px (capped at half its thickness) */
+export const BAR_RADIUS = 5;
+/** The gap between two stacked segments, in px */
+export const BAR_GAP = 1.5;
+
+/**
+ * An SVG path for a rectangle with its own radius at each corner, in the
+ * order top-left, top-right, bottom-right, bottom-left.
+ */
+export function roundedRectPath(x, y, width, height, [tl, tr, br, bl]) {
+  const w = Math.max(width, 0);
+  const h = Math.max(height, 0);
+  const cap = (r) => Math.max(0, Math.min(r, w / 2, h / 2));
+  const [a, b, c, d] = [cap(tl), cap(tr), cap(br), cap(bl)];
+  return [
+    `M${x + a},${y}`,
+    `H${x + w - b}`,
+    b ? `A${b},${b} 0 0 1 ${x + w},${y + b}` : "",
+    `V${y + h - c}`,
+    c ? `A${c},${c} 0 0 1 ${x + w - c},${y + h}` : "",
+    `H${x + d}`,
+    d ? `A${d},${d} 0 0 1 ${x},${y + h - d}` : "",
+    `V${y + a}`,
+    a ? `A${a},${a} 0 0 1 ${x + a},${y}` : "",
+    "Z",
+  ].join("");
+}
+
+const segmentValue = (payload, key) => {
+  const value = Number(payload?.[key]);
+  return Number.isFinite(value) ? value : 0;
+};
+
+/**
+ * A Recharts <Bar shape> in the dashboard's bar style. `keys` are the
+ * stack's dataKeys in the order the <Bar>s are drawn (one key for a plain
+ * bar). Each segment that ends its stack on its side of zero gets a
+ * rounded outer end; a segment followed by another of the same sign is cut
+ * short by BAR_GAP, so the joins read as separate and stay flush. With
+ * `roundBase` (a 100% bar, which has no zero line to sit on) the first
+ * segment's start is rounded too.
+ *
+ * @param {string[]} keys
+ * @param {{layout?: "horizontal"|"vertical", roundBase?: boolean, radius?: number}} [options]
+ *   `layout` as the chart's: "horizontal" for upright bars, "vertical" for
+ *   bars running across.
+ */
+export function barShape(keys, { layout = "horizontal", roundBase = false, radius = BAR_RADIUS } = {}) {
+  return function BarShape(props) {
+    const { x, y, width, height, fill, fillOpacity, opacity, payload, dataKey, value } = props;
+    if (![x, y, width, height].every(Number.isFinite) || (width === 0 && height === 0)) return null;
+    // The sign from the data (a stacked value's range is always low to high)
+    const raw = Number(payload?.[dataKey]);
+    const own = Number.isFinite(raw) ? raw : Array.isArray(value) ? value[1] - value[0] : Number(value) || 0;
+    const sign = own < 0 ? -1 : 1;
+    const index = keys.indexOf(dataKey);
+    const sameSign = (key) => {
+      const other = segmentValue(payload, key);
+      return other !== 0 && Math.sign(other) === sign;
+    };
+    const outer = index < 0 || !keys.slice(index + 1).some(sameSign);
+    const first = index < 0 || !keys.slice(0, index).some(sameSign);
+    const across = layout === "vertical";
+    let x0 = Math.min(x, x + width);
+    let y0 = Math.min(y, y + height);
+    let w = Math.abs(width);
+    let h = Math.abs(height);
+    // Cut a segment short at its outer side when another follows it
+    if (!outer) {
+      if (across) {
+        const cut = Math.min(BAR_GAP, w / 2);
+        w -= cut;
+        if (sign < 0) x0 += cut;
+      } else {
+        const cut = Math.min(BAR_GAP, h / 2);
+        h -= cut;
+        if (sign > 0) y0 += cut;
+      }
+    }
+    const r = (on) => (on ? radius : 0);
+    const end = outer;
+    const base = roundBase && first;
+    // Corners: top-left, top-right, bottom-right, bottom-left
+    let corners;
+    if (across) {
+      const right = sign > 0 ? end : base;
+      const left = sign > 0 ? base : end;
+      corners = [r(left), r(right), r(right), r(left)];
+    } else {
+      const top = sign > 0 ? end : base;
+      const bottom = sign > 0 ? base : end;
+      corners = [r(top), r(top), r(bottom), r(bottom)];
+    }
+    return createElement("path", {
+      className: "recharts-rectangle",
+      d: roundedRectPath(x0, y0, w, h, corners),
+      fill,
+      fillOpacity,
+      opacity,
+    });
+  };
+}
 
 export const TICK_STYLE = { fontSize: 12, fill: CHART_COLOURS.tick };
 export const AXIS_LINE = { stroke: CHART_COLOURS.axis };
@@ -299,17 +405,17 @@ export function axisWidth(ticks, format = String, { title = true } = {}) {
   return Math.ceil(longest * 7) + 10 + (title ? Y_TITLE_GUTTER : 0);
 }
 
+/** Height kept free under a legend: the logo, its padding and its clear space above. */
+export function logoClearance() {
+  return (CHART_LOGO.gap ?? 16) + CHART_LOGO.height + (CHART_LOGO.padding ?? 8);
+}
+
 /**
  * Legend wrapper: the full chart width, centred, with a row kept free below
  * it for the PolicyEngine logo (drawn at the bottom right), so the logo
  * never pushes the legend off centre, with CHART_LOGO.gap of clear space
  * between the legend's last row and the logo.
  */
-/** Height kept free under a legend: the logo, its padding and its clear space above. */
-export function logoClearance() {
-  return (CHART_LOGO.gap ?? 16) + CHART_LOGO.height + (CHART_LOGO.padding ?? 8);
-}
-
 export function legendWrapperStyle(narrow) {
   return {
     left: 0,

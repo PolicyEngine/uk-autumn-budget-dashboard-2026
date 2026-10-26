@@ -391,3 +391,37 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(methodology.textContent).not.toMatch(/Calculating your household/);
   });
 });
+
+describe("the income decile pair", () => {
+  it("is on All households, after the map and before the household scatter, and not on Living standards", async () => {
+    window.history.replaceState({}, "", "/?sub=all");
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
+    const panel = await screen.findByRole("tabpanel", { name: "All households" });
+    const absolute = await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 });
+    const relative = within(panel).getByRole("heading", { level: 3, name: /^Relative impact by income decile/ });
+    // Side by side under one measure key
+    const section = absolute.closest("#deciles");
+    expect(section).not.toBeNull();
+    expect(relative.closest("#deciles")).toBe(section);
+    await waitFor(() => expect(section.querySelectorAll(".measure-key")).toHaveLength(1));
+    const map = panel.querySelector("#constituencies");
+    const scatter = panel.querySelector("#scatter");
+    expect(map.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section.compareDocumentPosition(scatter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    const living = screen.getByRole("tabpanel", { name: "Living standards" });
+    await within(living).findAllByRole("heading", { name: /^Change in income inequality/ }, { timeout: 5000 });
+    expect(within(living).queryByRole("heading", { name: /impact by income decile/ })).toBeNull();
+    expect(within(living).queryByRole("heading", { name: "How the measures change incomes" })).toBeNull();
+  }, 15000);
+
+  it("opens All households from an old #deciles link", async () => {
+    window.history.replaceState({}, "", "/?sub=living#deciles");
+    render(<App />);
+    await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
+    const panel = await screen.findByRole("tabpanel", { name: "All households" });
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("all");
+    expect(await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 })).toBeInTheDocument();
+  }, 15000);
+});

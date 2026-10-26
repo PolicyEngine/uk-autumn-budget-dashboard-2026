@@ -18,6 +18,7 @@ import { useRef, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
+import { SELECTABLE_YEARS } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
 
 /** Each example's icon, by the name it gives (householdExamples.js). */
@@ -72,10 +73,14 @@ const tone = (value) => (Math.round(value) > 0 ? "is-gain" : Math.round(value) <
 export function cardFigures(example, byYear, year, catalogue = null) {
   const current = byYear?.[year];
   if (!current) return null;
+  // The split by measure, from the precomputed file only: a figure the
+  // page asked for itself (useExampleFigures.js) is the headline alone, so
+  // its card names no measure's part
+  const split = current.byPolicy ?? null;
   const own = example.measures ?? [example.measure];
-  const ownPart = own.reduce((sum, id) => sum + (current.byPolicy[id] ?? 0), 0);
+  const ownPart = split ? own.reduce((sum, id) => sum + (split[id] ?? 0), 0) : null;
   // The measure giving the largest part of the change, if not its own
-  const [mainId, mainPart] = Object.entries(current.byPolicy).reduce(
+  const [mainId, mainPart] = Object.entries(split ?? {}).reduce(
     (best, entry) => (Math.abs(entry[1]) > Math.abs(best[1]) ? entry : best),
     [null, 0],
   );
@@ -83,15 +88,15 @@ export function cardFigures(example, byYear, year, catalogue = null) {
     mainId && !own.includes(mainId) && Math.round(mainPart) !== 0 && Math.abs(mainPart) > Math.abs(ownPart)
       ? { name: sourceName(mainId, catalogue), part: mainPart }
       : null;
-  const series = Object.keys(byYear)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map((y) => ({ year: y, change: byYear[y].change }));
+  // Every year a reader can choose: one not yet in is null (its bar a stub)
+  const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].sort((a, b) => a - b);
+  const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
   return { change: current.change, ownPart, source, series };
 }
 
-/** "+£12 a year", or "No change", for a year's tooltip and label. */
-const changeText = (change) => (Math.round(change) === 0 ? "No change" : `${signedMoney(change)} a year`);
+/** "+£12 a year", "No change", or "calculating" for a year not yet in. */
+const changeText = (change) =>
+  change === null ? "calculating" : Math.round(change) === 0 ? "No change" : `${signedMoney(change)} a year`;
 
 // The bars' geometry: each bar BAR wide, PITCH apart, in PLOT of height
 const BAR = 12;
@@ -109,8 +114,9 @@ export function YearBars({ series, year }) {
   // The year shown in the tooltip: hovered, tapped or reached by the keys
   const [active, setActive] = useState(null);
   const highlighted = active ?? year;
-  const most = Math.max(0, ...series.map((point) => point.change));
-  const least = Math.min(0, ...series.map((point) => point.change));
+  const known = series.filter((point) => point.change !== null).map((point) => point.change);
+  const most = Math.max(0, ...known);
+  const least = Math.min(0, ...known);
   const span = most - least || 1;
   // The zero line: at the foot when nothing falls, at the top when nothing rises
   const zero = (PLOT * most) / span;
@@ -154,13 +160,15 @@ export function YearBars({ series, year }) {
       </span>
       <svg width={width} height={PLOT} viewBox={`0 0 ${width} ${PLOT}`} aria-hidden="true" focusable="false">
         {series.map((item, index) => {
-          const size = Math.max(1.5, (Math.abs(item.change) * PLOT) / span);
+          // A year not yet in: a short stub on the zero line, shimmering
+          const waiting = item.change === null;
+          const size = waiting ? 3 : Math.max(1.5, (Math.abs(item.change) * PLOT) / span);
           return (
             <g key={item.year}>
               <rect
-                className={`${tone(item.change)} ${item.year === highlighted ? "is-current" : ""}`.trim()}
+                className={`${waiting ? "is-pending" : tone(item.change)} ${item.year === highlighted ? "is-current" : ""}`.trim()}
                 x={index * PITCH}
-                y={item.change >= 0 ? zero - size : zero}
+                y={waiting || item.change >= 0 ? zero - size : zero}
                 width={BAR}
                 height={size}
                 rx={2}
@@ -211,7 +219,12 @@ export function YearBars({ series, year }) {
  * @param {string} props.formId - The form panel's id, for aria-controls
  * @param {() => void} props.onYours - "Your household" pressed
  * @param {(id: string) => void} props.onChoose - An example pressed
- * @param {Object|null} props.presets - presetChanges' map, or null to show no figures
+ * @param {Object|null} props.presets - The figures by example and year: the
+ *   precomputed file's (presetChanges, with the split by measure) or the
+ *   page's own (useExampleFigures, the headline only), or null for none
+ * @param {Object|null} [props.fill] - The page's own figures' progress, when
+ *   the file does not answer: { pending, failed (Sets of "id:year"), reduced
+ *   (the measures asked with, when the API did not know every selected one) }
  * @param {number|null} props.yoursChange - Your household's change, once calculated
  * @param {number} props.year
  * @param {boolean} [props.yoursSelected] - Your household is the one chosen
@@ -227,6 +240,7 @@ export default function HouseholdCards({
   onYours,
   onChoose,
   presets,
+  fill = null,
   yoursChange = null,
   year,
   chosen = false,
@@ -234,6 +248,9 @@ export default function HouseholdCards({
 }) {
   const catalogue = useMeasureCatalogue();
   const anyFigures = presets !== null && examples.some((example) => presets[example.id]?.[year]);
+  // What the figures are with: every measure (the file), the selected ones,
+  // or those of them the calculator supports
+  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -247,7 +264,7 @@ export default function HouseholdCards({
       {/* The page's section heading, as on every tab, with "Show all
           households" beside it once a household is chosen */}
       <div className="household-cards-head">
-        <SectionHeading title="Choose a household" subtitle="Enter your own household, or start from an example below." />
+        <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
         {chosen && (
           <button
             type="button"
@@ -286,13 +303,14 @@ export default function HouseholdCards({
       {/* What the examples' figures are, once they show */}
       {anyFigures && (
         <p className="household-cards-note">
-          {`Figures are the change in net income in ${fiscalYearTick(year)} with every measure; the bars show each year.`}
+          {`Figures are the change in net income in ${fiscalYearTick(year)} with ${figuresWith}; the bars show each year.`}
         </p>
       )}
       <div className="household-cards-grid" id="household-cards-grid" role="group" aria-label="Example households">
         {examples.map((example, index) => {
           const Icon = EXAMPLE_ICONS[example.icon] ?? House;
           const figures = presets ? cardFigures(example, presets[example.id], year, catalogue) : null;
+          const waiting = !figures && Boolean(fill?.pending.has(`${example.id}:${year}`));
           const featured = featuresPublished(example, catalogue);
           const pressed = value === example.id;
           const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
@@ -328,6 +346,14 @@ export default function HouseholdCards({
                     </span>
                     <YearBars series={figures.series} year={year} />
                   </>
+                ) : waiting ? (
+                  // Being calculated in the background: a shimmer where the
+                  // figure and bars will be
+                  <span className="household-card-shimmer" id={`household-card-${example.id}-result`} role="status">
+                    <span className="household-card-shimmer-figure" aria-hidden="true" />
+                    <span className="household-card-shimmer-bars" aria-hidden="true" />
+                    <span className="visually-hidden">Calculating</span>
+                  </span>
                 ) : (
                   <span className="household-card-pending" id={`household-card-${example.id}-result`}>
                     Calculated when chosen
@@ -344,7 +370,7 @@ export default function HouseholdCards({
                 <span className="household-card-tag">
                   <span className="household-card-dot" aria-hidden="true" />
                   <span className="household-card-tag-name">{example.tag}</span>
-                  {figures && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
+                  {figures?.ownPart != null && <span className="household-card-tag-part">{signedMoney(figures.ownPart)}</span>}
                 </span>
               )}
             </div>
@@ -382,19 +408,23 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
       onClick={onClick}
     >
       <span className="household-yours-art" aria-hidden="true">
-        <House size={30} strokeWidth={1.7} />
+        <House size={24} strokeWidth={1.8} />
       </span>
       <span className="household-yours-words">
-        <span className="household-card-name household-yours-eyebrow">Your household</span>
+        {/* The card's name, for the button's: the title says it on screen */}
+        <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
-        <span className="household-yours-hints" aria-hidden="true">
-          {YOURS_HINTS.map(({ label, Icon }) => (
-            <span key={label} className="household-yours-hint">
-              <Icon size={13} strokeWidth={2} />
-              {label}
-            </span>
-          ))}
+        {/* The subtitle, with what the form asks first beside it */}
+        <span className="household-yours-line">
+          <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
+          <span className="household-yours-hints" aria-hidden="true">
+            {YOURS_HINTS.map(({ label, Icon }) => (
+              <span key={label} className="household-yours-hint">
+                <Icon size={12} strokeWidth={2} />
+                {label}
+              </span>
+            ))}
+          </span>
         </span>
       </span>
       <span className="household-yours-side">

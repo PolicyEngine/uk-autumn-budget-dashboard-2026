@@ -1042,3 +1042,10 @@
     min-height: 40px;
   }
 }
+
+/* Section icons are circles on every tab (SectionHeading's .section-icon) */
+.method-section-heading .method-icon {
+  border: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+}

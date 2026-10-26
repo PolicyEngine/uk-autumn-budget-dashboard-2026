@@ -9,7 +9,9 @@ import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResu
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
 import useBasisIncome from "../hooks/useBasisIncome";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
-import { loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
+import { loadPresetChanges, loadPresetResults, presetInputs } from "../utils/householdPresets";
+import useExampleFigures from "../hooks/useExampleFigures";
+import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -314,6 +316,9 @@ const FORM_PANEL_ID = "household-form-panel";
  * as the answers change, from policyengine.py's household calculation
  * (POST /api/household-impact).
  */
+// Each example's id and full answers, for the cards' background figures
+const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+
 function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
@@ -364,6 +369,9 @@ function HouseholdCalculator({
   const [seeded, setSeeded] = useState(0);
   // and each example's change in net income, for its card
   const [presetChanges, setPresetChanges] = useState({});
+  // Whether the file has been read (until then the cards wait for it rather
+  // than ask the API)
+  const [presetsLoaded, setPresetsLoaded] = useState(false);
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
   // answers count only for exactly these, under the engine their receipts
@@ -383,7 +391,9 @@ function HouseholdCalculator({
       setSeeded((n) => n + 1);
     });
     loadPresetChanges(options).then((changes) => {
-      if (live) setPresetChanges(changes);
+      if (!live) return;
+      setPresetChanges(changes);
+      setPresetsLoaded(true);
     });
     return () => {
       live = false;
@@ -406,6 +416,21 @@ function HouseholdCalculator({
     presetPolicies.length > 0 &&
     householdPolicies.length === presetPolicies.length &&
     presetPolicies.every((id) => householdPolicies.includes(id));
+  // The file answers every card in every year: the cards show it at once
+  const presetsAnswer =
+    allSelected &&
+    HOUSEHOLD_EXAMPLES.every((example) => SELECTABLE_YEARS.every((y) => presetChanges[example.id]?.[y]));
+  // Otherwise the cards' figures are asked for in the background, for the
+  // selected measures (useExampleFigures.js)
+  const fill = useExampleFigures({
+    examples: EXAMPLE_REQUESTS,
+    policies: householdPolicies,
+    year,
+    enabled: active && presetsLoaded && !presetsAnswer,
+    publicationKey,
+    expectedEngine,
+    confirmPublication,
+  });
   // Fill the form from an example and show its result at once (no
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
@@ -821,7 +846,8 @@ function HouseholdCalculator({
         formId={FORM_PANEL_ID}
         onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
-        presets={allSelected ? presetChanges : null}
+        presets={noneSelected ? null : presetsAnswer ? presetChanges : fill.figures}
+        fill={noneSelected || presetsAnswer ? null : fill}
         yoursChange={yoursChange}
         year={year}
         chosen={presetId !== null || formOpen || submitted !== null}

@@ -493,6 +493,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       {household && (
         <>
           <SectionHeading
+            icon="pin"
             title="Your place in the income distribution"
             subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
           />
@@ -510,6 +511,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       )}
 
       <SectionHeading
+        icon="layers"
         title="Breakdown of household net income"
         subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
       />
@@ -535,6 +537,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       </section>
 
       <SectionHeading
+        icon="briefcase"
         title="Across earnings"
         subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
       />

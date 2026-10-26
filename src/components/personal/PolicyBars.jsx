@@ -6,7 +6,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import Disclosure from "../Disclosure";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { BAR_RADIUS, CHART_COLOURS } from "../../utils/chartTheme";
 import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
@@ -139,7 +139,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
                     <text x={plotLeft} y={y + 13} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
-                    <rect x={x0} y={barY} width={w} height={barHeight} rx={2} fill={row.color} />
+                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
                     <text
                       className="policy-bar-value"
                       x={width}

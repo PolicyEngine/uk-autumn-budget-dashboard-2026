@@ -51,7 +51,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--pe-gray-100);
+  border-left: 1px dashed var(--c-grid);
 }
 
 .wf-grid.wf-zero {
@@ -68,9 +68,10 @@
 .wf-bar {
   position: absolute;
   top: 50%;
-  height: 20px;
+  height: 16px;
   transform: translateY(-50%);
-  border-radius: 3px;
+  /* The dashboard's bar style (chartTheme BAR_RADIUS) */
+  border-radius: var(--bar-radius);
 }
 
 .wf-row > .wf-value {
@@ -111,7 +112,7 @@
 }
 
 .wf-total .wf-bar {
-  height: 24px;
+  height: 20px;
 }
 
 .wf-axis > *,
