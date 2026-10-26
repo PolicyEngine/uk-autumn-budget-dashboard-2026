@@ -116,7 +116,7 @@ code {
      tabs not chosen */
   --c-subtab-band: color-mix(in srgb, var(--pe-teal-100) 45%, var(--pe-teal-50));
   --c-subtab-rule: var(--pe-teal-200);
-  --c-subtab-active: var(--pe-teal-100);
+  --c-subtab-active: color-mix(in srgb, var(--pe-teal-200) 75%, var(--pe-teal-100));
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
