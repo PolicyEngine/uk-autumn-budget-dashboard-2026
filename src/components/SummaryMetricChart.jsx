@@ -267,6 +267,17 @@ export function hasColumn(rows, key) {
 }
 
 /**
+ * The rows that decide whether a chart offers its choices: the shown run's,
+ * so a verified artifact written before the poverty and inequality measures
+ * shows its headline only, even when another run carries them; every run's
+ * while no run is shown or the run has no rows.
+ */
+export function choiceRows(rows, run) {
+  const own = run ? (rows ?? []).filter((row) => row.reform_id === run) : [];
+  return own.length ? own : rows;
+}
+
+/**
  * The chosen measure for a chart with choices (poverty, inequality), and the
  * pill groups that choose it; none when the file predates the measures.
  */
@@ -328,16 +339,16 @@ export function metricByYear(rows, run, metric) {
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const chartRef = useRef(null);
-  const { metric, controls } = useMeasureChoice(family, rows);
+  // The whole selection's run: one measure's own, or the package's combined
+  // run (the catalogue's, #104) when every displayable measure is selected
+  const { combinedId } = useMeasureCatalogue();
+  const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
+  const { metric, controls } = useMeasureChoice(family, choiceRows(rows, run));
   // People behind a poverty change (pp × the population), where the
   // population is known for the year (population(year, group) in millions)
   const peopleText = (year, value) =>
     metric.group && population ? peopleInPovertyText(value, population(year, metric.group), metric.group) : null;
   const narrow = useNarrowViewport();
-  // The whole selection's run: one measure's own, or the package's combined
-  // run (the catalogue's, #104) when every displayable measure is selected
-  const { combinedId } = useMeasureCatalogue();
-  const run = wholeSelectionRun(policies, selectedPolicies, combinedId);
   const data = metricByYear(rows, run, metric);
   const shown = data.filter((point) => point.value !== null);
   // Every shown value reads as zero at the tooltip's precision (a measure
