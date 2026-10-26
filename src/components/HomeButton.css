@@ -1,5 +1,5 @@
-/* The band's home button (HomeButton.jsx): a translucent circle in the
-   family of the Year and Measures pills */
+/* The band's home button (HomeButton.jsx): PolicyEngine's white mark,
+   left of the title */
 .title-head {
   grid-area: title;
   display: flex;
@@ -8,44 +8,41 @@
   min-width: 0;
 }
 
+/* Just the mark: no box, tint or border */
 .title-row .home-button {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
   padding: 0;
-  color: var(--band-ink);
-  /* A light tint on the band, brighter than the pills, so it reads */
-  background: var(--band-ink-active);
-  border: 1px solid var(--band-ink-border-hover);
-  border-radius: 10px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
+  transition: opacity var(--landing-motion) ease, transform var(--landing-motion) ease;
 }
 
-.title-row .home-button:hover,
-.title-row .home-button[aria-current="page"] {
-  background: color-mix(in srgb, var(--band-ink) 28%, transparent);
-  border-color: var(--band-ink);
-}
-
-/* The square mark, whole and undistorted */
-.home-button-mark {
-  display: block;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
+.title-row .home-button:hover {
+  opacity: 0.85;
+  transform: scale(1.06);
 }
 
 .title-row .home-button[aria-current="page"] {
   cursor: default;
 }
 
+/* The ring goes round the mark only */
 .title-row .home-button:focus-visible {
   outline: 2px solid var(--band-ink);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+/* The square mark, whole and undistorted */
+.home-button-mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 /* Its tip, as a mini card above the band */
@@ -83,19 +80,118 @@
     gap: 10px;
   }
 
-  .title-row .home-button {
-    width: 34px;
-    height: 34px;
-  }
-
   .home-button-mark {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .title-row .home-button {
     transition: none;
+  }
+
+  .title-row .home-button:hover {
+    transform: none;
+  }
+}
+
+/* The "About" tab on the window's left edge (EdgeAboutTab): teal,
+   rounded on its right side only, level with the view tabs bar, below
+   the page's menus and dialogs */
+.edge-about {
+  position: fixed;
+  left: 0;
+  /* Centred on the view tabs bar (EdgeAboutTab sets top from it); this is
+     where the bar sits once stuck */
+  top: calc(var(--title-row-height) + var(--view-tabs-height) / 2);
+  transform: translateY(-50%);
+  /* Over the view tabs bar it sits on (1090), under the title band (1100) */
+  z-index: 1095;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  /* Narrow enough to sit in the page's left margin at 1280px */
+  padding: 6px 10px 6px 7px;
+  font-family: var(--pe-font-family);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--band-ink);
+  background: var(--band-teal);
+  border: 0;
+  border-radius: 0 999px 999px 0;
+  box-shadow: 0 4px 14px var(--shadow-strong);
+  cursor: pointer;
+  transition: background-color var(--landing-motion) ease, transform var(--motion-slide) ease;
+}
+
+.edge-about:hover {
+  background: var(--pe-teal-700);
+}
+
+.edge-about:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.edge-about-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* While the overview drawer is open the tab rides on its edge, above it,
+   so it closes it too (OverviewDrawer.css: 380px wide) */
+.edge-about[aria-expanded="true"] {
+  z-index: 1310;
+  transform: translate(380px, -50%);
+}
+
+/* On a phone the drawer takes the screen; its close button closes it */
+@media (max-width: 600px) {
+  .edge-about[aria-expanded="true"] {
+    z-index: 1095;
+    transform: translateY(-50%);
+  }
+}
+
+/* Once a session: two soft pulses, so it is seen */
+.edge-about.is-cue {
+  animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
+}
+
+@keyframes edge-about-cue {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 0 var(--focus-ring);
+  }
+  50% {
+    box-shadow: 0 4px 14px var(--shadow-strong), 0 0 0 8px var(--focus-ring);
+  }
+}
+
+/* On a phone: the mark alone, a slim tab clear of the column */
+@media (max-width: 768px) {
+  .edge-about {
+    padding: 5px 4px 5px 3px;
+  }
+
+  .edge-about-mark {
+    width: 14px;
+    height: 14px;
+  }
+
+  .edge-about-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-about {
+    transition: none;
+  }
+
+  .edge-about.is-cue {
+    animation: none;
   }
 }

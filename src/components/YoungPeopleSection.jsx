@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import LoadingSkeleton from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
 import {
   Bar,
@@ -18,7 +19,7 @@ import {
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { loadVerifiedTable } from "../utils/loadDashboard";
+import { loadVerifiedTable, peekVerifiedTables } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
@@ -146,7 +147,11 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * PensionersSection.
  */
 export function useAgeImpactRows(catalogue) {
-  const [state, setState] = useState({ catalogue, status: "loading", rows: null });
+  // Already loaded (the other age view, or the idle prefetch): no wait
+  const [state, setState] = useState(() => {
+    const peeked = peekVerifiedTables(catalogue, "age_impact");
+    return peeked ? { catalogue, status: peeked.rows.length ? "ready" : "unavailable", rows: peeked.rows.length ? peeked.rows : null } : { catalogue, status: "loading", rows: null };
+  });
   useEffect(() => {
     let cancelled = false;
     loadVerifiedTable(catalogue, "age_impact")
@@ -903,9 +908,11 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
           </section>
         </>
       ) : (
-        <p className="view-status" role="status">
-          {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
-        </p>
+        status === "loading" ? (
+          <LoadingSkeleton label="Loading results by age…" />
+        ) : (
+          <p className="view-status" role="status">Results by age are not available.</p>
+        )
       )}
     </>
   );

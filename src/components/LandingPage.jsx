@@ -31,10 +31,51 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
   );
 }
 
+/** The three ways in, in order: [tab, sub, icon, title, line]. */
+const BOXES = [
+  ["dashboard", "finances", "users", "The Budget and society", "Public finances, and who gains and loses"],
+  ["household", undefined, "house", "Your household", "See how your income changes"],
+  ["policies", undefined, "list", "What's in the Budget", "Every measure, and how we model it"],
+];
+
+/**
+ * What the dashboard is: the eyebrow, the heading (its id given, as the
+ * landing page and the overview drawer each name themselves by it), the
+ * paragraph and the provisional notice. One source for both.
+ */
+export function LandingIntro({ headingId, provisional, className = "landing-hero" }) {
+  return (
+    <div className={className}>
+      <p className="landing-eyebrow">PolicyEngine UK</p>
+      <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
+      <p className="landing-intro">
+        Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
+        Autumn Budget 2026 measures affect the public finances and household
+        incomes across the income distribution, regions and age groups, set
+        against the pre-measures forecast. Costings are our own; the economic
+        forecast is the OBR&rsquo;s{" "}
+        <SourceLink source="obr_efo_current">Economic and fiscal outlook, March 2026</SourceLink>.
+      </p>
+      {provisional}
+    </div>
+  );
+}
+
+/** The three boxes, side by side (the landing page) or stacked (`compact`). */
+export function LandingBoxes({ onOpen, compact = false }) {
+  return (
+    <ul className={`landing-boxes${compact ? " is-compact" : ""}`}>
+      {BOXES.map(([tab, sub, icon, title, description]) => (
+        <LandingBox key={tab} tab={tab} sub={sub} icon={icon} title={title} description={description} onOpen={onOpen} />
+      ))}
+    </ul>
+  );
+}
+
 /**
  * The landing page, at the bare address only (utils/landing.js): what the
- * dashboard does, then three ways in. App.jsx renders it over the Public
- * finances view, faded and inert, so the page behind is the live one.
+ * dashboard does, then three ways in, over a silhouette of the Public
+ * finances view (App.jsx).
  *
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onOpen - Open a view (App's handleTabChange)
@@ -43,42 +84,8 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
 export default function LandingPage({ onOpen, provisional }) {
   return (
     <section className="landing" aria-labelledby="landing-heading">
-      <div className="landing-hero">
-      <h2 id="landing-heading" className="landing-heading">What Autumn Budget 2026 means</h2>
-      <p className="landing-intro">
-        This dashboard uses <SourceLink source="policyengine_uk_model" /> to
-        show how Autumn Budget 2026 measures would affect the public
-        finances and households: by income, area and age, and
-        for your own household, alongside the pre-measures forecast.
-        Costings are our own; forecast:{" "}
-        <SourceLink source="obr_efo_current" />.
-      </p>
-      {provisional}
-      </div>
-      <ul className="landing-boxes">
-        <LandingBox
-          tab="dashboard"
-          sub="finances"
-          icon="users"
-          title="The Budget and society"
-          description="Public finances, and who gains and loses"
-          onOpen={onOpen}
-        />
-        <LandingBox
-          tab="household"
-          icon="house"
-          title="Your household"
-          description="See how your income changes"
-          onOpen={onOpen}
-        />
-        <LandingBox
-          tab="policies"
-          icon="list"
-          title="What's in the Budget"
-          description="Every measure, and how we model it"
-          onOpen={onOpen}
-        />
-      </ul>
+      <LandingIntro headingId="landing-heading" provisional={provisional} />
+      <LandingBoxes onOpen={onOpen} />
     </section>
   );
 }

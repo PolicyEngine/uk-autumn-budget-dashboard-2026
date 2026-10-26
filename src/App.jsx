@@ -29,12 +29,18 @@ import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton from "./components/HomeButton";
+import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
+import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
-import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
+import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
+import { pruneVerifiedCache } from "./utils/publication/cache";
+import { prefetchGeography } from "./hooks/useGeographyData";
+import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
+import LoadingSkeleton from "./components/publication/LoadingSkeleton";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -42,8 +48,8 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
-// the band's pills apply to a view; the others keep their place in the band
-// but are hidden. Pre-measures forecast is current law (incomes and poverty
+// the band's pills apply to a view; the others stay in the band, faded and
+// inactive, with a Tip saying they do not change it. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
@@ -60,6 +66,10 @@ export const VIEWS = [
 ];
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
+
+// The Tips on a band pill that does not change the view shown
+export const YEAR_INACTIVE = "The year doesn't change this tab";
+export const POLICIES_INACTIVE = "Policy choices don't change this tab";
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
@@ -165,6 +175,19 @@ const NOTHING_PUBLISHED = Object.freeze({
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
 
+// The tables no first view waits for, loaded when the page is idle
+const IDLE_TABLES = ["age_impact", "household_scatter_binned"];
+
+function whenIdle(run) {
+  if (typeof window === "undefined") return undefined;
+  if (typeof window.requestIdleCallback === "function") {
+    const handle = window.requestIdleCallback(run, { timeout: 2000 });
+    return () => window.cancelIdleCallback?.(handle);
+  }
+  const handle = setTimeout(run, 200);
+  return () => clearTimeout(handle);
+}
+
 function Dashboard({ published, unavailable = null, updated = false }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
@@ -180,6 +203,32 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
   const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
+  // Once the first view has painted, every other view's tables load and
+  // verify while the page is idle, so a tab switch need not wait
+  useEffect(() => {
+    if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
+    // One step per idle period, the views' own tables first
+    const steps = [
+      ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
+      () => prefetchGeography(catalogue),
+      () => loadOutlook().catch(() => {}),
+      () => loadPresetChanges().catch(() => {}),
+      () => pruneVerifiedCache().catch(() => {}),
+    ];
+    let cancel;
+    const next = () => {
+      const step = steps.shift();
+      if (!step) return;
+      cancel = whenIdle(() => {
+        Promise.resolve(step()).finally(next);
+      });
+    };
+    next();
+    return () => {
+      steps.length = 0;
+      cancel?.();
+    };
+  }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
@@ -187,6 +236,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
+  // The overview drawer, opened by the "About" tab on the window's edge
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const aboutTabRef = useRef(null);
+  const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
@@ -393,13 +446,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       openViewRef.current(tab);
       if (!anchor) return;
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${anchor}`);
-      setTimeout(() => {
+      // The view mounts, and some of its parts load their data, after the
+      // switch: look for the target for up to 3 seconds
+      let tries = 0;
+      const find = () => {
         const target = document.getElementById(anchor);
-        if (!target) return;
-        const folded = target.closest("details");
-        if (folded) folded.open = true;
+        if (!target) {
+          if ((tries += 1) < 30) setTimeout(find, 100);
+          return;
+        }
+        let folded = target.closest("details");
+        while (folded) {
+          folded.open = true;
+          folded = folded.parentElement?.closest("details");
+        }
         target.scrollIntoView?.({ block: "start" });
-      }, 300);
+      };
+      setTimeout(find, 100);
     };
     window.addEventListener(OPEN_VIEW_EVENT, onOpenView);
     return () => window.removeEventListener(OPEN_VIEW_EVENT, onOpenView);
@@ -675,7 +738,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     <div
       className="app"
       ref={appRef}
-      data-band={yearShown ? undefined : "compact"}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
@@ -694,29 +756,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Household impact. A pill that does
-              not apply keeps its place but is hidden, so the band does not
-              move. */}
-          <div
-            className={`band-year ${yearShown ? "" : "is-hidden"}`}
-            aria-hidden={yearShown ? undefined : "true"}
-            inert={!yearShown}
-          >
+              not apply stays in its place, faded, and says so in a Tip; it
+              does not open. Both are on every view, so the band never moves. */}
+          <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
               selectedYear={distributionalYear}
               onYearChange={setDistributionalYear}
+              inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
             />
           </div>
-          <div
-            className={`band-policy ${policiesShown ? "" : "is-hidden"}`}
-            aria-hidden={policiesShown ? undefined : "true"}
-            inert={!policiesShown}
-          >
+          <div className={`band-policy${policiesShown ? "" : " is-inactive"}`}>
             <PolicySelector
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
+              inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
             />
           </div>
         </div>
@@ -746,6 +802,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           hidden={landing}
         />
 
+        {/* A link to a view, before the page's code opens it: the landing
+            page is hidden (LandingPage.css), so placeholders show instead */}
+        {landing && (
+          <div className="deep-link-skeleton">
+            <LoadingSkeleton />
+          </div>
+        )}
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
@@ -768,11 +831,15 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
-        {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
+        {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
+          // Placeholders at once while the verified figures load; the
+          // "not published yet" line is only for an empty publication
+          <LoadingSkeleton cards={value === "household" ? 4 : 2} height={value === "household" ? 120 : 260} />
+        ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              unavailable.empty && <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -824,6 +891,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
+        {/* "About" on the window's edge, on every view but the landing
+            page: it opens the overview drawer */}
+        {!landing && (
+          <>
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+            <OverviewDrawer
+              open={overviewOpen}
+              onClose={closeOverview}
+              onOpen={handleTabChange}
+              returnFocus={aboutTabRef}
+              provisional={provisional && (
+                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
+              )}
+            />
+          </>
+        )}
         <ReplicationLine />
       </main>
     </div>
@@ -911,7 +994,7 @@ function App() {
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet" }
+      ? { reason: "No Budget results are published yet", empty: true }
       : null;
   const shown = unavailable ? NOTHING_PUBLISHED : published;
   // One snapshot per mount: a newer one starts the views afresh

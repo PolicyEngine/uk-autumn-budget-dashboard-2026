@@ -365,7 +365,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
     info: {
-      shows: `The real change in each ${g.noun}'s median income, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
+      shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
       how: [
         measures && !diff && "Current law's growth plus the measures' effect, from the same pair of simulations.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,

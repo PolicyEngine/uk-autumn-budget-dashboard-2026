@@ -140,7 +140,7 @@ export const POLICY_DETAILS = [
     type: "Income tax",
     inForce: { from: "2031-04" },
     details:
-      "The personal allowance stays at £12,570 and the higher rate threshold at £50,270, instead of rising with inflation to £12,830 and £51,330. The National Insurance primary threshold and upper earnings limit, which the model ties to them from 2031-32, stay at the same levels; the employer threshold is not held.",
+      "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
   },
   {
     id: "badr_lifetime_limit_cut",

@@ -3,7 +3,6 @@ import {
   Armchair,
   ArrowRight,
   Baby,
-  Banknote,
   BriefcaseBusiness,
   Car,
   Check,
@@ -459,13 +458,6 @@ export default function HouseholdCards({
   );
 }
 
-/** What the form asks first, as the Your household card hints at it. */
-const YOURS_HINTS = [
-  { label: "Salary", Icon: Banknote },
-  { label: "Family", Icon: UsersRound },
-  { label: "Home", Icon: House },
-];
-
 /**
  * "Your household", above the examples, the width of the grid: an
  * invitation to enter your own, with what the form asks first, and once
@@ -490,18 +482,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         {/* The card's name, for the button's: the title says it on screen */}
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        {/* The subtitle, with what the form asks first beside it */}
-        <span className="household-yours-line">
-          <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
-          <span className="household-yours-hints" aria-hidden="true">
-            {YOURS_HINTS.map(({ label, Icon }) => (
-              <span key={label} className="household-yours-hint">
-                <Icon size={12} strokeWidth={2} />
-                {label}
-              </span>
-            ))}
-          </span>
-        </span>
+        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
       </span>
       <span className="household-yours-side">
         {calculated && (

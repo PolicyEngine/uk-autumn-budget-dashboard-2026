@@ -1,4 +1,4 @@
-import { loadArtifact, loadManifest, loadPublication } from "./publication/load";
+import { CATALOGUE_TABLES, loadArtifact, loadManifest, loadPublication } from "./publication/load";
 import { parseCsv } from "./publication/csv";
 import { isDisplayable } from "./publication/manifest";
 import { buildMeasureCatalogue, isCatalogueRowDisplayable } from "./measureCatalogue";
@@ -18,7 +18,7 @@ export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal }
   // measure is shown as unavailable, so the combined run that describes the
   // page's figures is the one of the displayable measures.
   const packageIds = Object.keys(manifest.measures).filter((id) => isDisplayable(manifest.measures[id]));
-  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest });
+  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest, tables: CATALOGUE_TABLES });
   const names = { budgetary: "budgetary_impact", distributional: "distributional_impact", winnersLosers: "winners_losers", metrics: "metrics" };
   for (const [name, table] of Object.entries(names)) data[name] = Object.values(publication.tablesByKey).flatMap((tables) => tables[table] ?? []);
   const catalogue = buildMeasureCatalogue({ manifest, ...data, tablesByKey: publication.tablesByKey, failures: publication.failures });
@@ -37,6 +37,43 @@ export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal }
  *
  * @returns {Promise<{rows: Array<Object>, failures: Array<string>}>}
  */
+// One load per catalogue and table, shared by every view that reads it (Young
+// people and Pensioners both read the age table) and by the idle prefetch.
+// A catalogue is one verified snapshot, so its loads never mix snapshots.
+const tableLoads = new WeakMap();
+
+/**
+ * As loadVerifiedTables, shared: the first call for a catalogue and table
+ * loads it; later calls get the same result. A failed or aborted load is
+ * not kept, so a later call tries again.
+ */
+export function loadVerifiedTablesOnce(catalogue, table, options = {}) {
+  if (catalogue === null || typeof catalogue !== "object") return loadVerifiedTables(catalogue, table, options);
+  let loads = tableLoads.get(catalogue);
+  if (!loads) tableLoads.set(catalogue, (loads = new Map()));
+  if (!loads.has(table)) {
+    const record = { value: undefined };
+    record.promise = loadVerifiedTables(catalogue, table, { ...options, signal: undefined }).then(
+      (value) => {
+        record.value = value;
+        return value;
+      },
+      (error) => {
+        loads.delete(table);
+        throw error;
+      },
+    );
+    loads.set(table, record);
+  }
+  return loads.get(table).promise;
+}
+
+/** The shared result for a catalogue and table, if it has already loaded. */
+export function peekVerifiedTables(catalogue, table) {
+  if (catalogue === null || typeof catalogue !== "object") return undefined;
+  return tableLoads.get(catalogue)?.get(table)?.value;
+}
+
 export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
   const manifest = catalogue?.manifest;
   if (!manifest || !catalogue.tablesByKey) throw new Error("No Budget results are published yet");
@@ -57,7 +94,7 @@ export async function loadVerifiedTables(catalogue, table, { basePath = process.
 
 /** As loadVerifiedTables, the rows only. */
 export async function loadVerifiedTable(catalogue, table, options) {
-  return (await loadVerifiedTables(catalogue, table, options)).rows;
+  return (await loadVerifiedTablesOnce(catalogue, table, options)).rows;
 }
 
 /** Null is an unavailable figure, never a zero standing in for a missing row. */
