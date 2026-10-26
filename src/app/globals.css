@@ -2992,7 +2992,7 @@ body {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
+  transition: grid-template-rows var(--motion-base) var(--ease-out), opacity var(--motion-base) var(--ease-out);
 }
 
 .expander-body.is-expanded {
