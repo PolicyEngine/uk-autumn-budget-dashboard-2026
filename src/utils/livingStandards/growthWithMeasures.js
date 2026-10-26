@@ -8,7 +8,7 @@
  * 2027-28 prices, with each side's real change on the year before and the
  * difference between them (the reform's growth less its baseline's, from
  * the same pair of simulations). The income, groups and prices are the
- * OBR forecast's income_growth_by_group. Vigintile 1 has no rows.
+ * Before the Budget's income_growth_by_group. Vigintile 1 has no rows.
  *
  * The file is read directly, as income_distribution.csv is (#104 reads
  * verified artifacts for the Budget tables; these flat files sit beside
@@ -86,7 +86,7 @@ export function changesNothing(rows, reformId) {
 }
 
 /**
- * The growth chart's rows with the measures: the OBR forecast's
+ * The growth chart's rows with the measures: Before the Budget's
  * current-law rows (`twin`, DecileGrowthSection's growthRows) plus what
  * the run does to growth (`series`, from seriesFor), so that with the
  * measures less without is exactly the measures' effect. Annual growth is

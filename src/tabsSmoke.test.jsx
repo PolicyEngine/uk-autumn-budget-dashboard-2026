@@ -78,7 +78,7 @@ const LOADED = {
   // the fixture's carry none, so both say so (#104)
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
   pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
-  // The OBR forecast's sub-tabs (?tab=outlook&sub=): each heading
+  // The Before the Budget's sub-tabs (?tab=outlook&sub=): each heading
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
@@ -173,8 +173,8 @@ const CASES = [
   ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
   // The bare address is the landing page, over this view (landing.test.jsx)
   ["Population impact: Public finances", "finances", "/?tab=dashboard", "Public finances"],
-  ["OBR forecast: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
-  ["OBR forecast: Forecast changes", "outlookForecast", "/?tab=outlook&sub=forecast", "Forecast changes"],
+  ["Before the Budget: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
+  ["Before the Budget: Forecast changes", "outlookForecast", "/?tab=outlook&sub=forecast", "Forecast changes"],
 ];
 
 describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
@@ -242,12 +242,12 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
 
   // Living standards and Poverty are in both views, under the same names:
   // with the selected measures on Population impact (?sub=living,
-  // ?sub=poverty), without them on the OBR forecast
+  // ?sub=poverty), without them on Before the Budget
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
     ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
     ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
-  ])("?sub=%s shows the measures, its twin on the OBR forecast current law", async (sub, label, measures, currentLaw, cards) => {
+  ])("?sub=%s shows the measures, its twin on Before the Budget current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
@@ -272,7 +272,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(consoleErrors).toEqual([]);
   }, 15000);
 
-  it("reads the outlook once for all of the OBR forecast's sub-tabs", async () => {
+  it("reads the outlook once for all of the Before the Budget's sub-tabs", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
@@ -361,7 +361,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "OBR forecast", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Before the Budget", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }

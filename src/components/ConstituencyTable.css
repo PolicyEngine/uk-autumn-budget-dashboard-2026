@@ -1,0 +1,170 @@
+/* The constituency card's Table view: search and count, then every
+   constituency in a table that scrolls inside the card's body. */
+.ctable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.ctable-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.ctable-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+.ctable-count {
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.ctable-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+}
+
+/* Off the desktop's fixed body height, the table keeps to its own */
+@media (max-width: 1024px) {
+  .ctable-scroll {
+    max-height: 420px;
+  }
+}
+
+.ctable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-700);
+}
+
+.ctable-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--pe-gray-50);
+  border-bottom: 1px solid var(--card-border);
+  padding: 0;
+  text-align: left;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+.ctable-table thead th > span,
+.ctable-table thead th > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.ctable-table thead th > button {
+  cursor: pointer;
+}
+
+.ctable-table thead th > button:hover {
+  color: var(--pe-teal-700);
+}
+
+.ctable-table thead th > button:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+}
+
+.ctable-sort {
+  font-size: 9px;
+  min-width: 9px;
+}
+
+.ctable-table tbody tr + tr {
+  border-top: 1px solid var(--pe-border-light);
+}
+
+.ctable-table td,
+.ctable-table tbody th {
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.ctable-table tbody th {
+  font-weight: 500;
+}
+
+.ctable-col-rank {
+  width: 3em;
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctable-table .ctable-col-value {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctable-table thead .ctable-col-value > button {
+  justify-content: flex-end;
+}
+
+.ctable-na {
+  color: var(--pe-gray-500);
+  font-style: italic;
+}
+
+.ctable-approximate {
+  color: var(--pe-gray-500);
+}
+
+/* On a narrow card the region goes under the name */
+.ctable-region-inline {
+  display: none;
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+@media (max-width: 600px) {
+  .ctable-col-region {
+    display: none;
+  }
+
+  .ctable-region-inline {
+    display: block;
+  }
+
+  .ctable-table thead th > button,
+  .ctable-table thead th > span {
+    white-space: normal;
+  }
+}
+
+.ctable-empty,
+.ctable-note {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.ctable-note {
+  padding: 0;
+}

@@ -88,6 +88,13 @@ const seat = (container, code) =>
 
 const tooltip = (container) => container.querySelector(".constituency-tooltip");
 
+/** Choose how the change is shown, in the card's Options pill. */
+function showChangeAs(name) {
+  fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+  fireEvent.click(screen.getByRole("radio", { name }));
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
+}
+
 describe("ConstituencyMap", () => {
   it("defines the withheld hatch as a vector pattern in the map's own defs", async () => {
     const { container } = await renderMap();
@@ -179,8 +186,7 @@ describe("ConstituencyMap", () => {
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
         "Large gain: £100 or more",
@@ -188,34 +194,19 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("keeps the legend and logo in the corners of what is shown", async () => {
-    const observed = new Map();
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(callback) {
-          this.callback = callback;
-        }
-        observe(target) {
-          observed.set(target, this.callback);
-        }
-        disconnect() {}
-      },
-    );
+  it("puts the key beside or under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
+    // On screen the key is HTML, outside the map's SVG
+    const key = screen.getByRole("group", { name: "Key" });
+    expect(map.contains(key)).toBe(false);
+    expect(key).toHaveTextContent("Large gain: 1% or more");
+    expect(key).toHaveTextContent("Not published: hatched, confidentiality");
+    // The SVG carries no logo of its own; the card's logo row does
+    expect(map.querySelector("image")).toBeNull();
+    // The SVG's legend, for the exported file, sits in its corner
     const legend = map.querySelector(":scope > g.map-legend");
-    const logo = map.querySelector(":scope > image.map-logo");
     expect(legend.getAttribute("transform")).toBe("translate(12, 12)");
-
-    // Twice as wide as it is tall: 200 units show on either side of the
-    // drawing area, so the legend moves left and the logo right.
-    act(() => observed.get(map)([{ contentRect: { width: 1200, height: 600 } }]));
-    expect(legend.getAttribute("transform")).toBe("translate(-188, 12)");
-    expect(logo.getAttribute("x")).toBe("912");
-    expect(logo.getAttribute("y")).toBe("575");
-
-    // The file shows the drawing area alone, with the legend in its corner.
     fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
@@ -225,6 +216,7 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
       "translate(12, 12)",
     );
+    expect(root.getAttribute("viewBox")).toMatch(/^0 0 800 /);
   });
 
   it("has no footnote under the map; the search box says what to do", async () => {
@@ -343,8 +335,7 @@ describe("ConstituencyMap", () => {
 
   it("switches to £ per household with the published digits", async () => {
     const { container } = await renderMap();
-    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
         approximateFill("large_gain"),
