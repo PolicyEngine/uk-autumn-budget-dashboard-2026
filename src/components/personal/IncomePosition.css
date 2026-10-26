@@ -1,0 +1,52 @@
+/* Household impact: where you sit in the UK income distribution */
+
+.position-card.is-loading {
+  min-height: 360px;
+}
+
+.position-panels {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.position-panels.is-stacked {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.position-svg {
+  display: block;
+  overflow: visible;
+}
+
+.position-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.position-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--pe-gray-700);
+}
+
+.position-key svg + svg {
+  margin-left: 12px;
+}
+
+.position-notes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.position-notes li + li {
+  margin-top: 4px;
+}

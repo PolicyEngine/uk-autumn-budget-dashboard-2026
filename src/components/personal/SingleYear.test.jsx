@@ -103,15 +103,17 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
-    // income charts below the calculator and the published household
-    // scatter (the result among all households), only the household route
+    // income charts below the calculator, the published household scatter
+    // (the result among all households) and the UK files "Where you sit"
+    // reads, only the household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
         (url) =>
           !url.endsWith("/household_presets.json") &&
           !url.endsWith("/income_curve.csv") &&
-          !url.endsWith("/household_scatter_binned.csv"),
+          !url.endsWith("/household_scatter_binned.csv") &&
+          !url.endsWith("/income_distribution.csv"),
       );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);

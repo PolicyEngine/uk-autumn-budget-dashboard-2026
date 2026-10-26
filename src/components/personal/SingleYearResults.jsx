@@ -9,6 +9,7 @@ import { STAGE_TIMES } from "../../utils/householdTiming";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
+import IncomePositionChart from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 
@@ -475,7 +476,7 @@ function PendingSkeleton({ kind, startedAt }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, changed = false, startedAt = null }) {
+export function SingleYearDetails({ result, year, policies, household = null, selected = null, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Never an earlier result: nothing while the headline is calculated
   // again, or once the answers differ from the result's
@@ -492,6 +493,24 @@ export function SingleYearDetails({ result, year, policies, changed = false, sta
   // under their own year, until the new answer arrives
   return (
     <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
+      {household && (
+        <>
+          <SectionHeading
+            title="Your place in the income distribution"
+            subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
+          />
+          <section className="report-section" id="income-position">
+            <IncomePositionChart
+              net={data.net}
+              household={household}
+              year={data.year ?? year}
+              policies={selected ?? []}
+              yearLabel={yearLabel}
+            />
+          </section>
+        </>
+      )}
+
       {/* The breakdown and the split by policy side by side on a wide
           screen, stacked on a narrow one */}
       <div className="single-year-pair">

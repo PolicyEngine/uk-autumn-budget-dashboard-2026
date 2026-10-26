@@ -872,6 +872,8 @@ function HouseholdCalculator({
             result={householdResult}
             year={submitted.year}
             policies={policies}
+            household={buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household}
+            selected={submitted.policies}
             changed={changed}
             startedAt={submitted.at}
           />
