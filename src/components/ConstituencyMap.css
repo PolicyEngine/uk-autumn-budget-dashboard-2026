@@ -23,18 +23,29 @@
   text-decoration: underline;
 }
 
-/* One row: the view switch, the outcome toggle and the search box */
+/* One row: the view switch, the measure, the Options pill and the search
+   box; the search drops to its own line when the row is full */
 .map-top-bar {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 /* Search: fills the rest of the row */
 .map-search-section {
-  flex: 1;
-  min-width: 140px;
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+/* The view switch, the measure and the Options pill wrap on a narrow card */
+.map-top-bar .control-bar {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.map-top-bar .control-bar > * {
+  max-width: 100%;
 }
 
 .map-search-label {
@@ -130,27 +141,109 @@
   color: var(--pe-gray-500);
 }
 
-/* Map content container */
+/* The map and its key: the key beside the map on a wide card, under it on
+   a narrow one, never over it. The SVG keeps the whole of Great Britain
+   and Northern Ireland, Shetland included, in view at its full fit. */
 .map-content {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-content > .map-key {
+  order: 1;
+}
+
+@container constituency-body (min-width: 560px) {
+  .map-content {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .map-content > .map-key {
+    order: 0;
+    flex: 0 0 auto;
+    width: 260px;
+  }
 }
 
 .map-canvas {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-/* The SVG fills the width; past 600px tall it shows more on either side
-   of the map, and the legend and logo keep to its corners. */
+/* The SVG's viewBox is the box round every seat, so the map fills its
+   column at its own shape, whole. Its own legend is for the exported file
+   only: on screen the key sits beside or under the map. */
 .map-canvas svg {
   background: var(--c-surface);
   border-radius: 4px;
   width: 100%;
   height: auto;
-  max-height: 600px;
+  max-height: min(600px, 70vh);
   display: block;
+}
+
+.map-canvas svg g.map-legend {
+  display: none;
+}
+
+/* The key */
+.map-key {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-700);
+}
+
+.map-key-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.map-key-subtitle {
+  margin: 0 0 2px;
+  color: var(--pe-gray-500);
+}
+
+.map-key ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.map-key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.map-key-swatch {
+  flex: none;
+}
+
+/* Under the map on a narrow card: the two groups side by side */
+@container constituency-body (max-width: 559px) {
+  .map-key {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+
+  .map-key-group {
+    flex: 1 1 150px;
+  }
 }
 
 /* Map controls container */
@@ -349,6 +442,11 @@
     align-items: stretch;
     gap: 8px;
   }
+
+  /* Stacked, the search box keeps its own height */
+  .map-search-section {
+    flex: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -447,6 +545,7 @@
    switching views never moves the card or the scatter beside it. */
 .constituency-body {
   padding-top: 16px;
+  container: constituency-body / inline-size;
 }
 
 .constituency-body .map-search-section {
@@ -460,12 +559,38 @@
 @media (min-width: 1025px) {
   .constituency-body {
     height: 440px;
+    box-sizing: border-box;
     /* Never clip: a narrow card's longer names scroll within it */
     overflow-y: auto;
+  }
+
+  /* The map fits the body's height whole: the SVG takes the height left
+     and scales the drawing area into it, so nothing is cut off */
+  .constituency-body > .map-content:not([hidden]) {
+    height: 100%;
+  }
+
+  .constituency-body .map-canvas {
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .constituency-body .map-canvas svg {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .constituency-body > .rankings-panel {
+    height: 100%;
   }
 }
 
 /* On a phone the controls stack; the switch keeps its own width */
 .map-top-bar .obr-view-switch {
   align-self: flex-start;
+}
+
+/* The Table view, with the notice over it before results are published */
+.rankings-panel {
+  position: relative;
 }
