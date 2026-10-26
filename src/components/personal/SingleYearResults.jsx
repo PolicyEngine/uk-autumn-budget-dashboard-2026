@@ -398,7 +398,9 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const [view, setView] = useState("after");
   const [hidden, setHidden] = useState([]);
   const [hover, setHover] = useState(null);
-  const sync = { view, setView, hidden, setHidden, hover, setHover };
+  // The "+N with no effect for you" chip, open on both or neither
+  const [expanded, setExpanded] = useState(false);
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded };
   return (
     <div className="charts-grid single-year-chart-pair">
       <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />

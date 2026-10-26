@@ -19,12 +19,18 @@ describe("the two Across earnings cards", () => {
     const data = answer("higher-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
-    expect(chipLabels(net)).toEqual(chipLabels(rate));
-    expect(chipLabels(net)).toContain("Personal allowance taper");
+    // Each key: the components that apply, in the shared order
+    const order = (labels) => labels.filter((label) => !/with no effect/.test(label));
+    expect(order(chipLabels(net))).toContain("Income tax");
+    expect(order(chipLabels(rate))).toContain("Personal allowance taper");
     const netTax = within(net).getByRole("button", { name: "Income tax" });
     expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(netTax);
     expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
+    // Those with nothing here fold into one chip, opened on both cards at once
+    expect(within(net).queryByRole("button", { name: "Personal allowance taper" })).toBeNull();
+    fireEvent.click(within(net).getByRole("button", { name: /^\+\d+ with no effect for you$/ }));
+    expect(within(rate).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
     // The personal allowance taper is inside income tax on the net income card
     expect(within(net).getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-disabled", "true");
     // One view for both

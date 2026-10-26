@@ -528,6 +528,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
               setHiddenKeys([...hiddenKeys.filter((key) => !mine.includes(key)), ...mine.filter((key) => !next.includes(key))]);
             }}
             onHover={setFocus}
+            collapseDisabled
+            expanded={sync?.expanded}
+            onExpandedChange={sync?.setExpanded}
             narrow={narrow}
             extras={drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : []}
           />

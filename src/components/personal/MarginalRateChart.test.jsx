@@ -71,6 +71,7 @@ describe("MarginalRateChart", () => {
     expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
     // Every shared component has a chip, so the two cards' keys line up;
     // one with nothing for this household is disabled
+    fireEvent.click(screen.getByRole("button", { name: /with no effect for you$/ }));
     expect(screen.getByRole("button", { name: "Student loan" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "Earnings and other income" })).toHaveAttribute("aria-disabled", "true");
     // The parts are chips (shown, hidden or highlighted from the key)

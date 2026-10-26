@@ -124,3 +124,11 @@
 .series-toggle-chip.is-disabled:hover {
   border-color: var(--pe-gray-300);
 }
+
+/* "+N with no effect for you": opens the disabled chips in place */
+.series-toggle-chip.series-toggle-more {
+  padding: 0 11px;
+  border-style: dashed;
+  color: var(--pe-gray-600);
+  font-weight: 500;
+}
