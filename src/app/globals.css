@@ -857,7 +857,7 @@ body {
 
 @media (max-width: 640px) {
   .section-heading {
-    gap: 12px;
+    column-gap: 12px;
   }
 
   .section-icon {
