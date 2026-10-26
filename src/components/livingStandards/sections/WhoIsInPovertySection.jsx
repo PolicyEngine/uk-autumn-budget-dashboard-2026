@@ -13,6 +13,7 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../Floating
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import PillSelect from "../../PillSelect";
+import PovertyMeasurePills from "../PovertyMeasurePills";
 import YearRangeSelect from "../YearRangeSelect";
 import { useYearRange } from "../../../utils/livingStandards/yearRange";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
@@ -226,15 +227,7 @@ export default function WhoIsInPovertySection({ data }) {
             onChange={setBreakdown}
             options={ids.map((id) => ({ value: id, label: breakdowns[id].label, badge: breakdowns[id].badge }))}
           />
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Poverty measure"
-            value={measure}
-            onChange={setMeasure}
-            // Only the measures this breakdown has: none shown greyed out
-            options={b.measures.map((id) => ({ value: id, label: MEASURES[id].label, badge: MEASURES[id].badge }))}
-          />
+          <PovertyMeasurePills measure={measure} available={b.measures} onChange={setMeasure} />
         </>
       }
     >

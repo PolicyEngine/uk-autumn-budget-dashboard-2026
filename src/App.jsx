@@ -20,6 +20,7 @@ import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import ViewLink from "./components/ViewLink";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -78,20 +79,9 @@ export function opensYoungPeople({ search, hash }) {
   );
 }
 
-/**
- * Whether a page address is an old link to the example households' income
- * charts (#household on Population impact), now on Household impact.
- */
-export function opensIncomeCurves({ search, hash }) {
-  if (hash !== "#household") return false;
-  const tab = new URLSearchParams(search).get("tab");
-  return !tab || tab === DEFAULT_VIEW;
-}
-
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
-  if (opensIncomeCurves({ search, hash })) return "household";
   const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
@@ -193,9 +183,6 @@ function App() {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
     if (opensYoungPeople(window.location)) dropSubTab("young");
-    // An old link to the income charts (?sub=all#household) opens Household
-    // impact, which has no sub-tabs
-    else if (opensIncomeCurves(window.location)) dropSubTab();
     setActiveTab(viewFromLocation(window.location));
 
     if (policiesParam) {
@@ -569,8 +556,17 @@ function App() {
       return (
         <div className="results-container">
           <SectionHeading
-            title="Households by income"
-            subtitle="How net income changes across the income distribution in the selected year."
+            title="How the measures change incomes"
+            subtitle={
+              <>
+                How the selected measures change net income across the income distribution in the selected year.
+                Incomes before any measure are on{" "}
+                <ViewLink tab="outlook" hash="living-incomes" onShowTab={handleTabChange}>
+                  Pre-measures forecast, Incomes under current law
+                </ViewLink>
+                .
+              </>
+            }
           />
           <section id="deciles" className="report-section distributional-section">
             <div className="charts-grid">
@@ -615,7 +611,18 @@ function App() {
     if (sub === "poverty") {
       return (
         <div className="results-container">
-          <SectionHeading title="Poverty" />
+          <SectionHeading
+            title="How the measures change poverty"
+            subtitle={
+              <>
+                Poverty rates before any measure are on{" "}
+                <ViewLink tab="outlook" hash="living-poverty" onShowTab={handleTabChange}>
+                  Pre-measures forecast, Poverty under current law
+                </ViewLink>
+                .
+              </>
+            }
+          />
           <section id="poverty" className="report-section hero-chart">
             <SummaryMetricChart
               metric={SUMMARY_METRICS.poverty}
@@ -654,8 +661,7 @@ function App() {
             full width. The scatter shows binned groups of households only:
             the per-household scatter stays withdrawn, as it showed survey
             households one by one. Results by region are hidden for now
-            (RegionView is kept, not rendered). The example households'
-            income charts are on Household impact. */}
+            (RegionView is kept, not rendered). */}
         <SectionHeading
           title="Where and who"
           subtitle="Average change by constituency, and how changes vary between households."
@@ -764,7 +770,7 @@ function App() {
           hidden={value !== activeTab}
         >
         {value === "outlook" ? (
-          <LivingStandardsTab active={activeTab === value} />
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
         ) : value === "policies" ? (
           // Every measure's card, whatever the band's selection
           <div className="results-container">

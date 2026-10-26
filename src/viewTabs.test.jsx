@@ -111,9 +111,6 @@ describe("the view tabs", () => {
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
       ["/?tab=nonsense", "Population impact"],
-      // An old link to All households' example households: their income
-      // charts are now on Household impact
-      ["/?sub=all#household", "Household impact"],
     ]) {
       window.history.replaceState({}, "", url);
       const { unmount } = render(<App />);
@@ -125,12 +122,6 @@ describe("the view tabs", () => {
     expect(viewFromLocation({ search: "?tab=young", hash: "" })).toBe("dashboard");
     expect(opensYoungPeople({ search: "?tab=young", hash: "" })).toBe(true);
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
-    expect(viewFromLocation({ search: "?sub=all", hash: "#household" })).toBe("household");
-    expect(viewFromLocation({ search: "?tab=dashboard&sub=all", hash: "#household" })).toBe("household");
-    // Exact match only: the calculator's own #household-breakdown stays put
-    expect(viewFromLocation({ search: "?tab=household", hash: "#household-breakdown" })).toBe("household");
-    expect(viewFromLocation({ search: "?tab=policies", hash: "#household" })).toBe("policies");
-    expect(viewFromLocation({ search: "", hash: "#household-breakdown" })).toBe("dashboard");
   });
 
   it("describe every measure on Policies, whatever the selection, and link there from Population impact", async () => {

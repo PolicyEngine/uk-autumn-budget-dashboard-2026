@@ -41,7 +41,7 @@ describe("the Pre-measures forecast view", () => {
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: "Pre-measures forecast" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
     // Baseline outlook is the sub-tab it opens on
     expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Forecast changes" })).toBeNull();
@@ -62,7 +62,7 @@ describe("the Pre-measures forecast view", () => {
 
     const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
     expect(panel()).toHaveAccessibleName("Baseline outlook");
-    for (const name of ["Incomes", "Poverty"]) {
+    for (const name of ["Incomes under current law", "Poverty under current law"]) {
       expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
     }
     // Each section is one row of two cards that line up: Incomes over time
@@ -101,7 +101,7 @@ describe("the Pre-measures forecast view", () => {
     // The OBR's household income per person card is gone
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
     expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
-    expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
+    expect(within(panel()).queryByRole("heading", { name: "Incomes under current law" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
     expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
@@ -134,16 +134,19 @@ describe("the Pre-measures forecast view", () => {
       fireEvent.click(within(card).getByRole("option", { name: option }));
     };
 
-    // Poverty over time: Rate (with its Measure, Group and Period pills) or Depth
+    // Poverty over time: Rate (with its Poverty line, Housing costs, People
+    // and Period pills, worded as on Population impact) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toBeInTheDocument();
+    expect(within(poverty).getByRole("button", { name: /^People:/ })).toBeInTheDocument();
     // The view is a "Show" pill (Rate or Depth), short labels in the pills
     expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
-    expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
-    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
+    // The same default as Population impact: absolute, before housing costs, all people
+    expect(within(poverty).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Absolute");
+    expect(within(poverty).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("Before");
+    expect(within(poverty).getByRole("button", { name: /^People:/ })).toHaveTextContent("All people");
     choose(poverty, "Poverty view", "Depth");
     poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
-    expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
+    expect(within(poverty).queryByRole("button", { name: /^People:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the
@@ -170,7 +173,9 @@ describe("the Pre-measures forecast view", () => {
       expect(who.querySelector(".ls-bars")).not.toBeNull();
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
-    choose(who, "Poverty measure", "Absolute poverty (AHC)");
+    // Children's breakdowns are after housing costs only: Before is listed, disabled
+    expect(within(who).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
+    choose(who, "Poverty line", "Absolute");
     expect(within(who).getByText(/absolute child poverty rate/)).toBeInTheDocument();
 
     // Incomes over time and Growth across the distribution
