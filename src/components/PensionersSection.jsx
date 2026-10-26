@@ -815,7 +815,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
-              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide },
+              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
               { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
               { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}

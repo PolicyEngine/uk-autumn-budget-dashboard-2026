@@ -124,9 +124,6 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
     // The years compared are the section's (CurrentLawSection); every
     // choice sits under the card's Options (ControlBar)
     controls: {
-      // The pill's face shows only the measure; every choice is in its
-      // title and the dialog
-      face: ["Poverty line", "Housing costs"],
       options: [
         yearsOption(rangeYears(data), range, setRange),
         ...povertyMeasureOptions(measure, measureIds, setMeasure),

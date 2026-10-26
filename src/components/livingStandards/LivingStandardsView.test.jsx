@@ -193,7 +193,7 @@ describe("the OBR forecast view", () => {
     expect(overTime.closest(".charts-grid")).not.toBe(who.closest(".charts-grid"));
     expect(overTime.closest(".charts-grid").children).toHaveLength(1);
     for (const c of [overTime, who]) {
-      expect(c.querySelector(".control-bar-summary")).toHaveTextContent(/^Absolute · Before housing costs$/);
+      expect(c.querySelector(".control-bar-summary")).toHaveTextContent(/Absolute · Before housing costs/);
     }
     expect(poverty.querySelectorAll(".poverty-tiles .forecast-tile")).toHaveLength(3);
     // The two current-law cards only: Which measures move poverty is on
