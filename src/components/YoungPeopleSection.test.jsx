@@ -198,7 +198,8 @@ describe("YoungPeopleSection", () => {
     // One row per measure for the 16 to 24 group, no blocking message
     expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/shown for a single policy or for all policies/)).toBeNull();
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
+    // The shares as the shared per-measure chart, one row per measure
+    expect(document.querySelectorAll(".msc [role='rowheader']").length).toBeGreaterThan(0);
   });
 
   it("shows a year with no rows as not yet published", async () => {

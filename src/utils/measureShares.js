@@ -7,6 +7,7 @@
 
 import { wholeSelectionRun } from "./ageImpact";
 import { shortNameOf } from "./policyDetails";
+import { formatShare } from "./shareFormat";
 
 /**
  * The per-measure view, or null when the selection has its own run.
@@ -30,35 +31,52 @@ export function sharesByMeasure(sharesFn, rows, policies, selected, year, combin
     if (shares && !groups.length) groups = shares.groups.map(({ key, label }) => ({ key, label }));
     const group = shares?.groups.find((candidate) => candidate.key === groupKey);
     const name = shortNameOf(policy);
-    if (group && group.row && !group.suppressed) out.push({ id: policy.id, name, row: group.row });
+    const fullName = policy.label ?? policy.name ?? name;
+    if (group && group.row && !group.suppressed) out.push({ id: policy.id, name, fullName, row: group.row });
     else missing.push(name);
   }
   return { groups, rows: out, missing };
 }
 
+// The per-measure view's filters, in an Options pill: measures with no
+// effect hidden, largest effect first, and gains, losses or both
+export const SHARE_FILTER_OPTIONS = {
+  hide: [
+    { value: "hide", label: "Hide" },
+    { value: "show", label: "Show" },
+  ],
+  order: [
+    { value: "size", label: "Largest first" },
+    { value: "catalogue", label: "Catalogue" },
+  ],
+  direction: [
+    { value: "both", label: "Both" },
+    { value: "gains", label: "Gains" },
+    { value: "losses", label: "Losses" },
+  ],
+};
+
+const reads = (value) => formatShare(value ?? 0) !== formatShare(0);
+
 /**
- * Every group of each selected measure's own shares, one row group per
- * measure (e.g. pensioners, under State Pension age, all ages), or null
- * when the selection has its own run. Rows: {id, name, groupKey,
- * groupLabel, first, row}; `first` marks a measure's first group.
+ * The per-measure rows to draw ({row} holds pct_better_off and
+ * pct_worse_off): with no effect (both read as zero) left out when `hide`
+ * is "hide", only gains or losses when asked, largest effect (better plus
+ * worse off) first unless `order` is "catalogue". Returns { rows, hidden },
+ * hidden counting the measures left out for having no effect.
  */
-export function sharesByMeasureAllGroups(sharesFn, rows, policies, selected, year, combinedId) {
-  if (selected.length < 2) return null;
-  if (wholeSelectionRun(policies, selected, combinedId)) return null;
-  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
-  const out = [];
-  const missing = [];
-  for (const policy of chosen) {
-    const shares = sharesFn(rows, policies, [policy.id], year);
-    const name = shortNameOf(policy);
-    const usable = (shares?.groups ?? []).filter((group) => group.row && !group.suppressed);
-    if (!usable.length) {
-      missing.push(name);
-      continue;
-    }
-    usable.forEach((group, i) =>
-      out.push({ id: policy.id, name, groupKey: group.key, groupLabel: group.label, first: i === 0, row: group.row }),
-    );
+export function filterShareRows(rows, { hide = "hide", order = "size", direction = "both" } = {}) {
+  let out = rows;
+  let hidden = 0;
+  if (hide === "hide") {
+    out = out.filter((r) => reads(r.row.pct_better_off) || reads(r.row.pct_worse_off));
+    hidden = rows.length - out.length;
   }
-  return { rows: out, missing };
+  if (direction === "gains") out = out.filter((r) => reads(r.row.pct_better_off));
+  if (direction === "losses") out = out.filter((r) => reads(r.row.pct_worse_off));
+  if (order === "size") {
+    const size = (r) => (r.row.pct_better_off ?? 0) + (r.row.pct_worse_off ?? 0);
+    out = [...out].sort((a, b) => size(b) - size(a));
+  }
+  return { rows: out, hidden };
 }
