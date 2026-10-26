@@ -122,7 +122,7 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lower the poverty rate by 0\.008 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lower the poverty rate by less than 0\.1 percentage points \(about [\d,]+ fewer people\)\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.textContent);

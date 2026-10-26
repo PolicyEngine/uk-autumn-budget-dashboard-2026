@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -82,14 +83,48 @@ const MARGIN = { top: 28, right: 30, left: 0, bottom: 0 };
  * is at least `height` tall and fills its row, so beside a taller plot
  * (a dot plot with many rows) its x axis still sits on the same line.
  */
-function ChartRows({ plotRef, children, legendItems, height, legendNote = null }) {
+/**
+ * A light-to-dark key for many ordered groups ("Lowest income → Highest
+ * income"), in place of a swatch per group.
+ */
+function RampLegend({ ramp }) {
+  return (
+    <div className="ls-ramp-legend">
+      <span>{ramp.from}</span>
+      <span
+        className="ls-ramp-bar"
+        aria-hidden="true"
+        style={{ background: `linear-gradient(to right, ${ramp.colours.join(", ")})` }}
+      />
+      <span>{ramp.to}</span>
+    </div>
+  );
+}
+
+/** One bar's tooltip: "2031-32 · 15th of 20 (70th–75th percentile)" and its value. */
+function BarTooltip({ active, payload, describe }) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const { label, value, colour } = describe(String(entry.dataKey), entry.payload);
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
+      <div className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: colour ?? entry.color }} />
+        <span className="chart-tooltip-value">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function ChartRows({ plotRef, children, legendItems, height, legendNote = null, ramp = null }) {
   return (
     <>
       <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
         <div className="ls-plot-canvas">{children}</div>
       </div>
       <div className="chart-legend">
-        <GroupedLegend items={legendItems} />
+        {ramp ? <RampLegend ramp={ramp} /> : <GroupedLegend items={legendItems} />}
         {/* A line on what the chart leaves out, under the key */}
         {legendNote && <p className="ls-legend-note">{legendNote}</p>}
       </div>
@@ -225,15 +260,21 @@ export function LsBarChart({
   maxBarSize = 56,
   tooltipLabelFormat = null,
   legendNote = null,
+  // { colours, from, to }: a light-to-dark key in place of the swatches
+  ramp = null,
+  // (seriesKey, row) => { label, value, colour? }: a tooltip for the one
+  // bar hovered (its series dimmed others), in place of the year's list
+  describeBar = null,
 }) {
   const narrow = useNarrowViewport();
+  const [hovered, setHovered] = useState(null);
   const [ref, width] = useElementWidth();
   const yWidth = tickWidth(yTicks, yFormat);
   const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
 
   return (
-    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote}>
+    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)} legendNote={legendNote} ramp={ramp}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />
@@ -257,17 +298,31 @@ export function LsBarChart({
             allowDecimals
           />
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-          <Tooltip
-            {...TOOLTIP_PROPS}
-            cursor={HOVER_CURSOR}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={tooltipLabelFormat ?? xFormat} grouped={false} showPlus={showPlus} />}
-          />
+          {describeBar ? (
+            // Beside the bar, never over the year's other bars
+            <Tooltip
+              {...TOOLTIP_PROPS}
+              shared={false}
+              cursor={false}
+              offset={16}
+              content={<BarTooltip describe={describeBar} />}
+            />
+          ) : (
+            <Tooltip
+              {...TOOLTIP_PROPS}
+              cursor={HOVER_CURSOR}
+              content={<ChartTooltip format={tooltipFormat} labelFormat={tooltipLabelFormat ?? xFormat} grouped={false} showPlus={showPlus} />}
+            />
+          )}
           {series.map((s) => (
             <Bar
               key={s.key}
               dataKey={s.key}
               name={s.name}
               fill={s.colour}
+              fillOpacity={describeBar && hovered && hovered !== s.key ? 0.3 : 1}
+              onMouseEnter={describeBar ? () => setHovered(s.key) : undefined}
+              onMouseLeave={describeBar ? () => setHovered(null) : undefined}
               stackId={stacked ? "stack" : undefined}
               shape={barShape(stacked ? series.map((item) => item.key) : [s.key])}
               maxBarSize={maxBarSize}

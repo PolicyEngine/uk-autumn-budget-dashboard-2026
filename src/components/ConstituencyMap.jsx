@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
 import PillSelect from "./PillSelect";
+import { shortNameOf } from "../utils/policyDetails";
 import ConstituencyRankings, { TABLE_SIZE } from "./ConstituencyRankings";
 import {
   APPROXIMATE_MARK,
@@ -351,6 +352,8 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
+  // A selection with no single reform: the measure shown (Measure picker)
+  const [focusId, setFocusId] = useState(null);
   const [panel, setPanel] = usePanelParam();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -375,7 +378,8 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, focusId });
+  const focusName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
@@ -757,6 +761,7 @@ export default function ConstituencyMap({
               <TitleIcon name="map" />
               <span className="title-text">
                 {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
+                {choice.focus && <span className="map-title-focus">: {focusName(choice.reform)}</span>}
               </span>
             </h3>
             <p className="chart-description">
@@ -794,6 +799,17 @@ export default function ConstituencyMap({
           then the logo. */}
       <div className="chart-controls">
         <div className="map-top-bar">
+          {/* Several measures, no single published reform: one at a time */}
+          {choice.focus && (
+            <PillSelect
+              variant="light"
+              name="Measure shown"
+              prefix="Measure"
+              value={choice.reform}
+              onChange={setFocusId}
+              options={choice.focus.options.map((id) => ({ value: id, label: focusName(id) }))}
+            />
+          )}
           <PillSelect
             variant="light"
             name="Show constituencies as"

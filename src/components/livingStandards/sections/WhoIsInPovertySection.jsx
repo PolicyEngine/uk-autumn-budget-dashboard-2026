@@ -15,13 +15,11 @@ import { CHART_LOGO } from "../../../utils/chartLogo";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
 import { yearsOption } from "../controlOptions";
-import { useYearRange } from "../../../utils/livingStandards/yearRange";
+import { defaultRange, useYearRange } from "../../../utils/livingStandards/yearRange";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
   fyDash,
-  headlineStartYear,
-  headlineYear,
   periodLabel,
   round1,
   signedChange,
@@ -129,10 +127,7 @@ export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;
   const years = pbg?.years ?? [];
   // The two years compared: chosen by the reader, 2027-28 to 2031-32 at first
-  const [[from, to], setRange] = useYearRange(years, [
-    headlineStartYear(data) || years[0],
-    headlineYear(data) || years[years.length - 1],
-  ]);
+  const [[from, to], setRange] = useYearRange(years, defaultRange(years));
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);

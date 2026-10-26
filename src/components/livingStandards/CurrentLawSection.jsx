@@ -9,7 +9,6 @@
 // address (?ls_from, ?ls_to, ?ls_growth, …).
 
 import SectionHeading from "../SectionHeading";
-import SourceLink from "../SourceLink";
 import TwinLink from "../TwinLink";
 import { GrowthCard, IncomesOverTimeCard, InequalityOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
@@ -25,18 +24,16 @@ const SECTIONS = {
   living: {
     title: "Living standards under current law",
     icon: "wallet",
-    subtitle: (
-      <>
-        Without the measures (current law): incomes and inequality before any Budget measure, on
-        the <SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink> forecast.
-      </>
-    ),
-    rows: [[IncomesOverTimeCard, GrowthCard], [InequalityOverTimeCard]],
+    // The forecast it is built on is named in the page intro
+    subtitle: "Current law, before any Budget measure.",
+    // One card a row, so the twentieths chart has room for every year;
+    // growth first
+    rows: [[GrowthCard], [IncomesOverTimeCard], [InequalityOverTimeCard]],
   },
   poverty: {
     title: "Poverty under current law",
     icon: "lifebuoy",
-    subtitle: "Without the measures (current law): poverty before any Budget measure.",
+    subtitle: "Current law, before any Budget measure.",
     rows: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
 };
