@@ -6,8 +6,8 @@ const MIN_FONT_SIZE = 10;
 
 // A title above the plot: its baseline sits this far above the plot's top,
 // so it clears the top tick label (centred on the plot's top edge, about
-// 7px above it) by at least 14px
-const ABOVE_PLOT = 22;
+// 7px above it) by at least 14px, descenders included
+const ABOVE_PLOT = 25;
 
 /**
  * The top margin a chart with a title above its plot keeps: the title's
