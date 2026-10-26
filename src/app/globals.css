@@ -378,8 +378,18 @@ body {
   grid-area: policy;
 }
 
-/* A band control that does not apply to the current view keeps its place
-   (so the others do not move) but is not shown */
+/* A band control that does not apply to the current view stays in its
+   place, faded, and does not open; a Tip says why (App.jsx) */
+.title-row .band-control.is-inactive {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.title-row .band-control.is-inactive:hover {
+  background: var(--band-ink-hover);
+  border-color: var(--band-ink-border);
+}
+
 .title-row .is-hidden {
   visibility: hidden;
 }
