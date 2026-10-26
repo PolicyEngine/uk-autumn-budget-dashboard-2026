@@ -723,18 +723,28 @@ body {
 }
 
 /* Section headings (SectionHeading.jsx): an icon in a tinted circle, the
-   title and a "#" link,
-   the subtitle below, and one even hairline under it all. The circle is larger than a card's
-   square chip, so a section reads above its cards. */
+   title and a "#" link, the subtitle below. The circle is larger than a
+   card's square chip, so a section reads above its cards. */
 .section-heading {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  /* Icon and title share the first row, centred on each other; the
+     subtitle sits in the second row, under the title, not the icon. No
+     rule under it: spacing alone sets it off. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
   margin: 0 0 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--c-grid);
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+/* Without an icon the title and subtitle take the whole width */
+.section-heading:not(.has-icon):not(.method-section-heading) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.section-heading > .section-icon {
+  grid-row: 1;
 }
 
 /* Between sections: 48px (chart sections). None above the first. */
@@ -755,22 +765,28 @@ body {
   color: var(--pe-teal-700);
 }
 
+/* Its title row and subtitle are the grid's own cells */
 .section-heading-text {
-  min-width: 0;
-  flex: 1;
+  display: contents;
 }
 
-.section-heading.has-icon .section-heading-text {
-  padding-top: 7px;
+.section-heading > .section-heading-text > p {
+  grid-column: -2;
+  grid-row: 2;
 }
 
 .section-heading-title {
+  grid-row: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   column-gap: 10px;
   row-gap: 4px;
-  margin-bottom: 4px;
+}
+
+.section-heading > .section-heading-text > p {
+  margin-top: 4px;
 }
 
 .section-heading h2 {
@@ -847,9 +863,6 @@ body {
     height: 18px;
   }
 
-  .section-heading.has-icon .section-heading-text {
-    padding-top: 4px;
-  }
 }
 
 /* A source named in a section's intro reads as a link, as does the line
