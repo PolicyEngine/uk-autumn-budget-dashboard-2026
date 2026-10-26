@@ -1345,3 +1345,24 @@ def test_skips_give_the_same_answer_as_running_every_measure(year):
         fast = calculate(answers, measures, year, ("by_policy",))
         assert fast == full
     household_impact.clear_runs()
+
+
+def test_programme_notes_name_what_the_model_does():
+    """The Warm Home Discount row names every benefit the measure pays on
+    (as HOUSEHOLD_NOTES does), and the Council Tax Reduction row the
+    schemes policyengine-uk simulates, pensioners' included."""
+    from uk_budget_data.household_impact import HOUSEHOLD_NOTES, PROGRAMMES
+    from uk_budget_data.reforms import WARM_HOME_DISCOUNT_ID
+
+    notes = {row.id: row.note for row in PROGRAMMES}
+    for benefit in (
+        "Universal Credit",
+        "Pension Credit",
+        "Housing Benefit",
+        "income-related ESA",
+    ):
+        assert benefit in notes["warm_home_discount_top_up"]
+        assert benefit in HOUSEHOLD_NOTES[WARM_HOME_DISCOUNT_ID]["text"]
+    ctr = notes["council_tax_reduction"]
+    assert "pension-age" in ctr
+    assert "Scottish and Welsh" in ctr
