@@ -10,7 +10,7 @@ const OUTLOOK = readFileSync(
 );
 
 beforeEach(() => {
-  // The outlook JSON for the Living standards view; an empty CSV for the rest
+  // The outlook JSON for the Pre-measures forecast view; an empty CSV for the rest
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) =>
@@ -28,7 +28,7 @@ afterEach(() => {
 
 const band = (container) => container.querySelector(".title-row");
 
-describe("the Living standards view", () => {
+describe("the Pre-measures forecast view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
     await screen.findByRole("tablist", { name: "Views" });
@@ -37,25 +37,25 @@ describe("the Living standards view", () => {
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
-    expect(tabs[2]).toHaveTextContent("Living standards");
+    expect(tabs[2]).toHaveTextContent("Pre-measures forecast");
     fireEvent.click(tabs[2]);
 
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel", { name: "Living standards" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: "Pre-measures forecast" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
     // Baseline outlook is the sub-tab it opens on
     expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Forecast changes" })).toBeNull();
     // Its engine and data are said in Methodology, not on this view
     expect(screen.queryByText(/policyengine 6\.8\.0/)).toBeNull();
     expect(screen.queryByText("Demo")).toBeNull();
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro shared", async () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
-    const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
+    const subTabs = await screen.findByRole("tablist", { name: "Pre-measures forecast sections" });
     const [baseline, forecast] = within(subTabs).getAllByRole("tab");
     expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
     // No tab-level intro: the sections start straight under the sub-tabs
@@ -63,7 +63,7 @@ describe("the Living standards view", () => {
 
     const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
     expect(panel()).toHaveAccessibleName("Baseline outlook");
-    for (const name of ["Incomes", "Poverty"]) {
+    for (const name of ["Incomes under current law", "Poverty under current law"]) {
       expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
     }
     // Each section is one row of two cards that line up: Incomes over time
@@ -102,13 +102,13 @@ describe("the Living standards view", () => {
     // The OBR's household income per person card is gone
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
     expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
-    expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
+    expect(within(panel()).queryByRole("heading", { name: "Incomes under current law" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
     expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
 
     fireEvent.click(baseline);
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("compares the years chosen in the range pill on Incomes and Poverty over time", async () => {
@@ -127,7 +127,7 @@ describe("the Living standards view", () => {
   });
 
   it("switches each card's view with its switch, and never shows a signed zero", async () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     render(<App />);
     const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
     const choose = (card, pill, option) => {
@@ -135,16 +135,19 @@ describe("the Living standards view", () => {
       fireEvent.click(within(card).getByRole("option", { name: option }));
     };
 
-    // Poverty over time: Rate (with its Measure, Group and Period pills) or Depth
+    // Poverty over time: Rate (with its Poverty line, Housing costs, People
+    // and Period pills, worded as on Population impact) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toBeInTheDocument();
+    expect(within(poverty).getByRole("button", { name: /^People:/ })).toBeInTheDocument();
     // The view is a "Show" pill (Rate or Depth), short labels in the pills
     expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
-    expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
-    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
+    // The same default as Population impact: absolute, before housing costs, all people
+    expect(within(poverty).getByRole("button", { name: /^Poverty line:/ })).toHaveTextContent("Absolute");
+    expect(within(poverty).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("Before");
+    expect(within(poverty).getByRole("button", { name: /^People:/ })).toHaveTextContent("All people");
     choose(poverty, "Poverty view", "Depth");
     poverty = (await heading(/^Poverty over time$/)).closest(".ls-card");
-    expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
+    expect(within(poverty).queryByRole("button", { name: /^People:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
     // Who is in poverty: a bar per group for the end year with a tick at the
@@ -171,7 +174,9 @@ describe("the Living standards view", () => {
       expect(who.querySelector(".ls-bars")).not.toBeNull();
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
-    choose(who, "Poverty measure", "Absolute poverty (AHC)");
+    // Children's breakdowns are after housing costs only: Before is listed, disabled
+    expect(within(who).getByRole("button", { name: /^Housing costs:/ })).toHaveTextContent("After");
+    choose(who, "Poverty line", "Absolute");
     expect(within(who).getByText(/absolute child poverty rate/)).toBeInTheDocument();
 
     // Incomes over time and Growth across the distribution
@@ -183,6 +188,32 @@ describe("the Living standards view", () => {
     expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
     expect(within(growth).queryByRole("button", { name: /^Distribution view/ })).not.toBeInTheDocument();
     expect(within(growth).queryByText(/tenth/)).not.toBeInTheDocument();
+    // Year by year, deciles, after housing costs, non-pensioners: each
+    // choice in the address, the sentence following
+    choose(growth, "Growth view", "Year by year");
+    choose(growth, "Income groups", "Deciles");
+    choose(growth, "Housing costs", "After housing costs");
+    choose(growth, "Population", "Non-pensioners");
+    const chosen = new URLSearchParams(window.location.search);
+    expect([chosen.get("ls_growth"), chosen.get("ls_groups"), chosen.get("ls_housing"), chosen.get("ls_pop")]).toEqual([
+      "annual",
+      "decile",
+      "ahc",
+      "non_pensioners",
+    ]);
+    expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32, real median income \(AHC\) among non-pensioners/)).toBeInTheDocument();
+    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
+    // Vigintiles clear the household floor, so they are offered
+    choose(growth, "Income groups", "Vigintiles");
+    expect(within(growth).getByText(/lowest-income twentieth/)).toBeInTheDocument();
+    // Back to the defaults: nothing left in the address
+    choose(growth, "Growth view", "Whole period");
+    choose(growth, "Income groups", "Quintiles");
+    choose(growth, "Housing costs", "Before housing costs");
+    choose(growth, "Population", "All people");
+    for (const param of ["ls_growth", "ls_groups", "ls_housing", "ls_pop"]) {
+      expect(new URLSearchParams(window.location.search).has(param)).toBe(false);
+    }
 
     // The two years compared: chosen in one card, kept in the address and
     // followed by every card comparing two years
@@ -199,9 +230,11 @@ describe("the Living standards view", () => {
   });
 
   it("opens the sub-tab a link names, and drops it on another view", async () => {
+    // An old link (?tab=living): the view at its new address, its sub-tab kept
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("tab")).toBe("outlook");
     expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
 
@@ -210,9 +243,9 @@ describe("the Living standards view", () => {
     expect(params.get("tab")).toBe("methodology");
     expect(params.has("sub")).toBe(false);
 
-    // Back on Living standards (kept mounted), the sub-tab left open stays,
+    // Back on Pre-measures forecast (kept mounted), the sub-tab left open stays,
     // with its ?sub= again
-    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Pre-measures forecast" }));
     expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
   });
@@ -221,13 +254,13 @@ describe("the Living standards view", () => {
     window.history.replaceState({}, "", "/?tab=living&sub=nonsense");
     render(<App />);
     expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
-    expect(window.location.search).toBe("?tab=living");
+    expect(window.location.search).toBe("?tab=outlook");
   });
 
   it("states its engine, data, status, notes and gaps once, in Methodology", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     render(<App />);
-    const section = await screen.findByRole("region", { name: "Living standards" });
+    const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
@@ -244,7 +277,7 @@ describe("the Living standards view", () => {
   });
 
   it("hides the year and policy pills but keeps the band's layout", async () => {
-    window.history.replaceState({}, "", "/?tab=living");
+    window.history.replaceState({}, "", "/?tab=outlook");
     const { container } = render(<App />);
     await screen.findByRole("tablist", { name: "Views" });
     for (const selector of [".band-year", ".band-policy"]) {
@@ -254,7 +287,7 @@ describe("the Living standards view", () => {
       expect(pill).toHaveAttribute("aria-hidden", "true");
       expect(pill).toHaveAttribute("inert");
     }
-    expect(screen.getByRole("tab", { name: "Living standards" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DISPLAY_YEARS } from "../utils/displayYears";
 import {
   Bar,
   BarChart,
@@ -42,7 +41,7 @@ import {
   axisWidth,
   fiscalYearTick,
   CHART_COLOURS,
-  zeroBasedAxis,
+  divergingAxis,
   HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
@@ -57,6 +56,14 @@ import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import ZeroMeasuresNote from "./ZeroMeasuresNote";
+import CollapsibleNote from "./CollapsibleNote";
+import {
+  legendMembership,
+  legendItems as membershipItems,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
@@ -142,9 +149,10 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
 /**
  * The age table from each verified artifact (#20's receipt route), typed by
  * the publication contract. A measure whose artifact carries no age table
- * has no rows, so its figures by age are unavailable.
+ * has no rows, so its figures by age are unavailable. Exported for
+ * PensionersSection.
  */
-function useAgeImpactRows(catalogue) {
+export function useAgeImpactRows(catalogue) {
   const [state, setState] = useState({ catalogue, status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
@@ -227,7 +235,8 @@ function useBandDomain(rows, policies, selectedPolicies) {
         lo = Math.min(lo, down);
       }
     }
-    return zeroBasedAxis([lo, hi]);
+    // Symmetric about zero when ages gain and lose (divergingAxis)
+    return divergingAxis([lo, hi]);
   }, [rows, policies, selectedPolicies]);
 }
 
@@ -304,11 +313,12 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
 }
 
 function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const catalogue = useMeasureCatalogue();
   const {
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
     bySeriesKey,
-  } = useMeasureCatalogue();
+  } = catalogue;
   const chartRef = useRef(null);
   const [view, setView] = useState("band");
   const single = view === "single";
@@ -341,19 +351,18 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   });
   const { domain, ticks } = single ? singleAxis : bandAxis;
 
-  // Measures with an effect in any shown year, so the legend (and the
-  // plot's height) holds still when the year changes or Play runs
-  const activeNames = useMemo(
-    () =>
-      ALL_POLICY_NAMES.filter((name) =>
-        DISPLAY_YEARS.some((year) =>
-          meanChangeByBand(rows, policies, selectedPolicies, year).some(
-            (point) => Math.abs(point[name] ?? 0) > 0.01,
-          ),
-        ),
-      ),
-    [rows, policies, selectedPolicies, ALL_POLICY_NAMES],
-  );
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect at any age this year is greyed out, and the note under the
+  // chart says why (legendMembership)
+  const members = useMemo(() => {
+    const points = meanChangeByBand(rows, policies, selectedPolicies, selectedYear);
+    const keyOf = (id) => catalogue.byId.get(id)?.seriesKey;
+    return legendMembership(catalogue, selectedPolicies, (id) =>
+      points.some((point) => Math.abs(point[keyOf(id)] ?? 0) > 0),
+    );
+  }, [rows, policies, selectedPolicies, selectedYear, catalogue]);
+  const activeNames = drawnNames(members);
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
@@ -370,12 +379,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     logo: CHART_LOGO,
     reservedLegendHeight: 0,
     legendItems: [
-          ...activeNames.map((name) => ({
-            color: POLICY_COLORS[name],
-            label: bySeriesKey.get(name)?.label ?? name,
-            type: "rect",
-            group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
-          })),
+          ...exportLegendItems(members, catalogue),
           ...(activeNames.length > 1
             ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
@@ -582,18 +586,21 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       </div>
       <div className="chart-legend">
         {published &&
-          <GroupedLegend names={activeNames} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
+          <GroupedLegend items={membershipItems(members, catalogue)} netLabel={activeNames.length > 1 ? "Net change" : undefined} />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
+      {published && <ZeroMeasuresNote members={members} year={selectedYear} />}
       {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
       {published && single && (
-        <p className="chart-footnote">
-          Single years of age rest on fewer households; a few large changes, such as capital gains under
-          Business Asset Disposal Relief, can move one age&apos;s average.
-        </p>
+        <CollapsibleNote lead="Single years of age rest on fewer households.">
+          <p>
+            A few large changes, such as capital gains under Business Asset Disposal Relief, can move one
+            age&apos;s average.
+          </p>
+        </CollapsibleNote>
       )}
     </div>
   );

@@ -5,8 +5,10 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/mea
 import { fixtureJson } from "../../test/publicationFixture";
 import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -39,6 +41,7 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   // Figures at once, not counted up: the count-up is presentation only
@@ -85,7 +88,13 @@ function renderTab(props = {}) {
 // Nothing is asked until Calculate: every answer has a default, so one
 // press gives the results
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
+/** Open the form below the cards ("Your household"), unless it is open. */
+function openForm() {
+  const yours = screen.getByRole("button", { name: /^Your household/ });
+  if (yours.getAttribute("aria-expanded") !== "true") fireEvent.click(yours);
+}
 function toResults() {
+  openForm();
   fireEvent.click(calculateButton());
 }
 
@@ -109,7 +118,11 @@ describe("Household impact's results", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
-    const urls = fetch.mock.calls.map(([url]) => url);
+    // Besides the examples' precomputed file and the example households'
+    // income charts below the calculator, only the household route
+    const urls = fetch.mock.calls
+      .map(([url]) => url)
+      .filter((url) => !url.endsWith("/household_presets.json") && !url.endsWith("/income_curve.csv"));
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
   });
@@ -290,35 +303,62 @@ describe("the household calculation, from the fixture", () => {
     expect(terms).toContain("Change by policy");
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
     expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
+    // The marginal rate's known limits
+    expect(within(panel).getByText(/^Known limits: Council Tax Reduction/)).toBeInTheDocument();
+    expect(within(panel).getByText(/policyengine-uk 2\.134\.3 fixes this/)).toBeInTheDocument();
   });
 
-  it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {
+  it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { container } = renderTab();
     toResults();
-    await screen.findByRole("heading", { name: /Net income across earnings/ });
-    expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
+    await screen.findByRole("heading", { name: "Household net income, 2029-30" });
     // Always shown, not in an expander
     expect(screen.queryByRole("button", { name: "Marginal tax rate across earnings" })).not.toBeInTheDocument();
-    const pair = container.querySelector(".single-year-chart-pair");
-    expect(within(pair).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    // One pair in the charts grid: net income first, the marginal rate beside it
+    const pairs = container.querySelectorAll(".single-year-chart-pair");
+    expect(pairs).toHaveLength(1);
+    const [pair] = pairs;
+    expect(pair).toHaveClass("charts-grid");
     expect(pair.children).toHaveLength(2);
-    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
+    const [earnings, rate] = pair.children;
+    expect(within(earnings).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
+    expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Net income change, 2029-30" })).not.toBeInTheDocument();
+    // Each card's switch sits in the controls row, so the pair's rows line up
+    expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    // Net income first: before and after, marking you
+    const net = within(earnings).getByRole("button", { name: "Net income" });
+    expect(net).toHaveAttribute("aria-pressed", "true");
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
+    expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
+    // Change: the gain and loss key, still marking you
+    fireEvent.click(within(earnings).getByRole("button", { name: "Change" }));
+    expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
+    expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
+    expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
+    // The rate, then on a line of its own the rate as money, said once
+    // when before and after round the same
+    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68% before and 68% after\./);
+    expect(sentence).toHaveTextContent(/after\.Of your next £1,000 of earnings, you keep £324\.$/);
+    expect(sentence.querySelector("br")).not.toBeNull();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
-  it("asks nothing before Calculate; a year change before it only keeps the prompt", async () => {
+  it("asks nothing before Calculate; a year change before it shows nothing either", async () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
-    // Before Calculate: the empty cards and a prompt, and no request
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    // Before Calculate: no results box (the cards say what to do), and no
+    // request
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     rerender(
       <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toEqual([]);
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     toResults();
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -327,27 +367,174 @@ describe("the household calculation, from the fixture", () => {
 });
 
 describe("Calculate", () => {
-  it("asks only on Calculate or Enter, never on an example or an edit", async () => {
+  it("asks at once for an example card, with no Calculate; an edit waits for Calculate or Enter", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
-    // An example fills the form only
-    fireEvent.click(screen.getByRole("button", { name: "Examples" }));
-    fireEvent.click(screen.getAllByRole("menuitemradio")[0]);
+    // An example card shows its result without Calculate, and hides it
+    fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(household[0].household.age).toBe(22);
+    // "Change these answers" opens the form with its answers, and
+    // Calculate, to change one and calculate again
+    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(calculateButton()).toBeEnabled();
+    // An edit brings Calculate back, and asks nothing on its own
+    const before = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+    expect(calculateButton()).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(household).toEqual([]);
+    expect(household).toHaveLength(before);
     // Enter in a box sends the form
     fireEvent.submit(screen.getByRole("spinbutton", { name: "Age" }).closest("form"));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    expect(household[0].household.age).toBe(40);
-    // An edit after a result: the result goes, the prompt comes back, and
-    // nothing is asked
+    expect(household[before].household.age).toBe(40);
+    // An edit after a result: the result goes, with no box in its place,
+    // and nothing is asked
     const asked = household.length;
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    expect(screen.getByText("Choose your answers and press Calculate.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
     expect(headlineCard()).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
+  });
+});
+
+describe("an example card", () => {
+  it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    // jsdom has no scrolling
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    // The result appears below the screen's foot
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    renderTab();
+    openForm();
+    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+    expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+  });
+});
+
+describe("switching from one household's card to another", () => {
+  /** The fixture's answer, with a change in net income of `change`. */
+  const answerWith = (body, change) => {
+    const answer = householdAnswerFor(body);
+    const before = answer.net_income.baseline;
+    return { ...answer, net_income: { ...answer.net_income, reform: before + change, change } };
+  };
+  /** Requests held until released by hand: [{ body, release }]. */
+  function serveHeld() {
+    const held = [];
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url, init = {}) => {
+        if (url !== HOUSEHOLD_API) return Promise.resolve(new Response("{}", { status: 404 }));
+        const body = JSON.parse(init.body);
+        household.push(body);
+        return new Promise((resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+          held.push({ body, release: (change) => resolve(json(answerWith(body, change))) });
+        });
+      }),
+    );
+    return held;
+  }
+  const card = (name) =>
+    within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: new RegExp(`^${name}`) });
+
+  it("clears the previous card's result at once, shows the new one when it arrives, and ignores a late answer for the previous card", async () => {
+    const held = serveHeld();
+    renderTab();
+    // Example A: its headline arrives; its split by policy and sweep are
+    // still out when the reader moves on
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(held).toHaveLength(1));
+    held[0].release(1111);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    await waitFor(() => expect(held).toHaveLength(3));
+    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
+    // Example B: A's result and note go at once; B's own note, and a
+    // loading state, not A's figures
+    fireEvent.click(card("A pensioner on the State Pension"));
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByText("+£1,111")).toBeNull();
+    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
+    expect(screen.getByText(/Aged 70 with the full new State Pension/)).toBeInTheDocument();
+    // A's late answers (its split by policy and sweep) change nothing
+    held[1].release(1111);
+    held[2].release(1111);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(headlineCard()).toBeNull();
+    // B's answer arrives: B's figure
+    await waitFor(() => expect(held.some(({ body }) => body.household.age === 70)).toBe(true));
+    held.find(({ body }) => body.household.age === 70 && body.include.length === 0).release(2222);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£2,222"));
+    expect(screen.queryByText("+£1,111")).toBeNull();
+  });
+
+  it("from an example to Your household: the example's result and note go, and your own answers come back", async () => {
+    serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
+    renderTab();
+    // Your own household first (age 41), calculated
+    openForm();
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
+    fireEvent.click(calculateButton());
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
+    // An example
+    fireEvent.click(card("A 22-year-old renting"));
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
+    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
+    // Your household: never the example's result or note
+    fireEvent.click(card("Your household"));
+    expect(screen.queryByText("+£1,111")).toBeNull();
+    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(41);
+    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
+  });
+});
+
+describe("the examples' precomputed results", () => {
+  it("show an example's result from the published file, with no request to the API", async () => {
+    // The file as the precompute writes it: the API's answer for each
+    // example's own request (here the fixture's answer)
+    // #185 on #104: the file names its own measures; here every measure
+    // the page is given, so the cards' figures and answers apply
+    // the household API models (an unmodelled one makes the selection
+    // unavailable, #104)
+    const PRESET_POLICIES = SUPPORTED_POLICY_IDS;
+    const presetMeasures = POLICIES_FOR_TEST.filter((policy) => PRESET_POLICIES.includes(policy.id));
+    const entries = presetRequests(PRESET_POLICIES).map(({ preset_id, year, request }) => ({
+      preset_id,
+      year,
+      request,
+      response: householdAnswerFor(request),
+    }));
+    household = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url.endsWith("/data/household_presets.json")) return json({ policies: PRESET_POLICIES, engine: PUBLISHED_ENGINE, entries });
+        household.push(JSON.parse(init.body));
+        return json(householdAnswerFor(JSON.parse(init.body)));
+      }),
+    );
+    render(
+      <PersonalImpactTab selectedPolicies={PRESET_POLICIES} policies={presetMeasures} year={2029} />,
+      { wrapper: PublishedMeasures },
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /^A graduate on £35,000/ }));
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    expect(household).toEqual([]);
   });
 });
 
@@ -542,7 +729,7 @@ describe("the household calculation's errors", () => {
     );
     renderTab();
     toResults();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
     finishByPolicy();
     expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
@@ -555,7 +742,7 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.queryByText("The earnings charts are not available.")).not.toBeInTheDocument();
   });
 
@@ -642,5 +829,27 @@ describe("the fixture", () => {
       ].sort(),
     );
     expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});
+
+describe("keepSentence: the marginal rate as money", () => {
+  it("keeps of the next £1,000, before and after, once when they round the same", () => {
+    expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 before and keep £350 after.");
+  });
+
+  it("says a loss as a loss", () => {
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
+  });
+
+  it("turns to the next £100 at a cliff, where £1,000 would overstate it", () => {
+    // Net income falls £2,140 over the next £100 before, £32 kept after
+    expect(keepSentence(22.4, 0.68)).toBe("Of your next £100 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(22.4, 22.4)).toBe("Of your next £100 of earnings, you would lose £2,140.");
+  });
+
+  it("is null without both rates", () => {
+    expect(keepSentence(null, 0.4)).toBeNull();
+    expect(keepSentence(0.4, undefined)).toBeNull();
   });
 });

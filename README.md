@@ -16,9 +16,10 @@ The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-ta
 
 | Tab | What it shows |
 |---|---|
-| Population impact | Budgetary impact, distributional impact, winners and losers, and results by region and constituency, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** and **Young people**. |
+| Population impact | The selected measures' effects, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** (results by constituency, the household scatter, example households), **Young people** (results by age), **Pensioners** (people at or over State Pension age, from the same results by age), **Living standards** (change by income decile, and inequality), **Poverty** (change in the poverty rate) and **Public finances** (revenue impact, and the OBR comparison once published). |
 | Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Pre-measures forecast | The outlook before the Budget's measures (`?tab=outlook`; old `?tab=living` links still open it). Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Policies | Every published measure in one place: its published name and description, and, where [`src/utils/policyDetails.js`](src/utils/policyDetails.js) has an entry for its id, when it starts and is in force, its type, and its main modelling assumption and source behind "Details". Population impact links here rather than repeating it. |
 | Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
 Every chart downloads as CSV, PNG, SVG or plain text.
@@ -45,7 +46,7 @@ List them from the command line with `uv run uk-budget-data generate --list-refo
 
 ## Architecture
 
-- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Living standards read precomputed files from `public/data/`; Household impact calls the household API.
+- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Pre-measures forecast read precomputed files from `public/data/`; Household impact calls the household API.
 - **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
@@ -118,8 +119,9 @@ The web app's population figures are files in `public/data/`, written by the `uk
 | `generate` | The national results for every measure and year (`--reforms`, `--years` narrow it; `--artifacts` writes one receipted artifact per measure for the publication manifest) |
 | `geography` | Disclosure-controlled results by region and constituency |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
-| `living-standards` | `living_standards_outlook.json`, the Living standards tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
-| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Living standards Forecast changes series |
+| `living-standards` | `living_standards_outlook.json`, the Pre-measures forecast tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
+| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Pre-measures forecast's Forecast changes series |
+| `scripts/precompute_household_presets.py` (not the CLI; reads `bun scripts/household-preset-requests.mjs`) | `household_presets.json`, the Household impact examples' answers with every measure selected, 2027-28 to 2031-32, shown at once when an example is chosen (no dataset needed; about ten minutes locally) |
 | `publish …` | Reconciles, stages, approves and checks entries in the publication manifest |
 
 The same pipeline is importable: `from uk_budget_data import generate_all_data, get_reform, DataConfig`. A `Reform` can carry `baseline_parameter_changes` to compare against something other than current law (`src/uk_budget_data/models.py`).

@@ -186,6 +186,35 @@ describe("normaliseHouseholdImpact", () => {
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
   });
+
+  it("reads the marginal rate's parts when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.parts).toBeNull();
+    const steps = HOUSEHOLD_FIXTURE.sweep.marginal_rates.map((rate) => ({
+      income_tax: 0.2,
+      national_insurance: 0.08,
+      other: rate.reform - 0.28,
+    }));
+    const data = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      sweep: {
+        ...HOUSEHOLD_FIXTURE.sweep,
+        marginal_rate_parts: {
+          parts: ["income_tax", "national_insurance", "other"],
+          baseline: steps,
+          reform: steps,
+          own_point: {
+            baseline: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+            reform: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+          },
+        },
+      },
+    });
+    const parts = data.sweep.parts;
+    expect(parts.names).toEqual(["income_tax", "national_insurance", "other"]);
+    expect(parts.after).toHaveLength(data.sweep.rates.length);
+    expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
+    expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
+  });
 });
 
 // Review of 428d209, finding 2: a breakdown from one deployment was merged

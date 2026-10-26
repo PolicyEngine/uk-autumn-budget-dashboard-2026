@@ -196,34 +196,6 @@ function ProcessingPanel({ seconds }) {
   );
 }
 
-// Small line icons for the "Based on" items
-const ICON_PATHS = {
-  salary: "M4 8h16v11H4zM9 8V5h6v3M4 13h16",
-  "rent-area": "M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
-  "council-tax": "M4 11l8-6 8 6M6 9.5V19h12V9.5M10 19v-5h4v5",
-};
-
-function ItemIcon({ id }) {
-  const d = ICON_PATHS[id];
-  if (!d) return null;
-  return (
-    <svg
-      className="result-foot-icon"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={d} />
-    </svg>
-  );
-}
-
 /** Scroll to a section of the results, under the sticky band. */
 function scrollToSection(event, id) {
   const target = document.getElementById(id);
@@ -321,10 +293,7 @@ function ResultCard({ totals, yearLabel, policyCount, items }) {
           <dl className="result-foot-items" aria-label="Based on">
             {items.map((item) => (
               <div key={item.id} className="result-foot-item">
-                <dt>
-                  <ItemIcon id={item.id} />
-                  {item.label}
-                </dt>
+                <dt>{item.label}</dt>
                 <dd>
                   {item.value}
                   {item.detail && (
@@ -341,13 +310,6 @@ function ResultCard({ totals, yearLabel, policyCount, items }) {
               </div>
             ))}
           </dl>
-          <a
-            className="result-card-more"
-            href="#household-breakdown"
-            onClick={(event) => scrollToSection(event, "household-breakdown")}
-          >
-            See the breakdown <span aria-hidden="true">↓</span>
-          </a>
         </div>
       )}
     </section>
@@ -389,17 +351,10 @@ export function SingleYearHeadline({
     );
   }
 
-  // One state at a time: the prompt (before Calculate, or once the answers
-  // differ from the result's), the processing panel, or the result
-  if (!submitted || changed) {
-    return (
-      <div className="single-year-headline">
-        <div className="card single-year-prompt" role="status">
-          Choose your answers and press Calculate.
-        </div>
-      </div>
-    );
-  }
+  // One state at a time: nothing (before Calculate, or once the answers
+  // differ from the result's: the cards above say what to do), the
+  // processing panel, or the result
+  if (!submitted || changed) return null;
 
   // Calculating, the first time or again: only the processing panel, never
   // an earlier result
@@ -538,10 +493,12 @@ export function SingleYearDetails({ result, year, policies, changed = false, sta
 
       <SectionHeading
         title="Across earnings"
-        subtitle="How your household's net income and marginal tax rate change as your salary varies."
+        subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
       />
       <section className="report-section">
         {data.sweep ? (
+          // Net income (with its Net income / Change switch) beside the
+          // marginal rate, a pair of cards whose rows line up; stacked on a phone
           <div className="charts-grid single-year-chart-pair">
             <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
             <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />

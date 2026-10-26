@@ -1,6 +1,6 @@
 /**
- * Smoke test of the four tabs, and Population impact's Young people
- * sub-tab, on the real data.
+ * Smoke test of the five tabs, and Population impact's other sub-tabs,
+ * on the real data.
  *
  * Each tab is opened by its address (?tab=, ?sub=), as a shared link opens it, and
  * rendered with every data file served from public/ as the deployed page
@@ -60,16 +60,25 @@ const FAILURE_TEXT = [
 // What each tab shows only once its data has loaded. (jsdom lays nothing
 // out, so charts draw no values; these are the data-driven text around them.)
 const LOADED = {
-  // App.jsx renders the Public finances section only once the CSVs are read.
-  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The form's card: its More details section; the results are checked
+  // App.jsx renders All households' sections only once the CSVs are read.
+  dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
+  // Population impact's other sub-tabs, by ?sub=
+  living: (panel) => within(panel).findAllByRole("heading", { name: "How the measures change incomes" }),
+  poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
+  finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
+  // The cards, "Your household" first; the form and results are checked
   // below.
-  household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
+  household: (panel) => within(panel).findAllByRole("heading", { name: "Choose a household" }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
+  // Young people and Pensioners read the age table from verified artifacts;
+  // the fixture's carry none, so both say so (#104)
   young: (panel) => within(panel).findAllByText(/Results by age are not available/),
-  // The Incomes heading shows once the outlook is read.
-  living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  pensioners: (panel) => within(panel).findAllByText(/Results by age are not available/),
+  // The Incomes under current law heading shows once the outlook is read.
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
+  // Every published measure's card, whatever the band's selection
+  policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -144,14 +153,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Each tab by its address, and Population impact's Young people sub-tab:
+// Each tab by its address, and Population impact's other sub-tabs:
 // [name, LOADED key, address, the panel's label]
 const CASES = [
-  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/" : `/?tab=${v.value}`, v.label]),
+  // Population impact opens on Public finances; All households is ?sub=all
+  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/?sub=all" : `/?tab=${v.value}`, v.label]),
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+  ["Population impact: Pensioners", "pensioners", "/?sub=pensioners", "Pensioners"],
+  ["Population impact: Living standards", "living", "/?sub=living", "Living standards"],
+  ["Population impact: Poverty", "poverty", "/?sub=poverty", "Poverty"],
+  ["Population impact: Public finances", "finances", "/", "Public finances"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on a verified publication and real baseline data", () => {
+describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -176,7 +190,9 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
       );
       expect(missing).toEqual([]);
       if (value === "household") {
-        // The form's first box is the head's age, with its default
+        // "Your household" opens the form; its first box is the head's
+        // age, with its default
+        fireEvent.click(within(panel).getByRole("button", { name: /^Your household/ }));
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
         // Nothing is asked before Calculate
         expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toEqual([]);
@@ -209,6 +225,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await screen.findByRole("button", { name: /^Calculate/ }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
@@ -237,6 +254,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     // The views are rebuilt once the publication verifies
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(personal).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
 
@@ -261,7 +279,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
   });
 
   it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
@@ -270,10 +288,10 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
   });
 
   it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
-    window.history.replaceState({}, "", "/");
+    window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["Household impact", "Living standards", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -298,6 +316,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    fireEvent.click(await within(household).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));

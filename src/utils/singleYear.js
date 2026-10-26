@@ -8,6 +8,7 @@ import {
   CHANGE_BY_POLICY_NOTE,
   COUNCIL_TAX_NOTE,
   EVERY_POLICY_NOTE,
+  MARGINAL_RATE_NOTE,
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
@@ -407,6 +408,27 @@ export function rateAt(rates, income) {
 }
 
 /**
+ * The marginal rate as money: "Of your next £1,000 of earnings, you keep
+ * £324." from the rates over the next £100 (the API's own point), before
+ * and after, said once when they round to the same pounds. A rate over
+ * 200% is a cliff (net income falls by more than the £100 earned), which
+ * a £1,000 multiple would overstate, so the sentence is then about the
+ * next £100 itself. A keep below zero is a loss: "you would lose £X".
+ * Null without both rates.
+ */
+export function keepSentence(before, after) {
+  if (before === null || before === undefined || after === null || after === undefined) return null;
+  const unit = before > 2 || after > 2 ? 100 : 1000;
+  const kept = (rate) => Math.round(unit * (1 - rate));
+  const say = (amount) =>
+    amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
+  const lead = `Of your next ${money(unit)} of earnings, you`;
+  const [was, now] = [kept(before), kept(after)];
+  if (was === now) return `${lead} ${say(was)}.`;
+  return `${lead} ${say(was)} before and ${say(now)} after.`;
+}
+
+/**
  * Steps where net income after the policies falls as salary rises by more
  * than `threshold` pounds: [{from, to, drop}].
  */
@@ -455,7 +477,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+    MARGINAL_RATE_NOTE,
   ],
   [
     "Every policy applied",

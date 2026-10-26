@@ -1,4 +1,5 @@
-// The Living standards view: the pre-Budget baseline outlook for UK
+// The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
+// outlook before the Budget's measures, the pre-Budget baseline for UK
 // household incomes and poverty, and the OBR forecast it is built on.
 // Ported from PolicyEngine/uk-living-standards-outlook (branch
 // review-1-fixes, db0c8e4): its two tabs are this view's two sub-tabs,
@@ -14,6 +15,7 @@ import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
+import ViewLink from "../ViewLink";
 import { ForecastSource } from "./sources";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
@@ -27,27 +29,42 @@ import "./LivingStandards.css";
 // The baseline sections, in order: each one row of two cards that line up
 // (a card alone takes the full width). A card shows one view at a time, with
 // a Show pill; notes and sources sit in its "About this chart".
+// Each section's title says it is the outlook before any measure; its
+// subtitle links once to the Population impact sub-tab with the measures'
+// effect on the same thing, which states no number shown here.
 const BASELINE_ROWS = [
   {
     id: "incomes",
-    title: "Incomes",
-    subtitle: (
+    title: "Incomes under current law",
+    subtitle: (onShowTab) => (
       <>
-        Household income and inequality over time, and income growth across the distribution, under current
-        law (<SourceLink source="obr_efo_march_2026">OBR March 2026 forecast</SourceLink>).
+        Incomes before any Budget measure (<SourceLink source="obr_efo_march_2026">OBR March 2026</SourceLink>). With
+        the measures:{" "}
+        <ViewLink tab="dashboard" sub="living" hash="deciles" onShowTab={onShowTab}>
+          Living standards
+        </ViewLink>
+        .
       </>
     ),
     blocks: [[IncomesOverTimeCard, GrowthCard]],
   },
   {
     id: "poverty",
-    title: "Poverty",
-    subtitle: "Poverty rates, how far below the line people are, and who is in poverty, under current law.",
+    title: "Poverty under current law",
+    subtitle: (onShowTab) => (
+      <>
+        Poverty before any Budget measure. With the measures:{" "}
+        <ViewLink tab="dashboard" sub="poverty" hash="poverty" onShowTab={onShowTab}>
+          Poverty
+        </ViewLink>
+        .
+      </>
+    ),
     blocks: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
 ];
 
-function Row({ row, data }) {
+function Row({ row, data, onShowTab }) {
   if (row.requires && !data[row.requires]) return null;
   // Cards whose data block is missing are skipped; a pair with one card
   // left renders it full width.
@@ -57,7 +74,7 @@ function Row({ row, data }) {
   if (!blocks.length) return null;
   return (
     <>
-      <SectionHeading title={row.title} subtitle={row.subtitle} />
+      <SectionHeading title={row.title} subtitle={row.subtitle(onShowTab)} />
       <section id={`living-${row.id}`} className="report-section ls-section">
         {blocks.map((block, i) => (
           <div className="charts-grid" key={i}>
@@ -78,11 +95,11 @@ const SUB_TABS = [
 const SUB_TAB_VALUES = SUB_TABS.map((t) => t.value);
 
 /** Incomes and poverty under the baseline. */
-function BaselinePanel({ data }) {
+function BaselinePanel({ data, onShowTab }) {
   return (
     <>
       {BASELINE_ROWS.map((row) => (
-        <Row key={row.id} row={row} data={data} />
+        <Row key={row.id} row={row} data={data} onShowTab={onShowTab} />
       ))}
     </>
   );
@@ -136,7 +153,7 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
   );
 }
 
-export default function LivingStandardsTab({ active = true }) {
+export default function LivingStandardsTab({ active = true, onShowTab }) {
   const [state, setState] = useState({ loading: true, data: null, error: null });
   const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
   // Sub-tabs opened so far stay mounted, hidden while the other is shown
@@ -176,7 +193,7 @@ export default function LivingStandardsTab({ active = true }) {
             tabs={SUB_TABS}
             value={sub}
             onChange={setSub}
-            ariaLabel="Living standards sections"
+            ariaLabel="Pre-measures forecast sections"
             idPrefix="living"
           />
           {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
@@ -184,7 +201,7 @@ export default function LivingStandardsTab({ active = true }) {
               {value === "forecast" ? (
                 <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
               ) : (
-                <BaselinePanel data={data} />
+                <BaselinePanel data={data} onShowTab={onShowTab} />
               )}
             </SubTabPanel>
           ))}

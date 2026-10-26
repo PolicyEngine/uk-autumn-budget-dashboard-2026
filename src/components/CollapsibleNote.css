@@ -1,0 +1,83 @@
+/* A note with its detail behind "More info" (CollapsibleNote.jsx): the
+   closed line looks like a .note */
+.note.note-collapsible {
+  display: block;
+}
+
+.note-collapsible .note-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+}
+
+.note-collapsible .note-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pe-teal-700);
+  cursor: pointer;
+}
+
+.note-collapsible .note-toggle:hover {
+  color: var(--pe-teal-800);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.note-collapsible .note-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.note-collapsible .note-chevron {
+  transition: transform 0.2s;
+}
+
+.note-collapsible .note-toggle[aria-expanded="true"] .note-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-collapsible .note-chevron {
+    transition: none;
+  }
+}
+
+.note-collapsible .note-detail {
+  margin: 6px 0 0 19px;
+}
+
+.note-collapsible .note-detail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.note-collapsible .note-detail p {
+  margin: 6px 0 0;
+}
+
+.note-collapsible .note-detail p:first-child {
+  margin-top: 0;
+}
+
+.note-collapsible .note-detail a {
+  color: var(--pe-teal-700);
+}
+
+/* The chevron is not the note's ⓘ (.note svg) */
+.note-collapsible .note-toggle svg {
+  margin-top: 0;
+  color: inherit;
+}
