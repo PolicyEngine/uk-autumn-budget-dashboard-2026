@@ -3,6 +3,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ComposedChart,
   Customized,
   Line,
@@ -40,6 +41,7 @@ import {
   pensionerShares,
   pensionerSharesBySingleAge,
   pensionerTrend,
+  smoothByAge,
 } from "./pensioners/pensionersData";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
@@ -324,11 +326,36 @@ function AgeTick({ x, y, payload, from }) {
   );
 }
 
+/** "+£12", "−£8", "£0": a change in pounds with a true minus. */
+const changeText = (value) => {
+  const rounded = Math.round(value);
+  if (rounded === 0) return "£0";
+  const text = `£${Math.abs(rounded).toLocaleString("en-GB")}`;
+  return rounded > 0 ? `+${text}` : `−${text}`;
+};
+
+/** "Age 72: +£15 a year", and the five-year average under it. */
+function AgeTooltip({ active, payload }) {
+  const point = payload?.[0]?.payload;
+  if (!active || !point || point.netChange === null) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">
+        Age {point.label}: {changeText(point.netChange)} a year
+      </p>
+      {point.smooth !== null && (
+        <p className="chart-tooltip-note">Five-year average around this age: {changeText(point.smooth)} a year</p>
+      )}
+    </div>
+  );
+}
+
 /**
  * The average change per person by single year of age, 55 to 90 and over,
- * in the selected year, each policy's part stacked and the net change as a
- * dot, the pensioners' ages shaded. One axis for every year, so Play
- * shows the change between years.
+ * in the selected year: one bar per age, a gain in the gain colour and a
+ * loss in the loss colour, a five-year average drawn through them so the
+ * shape reads through single-year noise, and State Pension age marked. One
+ * axis for every year, so Play shows the change between years.
  */
 function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
@@ -336,15 +363,22 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   const yearLabel = fiscalYearTick(year);
   const published = isPublished(rows, year);
   const from = pensionerAge(year);
-  const data = singleAgeBars(rows, policies, selectedPolicies, year, PENSIONER_AGE_FIRST, PENSIONER_AGE_LAST);
+  const ageBars = (each) =>
+    smoothByAge(singleAgeBars(rows, policies, selectedPolicies, each, PENSIONER_AGE_FIRST, PENSIONER_AGE_LAST));
+  const data = ageBars(year);
+  // Round £ ticks from the lowest to the highest change in any year shown,
+  // always through £0, so the scale holds still under Play
   const { domain, ticks } = useMemo(() => {
-    const ends = [];
+    const values = [0];
     for (const each of DISPLAY_YEARS) {
-      const bars = singleAgeBars(rows, policies, selectedPolicies, each, PENSIONER_AGE_FIRST, PENSIONER_AGE_LAST);
-      ends.push(...stackEnds(bars, policies));
+      for (const point of ageBars(each)) {
+        if (point.netChange !== null) values.push(point.netChange);
+      }
     }
-    return divergingAxis(ends);
+    return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, policies, selectedPolicies]);
+  // The measures with no effect at these ages, for More info
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>
@@ -353,14 +387,13 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows, policies, selectedPolicies, year],
   );
-  const activeNames = drawnNames(members);
-  const netLabel = activeNames.length > 1 ? "Net change" : undefined;
-  // The section's key lists the measures (MeasureKey); alone, the card's own
-  const key = useMeasureKey(members, netLabel);
   const missing = data.filter((point) => point.netChange === null);
+  const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
+  const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const title = `Change by age, ${yearLabel}`;
-  const description = `Average change per person, £ a year, by single year of age (${PENSIONER_AGE_FIRST} to 90 and over); pensioners' ages shaded.`;
-  const names = selectedNames(policies, selectedPolicies);
+  const description = "Average change per person, £ a year, by age.";
+  const measureIds = [...new Set(data.flatMap((point) => point.parts.map((part) => part.id)))];
+  const measureName = (id) => catalogue.byId.get(id)?.label ?? id;
   const download = {
     chartRef,
     name: `pensioners-change-by-age-${year}`,
@@ -370,20 +403,26 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
       legendItems: [
-        ...exportLegendItems(members, catalogue),
-        ...(activeNames.length > 1 ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }] : []),
+        ...(anyGain ? [{ color: CHART_COLOURS.gain, label: "Gain", type: "rect" }] : []),
+        ...(anyLoss ? [{ color: CHART_COLOURS.loss, label: "Loss", type: "rect" }] : []),
+        { color: CHART_COLOURS.highlight, label: "Five-year average", type: "line" },
       ],
     },
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per person by single year of age, ${yearLabel}`,
-        units: `${CSV_UNITS}; the sum of each selected policy's own effect`,
+        units: `${CSV_UNITS}; the sum of each selected policy's own effect; the five-year average is centred on each age`,
         columns: [
           { key: "label", label: "Age" },
-          ...names.map((name) => ({ key: name, label: name, decimals: 2 })),
+          ...measureIds.map((id) => ({ key: id, label: measureName(id), decimals: 2 })),
           { key: "netChange", label: "Net change", decimals: 2 },
+          { key: "smooth", label: "Five-year average", decimals: 2 },
         ],
-        rows: published ? data.filter((point) => point.netChange !== null) : [],
+        rows: published
+          ? data
+              .filter((point) => point.netChange !== null)
+              .map((point) => ({ ...point, ...Object.fromEntries(point.parts.map((part) => [part.id, part.value])) }))
+          : [],
         notes: missing.length ? [`Not shown, too few survey records: ages ${missing.map((p) => p.label).join(", ")}`] : [],
       }),
     published,
@@ -397,14 +436,8 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : (
           <ResponsiveContainer width="100%" height={height}>
-            <ComposedChart data={data} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
+            <ComposedChart data={data} margin={plotMargin(narrow)} barCategoryGap="12%">
               <CartesianGrid {...GRID_PROPS} />
-              <ReferenceArea
-                x1={singleAgeKey(from)}
-                x2={singleAgeKey(PENSIONER_AGE_LAST)}
-                fill={HIGHLIGHT_FILL}
-                ifOverflow="visible"
-              />
               <XAxis
                 dataKey="label"
                 ticks={ageTicks(year, narrow)}
@@ -418,33 +451,46 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
               <YAxis
                 domain={domain}
                 ticks={ticks}
-                tickFormatter={signedPounds}
+                tickFormatter={changeText}
                 tick={TICK_STYLE}
-                width={axisWidth(ticks, signedPounds)}
+                width={axisWidth(ticks, changeText)}
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-              <Tooltip
-                {...TOOLTIP_PROPS}
-                cursor={HOVER_CURSOR}
-                content={
-                  <ChartTooltip
-                    format={pounds}
-                    labelFormat={(label) => `Age ${label}, ${yearLabel}`}
-                    netKey="netChange"
-                    netLabel="Net change"
+              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip />} />
+              <Bar dataKey="netChange" name="Change" isAnimationActive={false} legendType="none">
+                {data.map((point) => (
+                  <Cell
+                    key={point.label}
+                    fill={(point.netChange ?? 0) < 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain}
+                    fillOpacity={0.55}
                   />
-                }
-              />
-              {policyBars(catalogue, key.highlight)}
-              <Scatter
-                dataKey="netChange"
-                shape={netDot}
+                ))}
+              </Bar>
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              <Line
+                type="monotone"
+                dataKey="smooth"
+                stroke={CHART_COLOURS.highlight}
+                strokeWidth={2}
+                dot={false}
+                activeDot={false}
+                connectNulls
+                isAnimationActive={false}
                 legendType="none"
-                tooltipType="none"
-                {...chartMotion()}
-                hide={activeNames.length <= 1}
+              />
+              {/* State Pension age: where pensioners start */}
+              <ReferenceLine
+                x={singleAgeKey(from)}
+                stroke={CHART_COLOURS.highlight}
+                strokeDasharray="4 3"
+                label={{
+                  value: narrow ? `SPA ${from}` : `State Pension age, ${from}`,
+                  position: "insideTopRight",
+                  fill: CHART_COLOURS.highlight,
+                  fontSize: TICK_STYLE.fontSize,
+                  fontWeight: 600,
+                }}
               />
               <Customized component={<ChartUnitLabel text={AGE_UNIT} />} />
             </ComposedChart>
@@ -452,8 +498,22 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
         )}
       </div>
       <div className="chart-legend">
-        {published && !key.shared && (
-          <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
+        {published && (
+          <span className="measure-dumbbell-legend age-change-legend">
+            {anyGain && (
+              <span>
+                <i className="swatch gain" /> Gain
+              </span>
+            )}
+            {anyLoss && (
+              <span>
+                <i className="swatch loss" /> Loss
+              </span>
+            )}
+            <span>
+              <i className="line" /> Five-year average
+            </span>
+          </span>
         )}
       </div>
       <Logo />
@@ -462,7 +522,15 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
           {missing.length > 0 && (
             <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
           )}
-          <ChartMoreInfo members={members} year={year} />
+          <ChartMoreInfo members={members} year={year}>
+            <p>
+              Each bar is the average change in household net income per person at that single year of age (
+              {PENSIONER_AGE_FIRST} to 90 and over), from all the selected policies together; each person counts
+              their household&apos;s change. The line is the average over the five ages centred on each one, as
+              single years of age rest on few survey records. The dashed line marks State Pension age ({from} in{" "}
+              {yearLabel}); pensioners are the ages from it.
+            </p>
+          </ChartMoreInfo>
         </div>
       )}
     </div>

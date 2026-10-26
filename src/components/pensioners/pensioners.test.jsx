@@ -201,3 +201,19 @@ describe("PensionersSection", () => {
     expect(screen.queryByRole("link", { name: "Household impact" })).toBeNull();
   });
 });
+
+describe("smoothByAge", () => {
+  it("averages the five ages centred on each one, skipping thin ages, and none for a thin age itself", async () => {
+    const { smoothByAge } = await import("./pensionersData");
+    const points = [10, 20, 30, null, 50, 60].map((netChange, i) => ({ age: 60 + i, netChange }));
+    const smooth = smoothByAge(points).map((point) => point.smooth);
+    // 60: 10, 20, 30; 61: 10, 20, 30; 62: 10, 20, 30, 50 (63 thin)
+    expect(smooth[0]).toBeCloseTo(20);
+    expect(smooth[1]).toBeCloseTo(20);
+    expect(smooth[2]).toBeCloseTo(27.5);
+    expect(smooth[3]).toBeNull();
+    // 64: 30, 50, 60 (63 thin); 65: only 50 and 60 have values, too few
+    expect(smooth[4]).toBeCloseTo(140 / 3);
+    expect(smooth[5]).toBeNull();
+  });
+});
