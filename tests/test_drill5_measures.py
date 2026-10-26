@@ -84,6 +84,37 @@ def test_cgt_main_rates(drill5):
     changes = drill5[reforms.CGT_RATES_ID].parameter_changes
     assert set(changes[reforms.CGT_BASIC_RATE].values()) == {0.20}
     assert set(changes[reforms.CGT_HIGHER_RATE].values()) == {0.26}
+    assert set(changes[reforms.CGT_ADDITIONAL_RATE].values()) == {0.26}
+
+
+def test_cgt_rise_reaches_gains_above_the_higher_rate_limit(drill5):
+    """A £1m gain on a £50,000 salary: £270 falls in the basic rate band,
+    the rest above it, most of that above the higher rate limit, where the
+    engine charges the additional rate. Every pound of gain above the
+    £3,000 exemption pays 2 points more: 2% of £997,000 is £19,940
+    (£1,754 with the higher rate alone)."""
+    year = 2027
+    situation = {
+        "people": {
+            "p": {
+                "age": {year: 55},
+                "employment_income": {year: 50_000},
+                "capital_gains": {year: 1_000_000},
+            }
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
+    }
+    current_law = Simulation(situation=situation)
+    reformed = Simulation(
+        situation=situation,
+        scenario=drill5[reforms.CGT_RATES_ID].to_scenario(),
+    )
+    assert reformed.calculate("capital_gains_tax", year)[
+        0
+    ] - current_law.calculate("capital_gains_tax", year)[0] == pytest.approx(
+        19_940, abs=1
+    )
 
 
 RESPONSES = "gov.simulation.capital_gains_responses"

@@ -481,6 +481,11 @@ EMPLOYER_NI_INCIDENCES = (
 )
 CGT_BASIC_RATE = "gov.hmrc.cgt.basic_rate"
 CGT_HIGHER_RATE = "gov.hmrc.cgt.higher_rate"
+# policyengine-uk charges gains above the income tax higher rate limit,
+# stacked on income, at this rate, so that a reform can set one; in law
+# there is none, and current law sets it equal to the higher rate. A change
+# to the higher rate has to move it too, or most large gains keep 24%.
+CGT_ADDITIONAL_RATE = "gov.hmrc.cgt.additional_rate"
 HVCTS_FIRST_THRESHOLD = (
     "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold"
 )
@@ -610,13 +615,16 @@ def _create_employer_ni_secondary_threshold_raised() -> Reform:
 def _create_cgt_main_rates_up_2pp() -> Reform:
     changes = rate_change(CGT_BASIC_RATE, _years_from(2027, 0.20))
     changes.update(rate_change(CGT_HIGHER_RATE, _years_from(2027, 0.26)))
+    changes.update(rate_change(CGT_ADDITIONAL_RATE, _years_from(2027, 0.26)))
     changes.update(_static_capital_gains())
     return Reform(
         id=CGT_RATES_ID,
         name="Capital gains tax main rates up 2 points",
         description=(
             "Drill 5 mock measure. From 6 April 2027 the main capital gains "
-            "tax rates rise from 18% and 24% to 20% and 26%."
+            "tax rates rise from 18% and 24% to 20% and 26%, on gains of "
+            "any size. Residential property and carried interest gains keep "
+            "their own rates."
         ),
         parameter_changes=changes,
     )
