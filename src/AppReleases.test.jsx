@@ -275,6 +275,31 @@ describe("the budget selector", () => {
     expect(fetchImpl.calls.every((url) => url.startsWith(`${dataRoot("", AB2025)}/`))).toBe(true);
   });
 
+  it("names the release a link opens, but lets only a verified one be chosen", async () => {
+    // The build lists both; only Autumn Budget 2025 has files
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${SS2025.id}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", [AB2025.id, SS2025.id].join(","));
+    render(<App />);
+    expect(await screen.findByText(`No results for the ${SS2025.name} are published yet`)).toBeInTheDocument();
+    await waitFor(() => expect(pill()).not.toBeNull());
+    expect(pill()).toHaveAccessibleName(`Budget: ${SS2025.name}`);
+    fireEvent.click(pill());
+    const options = within(screen.getByRole("listbox", { name: "Budget" })).getAllByRole("option");
+    const choosable = options.filter((option) => option.getAttribute("aria-disabled") !== "true").map((option) => option.textContent.replace("✓", ""));
+    expect(choosable).toEqual([DEFAULT_RELEASE.name, AB2025.name]);
+    const unverified = options.find((option) => option.textContent.includes(SS2025.name));
+    expect(unverified).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(unverified);
+    expect(param(RELEASE_PARAM)).toBe(SS2025.id);
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: AB2025.name }));
+    await screen.findByTestId("budget-figures");
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+    // Gone once another release is shown: it never verified
+    expect(offeredNames()).toEqual([DEFAULT_RELEASE.name, AB2025.name]);
+  });
+
   it.each(["uk-autumn-budget-1999", DEFAULT_RELEASE.id])("opens this Budget for ?budget=%s and takes it out of the address", async (id) => {
     const fetchImpl = await siteFetch();
     await open(fetchImpl, { url: `/?${RELEASE_PARAM}=${id}&policies=alpha` });
@@ -460,6 +485,43 @@ describe("a past event in the dashboard", () => {
     const note = document.querySelector(".historical-obr");
     expect(note).toHaveTextContent(PAIR);
     expect(within(note).getByRole("link", { name: "scorecard" })).toHaveAttribute("href", SCORECARD_URL);
+  });
+
+  it("tries a flat view that failed again on the next check, and shows it once it loads", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    let failures = 1;
+    const flaky = async (url, init) => {
+      if (String(url) === `${dataRoot("", AB2025)}/coverage.csv` && failures > 0) {
+        failures -= 1;
+        return new Response(null, { status: 503 });
+      }
+      return fetchImpl(url, init);
+    };
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}`);
+    vi.stubGlobal("fetch", flaky);
+    render(<App />);
+    expect(await screen.findByText("The coverage of this event is unavailable")).toBeInTheDocument();
+    await screen.findByTestId("budget-figures");
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await waitFor(() => expect(screen.queryByText("The coverage of this event is unavailable")).toBeNull());
+    expect(within(document.getElementById("coverage")).getByText("Partly expressible")).toBeInTheDocument();
+  });
+
+  it("keeps its coverage and measures when the selection has an unavailable measure, and withholds only its figures", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=alpha,missing`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    expect(within(document.getElementById("coverage")).getByText("Partly expressible")).toBeInTheDocument();
+    expect(document.getElementById("policy-details")).toHaveTextContent("About the modelled measures");
+    expect(document.getElementById("policy-details")).toHaveTextContent("Measures not modelled");
+    expect(screen.getByRole("link", { name: "PolicyEngine scorecard" })).toHaveAttribute("href", SCORECARD_URL);
+    fireEvent.click(screen.getByRole("button", { name: "Remove missing from the selection" }));
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
   });
 
   it("shows nothing when its root holds another release's manifest", async () => {

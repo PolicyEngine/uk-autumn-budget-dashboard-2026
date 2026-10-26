@@ -328,6 +328,24 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
     detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
+  // The notice in place of a view's figures: none are published, or the
+  // selection has a measure that is unavailable
+  const unavailableNotice = (value) => (
+    <UnavailableNotice reason={viewUnavailable(value).reason}>
+      {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
+      {unavailable ? (
+        <p>{past ? `Figures appear here once results for the ${release.name} are published.` : "Figures appear here once the 2026 Budget measures are approved for publication."}</p>
+      ) : (
+        <>
+          <p>No figures are shown for a selection while any of it is unavailable.</p>
+          <RemoveUnavailable
+            names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
+            onRemove={() => removeFromSelection(unavailableIds)}
+          />
+        </>
+      )}
+    </UnavailableNotice>
+  );
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   // A past event with no figures yet has no years to offer
@@ -397,7 +415,11 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
               inert={!releaseShown}
             >
               <PillSelect
-                options={releases.map((option) => ({ value: option.id, label: option.name }))}
+                options={releases.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                  ...(option.choosable ? {} : { disabled: true, title: "Its results are not published" }),
+                }))}
                 value={release.id}
                 onChange={onReleaseChange}
                 name="Budget"
@@ -484,21 +506,10 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
           className="tab-panel"
           hidden={value !== activeTab}
         >
-        {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
-          <UnavailableNotice reason={viewUnavailable(value).reason}>
-            {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
-            {unavailable ? (
-              <p>{past ? `Figures appear here once results for the ${release.name} are published.` : "Figures appear here once the 2026 Budget measures are approved for publication."}</p>
-            ) : (
-              <>
-                <p>No figures are shown for a selection while any of it is unavailable.</p>
-                <RemoveUnavailable
-                  names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
-                  onRemove={() => removeFromSelection(unavailableIds)}
-                />
-              </>
-            )}
-          </UnavailableNotice>
+        {/* A past event's coverage and measures do not depend on the
+            selection, so an unavailable one gates only its figures */}
+        {BUDGET_VIEWS.has(value) && viewUnavailable(value) && (unavailable || !past) ? (
+          unavailableNotice(value)
         ) : value === "living" ? (
           <LivingStandardsTab active={activeTab === value} />
         ) : value === "methodology" ? (
@@ -514,6 +525,7 @@ function Dashboard({ published, unavailable = null, updated = false, release = D
             budgetData={results.budgetData}
             emptyState={emptyState}
             note={showingLine}
+            figuresNotice={selectionUnavailable && unavailableNotice(value)}
           />
         ) : value === "household" ? (
           <PersonalImpactTab
@@ -772,7 +784,9 @@ function App({ releaseId } = {}) {
         const live = await loadManifest(base, { signal: controller.signal, release });
         const catalogue = current.current?.catalogue;
         const shown = catalogue?.manifest?.snapshotSha256 ?? null;
-        const failed = Object.keys(catalogue?.failures ?? {}).length > 0;
+        // A past event's flat views that failed are tried again too
+        const failed = Object.keys(catalogue?.failures ?? {}).length > 0 ||
+          Object.values(current.current?.views ?? {}).some((view) => view.error !== undefined);
         if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return shown;
         const next = await loadRelease(base, release, { signal: controller.signal });
         if (controller.signal.aborted) return null;
@@ -833,8 +847,11 @@ function App({ releaseId } = {}) {
       : null;
   const shown = unavailable ? NOTHING_PUBLISHED : result;
   // The band offers a choice once a past event's manifest verifies: this
-  // Budget, every verified past event and the one shown, newest first
-  const releases = offered.length ? newestFirst([...new Set([DEFAULT_RELEASE, ...offered, release])]) : null;
+  // Budget and every verified past event, newest first. The release shown
+  // is listed too, so the pill names it, but one that did not verify (a
+  // link to it) cannot be chosen
+  const choices = offered.length ? [DEFAULT_RELEASE, ...offered] : null;
+  const releases = choices && newestFirst([...new Set([...choices, release])]).map((item) => ({ ...item, choosable: choices.includes(item) }));
   // One release and snapshot per mount: another starts the views afresh
   const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
   return (
