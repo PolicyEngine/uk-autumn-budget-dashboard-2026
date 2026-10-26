@@ -4,11 +4,12 @@ import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import TitleIcon from "./TitleIcon";
+import { policyCardId } from "./methodology/MeasureDescriptions";
 
 // Each group's heading and arrow, by the direction the catalogue gives a
 // measure's budgetary effect. Cards carry no icon per measure: a map by
 // measure id would be a measure list of the page's own.
-const GROUPS = [
+export const GROUPS = [
   { heading: "Raises revenue", direction: "revenue", arrow: "arrowUp" },
   { heading: "Costs revenue", direction: "cost", arrow: "arrowDown" },
   { heading: "Other measures", direction: "neutral", arrow: null },
@@ -201,6 +202,7 @@ function PolicyCard({ policy, onShowEffect, parameterRows }) {
   const [highlight, setHighlight] = useState(null);
   return (
     <li
+      id={policyCardId(policy.id)}
       className="policy-card"
       style={{ "--policy-accent": policy.color }}
     >
