@@ -44,6 +44,7 @@ import json
 import os
 import threading
 from collections import OrderedDict
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Optional
@@ -1483,55 +1484,91 @@ def clear_runs() -> None:
     """Forget the runs kept (for tests that stand in for the engine)."""
     with _RUNS_LOCK:
         _RUNS.clear()
+        _IN_FLIGHT.clear()
 
 
 def _run_key(job: tuple) -> str:
     return json.dumps(job, sort_keys=True, default=str)
 
 
-def _run_all(jobs: list, workers: int) -> list:
-    """Every calculation, in worker processes when there are several
-    workers (``personal_impact.run_in_workers``, taking the instance's
-    shared slots, so concurrent requests share the processes fairly), else
-    here, in turn. A run already done for the same inputs is reused."""
-    keys = [_run_key(job) for job in jobs]
-    results: list = [None] * len(jobs)
-    with _RUNS_LOCK:
-        for i, key in enumerate(keys):
-            if key in _RUNS:
-                _RUNS.move_to_end(key)
-                results[i] = copy.deepcopy(_RUNS[key])
-    todo = [i for i, result in enumerate(results) if result is None]
+# Runs being computed now, by key: a request that needs a run another
+# request has already started waits for that answer rather than starting
+# the same run again (the page asks for its three parts at once, and each
+# part's jobs include the before and after runs).
+_IN_FLIGHT: "dict[str, Future]" = {}
+
+
+def _compute(jobs: list, todo: list, workers: int) -> list:
+    """The runs ``todo`` (indices into ``jobs``), by the instance's runner."""
     # With workers, even one run goes to a worker: requests run at once, and
     # two runs in this process at the same time would share its engine.
-    if todo and os.environ.get("HOUSEHOLD_RUNNER") == "modal":
+    if os.environ.get("HOUSEHOLD_RUNNER") == "modal":
         # On Modal (modal_household.py): every run in its own container at
         # once, each with the engine already loaded.
         from uk_budget_data.modal_household import fan_out
 
-        done = fan_out([jobs[i] for i in todo])
-    elif workers > 1 and todo:
+        return fan_out([jobs[i] for i in todo])
+    if workers > 1:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
             household_slots,
             run_in_workers,
         )
 
-        done = run_in_workers(
+        return run_in_workers(
             workers,
             [(run_scenario, jobs[i]) for i in todo],
             CALCULATION_TIMEOUT_SECONDS,
             slots=household_slots(),
         )
-    else:
-        done = [run_scenario(*jobs[i]) for i in todo]
+    return [run_scenario(*jobs[i]) for i in todo]
+
+
+def _run_all(jobs: list, workers: int) -> list:
+    """Every calculation, in worker processes when there are several
+    workers (``personal_impact.run_in_workers``, taking the instance's
+    shared slots, so concurrent requests share the processes fairly), else
+    here, in turn. A run already done for the same inputs is reused, and
+    one another request is computing now is waited for, not run twice."""
+    keys = [_run_key(job) for job in jobs]
+    results: list = [None] * len(jobs)
+    owned: dict = {}
+    waiting: dict = {}
+    with _RUNS_LOCK:
+        for i, key in enumerate(keys):
+            if key in _RUNS:
+                _RUNS.move_to_end(key)
+                results[i] = copy.deepcopy(_RUNS[key])
+            elif key in owned:
+                waiting[i] = owned[key]
+            elif key in _IN_FLIGHT:
+                waiting[i] = _IN_FLIGHT[key]
+            else:
+                owned[key] = _IN_FLIGHT[key] = Future()
+    todo = [
+        i
+        for i, key in enumerate(keys)
+        if results[i] is None and i not in waiting
+    ]
+    try:
+        done = _compute(jobs, todo, workers) if todo else []
+    except BaseException as error:
+        with _RUNS_LOCK:
+            for key, future in owned.items():
+                _IN_FLIGHT.pop(key, None)
+                future.set_exception(error)
+        raise
     with _RUNS_LOCK:
         for i, result in zip(todo, done):
             results[i] = result
             _RUNS[keys[i]] = copy.deepcopy(result)
             _RUNS.move_to_end(keys[i])
+            _IN_FLIGHT.pop(keys[i], None)
+            owned[keys[i]].set_result(result)
         while len(_RUNS) > RUNS_KEPT:
             _RUNS.popitem(last=False)
+    for i, future in waiting.items():
+        results[i] = copy.deepcopy(future.result())
     return results
 
 

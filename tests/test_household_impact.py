@@ -1390,6 +1390,132 @@ def test_modal_runner_sends_every_run_to_fan_out_and_keeps_their_order(
     household_impact.clear_runs()
 
 
+def test_a_run_another_request_is_computing_is_waited_for_not_run_again(
+    monkeypatch,
+):
+    """Two requests at once that share runs (the page asks for its three
+    parts together, each with the before and after runs): the second waits
+    for the first's answer to a shared run rather than sending it again,
+    and gets the same answer."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    sent = []
+    first_started = threading.Event()
+    finish_first = threading.Event()
+
+    def fan_out(jobs):
+        sent.append(list(jobs))
+        if len(sent) == 1:
+            first_started.set()
+            assert finish_first.wait(5)
+        return [{"household_net_income": float(job[1])} for job in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    shared = [("job", 0), ("job", 1)]
+    answers = {}
+
+    def ask(name, jobs):
+        answers[name] = household_impact._run_all(jobs, workers=1)
+
+    first = threading.Thread(target=ask, args=("first", shared))
+    first.start()
+    assert first_started.wait(5)
+    second = threading.Thread(
+        target=ask, args=("second", [*shared, ("job", 2), ("job", 2)])
+    )
+    second.start()
+    # The second request sends only its own new run, once
+    for _ in range(100):
+        if len(sent) == 2:
+            break
+        threading.Event().wait(0.05)
+    assert sent[1] == [("job", 2)]
+    finish_first.set()
+    first.join(5)
+    second.join(5)
+    assert [r["household_net_income"] for r in answers["first"]] == [0, 1]
+    assert [r["household_net_income"] for r in answers["second"]] == [
+        0,
+        1,
+        2,
+        2,
+    ]
+    assert len(sent) == 2
+    household_impact.clear_runs()
+
+
+def test_a_failed_run_fails_every_request_waiting_for_it(monkeypatch):
+    """A shared run that fails is not kept as in progress: the requests
+    waiting for it fail too, and a later request runs it again."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    started = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def fan_out(jobs):
+        calls.append(list(jobs))
+        if len(calls) == 1:
+            started.set()
+            assert release.wait(5)
+            raise RuntimeError("container failed")
+        return [{"household_net_income": 1.0} for _ in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    from concurrent.futures import Future
+
+    waiting = threading.Event()
+
+    class SignallingFuture(Future):
+        def result(self, timeout=None):
+            waiting.set()
+            return super().result(timeout)
+
+    monkeypatch.setattr(household_impact, "Future", SignallingFuture)
+    errors = {}
+
+    def ask(name):
+        try:
+            household_impact._run_all([("job", 0)], workers=1)
+        except RuntimeError as error:
+            errors[name] = str(error)
+
+    first = threading.Thread(target=ask, args=("first",))
+    first.start()
+    assert started.wait(5)
+    second = threading.Thread(target=ask, args=("second",))
+    second.start()
+    # The second request is waiting for the first's run
+    assert waiting.wait(5)
+    release.set()
+    first.join(5)
+    second.join(5)
+    assert errors == {
+        "first": "container failed",
+        "second": "container failed",
+    }
+    assert household_impact._run_all([("job", 0)], workers=1) == [
+        {"household_net_income": 1.0}
+    ]
+    household_impact.clear_runs()
+
+
 def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
     """By policy: a measure provably_unaffected for this household and year
     is not run, and shows exactly as its run would (£0, not affected)."""
