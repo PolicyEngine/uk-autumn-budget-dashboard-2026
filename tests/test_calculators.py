@@ -198,31 +198,35 @@ class TestMetricsCalculator:
 class TestIncomeCurveCalculator:
     """Tests for income curve calculation."""
 
-    def test_calculator_returns_points_array(self):
-        """Calculator returns array of income curve points."""
+    def test_calculator_takes_the_points_per_household(self):
+        """Calculator holds the number of points on each income grid."""
         from uk_budget_data.calculators import IncomeCurveCalculator
 
-        calc = IncomeCurveCalculator(
-            max_income=150_000,
-            num_points=101,
-        )
+        assert IncomeCurveCalculator(num_points=101).num_points == 101
 
-        assert calc.max_income == 150_000
-        assert calc.num_points == 101
+    def test_rows_name_the_household_and_its_axis(self):
+        """Each row carries the household, its x variable and the income."""
+        import numpy as np
 
-    def test_calculator_generates_income_range(self):
-        """Calculator generates correct income range."""
         from uk_budget_data.calculators import IncomeCurveCalculator
+        from uk_budget_data.example_households import get_household
 
-        calc = IncomeCurveCalculator(
-            max_income=100_000,
-            num_points=11,
+        calc = IncomeCurveCalculator(num_points=3)
+        household = get_household("pensioner_couple")
+        rows = calc.rows(
+            household,
+            {2027: np.array([1.0, 2.0, 3.0])},
+            {2027: np.array([1.5, 2.5, 3.5])},
+            "m",
+            "M",
+            [2027],
         )
-
-        incomes = calc.get_income_range()
-        assert len(incomes) == 11
-        assert incomes[0] == 0
-        assert incomes[-1] == 100_000
+        assert [row["income"] for row in rows] == [0.0, 30_000.0, 60_000.0]
+        assert {row["x_variable"] for row in rows} == {
+            "private_pension_income"
+        }
+        assert {row["household"] for row in rows} == {"pensioner_couple"}
+        assert rows[1]["reform_net_income"] == 2.5
 
 
 class TestHouseholdScatterCalculator:

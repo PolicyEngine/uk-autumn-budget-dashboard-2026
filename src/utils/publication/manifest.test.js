@@ -1,13 +1,15 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
   attestationProblems,
+  CANDIDATE_PROVISIONAL_LABEL,
   isDisplayable,
   isSafeArtifactPath,
   ManifestError,
   measureAvailability,
   parseManifest,
+  personalSeriesProblems,
   PROVISIONAL_LABEL,
+  provisionalLabel,
   publicationLabel,
 } from "./manifest";
 import { fixtureJson } from "../../test/publicationFixture";
@@ -48,6 +50,14 @@ describe("parseManifest on the fixture", () => {
       ),
     ).not.toThrow();
   });
+
+  it("accepts a public description while retaining older manifests", () => {
+    expect(manifest.measures.alpha.description).toBeUndefined();
+    const updated = parseManifest(edited((m) => {
+      m.measures.alpha.description = "A newly announced measure.";
+    }));
+    expect(updated.measures.alpha.description).toBe("A newly announced measure.");
+  });
 });
 
 describe("parseManifest refusals", () => {
@@ -55,6 +65,10 @@ describe("parseManifest refusals", () => {
     "a different schema": (m) => (m.schema = "other/v1"),
     "revision zero": (m) => (m.revision = 0),
     "an unknown status": (m) => (m.measures.alpha.status = "published"),
+    "a non-text public description": (m) => (m.measures.alpha.description = 7),
+    "an invalid personal response mapping": (m) => (m.measures.alpha.personal = { key: 7 }),
+    "an empty personal response group": (m) => (m.measures.alpha.personal = { key: "impact_alpha", policies: [] }),
+    "unknown personal mapping fields": (m) => (m.measures.alpha.personal = { key: "impact_alpha", extra: true }),
     "a bad digest": (m) => (m.measures.alpha.outputs_sha256 = "abc"),
     "a digest with a trailing newline": (m) =>
       (m.measures.alpha.outputs_sha256 += "\n"),
@@ -283,5 +297,40 @@ describe("availability", () => {
   it("labels provisional entries only", () => {
     expect(publicationLabel(manifest.measures.gamma)).toBe(PROVISIONAL_LABEL);
     expect(publicationLabel(manifest.measures.alpha)).toBe("");
+  });
+
+  it("calls provisional figures candidates while the basis is pre-Budget", () => {
+    expect(raw.basis.forecast.status).toBe("pre_budget");
+    expect(provisionalLabel(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      copy.basis.forecast.status = "updated";
+    }))).toBe(PROVISIONAL_LABEL);
+    expect(provisionalLabel(undefined)).toBe(PROVISIONAL_LABEL);
+  });
+});
+
+
+describe("personal model contract metadata", () => {
+  const personal = { key: "impact_alpha", model: "lifecycle", reviewed: true, description: "Reviewed lifetime parameters.", years: [2026, 2029], unsupported_years: [2027] };
+
+  it("reads an explicit contract while retaining old receipts for inspection", () => {
+    expect(personalSeriesProblems(personal)).toEqual([]);
+    expect(personalSeriesProblems({ key: "impact_alpha" })).toEqual([]);
+    expect(parseManifest(edited((m) => { m.measures.alpha.personal = personal; })).measures.alpha.personal).toEqual(personal);
+  });
+
+  it.each([
+    { ...personal, model: "unknown" },
+    { ...personal, key: "gross_income" },
+    { ...personal, reviewed: "true" },
+    { ...personal, description: " " },
+    { ...personal, years: [] },
+    { ...personal, years: [2026, 2026] },
+    { ...personal, years: ["2026"] },
+    { ...personal, unsupported_years: [2026] },
+    { ...personal, policies: ["alpha", "alpha"] },
+  ])("rejects malformed per-model metadata: %j", (value) => {
+    expect(personalSeriesProblems(value).length).toBeGreaterThan(0);
+    expect(() => parseManifest(edited((m) => { m.measures.alpha.personal = value; }))).toThrow(ManifestError);
   });
 });

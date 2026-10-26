@@ -9,7 +9,19 @@ that:
 - ``/api/version`` names the commit being deployed and the same package
   versions as the revision's image, so the tagged URL really serves it;
 - ``/api/personal-impact`` answers a plain household with finite numbers
-  for every year and policy the image's calculator covers.
+  for every year and policy the image's calculator covers;
+- ``/api/household-impact``, the route the Personal impact tab calls,
+  answers one household's headline with finite numbers and a change equal
+  to reform minus baseline. Checked only on an image that has the route
+  (``expected_household_impact``), so a rollback to a revision older than
+  it is not refused for lacking it;
+- the same answer reports, for every measure the image registers, the
+  definition the image itself computes at the commit being deployed
+  (``expected_definitions``), so a definition the served code binds
+  differently, or cannot bind, is caught before traffic moves. The page
+  compares these with the approved receipts, so a false difference would
+  show measures as unavailable. Checked only on an image that declares
+  them.
 
 It does not check that the answers are right; the household fixtures do
 that (``household_route``), once the team has written them.
@@ -27,11 +39,14 @@ Usage::
 """
 
 import argparse
+import importlib.util
 import json
 import math
+import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Optional
 
@@ -167,6 +182,127 @@ def impact_problems(
     return problems
 
 
+HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
+# The headline alone (no per-measure runs, no sweep): two runs, a few
+# seconds on a warm instance.
+SMOKE_HOUSEHOLD_IMPACT = {
+    "year": 2028,
+    "policies": ["badr_lifetime_limit_cut"],
+    "household": {"employment_income": 30_000, "salary_year": 2028},
+    "include": [],
+}
+
+
+def expected_household_impact() -> dict:
+    """Whether this build has the single-year household route: an image
+    older than it declares none, and is not checked for it."""
+    return {
+        "declared": importlib.util.find_spec("uk_budget_data.household_impact")
+        is not None
+    }
+
+
+def household_impact_problems(body: Any) -> list[str]:
+    """Ways a single-year answer for ``SMOKE_HOUSEHOLD_IMPACT`` is not a
+    complete calculation: an object reporting no failure, every number
+    finite, a finite baseline, reform and change with the change equal to
+    reform minus baseline (to the penny), and the engine's versions named.
+    Whether the numbers are right is for the tests, not this check."""
+    route = HOUSEHOLD_IMPACT_ROUTE
+    if not isinstance(body, dict):
+        return [f"{route} did not return an object"]
+    markers = error_markers(body)
+    if markers:
+        return [f"{route} reported a failure at {', '.join(markers)}"]
+    if not all(math.isfinite(n) for n in numbers(body)):
+        return [f"{route} returned a non-finite number"]
+    net = body.get("net_income")
+    if not isinstance(net, dict) or not all(
+        _finite(net.get(key)) for key in ("baseline", "reform", "change")
+    ):
+        return [f"{route} has no baseline, reform and change"]
+    problems = []
+    if abs(net["reform"] - net["baseline"] - net["change"]) > 0.011:
+        problems.append(f"{route}: the change is not reform minus baseline")
+    engine = body.get("engine")
+    if not isinstance(engine, dict) or not engine.get("policyengine-uk"):
+        problems.append(f"{route} does not name its policyengine-uk version")
+    return problems
+
+
+FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
+def expected_definitions(git_sha: Optional[str] = None) -> dict:
+    """Every registered measure's definition at this build's commit, as
+    this image computes it (``uk_budget_data.definitions``), for the
+    smoke test to compare with the candidate's served ones.
+
+    An image older than the definitions declares none, and so does a run
+    with no full commit (a local one, with no ``GIT_SHA``): they are then
+    not checked. A measure the image cannot bind is declared with its
+    ``error``, and the smoke test refuses it (``read_expectations``): the
+    tests require every measure to bind, so an image that cannot is not
+    the code they passed on.
+    """
+    if importlib.util.find_spec("uk_budget_data.definitions") is None:
+        return {"declared": False}
+    git_sha = git_sha or runtime_identity()["git_sha"]
+    if not isinstance(git_sha, str) or not FULL_COMMIT.fullmatch(git_sha):
+        return {"declared": False}
+    from uk_budget_data import definitions, household_impact
+
+    return {
+        "declared": True,
+        "at": git_sha,
+        "expected": definitions.definitions_for(
+            {
+                measure_id: git_sha
+                for measure_id in household_impact.measure_ids()
+            }
+        ),
+    }
+
+
+def definitions_query(expected: dict) -> str:
+    """The query naming every expected measure at the expected commit."""
+    return urllib.parse.urlencode(
+        [
+            ("definition", f"{measure_id}:{expected['at']}")
+            for measure_id in sorted(expected["expected"])
+        ]
+    )
+
+
+def definitions_problems(body: Any, expected: dict) -> list[str]:
+    """How the served definitions differ from those the image computes.
+
+    Exact equality, an ``error`` included: the point is that the served
+    code binds every measure as the image does offline. Whether a
+    definition is the approved one is the page's comparison, not this.
+    """
+    route = HOUSEHOLD_IMPACT_ROUTE
+    served = body.get("definitions") if isinstance(body, dict) else None
+    if not isinstance(served, dict):
+        return [f"{route} reports no definitions"]
+    problems = []
+    for measure_id, definition in sorted(expected["expected"].items()):
+        if measure_id not in served:
+            problems.append(f"{route} reports no definition of {measure_id}")
+        elif served[measure_id] != definition:
+            problems.append(
+                f"{route}: the served definition of {measure_id} is not "
+                "the one the image computes"
+            )
+    unnamed = sorted(set(served) - set(expected["expected"]))
+    if unnamed:
+        problems.append(
+            f"{route} reports definitions that were not named: "
+            + ", ".join(unnamed)
+        )
+    return problems
+
+
 def identity_problems(
     reported: Any, expected_git_sha: str, expected: dict
 ) -> list[str]:
@@ -216,11 +352,16 @@ def run_smoke(
     expected: Optional[dict] = None,
     years: Optional[list[str]] = None,
     policies: Optional[list[str]] = None,
+    household_impact: Optional[dict] = None,
+    definitions: Optional[dict] = None,
 ) -> dict:
     """Run every check. Returns ``{"pass": bool, "problems": [...]}``.
 
-    ``expected`` is the image's identity and ``years``/``policies`` its
-    calculator's coverage; each defaults to this process's own.
+    ``expected`` is the image's identity, ``years``/``policies`` its
+    calculator's coverage, ``household_impact`` whether it has the
+    single-year route (``expected_household_impact``) and
+    ``definitions`` the definitions it computes
+    (``expected_definitions``); each defaults to this process's own.
     """
     expected = expected or runtime_identity()
     problems: list[str] = []
@@ -238,6 +379,22 @@ def run_smoke(
     )
     if impact is not None:
         problems += impact_problems(impact.json(), years, policies)
+
+    if household_impact is None:
+        household_impact = expected_household_impact()
+    if definitions is None:
+        definitions = expected_definitions()
+    if household_impact.get("declared"):
+        route = HOUSEHOLD_IMPACT_ROUTE
+        if definitions.get("declared"):
+            route += "?" + definitions_query(definitions)
+        single = _request(
+            client, "POST", route, problems, json=SMOKE_HOUSEHOLD_IMPACT
+        )
+        if single is not None:
+            problems += household_impact_problems(single.json())
+            if definitions.get("declared"):
+                problems += definitions_problems(single.json(), definitions)
 
     return {"pass": not problems, "problems": problems, "version": reported}
 
@@ -276,15 +433,18 @@ class StdlibClient:
 
 
 def print_expectations() -> dict:
-    """What a revision's image says it is: its identity and the years and
-    policies its calculator covers. The pipelines run the same thing inside
-    the image, written out (so an image older than this function answers
-    too); the checker reads the result as data."""
+    """What a revision's image says it is: its identity, the years and
+    policies its calculator covers, and whether it has the single-year
+    route. The pipelines run the same thing inside the image, written out
+    (so an image older than this function answers too); the checker reads
+    the result as data."""
     years, policies = expected_coverage()
     return {
         "identity": runtime_identity(),
         "years": years,
         "policies": policies,
+        "household_impact": expected_household_impact(),
+        "definitions": expected_definitions(),
     }
 
 
@@ -312,11 +472,58 @@ def read_expectations(path: str, expected_git_sha: str) -> dict:
             or not all(isinstance(v, str) and v for v in values)
         ):
             problems.append(f"names no {key}")
+    # An older image's file may also name a "lifecycle" entry, for a route
+    # this checker no longer calls; it is ignored.
+    # Optional: a file written before the single-year route names none,
+    # and the route is then not checked.
+    single = data.get("household_impact") if isinstance(data, dict) else None
+    if single is not None and not (
+        isinstance(single, dict) and isinstance(single.get("declared"), bool)
+    ):
+        problems.append("names a household_impact entry that is not declared")
+    # Optional, as the single-year route is: a file written before the
+    # definitions names none, and they are then not checked.
+    defined = data.get("definitions") if isinstance(data, dict) else None
+    if defined is not None:
+        problems += _definitions_entry_problems(defined, expected_git_sha)
     if problems:
         raise ValueError(
             f"the expectations file {path} " + "; ".join(problems)
         )
     return data
+
+
+def _definitions_entry_problems(entry: Any, expected_git_sha: str) -> list:
+    if not isinstance(entry, dict) or not isinstance(
+        entry.get("declared"), bool
+    ):
+        return ["names a definitions entry that is not declared"]
+    if not entry["declared"]:
+        return []
+    problems = []
+    if entry.get("at") != expected_git_sha:
+        problems.append(
+            f"names definitions at {entry.get('at')!r}, not "
+            f"{expected_git_sha!r}"
+        )
+    expected = entry.get("expected")
+    if (
+        not isinstance(expected, dict)
+        or not expected
+        or not all(
+            isinstance(key, str) and key and isinstance(value, dict)
+            for key, value in expected.items()
+        )
+    ):
+        problems.append("names no definitions")
+    else:
+        for measure_id, definition in sorted(expected.items()):
+            if "error" in definition:
+                problems.append(
+                    f"the image cannot bind {measure_id}: "
+                    f"{definition['error']}"
+                )
+    return problems
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -344,6 +551,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             data["identity"],
             data["years"],
             data["policies"],
+            data.get("household_impact") or {},
+            data.get("definitions") or {"declared": False},
         )
     else:
         result = run_smoke(StdlibClient(args.base_url, args.timeout), sha)

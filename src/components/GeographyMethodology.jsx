@@ -1,6 +1,8 @@
-import { useId, useState } from "react";
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
+import FactList from "./methodology/FactList";
+import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
 
 export const METHOD_NOTE_URL =
@@ -14,106 +16,100 @@ const breaks = (outcome) => {
 
 /**
  * How the figures by region and constituency are estimated and protected,
- * in a panel that opens on request.
+ * as a fact grid. Shown on the Methodology view; the map links to it.
  */
 function GeographyMethodology() {
-  const [open, setOpen] = useState(false);
-  const contentId = useId();
   const percent = breaks("relative_change");
   const pounds = breaks("average_change");
 
   return (
-    <div className="geography-methodology">
-      <button
-        type="button"
-        className="geography-methodology-toggle"
-        aria-expanded={open}
-        aria-controls={contentId}
-        onClick={() => setOpen((value) => !value)}
-      >
-        How these figures are estimated
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
-          }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && (
-        <div id={contentId} className="geography-methodology-content">
-          <p>
-            The figures by region and by constituency are estimated from a
-            survey of households. Before a figure is published, it passes these
-            checks.
-          </p>
-          <ul>
-            <li>
-              <strong>At least 10 households.</strong> Every published figure
-              rests on at least 10 survey households, and no single household
-              dominates it: each figure is checked against dominance and p%
-              rules before it is published.
-            </li>
-            <li>
-              <strong>90% intervals.</strong> Each figure comes with a 90%
-              interval, from resampling survey households with their weights
-              held fixed. Holding the weights fixed leaves out some of the
-              uncertainty, so the intervals understate it.
-            </li>
-            <li>
-              <strong>Rounding.</strong> Figures are rounded to the precision
-              the data supports, so a less certain figure has fewer digits.
-            </li>
-            <li>
-              <strong>Approximate.</strong> An approximate figure rests on few
-              survey households. Its interval understates the uncertainty, so
-              read it as a rough guide.
-            </li>
-            <li>
-              <strong>Not published.</strong> Some figures are not published,
-              to protect the confidentiality of survey respondents. The map
-              hatches these constituencies, and the tables mark them.
-            </li>
-            <li>
-              <strong>Map colours.</strong> The map groups figures into
-              categories with breaks fixed in advance: little change is under{" "}
-              {percent.small} of income ({pounds.small} a year) either way, a
-              small change is up to {percent.large} ({pounds.large}), and a
-              large change is more. A constituency is coloured only when its
-              interval lies within one category or two neighbouring ones;
-              otherwise it is too uncertain to classify.
-            </li>
-            <li>
-              <strong>Constituencies and regions.</strong> Constituency
-              figures do not add up exactly to the regional ones, and may come
+    <div className="geography-method">
+      <FactList
+        className="method-checklist"
+        items={[
+          [
+            "At least 10 households",
+            {
+              points: [
+                "Every published figure rests on at least 10 survey households.",
+                "No single household dominates it: each figure is checked against dominance and p% rules before it is published.",
+              ],
+            },
+            ShieldCheck,
+          ],
+          [
+            "90% intervals",
+            {
+              points: [
+                "Each figure comes with a 90% interval, from resampling survey households with their weights held fixed.",
+                "Holding the weights fixed leaves out some of the uncertainty, so the intervals understate it.",
+              ],
+            },
+            Ruler,
+          ],
+          [
+            "Rounding",
+            <>
+              Figures are rounded to the precision the data supports, so a
+              less certain figure has fewer digits.
+            </>,
+            Hash,
+          ],
+          [
+            "Approximate",
+            <>
+              An approximate figure rests on few survey households. Its
+              interval understates the uncertainty, so read it as a rough
+              guide.
+            </>,
+            TriangleAlert,
+          ],
+          [
+            "Not published",
+            <>
+              Some figures are not published, to protect the confidentiality
+              of survey respondents. The map hatches these constituencies, and
+              the tables mark them.
+            </>,
+            EyeOff,
+          ],
+          [
+            "Map colours",
+            {
+              lead: "The map groups figures into categories with breaks fixed in advance:",
+              points: [
+                `little change: under ${percent.small} of income (${pounds.small} a year) either way;`,
+                `small change: up to ${percent.large} (${pounds.large});`,
+                "large change: more.",
+                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify.",
+              ],
+            },
+            Palette,
+          ],
+          [
+            "Constituencies and regions",
+            <>
+              Constituency figures come from Microcosm&apos;s local-area
+              dataset, in which each household belongs to one constituency.
+              They do not add up exactly to the regional ones, which may come
               from a different dataset.
-            </li>
-            <li>
-              <strong>Later years.</strong> Constituency figures from the
-              national dataset use its constituency weights, which are
-              estimated for 2025. Later years keep each household&apos;s 2025
-              split across constituencies, scaled to that year&apos;s household
-              weights.
-            </li>
-          </ul>
-          <p>
-            <a href={METHOD_NOTE_URL} target="_blank" rel="noopener noreferrer">
-              Read the method note for constituency figures
-            </a>
-            .
-          </p>
-        </div>
-      )}
+            </>,
+            Layers,
+          ],
+          [
+            "Later years",
+            <>
+              Each household keeps its constituency in every year; later years
+              use that year&apos;s household weights.
+            </>,
+            CalendarClock,
+          ],
+        ]}
+      />
+      <p className="method-more">
+        <ExternalLink href={METHOD_NOTE_URL}>Read the method note for constituency figures</ExternalLink>
+        .
+      </p>
     </div>
   );
 }

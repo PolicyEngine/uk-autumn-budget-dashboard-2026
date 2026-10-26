@@ -1,0 +1,1034 @@
+{
+  "year": 2029,
+  "fiscal_year": "2029-30",
+  "salary_used": {
+    "salary_year": 2026,
+    "employment_income": 34192.26,
+    "partner_employment_income": 12822.1,
+    "growth": 1.068508,
+    "note": "Salary as entered for 2026, grown to 2029-30 with the OBR average earnings index."
+  },
+  "net_income": {
+    "baseline": 65370.9,
+    "reform": 69135.74,
+    "change": 3764.84
+  },
+  "included": [
+    "dividend_tax_increase_2pp",
+    "freeze_student_loan_thresholds",
+    "fuel_duty_freeze",
+    "property_tax_increase_2pp",
+    "salary_sacrifice_cap",
+    "savings_tax_increase_2pp",
+    "threshold_freeze_extension",
+    "two_child_limit"
+  ],
+  "not_modelled": [
+    {
+      "id": "rail_fares_freeze",
+      "name": "Rail fares freeze",
+      "reason": "This measure spreads a national cost over households by how much they use rail, which one household's answers can't show. It is in the national figures only."
+    }
+  ],
+  "by_policy": {
+    "measures": [
+      {
+        "id": "dividend_tax_increase_2pp",
+        "name": "Dividend tax increase (+2pp)",
+        "change": 0.0,
+        "status": "not_affected"
+      },
+      {
+        "id": "freeze_student_loan_thresholds",
+        "name": "Freeze student loan repayment thresholds",
+        "change": 0.0,
+        "status": "not_affected"
+      },
+      {
+        "id": "fuel_duty_freeze",
+        "name": "Fuel duty freeze extension",
+        "change": 2.37,
+        "status": "affected"
+      },
+      {
+        "id": "property_tax_increase_2pp",
+        "name": "Property income tax increase (+2pp)",
+        "change": 0.0,
+        "status": "not_affected"
+      },
+      {
+        "id": "salary_sacrifice_cap",
+        "name": "Salary sacrifice cap",
+        "change": -24.42,
+        "status": "affected"
+      },
+      {
+        "id": "savings_tax_increase_2pp",
+        "name": "Savings income tax increase (+2pp)",
+        "change": 0.0,
+        "status": "not_affected"
+      },
+      {
+        "id": "threshold_freeze_extension",
+        "name": "Threshold freeze extension",
+        "change": -95.05,
+        "status": "affected"
+      },
+      {
+        "id": "two_child_limit",
+        "name": "2 child limit repeal",
+        "change": 3881.89,
+        "status": "affected"
+      }
+    ],
+    "combined": 3764.84,
+    "sum_of_singles": 3764.8,
+    "residual": 0.04,
+    "method": "Each measure's change is that measure switched to its Budget setting, with every other selected measure held at pre-Budget law, against the same baseline. The combined change switches them all at once. The residual is the combined change minus the sum of the single changes: what the measures do together beyond what each does alone."
+  },
+  "programmes": [
+    {
+      "id": "income_tax",
+      "label": "Income Tax",
+      "baseline": 4163.65,
+      "reform": 4359.83,
+      "change": 196.18,
+      "group": "tax",
+      "note": "Includes the High Income Child Benefit Charge, so Child Benefit is shown before it.",
+      "children": [
+        {
+          "id": "earned_income_tax",
+          "label": "On earnings",
+          "baseline": 4163.65,
+          "reform": 4359.83,
+          "change": 196.18
+        },
+        {
+          "id": "savings_income_tax",
+          "label": "On savings",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        },
+        {
+          "id": "dividend_income_tax",
+          "label": "On dividends",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        },
+        {
+          "id": "property_income_tax",
+          "label": "On property income",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        },
+        {
+          "id": "child_benefit_charge",
+          "label": "High Income Child Benefit Charge",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        }
+      ]
+    },
+    {
+      "id": "national_insurance",
+      "label": "Employee National Insurance",
+      "baseline": 1749.95,
+      "reform": 1743.94,
+      "change": -6.02,
+      "group": "tax"
+    },
+    {
+      "id": "student_loan_repayments",
+      "label": "Student loan repayments",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "tax"
+    },
+    {
+      "id": "council_tax",
+      "label": "Council Tax",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "tax",
+      "note": "As entered, not modelled: policyengine-uk takes Council Tax as an input (the band does not set it), so no measure changes it."
+    },
+    {
+      "id": "fuel_duty",
+      "label": "Fuel duty",
+      "baseline": 212.18,
+      "reform": 209.81,
+      "change": -2.37,
+      "group": "tax",
+      "note": "From the petrol and diesel spending entered."
+    },
+    {
+      "id": "tv_licence",
+      "label": "TV licence",
+      "baseline": 180.0,
+      "reform": 180.0,
+      "change": 0.0,
+      "group": "tax"
+    },
+    {
+      "id": "pension_contributions",
+      "label": "Pension contributions from pay",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "tax",
+      "note": "Not a tax, but taken off net income. Salary sacrificed above the salary sacrifice cap is paid into the pension from pay instead."
+    },
+    {
+      "id": "universal_credit",
+      "label": "Universal Credit",
+      "baseline": 10536.31,
+      "reform": 14564.16,
+      "change": 4027.84,
+      "group": "benefit",
+      "note": "Elements are before the earnings taper and any benefit cap.",
+      "children": [
+        {
+          "id": "uc_standard_allowance",
+          "label": "Standard allowance",
+          "baseline": 8518.47,
+          "reform": 8518.47,
+          "change": 0.0
+        },
+        {
+          "id": "uc_child_element",
+          "label": "Child element",
+          "baseline": 7763.78,
+          "reform": 11645.67,
+          "change": 3881.89
+        },
+        {
+          "id": "uc_housing_costs_element",
+          "label": "Housing costs element",
+          "baseline": 10800.0,
+          "reform": 10800.0,
+          "change": 0.0
+        },
+        {
+          "id": "uc_childcare_element",
+          "label": "Childcare element",
+          "baseline": 3060.0,
+          "reform": 3060.0,
+          "change": 0.0
+        }
+      ]
+    },
+    {
+      "id": "child_benefit",
+      "label": "Child Benefit",
+      "baseline": 3478.42,
+      "reform": 3478.42,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "tax_free_childcare",
+      "label": "Tax-Free Childcare",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "housing_benefit",
+      "label": "Housing Benefit",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "pension_credit",
+      "label": "Pension Credit",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "state_pension",
+      "label": "State Pension",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "winter_fuel_payment",
+      "label": "Winter Fuel Payment",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "scottish_child_payment",
+      "label": "Scottish Child Payment",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "free_childcare",
+      "label": "Free childcare hours",
+      "baseline": 10647.64,
+      "reform": 10647.64,
+      "change": 0.0,
+      "group": "benefit",
+      "note": "The value of the funded hours, which policyengine-uk counts in net income.",
+      "children": [
+        {
+          "id": "universal_childcare_entitlement",
+          "label": "Universal hours (3- and 4-year-olds)",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        },
+        {
+          "id": "extended_childcare_entitlement",
+          "label": "Working parents' hours",
+          "baseline": 10647.64,
+          "reform": 10647.64,
+          "change": 0.0
+        },
+        {
+          "id": "targeted_childcare_entitlement",
+          "label": "Disadvantaged 2-year-olds' hours",
+          "baseline": 0.0,
+          "reform": 0.0,
+          "change": 0.0
+        }
+      ]
+    },
+    {
+      "id": "employment_income",
+      "label": "Employment income",
+      "baseline": 47014.35,
+      "reform": 46939.13,
+      "change": -75.22,
+      "group": "income",
+      "note": "policyengine-uk assumes employers recover the salary sacrifice cap's extra employer National Insurance by cutting every employee's pay by a set share, whether or not they use salary sacrifice: the pay cut row, a negative amount.",
+      "children": [
+        {
+          "id": "salary_sacrifice_haircut",
+          "label": "Pay cut for the salary sacrifice cap (current law)",
+          "baseline": 0.0,
+          "reform": -75.22,
+          "change": -75.22
+        }
+      ]
+    },
+    {
+      "id": "dividend_income",
+      "label": "Dividends",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "income"
+    },
+    {
+      "id": "savings_interest_income",
+      "label": "Savings interest",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "income"
+    },
+    {
+      "id": "property_income",
+      "label": "Property income",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "income"
+    },
+    {
+      "id": "other_taxes",
+      "label": "Other taxes",
+      "baseline": 0.04,
+      "reform": 0.04,
+      "change": 0.0,
+      "group": "tax"
+    },
+    {
+      "id": "other_benefits",
+      "label": "Other benefits",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "benefit"
+    },
+    {
+      "id": "other_income",
+      "label": "Other income",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0,
+      "group": "income"
+    }
+  ],
+  "not_in_breakdown": [
+    {
+      "id": "rail_fares_freeze",
+      "note": "This measure spreads a national cost over households by how much they use rail, which one household's answers can't show. It is in the national figures only."
+    }
+  ],
+  "dependants": [
+    {
+      "age": 9,
+      "in_education": null,
+      "claimant_or_partner": false,
+      "counts_for_child_benefit": true,
+      "counts_for_universal_credit": true
+    },
+    {
+      "age": 6,
+      "in_education": null,
+      "claimant_or_partner": false,
+      "counts_for_child_benefit": true,
+      "counts_for_universal_credit": true
+    },
+    {
+      "age": 2,
+      "in_education": null,
+      "claimant_or_partner": false,
+      "counts_for_child_benefit": true,
+      "counts_for_universal_credit": true
+    }
+  ],
+  "dependants_note": "Who counts as a child follows policyengine-uk: everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19. Child Benefit counts such a young person until 20; Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
+  "area": {
+    "region": "NORTH_WEST",
+    "brma": "CENTRAL_GREATER_MANCHESTER",
+    "brma_source": "region default",
+    "local_authority": "MAIDSTONE",
+    "local_authority_source": "policyengine-uk default"
+  },
+  "sweep": {
+    "variable": "employment_income",
+    "person": "head",
+    "points": [
+      {
+        "employment_income": 0.0,
+        "baseline": 44252.61,
+        "reform": 48128.38,
+        "change": 3875.77
+      },
+      {
+        "employment_income": 3061.22,
+        "baseline": 48690.16,
+        "reform": 52563.72,
+        "change": 3873.56
+      },
+      {
+        "employment_income": 6122.45,
+        "baseline": 50067.71,
+        "reform": 53939.07,
+        "change": 3871.36
+      },
+      {
+        "employment_income": 9183.67,
+        "baseline": 46121.44,
+        "reform": 49990.59,
+        "change": 3869.15
+      },
+      {
+        "employment_income": 12244.9,
+        "baseline": 58146.64,
+        "reform": 62013.58,
+        "change": 3866.94
+      },
+      {
+        "employment_income": 15306.12,
+        "baseline": 59251.79,
+        "reform": 63026.41,
+        "change": 3774.62
+      },
+      {
+        "employment_income": 18367.35,
+        "baseline": 60243.62,
+        "reform": 64016.66,
+        "change": 3773.04
+      },
+      {
+        "employment_income": 21428.57,
+        "baseline": 61235.46,
+        "reform": 65006.92,
+        "change": 3771.45
+      },
+      {
+        "employment_income": 24489.8,
+        "baseline": 62227.3,
+        "reform": 65997.17,
+        "change": 3769.87
+      },
+      {
+        "employment_income": 27551.02,
+        "baseline": 63219.14,
+        "reform": 66987.42,
+        "change": 3768.29
+      },
+      {
+        "employment_income": 30612.24,
+        "baseline": 64210.98,
+        "reform": 67977.66,
+        "change": 3766.69
+      },
+      {
+        "employment_income": 33673.47,
+        "baseline": 65202.81,
+        "reform": 68967.92,
+        "change": 3765.11
+      },
+      {
+        "employment_income": 36734.69,
+        "baseline": 66194.65,
+        "reform": 69958.17,
+        "change": 3763.52
+      },
+      {
+        "employment_income": 39795.92,
+        "baseline": 67186.48,
+        "reform": 70948.41,
+        "change": 3761.93
+      },
+      {
+        "employment_income": 42857.14,
+        "baseline": 68178.33,
+        "reform": 71938.67,
+        "change": 3760.34
+      },
+      {
+        "employment_income": 45918.37,
+        "baseline": 69170.16,
+        "reform": 72928.91,
+        "change": 3758.75
+      },
+      {
+        "employment_income": 48979.59,
+        "baseline": 70161.99,
+        "reform": 73919.17,
+        "change": 3757.18
+      },
+      {
+        "employment_income": 52040.82,
+        "baseline": 71201.65,
+        "reform": 74803.1,
+        "change": 3601.45
+      },
+      {
+        "employment_income": 55102.04,
+        "baseline": 72004.77,
+        "reform": 75600.8,
+        "change": 3596.02
+      },
+      {
+        "employment_income": 58163.27,
+        "baseline": 72803.76,
+        "reform": 76398.5,
+        "change": 3594.74
+      },
+      {
+        "employment_income": 61224.49,
+        "baseline": 73394.73,
+        "reform": 77023.2,
+        "change": 3628.47
+      },
+      {
+        "employment_income": 64285.71,
+        "baseline": 74893.08,
+        "reform": 77298.91,
+        "change": 2405.83
+      },
+      {
+        "employment_income": 67346.94,
+        "baseline": 76146.58,
+        "reform": 77539.6,
+        "change": 1393.02
+      },
+      {
+        "employment_income": 70408.16,
+        "baseline": 77366.09,
+        "reform": 77816.3,
+        "change": 450.21
+      },
+      {
+        "employment_income": 73469.39,
+        "baseline": 78619.61,
+        "reform": 78092.0,
+        "change": -527.61
+      },
+      {
+        "employment_income": 76530.61,
+        "baseline": 79874.11,
+        "reform": 79216.08,
+        "change": -658.03
+      },
+      {
+        "employment_income": 79591.84,
+        "baseline": 81127.62,
+        "reform": 80466.74,
+        "change": -660.88
+      },
+      {
+        "employment_income": 82653.06,
+        "baseline": 82798.13,
+        "reform": 82134.41,
+        "change": -663.72
+      },
+      {
+        "employment_income": 85714.29,
+        "baseline": 84573.65,
+        "reform": 83907.09,
+        "change": -666.56
+      },
+      {
+        "employment_income": 88775.51,
+        "baseline": 86349.16,
+        "reform": 85679.75,
+        "change": -669.41
+      },
+      {
+        "employment_income": 91836.73,
+        "baseline": 88124.66,
+        "reform": 87452.42,
+        "change": -672.24
+      },
+      {
+        "employment_income": 94897.96,
+        "baseline": 89900.17,
+        "reform": 89225.09,
+        "change": -675.08
+      },
+      {
+        "employment_income": 97959.18,
+        "baseline": 91675.69,
+        "reform": 90997.77,
+        "change": -677.92
+      },
+      {
+        "employment_income": 101020.41,
+        "baseline": 82599.55,
+        "reform": 81951.19,
+        "change": -648.36
+      },
+      {
+        "employment_income": 104081.63,
+        "baseline": 83763.06,
+        "reform": 83112.66,
+        "change": -650.41
+      },
+      {
+        "employment_income": 107142.86,
+        "baseline": 84926.17,
+        "reform": 84274.12,
+        "change": -652.05
+      },
+      {
+        "employment_income": 110204.08,
+        "baseline": 86089.28,
+        "reform": 85435.59,
+        "change": -653.69
+      },
+      {
+        "employment_income": 113265.31,
+        "baseline": 87252.8,
+        "reform": 86596.66,
+        "change": -656.13
+      },
+      {
+        "employment_income": 116326.53,
+        "baseline": 88415.91,
+        "reform": 87758.13,
+        "change": -657.77
+      },
+      {
+        "employment_income": 119387.76,
+        "baseline": 89579.42,
+        "reform": 88919.6,
+        "change": -659.82
+      },
+      {
+        "employment_income": 122448.98,
+        "baseline": 90742.53,
+        "reform": 90081.08,
+        "change": -661.45
+      },
+      {
+        "employment_income": 125510.2,
+        "baseline": 91904.08,
+        "reform": 91267.67,
+        "change": -636.41
+      },
+      {
+        "employment_income": 128571.43,
+        "baseline": 93373.98,
+        "reform": 92887.53,
+        "change": -486.45
+      },
+      {
+        "employment_income": 131632.65,
+        "baseline": 94996.42,
+        "reform": 94507.38,
+        "change": -489.04
+      },
+      {
+        "employment_income": 134693.88,
+        "baseline": 96618.88,
+        "reform": 96127.23,
+        "change": -491.65
+      },
+      {
+        "employment_income": 137755.1,
+        "baseline": 98241.33,
+        "reform": 97747.09,
+        "change": -494.23
+      },
+      {
+        "employment_income": 140816.33,
+        "baseline": 99863.77,
+        "reform": 99366.94,
+        "change": -496.84
+      },
+      {
+        "employment_income": 143877.55,
+        "baseline": 101486.22,
+        "reform": 100986.79,
+        "change": -499.43
+      },
+      {
+        "employment_income": 146938.78,
+        "baseline": 103108.67,
+        "reform": 102606.64,
+        "change": -502.03
+      },
+      {
+        "employment_income": 150000.0,
+        "baseline": 104731.12,
+        "reform": 104226.5,
+        "change": -504.62
+      }
+    ],
+    "marginal_rates": [
+      {
+        "from": 0.0,
+        "to": 3061.22,
+        "baseline": -0.4496,
+        "reform": -0.4489
+      },
+      {
+        "from": 3061.22,
+        "to": 6122.45,
+        "baseline": 0.55,
+        "reform": 0.5507
+      },
+      {
+        "from": 6122.45,
+        "to": 9183.67,
+        "baseline": 2.2891,
+        "reform": 2.2898
+      },
+      {
+        "from": 9183.67,
+        "to": 12244.9,
+        "baseline": -2.9282,
+        "reform": -2.9275
+      },
+      {
+        "from": 12244.9,
+        "to": 15306.12,
+        "baseline": 0.639,
+        "reform": 0.6691
+      },
+      {
+        "from": 15306.12,
+        "to": 18367.35,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 18367.35,
+        "to": 21428.57,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 21428.57,
+        "to": 24489.8,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 24489.8,
+        "to": 27551.02,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 27551.02,
+        "to": 30612.24,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 30612.24,
+        "to": 33673.47,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 33673.47,
+        "to": 36734.69,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 36734.69,
+        "to": 39795.92,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 39795.92,
+        "to": 42857.14,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 42857.14,
+        "to": 45918.37,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 45918.37,
+        "to": 48979.59,
+        "baseline": 0.676,
+        "reform": 0.6765
+      },
+      {
+        "from": 48979.59,
+        "to": 52040.82,
+        "baseline": 0.6604,
+        "reform": 0.7112
+      },
+      {
+        "from": 52040.82,
+        "to": 55102.04,
+        "baseline": 0.7376,
+        "reform": 0.7394
+      },
+      {
+        "from": 55102.04,
+        "to": 58163.27,
+        "baseline": 0.739,
+        "reform": 0.7394
+      },
+      {
+        "from": 58163.27,
+        "to": 61224.49,
+        "baseline": 0.8069,
+        "reform": 0.7959
+      },
+      {
+        "from": 61224.49,
+        "to": 64285.71,
+        "baseline": 0.5105,
+        "reform": 0.9099
+      },
+      {
+        "from": 64285.71,
+        "to": 67346.94,
+        "baseline": 0.5905,
+        "reform": 0.9214
+      },
+      {
+        "from": 67346.94,
+        "to": 70408.16,
+        "baseline": 0.6016,
+        "reform": 0.9096
+      },
+      {
+        "from": 70408.16,
+        "to": 73469.39,
+        "baseline": 0.5905,
+        "reform": 0.9099
+      },
+      {
+        "from": 73469.39,
+        "to": 76530.61,
+        "baseline": 0.5902,
+        "reform": 0.6328
+      },
+      {
+        "from": 76530.61,
+        "to": 79591.84,
+        "baseline": 0.5905,
+        "reform": 0.5914
+      },
+      {
+        "from": 79591.84,
+        "to": 82653.06,
+        "baseline": 0.4543,
+        "reform": 0.4552
+      },
+      {
+        "from": 82653.06,
+        "to": 85714.29,
+        "baseline": 0.42,
+        "reform": 0.4209
+      },
+      {
+        "from": 85714.29,
+        "to": 88775.51,
+        "baseline": 0.42,
+        "reform": 0.4209
+      },
+      {
+        "from": 88775.51,
+        "to": 91836.73,
+        "baseline": 0.42,
+        "reform": 0.4209
+      },
+      {
+        "from": 91836.73,
+        "to": 94897.96,
+        "baseline": 0.42,
+        "reform": 0.4209
+      },
+      {
+        "from": 94897.96,
+        "to": 97959.18,
+        "baseline": 0.42,
+        "reform": 0.4209
+      },
+      {
+        "from": 97959.18,
+        "to": 101020.41,
+        "baseline": 3.9649,
+        "reform": 3.9552
+      },
+      {
+        "from": 101020.41,
+        "to": 104081.63,
+        "baseline": 0.6199,
+        "reform": 0.6206
+      },
+      {
+        "from": 104081.63,
+        "to": 107142.86,
+        "baseline": 0.6201,
+        "reform": 0.6206
+      },
+      {
+        "from": 107142.86,
+        "to": 110204.08,
+        "baseline": 0.6201,
+        "reform": 0.6206
+      },
+      {
+        "from": 110204.08,
+        "to": 113265.31,
+        "baseline": 0.6199,
+        "reform": 0.6207
+      },
+      {
+        "from": 113265.31,
+        "to": 116326.53,
+        "baseline": 0.6201,
+        "reform": 0.6206
+      },
+      {
+        "from": 116326.53,
+        "to": 119387.76,
+        "baseline": 0.6199,
+        "reform": 0.6206
+      },
+      {
+        "from": 119387.76,
+        "to": 122448.98,
+        "baseline": 0.6201,
+        "reform": 0.6206
+      },
+      {
+        "from": 122448.98,
+        "to": 125510.2,
+        "baseline": 0.6206,
+        "reform": 0.6124
+      },
+      {
+        "from": 125510.2,
+        "to": 128571.43,
+        "baseline": 0.5198,
+        "reform": 0.4708
+      },
+      {
+        "from": 128571.43,
+        "to": 131632.65,
+        "baseline": 0.47,
+        "reform": 0.4708
+      },
+      {
+        "from": 131632.65,
+        "to": 134693.88,
+        "baseline": 0.47,
+        "reform": 0.4709
+      },
+      {
+        "from": 134693.88,
+        "to": 137755.1,
+        "baseline": 0.47,
+        "reform": 0.4708
+      },
+      {
+        "from": 137755.1,
+        "to": 140816.33,
+        "baseline": 0.47,
+        "reform": 0.4709
+      },
+      {
+        "from": 140816.33,
+        "to": 143877.55,
+        "baseline": 0.47,
+        "reform": 0.4708
+      },
+      {
+        "from": 143877.55,
+        "to": 146938.78,
+        "baseline": 0.47,
+        "reform": 0.4708
+      },
+      {
+        "from": 146938.78,
+        "to": 150000.0,
+        "baseline": 0.47,
+        "reform": 0.4708
+      }
+    ],
+    "own_point": {
+      "employment_income": 34192.26,
+      "baseline": 65370.9,
+      "reform": 69135.74,
+      "baseline_marginal_rate": 0.676,
+      "reform_marginal_rate": 0.6765
+    },
+    "note": "Only the head's employment income varies; everything else is held as entered. A marginal rate is over the interval between two neighbouring points: one minus the change in household net income over the change in the head's employment income."
+  },
+  "engine": {
+    "policyengine": "6.10.1",
+    "policyengine-uk": "2.132.6",
+    "policyengine-core": "3.33.3",
+    "uk_budget_data": "0.1.0"
+  }
+}

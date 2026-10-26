@@ -22,8 +22,11 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Last production deployment ID, the rollback target: record before every merge on the day.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
-  - Serving revision and image: record after the last deploy before the day. On 22 October it is `uk-budget-api-2026-00020-pal` (git `ff217d3`; policyengine 6.10.0, policyengine-uk 2.132.6, core 3.33.3), deployed on 22 October after #72. Each re-cut redeploys it (see "Rolling re-cuts" below).
-  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 183 s on `00020-pal` (6.10.0), as on `00018-xuv` (6.6.0). So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures.
+  - Serving revision and image: record after the last deploy before the day. On 25 October it is `uk-budget-api-2026-00026-xol` (git `65280bd`, the merge of #125; policyengine 6.10.2, policyengine-uk 2.132.6, core 3.33.3; image `sha256:3309d448…`), promoted at 11:24Z on 25 October (run 40188251705). Before it, `00024-lir` (git `5fd6925`, the merge of #69) served from 23:27Z on 24 October. Each re-cut redeploys it (see "Rolling re-cuts" below).
+  - **How long one household answer takes.** Since #69 the Personal impact tab calls `/api/household-impact`: one household, one year, the selected measures. It asks in two stages: the headline first (`include: []`), then each measure's own effect and the earnings sweep (`by_policy`, `sweep`). It waits 90 s for the first and 200 s for the second (`householdImpactApi.js`), and the server gives up at 280 s with a 504 (`HOUSEHOLD_CALCULATION_TIMEOUT`). On `00024-lir`, for a household new to the revision, a headline took 16.7 to 17.3 s and a breakdown 81.0 to 83.9 s.
+    - **What the gates cover.** The deploy's smoke test asks `/api/household-impact` for one headline of one measure (`SMOKE_HOUSEHOLD_IMPACT` in `deploy_smoke.py`: `badr_lifetime_limit_cut`, 2028, `include: []`). From #125 the same request names every registered measure's definition at the deployed commit, and the candidate must serve exactly what its image computes. The smoke test also makes one full `/api/personal-impact` request for the £30,000 earner (six years, now nine measures), a route the page no longer calls. The same request took 96.1 s on `00024-lir` in the timings below. The household check posts only to each fixture's `route`, and the plumbing fixture's is `/api/personal-impact`.
+    - **So no gate asks for a breakdown,** the stage the page waits longest for. A revision whose breakdown passes 200 s, or 280 s, would still take traffic. So after each deploy, time one breakdown (see "Adopting a release").
+    - Cloud Run serves both routes on 2 CPUs with a 300 s request timeout, so a smoke-test request that takes more than 300 s fails it, and the revision never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures. The timings are under "Deploy and roll back once" below.
   - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation, with the grants made on 15 October (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call: `main`'s household route has passed the smoke test since 15 October).
   - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October. Run it from an up-to-date checkout of `main`, and submit **that checkout's** `cloudbuild.yaml`, never the archive's own. An older commit's copy lacks the one-deploy-at-a-time lock and the traffic check. To deploy an older commit, change `commit` and keep the config:
 
@@ -48,7 +51,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
   Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Whether to require Publication gate too is your call (question 3 in `budget-day-publication.md`).
 - [ ] **Household fixtures: specimen households before the rehearsal.** `data_inputs/household_fixtures/` (#15) holds its README, a draft example (`example-zero-income.json`, marked `"draft": true`, which the checker skips) and the plumbing fixture (#65).
-  - **The plumbing fixture** is a single employee on £12,000. It checks that the route answers on the bundle's versions, with the response's shape, and that seven of the route's eight measures change a household they can't reach by £0, with no measure giving it Universal Credit. It checks no non-zero answer.
+  - **The plumbing fixture** is a single employee on £12,000. It checks that the route answers on the bundle's versions, with the response's shape, and that each of the route's nine measures changes a household it can't reach by £0 in every year, and that it gets no Universal Credit in the baseline (since #69; before, seven of eight measures, and no measure giving it Universal Credit). It checks no non-zero answer.
   - **It is enough for the check to pass.** The check needs at least one non-draft fixture, and passes when every fixture it checks passes and the API's versions match the bundle's (`run_checks`). So with the plumbing fixture alone, the household check can pass at G0, G2 and G4 on `main`'s route. The checker doesn't require a fixture for each measure.
   - **The accuracy check is still to come:** specimen households whose non-zero answers are computed independently of the API (the README says how), at least one reached by each measure. Proposed: María's specimen households. Whether the checker should refuse to pass until every measure has one is your call.
 - [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3; the first two rows re-checked on 19 October against `main` (5324080):
@@ -56,12 +59,12 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | Where | What it says | Shown today? | Who fixes it |
   |---|---|---|---|
   | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures | **No.** Removed by #26 (15 October), which also tests that no static page names another year's Budget | Done. The briefing export (#22) writes this year's from an approved manifest |
-  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | Last year's results: all four last changed on 8 December 2025 and are byte-identical to `ec29ebd`. (`household_scatter.csv` was withdrawn from every public path by #30, 15 October.) | **Yes**: `main`'s main route (`App.jsx`) fetches them and charts them under the 2026 heading once a policy is selected. For example, `?policies=two_child_limit` shows −£2.95bn for 2026 and −£3.72bn for 2030 (#26 review, 15 October). Served at `uk-autumn-budget-2026.vercel.app`, which deploys `main` | #3 regenerates them. Until it merges, the production URL shows last year's numbers; whether to hide them meanwhile is your call |
+  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | **24 October (branch `ab2026-candidates`):** regenerated on the ten candidate 2026 measures (`reforms.py`), replacing last year's nine; the salary sacrifice cap candidate was dropped later that day (nine measures), and the combined package regenerated without it. `obr_comparison.csv` was regenerated on 25 October on the same nine measures and combined run, with empty OBR columns. The page never binds it (it is not among the flat files a view may read), so the comparison says it is not available, and stays so after the OBR publishes until it has a verified route | Yes, with the candidate banner under the intro | Budget day replaces the candidates with the announced measures |
   | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
-  | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
+  | The Personal impact tab's hand-typed calculator | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | No | Deleted in #69: the tab now calls `/api/household-impact` (policyengine.py) |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
   | `policyConfig.js` in #3, and the flat `public/data/*.csv` | A policy named "Autumn Budget 2025 (combined)" (id `autumn_budget_2025_combined`), with last year's rows | In #3, only through an old shared URL | #3 keeps it for old links: **your call** whether a 2026 page should still answer them |
-  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imports them, on `main`, in #3 or in the drills | Left alone. Delete them, or fix them before wiring them back |
+  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imported them, on `main`, in #3 or in the drills | Deleted in #69 (the UI redesign) |
   | `scripts/generate_combined_charts.py` | Chart titles "Combined Autumn Budget 2025" | Not a page | #22 |
 
   The page title and heading already say "UK Autumn Budget 2026".
@@ -87,25 +90,58 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | 16 October, `5482ca6` | 38867243746 | `00016-tes`, replacing `00014-coj` | #49: workers stopped for certain; policyengine 6.5.0 |
     | 16 October, `5324080` | 38960332978 | `00018-xuv`, replacing `00016-tes` | policyengine 6.6.0 (#56) |
     | 22 October, `ff217d3` | 39698257053 | `00020-pal`, replacing `00018-xuv` | policyengine 6.10.0 (#72): Microcosm data 0.1.0, policyengine-uk 2.132.6 |
+    | 24 October, `1acbd44` | 40114977669 | `00022-suw`, replacing `00020-pal` | policyengine 6.10.2 (#102): the same policyengine-uk and data as 6.10.0; only version strings change |
+    | 24 October, `5fd6925` | 40142327478 | `00024-lir`, replacing `00022-suw` | #69, the UI redesign: adds `/api/household-impact`, the route the Personal impact tab calls, and removes `/api/lifecycle/calculate`. Dispatched by Vahid |
+    | 25 October, `65280bd` | 40188251705 | `00026-xol`, replacing `00024-lir` | #125: `/api/household-impact` reports each measure's definition at its approved commit. The same policyengine, policyengine-uk and core as `00024-lir` |
 
-  - **Live and rollback target, 22 October:** `00020-pal` is live. The rollback target is `00018-xuv` (policyengine 6.6.0), the revision it replaced, which passed the smoke test when it was deployed.
+  - **Live and rollback target, 25 October:** `00026-xol` is live, promoted at 11:24Z, and its rollback target is `00024-lir`, which reports no definitions. The revision before that, `00022-suw`, passed the smoke test when it was deployed, but **it can't serve the page that is live now.**
+    - **Why:** since #69 the Personal impact tab calls `/api/household-impact`, which no revision before `00024-lir` has (`household_impact.py` doesn't exist at `1acbd44`). Rolling the API back to `00022-suw` or earlier keeps the rest of the page, but the tab fails for every household.
+    - **The rollback pipeline doesn't catch it.** Its smoke test checks `/api/household-impact` only on an image that has the route (`expected_household_impact` in `deploy_smoke.py`), so a rollback to `00022-suw` passes and moves traffic.
+    - **Rolling the dashboard back to before #69 doesn't help either.** Its Personal impact tab, the lifetime calculator, never calculated in production: it throws before any request when `NEXT_PUBLIC_LIFECYCLE_API_URL` is unset (`LifecycleCalculator.jsx` at `1329312`). None of the 70 production builds before #69 (12 to 24 October) had that variable. The production project's only variable is `NEXT_PUBLIC_HOUSEHOLD_API_URL` (production and preview), added at 23:19:54Z on 24 October, just before #69 merged.
+    - **So never roll the API back past `00024-lir`,** the first revision with the route. Through an API fault, roll back to it or fix forward.
   - **The household route can exceed 2 GiB.** Cloud Run killed two instances for exceeding the 2 GiB limit. Those are the only two such kills since 12 October, from the coordinator's read of the logs:
     - `00004-fur` at 12:40:03Z (2050 MiB), which gave step 2's 503;
     - `00003-jic` at 10:09:59Z (2054 MiB), during the first deploy's smoke test, so that 504 may have been memory as well as the 300 s limit.
 
     One full request, or a later request on an instance that has already run some (policyengine-core keeps what each build registers), could pass 2 GiB then. A smoke test or a rollback can therefore fail on memory, and retrying is not a fix. The memory setting is in the capacity decision going to Max.
-  - **Memory since #49:** the `read-api-memory.yml` workflow (#54) read a peak of 0.62 of 2 GiB on `00016-tes`, 0.65 on `00018-xuv` and 0.59 on `00020-pal` (about 1,208 MiB; run 39705395549), as p99 per minute over the timing runs below, with no out-of-memory lines.
+  - **Memory since #49:** the `read-api-memory.yml` workflow (#54) read a peak of 0.62 of 2 GiB on `00016-tes`, 0.65 on `00018-xuv`, 0.59 on `00020-pal` (about 1,208 MiB; run 39705395549) as p99 per minute over the timing runs below, with no out-of-memory lines. On `00022-suw` it read 0.64 (about 1,311 MiB; run 40116261683), peaking at 17:17Z during the deploy's smoke test; the window also covered the household check and the timing runs. On `00024-lir` it read 0.66 (about 1,351 MiB; run 40166629627) over the smoke test, the household check and both routes' timing runs, again with no out-of-memory lines.
   - **Cold start:** 32.6 s to the first response from an idle revision (`/api/version`).
   - **How long one household answer takes on Cloud Run, one request at a time:**
 
-    | Request | `00004-fur`, 15 October | `00016-tes`, 16 October | `00018-xuv`, 16 October | `00020-pal`, 22 October (6.10.0) |
-    |---|---|---|---|---|
-    | £30,000 earner | 142.5 s | 85.0 s | 77.5 s | 83.8 s |
-    | Couple on £40,000 and £20,000, children 3, 6, 9 and 12 | not timed | 94.4 s | 87.1 s | 77.5 s |
-    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s | 182.6 s, then 167.2 s |
+    | Request | `00004-fur`, 15 October | `00016-tes`, 16 October | `00018-xuv`, 16 October | `00020-pal`, 22 October (6.10.0) | `00022-suw`, 24 October (6.10.2) | `00024-lir`, 25 October (#69, nine measures) |
+    |---|---|---|---|---|---|---|
+    | £30,000 earner | 142.5 s | 85.0 s | 77.5 s | 83.8 s | 71.3 s | 96.1 s |
+    | Couple on £40,000 and £20,000, children 3, 6, 9 and 12 | not timed | 94.4 s | 87.1 s | 77.5 s | 70.8 s | 90.4 s |
+    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s | 182.6 s, then 167.2 s | 171.7 s, then 165.5 s | 195.1 s, then 193.7 s |
 
-    The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes`, `00018-xuv` and `00020-pal`, after #46. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
-  - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
+    These are `/api/personal-impact` requests. The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on every revision timed since #46 (`00016-tes` to `00024-lir`). `00024-lir` is slower. Its route covers nine different measures (the 2026 candidates, in place of last year's eight), and #69 also changed how runs share the workers (`FairSlots`). Every household is slower, by 14% to 35%, more than the earlier change between `00020-pal` and `00022-suw` on the same code (1% to 15% faster). Which of the two changes, if either, caused it isn't measured.
+  - **The route the page calls, `/api/household-impact`, on `00024-lir`** (25 October, one request at a time, each household new to the revision):
+
+    | Request | Headline (`include: []`) | Breakdown (`by_policy`, `sweep`) |
+    |---|---|---|
+    | £31,000 earner, 2027-28 | 16.7 s | 81.0 s |
+    | Couple on £41,000 and £21,000, children 3 and 7, 2028-29 | 17.3 s | 83.9 s, then 68.2 s |
+
+    The couple's request also sent `monthly_rent: 950`, but no `tenure`, so the default (owned with a mortgage) applied and no rent was counted. The repeated breakdown wasn't answered from the route's per-process cache (`_cached_household_impact` in `api.py`), which would have returned it at once. The image runs one uvicorn process, so another instance answering it would explain this, but that isn't established. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
+  - **Concurrent household calculations share the workers.** `/api/household-impact` admits up to `HOUSEHOLD_CONCURRENT_REQUESTS` requests per instance at once (default 4; 1 when `HOUSEHOLD_WORKERS` is 1), and their runs share the instance's `HOUSEHOLD_WORKERS` processes run by run (`FairSlots` in `personal_impact.py`; `/api/personal-impact` takes the same slots), so a second visitor's headline starts as soon as any run finishes instead of after the first visitor's whole calculation, and memory stays bounded by the workers. Measured on 24 October on a laptop with 2 workers, three different full requests at once: before, 23, 47 and 73 s (each queued behind the last); after, 54, 58 and 59 s. Three visitors asking in the page's two stages: headlines in 4–11 s either way, the last breakdown at 68 s before and 53 s after. The page now waits 90 s for a headline and 200 s for a breakdown; the server gives up at 280 s with a 504.
+    **Cloud Run setting needed:** `--concurrency` should match what an instance can serve in time. With `--cpu 2` and `HOUSEHOLD_WORKERS=2`, set `--concurrency 4` (equal to `HOUSEHOLD_CONCURRENT_REQUESTS`), so a fifth visitor goes to another instance rather than queueing; the deploy does not set it today, so Cloud Run's default of 80 applies. Not changed in `cloudbuild.yaml` here: it is a cost decision (more instances), Max's call through the coordinator.
+  - **Capacity for Budget week (#141, decided 25 October; recorded on #119).** `cloudbuild.yaml` deploys with `--cpu 8 --memory 8Gi --min-instances 1 --cpu-boost` and `HOUSEHOLD_WORKERS=8`.
+    - **Why:** a full answer runs 11 simulations (9 measures alone, then the sweep's two sides). On 2 workers that took about 6 rounds of about 12 s, so the split by policy took about 85 s. On 8 it is estimated at about 35 s; this is to be measured after the deploy.
+    - **Memory:** each worker peaks near 0.4 GB, so 8 workers and the parent fit in 8 GiB. The 2 GiB revisions peaked at about 1.35 GiB.
+    - **Cost:** `--min-instances 1` keeps one 8 vCPU instance always on. After Budget week, set it back to `--min-instances 0` (and optionally `--cpu 2 --memory 2Gi`, `HOUSEHOLD_WORKERS=2`) in `cloudbuild.yaml` through a PR, then run the deploy workflow.
+    - **Rollback:** the rollback workflow moves traffic to an earlier revision, which keeps that revision's own CPU and memory (2 vCPU, 2 GiB). A rollback is therefore also a capacity rollback, and is safe.
+  - **Fewer runs: measures that cannot move the household are skipped (#147).** `household_impact.provably_unaffected` leaves a measure out of the split by policy when it is exactly £0 for this household and year: the employer NI relief always (an employer cost), the Warm Home Discount top-up outside 2026-27, the threshold freeze before 2031-32, Plan 2 without a Plan 2 borrower, the State Pension protection with no one at State Pension age, BADR (the answers carry no capital gains), the fuel measures with no fuel spending (the road fuel VAT cut also from 2028-29), and electricity VAT with no electricity spending or from 2028-29. The default household's split falls from 9 runs to 3 in 2027-28. Each rule was checked against the full run (40 generated households x every policy year, identical; `tests/test_household_impact.py` keeps a slow version). A new measure has no rule until one is added and checked.
+  - **Optional: the slow parts on Modal (#147, live on production).** `src/uk_budget_data/modal_household.py` serves the same API on Modal, each simulation in its own one-core container, all at once. Measured on 25 October (default household, all nine measures, 2027-28, end to end over HTTPS): warm, headline 7-10 s, sweep 8-9 s, split by policy 10-14 s; cold (first request after idle) about 45 s, then warm. The page uses it when the build sets `NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL`. The sweep and the split go there, and are asked of Cloud Run instead when Modal fails, refuses the request, or answers from another build than the headline's. That is: other policyengine, policyengine-core or policyengine-uk versions; another build commit, or none (`git_sha`, which every answer carries); or a net income for the household more than a penny from the headline's. Net income alone can't show the build is the same: two builds can agree on one household's net income and differ elsewhere on its sweep, so a Modal answer is used only when it and the headline report the same commit. If Cloud Run's answer doesn't match the headline either (its packages, its net income, or a commit other than one the headline or the other part has already reported), the whole result is refused. A malformed commit matches nothing. `uk_budget_data` is not compared: the Modal image doesn't install the project, so it reports no version for it.
+    - **Deploy Modal from the commit Cloud Run serves.** Cloud Run's commit comes from the deploy (`_GIT_SHA`, checked against the uploaded source). Modal's is the HEAD of the checkout `modal deploy` runs in, and only when every file the image copies (`src/uk_budget_data` less its `__pycache__` folders, `data_inputs`, `pyproject.toml`, `uv.lock`, `.python-version`) has exactly HEAD's bytes and nothing else is copied (`runtime_identity.checkout_commit`). It compares the files with HEAD's tree, not with git's status, so a file git has been told not to check (`assume-unchanged`, `skip-worktree`) still counts, and so does any symbolic link. It reads HEAD's commit once and lists that commit's own tree, ignoring replacement objects (`git replace`), so the commit it reports is the one whose files it compared. It counts only a checkout that is git's work tree itself: run the deploy from the checkout's top folder, not from a folder inside a larger work tree, and not with `GIT_DIR` or `GIT_WORK_TREE` naming another one. It reads the files once, before the upload, so don't edit the checkout while the deploy runs. Otherwise the deploy prints "No build commit" and the files that differ, reports none, and every breakdown goes to Cloud Run. So run the deploy from a clean checkout of the commit Cloud Run serves, and redeploy Modal whenever Cloud Run is redeployed. A Modal deploy older than this change reports no commit, so the page doesn't use it until it is redeployed.
+    - **Before setting the variable,** check that `GET /api/version` reports the same `git_sha` and the same three package versions on both services.
+    - **Where it stands (read 26 October, 00:00Z):** the production build already sets `NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL` to the Modal app (`https://policyengine--uk-budget-household-web.us-east.modal.run/api/household-impact`, in the live bundle). `/api/version` reports commit `9305d80` on Modal and `f3304ff` on Cloud Run, with the same three package versions. Neither deploy's answers carry a commit yet, so once this page is live it asks Cloud Run for every breakdown, until Cloud Run and then Modal are deployed from one commit that has this change.
+    - **No survey data:** the household route builds one synthetic household, so no dataset and no Hugging Face token go to Modal.
+    - **Cost rules:** one core and 1 GiB per container, at most 12 containers, 300 s timeout. The deploy itself keeps none warm (`HOUSEHOLD_MODAL_MIN_CONTAINERS`, default 0). Then `warm_schedule` runs every 10 minutes and sets the warm `Household` containers from `household_warm.WARM_WINDOWS`, in UK time:
+        - 2 by default;
+        - 12 on Monday 26 October 09:00-18:00 and Wednesday 28 October 12:00-22:00, with the web endpoint also kept at 1 in those two windows only;
+        - 0 from 4 November 00:00, the hard stop.
+
+      Vahid approved this schedule on 25 October at about $35-40 in all. Each warm container costs about $0.055 an hour ($0.0473 per core-hour + $0.008 per GiB-hour), so 12 warm cost about $0.66 an hour. Deploy: `uv run --with modal modal deploy src/uk_budget_data/modal_household.py`; stop: `uv run --with modal modal app stop uk-budget-household`, then check `modal app list` shows no tasks.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
   - **Time the regeneration** (regenerate, stage, reconcile: the fifth row of the table under "How long one adoption takes" below), as that section says, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
 
@@ -116,14 +152,27 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **`parameter_changes`**, wherever the measure can be expressed that way.
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
+- **Each modifier has a module of its own, named after it, in `src/uk_budget_data/budget_measures/`.** The receipt binds a modifier's whole module (its source, and the default arguments of every function in it), so adding a function to a module, or editing one, changes the definition of every modifier there: each must be regenerated, and attested again where it needs attestation (see G5, steps 1 and 4). So a new modifier goes in a new module, `budget_measures/<its name>.py`, holding that one function, with any constant it uses written in that module; `reforms.py` imports it as `from uk_budget_data.budget_measures.<its name> import <its name>`. A helper two modifiers share goes outside the package, as the templates in `measure_templates.py` do: a change there reaches every measure whose modifier calls it, and no definition shows it (G5, step 1, "Code national generation also runs"). `tests/test_budget_measures.py` fails on a module holding more than one function or one not named after it, on a registered modifier from anywhere else (in the package or outside it; only the combined measure's composition of its members' is exempt), on a road fuel VAT rate that differs between the two modules writing it or a missing fuel module, and on a module the receipt can't bind; a new module, or a fix to one that keeps those, passes it. `tests/test_budget_measures_split.py` checks the split itself, each module only while its source is the one the split wrote: a later fix skips that module's comparison, saying so. (Until 25 October all seven were in one `budget_measures.py`, and any edit there changed all seven definitions.)
 
-**Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: the salary sacrifice cap declares National Insurance alone, though in the model it also raises some people's income tax.
+**Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: a measure declares the taxes whose rules its code changes, not every tax the model moves.
 
 **Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
 
-**Wealth-tax templates refuse `gov.contrib.ubi_center.wealth_tax`** (UK hub, `budget-triage/JUDGED.md` S4). The engine taxes gross wealth, including private pensions, with no debts netted, so an announcement on net assets would use the wrong base. A hand-written wealth-tax modifier is held not computable by hand for the same reason.
+**The engine's wealth-tax scales are refused** (UK hub, `budget-triage/JUDGED.md` S4). Both tax a gross base, so an announcement on net assets would use the wrong one:
+- `wealth_tax` applies `gov.contrib.ubi_center.wealth_tax` to `total_wealth`: gross wealth, including private pensions, with no debts netted (S4).
+- `non_primary_residence_wealth_tax` applies `gov.contrib.cec.non_primary_residence_wealth_tax` to `total_wealth` less `main_residence_value`: the same gross wealth, less the main home's full value rather than its equity. S4 names only the first; this one was read in policyengine-uk 2.132.6.
 
-**An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and deflates by the same GDP-per-capita or OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
+Both count in `household_tax` and `gov_tax`.
+- **The templates refuse any path under either scale.**
+- **Generation refuses a measure that changes either scale,** before any figure is made, with `REFUSED <id>: <path> is under <scale>, …`. The other measures are still written. It looks in two places:
+  - the measure's `parameter_changes`, on either side and in the configured baseline, before any simulation is built;
+  - its two built simulations, compared with each other as the model limits compare theirs. This catches a hand-written modifier that edits a scale's brackets or rebinds it, with no `parameter_changes`, on one side or differently on the two sides. The same edit made on both sides leaves the two simulations agreeing, so it isn't caught; written as `parameter_changes`, it is.
+- **The flat pipeline warns instead.**
+- **Registering such a measure fails CI** (`tests/test_wealth_tax_template.py`).
+- **A hand-written modifier that taxes a base it reads directly from `wealth_tax`, `non_primary_residence_wealth_tax` or `total_wealth`** is held not computable by hand, for the same reason. Nothing in the code catches one, since the scales are unchanged.
+- **A modifier that taxes `net_wealth`** (total wealth less mortgage, consumer and student-loan debt) is on the net base, so this reason doesn't apply to it, but give it a scale of its own. Generation refuses a change to either engine scale, even from a modifier that re-points the engine's formula at `net_wealth`, and the refusal then names the engine's gross base. Review it like any other hand-written modifier.
+
+**An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and uses the same index, as the engine does: it deflates property values by OBR GDP per capita, or projects the band's bounds by the OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
 
 **A measure on pension tax relief, the annual allowance, its taper or the MPAA is expected to fail the Treasury reconciliation. By default it is held for the 07:00 briefing pending review** (Vahid and María to confirm).
 - **Why:** the UK hub's rebuild of policyengine-uk #2240 replays the Spring Budget 2023 pension changes at about −£12.9bn over four years against the OBR's −£1.55bn, roughly 8 times over. The remaining causes are mostly data: the imputation of pension inputs, defined-benefit accrual, the taper's income measure and carry-forward. A pensions decomposition is queued; revisit this row when it reports.
@@ -209,8 +258,8 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabled.amount` in those years therefore scores £0: on policyengine-uk 2.130.1, £600 a month on it moved no claimant's element in 2026 or 2029, while £600 on the claimant's rebalancing amount gave £7,200 a year. In 2025 and 2030 it is the other way round: only the element's own amount moves the element.
 - **Switching `rebalancing.active` off is not the law before the Universal Credit Act 2025 either:** the 2026 element amount is already the new claimants' rate, so every claimant would get it.
-- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), for 2026-29. The templates refuse the element's amount in 2026-29, and `rebalancing.active` in any year.
-- **From 2030, change the element's own amount** with `rate_change(UC_LCWRA_AMOUNT, ...)`. The rebalancing has stopped, so every claimant, protected or not, gets that amount (next bullet).
+- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), in the years in `UC_REBALANCED_YEARS` (2026-29 on policyengine-uk 2.132.6). The templates refuse the element's amount in those years, and `rebalancing.active` in any year.
+- **After the last rebalanced year (from 2030 on 2.132.6), change the element's own amount** with `rate_change(UC_LCWRA_AMOUNT, ...)`. The rebalancing has stopped, so every claimant, protected or not, gets that amount (next bullet).
 - **Found by the UK hub.** Its engine-side fix is policyengine-uk #2428 (below), merged on 16 October. Re-check this row on the first certified pair that carries it.
 - **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:
   - the dashboard's 2030-31 UC figures rise, and so does any measure's 2030-31 effect that runs through UC. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
@@ -224,7 +273,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. It has been on policyengine-uk's `main` since 21 October, 20:32Z (coordinator), and policyengine-uk 2.146.5 (on PyPI 22 October) has it.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
   - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
-  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
+  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over 2026-27 to 2030-31;
   - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
   So without the fix, a 10% rise's net cost is overstated by about £0.85bn to £1.06bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
@@ -348,7 +397,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 
 | Key | What it means | Use it? |
 |---|---|---|
-| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
+| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2031 (2031-32). |
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where #3's household calculator showed no change. |
 
@@ -400,7 +449,7 @@ EOF
 | Beer duty to £30 (a calendar-preserved duty) | £0.00 (#3) | −£37.10 |
 | Personal allowance to £20,000 (read on 1 January) | +£1,486.00 | +£1,486.00 |
 
-On 1 January only, the registered `fuel_duty_freeze` showed exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…, simulation_modifier=…)` with the measure's bare-year keys, as the national run does, closes every gap found. #32 did that for `main`'s calculator, checked by `tests/test_household_route_parity.py`, which no longer expects any gap. **Your call**, for #3.
+On 1 January only, the 2025 placeholder `fuel_duty_freeze` showed exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…, simulation_modifier=…)` with the measure's bare-year keys, as the national run does, closes every gap found. #32 did that for `main`'s calculator, checked by `tests/test_household_route_parity.py`, which no longer expects any gap. **Your call**, for #3.
 
 **#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle on `main` on 14 October (policyengine-uk 2.126.12), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
 
@@ -441,7 +490,8 @@ What they check:
 - the certified-data tests, which fail rather than skip here;
 - the model-limit check: whether the model has each limit's fix (policyengine-uk #2336, #2533's fix, the minimum guarantee's earnings fix and #2187);
 - `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
-- `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
+- `publish check`: every gate over each entry the page lists (#19), the manifest file's own 2026 Budget identity, and, once results by area are bound, that `release-index.json` matches the manifest and the files' bytes; `publish status` lists the manifest's entries.
+- **Once results by area are bound, re-bind after every manifest change.** Any `publish stage`, `approve` or `withdraw` gives the manifest a new revision, so the release index no longer matches it: the area views go unavailable and `publish check` fails until `uv run uk-budget-data publish index` runs again (G4). Rerun the area run first if an entry it used has changed; `publish index` refuses tables made for an earlier version of an entry.
 
 The shell blocks in this runbook carry no comments, so they paste into zsh as they are, once any `<placeholder>` in them is filled in.
 
@@ -462,7 +512,7 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 ## Construction (from G1)
 
 For each coded measure:
-1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module, not in `reforms.py` itself (question 6 in `budget-day-publication.md`). Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
+1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module of its own, `src/uk_budget_data/budget_measures/<its name>.py`, never in `reforms.py` itself (question 6 in `budget-day-publication.md`) and never added to another modifier's module, where it would change that modifier's definition too. Register it in `reforms.py`, which imports it. The page lists it from the published manifest, so it needs no frontend change.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
 3. **Declare the taxes it moves** in `DECLARED` in `tests/test_measure_descriptions.py`, and check that its name and description name only those (see "How a measure must be written" above). Without this, the required Python tests fail on the new id.
 4. **Add one numerical test.**
@@ -471,16 +521,17 @@ For each coded measure:
 ## G2: provisional numbers (13:15)
 
 ```sh
-uv run uk-budget-data generate --artifacts --reforms <ids> \
-  --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --artifacts --reforms <ids>
 uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish check
 ```
 
+- **Once results by area are bound** (after G4's first area run), staging unbinds them, and this `publish check` fails until the index is rebuilt. From then on, run `uv run uk-budget-data publish index` before it, after rerunning the area run if an entry it used has changed (G4).
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
-- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
+- **Years: leave `--years` out.** It defaults to the policy years in `src/uk_budget_data/budget_years.json`, 2026 to 2031. Narrowing it drops a scored year: `threshold_freeze_2031_32` changes only 2031-32, so a run without 2031 has nothing to score for it. The area run's `--years` has the same default.
+- **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
 - **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **outside the checkout**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
@@ -504,11 +555,30 @@ uv run uk-budget-data publish check
   - W3 saw HTTP 403.
   - uk-data #536 records a 200 answer that is an HTML page titled "No Access - Office for Budget Responsibility" instead of the workbook.
   - On 15 October, from W5's machine, the March 2026 EFO receipts workbook downloaded by script, but the expenditure workbook got that "No Access" page.
+  - On 25 October (dry run), curl got that "No Access" page for all three workbooks below, with HTTP 200 and `text/html` (88,552 bytes each).
 
-  A browser download works.
-- **What:** the EFO's detailed forecast tables, at least receipts and expenditure. W3 lists the full set.
-- **Where the files go:** to W3's Budget-day ingest in policyengine-uk-data, which records each file's SHA-256, vintage, units, geography and year coverage. Today the OBR loader's fallback reads committed workbooks from `storage/obr_efo/` (uk-data #536). W3 to confirm the path for the Budget-day files.
+  A browser download works: on 25 October each workbook took under a second.
+- **What:** three of the EFO's *detailed forecast tables* workbooks, each its own link on the EFO page (each appears twice there, as an "xlsx" icon and as its title):
+  - **economy**, for the Pre-measures forecast tab's Forecast changes (next section);
+  - **receipts** and **expenditure**, for the OBR targets in policyengine-uk-data.
+
+  The page also offers aggregates, policy, debt interest and a zip of all of them; none is needed. Take the single workbooks, not the zip: an unzipped file's modification time is not its download time.
+- **Check each file is a workbook**, not the "No Access" page saved as `.xlsx`: `file <file>` must say "Microsoft Excel 2007+", not "HTML document".
 - **Record:** each file's name and SHA-256 (`shasum -a 256 <file>`) in the coverage ledger as it lands, so the ingest's record can be checked against what was downloaded.
+- **Receipts and expenditure go to policyengine-uk-data's ingest** (`policyengine_uk_data/targets/obr_sources.py`). In a policyengine-uk-data checkout, dry run first; it writes nothing and prints each workbook's title, SHA-256 and every OBR target's old and new value:
+
+  ```sh
+  uv run python -m policyengine_uk_data.targets.obr_sources ingest \
+    --vintage october_2026 --label "October 2026" \
+    --receipts <receipts xlsx> --expenditure <expenditure xlsx> \
+    --receipts-url https://obr.uk/download/<receipts page>/ \
+    --expenditure-url https://obr.uk/download/<expenditure page>/ \
+    --first-year 2025 --last-year 2031 --dry-run
+  ```
+
+  The `--*-url` values are the obr.uk download pages the files came from (on the EFO page, the links' addresses without the `?tmstv=` query); every target cites them. The ingest refuses a workbook whose title doesn't name the vintage. Then run it again without `--dry-run`: it moves the files under `storage/obr_efo/october_2026/` and writes the vintage's manifest; pointing `sources.yaml` at that manifest adopts it, in a policyengine-uk-data pull request. About 40 s, nearly all start-up.
+
+  Dry run, 25 October, on the March 2026 workbooks (`--vintage march_2026 --label "March 2026" --first-year 2024 --last-year 2030`): both files matched the committed manifest's SHA-256 (receipts `f65b6cb7…`, expenditure `700bfd70…`), all 168 target-years were unchanged, and it ended "a rehearsal, nothing to write".
 
 **Treasury tables come from gov.uk by script.** On 15 October `assets.publishing.service.gov.uk` served a spreadsheet to both curl's and python-requests' user agents (HTTP 200, the right content type), so gov.uk does not refuse scripted downloads. The importer below reads a workbook from a local path and fetches nothing itself. If gov.uk does refuse on the day, download Table 4.1 in a browser the same way and pass its path.
 
@@ -522,6 +592,41 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **Totals check.** The importer (#16) checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
+
+**Wording on the day: config only.** The page says nothing that stops being true on Budget day. Loading the OBR's figures is not config: an imported post forecast stays withheld, and the March forecast's lines go with it, until a verified publication route exists (see "Budget day: OBR forecast" below); the OBR comparison shows only through a verified route. The only text edits on the day are two keys in `src/utils/sources.js`, as soon as they are published, with labels to match (the page's text comes from the labels):
+- `obr_efo_current`: the October 2026 EFO page ("OBR, Economic and fiscal outlook – October 2026");
+- `budget_documents`: the Autumn Budget 2026 document and its policy costings on gov.uk.
+
+Check each URL loads, then deploy. A test fails if a view other than Methodology says "pre-Budget", "28 October" or "candidate".
+
+## Budget day: OBR forecast (Pre-measures forecast tab, from 13:40)
+
+The Pre-measures forecast tab's **Forecast changes** sub-tab (`?tab=outlook&sub=forecast`) shows the OBR March 2026 economic forecast, the one behind the baseline. Once the OBR publishes the Budget EFO, import its economy tables as a reviewable "post" series. Importing and committing them does not publish post-Budget figures: the page withholds those figures until a dedicated verified publication route exists. The import sets `post_published`, and from then on the Forecast changes sub-tab shows only an unavailable notice: the March 2026 forecast's lines and tiles go too (`ForecastPanel` in `src/components/livingStandards/LivingStandardsTab.jsx`). The tab's Living standards and Poverty sub-tabs stay available. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
+
+1. **Download** the EFO's *detailed forecast tables: economy* (.xlsx) in a browser, as above, and record its SHA-256.
+2. **Load it** (Vahid):
+
+   ```sh
+   uv run uk-budget-data obr-forecast \
+     --efo ~/Downloads/<economy tables>.xlsx \
+     --label "OBR October 2026 (Autumn Budget)" \
+     --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
+   ```
+
+   It takes about 2 seconds. It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending, with a new SHA-256 and a 14-day expiry. A stored `post_published` flag does not authorise the figures on the page.
+3. **Check what it printed:**
+   - every series, with its values for 2027 to 2030: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, then CPI after housing costs and social rent recomputed by PolicyEngine. The console prints values only; the table and column each was read from are in each series' `post_source` in `public/data/living_standards_outlook.json`;
+   - the file name and SHA-256 match the download;
+   - any "kept at the pre-Budget value" line. Only mortgage interest 2030 may say this, and on the March 2026 tables it does, because the OBR stops forecasting it after 2030 Q1. That line is expected; any other series saying it is not.
+
+   If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
+4. **Commit for review** both files and the review row in a pull request. The stored source and label can then be reviewed, but the post-Budget lines, changes and tiles remain unavailable until their dedicated verified publication route is implemented and approved. Once merged, the Forecast changes sub-tab shows an unavailable notice in place of the March 2026 forecast as well. The Living standards and Poverty sub-tabs are unaffected. If the March forecast must stay visible on the day, hold the import's pull request.
+
+**Rehearsing with the March tables.** Loading the March 2026 economy workbook (SHA-256 `fde1de4b…`, the same bytes as `data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx`) under a test `--label` gives post equal to pre: on 25 October all 40 values of the 10 series matched. On `main` as it was then, the Forecast changes sub-tab showed the test label, "no change" on each headline and the post line drawn over the pre line; the page now shows its unavailable notice in their place (step 4). Don't commit a rehearsal. Undo it with `git checkout -- public/data/living_standards_outlook.json data_inputs/public_data_review.csv` and `rm data_inputs/living_standards/obr_forecast_post.json`.
+
+**This does not change the model.** The national results, and every projection on the Pre-measures forecast tab's Living standards and Poverty sub-tabs, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Population impact's growth and poverty cards read their current-law growth and population counts from the same projections. Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
+
+**To regenerate the baseline projections** (any time the bundle changes): `export HUGGING_FACE_TOKEN=…`, then `uv run uk-budget-data living-standards`. About 40 s and 8 GB. A new HBAI release: add `--hbai-ods <summary tables .ods>`; OBR household income per person from a new EFO: `--rhdi-efo <economy tables .xlsx>`. Sources and hashes are in `data_inputs/living_standards/README.md`.
 
 ## G3: rebase and reconcile (13:40 to 14:10)
 
@@ -543,16 +648,17 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
     --household-receipt receipts/<id>-households.json
   ```
 
-  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. *The household receipt is optional in the code today (`REQUIRE_HOUSEHOLD_CHECKS` in `publish.py`); it becomes required once the specimen households exist.*
+  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. Once results by area are bound, follow the approvals with `uv run uk-budget-data publish index`, then `uv run uk-budget-data publish check`, as at G4. *The household receipt is optional in the code today (`REQUIRE_HOUSEHOLD_CHECKS` in `publish.py`); it becomes required once the specimen households exist.*
 
 ## G4: combined run and publish (14:50)
 
 ```sh
-uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --combined <all coded ids>
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
-uv run uk-budget-data publish check
 ```
+
+Then run the area run (`uk-budget-data geography`, below), and finish with `publish index`, then `publish check` ("Bind the results by area last").
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
@@ -560,7 +666,22 @@ uv run uk-budget-data publish check
   - **What it doesn't:** the manifest records publication approval, but the command does not read the holds ledger. The Reconciler still checks that measures held by hand have not been approved. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
   - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). **The coordinator's ruling on the page caveat** (22 October): the area views show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement. Until it's added, the page doesn't show the label, and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
+- **The package the page shows** is the combined run of exactly the measures it can display (approved and provisional). A held, staged or not-computable measure is listed on the page as unavailable and is not part of it, so a combined run that leaves such measures out is the one the page uses. If no displayable combined run has exactly those members, the package's figures (net income levels for the example households, results by area and the household scatter for all measures, young people's shares) show as unavailable.
+- **Bind the results by area last, then check.** `regional.csv` and `constituency.csv` are the only files the page reads outside the artifacts. After the last `publish stage`, `approve` or `withdraw`, and after the area run (which writes `area_provenance.json`, recording the approved artifact, receipt and actual baseline/reform identities checked before simulation, plus the output and table digests), run these two in this order:
+
+  ```sh
+  uv run uk-budget-data publish index
+  uv run uk-budget-data publish check
+  ```
+
+  `publish index` runs every gate, and refuses area tables made beside an earlier version of any entry (its artifact, receipt or outputs), tables not the ones the area run wrote, and figures for a staged, stale, withdrawn or not-computable entry. It writes `release-index.json` and the manifest's `flat_files` and `flat_aliases`: the manifest's new revision, the SHA-256 of each file, and the manifest key the area run's package alias stands for. The page shows the area views only while the index matches the manifest it loaded and each file's bytes match. With no index, only the area views are unavailable. Run the final `publish check` only after the index has been rebuilt for the last manifest change.
+  - **Before simulating**, the area run compares the actual baseline and reform scenario identities with the approved receipts. Any parameter, structural code or baseline mismatch stops before simulation. Its closed-schema `area_provenance.json` records the approved artifact, receipt, execution identity and table digests. `publish index` binds its bytes as `flat_provenance_sha256`; publication, public-file and browser checks verify that record and its aliases against the approved receipts. Review this sidecar as `publication_provenance`, and each CSV as a disclosure table. A `geography` run's sidecar binds only the files that run wrote: an untouched `regional.csv` beside a later `geography` seats-only run is refused. `uk-budget-data constituencies` composes the two: it carries the regional table's record over from that table's own run, once that record matches the table's bytes and binds each measure in both tables to the same approved entry (see "Results by constituency on the local-area cut (#115)").
+  - **Which later commits an area run accepts.** A measure with a `simulation_modifier` (seven of the nine candidates, each in its own module in `budget_measures`) is bound by the commit its receipt was made at and by its module's whole source. The area run binds it at that commit when HEAD descends from it and every file committed since is one that cannot change a calculation: attestations, `public/`, `data_inputs/public_data_review.csv`, `docs/` (Python files under either excepted), top-level Markdown and the page's own files under `src/` outside `src/uk_budget_data/`. This covers the repository's code only: inputs a command is given explicitly, such as a data directory, are that run's inputs. So attestation, artifact, manifest, review-row, docs and UI commits don't block a refresh. A package's code-bound members are bound the same way, each at the commit its own approved receipt was made at, so the package needs each such member's manifest entry. Any other change refuses it and names the files, including anything in `src/uk_budget_data/`, `pyproject.toml` or `uv.lock`. Adding the next measure's module to `budget_measures` is such a change, though since the split it changes no other measure's identity. Before the area views can refresh after it, regenerate and re-approve those measures, with fresh attestations for hand-written modifiers. Time one area refresh in the rehearsal.
+- **An open page follows the publication.** On focus, on becoming visible and every five minutes the page checks `manifest.json`. A newer one replaces the figures with its own verified ones, with a notice; a missing, invalid or unreachable one takes them away. A later successful check restores verified results without a page reload. So a withdrawal reaches readers with the page open within five minutes, or when they return to the tab. Personal impact also checks before each household request, so it never asks for a withdrawn measure once the withdrawal is live.
+- **Personal impact asks only the published model.** It compares the household API's policyengine, policyengine-uk and policyengine-core versions with those the selected measures' receipts record, and shows an error naming the packages that differ instead of an answer from another model. So the household API must run the release the approved receipts were made with: deploy it straight after each adoption's merge (see "Adopting a release (each re-cut)"). **Check it at the rehearsal:** with the first cut published on staging, open Personal impact for a published measure and get an answer, not the error. The comparison needs the receipts' package names (`policyengine-uk` and so on) to match the keys the API reports, and only the test fixtures have checked that so far.
+- **The OBR comparison is unavailable this year.** `obr_comparison.csv` is not among the flat files a view may read (`FLAT_VIEW_FILES`), so nothing binds it and the page shows the comparison as unavailable, whatever its OBR columns hold. Showing it needs a verified route for it and a 2026 OBR source.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
+- **Members keep their own identities.** A combined run binds each member it reads from the manifest at the commit that member's receipt was made at, by the area run's rule below: HEAD must descend from it, and nothing committed since may be able to change a calculation. Staging compares each member exactly with its own receipt, so generating the combined run after the members' attestation commits is fine. Any other change refuses the combined run before simulating, naming the member and the files; regenerate and restage that member first.
 - **Approval** needs every member approved.
 - **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional or not-computable entry is listed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
@@ -609,11 +730,41 @@ uv run uk-budget-data publish check
 
 ## G5: corrections (whenever one arrives)
 
-1. **Fix the measure and commit.**
-2. **Regenerate it.** This writes a new artifact; the old one is untouched until step 5's review rows delete it (its entry stays in `superseded` for audit).
-3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
-4. **Regenerate the combined run**, stage it, and approve both.
-5. **Write the review rows, as at G2, and publish through a pull request.**
+Personal impact asks the household API live, so a correction has to keep the published figures and the live answers on one definition. The page checks two things itself. Before each request it checks the live `manifest.json`, and drops the request if the snapshot it was made under is no longer live. And it refuses an answer whose policyengine, policyengine-uk or policyengine-core versions differ from those the selected measures' receipts record. Neither check sees a definition changed in this repository under the same package versions, such as a fix to a modifier's module in `budget_measures`. The API reports definitions since #125, but the page doesn't compare them until W5's page follow-up merges. So the order below does it: withdraw first, deploy the fix only once the withdrawal has been live for five minutes, and bring the measures back only after the deploy.
+
+A fix that changes a package version (policyengine-uk, say) is a re-cut, not a G5 correction: see "Adopting a release (each re-cut)".
+
+1. **Commit the fix on a branch, and list the measures it changes** (the "affected measures" below). Run `uv run uk-budget-data publish definitions` on the fixed commit (#125). For each displayed single measure (approved or provisional), it recomputes the measure's receipt identities from this code at the commit its receipt was made at, and prints `same` or `DIFFERS` against its receipt; it exits 1 if any differs. Withdrawn and not-computable entries aren't listed, and combined runs aren't compared (step 5 covers them). It takes a few seconds and needs no data.
+   - **A fix in a modifier's module lists the measures that use that modifier, and only those.** The receipt binds a modifier's whole module, and each modifier has a module of its own (since 25 October; before, all seven shared `budget_measures.py`, and a fix there listed all seven). A comment counts. `connect_student_loan_repayments` is on both sides of `plan_2_threshold_unfreeze`, so a fix there lists that measure once, with both sides.
+   - **The split itself changed all seven definitions once**, through each modifier's module: its name, its source, and its module defaults, which now hold only that function's own (none, for `connect_student_loan_repayments`). Nothing else changed: `tests/test_budget_measures_split.py` checks that the function sources and defaults are as they were, and that each measure gives the same figures. Receipts made before it differ from it; the next regeneration (Monday's rehearsal, or at the latest the final cut's) absorbs it.
+   - **It can't see a fix outside the measures' own module.** A receipt binds everything else only through its commit. List what has changed since each displayed measure's receipt with `git diff --name-only <receipt commit> HEAD -- src pyproject.toml uv.lock data_inputs Dockerfile` (the commit is the one `publish definitions` prints, from the receipt's `dashboard.git_sha`). The image's base layers (`python:3.13-slim` and `uv:latest` in the `Dockerfile`) can change with no commit at all; the deploy smoke checks the served packages' versions, not those layers.
+     - **Code national generation also runs** (`measure_templates.py`, `reforms.py`, `models.py`, the scenario helpers in `personal_impact.py`, or anything else a modifier calls): every measure it reaches is affected, as for a fix in its own module. The page can't tell these apart.
+     - **Code only the household route runs** (`household_impact.py`, which only `api.py` imports, and the request defaults in `api.py`): no measure's definition changes and none is affected. Merge the fix to `main` anyway, since the deploy builds only commits on `main` (step 2, with no withdrawal), then deploy and check it as in step 3, and stop there: nothing national is regenerated. The deploy changes Personal impact's answers for every measure it reaches, and nothing on the page marks it. If those answers can't stand, withdraw the measures they reach in step 2 and carry on through step 7 for them.
+     - **From the page follow-up (stacked on #104, which adds `calculation_changes_since`),** `publish definitions` lists these files itself.
+   - **Every measure with a modifier needs a new receipt before the next combined run or area run, affected or not.** Those runs bind each one at the commit its receipt was made at, and refuse it once anything that could change a calculation has been committed since, whichever measure the change reaches (`approved_revision` in `receipt.py`). Only attestations, `public/`, `docs/`, `data_inputs/public_data_review.csv`, top-level Markdown and the page's files under `src/` outside `src/uk_budget_data/` are exempt (`is_non_calculation_path`), so a household-only fix counts too. Only the affected measures change and are withdrawn; the other six regenerate with byte-identical outputs, so their approvals carry over. Parameter-only measures keep their receipts.
+2. **Withdraw every affected measure, in the fix's pull request, and merge it.** Put the withdrawals in the same pull request as the fix, so the fix reaches `main` (the deploy builds only commits on `main`) with the affected measures already off the page. The household API still runs the previous code until step 3's deploy.
+
+   ```sh
+   uv run uk-budget-data publish withdraw <id> --reason "<why>"
+   ```
+
+   The withdrawal also makes stale any combined run that includes the measure. **Once results by area are bound** (the manifest has `flat_files`), the area tables still hold rows for the withdrawn measure and the stale package, so `publish index` refuses them and `publish check` fails. Take one of these two routes before checking:
+
+   - **Quick: take the area views down.** This deletes `release-index.json`, `regional.csv`, `constituency.csv` and `area_provenance.json`, then saves the manifest without a flat binding. The area views show as unavailable; nothing else on the page changes. If it stops part way, `publish check` fails until you run it again. Bring the views back in step 6.
+
+     ```sh
+     uv run uk-budget-data publish index --without-area
+     ```
+
+   - **Or rerun the area run over what is still approved**, then `uv run uk-budget-data publish index`. It defaults to the approved ids, so the withdrawn measure and the stale package drop out. With no approved package, constituency results need `--seat-reforms <approved ids>`; or pass `--levels region` and delete `constituency.csv`, since the index refuses a table the run didn't write. Use this route only once the rehearsal has timed an area run. After the fix's commit it refuses every measure with a modifier until that measure is regenerated (step 1), so here it can rerun parameter-only measures alone; with any measure with a modifier approved, take the quick route and bring the views back in step 6.
+
+   Then run `uv run uk-budget-data publish check`, write the review rows (`publish review-rows`, as at G2; they drop the rows of any area files taken down), and merge. Check it's live with the `curl` of the deployed `manifest.json` at G4: it shows the new revision. From then on, an open page sends no request for a withdrawn measure, since its next check finds the new snapshot.
+3. **Wait five minutes, then deploy the household API** from `main` ("Merge, then redeploy the household API by hand" under "Adopting a release"). A request checked just before the withdrawal went live was sent at once, and the API answers or times out within 300 s (`--timeout 300` in `cloudbuild.yaml`). Starting the deploy after that means no request made under the old snapshot reaches the fixed API; the deploy's own build and smoke test add several minutes more before traffic moves. After the household check, `uv run uk-budget-data publish definitions --api https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` must print "same" for every measure still displayed.
+4. **Regenerate every affected measure**, each alone as at G2, then reconcile and stage it. Before step 5 or 6, regenerate and stage every other measure with a modifier too (step 1). This can run while you wait for step 3: only publishing waits for the deploy. Each new artifact leaves the old one untouched until step 7's review rows delete it (its entry stays in `superseded` for audit). Any combined run that included it becomes **stale** automatically.
+   - **Two need a fresh two-person attestation whenever they are regenerated, affected or not:** `employer_ni_relief_under_25s` and `plan_2_threshold_unfreeze` have hand-written modifiers, and while any data limit is active each regenerated receipt is held until attested again (`attestations.py`: an attestation binds the whole receipt document). Budget the reviewers' time, or leave them withdrawn.
+5. **Then regenerate the combined run**, stage it, and approve every regenerated entry. Generation binds each code-bound member at the commit its own receipt was made at, and refuses a member whose code has changed since, naming the member and the paths. So it runs only once every code-bound member is regenerated and staged: after any calculation commit, all seven measures with a modifier, the unaffected ones included (step 1). Until then the package views (example-household levels, results by area, the scatter, young people's shares) stay unavailable.
+6. **Bring back results by area**, if step 2 took them down: the area run, then `publish index`, as at G4.
+7. **Write the review rows, as at G2, and publish through a second pull request.** Merge it only after step 3's household check: the measures return to Personal impact on a revision that runs the fix.
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
@@ -624,17 +775,17 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - **The cuts:**
   - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
-  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
+  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, a breakdown answered under 200 s, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
   3. merge with a merge commit (`gh pr merge --merge`), since `git revert -m 1` needs one, and open its revert PR as a draft;
   4. redeploy the household API;
-  5. run the household check, and the "Read API memory" workflow on the new revision.
+  5. run the household check, time one breakdown (see "Adopting a release"), and run the "Read API memory" workflow on the new revision.
 - **Approval for re-cuts and the final cut: on the adoption branch, before the merge** (coordinator, 22 October). It's an ordering change, not a lower bar. Use the same order for the rehearsal cut, so that the rehearsal exercises it.
   - **Who:** the named approvers approve on the branch, on the new release's figures.
-  - **Right after the merge and the API deploy,** run the household check.
-  - **If it fails,** merge the prepared revert PR and roll the API back to the previous revision (see "The fast revert" below).
+  - **Right after the merge and the API deploy,** run the household check and time one breakdown.
+  - **If it fails,** merge the prepared revert PR and roll the API back to the previous revision, or redeploy it from the reverted `main` if that revision predates the route the page calls (see "The fast revert" below).
   - **Why this order:** the approvals then live in the adoption PR, which is what keeps the revert clean.
 - **The 07:00Z go/no-go, Wednesday 28:**
   - **Go** with the final cut only if every gate is green and its change against the previous cut is attributed (d1682).
@@ -699,11 +850,103 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, write the review rows, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
   - **Then, to revert:**
     1. mark the revert PR ready (a draft can't be merged), and merge it;
-    2. run the API `rollback` to the recorded revision;
-    3. run the household check.
+    2. run the API `rollback` to the recorded revision. If that revision predates the route the live page calls (any revision before `00024-lir`, for #69's `/api/household-impact`), `deploy` the reverted `main` instead;
+    3. run the household check, and time one breakdown (see "Adopting a release").
 
     The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
   - **The 14 October cut, only if a release ever falls back to it** (UK hub, S6, 22 October). That cut predates Microcosm's weight-index fix (0f0bb869), so it carries a +0.72% calibration-year weight skew. No dashboard release has used it: 6.10.0's cut has the fix, and so do later re-cuts. So a revert to the dashboard's previous cut doesn't carry it.
+
+## Faster generation on Budget day
+
+**What the page reads.** The Budget views read approved artifacts only, plus `regional.csv` and `constituency.csv` once `publish index` binds them (G4). The other flat tables in `public/data` (`budgetary_impact.csv` and the rest) are still written by a plain `generate`, but no view reads them. So on Budget day `--jobs` speeds up these runs:
+- G2's `generate --artifacts --reforms <ids> --jobs 2`;
+- G4's `geography --jobs 2`.
+
+`--artifacts` and `--combined` also run on Modal (#139, ported to `main`): `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --backend modal --reforms <ids>`, one container per measure (32 GB, 2 CPUs, no retries, at most 16 at once, 45 min timeout), with the workspace secret `pe-uk-private-hf-read-token`. The run needs a clean working tree (the receipts name the commit the containers ran) and never sends a dataset file. A receipt binds the execution it ran in, so Modal artifacts carry the container's execution identity: make every artifact of a release in one place, or staging needs `--adopt-execution`, which marks every other entry stale. A hand-written modifier still goes in a `generate` call of its own. `scripts/budget_day/modal_smoke.py` tests the plumbing on an invented dataset, with no secret. The local artifact and area timings below are estimates, not timed runs.
+
+Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microcosm national dataset). The draft PR "Faster generation" holds the details.
+
+- **Where the time goes.** One measure is two microsimulations, built once and read for every year:
+  - **Building them:** about 15 s each, all inside policyengine-uk's `Simulation.__init__` (the UC reform, enum encoding, uprating). Loading the dataset itself is not the cost.
+  - **The example households' income curve** was the largest part: about 17 s per measure and year. It now runs one household simulation per scenario for every year. The rows are identical to the bit, and it is about four times faster.
+  - **Everything else** (budgetary, distributional, winners and losers, age, scatter): about 5 s per year, mostly `gov_balance` and net income.
+  - **Memory:** about 19 GB per measure over two years and 22.5 GB over six as peak footprint (compressed pages included), but about 6.5 GB resident at its peak with another measure running beside it ("Fast full run" below).
+- **One pass writes every flat file.** `generate` now writes `household_scatter_binned.csv` from the same simulations, beside `age_impact.csv` and `income_curve.csv`, so `--only age_impact`, `--only household_scatter` and `income-curve` are needed only to rerun one file.
+- **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
+
+  ```bash
+  uv run uk-budget-data generate --jobs auto
+  uv run uk-budget-data generate --artifacts --reforms <ids> --jobs auto
+  uv run uk-budget-data geography --jobs auto
+  ```
+
+  - **One worker process per measure,** started from a forkserver that has already imported the engine. The data-limit watch, the model-limit check and the receipt each read one measure's two simulations, so a measure is never split across workers.
+  - **The same bytes as a serial run.** Results are written in measure order, and each artifact made from `parameter_changes` or tested templates gets the same digest. Only `receipt.json`'s run fields (`generated_at`, `generator_argv`) differ.
+    - **Not a hand-written modifier's artifact.** Every hand-written regeneration gets a fresh `generation_id`, which the artifact digest includes ("Which digest" above). A serial and a parallel run of such a measure therefore give different artifact digests, as two serial runs do. That is expected, not a parallel-generation fault: compare their tables (`dashboard.digests.outputs_sha256`) instead, and give whichever is staged a fresh attestation.
+  - **`auto` never pushes the machine into swap.** It takes as many workers as the free memory holds at the per-measure estimate, after keeping 6 GB back. A measure starts only when its memory is free, and one still starting up counts at its whole estimate. With more than 30 GB of swap already in use, measures run one at a time. The estimate is 6.5 GB for `generate` (measured resident peak) and the footprint above for `geography` (not yet measured side by side). `--unit-memory-gb` overrides it.
+  - **Before a heavy run,** check `sysctl vm.swapusage` and `pgrep -fl uk-budget-data`. Other generations share the machine.
+- **Expected times for the whole run** (10 measures × 6 years). These are scaled from the measured figures, not timed end to end:
+
+  | Step | Before (serial) | Now, `--jobs 1` | Now, 2 jobs | Modal, about 10 containers |
+  |---|---|---|---|---|
+  | Flat CSVs, with age_impact and the binned scatter | 33 min, plus 12–23 min (age) and 10–24 min (scatter) | about 17 min | about 9 min | about 5 min |
+  | `--artifacts`, every measure, plus the combined run | not measured | about 22 min | about 12 min (the combined run waits for its members) | local only |
+  | `geography` (simulation part; the estimate and checks add about 3 min) | about 24 min | about 24 min | about 12 min | local only |
+
+  - **How many jobs fit.** On a quiet 64 GB laptop `auto` should pick 2 workers for six years. On 24 October, with other agents' sessions holding memory and 16 GB of swap, it picked 1.
+  - **Modal** sends each measure to its own container. Each container downloads the dataset (about 1.5 GB) on its first run. 10 measures need 10 containers, so 20 containers buy nothing over 10.
+- **`--backend modal`** (flat CSVs and `--only` only, opt-in):
+
+  ```bash
+  uv run --with modal==1.6.2 uk-budget-data generate --backend modal
+  ```
+
+  - **Secret:** the `policyengine` workspace's existing `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a read-only token for `populace-uk-private`, created by Anthony; decision on #119). If it is missing, the command stops with "Modal secret missing" and names the owner. The person running the command needs a Modal token for the workspace (`modal token new`).
+  - **What runs where.** The command starts an ephemeral app, `uk-budget-2026-generate`, that stops when the command ends. Nothing is deployed and nothing is served, so no proxy auth is needed. The containers get the Hugging Face token from that one secret and no other credential. The image carries the working tree's package and `data_inputs/`.
+  - **Guards:** no retries, at most 16 containers, 32 GB and 2 CPUs each, 45 minutes per container.
+  - **Measured on 26 October** (`main` at 9305d80 with this change; scratch `--output-dir`): 10 units in **8.1 min** end to end, **$0.41**; the laptop's process peaked at 3.1 GB. `household_scatter_binned.csv` and `income_curve.csv` were byte-identical to `public/data`. Every other file differed only in 2026 rows of the VAT measures, the Warm Home Discount top-up and the package, by at most 7.4e-10 relative (last-digit float differences; main's rows were made on a Mac). A second Modal run gave bit-identical rows.
+  - **On pull requests:** `.github/workflows/results-on-modal.yml` runs this when a PR changes a measure, and uploads the files as a workflow artifact with a table of which differ. It never commits or signs: copy in the files you accept and sign their review rows yourself, in the same commit.
+  - **The image is built from `uv.lock`** (`uv_sync`), as #97's household app is. A memory snapshot holds the engine already imported.
+  - **`--artifacts` and `geography` stay local.** A receipt binds the execution it ran in, and a container's (platform, Python build) differs from every entry made locally. Generating them on Modal needs the coordinator's decision first.
+  - **Linux and macOS may differ in the last bit of a float.** So check a Modal run's files against a local run once before relying on it.
+
+## Fast full run
+
+**Not a step of the day.** This run writes the flat tables, which no Budget view reads (see "What the page reads" above). It's kept here as a measure of the machine's speed and memory. To time the day's own runs, time G2's `generate --artifacts` and G4's area run at the rehearsal.
+
+"Society" results: the nine candidate measures plus `autumn_budget_2026_combined`, every year (2026 to 2031), every flat table in `public/data` (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned`, `income_curve`, and `obr_comparison`). One `generate` writes all of them.
+
+**Measured end to end on 25 October** on an 18-core, 64 GB Mac (policyengine 6.10.2, `microcosm_uk_2024_25`). Other sessions were holding about 37 GB, with 10 to 20 GB of swap in use. Every parallel run's files were byte-identical to the serial run's. The serial run's seven dashboard tables were also byte-identical to the committed `public/data`.
+
+| Configuration | Wall time | Units at once (observed) | Peak RSS, process tree | Swap rise |
+|---|---|---|---|---|
+| `--jobs 1` (serial) | 16.0 min | 1 | 10.3 GB | +5.3 GB |
+| `--jobs auto` | 14.7 min | 1 (it chose 1: "21 GB free, 22.5 GB per unit") | 12.2 GB | 0 |
+| `--jobs 2` (old 22.5 GB estimate) | not timed end to end: expected to be about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time (seen in the interrupted runs) | n/a | n/a |
+| **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
+| `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
+
+- **`--jobs 2` is the setting to use, about 8 minutes here.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
+- **The per-unit estimate is now 6.5 GB** (it was 22.5 GB, a peak footprint that counts compressed pages). With 22.5 GB, `auto` and the admission check fell back to one unit at a time on this Mac. Two units at once peaked at 12.8 GB RSS (6.4 GB each), three at 16.4 GB, swap rose no more than in the serial run, and free memory never fell below 8.4 GB. With 6.5 GB and 21 GB free, `auto` picks 2 and the admission check lets a second unit start while the first ramps up, but not a third. The table's `--unit-memory-gb 4` rows are how this was measured before the change; 4 and 6.5 both admit two units on this machine.
+- **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
+
+```bash
+cd <checkout of the release commit>
+export HUGGING_FACE_TOKEN="$(cat ~/.cache/huggingface/token)"   # never echo it
+sysctl vm.swapusage; pgrep -fl uk-budget-data                   # nothing else generating
+top -l 1 -n 0 | grep PhysMem                                    # at least ~15 GB unused or inactive
+uv run uk-budget-data generate --jobs 2                         # about 8 min, writes public/data
+git status --short public/data                                  # review the diff before committing
+```
+
+- **Check against a serial run** on a scratch copy when there is time (16 min): `--output-dir /tmp/serial --jobs 1`, then `cmp` each CSV. They must be identical.
+- **Fallbacks, in order:**
+  1. If memory is short (less than about 10 GB free, or swap climbing past 30 GB), use `--jobs 1`: 16 min, peak about 10 GB RSS.
+  2. If one measure fails or changes late, rerun the full set. `generate --reforms <ids>`, and `--only age_impact` / `--only household_scatter` with `--reforms`, replace the shared CSV with only those measures. They don't merge into it.
+  3. Modal (`--backend modal`): about 8 min and $0.41 for every measure (see above).
+- **Not covered here:**
+  - **Results by area.** `geography` needs `public/data/manifest.json` approvals and the seat weights in `data/`. Neither is on #69, so it is not wired for this run (#115).
+  - **Receipted `--artifacts`/`--combined` runs.** They were not timed on 25 October.
 
 ## Adopting a release (each re-cut)
 
@@ -716,12 +959,39 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **How the label lifts.** Regenerating the file at the adoption of a release that routes results by area again flips it to `available`. The page then draws whatever constituency file `public/data/` holds, and nothing ties that file to a release. So the same upgrade PR carries the area run's tables from the new release, with their review rows; otherwise the page shows the tables of an earlier release. A clean revert of the adoption brings the previous file back with it; one that keeps `main`'s publication files doesn't (see "A model release" under rolling back).
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
   - **The regenerated artifacts and the manifest go in the upgrade PR,** with their review rows (`publish review-rows`, as at G2). `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
-  - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
+  - **The Living standards outlook too (since #69).** With the new release installed, run `uv run uk-budget-data living-standards` (about 40 s and 8 GB; it needs `HUGGING_FACE_TOKEN`). Commit `public/data/living_standards_outlook.json` and `data_inputs/public_data_review.csv`, where the command sets the file's review row to pending.
+    - **Commit it before the first `generate`, or run it after the last.** An uncommitted outlook or review list makes the tree dirty, and only the manifest and artifacts are exempt (`is_publication_path` in `publication/receipt.py`), so receipts generated meanwhile aren't publishable.
+    - **Why:** `test_the_committed_outlook_meets_the_contract_on_the_pinned_engine` (`tests/test_living_standards.py`) requires the file's `meta` to name the installed policyengine, policyengine-uk and certified dataset, so an upgrade PR that changes only the lock fails the Python tests.
+    - **It also keeps the revert clean:** carried in the upgrade PR, a clean revert brings the previous file back with it.
+    - **And bring the view's tests up to date, in the same commit.** They read the committed outlook, so after regenerating, run `bun run test src/components/livingStandards src/utils/livingStandards` (the view tests and the outlook schema test) and update every assertion the new file changes, or Frontend tests fails. The ones known to depend on it:
+      - **The engine and the data build** in `LivingStandardsView.test.jsx`'s Methodology test ("policyengine 6.10.2 (policyengine-uk 2.132.6)", "Microcosm UK national (19 Oct 2026, 6cba5d71)"). Set them to what the Methodology page shows for the regenerated file. A new policyengine changes the first (a new policyengine-uk, its bracket), and a new data cut the second; a133 changes both.
+      - **The UC health element row** in the same test (the `PolicyEngine/policyengine-uk#2428` link and "For 2030-31 and 2031-32 this baseline applies that fix itself"). From policyengine-uk 2.134.4 the baseline no longer applies the fix itself (`FIXED_IN` in `living_standards/uc_health_element.py`), so the page drops the row: remove those assertions, or assert the row is absent. a133, on policyengine-uk 2.147.2, does this.
+      - **The poverty figures for couples with children** ("19.8% → 19.8%no change", "2027-2819.8%", "ChangeNo change"), if the regenerated relative AHC rates round differently.
+  - **So does whatever the new release's tests demand,** for example removing a lifted data limit or updating the State Pension test for #2336 (each above). `UC_REBALANCED_YEARS` needs no change: it follows the engine's export.
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
+- **Before the page lists a new measure, every household API it calls must know it, and the examples must be recomputed.** The page sends every displayable measure in `public/data/manifest.json` to the household API. An API deployed from an older commit refuses the new ones ("Unknown measures: …"), so Household impact shows an error. The example cards don't call the API: they read `public/data/household_presets.json`, so stale presets show the previous measures' answers with no error at all. Drill 5 hit both (#144). So, in this order:
+  1. Deploy the household API from the commit that registers the measures: Cloud Run ("Deploy the household API") and, if the page uses it, the Modal app (`modal deploy src/uk_budget_data/modal_household.py`).
+  2. Recompute the examples on that commit: `bun scripts/household-preset-requests.mjs > /tmp/requests.json`, then `uv run python scripts/precompute_household_presets.py /tmp/requests.json`. Commit `household_presets.json` with its review row.
+  3. Check both before the page publishes. It exits 1, naming each refused measure or stale preset:
+
+     ```sh
+     uv run python -m uk_budget_data.page_measures_check --base-url "$HOUSEHOLD_API" --base-url "$HOUSEHOLD_DETAIL_API"
+     ```
+  - **Check the definitions first.** On the merged `main`, run `uv run uk-budget-data publish definitions`. Every displayed measure should be "same", since each was regenerated on the branch. One that differs was changed after its regeneration: regenerate it before deploying. Once the page compares definitions, it would show that measure as unavailable in Personal impact. The command takes a few seconds and needs no data.
+  - **And again on the deployed image, after the household check.** `uv run uk-budget-data publish definitions --api https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` asks the live revision in one household request (about 20 seconds when its answer isn't cached: the smoke household's headline, two runs) and must print "same" for every displayed measure: the image the page asks, not the checkout, computes them as the receipts recorded.
+  - **The page follow-up merges only once the rollback target serves definitions too.** The first deploy with #125 makes the live revision report definitions, but the revision it replaced doesn't, and a fast rollback to it would leave every measure unavailable in Personal impact. So merge the page follow-up only after a second deploy with #125 (a re-cut's adoption, at the latest the final cut's), once the revision recorded as the rollback target is one deployed with #125. Check it against that revision's tag URL, on `main` with the manifest the page will serve: `uv run uk-budget-data publish definitions --api '<tag URL>'` must answer with definitions, with no `REFUSED` line. A `DIFFERS` row there is expected for any measure whose definition changed in the deploy since (an engine adoption can change one: `plan_2_unfrozen_thresholds` reads the engine's RPI index), and is what a rollback to that revision would show as unavailable, as designed; it doesn't hold the merge. A row whose problem is "the running code cannot bind it" for a measure that revision registers does: that image can't bind code. If none is published yet, it has nothing to compare; check presence instead: `curl -s -H 'content-type: application/json' -d '{"year": 2027, "policies": ["badr_lifetime_limit_cut"], "household": {"employment_income": 30000}, "include": []}' '<tag URL>/api/household-impact?definition=road_fuel_vat_cut:<its full commit>'` must answer with a `definitions` object whose `road_fuel_vat_cut` entry has `baseline` and `reform` and no `error` (a measure with a modifier, so it also shows the image binds code).
+  - **Dispatch it as soon as the merge lands.** Until the deploy finishes, the previous revision serves the Personal impact tab. The dashboard goes live about a minute after the merge. The API goes live only when the deploy promotes its revision, about 6 to 7 minutes after dispatch. On 24 October, #69's merge was live on the dashboard at 23:21:16Z (Vercel), and `00024-lir` had taken traffic by 23:27:13Z (run 40142327478, dispatched at 23:20:24Z; the workflow confirmed the live version at 23:27:15Z).
+  - **Then time one breakdown.** No gate asks for one (see "How long one household answer takes"). After the household check, run this. The first number printed must be 200, and the second, the seconds, under 200, the page's limit. Treat anything else like a failed household check. An answer within a few seconds came from the route's cache (`_cached_household_impact`), so change `employment_income` and run it again.
+
+    ```sh
+    curl -s -o /dev/null -w '%{http_code} %{time_total}\n' --max-time 300 -H 'content-type: application/json' -d '{"year": 2027, "household": {"employment_income": 31000}, "include": ["by_policy", "sweep"]}' https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/household-impact
+    ```
+
+  - **What the gap does:** in a model adoption, the national figures come from the new release while the previous revision still serves the API. The page compares the API's policyengine, policyengine-uk and policyengine-core versions with those the selected measures' receipts record, and refuses answers from another model, so Personal impact shows an error naming the packages that differ until the deploy finishes. The same holds after a revert merges, until the API is rolled back or redeployed. In a merge that changes the route the tab calls, as #69 did, the tab fails until the deploy finishes.
 - **Approve on the upgrade branch, before merging, for re-cuts and the final cut** (coordinator, 22 October; see "Rolling re-cuts" above).
   - **Why it's possible:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`).
   - **What it avoids:** a gap. If approval came after the merge, figures that were approved would show at most as provisional from the merge until approval (re-staging them with `--provisional` keeps them visible).
-  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check immediately after the merge and the deploy, and revert if it fails.
+  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check and time one breakdown immediately after the merge and the deploy, and revert if either fails.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -739,7 +1009,7 @@ policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK defaul
 - the 2030-31 UC note, and the UC health row's "from 2030" advice: policyengine-uk 2.132.6 lacks #2428, which extends the rebalancing to 2032, while the Budget-day pair's model has it, so the advice flips there;
 - the SDLT "Why" row: the certified dataset it names is uk-data 1.58.1. The tripwire re-checks it when new data are adopted;
 - the State Pension row's figures: #2336's reports ran on uk-data 1.58.1;
-- the household API timings and memory: re-measured on 6.10.0 (`00020-pal`, 22 October, above). Re-measure after each re-cut's redeploy;
+- the household API timings and memory: re-measured on 6.10.2 with #69's route (`00024-lir`, 25 October, above). Re-measure after each re-cut's redeploy;
 - results by area: Microcosm's local-area cut is not yet certified (policyengine.py#685).
 
 Until a row is re-measured, don't quote its figures.
@@ -753,6 +1023,101 @@ Saturday's data cut (a133f37a, as the UK hub names it, with policyengine-uk 2.14
   - **The view draws only when the file says `available`.** While it loads, the view says "Loading map…", and keeps saying so if the request never answers. If the file is missing or can't be read, on any release, the view says "Results by constituency could not be loaded." and shows no figures, search or export.
 - **The region view is not labelled.** The area run publishes regions only from an enhanced FRS run (`--dataset-kind efrs`), never from a local-area release, and that run does not read the bundle's routing, so dropping the routing does not affect it. No region file is published yet, so the view says "Results by region are not yet published."
 - **Nothing else needs the label.** The page has no local-authority view, the household calculator has no area selector, and the page calls no area route.
+
+## Results by constituency on the local-area cut (#115)
+
+`uk-budget-data constituencies` is `geography`'s seats pass (`--dataset-kind microcosm --levels constituency`) on Microcosm's published local-area cut, with each measure simulated in a fresh process, so memory goes back to the machine between measures. By default it runs the nine measures of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS`, and their package when the manifest approves it, over the policy years, and publishes every one of them by constituency. Regions stay a separate pass, from the national file.
+
+**It writes `area_provenance.json` beside the table, as `geography` does, so `publish index` accepts it.** Before anything is simulated, each reform's current definition is checked against its approved receipt (`geography.area_provenance`); the record is written after `constituency.csv` passes `validate_public`. If a `regional.csv` from a regional run is already in `--out-dir`, the record carries that run's record of it (checked against its bytes and approvals), so `publish index` binds both tables.
+
+**Order on the day: merge the code before the receipts.** A measure bound to the repository's code (`code_revision` in its receipt) passes the check only while nothing under `src/uk_budget_data/` (or any other calculation path) has been committed since its receipt's commit, and only if that commit is an ancestor of the one you run from. So merge this command's code and #206 before G2 generates the receipts, and merge nothing that touches the package between approval and the area run. A measure refused with "calculation code changed since the approved commit" or "is not an ancestor of HEAD" needs regenerating and approving again, not a workaround.
+
+**Before you start**
+- **A quiet machine with 64 GB.** Nothing else heavy runs beside it: no other simulation, no `next build`. Note swap before you start. On the national file, #112 measured 22.5 GB of peak footprint for one measure over six years; this run measures the local file.
+- **This branch, with its own environment:** `uv sync --extra dev --frozen` and `bun install`, from the repository root.
+- **`HUGGING_FACE_TOKEN`**, which must read `policyengine/populace-uk-private`.
+- **`UK_BUDGET_DISCLOSURE_AUDIT_DIR`**, a directory outside any git repository. The private audit and each measure's household arrays go there, readable by you alone. The arrays are record-level data derived from the survey: keep the directory on this machine, out of any synced or shared folder. Once the table is merged, delete the arrays (the run directory's `units/` and `dataset.npz`) and keep the audit.
+- **Approvals.** Like `geography`, the command takes approved ids only, from `public/data/manifest.json`. If the manifest is missing, or doesn't approve a measure, it stops before it downloads or simulates anything, and names each refusal. A manifest given with `--manifest` that isn't the publication manifest can't write into any repository: pass an `--out-dir` outside one.
+- **Disk:** about 0.7 GB for the cut, in the Hugging Face cache, and a few hundred MB in the private directory.
+
+**The command**
+
+```sh
+uv run uk-budget-data constituencies --dry-run   # resolve and check the cut, check the gates, print the plan
+uv run uk-budget-data constituencies --fresh     # the run; --fresh simulates every measure again, for the timing table
+```
+
+What it does, in order:
+1. **Resolves the cut:** the latest tag of `policyengine/populace-uk-private` named `microcosm-uk-2024-25-dense-<YYYYMMDDTHHMMSSZ>-<8 hex digits>` (the local-area release is published as tags only), or `--cut <tag>`.
+   - The cut's release manifest names its file and the file's SHA-256. The Hugging Face metadata and the downloaded bytes must match it, and the cut must be built for the installed policyengine-uk.
+   - The latest cut must be the one the installed bundle routes constituencies to. If it isn't, the command stops and says which `--cut` to pass.
+   - `--dataset <path>` uses a copy you already have, checked against the same SHA-256.
+   - The dry run fetches the file too, so the real run starts with it in place.
+2. **Plans the run** with `geography`'s own checks (`geography._plan`), and checks a published `public/data/regional.csv`, if there is one, against it: that table is the release's prior. Then, as `geography` does before simulating, it compares each reform's baseline and reform identities with its approved receipt (`geography.area_provenance`) and stops on any mismatch. If a `regional.csv` is already in `--out-dir`, its record in `area_provenance.json` must match its bytes and bind each measure in both tables to the same approved entry; otherwise the command stops and asks for the regional run first.
+3. **Simulates each measure, then the package, in a fresh process** under `/usr/bin/time -l`, with `HDF5_USE_FILE_LOCKING=FALSE`. Each builds its two simulations, reads each year's household net income and weights under the data-limit watch, then runs the data-limit and model-limit checks, as `geography` does for each measure. The arrays go to the private run directory, `$UK_BUDGET_DISCLOSURE_AUDIT_DIR/geography/constituencies-<the cut's 8 hex digits>/`.
+4. **Stops on a limit.** If any measure touches a data or model limit, the command prints the reasons and writes no table, as `geography` does. It then prints the `--reforms` to run again with: the measures left, without the package. On policyengine-uk 2.132.6, expect the three VAT measures (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat` and `road_fuel_vat_cut`), and so the package, to be held by the VAT model limit (policyengine-uk #2187; see "The area view is held too" above). Run again with those `--reforms`: the measures already simulated are reused, so only the release runs.
+5. **Builds one disclosure release over every measure**, in a fresh process too: the estimates, the layer's checks, resolution and the private audit (`microcosm-<time>/` in the run directory), then `public/data/constituency.csv` through `geography.write_public_tables`, which replaces the file only once `validate_public` finds 0 problems. A demoted run stops it unless you pass `--allow-demotions`.
+   - Last, `public/data/area_provenance.json`, which `publish index` reads before it binds the table: each reform's approved entry and identities, and the SHA-256 of `constituency.csv` and of any `regional.csv` beside it. The regional table's reforms are recorded as its own run recorded them, checked again against its bytes. It is written on your machine once the table is back, on either backend (on Modal, not in a container). If the regional table changed during the run, the new `constituency.csv` is removed and the command stops.
+6. **Prints** the table's SHA-256, the review row to add, the files the provenance records, and the timing table.
+
+**Resuming.** A run that stops (Ctrl-C, a crash, a measure killed for memory) resumes with the same command. It reuses every measure already simulated for the same cut, years and code (the package's code, `uv.lock` and the two lookups). `--fresh` simulates everything again, and `--run-id` picks another private run directory.
+
+**What to expect:**
+- `employer_ni_relief_under_25s` moves no household income, so each seat it publishes shows no change.
+- Like every Microcosm area run, it prints the uncertified label at the start and the end, and records `certified: false` in the private audit (see "Results by area" under G4).
+
+**After the run**
+1. Review the table and the private summary: `summary.json` in the private audit directory, with tiers, withholdings and demotions. Never copy a figure from either into a pull request, commit message or comment.
+2. Bind the table, as at G4 ("Bind the results by area last"): `uv run uk-budget-data publish index`, then `uv run uk-budget-data publish check`. `publish index` reads `area_provenance.json`, and refuses the tables if an entry the run used has changed since.
+3. Add the review row the command printed to `data_inputs/public_data_review.csv`: kind `disclosure_table`, the table's SHA-256 (check it with `shasum -a 256 public/data/constituency.csv`), your name as reviewer, today's date and the basis. Then `uv run uk-budget-data publish review-rows --reviewer <name>`, as at G4, writes the rows for `area_provenance.json` (`publication_provenance`), the manifest and `release-index.json`.
+4. Run both checks. Each must report 0 problems:
+
+   ```sh
+   uv run python scripts/check_public_data.py
+   bun scripts/check-public-files.mjs
+   ```
+
+5. Commit `public/data/constituency.csv`, `public/data/area_provenance.json`, the manifest and `release-index.json` that `publish index` wrote, and `data_inputs/public_data_review.csv` to this branch, and nothing else from the run: the private directory stays outside the repository. Name the cut and the measures in the commit message, never a figure.
+6. Paste the timing table into a comment on the pull request. It is printed at the end, and kept as `timings-<time>.md` in the private run directory. It holds times and memory only. Posting it on #115 waits for María's go.
+
+**If a regional table is published after this one,** run the command again: it takes `public/data/regional.csv` as its prior when the file is there, and reuses every measure, so only the release runs. The release then keeps that table's withheld cells withheld, and checks the seats against its published cells. A regions-only `geography` run (`--levels region`) writes an `area_provenance.json` that records only `regional.csv`, so `publish index` refuses `constituency.csv` until this second run records both. Then bind them again with `publish index`.
+
+**What the page shows.** Each measure on its own, by constituency, and the package when every measure is selected: the catalogue's combined run of exactly the measures the page can display (`combinedId`), which `publish index` names for the table's package alias.
+- A measure the run left out reads "Results by constituency are not yet published for this measure."
+- With the package left out, all measures together read "Results by constituency are not yet published for the full package."
+- While `public/data/constituency.csv` is absent, the view reads "Results by constituency are not yet published." On a release that routes no results by area, it reads "Results by constituency are not available on this release.", and the command refuses to run.
+
+### Results by constituency on Modal
+
+The same run, with each measure in its own Modal container and the release in one more (`--backend modal`). The plan is made here as above. Each container downloads and checks the cut itself; no dataset file is sent. The units' arrays and the disclosure audit stay on the private Modal Volume `uk-budget-2026-constituencies-private`; only `constituency.csv` and the timings come back, and the table is checked with `validate_public` here. The receipt check runs here before the app starts, and `area_provenance.json` is written here after the table comes back.
+
+Uses the workspace's existing Modal secret `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a fine-grained read-only token for `policyengine/populace-uk-private`; created by Anthony). It was checked on Modal on 25 October: it reads the local-area cut. Decisions to run the data on Modal and to use this secret: issue #119.
+
+```
+UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
+  uv run --with modal==1.6.2 uk-budget-data constituencies --backend modal
+```
+
+- **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 16 at once, so 15 measures and their package run in one wave, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends. Modal still restarts a container it preempts, with the same input (seen once in drill 5).
+- **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, all 16 units hitting their timeout, about $17. The cap changes how many run at once, not how much is simulated. Check with `uvx --from modal modal billing report --for today` before and after.
+- **Build the image before the day, after every pin change.** A new `uv.lock` (a new policyengine wheel, say) means a new image, built the first time the command runs: 12 minutes in drill 5 (#144), before any container starts. Run both smoke tests once after the pin is set; they need no secret and no data, and leave the images built:
+
+  ```sh
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke badr_lifetime_limit_cut
+  uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py
+  ```
+
+- **Where the time goes** (drill 5, 26 October, 10 measures on policyengine-uk 2.132.6): 3:36–5:22 per measure, all at once, then **15:25 for the release in one container**, 21:18 in all. The release is serial, so more containers don't shorten it. On policyengine-uk 2.151.0 each simulation takes about twice as long (#144).
+- **No reuse:** every Modal run simulates every measure again. The refusal message's "run again … the measures already simulated are reused" holds for a local run only: on Modal the units' records stay on the Volume, so the rerun simulates them again (about 5 min).
+- **Smoke test (no secret, no data):** `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. On 25 October: ten units fanned out in 23 s end to end (1–2 s in each container), the release read them all back in 8 s, 53 s in all including the image build.
+- **Measured on the real cut, 25 October** (`main` at 63c61a1 with #138 merged in; cut `…-ee5c2dbe`; a timing-only scratch manifest and a scratch `--out-dir`, nothing published):
+  - **All ten units at once (`--fresh`): 7:05 end to end**, 3:28–6:35 per container, peak resident 33.5–42.2 GB. Four were refused by the model-limit gate (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat`, `road_fuel_vat_cut` and the package), so no table was written. That is the gate working, not Modal.
+  - **The six admissible measures, then the release: 13:53 end to end**, 3:40–5:16 per measure, then 8:07 for the release in one container (7.5 min of it estimating). `validate_public` found 0 problems in `constituency.csv`.
+  - **Before:** 2–3.5 h on the 64 GB laptop (#138, #115).
+  - **Cost** (Modal's billing report): $0.70 for the ten-unit run, $0.51 for the six-plus-release run.
+  - **Peaks are under 43 GB,** so 48 GiB containers would do. That would cut the memory part of the cost by a quarter; not changed here.
+  - **Main publishes no `constituency.csv`,** so there is no published table to compare with.
+- **Measured again from `main`, 26 October** (`main` at 9305d80 with #142 merged in, no #104; a timing-only scratch manifest built from `main`'s measures, marked "TIMING ONLY, not an approval"; scratch `--out-dir` and audit directory; nothing published): the six admissible measures, then the release, **14:32 end to end**, 3:48–6:32 per measure, 7:32 for the release, peak resident 33.3–39.5 GB. `validate_public` found 0 problems in `constituency.csv`. The laptop's process stayed under 0.4 GB.
 
 ## Data and model limitations: say these wherever a measure depends on them
 
@@ -807,6 +1172,8 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
   2. Revert the bad merge through a pull request, and wait for its deployment to build. This repository merges with merge commits, so use GitHub's Revert button or `git revert -m 1 <merge>`; a plain `git revert` of a merge commit fails.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
+- **Don't roll the household API back past `00024-lir`.** An older revision can't serve the live page's Personal impact tab, and a dashboard deployment from before #69 has no working Personal impact tab at all (see "Live and rollback target" above).
+  - **Once the page compares definitions (the follow-up to #104), the floor moves up** to the first revision deployed with #125. An older revision reports no definitions, so the page would show every measure as unavailable in Personal impact. That fails closed, but it leaves the tab empty. That is why the follow-up merges only once the recorded rollback target is at or above this floor ("Adopting a release").
 - **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). The rollback runs as its own Cloud Build pipeline, and only one deploy or rollback runs at a time, however it was started. The pipeline:
   - accepts only a ready revision whose own deploy build succeeded. That build must be of a commit on `main`, and must have pushed the exact image the revision runs (checked against Cloud Build's record, not only the revision's labels);
   - reruns `main`'s current smoke test on that revision before any traffic moves. The checker never comes from the revision's own image, which only reports its versions and coverage;
@@ -824,16 +1191,17 @@ Exports are built only from approved entries of one manifest revision. A measure
     --to-revisions <revision>=100
   ```
 
-  Then re-run the household check against the live route.
+  **After either path,** the workflow's `rollback` or this fallback, re-run the household check against the live route, and time one breakdown (see "Adopting a release").
 - **A model release.** To go back to the previous bundle after an upgrade:
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
      - Check that nothing else merged since depends on what is reverted.
   2. **Regenerate on the revert branch, before merging, if anything was published after the upgrade.** With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, approve, and write the review rows (as at G2), as for a re-cut. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
      - **The area routing status and the constituency tables too, if the revert kept `main`'s publication files.** Those still hold the newer release's. With the previous release installed, regenerate the status (`uv run python -m uk_budget_data.area_routing --write`) and commit it; `tests/test_area_routing.py` fails until you do if the two releases route differently. If the previous release routes results by area, bring back its constituency tables with their review rows, as the adoption step does; if it doesn't, the page shows the label and no figures.
+     - **The Living standards outlook, if the upgrade PR didn't carry it, `main` has changed it since, or the revert kept `main`'s publication files.** With the previous release installed, rerun `uv run uk-budget-data living-standards` on the revert branch and commit the file with its review row. Otherwise the outlook test fails on the version (see "Adopting a release"). Update the view's tests with it, as at adoption. #110, the prepared revert of #102 (6.10.2), needed both: #102 predates #69, so its revert left the outlook on 6.10.2.
      - **A clean revert needs no regeneration.** If nothing was published after the upgrade, the revert brings back the previous lock with its manifest, artifacts and approvals together, and `publish check` passes.
-  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "Adopting a release (each re-cut)"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
-  4. **Run the household checks.** After a clean revert, the previous cut's approvals are already back, with its manifest.
+  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. **Deploy, don't roll back, when that revision predates the route the live page calls.** For example, `00020-pal` (6.10.0) and `00022-suw` (6.10.2) both predate #69's `/api/household-impact` (see "Live and rollback target" above). Merging doesn't redeploy it (see "Adopting a release (each re-cut)"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  4. **Run the household checks, and time one breakdown** (see "Adopting a release"). After a clean revert, the previous cut's approvals are already back, with its manifest.
 
 ## Clock
 

@@ -1,0 +1,228 @@
+/* Legend: never wider than its container; the layout (split / columns /
+   stacked) and each column's width come from legendLayout, shared with the
+   SVG/PNG export. Gaps as in legendLayout.js. */
+.grouped-legend {
+  position: relative;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--pe-gray-700);
+}
+
+.grouped-legend-groups {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px 32px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.grouped-legend.is-stacked .grouped-legend-groups {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.grouped-legend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.grouped-legend-heading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pe-gray-500);
+}
+
+/* A group's sub-columns: two when it has more than three items */
+.grouped-legend-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.grouped-legend.is-stacked .grouped-legend-columns {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grouped-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.grouped-legend-items li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.grouped-legend-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.grouped-legend-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.grouped-legend-swatch-line {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.grouped-legend-net {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.grouped-legend-line {
+  position: relative;
+  width: 14px;
+  height: 2px;
+  background: var(--c-net);
+}
+
+.grouped-legend-line::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-net);
+}
+
+/* A short legend with no groups (before / after): one centred row, items
+   side by side, wrapping only on a narrow phone */
+.grouped-legend.is-row .grouped-legend-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grouped-legend.is-row .grouped-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .grouped-legend.is-row .grouped-legend-row {
+    flex-wrap: wrap;
+  }
+
+  .grouped-legend.is-row .grouped-legend-item {
+    white-space: normal;
+  }
+}
+
+/* The net line's copy inside the last group: only for a narrow card */
+.grouped-legend-net-inline {
+  display: none !important;
+}
+
+/* A narrow (half-width) card: each group a block across the card's width,
+   its items flowing into as many columns as fit, names kept whole; the
+   net line on the last row */
+@container (max-width: 640px) {
+  .grouped-legend-groups,
+  .grouped-legend.is-stacked .grouped-legend-groups {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .grouped-legend-columns,
+  .grouped-legend.is-stacked .grouped-legend-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+
+  .grouped-legend-items {
+    display: contents;
+  }
+
+  .grouped-legend-items li {
+    white-space: nowrap;
+    align-items: center;
+  }
+
+  .grouped-legend-label {
+    overflow-wrap: normal;
+  }
+
+  .grouped-legend-swatch,
+  .grouped-legend-swatch-line {
+    margin-top: 0;
+  }
+
+  .grouped-legend > .grouped-legend-net {
+    display: none;
+  }
+
+  .grouped-legend-net-inline {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/* A measure that is £0 in the year shown (legendMembership): still listed,
+   greyed out, with an outline swatch; the card's "More info" (ChartMoreInfo) says why */
+.grouped-legend .is-muted .grouped-legend-label {
+  color: var(--pe-gray-500);
+}
+
+.grouped-legend .is-muted .grouped-legend-swatch {
+  box-shadow: inset 0 0 0 1.5px var(--pe-gray-400);
+}
+
+/* An item's note behind an "i" (styles in HouseholdCalculator.css), beside
+   its label */
+.grouped-legend-info {
+  align-self: center;
+  margin-left: -2px;
+}
+
+.grouped-legend-info .info-tooltip {
+  width: 240px;
+  white-space: normal;
+  text-align: left;
+}

@@ -6,6 +6,8 @@ from typing import Any, Callable, Optional
 from policyengine_uk.utils.scenario import Scenario
 from pydantic import BaseModel, Field
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 
 class Reform(BaseModel):
     """Definition of a policy reform.
@@ -130,6 +132,7 @@ class ReformResult(BaseModel):
     household_scatter: list[dict]
     constituency: list[dict]
     demographic_constituency: list[dict]
+    age_impact: list[dict] = []
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -138,8 +141,11 @@ class DataConfig(BaseModel):
     """Configuration for the data generation pipeline."""
 
     years: list[int] = Field(
-        default=[2026, 2027, 2028, 2029, 2030],
-        description="Years to calculate metrics for",
+        default_factory=lambda: list(POLICY_YEARS),
+        description=(
+            "Years to calculate metrics for: the policy years in "
+            "budget_years.json"
+        ),
     )
     output_dir: Path = Field(
         default=Path("./public/data"),
@@ -157,13 +163,12 @@ class DataConfig(BaseModel):
         default=None,
         description="Path to enhanced FRS dataset (optional)",
     )
-    income_curve_max: int = Field(
-        default=150_000,
-        description="Maximum employment income for curve",
-    )
     income_curve_points: int = Field(
         default=201,
-        description="Number of points on income curve",
+        description=(
+            "Points on each example household's income grid (its range is "
+            "set per household in example_households)"
+        ),
     )
     household_scatter_max_income: int = Field(
         default=150_000,

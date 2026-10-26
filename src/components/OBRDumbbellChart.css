@@ -1,0 +1,131 @@
+/* PolicyEngine and OBR estimates: dumbbell chart */
+
+.obr-dumbbell {
+  margin: 0 0 20px;
+}
+
+.obr-dumbbell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.obr-dumbbell-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.obr-dumbbell-header h3 {
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+  margin: 0;
+}
+
+.obr-dumbbell-header .chart-download {
+  flex-shrink: 0;
+}
+
+.obr-dumbbell-plot {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.obr-dumbbell-plot svg text {
+  font-family: inherit;
+}
+
+.obr-dumbbell-empty {
+  margin: 0;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+  font-size: var(--fs-body);
+}
+
+.obr-dumbbell-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.obr-dumbbell-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.obr-dumbbell-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.obr-dumbbell-key-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* The OBR's key: a hollow ring, as in the chart */
+.obr-dumbbell-key-ring {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid;
+  border-radius: 50%;
+}
+
+.obr-dumbbell-legend .obr-dumbbell-legend-title {
+  color: var(--pe-gray-600);
+}
+
+.obr-dumbbell-logo {
+  align-self: flex-end;
+  display: block;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  /* The title wraps beside the Download button, as in the other cards */
+  .obr-dumbbell-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .obr-dumbbell-legend {
+    font-size: 12px;
+    gap: 4px 14px;
+  }
+}
+
+/* A year change (or the Play control) slides the dots, the connecting line
+   and the value labels to their new places instead of redrawing them */
+.obr-dumbbell-move {
+  transition: transform 850ms ease-in-out;
+}
+
+.obr-dumbbell-dot-move {
+  transition: cx 850ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-dumbbell-move,
+  .obr-dumbbell-dot-move {
+    transition: none;
+  }
+}

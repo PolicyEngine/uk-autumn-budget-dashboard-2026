@@ -1,0 +1,29 @@
+{
+  "_note": "The page's copy of policyengine-uk's State Pension age and full new State Pension (£ a year) by policy year, to show and prefill the wizard's State Pension fields. tests/test_household_impact.py checks it against the model; the API reads the model itself.",
+  "years": {
+    "2026": {
+      "state_pension_age": 66,
+      "full_new_state_pension": 12547.6
+    },
+    "2027": {
+      "state_pension_age": 67,
+      "full_new_state_pension": 13036.97
+    },
+    "2028": {
+      "state_pension_age": 67,
+      "full_new_state_pension": 13362.92
+    },
+    "2029": {
+      "state_pension_age": 67,
+      "full_new_state_pension": 13696.98
+    },
+    "2030": {
+      "state_pension_age": 67,
+      "full_new_state_pension": 14039.42
+    },
+    "2031": {
+      "state_pension_age": 67,
+      "full_new_state_pension": 14390.39
+    }
+  }
+}

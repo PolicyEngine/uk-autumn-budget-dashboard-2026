@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import RegionView from "./RegionView";
 import { downloadFile } from "../utils/downloadFile";
 import { resetGeographyCache } from "../hooks/useGeographyData";
@@ -10,6 +10,15 @@ import {
   areaRouting,
   geographyFetch,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -111,15 +120,15 @@ describe("RegionView", () => {
   it("switches to £ per household with the published digits", async () => {
     renderView();
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
     const london = within(rowFor("London"));
     expect(london.getByText("+£1,234.5")).toBeInTheDocument();
     expect(london.getByText("£1,100 to £1,369")).toBeInTheDocument();
     expect(within(rowFor("Yorkshire and The Humber")).getByText("-£50")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "£ per household" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "Show the change as: £ per household" }),
+    ).toBeInTheDocument();
   });
 
   it("marks a region with no published row as no data, never a value", async () => {
@@ -164,7 +173,9 @@ describe("RegionView", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     // No figure anywhere: every published figure is signed or zero.
     expect(container.textContent).not.toMatch(/[+-]£|£0|[+-][\d.]+%|\b0%/);
-    expect(screen.queryByRole("button", { name: /CSV/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Download chart: Results by region/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("says a measure with no regional rows is not yet published", async () => {
@@ -202,7 +213,9 @@ describe("RegionView", () => {
   it("exports the published strings as CSV, with metadata and a byte-order mark", async () => {
     renderView();
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Download chart: Results by region/ }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     expect(downloadFile).toHaveBeenCalledTimes(1);
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe("results-by-region-autumn_budget_2026_combined-2029.csv");
@@ -246,7 +259,9 @@ describe("RegionView", () => {
   it("exports the same rows as text", async () => {
     renderView({ selectedPolicies: ["fuel_duty_freeze"] });
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "TXT" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Download chart: Results by region/ }));
+    fireEvent.click(screen.getByRole("button", { name: "TXT Plain text" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe("results-by-region-fuel_duty_freeze-2029.txt");
     expect(mimeType).toBe("text/plain;charset=utf-8");

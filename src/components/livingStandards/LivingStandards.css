@@ -1,0 +1,1100 @@
+/* Living standards view: the dashboard's cards, section headings and chart
+   theme (globals.css), plus the few parts the other views do not have:
+   in-card notes and source lines, the dot plot, and forecast tiles and
+   tables. Colours come from the PolicyEngine tokens. */
+
+/* Sections: two-up rows of cards, 20px apart */
+.ls-section > .charts-grid + .charts-grid {
+  margin-top: 20px;
+}
+
+/* Cards */
+.main-content .ls-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main-content .ls-card .chart-description strong {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+/* Controls: compact pills in one controls row */
+/* 24px under the row, so the plot's top tick is never glued to it */
+.ls-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 24px;
+}
+
+/* Labels and full values on every pill. One row: a card's controls are
+   its primary pills and an Options button (ControlBar) */
+.ls-controls .pill-select-prefix::after {
+  content: ":";
+}
+
+/* The years compared: one pill holding the two year lists and an arrow */
+.ls-range {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  background: var(--pe-surface);
+}
+
+.ls-range:focus-within,
+.ls-range:hover {
+  border-color: var(--pe-teal-500);
+}
+
+.ls-range .pill-select-light .pill-select-toggle {
+  height: 24px;
+  padding: 0 4px 0 6px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.ls-range .pill-select-light .pill-select-toggle:hover,
+.ls-range .pill-select-light .pill-select-toggle[aria-expanded="true"] {
+  border-color: transparent;
+  background: var(--pe-gray-50);
+}
+
+.ls-range-arrow {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
+.ls-controls:empty {
+  margin: 0;
+}
+
+/* The page's one in-card control height, 32px */
+.ls-controls .pill-select-light .pill-select-toggle {
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 12px;
+  font-size: var(--fs-micro);
+}
+
+.ls-controls .pill-select-light .pill-select-badge {
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--fs-micro);
+}
+
+.ls-controls .obr-view-switch.is-compact .obr-view-option {
+  padding: 0 8px;
+}
+
+/* In-card pill lists open from the pill's left edge, inside the card */
+.ls-controls .pill-select-list,
+.ls-section-controls .pill-select-list {
+  left: 0;
+  right: auto;
+}
+
+/* A long choice shortens with an ellipsis rather than leave the card */
+.ls-controls .pill-select,
+.ls-controls .pill-select-toggle {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ls-controls .pill-select-light .pill-select-badge {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 22px;
+  flex-shrink: 1;
+}
+
+.ls-controls .pill-select-prefix,
+.ls-controls .policy-selector-icon {
+  flex-shrink: 0;
+}
+
+/* A card's pills wrap onto a second line rather than truncate. A view
+   with no pills of its own keeps another view's in place, hidden, so the
+   card does not jump when the view changes (ViewCard). */
+.ls-controls > .pill-select {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.ls-controls > .control-bar {
+  flex: 1 1 auto;
+}
+
+.ls-card-footer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Reading notes inside "About this chart", under the definition */
+.ls-about-notes {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.ls-about-notes li + li {
+  margin-top: 6px;
+}
+
+/* "About this chart" sits at the foot of the card, so in two cards side
+   by side the two disclosures line up */
+.ls-card-footer > .disclosure-in-card {
+  margin-top: auto;
+}
+
+.ls-card-footer > :has(+ .disclosure-in-card) {
+  margin-bottom: 16px;
+}
+
+.ls-card-footer:has(> .disclosure-in-card:first-child) {
+  padding-top: 16px;
+}
+
+/* The plot, legend and logo rows a chart fills are rows of the card */
+.ls-chart-rows {
+  display: contents;
+}
+
+@media (min-width: 1025px) {
+  /* Rows 4 to 7 of a paired card (see the charts-grid rules in globals.css) */
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-plot,
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-legend,
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-logo,
+  .charts-grid > div:not(:only-child) > .ls-card-footer {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-plot {
+    grid-row: 4;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-legend {
+    grid-row: 5;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-logo {
+    grid-row: 6;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-card-footer {
+    grid-row: 7;
+  }
+
+  /* A title that wraps beside a one-line title: both start on the same
+     line, rather than the shorter one centred in the taller row */
+  .charts-grid > .ls-card:not(:only-child) h3 {
+    align-self: start;
+  }
+}
+
+/* An empty plot keeps the height of the chart it stands in for */
+.ls-card .plot-empty {
+  min-height: 318px;
+}
+
+/* A Recharts plot is at least its chart's height (set inline) and fills
+   its row: beside a taller plot it stretches, so the two x axes stay on
+   one line. The drawing is placed absolutely, so it adds no height of its
+   own and the row never grows from it. */
+.ls-plot-fill {
+  position: relative;
+}
+
+.ls-plot-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* The dot plot fills its row too, its axis at the foot: the axis rule
+   level with the x axis of the chart beside it (48px above the plot's
+   foot, as LsCharts' x axis with its title room) */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  display: flex;
+  flex-direction: column;
+}
+
+.ls-card .chart-plot > .ls-dot-plot {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.ls-card .ls-dot-plot .dot-axis {
+  margin-top: auto;
+  min-height: 48px;
+}
+
+/* The head holds only the "All people" label, which sits on the first
+   row's rule; kept 10px tall (the room the charts keep above their plot),
+   the first row starts level with the plot beside it */
+.ls-card .ls-dot-plot .dot-head,
+.ls-card .ls-dot-plot .dot-head .dot-plot-area {
+  min-height: 10px;
+}
+
+.ls-source {
+  margin: 10px 0 0;
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+/* The source line closes "About this chart" */
+.disclosure-content > .ls-source {
+  margin-top: 12px;
+}
+
+.ls-source a {
+  color: var(--pe-teal-700);
+}
+
+.ls-source-label {
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.stat-sub.change-positive,
+.ls-table td.change-positive {
+  color: var(--pe-teal-700);
+}
+
+.stat-sub.change-negative,
+.ls-table td.change-negative {
+  color: var(--c-loss-text);
+}
+
+.ls-section-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.ls-section-controls .pill-select {
+  position: relative;
+}
+
+/* Forecast tables */
+.ls-table-wrapper {
+  overflow-x: auto;
+}
+
+.ls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.ls-table th,
+.ls-table td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: none;
+}
+
+.ls-table thead th {
+  font-weight: 600;
+  color: var(--pe-gray-700);
+  border-bottom: 1px solid var(--card-border);
+  vertical-align: bottom;
+}
+
+.ls-table th:first-child,
+.ls-table td:first-child {
+  text-align: left;
+}
+
+.ls-table td {
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-700);
+}
+
+.ls-table td.pending {
+  color: var(--pe-gray-500);
+  font-style: italic;
+}
+
+/* Poverty and income by group: a dot plot drawn in HTML */
+.ls-dot-plot {
+  --dot-cols: minmax(150px, 250px) minmax(0, 1fr) 190px;
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.ls-dot-plot .dot-head,
+.ls-dot-plot .dot-row {
+  display: grid;
+  grid-template-columns: var(--dot-cols);
+  align-items: center;
+  column-gap: 16px;
+}
+
+.ls-dot-plot .dot-head {
+  min-height: 22px;
+}
+
+.ls-dot-plot .dot-row {
+  min-height: 34px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.ls-dot-plot .dot-axis {
+  border-top: 1px solid var(--pe-gray-200);
+  min-height: 22px;
+}
+
+.ls-dot-plot .dot-label {
+  line-height: 1.3;
+}
+
+.ls-dot-plot .dot-plot-area {
+  position: relative;
+  align-self: stretch;
+  margin: 0 8px;
+}
+
+.ls-dot-plot .dot-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--pe-gray-100);
+}
+
+.ls-dot-plot .dot-all {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--pe-gray-400);
+}
+
+.ls-dot-plot .dot-all-label {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+/* The two years' dots, in the legend row under the plot */
+.ls-card .dot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.ls-card .dot-legend i {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+/* The start year a hollow ring, the end year a smaller filled dot drawn
+   on top: equal values read as a dot in a ring, never one hiding the other */
+.ls-card .dot-legend i.from,
+.ls-dot-plot .dot.from {
+  width: 14px;
+  height: 14px;
+  background: var(--c-surface);
+  border: 2px solid var(--c-before);
+  box-sizing: border-box;
+}
+
+.ls-card .dot-legend i.all {
+  width: 0;
+  height: 12px;
+  border-radius: 0;
+  border-left: 1px dashed var(--pe-gray-400);
+}
+
+.ls-card .dot-legend i.to,
+.ls-dot-plot .dot.to {
+  width: 8px;
+  height: 8px;
+  background: var(--c-after);
+}
+
+/* From the start to the end year, coloured by direction: a rise in
+   poverty in the loss colour, a fall in the gain colour */
+.ls-dot-plot .dot-link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--c-no-change);
+}
+
+.ls-dot-plot .dot-link.up {
+  background: var(--c-loss);
+}
+
+.ls-dot-plot .dot-link.down {
+  background: var(--c-gain);
+}
+
+.ls-dot-plot .dot-arrow {
+  position: absolute;
+  top: -3px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.ls-dot-plot .dot-arrow.right {
+  right: 5px;
+  border-left: 6px solid currentColor;
+}
+
+.ls-dot-plot .dot-arrow.left {
+  left: 5px;
+  border-right: 6px solid currentColor;
+}
+
+.ls-dot-plot .dot-link.up .dot-arrow {
+  color: var(--c-loss);
+}
+
+.ls-dot-plot .dot-link.down .dot-arrow {
+  color: var(--c-gain);
+}
+
+.ls-dot-plot .dot {
+  position: absolute;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ls-dot-plot .dot.to {
+  z-index: 1;
+}
+
+.ls-dot-plot .dot-values {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ls-dot-plot .dot-nums {
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+:is(.ls-dot-plot, .ls-bars) .dot-chip {
+  min-width: 52px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+:is(.ls-dot-plot, .ls-bars) .dot-chip.good {
+  background: var(--pe-teal-50);
+  color: var(--pe-teal-700);
+}
+
+:is(.ls-dot-plot, .ls-bars) .dot-chip.bad {
+  background: var(--c-loss-soft);
+  color: var(--c-loss-text);
+}
+
+:is(.ls-dot-plot, .ls-bars) .dot-chip {
+  white-space: nowrap;
+}
+
+:is(.ls-dot-plot, .ls-bars) .dot-chip.flat {
+  background: var(--pe-gray-100);
+  color: var(--pe-gray-500);
+}
+
+.ls-dot-plot .dot-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .ls-section-controls {
+    justify-content: flex-start;
+  }
+}
+
+/* A narrow card (a phone, or one of a pair): label on its own line, then
+   the plot and the values */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  container-type: inline-size;
+}
+
+@container (max-width: 640px) {
+  .ls-dot-plot {
+    --dot-cols: minmax(0, 1fr) 176px;
+  }
+
+  .ls-dot-plot .dot-head,
+  .ls-dot-plot .dot-row {
+    column-gap: 8px;
+  }
+
+  .ls-dot-plot .dot-row {
+    row-gap: 2px;
+    padding: 6px 0;
+  }
+
+  .ls-dot-plot .dot-row .dot-label {
+    grid-column: 1 / -1;
+  }
+
+  .ls-dot-plot .dot-row .dot-plot-area {
+    min-height: 20px;
+    margin: 0 4px;
+  }
+
+  .ls-dot-plot .dot-head .dot-label,
+  .ls-dot-plot .dot-axis .dot-label {
+    display: none;
+  }
+
+
+  .ls-dot-plot .dot-head .dot-plot-area {
+    grid-row: 2;
+    min-height: 18px;
+  }
+
+  .ls-dot-plot .dot-nums {
+    font-size: var(--fs-micro);
+  }
+
+  .ls-dot-plot .dot-chip {
+    min-width: 0;
+    padding: 1px 5px;
+  }
+
+  .ls-dot-plot .dot-values {
+    gap: 5px;
+  }
+}
+
+/* Forecast headline tiles: icon and name, the figure with a small line of
+   the forecast years on its right, then one line on what it means */
+.forecast-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* One tile a row below 900px */
+@media (max-width: 900px) {
+  .forecast-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
+.forecast-tile {
+  display: flex;
+  flex-direction: column;
+  /* A grid cell that may shrink below its content: long captions wrap */
+  min-width: 0;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--c-surface);
+}
+
+.forecast-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-tile-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
+}
+
+.forecast-tile-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.forecast-tile-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.forecast-tile-name a:hover {
+  text-decoration: underline;
+}
+
+.forecast-tile-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A change in words ("Rises 0.1 points") leads in place of a number */
+.forecast-tile-value.is-text {
+  font-size: 1.5rem;
+}
+
+.poverty-tiles .forecast-tile-sub {
+  white-space: normal;
+}
+
+/* The model's levels, said small under a change-led tile */
+.forecast-tile-meaning.is-small {
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
+.forecast-tile-sub {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.forecast-tile-meaning {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pe-gray-100);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+/* A tile's trend (HeadlineTile): its series named above, a line over a
+   light area, the first and last values labelled, the figure's year
+   ringed; a guide and tip on hover or focus */
+.tile-trend {
+  min-width: 0;
+}
+
+.tile-trend-series {
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.tile-trend-plot {
+  position: relative;
+  border-radius: 6px;
+  outline: none;
+  cursor: crosshair;
+}
+
+.tile-trend-plot:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.tile-trend-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.tile-trend-area {
+  fill: var(--c-gain);
+  fill-opacity: 0.1;
+}
+
+.tile-trend-line {
+  fill: none;
+  stroke: var(--c-gain);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tile-trend-line.is-dashed {
+  stroke-dasharray: 5 3;
+}
+
+.tile-trend-dot {
+  fill: var(--c-gain);
+}
+
+.tile-trend-hero {
+  fill: var(--c-surface);
+  stroke: var(--c-gain-text);
+  stroke-width: 2.5;
+}
+
+.tile-trend-value {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--c-gain-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-trend-hover {
+  fill: var(--c-gain-text);
+  stroke: var(--c-surface);
+  stroke-width: 1.5;
+}
+
+.tile-trend-guide {
+  stroke: var(--c-axis);
+  stroke-width: 1;
+}
+
+.tile-trend-tip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 2px 8px var(--shadow-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tile-trend-years {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-tile-info {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+/* The poverty tiles sit as one more row of the section's cards */
+.poverty-tiles {
+  margin-bottom: 20px;
+}
+
+.forecast-feed-params {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: circle;
+}
+
+.forecast-feed-params code {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* A section with one card: the card takes the full width */
+.charts-grid.forecast-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Who is in poverty: a bar per group for the end year, a dark tick at the
+   start year, a change chip on the right, and a dashed reference line */
+.ls-card .chart-plot:has(> .ls-bars) {
+  container-type: inline-size;
+}
+
+.ls-bars {
+  display: grid;
+  grid-template-columns: minmax(120px, 30%) minmax(0, 1fr) 88px;
+  column-gap: 12px;
+  font-size: var(--fs-caption);
+}
+
+.ls-bar-row {
+  display: contents;
+}
+
+.ls-bar-row > * {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.ls-bar-label {
+  color: var(--pe-gray-700);
+  line-height: 1.3;
+}
+
+.ls-bar-area {
+  position: relative;
+  min-width: 0;
+}
+
+.ls-bar-area:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.ls-bar-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--pe-gray-100);
+}
+
+.ls-bar-fill {
+  position: relative;
+  height: 18px;
+  min-width: 2px;
+  border-radius: 0 3px 3px 0;
+  background: var(--c-after);
+}
+
+/* Above the dashed reference line, on the card's colour, so the line never
+   runs through the figure */
+.ls-bar-value {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 100%;
+  margin-left: 4px;
+  padding: 0 3px;
+  background: var(--c-surface);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ls-bar-value.inside {
+  left: auto;
+  right: 6px;
+  margin-left: 0;
+  padding: 0;
+  background: none;
+  color: var(--c-surface);
+  font-weight: 600;
+}
+
+.ls-bar-start {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 26px;
+  margin-left: -1.5px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--pe-gray-800);
+}
+
+.ls-bar-all {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--c-reference);
+}
+
+.ls-bar-chip-cell {
+  justify-content: flex-end;
+}
+
+.ls-bar-head > * {
+  min-height: 20px;
+}
+
+.ls-bar-all-label {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  color: var(--c-reference);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.ls-bar-axis > * {
+  min-height: 22px;
+}
+
+.ls-bar-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.ls-card .ls-bar-legend i.ls-key-bar {
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--c-after);
+}
+
+.ls-card .ls-bar-legend i.ls-key-start {
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--pe-gray-800);
+}
+
+.ls-card .ls-bar-legend i.ls-key-all {
+  width: 0;
+  height: 12px;
+  border-radius: 0;
+  border-left: 1px dashed var(--c-reference);
+}
+
+/* A phone or half-width card: the label above its bar, the chip still right */
+@container (max-width: 520px) {
+  .ls-bars {
+    grid-template-columns: minmax(0, 1fr) 80px;
+  }
+
+  .ls-bar-row > .ls-bar-label {
+    grid-column: 1 / -1;
+    min-height: 0;
+    padding-top: 6px;
+  }
+
+  .ls-bar-head > .ls-bar-label,
+  .ls-bar-axis > .ls-bar-label {
+    display: none;
+  }
+}
+
+/* A line under a chart's key on what it leaves out (vigintile 1) */
+.ls-legend-note {
+  margin: 6px 0 0;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+
+/* A card's one-line subtitle under its title: which side of a with/without
+   pair it is, and the link to its twin (GrowthWithMeasuresCard) */
+.main-content .chart-description .ls-card-subtitle {
+  margin: 0 0 8px;
+}
+.main-content .chart-description > p {
+  margin: 0;
+}
+.main-content .chart-description .ls-card-subtitle a {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A light-to-dark key for many ordered groups (Growth across the
+   distribution by twentieths): "Lowest income [ramp] Highest income" */
+.ls-ramp-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+}
+
+.ls-ramp-bar {
+  width: 120px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* The growth chart's year panel: every group's value for the hovered
+   year, as one compact list */
+.ls-nowrap {
+  white-space: nowrap;
+}
+
+.ls-year-panel-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-micro);
+}
+
+.ls-year-panel-list li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 48px 3.6em;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+  border-radius: 3px;
+}
+
+.ls-year-panel-list li.is-hovered {
+  background: var(--pe-gray-100);
+}
+
+.ls-year-panel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.ls-year-panel-group {
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+/* A small bar from a centre line: right for a gain, left for a loss */
+.ls-year-panel-track {
+  position: relative;
+  height: 6px;
+  background: linear-gradient(var(--pe-gray-300), var(--pe-gray-300)) center / 1px 100% no-repeat;
+}
+
+.ls-year-panel-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 1px;
+}
+
+.ls-year-panel-value {
+  text-align: right;
+}

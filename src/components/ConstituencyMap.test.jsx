@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
-import { downloadSvg } from "../utils/downloadFile";
+import { CHART_COLOURS } from "../utils/chartTheme";
+import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
@@ -24,6 +25,15 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -77,6 +87,13 @@ const seat = (container, code) =>
   container.querySelector(`path.constituency-path[data-code="${code}"]`);
 
 const tooltip = (container) => container.querySelector(".constituency-tooltip");
+
+/** Choose how the change is shown, in the card's Options pill. */
+function showChangeAs(name) {
+  fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+  // A click applies the choice and closes the popover
+  fireEvent.click(screen.getByRole("radio", { name }));
+}
 
 describe("ConstituencyMap", () => {
   it("defines the withheld hatch as a vector pattern in the map's own defs", async () => {
@@ -169,7 +186,7 @@ describe("ConstituencyMap", () => {
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
         "Large gain: £100 or more",
@@ -177,35 +194,35 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("keeps the legend and logo in the corners of what is shown", async () => {
-    const observed = new Map();
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(callback) {
-          this.callback = callback;
-        }
-        observe(target) {
-          observed.set(target, this.callback);
-        }
-        disconnect() {}
-      },
-    );
+  it("puts the key under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
+    // On screen the key is HTML, outside the map's SVG: a ramp from loss
+    // to gain, too uncertain, and the three status textures
+    const key = screen.getByRole("group", { name: "Key" });
+    expect(map.contains(key)).toBe(false);
+    expect(key).toHaveTextContent("Change in household net income, % of income");
+    const entries = [...key.querySelectorAll("button[data-key]")].map((button) => button.getAttribute("aria-label"));
+    expect(entries.slice(0, 5)).toEqual([
+      expect.stringMatching(/^Large loss, 1% or more: \d+ seats?$/),
+      expect.stringMatching(/^Small loss, 0.1% to 1%: /),
+      expect.stringMatching(/^Little change, under 0.1% either way: /),
+      expect.stringMatching(/^Small gain, 0.1% to 1%: /),
+      expect.stringMatching(/^Large gain, 1% or more: /),
+    ]);
+    expect(key).toHaveTextContent("Too uncertain");
+    expect(key).toHaveTextContent("Shown by pattern:");
+    expect(key).toHaveTextContent("Approximate");
+    expect(key).toHaveTextContent("Not published");
+    expect(key).toHaveTextContent("No data");
+    expect(key).not.toHaveTextContent("Reported");
+    // The SVG carries no logo of its own; the card's logo row does
+    expect(map.querySelector("image")).toBeNull();
+    // The SVG's legend, for the exported file, sits in its corner
     const legend = map.querySelector(":scope > g.map-legend");
-    const logo = map.querySelector(":scope > image.map-logo");
     expect(legend.getAttribute("transform")).toBe("translate(12, 12)");
-
-    // Twice as wide as it is tall: 200 units show on either side of the
-    // drawing area, so the legend moves left and the logo right.
-    act(() => observed.get(map)([{ contentRect: { width: 1200, height: 600 } }]));
-    expect(legend.getAttribute("transform")).toBe("translate(-188, 12)");
-    expect(logo.getAttribute("x")).toBe("912");
-    expect(logo.getAttribute("y")).toBe("575");
-
-    // The file shows the drawing area alone, with the legend in its corner.
-    fireEvent.click(screen.getByRole("button", { name: "Download map as SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
     const root = new DOMParser().parseFromString(svgText, "image/svg+xml")
@@ -213,14 +230,20 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
       "translate(12, 12)",
     );
+    expect(root.getAttribute("viewBox")).toMatch(/^0 0 800 /);
   });
 
-  it("describes approximate seats as dotted, as the legend draws them", async () => {
+  it("has no footnote under the map; the search box says what to do", async () => {
+    // The dotted / hatched rules live on the Methodology tab (Figures by area)
     await renderMap();
     expect(
-      screen.getByText(/Dotted constituencies rest on few survey households/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Dotted constituencies rest on few survey households/),
+    ).toBeNull();
+    expect(screen.queryByText(/Select a constituency, or search for one/)).toBeNull();
     expect(screen.queryByText(/Lighter constituencies/)).toBeNull();
+    expect(
+      screen.getByPlaceholderText("Search or select a constituency"),
+    ).toBeInTheDocument();
   });
 
   it("makes the legend as wide as its longest line", async () => {
@@ -307,7 +330,7 @@ describe("ConstituencyMap", () => {
 
   it("finds a constituency by name, with its published figure", async () => {
     const { container } = await renderMap();
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "harbour" },
     });
     const result = screen.getByRole("button", { name: /Harbour, Mill and Quay/ });
@@ -316,7 +339,7 @@ describe("ConstituencyMap", () => {
     expect(within(tooltip(container)).getByRole("heading")).toHaveTextContent(
       "Harbour, Mill and Quay",
     );
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "west" },
     });
     expect(screen.getByRole("button", { name: /Westmoor/ })).toHaveTextContent(
@@ -326,7 +349,7 @@ describe("ConstituencyMap", () => {
 
   it("switches to £ per household with the published digits", async () => {
     const { container } = await renderMap();
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
         approximateFill("large_gain"),
@@ -349,24 +372,28 @@ describe("ConstituencyMap", () => {
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
     expect(seat(container, "Z14000003").getAttribute("fill")).toBe(WITHHELD_FILL);
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2030-31");
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums: several measures but not all draws no map and no figures", async () => {
-    const { container } = render(
+  it("never sums: several measures but not all show one measure at a time, chosen in a picker", async () => {
+    render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
         selectedYear={2029}
         policies={POLICIES}
       />,
     );
-    expect(
-      await screen.findByText(
-        "Results by constituency are shown for one measure at a time, or for all measures together.",
-      ),
-    ).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
-    expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
+    // No blocking message: the Options pill offers the selected measures,
+    // and the title names the one shown
+    const pill = await screen.findByRole("button", { name: /^Options:/ });
+    expect(screen.queryByText(/shown for one measure at a time/)).toBeNull();
+    fireEvent.click(pill);
+    const measures = within(screen.getByRole("radiogroup", { name: "Measure" })).getAllByRole("radio");
+    expect(measures.length).toBeGreaterThan(0);
+    expect(measures.length).toBeLessThanOrEqual(2);
+    const shown = measures.find((radio) => radio.getAttribute("aria-checked") === "true").textContent;
+    expect(document.querySelector(".map-title-focus")).toHaveTextContent(shown);
+    expect(pill.getAttribute("aria-label")).toContain(shown);
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -413,7 +440,17 @@ describe("ConstituencyMap", () => {
     expect(
       await screen.findByText("Results by constituency are not yet published."),
     ).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
+    // No results map: at most the unpublished template, every seat grey.
+    const drawn = [...container.querySelectorAll("svg path")].filter(
+      (path) =>
+        !path.closest(
+          ".map-template-svg, .chart-download, .pill-select, .title-icon, .control-bar-options, .chart-more-info",
+        ),
+    );
+    expect(drawn).toEqual([]);
+    container
+      .querySelectorAll(".map-template-svg path")
+      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
     unmount();
 
     resetGeographyCache();
@@ -430,10 +467,30 @@ describe("ConstituencyMap", () => {
     ).toHaveAttribute("href", "#results-by-region");
   });
 
+  it("downloads every constituency's published row as CSV", async () => {
+    await renderMap();
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
+    expect(filename).toBe(
+      "constituency-results-autumn_budget_2026_combined-2029.csv",
+    );
+    expect(mimeType).toBe("text/csv;charset=utf-8");
+    const lines = content.slice(1).trim().split("\r\n");
+    expect(lines[0]).toMatch(/^# Generated: /);
+    expect(lines).toContain("# Reform: autumn_budget_2026_combined");
+    expect(lines).toContain("# Year: 2029-30");
+    const header = lines.find((line) => !line.startsWith("#") && !line.startsWith('"#'));
+    expect(header.split(",")[0]).toBe("area_code");
+  });
+
   it("exports the hatch, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
-    fireEvent.click(screen.getByRole("button", { name: "Download map as SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
     expect(filename).toBe(
@@ -475,18 +532,27 @@ describe("ConstituencyMap and the release's area routing", () => {
   const NOT_AVAILABLE = "Results by constituency are not available on this release.";
   const NOT_LOADED = "Results by constituency could not be loaded.";
   const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
-  const HOW_TO_READ = /Select a constituency, or search for one/;
+  // How to read the map is in "About this chart", whose closed line names
+  // its parts; on a release that routes nothing it describes the measure only.
+  const HOW_TO_READ = /How it's calculated/;
   // A fetch that fails, as on a network error, only when it is awaited.
   const NETWORK_FAILURE = {
     then: (_, reject) => reject(new TypeError("network down")),
   };
 
+  // The placeholder may draw the boundaries in grey, with a disabled search
+  // box and download menu, but no seat, figure or export from the file.
   const expectNothingFromTheFile = (container) => {
-    expect(container.querySelector("svg path")).toBeNull();
+    expect(container.querySelector("path.constituency-path")).toBeNull();
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    for (const path of container.querySelectorAll(".map-template-svg path")) {
+      expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis);
+    }
     expect(
-      screen.queryByRole("button", { name: "Download map as SVG" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Search constituency")).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /Download chart/ }),
+    ).toBeDisabled();
+    const search = screen.queryByLabelText("Search or select a constituency");
+    if (search) expect(search).toBeDisabled();
     expect(container.textContent).not.toMatch(FIGURES);
   };
 
@@ -534,7 +600,7 @@ describe("ConstituencyMap and the release's area routing", () => {
       );
       expect(
         screen.getByText(
-          "The average change in household net income in each constituency.",
+          "Average change in household net income by constituency.",
         ),
       ).toBeInTheDocument();
       expect(screen.queryByText(HOW_TO_READ)).not.toBeInTheDocument();
@@ -585,13 +651,13 @@ describe("ConstituencyMap and the release's area routing", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     expect(screen.getByText("Loading map…")).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
+    expect(container.querySelector("path.constituency-path")).toBeNull();
     await act(async () => {
       release();
       await gate;
     });
     expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
+    expect(container.querySelector("path.constituency-path")).toBeNull();
   });
 
   it.each([
