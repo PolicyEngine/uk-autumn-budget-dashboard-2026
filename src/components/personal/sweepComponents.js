@@ -131,28 +131,48 @@ export function componentOf(card, part) {
   return SWEEP_COMPONENTS.find((component) => (component[card] ?? []).includes(part)) ?? null;
 }
 
+/** Why a component shown in both keys has nothing on this card. */
+const NOTHING_HERE = {
+  net: "No effect on your net income",
+  rate: "Doesn't change your marginal rate",
+};
+
+/** The components that apply to this household on either card (net and rate parts in use). */
+export function componentsInUse(netInUse, rateInUse) {
+  return new Set(
+    SWEEP_COMPONENTS.filter(
+      (component) => (component.net ?? []).some((part) => netInUse.has(part)) || (component.rate ?? []).some((part) => rateInUse.has(part)),
+    ).map((component) => component.key),
+  );
+}
+
 /**
- * The "Show:" chips for one card: every component, in order, each enabled
- * only when the card has it and it is in use (`inUse`, the card's own part
- * names drawn for this household); else disabled with why. Then the total.
+ * The "Show:" chips for one card: every component, in order. Those that
+ * apply on either card (`union`) are in both keys alike, so the two rows
+ * match chip for chip: on a card where one has nothing, its chip is
+ * disabled with why. The rest are folded (`folded`) into the "+N with no
+ * effect for you" chip, the same N on both. Then the total. Without
+ * `union`, those this card draws are shown and the rest folded.
  *
  * @param {"net"|"rate"} card
  * @param {Set<string>} inUse - The card's parts in use for this household
- * @param {string[]} hidden - Component keys switched off (shared)
  * @param {{label: string, colour: string}} total - The total line's chip
+ * @param {Set<string>|null} [union] - Component keys that apply on either card
  */
-export function sweepChips(card, inUse, total) {
+export function sweepChips(card, inUse, total, union = null) {
   return [
     ...SWEEP_COMPONENTS.map((component) => {
       const parts = component[card];
       const used = Boolean(parts) && parts.some((part) => inUse.has(part));
+      const shown = union ? union.has(component.key) : used;
       return {
         key: component.key,
         label: component.label,
         colour: component.color,
         shape: "block",
         disabled: !used,
-        tip: used ? null : !parts ? component.absent?.[card] ?? NO_EFFECT_TIP : NO_EFFECT_TIP,
+        folded: !shown,
+        tip: used ? null : !parts ? component.absent?.[card] ?? NOTHING_HERE[card] : shown ? NOTHING_HERE[card] : NO_EFFECT_TIP,
       };
     }),
     { key: "total", label: total.label, colour: total.colour },

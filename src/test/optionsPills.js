@@ -27,3 +27,26 @@ export function expectCompletePills(scope) {
   }
   return buttons.length;
 }
+
+/**
+ * Choose `label` in `scope`'s Options pill (its only one, or the one whose
+ * dialog offers it): opens the pill, picks the radio, closes the dialog.
+ */
+export function chooseOption(scope, label) {
+  for (const button of scope.querySelectorAll(".control-bar-button")) {
+    fireEvent.click(button);
+    const dialog = within(button.closest(".control-bar-options")).getByRole("dialog");
+    const radio = within(dialog).queryByRole("radio", { name: label });
+    if (radio) {
+      fireEvent.click(radio);
+      const open = button.closest(".control-bar-options").querySelector('[role="dialog"]');
+      if (open) fireEvent.keyDown(open, { key: "Escape" });
+      return;
+    }
+    fireEvent.keyDown(dialog, { key: "Escape" });
+  }
+  throw new Error(`No option "${label}"`);
+}
+
+/** The label of `scope`'s first Options pill: every current choice ("After · Spread"). */
+export const optionsLabel = (scope) => scope.querySelector(".control-bar-summary")?.textContent ?? "";

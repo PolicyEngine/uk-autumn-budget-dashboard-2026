@@ -25,7 +25,7 @@ import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import SeriesToggle from "../SeriesToggle";
 import TitleIcon from "../TitleIcon";
-import ViewSwitch from "../ViewSwitch";
+import ControlBar from "../ControlBar";
 import { CHART_VIEWS } from "./chartViews";
 import { layerLegendItems, layerRows, layersInUse, stackLayers } from "./netIncomeParts";
 import { SWEEP_COMPONENTS, hiddenParts, sweepChips } from "./sweepComponents";
@@ -217,8 +217,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   // The chips: every component both cards share, in one order, those
   // with nothing here disabled so the two keys line up
   const chips = useMemo(
-    () => sweepChips("net", new Set(layers.map((layer) => layer.key)), { label: TOTAL_NAME[view], colour: TOTAL_COLOUR }),
-    [layers, view],
+    () => sweepChips("net", new Set(layers.map((layer) => layer.key)), { label: TOTAL_NAME[view], colour: TOTAL_COLOUR }, sync?.union ?? null),
+    [layers, view, sync?.union],
   );
   const membersOf = (key) => SWEEP_COMPONENTS.find((component) => component.key === key)?.net ?? [key];
   const highlightedKeys = focus ? membersOf(focus) : pointerLayer ? [pointerLayer] : [];
@@ -323,7 +323,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         <ChartDownloadMenu download={download} chartTitle={viewTitle} />
       </div>
       <div className="chart-view-switch chart-controls">
-        <ViewSwitch options={CHART_VIEWS} value={view} onChange={setView} label="Net income view" compact />
+        {/* The view in the card's Options pill, as on every other page */}
+        <ControlBar name={title} options={[{ label: "View", value: view, onChange: setView, options: CHART_VIEWS }]} />
       </div>
       <div ref={wrapperRef} className="earnings-plot chart-plot">
         <div ref={chartRef} className="earnings-plot-inner">

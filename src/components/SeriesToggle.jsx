@@ -78,6 +78,9 @@ export default function SeriesToggle({
     setHint(!hintSeen());
   }, []);
   const off = new Set(series.filter((s) => s.disabled).map((s) => s.key));
+  // Folded into "+N": those marked `folded`, else every disabled one
+  const isFolded = (s) => (s.folded !== undefined ? s.folded : Boolean(s.disabled));
+  const foldedCount = series.filter(isFolded).length;
   const on = new Set(shown.filter((key) => !off.has(key)));
   const toggle = (key) => {
     if (off.has(key)) return;
@@ -100,7 +103,7 @@ export default function SeriesToggle({
         <span className="series-toggle-lead" aria-hidden="true">
           {lead}
         </span>
-        {(collapseDisabled ? series.filter((s) => !s.disabled || expanded) : series).map((s) => {
+        {(collapseDisabled ? series.filter((s) => !isFolded(s) || expanded) : series).map((s) => {
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
@@ -144,14 +147,14 @@ export default function SeriesToggle({
             </Tip>
           );
         })}
-        {collapseDisabled && off.size > 0 && (
+        {collapseDisabled && foldedCount > 0 && (
           <button
             type="button"
             className="series-toggle-chip series-toggle-more"
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? "Show fewer" : `+${off.size} with no effect for you`}
+            {expanded ? "Show fewer" : `+${foldedCount} with no effect for you`}
           </button>
         )}
         {extras.map((item) => (

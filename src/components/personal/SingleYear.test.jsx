@@ -4,6 +4,7 @@ import PersonalImpactTab from "../PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
 import { mostlyFromSpending } from "./SingleYearResults";
+import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
@@ -452,16 +453,16 @@ describe("the household calculation, from the fixture", () => {
     expect(within(earnings).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
     expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Net income change, 2029-30" })).not.toBeInTheDocument();
-    // Each card's switch sits in the controls row, so the pair's rows line up
-    expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
-    expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
+    // Each card's view is in its Options pill, in the controls row, so the
+    // pair's rows line up
+    expect(earnings.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
+    expect(rate.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     // After first, as the marginal rate card, marking you
-    const net = within(earnings).getByRole("button", { name: "After" });
-    expect(net).toHaveAttribute("aria-pressed", "true");
+    expect(optionsLabel(earnings)).toBe("After");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
     expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
     // Change: the gain and loss key, still marking you
-    fireEvent.click(within(earnings).getByRole("button", { name: "Change" }));
+    chooseOption(earnings, "Change");
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
     expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
@@ -1091,8 +1092,8 @@ describe("the Across earnings cards together", () => {
     await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
     const pair = container.querySelector(".single-year-chart-pair");
     const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
-    fireEvent.click(within(netCard).getByRole("button", { name: "Before" }));
-    expect(within(rateCard).getByRole("button", { name: "Before" })).toHaveAttribute("aria-pressed", "true");
+    chooseOption(netCard, "Before");
+    expect(optionsLabel(rateCard)).toBe("Before");
     // Where both cards have their parts, a chip toggled on one is toggled
     // on the other, and both keys list the same components in order
     const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });
