@@ -263,7 +263,7 @@
 .select-input:focus {
   outline: none;
   border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .wizard-fields .control-group.is-check label {
@@ -600,8 +600,17 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 24px 40px;
-  align-items: center;
+  /* Both columns start at the top: the figure and what it is based on on
+     the left, the bars on the right */
+  align-items: start;
   padding: 16px 28px 24px;
+}
+
+.result-card-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
 /* A very light tint behind the figure only */
@@ -743,16 +752,21 @@
   transform: scaleX(1);
 }
 
-/* Foot: what the figure is based on */
-.result-card-foot {
+/* Under the figure, when most of it comes from assumed spending */
+.result-caution {
+  margin: -4px 4px 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+/* What the figure is based on, under it in the left column: one fact a
+   row, its label on the left and its value (and "i") on the right */
+.result-card-basis {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-  padding: 12px 28px;
-  background: var(--pe-gray-50);
-  border-top: 1px solid var(--card-border);
-  border-radius: 0 0 var(--card-radius) 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
 }
 
 .result-foot-title {
@@ -765,56 +779,49 @@
 
 .result-foot-items {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
+  flex-direction: column;
+  min-width: 0;
   margin: 0;
 }
 
 .result-foot-item {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 5px 0;
   font-size: var(--fs-caption);
+  line-height: 1.35;
 }
 
+.result-foot-item + .result-foot-item {
+  border-top: 1px solid var(--card-border);
+}
+
+/* The label gives way first; the value keeps its line where it can, its
+   "i" after its last word */
 .result-foot-item dt {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--pe-gray-500);
 }
 
-.result-foot-icon {
-  flex: none;
-  color: var(--pe-gray-400);
-}
-
 .result-foot-item dd {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  flex: 0 0 auto;
+  max-width: 62%;
   margin: 0;
   font-weight: 600;
+  text-align: right;
   color: var(--pe-gray-800);
 }
 
-.result-card-more {
-  margin-left: auto;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  white-space: nowrap;
+.result-foot-item dd .info-icon-wrapper {
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
-.result-card-more:hover {
-  text-decoration: underline;
-}
-
-.result-card-more:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
+.result-foot-item dd .info-tooltip {
+  text-align: left;
 }
 
 /* A detail card while it is calculated: empty at its final height, with
@@ -871,15 +878,6 @@
   height: 16px;
   margin-top: 2px;
   border-width: 2px;
-}
-
-/* Before Calculate */
-.single-year-prompt.card {
-  margin: 0;
-  padding: 28px;
-  font-size: var(--fs-body);
-  text-align: center;
-  color: var(--pe-gray-500);
 }
 
 /* The calculation in progress */
@@ -1071,8 +1069,7 @@
 
 @media (max-width: 600px) {
   .result-card-head,
-  .result-card-body,
-  .result-card-foot {
+  .result-card-body {
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -1081,14 +1078,6 @@
     font-size: 2rem;
   }
 
-  .result-foot-items {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .result-card-more {
-    margin-left: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1119,4 +1108,31 @@
   font-size: var(--fs-caption);
   font-weight: 500;
   color: var(--pe-gray-500);
+}
+
+/* Before / After / Change, above the chart */
+.chart-view-switch {
+  display: flex;
+  margin: 0 0 12px;
+}
+
+/* Under the waterfall: policies under £1, notes, and those with no effect */
+.result-card-notes {
+  padding: 0 28px 16px;
+}
+
+.result-card-notes .single-year-quiet {
+  margin: 0 0 8px;
+}
+
+.waterfall-pending,
+.waterfall-no-effect {
+  margin: 4px 0 0;
+}
+
+@media (max-width: 600px) {
+  .result-card-notes {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

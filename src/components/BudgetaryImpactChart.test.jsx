@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
+import fc from "fast-check";
 import { render, screen } from "@testing-library/react";
-import BudgetaryImpactChart from "./BudgetaryImpactChart";
+import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
 
 // Recharts ResponsiveContainer measures the parent in jsdom and refuses
 // to render its children when width / height resolve to zero. Replace it
@@ -17,26 +20,32 @@ vi.mock("recharts", async () => {
   };
 });
 
-// Mock data that produces domain around [-35, 35]
-const mockData = [
-  {
-    year: 2026,
-    "Income tax increase (basic and higher +2pp)": 20,
-    "Threshold freeze extension": 5,
-    "Salary sacrifice cap": 1,
-    "National Insurance rate reduction": -12,
-    "Zero-rate VAT on domestic energy": -3,
-    "2 child limit repeal": -3,
-    "Fuel duty freeze": -1.5,
-    netImpact: 6.5,
-  },
-];
+const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
+const mockData = [{
+  year: YEAR,
+  ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, 2])),
+  netImpact: 4,
+}];
 
 describe("BudgetaryImpactChart", () => {
+  it("shows no figures without a verified catalogue", () => {
+    fc.assert(fc.property(fc.integer({ min: -100000, max: 100000 }), (value) => {
+      const view = render(<BudgetaryImpactChart data={[{ year: YEAR, netImpact: value }]} />);
+      expect(screen.getByRole("status")).toHaveTextContent("Revenue figures are unavailable");
+      expect(screen.queryByTestId("recharts-responsive-container")).not.toBeInTheDocument();
+      view.unmount();
+    }), { numRuns: 20 });
+  });
   it("renders a recharts ResponsiveContainer", () => {
-    render(<BudgetaryImpactChart data={mockData} />);
+    render(<MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={mockData} /></MeasureCatalogueProvider>);
     expect(
       screen.getByTestId("recharts-responsive-container"),
     ).toBeInTheDocument();
+  });
+
+  it("orders raisers before costs, each group by size (the catalogue's groups)", () => {
+    const keyOf = (id) => catalogue.byId.get(id).seriesKey;
+    const order = measureOrder(mockData, catalogue);
+    expect(order).toEqual([keyOf(BETA), keyOf(ALPHA)]);
   });
 });

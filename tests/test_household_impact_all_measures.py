@@ -259,6 +259,17 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     )
 
 
+def test_northern_ireland_keeps_the_electricity_vat():
+    """The temporary zero rate is for domestic electricity in Great
+    Britain only."""
+    result = calculate(
+        Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
+        2027,
+        ["domestic_electricity_zero_vat"],
+    )
+    assert result["net_income"]["change"] == 0
+
+
 def test_no_electricity_spending_no_electricity_vat_change():
     result = calculate(
         Answers(2027, electricity_spending=0),

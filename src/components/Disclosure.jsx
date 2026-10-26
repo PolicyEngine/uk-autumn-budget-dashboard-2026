@@ -6,7 +6,7 @@ import useCollapse from "../hooks/useCollapse";
  * its content below once opened. One style for every expander on the
  * page: in a card's foot ("About this chart", "Compare with OBR
  * estimates"), where `inCard` puts a rule above it, or as a card of its own
- * ("About selected policies", "About this data").
+ * ("About this data").
  */
 function Disclosure({ title, inCard = false, id, className = "", contentClassName = "", children }) {
   const [open, setOpen] = useState(false);

@@ -16,6 +16,14 @@ from typing import Callable, Iterable, Optional, Sequence
 Remote = Callable[[Sequence], Iterable]
 
 
+SECRET_MISSING = (
+    "Modal secret missing: the policyengine workspace needs the secret "
+    "'pe-uk-private-hf-read-token' (key HUGGING_FACE_TOKEN, a read-only "
+    "token for populace-uk-private) before measures can run on the "
+    "bundle's dataset. Owner: Anthony. Until then, run locally."
+)
+
+
 class ModalUnavailable(RuntimeError):
     """Raised when Modal cannot be used: not installed, or no credentials."""
 
@@ -31,9 +39,12 @@ def _modal_remote(units: Sequence) -> Iterable:
         ) from error
     from uk_budget_data import modal_generate
 
-    with modal.enable_output(), modal_generate.app.run():
-        generator = modal_generate.Generator()
-        yield from generator.run.map(units, order_outputs=True)
+    try:
+        with modal.enable_output(), modal_generate.app.run():
+            generator = modal_generate.Generator()
+            yield from generator.run.map(units, order_outputs=True)
+    except modal.exception.NotFoundError as error:
+        raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
 
 
 class ModalRunner:

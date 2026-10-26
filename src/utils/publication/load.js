@@ -8,7 +8,8 @@
  */
 
 import { parseTable, tableForFile, TABLES } from "./csv";
-import { receiptProblems, verifyFile, verifyReceiptFiles } from "./digest";
+import { receiptProblems, sha256Hex, verifyFile, verifyReceiptFiles } from "./digest";
+import { assertCurrentRelease } from "./release";
 import {
   isDisplayable,
   MANIFEST_FILE,
@@ -54,11 +55,29 @@ export async function loadManifest(
   const response = await fetchImpl(url, { signal, cache: "no-cache" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-  return parseManifest(await response.json());
+  const bytes = await response.arrayBuffer();
+  const manifest = assertCurrentRelease(parseManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))));
+  Object.defineProperty(manifest, "snapshotSha256", { value: await sha256Hex(bytes) });
+  return manifest;
 }
 
 /**
- * Fetch one entry's artifact and return its verified, typed tables.
+ * The package versions a verified receipt records: its wrapper, model and
+ * core, by package name, as the household API reports its own.
+ */
+export function receiptEngine(receipt) {
+  const execution = receipt?.execution_receipt ?? {};
+  const engine = {};
+  for (const part of ["wrapper", "model", "core"]) {
+    const { name, version } = execution[part] ?? {};
+    if (typeof name === "string" && typeof version === "string") engine[name] = version;
+  }
+  return engine;
+}
+
+/**
+ * Fetch one entry's artifact and return its verified, typed tables, with
+ * the package versions its receipt records as `engine`.
  *
  * @throws {Error} naming the first check that failed.
  */
@@ -102,6 +121,7 @@ export async function loadArtifact(
       loaded[tableForFile(fileName)] = parseTable(table, text);
     }),
   );
+  loaded.engine = receiptEngine(receipt);
   return loaded;
 }
 
@@ -126,7 +146,7 @@ export function unverifiedMembers(memberIds, tablesByKey) {
  */
 export async function loadPublication(basePath, selectedIds, options = {}) {
   const selection = uniqueIds(selectedIds);
-  const manifest = await loadManifest(basePath, options);
+  const manifest = options.manifest ?? await loadManifest(basePath, options);
   if (manifest === null) {
     return {
       status: "no-manifest",
