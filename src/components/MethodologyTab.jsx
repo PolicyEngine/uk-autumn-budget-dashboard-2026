@@ -670,7 +670,7 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, and surveys under-record some incomes."
         >
-          <Topic title="Measures added up" preview="Which charts leave out interactions between measures">
+          <Topic title="Measures added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
             <p className="method-more">
               Each measure is also simulated on its own. Where several are selected, the revenue,
               decile and age charts add up their separate effects, so they leave out interactions
