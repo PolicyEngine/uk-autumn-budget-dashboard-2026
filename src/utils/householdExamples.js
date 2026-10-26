@@ -13,7 +13,8 @@
  * API on 25 October 2026 with every measure selected; the measure it is for
  * changes its net income in the year named:
  *   pensioner: State Pension income tax protection +£93 in 2027-28
- *   family: Warm Home Discount top-up +£100 in 2026-27 (one winter only)
+ *   family: zero VAT on domestic electricity +£62 in 2027-28 (the Warm
+ *     Home Discount top-up is 2026-27 only, a year the form does not offer)
  *   graduate: Plan 2 threshold unfrozen +£79 in 2027-28
  *   driver: fuel duty rises deferred +£89, VAT cut on road fuel +£18, 2027-28
  *   higher earner: threshold freeze to 2031-32 −£221 in 2031-32
@@ -71,7 +72,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       monthly_rent: 975,
       electricity_spending_per_year: 1300,
     },
-    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is paid for winter 2026-27 only: choose 2026-27 to see it.",
+    note: "A couple renting privately at £975 a month with children aged 7 and 4; one earns £21,000, the other has no earnings. Claims the Universal Credit they are due. Spends £1,300 a year on electricity, above the average household. The Warm Home Discount top-up is for winter 2026-27 only, before the years offered here.",
   },
   {
     id: "graduate-35k",
