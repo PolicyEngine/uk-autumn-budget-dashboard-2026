@@ -310,7 +310,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
   );
 }
 
-export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false }) {
+export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age" }) {
   const catalogue = useMeasureCatalogue();
   const {
     allPolicyNames: ALL_POLICY_NAMES,
@@ -373,7 +373,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   const description = single ? SINGLE_AGE_DESCRIPTION : MEAN_DESCRIPTION;
   const incomplete = data.some((point) => point.incomplete);
 
-  const title = `Average change by age, ${yearLabel}`;
+  const title = `${titleBase}, ${yearLabel}`;
   const exportName = single
     ? `young-people-change-by-single-age-${selectedYear}`
     : `young-people-change-by-age-${selectedYear}`;
@@ -449,7 +449,13 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        {!bandsOnly && <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />}
+        {/* By age's choices (the age group, the view) first */}
+        {(!bandsOnly || extraOptions.length > 0) && (
+          <ControlBar
+            name={title}
+            options={[...extraOptions, ...(bandsOnly ? [] : [{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }])]}
+          />
+        )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
@@ -617,7 +623,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
 /** Row labels at the caption size (13px), as the dumbbell's policy names beside it. */
 
 
-export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND }) {
+export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND, extraOptions = [] }) {
   const chartRef = useRef(null);
   // By age group or by single year of age, as "Average change by age"
   const [view, setView] = useState("band");
@@ -718,7 +724,9 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           <ControlBar
             name={title}
             options={[
-              {
+              ...extraOptions,
+              // By age's group control stands in for the card's own
+              !extraOptions.length && {
                 label: "Age group",
                 value: groupKey,
                 onChange: setGroupKey,
@@ -730,7 +738,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">

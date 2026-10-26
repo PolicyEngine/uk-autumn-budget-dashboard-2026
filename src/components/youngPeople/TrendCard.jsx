@@ -329,7 +329,7 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
  * the biggest steps named on the line, and a breakdown by measure. Straight
  * segments between the annual points: there is nothing between them.
  */
-function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND }) {
+function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
   // The focus group (By age's Age group): an age band, or pensioners from
   // their single years of age, which join the lines as a series of their own
   const FOCUS = group;
@@ -566,6 +566,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         <ControlBar
           name={title}
           options={[
+            ...extraOptions,
             { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
             { label: "Breakdown", value: view, onChange: setView, options: viewOptions(FOCUS_LABEL) },
             { label: "Years", value: years, onChange: setYears, options: YEARS_OPTIONS },
