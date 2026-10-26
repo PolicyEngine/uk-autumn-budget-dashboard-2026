@@ -1,9 +1,8 @@
-/* A view's sub-tabs (SubTabs.jsx): a strip right under the view tabs, in
-   the chosen view tab's tint and with no rule between them, so the strip
-   reads as that tab opened out (the notch). It spans the window like the
-   view tab bar, ends on one crisp rule, and sticks under the view tabs.
-   The control inside starts under the chosen view tab (--view-tab-x,
-   ViewTabs.jsx). */
+/* A view's sub-tabs (SubTabs.jsx): a second row right under the view
+   tabs, white like them, one rule under it, sticking with them. The chosen
+   sub-tab is marked as the chosen view tab is: a light tint and a teal
+   underline on the rule, sliding from tab to tab. The row starts under the
+   chosen view tab (--view-tab-x, ViewTabs.jsx). */
 .sub-tabs-sentinel {
   height: 0;
 }
@@ -16,23 +15,20 @@
   /* The tab panel's top padding is the band's place: it sits flush under
      the view tabs, and the content keeps its distance below it */
   margin: -32px calc(50% - 50vw) 32px;
-  padding: 8px max(40px, calc((100vw - 1120px) / 2));
-  background: var(--c-subtab-band);
-  border-bottom: 1px solid var(--c-subtab-rule);
+  padding: 0 max(40px, calc((100vw - 1120px) / 2));
+  background: var(--pe-surface);
+  border-bottom: 1px solid var(--card-border);
   /* Choosing a sub-tab brings the panel's top back to just under the band;
      SubTabs.jsx reads this: the height of the bars above it */
   scroll-margin-top: calc(var(--title-row-height) + var(--view-tabs-height));
-  transition: padding 180ms ease-out;
 }
 
 /* Stuck, the view tabs and the band are one compact bar */
 .app[data-tabs-stuck] .sub-tabs-band {
-  padding-block: 4px;
   box-shadow: 0 2px 6px var(--shadow-faint);
 }
 
-/* The chosen sub-tab is marked as the chosen view tab is: a stronger tint
-   behind it, square, no border or shadow, sliding from tab to tab */
+/* The row of sub-tabs */
 .sub-tabs {
   position: relative;
   display: flex;
@@ -70,8 +66,20 @@
   bottom: 0;
   left: 0;
   z-index: 0;
-  background: var(--c-subtab-active);
+  background: var(--pe-teal-50);
   pointer-events: none;
+}
+
+/* Its underline, as the chosen view tab's, a step thinner */
+.sub-tabs-pill::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--band-teal);
 }
 
 /* It slides once it has a place to start from */
@@ -89,7 +97,7 @@
   align-items: center;
   gap: 7px;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   font-family: inherit;
   font-size: 0.9375rem;
@@ -105,7 +113,7 @@
 }
 
 .app[data-tabs-stuck] .sub-tab {
-  min-height: 36px;
+  min-height: 38px;
 }
 
 .sub-tab-icon {
@@ -117,7 +125,7 @@
 /* A light tint under the pointer; the chosen tab has its stronger one */
 .sub-tab:not([aria-selected="true"]):hover {
   color: var(--band-teal);
-  background: color-mix(in srgb, var(--c-subtab-active) 50%, transparent);
+  background: color-mix(in srgb, var(--pe-teal-50) 60%, transparent);
 }
 
 .sub-tab:hover .sub-tab-icon {
@@ -143,7 +151,7 @@
 @media (max-width: 600px) {
   .sub-tabs-band {
     margin: -32px -16px 24px;
-    padding: 8px 12px;
+    padding: 0 12px;
   }
 
   .sub-tabs {
@@ -173,7 +181,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sub-tabs-band,
   .sub-tabs-pill.is-ready,
   .sub-tab,
   .sub-tab-icon {

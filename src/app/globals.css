@@ -138,12 +138,7 @@ code {
   --landing-fade-top: 92%;
   --landing-blur: 4px;
   --landing-min-height: 640px;
-  /* The sub-tab band (SubTabs.css) and the chosen view tab that opens into
-     it: one tint, a crisp rule under the band, muted teal-grey for the
-     tabs not chosen */
-  --c-subtab-band: color-mix(in srgb, var(--pe-teal-100) 45%, var(--pe-teal-50));
-  --c-subtab-rule: var(--pe-teal-200);
-  --c-subtab-active: color-mix(in srgb, var(--pe-teal-200) 75%, var(--pe-teal-100));
+  /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97): the highlight colour */
   --band-teal: var(--c-highlight);
@@ -432,7 +427,7 @@ body {
 }
 
 .app[data-sub-band] {
-  --sub-band-height: 57px;
+  --sub-band-height: 45px;
 }
 
 @media (min-width: 601px) {
@@ -441,7 +436,7 @@ body {
   }
 
   .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 45px;
+    --sub-band-height: 39px;
   }
 
   .app[data-tabs-stuck] .view-tabs-bar {
@@ -575,16 +570,10 @@ body {
     width 220ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* A view with sub-tabs: its tab opens into their band (SubTabs.css), the
-   same tint and no rule between them, so the band reads as that tab's
-   own. Its underline stays: every chosen view tab is marked the same. */
+/* A view with sub-tabs: their row follows right under this one (SubTabs),
+   white too, one rule between them and no shadow over it */
 .view-tabs-bar.has-notch {
-  border-bottom-color: transparent;
   box-shadow: none;
-}
-
-.view-tabs-bar.has-notch .view-tabs-indicator {
-  background: var(--c-subtab-band);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -605,6 +594,10 @@ body {
 
   .app[data-tabs-stuck] {
     --view-tabs-height: 44px;
+  }
+
+  .app[data-tabs-stuck][data-sub-band] {
+    --sub-band-height: 39px;
   }
 
   .view-tab {
