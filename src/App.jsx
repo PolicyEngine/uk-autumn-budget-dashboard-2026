@@ -20,6 +20,7 @@ import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import ViewLink from "./components/ViewLink";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PensionersSection from "./components/PensionersSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -555,8 +556,17 @@ function App() {
       return (
         <div className="results-container">
           <SectionHeading
-            title="Households by income"
-            subtitle="How net income changes across the income distribution in the selected year."
+            title="How the measures change incomes"
+            subtitle={
+              <>
+                How the selected measures change net income across the income distribution in the selected year.
+                Incomes before any measure are on{" "}
+                <ViewLink tab="outlook" hash="living-incomes" onShowTab={handleTabChange}>
+                  Pre-measures forecast, Incomes under current law
+                </ViewLink>
+                .
+              </>
+            }
           />
           <section id="deciles" className="report-section distributional-section">
             <div className="charts-grid">
@@ -601,7 +611,18 @@ function App() {
     if (sub === "poverty") {
       return (
         <div className="results-container">
-          <SectionHeading title="Poverty" />
+          <SectionHeading
+            title="How the measures change poverty"
+            subtitle={
+              <>
+                Poverty rates before any measure are on{" "}
+                <ViewLink tab="outlook" hash="living-poverty" onShowTab={handleTabChange}>
+                  Pre-measures forecast, Poverty under current law
+                </ViewLink>
+                .
+              </>
+            }
+          />
           <section id="poverty" className="report-section hero-chart">
             <SummaryMetricChart
               metric={SUMMARY_METRICS.poverty}
@@ -749,7 +770,7 @@ function App() {
           hidden={value !== activeTab}
         >
         {value === "outlook" ? (
-          <LivingStandardsTab active={activeTab === value} />
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
         ) : value === "policies" ? (
           // Every measure's card, whatever the band's selection
           <div className="results-container">

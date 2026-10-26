@@ -51,7 +51,7 @@ const LOADED = {
   // App.jsx renders All households' sections only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Where and who" }),
   // Population impact's other sub-tabs, by ?sub=
-  living: (panel) => within(panel).findAllByRole("heading", { name: "Households by income" }),
+  living: (panel) => within(panel).findAllByRole("heading", { name: "How the measures change incomes" }),
   poverty: (panel) => within(panel).findAllByRole("heading", { name: /Change in the poverty rate/ }),
   finances: (panel) => within(panel).findAllByRole("heading", { name: /Revenue impact/ }),
   // The cards, "Your household" first; the form and results are checked
@@ -63,8 +63,8 @@ const LOADED = {
   // Population impact's Pensioners sub-tab (?sub=pensioners): the cards
   // render once age_impact.csv is read.
   pensioners: (panel) => within(panel).findAllByRole("heading", { name: /Change per pensioner by year/ }),
-  // The Incomes heading shows once the outlook is read.
-  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  // The Incomes under current law heading shows once the outlook is read.
+  outlook: (panel) => within(panel).findAllByRole("heading", { name: "Incomes under current law" }),
   // Every measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
