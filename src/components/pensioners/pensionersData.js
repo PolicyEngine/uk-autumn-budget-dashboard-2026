@@ -128,13 +128,13 @@ export function pensionerTrend(rows, policies, selected, years) {
  * dumbbell draws it. Policies with no effect on either are in `noEffect`;
  * those with a thin pensioner age in `suppressed`.
  */
-export function pensionerMeasures(rows, policies, selected, year) {
+export function pensionerMeasures(rows, policies, selected, year, compareBand = ALL_BAND) {
   const shown = [];
   const noEffect = [];
   const suppressed = [];
   for (const policy of policies) {
     if (!selected.includes(policy.id)) continue;
-    const all = lookup(rows, policy.id, year, ALL_BAND);
+    const all = lookup(rows, policy.id, year, compareBand);
     if (!all) continue;
     const group = pensionerRow(rows, policy.id, year);
     if (!group) {

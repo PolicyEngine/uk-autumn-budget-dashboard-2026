@@ -246,6 +246,15 @@ const ICONS = {
       <path d="M2 21h20M7 8v3M12 8v3M17 8v3M7 4h.01M12 4h.01M17 4h.01" />
     </>
   ),
+  // By age: a grown-up and a child, side by side (age groups)
+  ages: (
+    <>
+      <circle cx="8" cy="5" r="2.5" />
+      <path d="M8 8v7M5 10.5h6M8 15l-2 6M8 15l2 6" />
+      <circle cx="17" cy="11" r="2" />
+      <path d="M17 13v4M15 14.75h4M17 17l-1.5 4M17 17l1.5 4" />
+    </>
+  ),
   // Who gains: a person with a plus
   userPlus: (
     <>

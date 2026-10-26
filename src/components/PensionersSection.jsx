@@ -582,7 +582,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * people under State Pension age and all ages, from one run (a single
  * policy, or all of them).
  */
-export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, extraOptions = [] }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -675,6 +675,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           <ControlBar
             name={title}
             options={[
+              ...extraOptions,
               {
                 label: "Group",
                 value: groupKey,
@@ -687,7 +688,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
