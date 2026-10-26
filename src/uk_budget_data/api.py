@@ -409,12 +409,14 @@ class HouseholdAnswersRequest(BaseModel):
         ),
     )
     gas_spending: float = Field(
-        default=0,
+        default=household_impact.GAS_SPENDING,
         ge=0,
         le=100_000,
         description=(
             "Domestic mains gas, £ a year including VAT, for a measure that "
-            "changes the VAT on domestic gas. Left out: none."
+            "changes the VAT on domestic gas. Left out: the average UK "
+            "household's, £14.10 a week (ONS, Family spending in the UK, "
+            "April 2024 to March 2025, Table A1, 4.4.2)."
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(

@@ -646,6 +646,11 @@ def measure_ids() -> list[str]:
 # reads it for the zero VAT on domestic electricity, so it changes no
 # pre-Budget figure.
 ELECTRICITY_SPENDING = round(20.00 * 52)
+# Domestic mains gas, from the same table: line 4.4.2 (Gas), £14.10 a week,
+# averaged over all households as electricity is. ``gas_consumption`` is an
+# input too, which the VAT base template would read for a measure that
+# changes the VAT on domestic gas, so it changes no pre-Budget figure.
+GAS_SPENDING = round(14.10 * 52)
 
 
 @dataclass(frozen=True)
@@ -694,11 +699,9 @@ class HouseholdAnswers:
     diesel_spending: float = 0
     # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
     electricity_spending: float = ELECTRICITY_SPENDING
-    # Domestic mains gas, £ a year including VAT, none unless given. No
-    # policyengine-uk formula reads it (``gas_consumption`` is an input):
-    # the VAT base template would, for a measure that changes the VAT on
-    # domestic gas. The form does not ask for it yet.
-    gas_spending: float = 0
+    # Domestic mains gas, £ a year including VAT (GAS_SPENDING). The form
+    # does not ask for it yet, so every calculator household has the average.
+    gas_spending: float = GAS_SPENDING
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)

@@ -255,12 +255,16 @@ def test_a_calculation_past_its_limit_is_a_504(monkeypatch):
     assert response.status_code == 504
 
 
-def test_gas_spending_is_none_unless_given():
+def test_gas_spending_defaults_to_the_ons_average():
+    """Left out, the average household's (ONS Family Spending), as for
+    electricity, so a gas VAT measure reaches every calculator household
+    (#208 review, finding 7); entered, as entered."""
     from uk_budget_data.api import HouseholdAnswersRequest
 
-    assert HouseholdAnswersRequest().answers().gas_spending == 0
+    assert HouseholdAnswersRequest().answers().gas_spending == 733
     answers = HouseholdAnswersRequest(gas_spending=1_050).answers()
     assert answers.gas_spending == 1_050
+    assert HouseholdAnswersRequest(gas_spending=0).answers().gas_spending == 0
 
 
 def test_electricity_spending_defaults_to_the_ons_average():
