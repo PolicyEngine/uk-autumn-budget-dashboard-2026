@@ -163,11 +163,6 @@
   }
 }
 
-/* The short label ("9 selected") is for the compact phone title row */
-.policy-selector-label-short {
-  display: none;
-}
-
 /* Select all, clear and Done, kept in view at the list's foot */
 .policy-selector-actions {
   position: sticky;

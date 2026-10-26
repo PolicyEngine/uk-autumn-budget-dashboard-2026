@@ -141,7 +141,7 @@ export default function OverTimeChart({
               fill={CHART_COLOURS.mutedFill}
               fillOpacity={0.6}
               stroke="none"
-              label={{ value: "Projection", position: "insideTopLeft", offset: 8, fill: CHART_COLOURS.gainText, fontSize: 12, fontWeight: 600 }}
+              label={{ value: "Projection", position: "insideTopRight", offset: 8, fill: CHART_COLOURS.gainText, fontSize: 12, fontWeight: 600 }}
             />
           )}
           <XAxis

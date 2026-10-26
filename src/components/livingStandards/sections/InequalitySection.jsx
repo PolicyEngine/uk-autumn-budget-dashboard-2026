@@ -92,8 +92,6 @@ export default function useInequalityView(data, range = null, setRange = null) {
       : null,
     // One Options pill: the years compared first, then the rest (ControlBar)
     controls: {
-      // The pill's face: the measure only; every choice is in its title
-      face: ["Inequality measure", "Housing costs"],
       options: [
         yearsOption(rangeYears(data), range, setRange),
         {
