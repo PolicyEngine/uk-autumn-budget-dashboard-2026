@@ -74,8 +74,8 @@ function householdItem(name) {
 const calculateButton = () => screen.getByRole("button", { name: /^Calcul/ });
 /** Open the form below the cards ("Your household"), unless it is open. */
 function openForm() {
-  const yours = screen.getByRole("button", { name: /^Your household/ });
-  if (yours.getAttribute("aria-expanded") !== "true") fireEvent.click(yours);
+  const yours = householdItem(/^Your household/);
+  if (document.getElementById(yours.getAttribute("aria-controls"))?.dataset.open !== "true") fireEvent.click(yours);
 }
 function toResults() {
   openForm();
@@ -433,8 +433,9 @@ describe("Calculate", () => {
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
     // Your household opens the form with its answers, and Calculate, to
-    // change one and calculate again
-    fireEvent.click(screen.getByRole("button", { name: /^Your household/ }));
+    // change one and calculate again; the example's result goes
+    fireEvent.click(householdItem(/^Your household/));
+    expect(headlineCard()).toBeNull();
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
     expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
@@ -482,7 +483,7 @@ describe("an example card", () => {
     renderTab();
     openForm();
     fireEvent.click(householdItem(/^A pensioner on the State Pension/));
-    expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
@@ -594,18 +595,23 @@ describe("switching from one household's card to another", () => {
     expect(screen.queryByText("+£1,111")).toBeNull();
   });
 
-  it("from an example to Your household: the form opens with the example's answers, its result still shown", async () => {
+  it("from an example to Your household: the form opens with the example's answers, the example's result goes, Calculate gives Your household's own", async () => {
     serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
     renderTab();
     fireEvent.click(card("A 22-year-old renting"));
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
     fireEvent.click(card("Your household"));
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
-    expect(headlineCard()).toHaveTextContent("+£1,111");
+    expect(headlineCard()).toBeNull();
+    expect(screen.queryByText("+£1,111", { selector: ".result-value" })).toBeNull();
     // A changed answer and Calculate: the new result
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
     fireEvent.click(calculateButton());
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
+    // Your household's own figure, on its chip, chosen with its tick
+    const yours = card("Your household");
+    expect(yours).toHaveAttribute("aria-selected", "true");
+    expect(yours).toHaveTextContent("+£3,333");
   });
 });
 

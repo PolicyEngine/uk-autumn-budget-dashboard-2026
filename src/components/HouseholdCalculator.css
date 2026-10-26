@@ -514,6 +514,18 @@
   color: var(--pe-gray-500);
 }
 
+/* "Starting from: Apprentice": the example Your household began from */
+.household-form-title p.household-start-from {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  font-size: var(--fs-caption);
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
+}
+
 /* The header's right side: Calculate (primary) */
 .household-header-actions {
   display: flex;
@@ -617,19 +629,13 @@
 
 /* The chips: the eight cards in the same order and grid they fold from,
    each the same width and height (four across, two rows; two across on a
-   tablet or phone, four rows). The examples' listbox lays its chips straight into the
-   grid (display: contents), after Your household */
+   tablet or phone, four rows); one listbox, Your household first */
 .household-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 3px;
-}
-
-.household-strip-list {
-  display: contents;
   margin: 0;
-  padding: 0;
+  padding: 3px;
   list-style: none;
 }
 
@@ -748,9 +754,22 @@
   color: var(--pe-gray-500);
 }
 
+/* Your household's chip says "Yours" where "Your household" would be cut */
+.household-chip-short {
+  display: none;
+}
+
 /* A phone: still two across, a little tighter, so every chip shows at
    once */
 @media (max-width: 599px) {
+  .household-chip-long {
+    display: none;
+  }
+
+  .household-chip-short {
+    display: inline;
+  }
+
   .household-strip {
     gap: 6px;
   }
@@ -1104,7 +1123,7 @@
   border-left: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
 }
 
-.household-card[aria-pressed="true"] .household-card-tag {
+.household-card[aria-pressed="true"] .household-card-tag:not(.is-start) {
   background: var(--pe-surface);
 }
 
@@ -1137,7 +1156,7 @@
   transition: transform 0.25s ease;
 }
 
-.household-card[aria-expanded="true"] .household-card-chevron {
+.household-card.is-open .household-card-chevron {
   transform: rotate(180deg);
 }
 
