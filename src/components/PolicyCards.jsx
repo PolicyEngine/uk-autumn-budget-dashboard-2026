@@ -78,20 +78,17 @@ const AXIS_TICKS = Array.from({ length: TIMELINE_MONTHS + 1 }, (_, month) => mon
  * When a measure is in force, on a small time axis from April 2026 to
  * March 2032: ticks for months and years, a line at Budget day, a dot where
  * the measure starts, and either an end dot with its length (a temporary
- * measure) or a fade and an arrow off the right edge (a lasting one). Steps
- * within it, such as fuel duty coming back in two stages, are diamonds,
- * labelled below the axis; after the last step the remaining effect is
- * drawn thinner. One image, described
- * in words for screen readers.
+ * measure) or an arrowhead at the right edge (a lasting one). The span is
+ * one solid line of one weight: no fades or thinner stretches, which would
+ * read as a weaker measure. Steps within it, such as fuel duty's 5p coming
+ * back in two stages, are small diamonds labelled below the axis. One
+ * image, described in words for screen readers.
  */
 function PolicyTimeline({ policy }) {
   const { from, to } = policy.inForce;
   const start = timelineMonth(from);
   const end = to ? timelineMonth(to) + 1 : TIMELINE_MONTHS;
   const steps = policy.steps ?? [];
-  // A lasting measure with steps: full strength until its last step, then a
-  // thinner tail for what remains
-  const fullEnd = !to && steps.length ? timelineMonth(steps[steps.length - 1].month) : end;
   const stepLabel = steps.length ? policy.stepsLabel : null;
   const stepStart = steps.length ? timelineMonth(steps[0].month) : null;
   return (
@@ -100,7 +97,7 @@ function PolicyTimeline({ policy }) {
         <div className="ptl-notes">
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
             Budget
-          </span>
+          </span>{" "}
           {!to && <span className="ptl-continues">Continues</span>}
         </div>
         <div className="ptl-track">
@@ -110,7 +107,7 @@ function PolicyTimeline({ policy }) {
             preserveAspectRatio="none"
             focusable="false"
           >
-            <line x1="0" x2={TIMELINE_MONTHS} y1="6" y2="6" />
+            <line className="is-base" x1="0" x2={TIMELINE_MONTHS} y1="6" y2="6" />
             {AXIS_TICKS.map((month) => {
               const year = month % 12 === 0;
               return (
@@ -127,15 +124,9 @@ function PolicyTimeline({ policy }) {
           </svg>
           <span className="ptl-budget-line" style={{ left: share(BUDGET_DAY_MONTH) }} />
           <span
-            className={`ptl-span${!to && !steps.length ? " is-lasting" : ""}`}
-            style={{ left: share(start), width: share(fullEnd - start) }}
+            className={`ptl-span${to ? "" : " is-lasting"}`}
+            style={{ left: share(start), width: share(end - start) }}
           />
-          {!to && steps.length > 0 && (
-            <span
-              className="ptl-tail is-lasting"
-              style={{ left: share(fullEnd), width: share(TIMELINE_MONTHS - fullEnd) }}
-            />
-          )}
           <span className="ptl-dot" style={{ left: share(start) }} />
           {to && <span className="ptl-dot is-end" style={{ left: share(end) }} />}
           {steps.map((step) => (
@@ -147,26 +138,26 @@ function PolicyTimeline({ policy }) {
           ))}
           {!to && <span className="ptl-arrow" />}
         </div>
-        {(to || stepLabel) && (
-          <div className="ptl-chips">
-            {to && (
-              <span className="ptl-chip" style={{ left: share(start) }}>
-                {durationLabel(policy)}
-              </span>
-            )}
-            {stepLabel && (
-              <span className="ptl-step-label" style={{ left: share(stepStart) }}>
-                {stepLabel}
-              </span>
-            )}
-          </div>
-        )}
+        {" "}
+        {/* Always there, empty when unused, so the years line up across a row */}
+        <div className="ptl-chips">
+          {to && (
+            <span className="ptl-chip" style={{ left: share(start) }}>
+              {durationLabel(policy)}
+            </span>
+          )}
+          {stepLabel && (
+            <span className="ptl-step-label" style={{ left: share(stepStart) }}>
+              {stepLabel}
+            </span>
+          )}
+        </div>
       </div>
       <div className="policy-timeline-labels">
         {TIMELINE_LABELS.map((label) => (
           <span key={label}>
             <span className="policy-timeline-label-full">{label}</span>
-            <span className="policy-timeline-label-short">{label.slice(2)}</span>
+            <span className="policy-timeline-label-short">{label.slice(2)}</span>{" "}
           </span>
         ))}
       </div>
@@ -174,6 +165,14 @@ function PolicyTimeline({ policy }) {
   );
 }
 
+/**
+ * One measure's card. Every card has the same five rows, in the same order,
+ * and the cards of a grid row share them (CSS subgrid), so each row lines
+ * up across the cards: the head (type and any "Temporary" badge on one
+ * line, then the name), the summary, when it is in force (Starts and Ends,
+ * the Ends slot kept even when empty, then the timeline), the source, and
+ * the footer ("How it is modelled" and "See its effect" on one line).
+ */
 function PolicyCard({ policy, onShowEffect }) {
   const temporary = Boolean(policy.inForce?.to);
   return (
@@ -186,10 +185,12 @@ function PolicyCard({ policy, onShowEffect }) {
           <TitleIcon name={POLICY_ICONS[policy.id]} bare size={22} />
         </span>
         <div className="policy-card-titles">
-          <p className="policy-card-type">{policy.type}</p>
+          <div className="policy-card-topline">
+            <p className="policy-card-type">{policy.type}</p>
+            {temporary && <span className="policy-card-badge">Temporary</span>}
+          </div>
           <h4 className="policy-card-name">{policy.name}</h4>
         </div>
-        {temporary && <span className="policy-card-badge">Temporary</span>}
       </div>
 
       <p className="policy-card-summary">{policy.summary}</p>
@@ -200,15 +201,34 @@ function PolicyCard({ policy, onShowEffect }) {
             <dt>Starts</dt>
             <dd className="policy-card-start">{policy.starts}</dd>
           </div>
-          {temporary && (
-            <div>
-              <dt>Ends</dt>
-              <dd className="policy-card-end">{policy.ends}</dd>
-            </div>
-          )}
+          {/* The Ends slot stays, empty for a lasting measure, so the
+              timeline sits at the same height in every card */}
+          <div className="policy-card-ends" aria-hidden={temporary ? undefined : "true"}>
+            {temporary && (
+              <>
+                <dt>Ends</dt>
+                <dd className="policy-card-end">{policy.ends}</dd>
+              </>
+            )}
+          </div>
         </dl>
         {policy.inForce && <PolicyTimeline policy={policy} />}
       </div>
+
+      <p className="policy-card-source-line">
+        {policy.source && (
+          <a
+            className="policy-card-source"
+            href={policy.source.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Source: {policy.source.label}
+            <ExternalLink size={14} aria-hidden="true" />
+            <span className="policy-sr-only"> (opens in a new tab)</span>
+          </a>
+        )}
+      </p>
 
       <div className="policy-card-foot">
         {policy.details && (
@@ -217,31 +237,17 @@ function PolicyCard({ policy, onShowEffect }) {
             <p>{policy.details}</p>
           </details>
         )}
-        <div className="policy-card-actions">
-          {policy.source && (
-            <a
-              className="policy-card-source"
-              href={policy.source.href}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span>Source: {policy.source.label}</span>
-              <ExternalLink size={14} aria-hidden="true" />
-              <span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          )}
-          {onShowEffect && (
-            <button
-              type="button"
-              className="policy-card-effect"
-              onClick={() => onShowEffect(policy.id)}
-              aria-label={`See the effect of ${policy.name} on Population impact`}
-            >
-              See its effect
-              <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          )}
-        </div>
+        {onShowEffect && (
+          <button
+            type="button"
+            className="policy-card-effect"
+            onClick={() => onShowEffect(policy.id)}
+            aria-label={`See the effect of ${policy.name} on Population impact`}
+          >
+            See its effect
+            <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </li>
   );
