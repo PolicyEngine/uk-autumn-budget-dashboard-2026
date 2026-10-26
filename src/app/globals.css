@@ -1441,28 +1441,33 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: 20px;
+  padding-bottom: 0;
 }
 
 .app > .main-content > * {
   flex-shrink: 0;
 }
 
-/* At least 40px between the last section and the replication line */
-.app > .main-content > :nth-last-child(2) {
-  margin-bottom: 40px;
-}
-
 /* Replication line above the footer: a thin rule across the column,
-   small muted centred text */
+   small muted centred text. It owns its spacing on every tab and sub-tab
+   (hidden panels stay mounted, so no sibling rule can find the last
+   visible section): 48px above the rule, 24px below the text. The auto
+   top margin keeps it at the bottom of a short page. */
 .replication-line {
   margin: auto 0 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--card-border);
+  padding: 48px 0 24px;
   font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-500);
   text-align: center;
+}
+
+.replication-line::before {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-bottom: 16px;
+  background: var(--card-border);
 }
 
 .replication-line a {
