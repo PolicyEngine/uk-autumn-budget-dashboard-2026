@@ -348,7 +348,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 strokeDasharray={REFERENCE_DASH}
                 label={{
                   value: yours ? `You: ${isChange ? points(yours.after - yours.before) : pct(yours[view])}` : "You",
-                  position: "insideTopRight",
+                  // Right of the line near £0, where the left would be cut off
+                  position: salary < xDomain[1] * 0.15 ? "insideTopLeft" : "insideTopRight",
                   fill: CHART_COLOURS.text,
                   fontSize: 13,
                   fontWeight: 600,
