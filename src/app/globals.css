@@ -1350,6 +1350,11 @@ body {
 }
 
 /* The logo's clear space under a legend is CHART_LOGO.gap (chartLogo.jsx) */
+/* Revenue impact: its measure key boxed under the plot, the logo below */
+.revenue-key .measure-key.is-section {
+  margin: 8px 0 0;
+}
+
 .chart-logo {
   display: flex;
   justify-content: flex-end;

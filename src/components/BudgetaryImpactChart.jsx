@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   Customized,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
@@ -298,17 +298,6 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
-      {/* The measures' key, boxed above the plot as on every tab
-          (MeasureKey): click chips to highlight several together */}
-      <MeasureKey
-        members={keyMembers}
-        netLabel={netLabel}
-        highlight={highlight}
-        onHighlight={setHighlight}
-        placement="section"
-        label="Measures"
-      />
-
       <div ref={chartRef}>
         <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
@@ -401,9 +390,25 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               }
             />
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
-            <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* The measures' key, boxed, under the plot (MeasureKey): click
+          chips to highlight several together. The logo below it. */}
+      <div className="revenue-key">
+        <MeasureKey
+          members={keyMembers}
+          netLabel={netLabel}
+          highlight={highlight}
+          onHighlight={setHighlight}
+          placement="section"
+          label="Measures"
+        />
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
     </div>
   );
