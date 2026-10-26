@@ -101,6 +101,7 @@ describe("the landing page", () => {
     expect(notes()).toHaveLength(1);
     expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
     fireEvent.click(box("policies"));
+    // Not over any view (the overview drawer has it only while open)
     expect(notes()).toHaveLength(0);
   });
 
@@ -208,28 +209,89 @@ describe("the band's home button", () => {
   });
 });
 
-describe("the About tab on the window's edge", () => {
-  const edge = () => screen.queryByRole("button", { name: "About this dashboard: back to the start" });
+describe("the About tab on the window's edge, and its overview drawer", () => {
+  const edge = () => screen.queryByRole("button", { name: "About this dashboard: open the overview" });
+  const drawer = () => screen.queryByRole("dialog", { name: "Autumn Budget 2026: fiscal and distributional analysis" });
+  const openDrawer = async () => {
+    window.history.replaceState({}, "", "/?tab=methodology");
+    const rendered = await renderApp();
+    fireEvent.click(edge());
+    return rendered;
+  };
 
   it("is not on the landing page", async () => {
     await renderApp();
     expect(landing()).not.toBeNull();
     expect(edge()).toBeNull();
+    expect(drawer()).toBeNull();
   });
 
-  it("is on every view, says what the dashboard is, and goes back to the start", async () => {
+  it("says what the dashboard is on hover or focus", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
     expect(edge()).toHaveTextContent("About");
-    expect(edge()).toHaveClass("edge-about");
+    expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
     const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/^About this dashboard/);
-    expect(edge()).toHaveAttribute("aria-describedby", tip.id);
+    expect(tip).toHaveTextContent(/^About this dashboard.*Click to open the overview\.$/);
+  });
+
+  it("opens a modal drawer with the overview, focus inside and the page locked", async () => {
+    await openDrawer();
+    const dialog = drawer();
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(edge()).toHaveAttribute("aria-expanded", "true");
+    expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("link", { name: /Explore$/ })).toHaveLength(3);
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
+    expect(document.body.style.overflow).toBe("hidden");
+    // The view stays where it was
+    expect(search().get("tab")).toBe("methodology");
+  });
+
+  it("closes by the close button, Esc, the backdrop or the tab, with focus back on the tab", async () => {
+    const { container } = await openDrawer();
+    fireEvent.click(within(drawer()).getByRole("button", { name: "Close the overview" }));
+    expect(drawer()).toBeNull();
+    expect(edge()).toHaveFocus();
+    expect(document.body.style.overflow).toBe("");
+
     fireEvent.click(edge());
-    expect(landing()).not.toBeNull();
-    expect(window.location.search).toBe("");
-    expect(edge()).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(drawer()).toBeNull();
+
+    fireEvent.click(edge());
+    fireEvent.click(container.querySelector(".overview-backdrop"));
+    expect(drawer()).toBeNull();
+
+    fireEvent.click(edge());
+    expect(drawer()).not.toBeNull();
+    fireEvent.click(edge());
+    expect(drawer()).toBeNull();
+  });
+
+  it("keeps Tab inside the drawer", async () => {
+    await openDrawer();
+    const dialog = drawer();
+    const close = within(dialog).getByRole("button", { name: "Close the overview" });
+    const links = within(dialog).getAllByRole("link");
+    links.at(-1).focus();
+    fireEvent.keyDown(links.at(-1), { key: "Tab" });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+    expect(links.at(-1)).toHaveFocus();
+  });
+
+  it.each([
+    [/^The Budget and society/, "Population impact", "dashboard"],
+    [/^Your household/, "Household impact", "household"],
+    [/^What's in the Budget/, "Policies", "policies"],
+  ])("opens a view from a box and closes: %s", async (name, view, tab) => {
+    await openDrawer();
+    fireEvent.click(within(drawer()).getByRole("link", { name }));
+    expect(drawer()).toBeNull();
+    expect(viewTab(view)).toHaveAttribute("aria-selected", "true");
+    expect(search().get("tab")).toBe(tab);
   });
 });
 

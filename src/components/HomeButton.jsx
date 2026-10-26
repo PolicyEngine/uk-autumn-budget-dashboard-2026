@@ -41,12 +41,12 @@ function Mark({ className }) {
 }
 
 /** The card both buttons show: what the dashboard is, and the way back. */
-function AboutTip({ current }) {
+function AboutTip({ current, hint }) {
   return (
     <span className="home-tip">
       <span className="home-tip-title">About this dashboard</span>
       <span>Our estimates of how Autumn Budget 2026 changes the public finances and household incomes.</span>
-      <span className="home-tip-hint">{current ? "You are at the start." : "Click to return to the start."}</span>
+      <span className="home-tip-hint">{hint ?? (current ? "You are at the start." : "Click to return to the start.")}</span>
     </span>
   );
 }
@@ -79,15 +79,46 @@ const CUE_KEY = "ab2026-about-cue";
 
 /**
  * An "About" tab pinned to the window's left edge on every view (App.jsx
- * leaves it off the landing page): the same card on hover or focus, and a
- * click back to the start. It pulses softly once per session (not under
- * reduced motion, LandingPage.css); on a phone it is the mark alone.
+ * leaves it off the landing page), level with the view tabs bar: the card
+ * on hover or focus, and a click
+ * that opens the overview drawer (OverviewDrawer.jsx), or closes it. It
+ * pulses softly once per session (not under reduced motion); on a phone it
+ * is the mark alone.
  *
  * @param {Object} props
- * @param {() => void} props.onHome - Go to the landing page (App's goHome)
+ * @param {boolean} props.open - Whether the overview drawer is open
+ * @param {() => void} props.onToggle - Open or close it
+ * @param {{current: HTMLElement|null}} [props.buttonRef] - The button, for focus to come back to
  */
-export function EdgeAboutTab({ onHome }) {
-  const props = useHomeClick(false, onHome);
+export function EdgeAboutTab({ open, onToggle, buttonRef }) {
+  const own = useRef(null);
+  // Level with the view tabs bar, centred on its height, wherever it is:
+  // in the page at first, then stuck (and compact) under the band
+  useEffect(() => {
+    let frame = 0;
+    const place = () => {
+      frame = 0;
+      const bar = document.querySelector(".view-tabs-bar");
+      if (!bar || !own.current) return;
+      const box = bar.getBoundingClientRect();
+      own.current.style.top = `${Math.round(box.top + box.height / 2)}px`;
+    };
+    const later = () => {
+      if (!frame) frame = requestAnimationFrame(place);
+    };
+    place();
+    window.addEventListener("scroll", later, { passive: true });
+    window.addEventListener("resize", later);
+    const bar = document.querySelector(".view-tabs-bar");
+    const observer = typeof ResizeObserver === "undefined" || !bar ? null : new ResizeObserver(later);
+    observer?.observe(bar);
+    return () => {
+      window.removeEventListener("scroll", later);
+      window.removeEventListener("resize", later);
+      observer?.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
   const [cue, setCue] = useState(false);
   useEffect(() => {
     let seen = true;
@@ -101,12 +132,18 @@ export function EdgeAboutTab({ onHome }) {
     if (!seen) setCue(true);
   }, []);
   return (
-    <Tip content={<AboutTip current={false} />}>
+    <Tip content={<AboutTip current={false} hint="Click to open the overview." />}>
       <button
+        ref={(node) => {
+          own.current = node;
+          if (buttonRef) buttonRef.current = node;
+        }}
         type="button"
         className={`edge-about${cue ? " is-cue" : ""}`}
-        aria-label="About this dashboard: back to the start"
-        {...props}
+        aria-label="About this dashboard: open the overview"
+        aria-expanded={open}
+        aria-controls="overview-drawer"
+        onClick={onToggle}
       >
         <Mark className="edge-about-mark" />
         <span className="edge-about-label" aria-hidden="true">About</span>
