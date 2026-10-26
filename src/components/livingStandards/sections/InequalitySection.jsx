@@ -7,12 +7,12 @@
 import { useMemo, useState } from "react";
 import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { housingOption, periodOption, yearsOption } from "../controlOptions";
-import { LsLineChart, lineLegendItems } from "../LsCharts";
+import { lineLegendItems } from "../LsCharts";
+import OverTimeChart from "../OverTimeChart";
 import {
   EMPTY,
   lineSeries,
   mergeSeries,
-  rangeAxis,
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
@@ -42,7 +42,6 @@ export default function useInequalityView(data, range = null, setRange = null) {
     () => visibleRows(mergeSeries(outturn, projection, (d) => d.value), viewMode),
     [outturn, projection, viewMode],
   );
-  const axis = rangeAxis(rows.flatMap((r) => [r.historical, r.projection]), { pad: 0.2 });
   const noOutturn = outturn.length === 0;
   const series = lineSeries(viewMode, !noOutturn);
 
@@ -93,6 +92,8 @@ export default function useInequalityView(data, range = null, setRange = null) {
       : null,
     // One Options pill: the years compared first, then the rest (ControlBar)
     controls: {
+      // The pill's face: the measure only; every choice is in its title
+      face: ["Inequality measure", "Housing costs"],
       options: [
         yearsOption(rangeYears(data), range, setRange),
         {
@@ -106,15 +107,13 @@ export default function useInequalityView(data, range = null, setRange = null) {
       ],
     },
     chart: (
-      <LsLineChart
-          highlight={range}
+      <OverTimeChart
+        compare={range}
         data={rows}
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}
         tooltipFormat={fmt}
         yLabel={label(measure)}
-        yDomain={axis.domain}
-        yTicks={axis.ticks}
       />
     ),
   };
