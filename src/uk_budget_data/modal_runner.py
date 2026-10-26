@@ -43,6 +43,29 @@ class ModalUnavailable(RuntimeError):
     """Raised when Modal cannot be used: not installed, or no credentials."""
 
 
+class ModalRunsFailed(RuntimeError):
+    """Raised once every artifact has come back, when some raised in their
+    containers. The others were written (``written``) and can be staged;
+    rerun only the failed ones (``failed``, key to error)."""
+
+    def __init__(self, failed: dict, written: list):
+        self.failed = dict(failed)
+        self.written = list(written)
+        lines = [
+            f"{len(self.failed)} of {len(self.failed) + len(self.written)} "
+            "Modal runs failed in their containers; the others were written "
+            "and can be staged as they are:"
+        ]
+        lines += [f"  FAILED {key}: {error}" for key, error in failed.items()]
+        lines += [f"  written {path}" for path in self.written]
+        lines.append(
+            "Stage the written ones, then rerun only the failed ones (a "
+            "measure with --reforms, a combined run with --combined and its "
+            "member ids): " + " ".join(self.failed)
+        )
+        super().__init__("\n".join(lines))
+
+
 def _import_modal():
     try:
         import modal
@@ -69,7 +92,14 @@ def _modal_remote(units: Sequence) -> Iterable:
 
 def _modal_remote_artifacts(jobs: Sequence, smoke: bool) -> Iterable:
     """Run the artifacts in an ephemeral Modal app, one container each:
-    the smoke app on the synthetic dataset, else the real one."""
+    the smoke app on the synthetic dataset, else the real one.
+
+    A container that raises comes back as its exception
+    (``return_exceptions``), in its place, and the others carry on: without
+    it the first failure ended the app, and every artifact not yet written
+    here was lost although its container had finished (paid for, and run
+    again). ``ModalRunner._map_artifacts`` writes the others and then
+    raises (``ModalRunsFailed``)."""
     modal = _import_modal()
     from uk_budget_data import modal_generate
 
@@ -81,7 +111,9 @@ def _modal_remote_artifacts(jobs: Sequence, smoke: bool) -> Iterable:
                 if smoke
                 else modal_generate.Generator()
             )
-            yield from generator.run_artifact.map(jobs, order_outputs=True)
+            yield from generator.run_artifact.map(
+                jobs, order_outputs=True, return_exceptions=True
+            )
     except modal.exception.NotFoundError as error:
         raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
 
@@ -254,9 +286,20 @@ class ModalRunner:
             + (" (synthetic smoke test)" if smoke else "")
         )
         results = []
+        failed: dict[str, str] = {}
+        count = 0
         for index, returned in enumerate(self.remote_artifacts(jobs, smoke)):
             if index >= len(jobs):
                 raise ModalUnavailable("Modal returned more results than runs")
+            count += 1
+            if isinstance(returned, BaseException):
+                # One container failed (an error in the run, a timeout, out
+                # of memory): say so, keep going, and raise once every other
+                # artifact is written.
+                key = jobs[index].key
+                failed[key] = f"{type(returned).__name__}: {returned}"
+                self.say(f"{key}: FAILED in its Modal container: {returned}")
+                continue
             outcome, relative, files = returned
             if outcome.key != jobs[index].key:
                 raise ModalUnavailable(
@@ -268,9 +311,18 @@ class ModalRunner:
             )
             results.append(outcome)
             on_result(index, outcome)
-        if len(results) != len(jobs):
+        if count != len(jobs):
             raise ModalUnavailable(
-                f"Modal returned {len(results)} results for {len(jobs)} runs"
+                f"Modal returned {count} results for {len(jobs)} runs"
+            )
+        if failed:
+            raise ModalRunsFailed(
+                failed,
+                [
+                    str(outcome.reference.path)
+                    for outcome in results
+                    if outcome.reference is not None
+                ],
             )
         return results
 
