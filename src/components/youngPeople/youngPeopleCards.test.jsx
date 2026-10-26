@@ -176,6 +176,14 @@ describe("young people cards", () => {
     expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
   });
 
+  it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
+    const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
+    expect(screen.getByRole("button", { name: /^Options: 25 to 34 vs all/ })).toBeInTheDocument();
+    unmount();
+    render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
+    expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
+  });
+
   it("draws every year shown, whatever year is selected", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const first = DISPLAY_YEARS[0];

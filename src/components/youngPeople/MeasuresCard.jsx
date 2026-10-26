@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MeasureRowLabel from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -10,6 +10,7 @@ import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
+import { pensionerMeasures } from "../pensioners/pensionersData";
 import { NoEffectList } from "../personal/PolicyBars";
 import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
@@ -24,6 +25,7 @@ const MEASURES_INFO = {
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
+  if (band === "pensioners") return "Pensioners";
   const label = AGE_BANDS.find((candidate) => candidate.key === band)?.label ?? band;
   return `Aged ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 };
@@ -151,7 +153,10 @@ export const measuresDescription = (band) => {
   return `Each policy's average change per person: ${label} vs all ages.`;
 };
 
-const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));
+const BAND_OPTIONS = [
+  ...AGE_BANDS.map((band) => ({ value: band.key, label: band.label })),
+  { value: "pensioners", label: "Pensioners" },
+];
 
 const UNIT = "Average change per person (£ a year)";
 
@@ -160,21 +165,23 @@ const UNIT = "Average change per person (£ a year)";
  * chosen age group (16 to 24 at first) beside its all-ages figure, in the
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
-function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND }) {
   const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
-  const [band, setBand] = useState(YOUNG_BAND);
+  // The section's age group (By age), which the card's Compare can override
+  // until the section's group changes again
+  const [band, setBand] = useState(group);
+  useEffect(() => {
+    setBand(group);
+  }, [group]);
   const GROUPS = groupsFor(band);
   const description = measuresDescription(band);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const { shown, noEffect, suppressed } = measureComparison(
-    rows,
-    policies,
-    selectedPolicies,
-    selectedYear,
-    band,
-  );
+  const { shown, noEffect, suppressed } =
+    band === "pensioners"
+      ? pensionerMeasures(rows, policies, selectedPolicies, selectedYear)
+      : measureComparison(rows, policies, selectedPolicies, selectedYear, band);
   const values = shown.flatMap((point) => [point.group, point.all]);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values), {
     maxSteps: DUMBBELL_MAX_STEPS,

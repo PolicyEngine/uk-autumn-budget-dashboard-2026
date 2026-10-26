@@ -207,7 +207,7 @@ describe("the view tabs", () => {
     expect(bar).toHaveClass("has-notch");
   });
 
-  it("split Population impact into six sub-tabs, Public finances first", async () => {
+  it("split Population impact into five sub-tabs, Public finances first", async () => {
     window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
@@ -221,8 +221,7 @@ describe("the view tabs", () => {
     expect(subTabs().map((tab) => tab.textContent)).toEqual([
       "Public finances",
       "All households",
-      "Young people",
-      "Pensioners",
+      "By age",
       "Living standards",
       "Poverty",
     ]);
@@ -233,8 +232,8 @@ describe("the view tabs", () => {
 
     fireEvent.click(subTabs()[2]);
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    expect(await screen.findByRole("tabpanel", { name: "By age" })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("age");
     // The year and policy pills drive both sub-tabs
     expect(shown(band(document.body).querySelector(".band-year"))).toBe(true);
     expect(shown(band(document.body).querySelector(".band-policy"))).toBe(true);
@@ -247,25 +246,19 @@ describe("the view tabs", () => {
     expect(window.location.search).not.toContain("sub=");
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
     expect(subTabs()[2]).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("age");
   });
 
-  it("open the Pensioners sub-tab from ?sub=pensioners, and write it on choosing it", async () => {
+  it("open By age with pensioners chosen from an old ?sub=pensioners link", async () => {
     window.history.replaceState({}, "", "/?sub=pensioners");
-    const { unmount } = await renderApp();
-    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("tabpanel", { name: "Pensioners" })).toBeInTheDocument();
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
-    unmount();
-
-    window.history.replaceState({}, "", "/?tab=dashboard");
     await renderApp();
-    fireEvent.click(screen.getByRole("tab", { name: "Pensioners" }));
-    expect(screen.getByRole("tab", { name: "Pensioners" })).toHaveAttribute("aria-selected", "true");
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("pensioners");
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tabpanel", { name: "By age" })).toBeInTheDocument();
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get("sub"), params.get("age")]).toEqual(["age", "pensioners"]);
   });
 
-  it("open the Young people sub-tab from the old links, keeping the hash", async () => {
+  it("open By age with 16 to 24 chosen from the old Young people links, keeping the hash", async () => {
     for (const [url, hash] of [
       ["/?tab=young", ""],
       ["/#young-people", "#young-people"],
@@ -277,21 +270,22 @@ describe("the view tabs", () => {
         "aria-selected",
         "true",
       );
-      expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+      expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
         "aria-selected",
         "true",
       );
       const params = new URLSearchParams(window.location.search);
-      expect([params.get("tab"), params.get("sub"), window.location.hash]).toEqual([
+      expect([params.get("tab"), params.get("sub"), params.get("age"), window.location.hash]).toEqual([
         "dashboard",
-        "young",
+        "age",
+        "16-24",
         hash,
       ]);
       unmount();
     }
   });
 
-  it("open Young people from a #young-people link on another view, and drop the hash on leaving", async () => {
+  it("open By age from a #young-people link on another view, and drop the hash on leaving", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
     window.history.replaceState({}, "", "/?tab=methodology#young-people");
@@ -300,7 +294,7 @@ describe("the view tabs", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -310,15 +304,16 @@ describe("the view tabs", () => {
     expect(window.location.search).not.toContain("sub=");
   });
 
-  it("open Young people from Methodology's link", async () => {
+  it("open By age, 16 to 24 chosen, from Methodology's link", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    fireEvent.click(screen.getByRole("link", { name: "Young people results" }));
-    expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
+    fireEvent.click(screen.getByRole("link", { name: "results by age" }));
+    expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
+    const params = new URLSearchParams(window.location.search);
+    expect([params.get("sub"), params.get("age")]).toEqual(["age", "16-24"]);
   });
 
   it("gather the method notes on Methodology, each said once", async () => {

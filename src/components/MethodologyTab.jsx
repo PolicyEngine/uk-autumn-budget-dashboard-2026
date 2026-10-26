@@ -102,13 +102,15 @@ function MethodSection({ id, title, summary, details, children, detailsLabel = "
 }
 
 /** A link to another view (at one of its sub-tabs), switched to in place. */
-function ViewLink({ tab, sub, hash, onShowTab, children }) {
+function ViewLink({ tab, sub, age, hash, onShowTab, children }) {
   return (
     <a
-      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${age ? `&age=${age}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        if (sub) onShowTab(tab, sub);
+        // By age's group (?age=) goes with its sub-tab
+        if (sub && age) onShowTab(tab, sub, { age });
+        else if (sub) onShowTab(tab, sub);
         else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
@@ -490,8 +492,8 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <p>
               The{" "}
-              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
-                Young people results
+              <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
+                results by age
               </ViewLink>{" "}
               split everyone into the Office for National Statistics&apos; age bands, with 16 to 24
               as young people, and count who is better or worse off in each.
@@ -565,7 +567,7 @@ function MethodologyTab({ onShowTab }) {
                     People at or over <Term id="statePensionAge">State Pension age</Term>: 66 in
                     2026-27 and 67 from 2027-28, as in{" "}
                     <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>. Their results are on{" "}
-                    <ViewLink tab="dashboard" sub="pensioners" onShowTab={onShowTab}>Pensioners</ViewLink>.
+                    <ViewLink tab="dashboard" sub="age" age="pensioners" onShowTab={onShowTab}>By age, with Pensioners chosen</ViewLink>.
                   </>,
                 ],
                 [
