@@ -17,6 +17,7 @@ import {
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -529,6 +530,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 : "The line is your household's net income.",
               "The dashed line marks your salary.",
             ],
+            method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               isChange && smallChange && "The change is under 1% of net income at every salary.",
               drops.length > 0 && "In the shaded bands net income falls as salary rises, as benefits are withdrawn.",

@@ -19,7 +19,7 @@ describe("GeographyMethodology", () => {
     expect(text).not.toMatch(/noise/i);
 
     const link = screen.getByRole("link", {
-      name: "Read the method note for constituency figures",
+      name: /^Read the method note for constituency figures/,
     });
     expect(link).toHaveAttribute("href", METHOD_NOTE_URL);
     expect(METHOD_NOTE_URL).toBe(

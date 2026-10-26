@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
+import { HOUSEHOLD_ABOUT_ID } from "./methodology/anchors";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -147,15 +148,51 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     // The current-law cards on the Pre-measures forecast's sub-tabs
     for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"], ["Forecast changes", "forecast"]]) {
-      const link = within(living).getByRole("link", { name });
-      expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
+      const link = within(living).getAllByRole("link", { name }).find((a) => a.getAttribute("href") === `?tab=outlook&sub=${sub}`);
       fireEvent.click(link);
       expect(onShowTab).toHaveBeenLastCalledWith("outlook", sub);
     }
+    // The twins with the measures, on Population impact
+    for (const [name, sub] of [["Living standards", "living"], ["Poverty", "poverty"]]) {
+      const link = within(living).getAllByRole("link", { name }).find((a) => a.getAttribute("href") === `?tab=dashboard&sub=${sub}`);
+      fireEvent.click(link);
+      expect(onShowTab).toHaveBeenLastCalledWith("dashboard", sub);
+    }
+    // Household impact is the "household" view (it was linked as "personal",
+    // a view that does not exist)
+    const household = document.getElementById(METHOD_SECTIONS.singleYear);
+    const about = within(household).getByRole("link", { name: "“About these figures”" });
+    expect(about).toHaveAttribute("href", `?tab=household#${HOUSEHOLD_ABOUT_ID}`);
+    fireEvent.click(about);
+    expect(onShowTab).toHaveBeenLastCalledWith("household");
     const young = screen.getByRole("link", { name: "Young people results" });
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
     fireEvent.click(young);
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
+  });
+
+  it("links every external source in a new tab, saying so, and every shared term to its definition", () => {
+    const { container } = renderTab();
+    const external = [...container.querySelectorAll('a[href^="http"]')];
+    expect(external.length).toBeGreaterThan(5);
+    for (const link of external) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      expect(link).toHaveTextContent("(opens in a new tab)");
+    }
+    expect(external.map((link) => link.getAttribute("href"))).toEqual(
+      expect.arrayContaining(["https://policyengine.org/uk/model", "https://github.com/PolicyEngine/policyengine-uk"]),
+    );
+    // Each term link lands on a term the glossary defines
+    const terms = [...container.querySelectorAll('a[href^="#term-"]')];
+    expect(terms.length).toBeGreaterThan(5);
+    for (const link of terms) {
+      expect(container.querySelector(link.getAttribute("href"))).not.toBeNull();
+    }
+    // In-view anchors exist too
+    for (const link of container.querySelectorAll('a[href^="#method-"]')) {
+      expect(container.querySelector(link.getAttribute("href")), link.getAttribute("href")).not.toBeNull();
+    }
   });
 
   it("renders every section with its icon, so a missing icon import fails", () => {

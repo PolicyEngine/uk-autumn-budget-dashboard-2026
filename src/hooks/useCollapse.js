@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // How long an expander takes to open or close (the CSS transition on
 // .expander-body matches it; not ".collapse", which Tailwind makes visibility: collapse)
-export const COLLAPSE_MS = 250;
+export const COLLAPSE_MS = 220;
 
 /**
  * An expander's content, opened and closed with a height transition: the

@@ -29,6 +29,7 @@ import {
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
 import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -384,6 +385,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
             // Each part's note (the Child Benefit clawback, the personal
             // allowance taper), in place of the legend's "i"
             definitions: (parts ?? []).filter((part) => part.info).map((part) => ({ term: part.label, meaning: part.info })),
+            method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: ["The axis runs from 0% to 100%; a rate beyond either end is marked at the edge, and the tooltip gives it in full."],
           }}
         />

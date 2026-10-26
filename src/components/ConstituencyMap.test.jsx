@@ -194,14 +194,27 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("puts the key beside or under the map, never over it, and keeps the legend for the file", async () => {
+  it("puts the key under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
-    // On screen the key is HTML, outside the map's SVG
+    // On screen the key is HTML, outside the map's SVG: a ramp from loss
+    // to gain, too uncertain, and the three status textures
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
-    expect(key).toHaveTextContent("Large gain: 1% or more");
-    expect(key).toHaveTextContent("Not published: hatched, confidentiality");
+    expect(key).toHaveTextContent("Change in household net income, % of income");
+    const entries = [...key.querySelectorAll("button[data-key]")].map((button) => button.getAttribute("aria-label"));
+    expect(entries.slice(0, 5)).toEqual([
+      expect.stringMatching(/^Large loss, 1% or more: \d+ seats?$/),
+      expect.stringMatching(/^Small loss, 0.1% to 1%: /),
+      expect.stringMatching(/^Little change, under 0.1% either way: /),
+      expect.stringMatching(/^Small gain, 0.1% to 1%: /),
+      expect.stringMatching(/^Large gain, 1% or more: /),
+    ]);
+    expect(key).toHaveTextContent("Too uncertain");
+    expect(key).toHaveTextContent("Approximate (few survey households)");
+    expect(key).toHaveTextContent("Not published (confidential)");
+    expect(key).toHaveTextContent("No data");
+    expect(key).not.toHaveTextContent("Reported");
     // The SVG carries no logo of its own; the card's logo row does
     expect(map.querySelector("image")).toBeNull();
     // The SVG's legend, for the exported file, sits in its corner
@@ -316,7 +329,7 @@ describe("ConstituencyMap", () => {
 
   it("finds a constituency by name, with its published figure", async () => {
     const { container } = await renderMap();
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "harbour" },
     });
     const result = screen.getByRole("button", { name: /Harbour, Mill and Quay/ });
@@ -325,7 +338,7 @@ describe("ConstituencyMap", () => {
     expect(within(tooltip(container)).getByRole("heading")).toHaveTextContent(
       "Harbour, Mill and Quay",
     );
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "west" },
     });
     expect(screen.getByRole("button", { name: /Westmoor/ })).toHaveTextContent(
@@ -369,16 +382,17 @@ describe("ConstituencyMap", () => {
         policies={POLICIES}
       />,
     );
-    // No blocking message: a Measure picker offering the selected measures,
+    // No blocking message: the Options pill offers the selected measures,
     // and the title names the one shown
-    const picker = await screen.findByRole("button", { name: /^Measure shown:/ });
+    const pill = await screen.findByRole("button", { name: /^Options:/ });
     expect(screen.queryByText(/shown for one measure at a time/)).toBeNull();
-    const shown = picker.getAttribute("aria-label").replace(/^Measure shown: /, "");
+    fireEvent.click(pill);
+    const measures = within(screen.getByRole("radiogroup", { name: "Measure" })).getAllByRole("radio");
+    expect(measures.length).toBeGreaterThan(0);
+    expect(measures.length).toBeLessThanOrEqual(2);
+    const shown = measures.find((radio) => radio.getAttribute("aria-checked") === "true").textContent;
     expect(document.querySelector(".map-title-focus")).toHaveTextContent(shown);
-    fireEvent.click(picker);
-    const options = screen.getAllByRole("option").map((o) => o.textContent.replace(/^✓/, ""));
-    expect(options.length).toBeGreaterThan(0);
-    expect(options.length).toBeLessThanOrEqual(2);
+    expect(pill.getAttribute("aria-label")).toContain(shown);
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -427,7 +441,10 @@ describe("ConstituencyMap", () => {
     ).toBeInTheDocument();
     // No results map: at most the unpublished template, every seat grey.
     const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .pill-select, .title-icon"),
+      (path) =>
+        !path.closest(
+          ".map-template-svg, .chart-download, .pill-select, .title-icon, .control-bar-options, .chart-more-info",
+        ),
     );
     expect(drawn).toEqual([]);
     container
@@ -514,9 +531,9 @@ describe("ConstituencyMap and the release's area routing", () => {
   const NOT_AVAILABLE = "Results by constituency are not available on this release.";
   const NOT_LOADED = "Results by constituency could not be loaded.";
   const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
-  // The redesign's only how-to-read sentence; the search box's placeholder
-  // says what to do.
-  const HOW_TO_READ = /Uncoloured where the estimate is too uncertain/;
+  // How to read the map is in "About this chart", whose closed line names
+  // its parts; on a release that routes nothing it describes the measure only.
+  const HOW_TO_READ = /How it's calculated/;
   // A fetch that fails, as on a network error, only when it is awaited.
   const NETWORK_FAILURE = {
     then: (_, reject) => reject(new TypeError("network down")),
@@ -533,7 +550,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(
       screen.getByRole("button", { name: /Download chart/ }),
     ).toBeDisabled();
-    const search = screen.queryByLabelText("Search constituency");
+    const search = screen.queryByLabelText("Search or select a constituency");
     if (search) expect(search).toBeDisabled();
     expect(container.textContent).not.toMatch(FIGURES);
   };
