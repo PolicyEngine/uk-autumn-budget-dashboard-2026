@@ -49,6 +49,19 @@ sys.exit(0 if same else 1)
 PY
 }
 
+# curl's --write-out line for one request. curl writes that line even when the
+# transfer fails part-way (a 200 whose body is cut off), so its exit status
+# decides: on any failure this prints "000 (curl exit N)" instead.
+fetch() {
+  local out rc=0
+  out="$(curl --silent --output /dev/null --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} "$@")" || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    printf '%s\n' "$out"
+  else
+    echo "000 (curl exit $rc)"
+  fi
+}
+
 failures=0
 fail() {
   echo "FAIL $1"
@@ -61,14 +74,11 @@ for case in "${CASES[@]}"; do
 
   # The first answer: a 307 straight to the new address, unless the slash
   # comes off first.
-  read -r code location < <(
-    curl --silent --output /dev/null --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} \
-      --write-out '%{http_code} %{redirect_url}\n' "$url" || echo "000 -"
-  )
+  read -r code location <<<"$(fetch --write-out '%{http_code} %{redirect_url}\n' "$url")"
   if [ "${sent: -1}" = "/" ]; then
-    [ "$code" = 308 ] || [ "$code" = 307 ] || { fail "$url: HTTP $code, expected 308 or 307"; continue; }
+    [ "$code" = 308 ] || [ "$code" = 307 ] || { fail "$url: HTTP $code $location, expected 308 or 307"; continue; }
   elif [ "$code" != 307 ]; then
-    fail "$url: HTTP $code, expected 307"
+    fail "$url: HTTP $code${location:+ $location}, expected 307"
     continue
   elif ! same_place "$location" "$expected"; then
     fail "$url: redirects to $location, expected $expected"
@@ -76,11 +86,10 @@ for case in "${CASES[@]}"; do
   fi
 
   # Where following the redirects ends.
-  read -r final landed < <(
-    curl --silent --output /dev/null --location --max-redirs 5 --max-time 60 ${EXTRA[@]+"${EXTRA[@]}"} \
-      --write-out '%{http_code} %{url_effective}\n' "$url" || echo "000 -"
-  )
-  if [ "$final" != 200 ]; then
+  read -r final landed <<<"$(fetch --location --max-redirs 5 --write-out '%{http_code} %{url_effective}\n' "$url")"
+  if [ "$final" = 000 ]; then
+    fail "$url: following the redirects failed $landed"
+  elif [ "$final" != 200 ]; then
     fail "$url: ends at $landed with HTTP $final"
   elif ! same_place "$landed" "$expected"; then
     fail "$url: ends at $landed, expected $expected"
