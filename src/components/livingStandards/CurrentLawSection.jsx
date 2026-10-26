@@ -1,5 +1,5 @@
 // Incomes and poverty under current law, before any Budget measure: the
-// OBR forecast's Living standards and Poverty sub-tabs, the twins
+// Before the Budget's Living standards and Poverty sub-tabs, the twins
 // of Population impact's sub-tabs of the same names (which show the
 // measures' effect). Ported from PolicyEngine/uk-living-standards-outlook
 // (branch review-1-fixes, db0c8e4). It reads
