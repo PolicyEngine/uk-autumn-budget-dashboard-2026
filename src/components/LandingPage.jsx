@@ -17,6 +17,9 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
           onOpen(tab, sub);
         }}
       >
+        <svg className="landing-box-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M7 17 17 7M8 7h9v9" />
+        </svg>
         <TitleIcon name={icon} size={24} className="landing-box-icon" />
         <span className="landing-box-title">{title}</span>
         <span className="landing-box-description">{description}</span>

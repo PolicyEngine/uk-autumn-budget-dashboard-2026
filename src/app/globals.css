@@ -136,13 +136,11 @@ code {
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
      the heading and paragraph; less around and below the boxes), its blur,
-     the glass panels' blur, the least height of the view it shows, and the
-     boxes' hover motion */
-  --landing-fade: 58%;
+     the glass panels' blur, and the boxes' hover motion */
+  --landing-fade: 42%;
   --landing-fade-top: 80%;
   --landing-blur: 2px;
   --landing-glass-blur: 10px;
-  --landing-min-height: 620px;
   --landing-motion: 0.2s;
   /* Sub-tabs not chosen (SubTabs.css): muted teal-grey */
   --c-subtab-muted: color-mix(in srgb, var(--pe-teal-800) 55%, var(--pe-gray-500));

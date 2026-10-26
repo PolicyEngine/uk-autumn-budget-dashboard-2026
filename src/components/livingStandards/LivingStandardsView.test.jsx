@@ -42,7 +42,8 @@ beforeEach(() => {
         : new Response("reform_id,year,value\n", { status: 200 });
     }),
   );
-  window.history.replaceState({}, "", "/");
+  // A view: the bare address is the landing page, with no tab bar
+  window.history.replaceState({}, "", "/?tab=dashboard");
 });
 
 afterEach(() => {

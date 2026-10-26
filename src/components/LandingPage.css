@@ -1,54 +1,116 @@
-/* The landing page (LandingPage.jsx), over the Public finances view.
-   App.jsx's .view-stage.is-landing stacks them: the landing content sets
-   the height; the views behind are clipped to it, blurred and faded. */
+/* The landing page (LandingPage.jsx): one screen. With the site's nav and
+   the title band above and the replication line and site footer below, it
+   fills the window (100svh) as a flex column; its own content takes the
+   rest and scales with clamp(). Behind it, a silhouette of the Public
+   finances view (LandingBackdrop.jsx), faded and blurred. */
+
+html:has(.view-stage.is-landing) .min-h-screen.flex.flex-col {
+  min-height: 100svh;
+}
+
+html:has(.view-stage.is-landing) .min-h-screen.flex.flex-col > main,
+html:has(.view-stage.is-landing) .app,
+html:has(.view-stage.is-landing) .main-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+html:has(.view-stage.is-landing) .main-content {
+  width: 100%;
+  padding-bottom: 0;
+}
+
+/* The replication line, tighter under the landing page */
+html:has(.view-stage.is-landing) .replication-line {
+  margin: 0;
+  padding: clamp(8px, 1.6svh, 16px) 0 clamp(8px, 1.6svh, 14px);
+}
+
+html:has(.view-stage.is-landing) .replication-line::before {
+  margin-bottom: clamp(8px, 1.4svh, 14px);
+}
 
 .view-stage {
   position: relative;
 }
 
 .view-stage.is-landing {
-  min-height: var(--landing-min-height);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
-.view-stage.is-landing > .view-panels {
+/* The silhouette behind: clipped to the landing page, blurred, fading out
+   at the bottom, under the page background (more over the top, behind the
+   hero; less around and below the boxes) */
+.landing-backdrop {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  user-select: none;
   filter: blur(var(--landing-blur));
-  /* The view behind fades out towards the bottom, rather than stopping */
   mask-image: linear-gradient(to bottom, black 70%, transparent);
-  transition: opacity 0.4s ease;
 }
 
-/* The fade over the view behind: the page's own background, stronger at
-   the top, behind the heading and paragraph, lighter around and below the
-   boxes, where the chart shows through */
-.view-stage.is-landing > .view-panels::after {
+.landing-backdrop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-backdrop::after {
   content: "";
   position: absolute;
   inset: 0;
-  /* Over the view's own sticky layers (the sub-tab band's z-index is in
-     the thousands); the filter above makes .view-panels a stacking
-     context, so this stays inside it */
-  z-index: 100000;
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--page-bg) var(--landing-fade-top), transparent) 0,
-    color-mix(in srgb, var(--page-bg) var(--landing-fade-top), transparent) 160px,
-    color-mix(in srgb, var(--page-bg) var(--landing-fade), transparent) 340px
+    color-mix(in srgb, var(--page-bg) var(--landing-fade-top), transparent) 30%,
+    color-mix(in srgb, var(--page-bg) var(--landing-fade), transparent) 55%
   );
 }
 
-/* Until the published figures load, only the faded shell: no loading
-   notice behind the boxes, then the chart fades in */
-.app[data-publication="unavailable"] .view-stage.is-landing > .view-panels {
-  opacity: 0;
+.lb-band {
+  fill: var(--pe-teal-50);
+}
+
+.lb-pill {
+  fill: var(--pe-teal-50);
+}
+
+.lb-pill.is-chosen {
+  fill: var(--c-surface);
+}
+
+.lb-icon {
+  fill: var(--pe-teal-100);
+}
+
+.lb-text {
+  fill: var(--pe-gray-200);
+}
+
+.lb-text.is-strong {
+  fill: var(--pe-gray-400);
+}
+
+.lb-card {
+  fill: var(--c-surface);
+  stroke: var(--card-border);
+}
+
+.lb-grid {
+  stroke: var(--c-grid);
+  stroke-dasharray: 4 4;
+}
+
+.lb-zero {
+  stroke: var(--c-zero-line);
 }
 
 /* A link to a view (utils/landing.js DEEP_LINK_SCRIPT): the server's
-   landing page stays hidden until the browser opens the view */
+   landing page stays hidden until the browser opens the view... */
 html[data-deep-link] .view-stage.is-landing {
   visibility: hidden;
 }
@@ -61,34 +123,42 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 .landing {
   position: relative;
   z-index: 1;
-  padding: 20px 0 40px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(14px, 2.6svh, 28px);
+  padding: clamp(14px, 3svh, 36px) 0;
 }
 
-/* The hero: heading, lead and caveat, centred on a soft glass panel as
-   wide as the row of boxes, so the text reads over the view behind */
+/* The hero: the full width of the boxes, left-aligned, on a soft teal
+   panel with an accent line */
 .landing-hero {
-  margin: 0 0 20px;
-  padding: 20px 32px 18px;
-  text-align: center;
-  background: color-mix(in srgb, var(--c-surface) 78%, transparent);
+  padding: clamp(16px, 2.8svh, 30px) clamp(18px, 2.5vw, 36px);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--pe-teal-50) 94%, transparent),
+    color-mix(in srgb, var(--c-surface) 82%, transparent) 70%
+  );
   backdrop-filter: blur(var(--landing-glass-blur));
-  border: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pe-teal-100) 80%, transparent);
+  border-left: 4px solid var(--pe-teal-500);
   border-radius: var(--pe-radius-lg);
 }
 
 .landing-heading {
-  margin: 0 0 10px;
-  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.25rem);
+  margin: 0 0 clamp(6px, 1.2svh, 12px);
+  font-size: clamp(1.5rem, 0.9rem + 1.5vw + 0.6svh, 2.25rem);
   font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
   color: var(--pe-gray-900);
 }
 
 .landing-intro {
-  max-width: 75ch;
-  margin: 0 auto;
-  font-size: var(--fs-lead);
+  max-width: 80ch;
+  margin: 0;
+  font-size: clamp(var(--fs-body), 0.8rem + 0.5vw, var(--fs-lead));
   line-height: 1.6;
   color: var(--pe-gray-700);
 }
@@ -104,10 +174,10 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   text-decoration-color: currentColor;
 }
 
-/* The provisional caveat: a small, quiet badge under the lead */
+/* The provisional caveat: a small badge under the lead */
 .landing .publication-provisional {
   display: inline-block;
-  margin: 14px 0 0;
+  margin: clamp(8px, 1.4svh, 14px) 0 0;
   padding: 3px 12px;
   border-radius: 999px;
   font-size: var(--fs-caption);
@@ -116,7 +186,7 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 .landing-boxes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  gap: clamp(14px, 1.8vw, 24px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -126,28 +196,40 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   display: flex;
 }
 
-/* A way in: glass over the chart, lifting on hover */
+/* A way in: the whole card is the link, with a teal accent along the top,
+   a chevron in the corner and a filled "Explore" button at the foot */
 .landing-box {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 22px 26px 20px;
+  gap: clamp(4px, 0.8svh, 8px);
+  padding: clamp(18px, 2.8svh, 28px) clamp(18px, 2vw, 26px) clamp(16px, 2.4svh, 24px);
+  overflow: hidden;
   color: var(--c-text);
   text-decoration: none;
-  background: color-mix(in srgb, var(--c-surface) 82%, transparent);
+  background: color-mix(in srgb, var(--c-surface) 88%, transparent);
   backdrop-filter: blur(var(--landing-glass-blur)) saturate(1.2);
-  border: 1px solid color-mix(in srgb, var(--card-border) 80%, transparent);
+  border: 1px solid var(--card-border);
   border-radius: var(--pe-radius-lg);
   box-shadow: 0 2px 8px var(--shadow-faint);
+  cursor: pointer;
   transition: box-shadow var(--landing-motion) ease, transform var(--landing-motion) ease,
     border-color var(--landing-motion) ease, background-color var(--landing-motion) ease;
 }
 
+.landing-box::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--pe-teal-500);
+}
+
 .landing-box:hover {
-  background: color-mix(in srgb, var(--c-surface) 94%, transparent);
-  border-color: var(--pe-teal-200);
+  background: var(--c-surface);
+  border-color: var(--pe-teal-500);
   box-shadow: 0 12px 28px var(--shadow-strong);
   transform: translateY(-4px);
 }
@@ -157,13 +239,26 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   outline-offset: 3px;
 }
 
+.landing-box-chevron {
+  position: absolute;
+  top: clamp(16px, 2.6svh, 24px);
+  right: clamp(16px, 1.8vw, 22px);
+  color: var(--pe-gray-400);
+  transition: color var(--landing-motion) ease, transform var(--landing-motion) ease;
+}
+
+.landing-box:hover .landing-box-chevron {
+  color: var(--c-gain-text);
+  transform: translate(2px, -2px);
+}
+
 .landing-box-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  margin-bottom: 6px;
+  width: clamp(40px, 6svh, 52px);
+  height: clamp(40px, 6svh, 52px);
+  margin-bottom: clamp(2px, 0.6svh, 6px);
   border-radius: 50%;
   background: var(--pe-teal-50);
   box-shadow: inset 0 0 0 1px var(--pe-teal-100);
@@ -171,7 +266,7 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 }
 
 .landing-box-title {
-  font-size: var(--fs-section);
+  font-size: clamp(var(--fs-card-title), 1rem + 0.4vw, var(--fs-section));
   font-weight: 600;
   line-height: 1.3;
   color: var(--pe-gray-900);
@@ -183,17 +278,31 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   color: var(--pe-gray-600);
 }
 
+/* The way in, as a filled teal button */
 .landing-box-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-top: auto;
-  padding-top: 8px;
-  font-size: var(--fs-body);
+  padding: 7px 16px;
+  font-size: var(--fs-small);
   font-weight: 600;
-  color: var(--c-gain-text);
+  color: var(--band-ink);
+  background: var(--pe-teal-700);
+  border-radius: 999px;
+  transition: background-color var(--landing-motion) ease;
+}
+
+.landing-box-description + .landing-box-explore {
+  margin-top: clamp(10px, 1.8svh, 18px);
+}
+
+.landing-box:hover .landing-box-explore {
+  background: var(--band-teal);
 }
 
 .landing-box-arrow {
   display: inline-block;
-  margin-left: 4px;
   transition: transform var(--landing-motion) ease;
 }
 
@@ -204,38 +313,35 @@ html[data-deep-link] .view-tabs-bar[hidden] {
 @media (max-width: 900px) {
   .landing-boxes {
     grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+    gap: 12px;
   }
 }
 
 @media (max-width: 600px) {
   .landing {
-    padding: 20px 0 36px;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 16px 0 20px;
   }
 
   .landing-hero {
-    margin-bottom: 18px;
-    padding: 18px 16px;
+    padding: 16px 16px 16px 14px;
   }
 
-  .landing-intro {
-    font-size: var(--fs-body-lg);
-  }
-
-  /* On a phone: the icon beside the text */
+  /* On a phone: the icon beside the text, the button under it */
   .landing-box {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: 14px;
     row-gap: 4px;
     align-items: start;
-    padding: 18px 16px;
+    padding: 18px 16px 16px;
   }
 
   .landing-box-icon {
     grid-row: 1 / span 3;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     margin: 0;
   }
 
@@ -245,25 +351,26 @@ html[data-deep-link] .view-tabs-bar[hidden] {
     grid-column: 2;
   }
 
-  .landing-box-title {
-    font-size: var(--fs-card-title);
+  .landing-box-explore {
+    justify-self: start;
   }
 
-
-  .landing-box-explore {
-    padding-top: 6px;
+  .landing-box-description + .landing-box-explore {
+    margin-top: 8px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .view-stage.is-landing > .view-panels,
   .landing-box,
-  .landing-box-arrow {
+  .landing-box-arrow,
+  .landing-box-chevron,
+  .landing-box-explore {
     transition: none;
   }
 
   .landing-box:hover,
-  .landing-box:hover .landing-box-arrow {
+  .landing-box:hover .landing-box-arrow,
+  .landing-box:hover .landing-box-chevron {
     transform: none;
   }
 }

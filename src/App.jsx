@@ -12,6 +12,7 @@ import HouseholdScatter from "./components/HouseholdScatter";
 import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
+import LandingBackdrop from "./components/landing/LandingBackdrop";
 import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
@@ -179,9 +180,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   useScrollReveal(mainRef);
   // The views opened so far: each stays mounted once opened, hidden while
   // another is shown, so its state, open expanders and any calculation in
-  // flight carry on
-  const [visited, setVisited] = useState([DEFAULT_VIEW]);
-  if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
+  // flight carry on. None is mounted for the landing page, so it paints
+  // and settles without them; the first opens with the first box or tab.
+  const [visited, setVisited] = useState([]);
+  if (!landing && !visited.includes(activeTab)) setVisited([...visited, activeTab]);
 
   // Every "i" tooltip stays inside the screen (a phone's edge columns)
   useEffect(() => installInfoTooltipClamp(), []);
@@ -743,17 +745,18 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             )}
           />
         )}
-        {/* Behind the landing page, the default view (Public finances),
-            live but faded, blurred and out of reach (LandingPage.css) */}
-        <div className="view-panels" inert={landing} aria-hidden={landing ? "true" : undefined}>
-        {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
+        {/* Behind the landing page, a silhouette of Public finances, drawn
+            with the page (no data, no charts to load), faded and blurred */}
+        {landing && <LandingBackdrop />}
+        <div className="view-panels">
+        {VIEWS.filter(({ value }) => visited.includes(value)).map(({ value }) => (
         <div
           key={value}
           id={panelId(value)}
           role="tabpanel"
           aria-labelledby={tabId(value)}
           className="tab-panel"
-          hidden={value !== activeTab}
+          hidden={landing || value !== activeTab}
         >
         {BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
@@ -802,9 +805,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
         ) : (
           // Population impact and its sub-tabs (populationPanel)
-          // Behind the landing page it shows Public finances, and leaves
-          // the address alone
-          <PopulationImpactView note={showingLine} active={activeTab === value && !landing} preview={landing}>
+          // Hidden under the landing page, it leaves the address alone
+          <PopulationImpactView note={showingLine} active={activeTab === value && !landing}>
             {populationPanel}
           </PopulationImpactView>
         )}

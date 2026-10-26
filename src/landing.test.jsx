@@ -103,19 +103,20 @@ describe("the landing page", () => {
     expect(notes()).toHaveLength(0);
   });
 
-  it("puts the live Public finances view behind it, faded and out of reach", async () => {
+  it("draws a silhouette of Public finances behind it, with no view mounted", async () => {
     const { container } = await renderApp();
-    const behind = container.querySelector(".view-panels");
+    const backdrop = container.querySelector(".landing-backdrop");
     expect(container.querySelector(".view-stage")).toHaveClass("is-landing");
-    expect(behind).toHaveAttribute("inert");
-    expect(behind).toHaveAttribute("aria-hidden", "true");
-    expect(within(behind).getByText("Public finances", { selector: ".sub-tab, .sub-tab *" })).toBeInTheDocument();
-    expect(screen.queryByRole("tabpanel")).toBeNull();
-    expect(screen.queryByRole("tablist", { name: "Population impact sections" })).toBeNull();
+    // Decoration only: hidden from assistive tech, nothing in it to reach
+    expect(backdrop).toHaveAttribute("aria-hidden", "true");
+    expect(backdrop.querySelectorAll("rect").length).toBeGreaterThan(10);
+    expect(backdrop.querySelector("a, button, [tabindex]")).toBeNull();
+    // No view is mounted yet, so the page settles without them
+    expect(container.querySelectorAll('[role="tabpanel"]')).toHaveLength(0);
     fireEvent.click(box("society"));
+    expect(container.querySelector(".landing-backdrop")).toBeNull();
     expect(container.querySelector(".view-stage")).not.toHaveClass("is-landing");
-    expect(behind).not.toHaveAttribute("inert");
-    expect(behind).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByRole("tabpanel", { name: "Population impact" })).toBeInTheDocument();
   });
 
   it("opens Population impact at Public finances from the first box, and brings the tab bar", async () => {
@@ -186,7 +187,7 @@ describe("the band's home button", () => {
     expect(home()).toHaveAttribute("aria-describedby", tip.id);
   });
 
-  it("goes back to the landing page from any view, in place, with Public finances behind it", async () => {
+  it("goes back to the landing page from any view, in place", async () => {
     window.history.replaceState({}, "", "/?tab=dashboard&sub=all&policies=alpha");
     const { container } = await renderApp();
     expect(home()).not.toHaveAttribute("aria-current");
@@ -197,9 +198,9 @@ describe("the band's home button", () => {
     expect(home()).toHaveAttribute("aria-current", "page");
     // The bare address: a reload opens the landing page again
     expect(window.location.search).toBe("");
-    // Behind it, Public finances
-    const behind = container.querySelector(".view-panels");
-    expect(behind.querySelector('.sub-tab[aria-selected="true"]')).toHaveTextContent("Public finances");
+    // Behind it, the silhouette; the view is kept, hidden
+    expect(container.querySelector(".landing-backdrop")).not.toBeNull();
+    expect(screen.queryByRole("tabpanel")).toBeNull();
     // The selection is kept, and comes back to the address with a view
     fireEvent.click(box("household"));
     expect([search().get("tab"), search().get("policies")]).toEqual(["household", "alpha"]);
