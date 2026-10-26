@@ -31,7 +31,7 @@ import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
-import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
 import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
@@ -587,7 +587,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </p>
         )}
         {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
-          <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
+          <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
         )}
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>

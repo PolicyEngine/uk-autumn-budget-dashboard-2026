@@ -19,6 +19,20 @@ export const NOT_COMPUTABLE = "not_computable";
 export const PROVISIONAL_LABEL =
   "Provisional: statement figures, awaiting Treasury costing";
 
+/** The provisional label before the Budget: the entries are candidates. */
+export const CANDIDATE_PROVISIONAL_LABEL =
+  "Provisional: candidate measures modelled before the Budget, not announced policy";
+
+/**
+ * The label for provisional figures in this manifest: the candidate label
+ * while its forecast basis is pre-Budget, the statement label otherwise.
+ */
+export function provisionalLabel(manifest) {
+  return manifest?.basis?.forecast?.status === "pre_budget"
+    ? CANDIDATE_PROVISIONAL_LABEL
+    : PROVISIONAL_LABEL;
+}
+
 const DIGEST = /^[0-9a-f]{64}$/;
 
 function isDigest(value) {
