@@ -30,6 +30,7 @@ import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import HomeButton, { EdgeAboutTab } from "./components/HomeButton";
+import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
@@ -222,6 +223,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
+  // The overview drawer, opened by the "About" tab on the window's edge
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const aboutTabRef = useRef(null);
+  const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
@@ -878,8 +883,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
-        {/* "About" on the window's edge, on every view but the landing page */}
-        {!landing && <EdgeAboutTab onHome={goHome} />}
+        {/* "About" on the window's edge, on every view but the landing
+            page: it opens the overview drawer */}
+        {!landing && (
+          <>
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+            <OverviewDrawer
+              open={overviewOpen}
+              onClose={closeOverview}
+              onOpen={handleTabChange}
+              returnFocus={aboutTabRef}
+              provisional={provisional && (
+                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
+              )}
+            />
+          </>
+        )}
         <ReplicationLine />
       </main>
     </div>
