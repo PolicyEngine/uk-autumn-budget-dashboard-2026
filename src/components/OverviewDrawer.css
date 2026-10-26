@@ -1,0 +1,152 @@
+/* The overview drawer (OverviewDrawer.jsx): from the left, full height,
+   380px wide (the full width on a phone), over a dimmed page */
+.overview {
+  --overview-width: min(380px, 100vw);
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  visibility: hidden;
+  transition: visibility 0s linear var(--motion-slide);
+}
+
+.overview.is-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.overview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pe-gray-900) 40%, transparent);
+  opacity: 0;
+  transition: opacity var(--motion-slide) ease;
+}
+
+.overview.is-open .overview-backdrop {
+  opacity: 1;
+}
+
+.overview-panel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: var(--overview-width);
+  padding: 20px 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--page-bg);
+  box-shadow: 8px 0 32px var(--shadow-strong);
+  transform: translateX(-100%);
+  transition: transform var(--motion-slide) ease;
+}
+
+.overview.is-open .overview-panel {
+  transform: none;
+}
+
+.overview-close {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: -6px -6px -10px 0;
+  padding: 0;
+  color: var(--pe-gray-600);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.overview-close:hover {
+  color: var(--pe-gray-900);
+  background: var(--pe-gray-100);
+}
+
+.overview-close:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+/* The intro, as on the landing page but sized for the drawer */
+.overview-intro {
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--pe-teal-500);
+}
+
+.overview-intro .landing-heading {
+  font-size: var(--fs-xl);
+}
+
+.overview-intro .landing-intro {
+  font-size: var(--fs-body);
+}
+
+.overview-intro .publication-provisional {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-caption);
+}
+
+/* The boxes, stacked and compact: the icon beside the text */
+.landing-boxes.is-compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.landing-boxes.is-compact .landing-box {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: start;
+  padding: 16px 16px 14px;
+  backdrop-filter: none;
+}
+
+.landing-boxes.is-compact .landing-box:hover {
+  transform: translateY(-2px);
+}
+
+.landing-boxes.is-compact .landing-box-icon {
+  grid-row: 1 / span 3;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+}
+
+.landing-boxes.is-compact .landing-box-title,
+.landing-boxes.is-compact .landing-box-description,
+.landing-boxes.is-compact .landing-box-explore {
+  grid-column: 2;
+}
+
+.landing-boxes.is-compact .landing-box-title {
+  font-size: var(--fs-card-title);
+}
+
+.landing-boxes.is-compact .landing-box-explore {
+  justify-self: start;
+  margin-top: 8px;
+}
+
+/* On a phone it takes the whole screen */
+@media (max-width: 600px) {
+  .overview {
+    --overview-width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview,
+  .overview-backdrop,
+  .overview-panel {
+    transition: none;
+  }
+}

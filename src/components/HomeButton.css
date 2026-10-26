@@ -97,13 +97,17 @@
 }
 
 /* The "About" tab on the window's left edge (EdgeAboutTab): teal,
-   rounded on its right side only, under the sticky band and tabs, above
-   the page's content and below its menus and dialogs */
+   rounded on its right side only, level with the view tabs bar, below
+   the page's menus and dialogs */
 .edge-about {
   position: fixed;
   left: 0;
-  top: calc(var(--sticky-offset) + 72px);
-  z-index: 1080;
+  /* Centred on the view tabs bar (EdgeAboutTab sets top from it); this is
+     where the bar sits once stuck */
+  top: calc(var(--title-row-height) + var(--view-tabs-height) / 2);
+  transform: translateY(-50%);
+  /* Over the view tabs bar it sits on (1090), under the title band (1100) */
+  z-index: 1095;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -118,7 +122,7 @@
   border-radius: 0 999px 999px 0;
   box-shadow: 0 4px 14px var(--shadow-strong);
   cursor: pointer;
-  transition: background-color var(--landing-motion) ease;
+  transition: background-color var(--landing-motion) ease, transform var(--motion-slide) ease;
 }
 
 .edge-about:hover {
@@ -134,6 +138,21 @@
   display: block;
   width: 18px;
   height: 18px;
+}
+
+/* While the overview drawer is open the tab rides on its edge, above it,
+   so it closes it too (OverviewDrawer.css: 380px wide) */
+.edge-about[aria-expanded="true"] {
+  z-index: 1310;
+  transform: translate(380px, -50%);
+}
+
+/* On a phone the drawer takes the screen; its close button closes it */
+@media (max-width: 600px) {
+  .edge-about[aria-expanded="true"] {
+    z-index: 1095;
+    transform: translateY(-50%);
+  }
 }
 
 /* Once a session: two soft pulses, so it is seen */
