@@ -53,6 +53,9 @@ export const YOUNG_PERSON_PRESETS = [
     },
     note:
       "Earns £25,000, between the 2025 full-time medians for ages 18 to 21 and 22 to 29 (ONS ASHE). No student loan. Rents privately at £900 a month, an illustrative figure.",
+    // The salary's source, in the result's "Based on"
+    salarySource:
+      "£25,000 in 2026, between the 2025 full-time medians for ages 18 to 21 and 22 to 29 (ONS ASHE)",
   },
   {
     id: "apprentice-19",
@@ -72,5 +75,8 @@ export const YOUNG_PERSON_PRESETS = [
     },
     note:
       "Earns £23,600, the 2025 full-time median for ages 18 to 21 (ONS ASHE). That median covers all full-time employees of that age, not apprentices only, many of whom earn less. No student loan. Rents a room privately at £600 a month, an illustrative figure.",
+    // The salary's source, in the result's "Based on"
+    salarySource:
+      "£23,600 in 2026, the 2025 full-time median for ages 18 to 21 (ONS ASHE), for all full-time employees of that age, not apprentices only",
   },
 ];

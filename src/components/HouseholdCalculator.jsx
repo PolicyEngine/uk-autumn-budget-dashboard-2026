@@ -280,13 +280,11 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-// `own`: your own household's answers and result, kept while an example is
-// shown, so "Your household" brings them back
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, own: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, own: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -357,6 +355,7 @@ function HouseholdCalculator({
     };
   }, []);
 
+  // The example shown, if any: its salary's source goes in "Based on"
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
 
   const householdPolicies = useMemo(
@@ -373,13 +372,11 @@ function HouseholdCalculator({
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
     if (!preset) return;
-    // Leaving your own household: keep its answers and result for "Your
-    // household" to bring back
-    if (presetId === null) savedWizard.own = { inputs, submitted };
     const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
     setInputs(next);
     setPresetId(preset.id);
-    // The form closes; the result, once shown, is scrolled to
+    // The form closes; the result (or, for an answer not precomputed, its
+    // progress) is scrolled to once shown
     setFormOpen(false);
     scrollToResult.current = true;
     if (householdPolicies.length > 0) {
@@ -432,28 +429,10 @@ function HouseholdCalculator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, selectionKey, active]);
 
-  // "Your household" opens or closes the form with your own answers. From
-  // an example's card it is a switch to another household: the example's
-  // result and note go at once, and your own answers (and their result,
-  // for the year and policies now chosen) come back, or the defaults.
-  // "Change these answers", under an example, opens the form with the
-  // example's answers instead.
-  const chooseYours = () => {
-    if (presetId === null) {
-      setFormOpen((open) => !open);
-      return;
-    }
-    const own = savedWizard.own;
-    savedWizard.own = null;
-    setPresetId(null);
-    setInputs(own?.inputs ?? { ...WIZARD_DEFAULTS });
-    setSubmitted(
-      own?.submitted && householdPolicies.length > 0
-        ? { ...own.submitted, year, policies: householdPolicies, at: Date.now(), household: "yours" }
-        : null,
-    );
-    setFormOpen(true);
-  };
+  // "Your household" opens or closes the form with the answers shown: your
+  // own, or, under an example, the example's, to change one and press
+  // Calculate. The example stays chosen until an answer is changed.
+  const chooseYours = () => setFormOpen((open) => !open);
   // Your own household's change, on its card, once calculated and unedited
   const yoursChange =
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
@@ -461,22 +440,39 @@ function HouseholdCalculator({
       : null;
 
   const resultsRef = useRef(null);
-  // After an example card: once its result (or its progress) shows, bring
-  // it into view below the sticky bars, unless it is already, and move
-  // focus to it
+  // After an example card: bring its result (or its progress) into view
+  // below the sticky bars, every time, unless its top is already in the
+  // top third of the screen, and move focus to it. The region mounts
+  // before what is under it has any height (the detail sections render a
+  // frame or two later), so a single scroll is cut short at the page's
+  // end as it was then: while the page grows, the scroll is asked again.
   const scrollToResult = useRef(false);
   useEffect(() => {
-    if (!scrollToResult.current || submitted === null) return;
+    if (!scrollToResult.current || submitted === null) return undefined;
     scrollToResult.current = false;
-    const frame = requestAnimationFrame(() => {
+    let frame = requestAnimationFrame(() => {
       const target = resultsRef.current;
       if (!target) return;
-      const { top, bottom } = target.getBoundingClientRect();
-      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
-      if (top < offset || bottom > window.innerHeight) {
-        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
-      }
       target.focus({ preventScroll: true });
+      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const { top } = target.getBoundingClientRect();
+      if (top >= offset - 1 && top <= window.innerHeight / 3) return;
+      const behavior = prefersReducedMotion() ? "auto" : "smooth";
+      target.scrollIntoView({ behavior, block: "start" });
+      const page = document.documentElement;
+      let height = page.scrollHeight;
+      const until = performance.now() + 1500;
+      const follow = () => {
+        if (!target.isConnected || performance.now() > until) return;
+        if (page.scrollHeight !== height) {
+          height = page.scrollHeight;
+          if (Math.abs(target.getBoundingClientRect().top - offset) > 1) {
+            target.scrollIntoView({ behavior, block: "start" });
+          }
+        }
+        frame = requestAnimationFrame(follow);
+      };
+      frame = requestAnimationFrame(follow);
     });
     return () => cancelAnimationFrame(frame);
   }, [submitted]);
@@ -709,16 +705,6 @@ function HouseholdCalculator({
         yoursChange={yoursChange}
         year={year}
       />
-      {activePreset && (
-        <p className="household-examples-note" role="status">
-          <span>{activePreset.note}</span>
-          {!formOpen && (
-            <button type="button" className="text-button" onClick={() => setFormOpen(true)}>
-              Change these answers
-            </button>
-          )}
-        </p>
-      )}
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a
             header, then the questions in sections */}
@@ -780,6 +766,7 @@ function HouseholdCalculator({
             changed={changed}
             policyCount={submitted?.policies.length ?? householdPolicies.length}
             startedAt={submitted?.at ?? null}
+            salarySource={activePreset?.salarySource ?? null}
           />
         </div>
         )}

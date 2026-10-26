@@ -90,7 +90,7 @@ export function showDependantsNote(data) {
  * chosen) for one line under the headline. The full explanations are in
  * "About these figures".
  */
-export function assumptionItems(data, yearLabel, { renting = false, policies = [] } = {}) {
+export function assumptionItems(data, yearLabel, { renting = false, policies = [], salarySource = null } = {}) {
   const items = [];
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
@@ -99,7 +99,9 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: "salary",
       label: `Salary in ${yearLabel}`,
       value: data.partnerSalaryUsed !== null ? `${money(own)}, partner ${money(partner)}` : money(own),
-      detail: `grown from ${data.salaryYear} with OBR earnings`,
+      detail: salarySource
+        ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
+        : `grown from ${data.salaryYear} with OBR earnings`,
     });
   }
   if (renting && data.area?.brmaDefault && data.area.brma) {
@@ -246,7 +248,7 @@ function BeforeAfterBars({ totals }) {
  * The result: one card. Its head names the figure and its year and
  * policies; the body has the change (said nowhere else), large and counted
  * up, with its share as a chip, beside net income before and after as
- * bars; the foot says what it is based on, each note behind an "i". The
+ * bars; under the figure, what it is based on, each note behind an "i". The
  * figure is one element, so it reads (and copies) once.
  */
 function ResultCard({ totals, yearLabel, policyCount, items }) {
@@ -270,54 +272,58 @@ function ResultCard({ totals, yearLabel, policyCount, items }) {
         </div>
       </div>
       <div className="result-card-body">
-        <div className="result-card-hero">
-          <p className="result-figure">
-            <span className="result-value" aria-busy={counting || undefined}>
-              {signedPounds(counting ? shown : totals.change)}
-            </span>
-            {totals.change !== 0 && <span className="result-unit"> a year</span>}
-          </p>
-          {share && (
-            <p className={`result-chip ${tone}`}>
-              <span aria-hidden="true">{totals.change > 0 ? "▲" : "▼"} </span>
-              <span className="visually-hidden">{totals.change > 0 ? "Up " : "Down "}</span>
-              {share.replace(/^[+−]/, "")} of net income
+        {/* The left column: the figure, then what it is based on; the
+            right: net income before and after */}
+        <div className="result-card-side">
+          <div className="result-card-hero">
+            <p className="result-figure">
+              <span className="result-value" aria-busy={counting || undefined}>
+                {signedPounds(counting ? shown : totals.change)}
+              </span>
+              {totals.change !== 0 && <span className="result-unit"> a year</span>}
             </p>
+            {share && (
+              <p className={`result-chip ${tone}`}>
+                <span aria-hidden="true">{totals.change > 0 ? "▲" : "▼"} </span>
+                <span className="visually-hidden">{totals.change > 0 ? "Up " : "Down "}</span>
+                {share.replace(/^[+−]/, "")} of net income
+              </p>
+            )}
+          </div>
+          {items.length > 0 && (
+            <div className="result-card-basis">
+              <span className="result-foot-title">Based on</span>
+              <dl className="result-foot-items" aria-label="Based on">
+                {items.map((item) => (
+                  <div key={item.id} className="result-foot-item">
+                    <dt>{item.label}</dt>
+                    <dd>
+                      {item.value}
+                      {item.detail && (
+                        <span className="info-icon-wrapper">
+                          <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
+                            i
+                          </button>
+                          <span className="info-tooltip" role="tooltip">
+                            {item.detail}
+                          </span>
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           )}
         </div>
         <BeforeAfterBars totals={totals} />
       </div>
-      {items.length > 0 && (
-        <div className="result-card-foot">
-          <span className="result-foot-title">Based on</span>
-          <dl className="result-foot-items" aria-label="Based on">
-            {items.map((item) => (
-              <div key={item.id} className="result-foot-item">
-                <dt>{item.label}</dt>
-                <dd>
-                  {item.value}
-                  {item.detail && (
-                    <span className="info-icon-wrapper">
-                      <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
-                        i
-                      </button>
-                      <span className="info-tooltip" role="tooltip">
-                        {item.detail}
-                      </span>
-                    </span>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
     </section>
   );
 }
 
 /**
- * The household's headline: the hero card, then what it is based on.
+ * The household's headline: the hero card, with what it is based on.
  * Nothing is asked until Calculate: before it, a prompt. The first answer
  * shows a processing panel in place of everything; a later one keeps the
  * last result, dimmed, under a compact panel. When the answers change
@@ -333,6 +339,7 @@ export function SingleYearHeadline({
   changed = false,
   policyCount = 0,
   startedAt = null,
+  salarySource = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -376,7 +383,7 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             policyCount={policyCount}
-            items={assumptionItems(data, yearLabel, { renting, policies })}
+            items={assumptionItems(data, yearLabel, { renting, policies, salarySource })}
           />
         </div>
       )}

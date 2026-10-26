@@ -347,9 +347,9 @@ describe("Calculate", () => {
     fireEvent.click(within(screen.getByRole("region", { name: "Choose a household" })).getByRole("button", { name: /^A 22-year-old renting/ }));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
-    // "Change these answers" opens the form with its answers, and
-    // Calculate, to change one and calculate again
-    fireEvent.click(screen.getByRole("button", { name: "Change these answers" }));
+    // Your household opens the form with its answers, and Calculate, to
+    // change one and calculate again
+    fireEvent.click(screen.getByRole("button", { name: /^Your household/ }));
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
     expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
@@ -374,8 +374,19 @@ describe("Calculate", () => {
 });
 
 describe("an example card", () => {
+  // The file's default is reduced motion: these tests choose
+  const motion = (reduce) =>
+    vi.stubGlobal("matchMedia", (query) => ({
+      matches: reduce && query.includes("reduce"),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    }));
   it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
     serve((body) => json(householdAnswerFor(body)));
+    motion(false);
     // jsdom has no scrolling
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -388,8 +399,58 @@ describe("an example card", () => {
     fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
     expect(screen.getByRole("button", { name: /^Your household/ })).toHaveAttribute("aria-expanded", "false");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    // Every card: another one scrolls again
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /^A 22-year-old renting/ }));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+  });
+
+  it("asks the scroll again while the page grows under the result, so it is not cut short", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    motion(false);
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    // The page's height grows after the first scroll is asked
+    let height = 2000;
+    const scrollHeight = vi
+      .spyOn(document.documentElement, "scrollHeight", "get")
+      .mockImplementation(() => height);
+    renderTab();
+    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    height = 3200;
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+    expect(scrollIntoView.mock.calls[1][0]).toEqual({ behavior: "smooth", block: "start" });
+    delete Element.prototype.scrollIntoView;
+    rect.mockRestore();
+    scrollHeight.mockRestore();
+  });
+
+  it("does not scroll when the result already starts in the top third of the screen, and is instant with reduced motion", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 140, bottom: 540, height: 400 });
+    renderTab();
+    fireEvent.click(screen.getByRole("button", { name: /^A pensioner on the State Pension/ }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" })));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    // Lower down, with reduced motion: an instant scroll
+    rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
+    motion(true);
+    fireEvent.click(screen.getByRole("button", { name: /^A 22-year-old renting/ }));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
     delete Element.prototype.scrollIntoView;
     rect.mockRestore();
   });
@@ -433,14 +494,10 @@ describe("switching from one household's card to another", () => {
     held[0].release(1111);
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
     await waitFor(() => expect(held).toHaveLength(3));
-    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
-    // Example B: A's result and note go at once; B's own note, and a
-    // loading state, not A's figures
+    // Example B: A's result goes at once; a loading state, not A's figures
     fireEvent.click(card("A pensioner on the State Pension"));
     expect(headlineCard()).toBeNull();
     expect(screen.queryByText("+£1,111")).toBeNull();
-    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
-    expect(screen.getByText(/Aged 70 with the full new State Pension/)).toBeInTheDocument();
     // A's late answers (its split by policy and sweep) change nothing
     held[1].release(1111);
     held[2].release(1111);
@@ -453,23 +510,17 @@ describe("switching from one household's card to another", () => {
     expect(screen.queryByText("+£1,111")).toBeNull();
   });
 
-  it("from an example to Your household: the example's result and note go, and your own answers come back", async () => {
+  it("from an example to Your household: the form opens with the example's answers, its result still shown", async () => {
     serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
     renderTab();
-    // Your own household first (age 41), calculated
-    openForm();
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
-    fireEvent.click(calculateButton());
-    await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
-    // An example
     fireEvent.click(card("A 22-year-old renting"));
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
-    expect(screen.getByText(/Earns £25,000/)).toBeInTheDocument();
-    // Your household: never the example's result or note
     fireEvent.click(card("Your household"));
-    expect(screen.queryByText("+£1,111")).toBeNull();
-    expect(screen.queryByText(/Earns £25,000/)).toBeNull();
-    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(41);
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(headlineCard()).toHaveTextContent("+£1,111");
+    // A changed answer and Calculate: the new result
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
+    fireEvent.click(calculateButton());
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£3,333"));
   });
 });

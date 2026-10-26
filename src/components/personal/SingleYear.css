@@ -600,8 +600,17 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 24px 40px;
-  align-items: center;
+  /* Both columns start at the top: the figure and what it is based on on
+     the left, the bars on the right */
+  align-items: start;
   padding: 16px 28px 24px;
+}
+
+.result-card-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
 /* A very light tint behind the figure only */
@@ -743,18 +752,13 @@
   transform: scaleX(1);
 }
 
-/* Foot: what the figure is based on. The facts run in one line, each a
-   compact label and value with its "i", separated by dots; they wrap only
-   when the width runs out. The breakdown link sits on its own row. */
-.result-card-foot {
+/* What the figure is based on, under it in the left column: one fact a
+   row, its label on the left and its value (and "i") on the right */
+.result-card-basis {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-  padding: 12px 28px;
-  background: var(--pe-gray-50);
-  border-top: 1px solid var(--card-border);
-  border-radius: 0 0 var(--card-radius) 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px;
 }
 
 .result-foot-title {
@@ -765,47 +769,42 @@
   color: var(--pe-gray-400);
 }
 
-.result-foot-title {
-  flex-basis: 100%;
-}
-
 .result-foot-items {
   display: flex;
-  flex: 1 1 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 0;
+  flex-direction: column;
   min-width: 0;
   margin: 0;
 }
 
 .result-foot-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 7px 0;
   font-size: var(--fs-caption);
+  line-height: 1.4;
 }
 
-.result-foot-item:not(:last-child)::after {
-  content: "·";
-  margin: 0 10px 0 4px;
-  font-weight: 600;
-  color: var(--pe-gray-400);
+.result-foot-item + .result-foot-item {
+  border-top: 1px solid var(--card-border);
 }
 
 .result-foot-item dt {
   flex: none;
-  white-space: nowrap;
   color: var(--pe-gray-500);
 }
 
 .result-foot-item dd {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
   margin: 0;
   font-weight: 600;
+  text-align: right;
   color: var(--pe-gray-800);
 }
 
@@ -1054,8 +1053,7 @@
 
 @media (max-width: 600px) {
   .result-card-head,
-  .result-card-body,
-  .result-card-foot {
+  .result-card-body {
     padding-left: 16px;
     padding-right: 16px;
   }
