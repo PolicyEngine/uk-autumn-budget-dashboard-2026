@@ -51,3 +51,5 @@ A `policy.yaml` that exists must hold the thresholds as a mapping. An empty file
 ## Responsiveness
 
 Where an effect is expected, the measure's impact must have the expected sign and be at least £1m and 5% of the Treasury's figure. Otherwise it is **inert** or **wrong_direction**, and **no exception can waive that**: a reform that silently does nothing must not be published as a small number. A measure with no declared effect and no Treasury figure is **undeclared** and cannot be published either.
+
+Rehearsal 26 October (MOCK DATA): this line is a Treasury-input commit made after the members were staged, to check that the combined run still binds them (#174).
