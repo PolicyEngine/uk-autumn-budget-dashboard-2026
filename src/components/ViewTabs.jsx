@@ -124,7 +124,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false }) {
               onClick={() => onChange(tab.value)}
             >
               <TitleIcon name={TAB_ICONS[tab.value]} bare size={18} className="view-tab-icon" />
-              {tab.label}
+              <span className="view-tab-label">{tab.label}</span>
             </button>
           );
         })}
