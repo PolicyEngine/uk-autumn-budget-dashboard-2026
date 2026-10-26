@@ -675,8 +675,6 @@
   }
 
   /* 40px tap areas */
-  .mm-links a,
-  .mm-effect,
   .method-back a {
     display: inline-flex;
     align-items: center;
@@ -896,202 +894,32 @@
   }
 }
 
-/* Published measure descriptions: grouped rows that open to the full text */
-.mm-group + .mm-group {
-  margin-top: 20px;
-}
-
-.mm-group-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0 0 4px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--card-border);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  letter-spacing: 0.02em;
+/* The pointer to Policies, where each measure's description and modelling live */
+.method-pointer {
+  margin: 0 0 16px;
+  font-size: var(--fs-body);
   color: var(--pe-gray-700);
 }
 
-.mm-group-count {
-  font-weight: 500;
-  color: var(--pe-gray-500);
+.method-pointer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
 }
 
-.mm-list,
+.method-pointer svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Unavailable and not modelled: a name and its reason per line */
 .mm-reasons {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.mm-item {
-  padding: 10px 0;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
-.mm-item + .mm-item {
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.mm-item .method-swatch {
-  flex: none;
-  margin: 0;
-  background: var(--mm-accent);
-}
-
-.mm-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  color: var(--pe-gray-900);
-  cursor: pointer;
-}
-
-.mm-toggle:hover .mm-name {
-  color: var(--pe-teal-700);
-}
-
-.mm-toggle:focus-visible,
-.mm-limit-chip:focus-visible,
-.mm-effect:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
-.mm-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.mm-chevron {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  color: var(--pe-gray-400);
-  transition: transform var(--pe-transition-fast);
-}
-
-.mm-toggle[aria-expanded="true"] .mm-chevron {
-  transform: rotate(180deg);
-}
-
-.mm-summary {
-  margin: 2px 0 0 18px;
-  color: var(--pe-gray-700);
-}
-
-.mm-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 6px 0 0 18px;
-}
-
-.mm-limit-chip {
-  font: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.mm-limit-chip svg {
-  width: 12px;
-  height: 12px;
-}
-
-.mm-limit-chip[aria-expanded="true"] {
-  border-color: var(--c-loss);
-}
-
-.mm-limit {
-  margin: 6px 0 0 18px;
-  padding: 6px 10px;
-  border-left: 3px solid var(--c-loss-border);
-  background: var(--c-notice-bg);
-  color: var(--pe-gray-800);
-}
-
-.mm-body {
-  margin: 8px 0 0 18px;
-  padding: 10px 12px;
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-gray-50);
-}
-
-.mm-label {
-  margin: 0 0 2px;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.mm-note {
-  margin-top: 8px;
-}
-
-.mm-note-first {
-  margin-top: 0;
-}
-
-.mm-points {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--pe-gray-700);
-}
-
-.mm-points li + li {
-  margin-top: 2px;
-}
-
-.mm-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin: 10px 0 0;
-}
-
-.mm-links:first-child {
-  margin-top: 0;
-}
-
-.mm-links a,
-.mm-effect {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.mm-links a:hover,
-.mm-effect:hover {
-  text-decoration: underline;
-}
-
-.mm-links svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Unavailable and not modelled: a name and its reason per line */
 .mm-reasons li {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
@@ -1122,14 +950,5 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
-
-  .mm-toggle {
-    min-height: 40px;
-  }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mm-chevron {
-    transition: none;
-  }
-}

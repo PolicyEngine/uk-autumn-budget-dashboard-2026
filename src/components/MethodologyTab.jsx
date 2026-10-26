@@ -2,16 +2,16 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
-import { MeasureDescriptions, ReasonList } from "./methodology/MeasureDescriptions";
+import { BackToTop, Callout, IconChip, ReasonList, SourceLink, Tag } from "./methodology/MethodUi";
 import {
+  ArrowRight,
   Calculator,
   ChevronDown,
   ChartColumn,
@@ -142,13 +142,10 @@ function SectionLink({ id, children }) {
  *
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
- * @param {(id: string) => void} [props.onShowEffect] - Show one measure alone on Population impact
  */
-function MethodologyTab({ onShowTab, onShowEffect }) {
+function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
-  const MEASURE_MODELLING = measureModelling(catalogue);
   const UNAVAILABLE = unavailableMeasures(catalogue);
-  const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="policies" onShowTab={onShowTab}>
       {text}
@@ -233,9 +230,7 @@ function MethodologyTab({ onShowTab, onShowEffect }) {
               PolicyEngine UK works out each household&apos;s taxes, benefits and net income under
               current law, then again with a measure; the difference between the two runs is the
               measure&apos;s effect. The estimates are static: households do not change their
-              behaviour in response. What each measure does is on the{" "}
-              {policyNotes("Policies tab")}; how the model represents it is
-              below.
+              behaviour in response.
             </p>
           }
           details={
@@ -258,15 +253,13 @@ function MethodologyTab({ onShowTab, onShowEffect }) {
             </>
           }
         >
-          <div className="card method-card mm-card">
-            <h3 className="method-card-title">Published measure descriptions</h3>
-            <MeasureDescriptions
-              measures={MEASURE_MODELLING}
-              colors={POLICY_COLORS}
-              onShowTab={onShowTab}
-              onShowEffect={onShowEffect}
-            />
-          </div>
+          <p className="method-pointer">
+            What each measure does and how it is modelled is on{" "}
+            <ViewLink tab="policies" onShowTab={onShowTab}>
+              Policies
+              <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+            </ViewLink>
+          </p>
 
           {UNAVAILABLE.length > 0 && (
             <div className="card method-card mm-card">
