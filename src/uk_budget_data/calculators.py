@@ -1163,7 +1163,7 @@ class AgeImpactCalculator(BaseCalculator):
 
 # The income distribution: the percentiles published, and the floor on
 # the survey households behind each one.
-DISTRIBUTION_PERCENTILES = tuple(range(5, 96))
+DISTRIBUTION_PERCENTILES = tuple(range(1, 100))
 # Each percentile is the mean over the people in a band one percentile wide
 # around it; a band with fewer survey households than this has no row.
 DISTRIBUTION_MIN_HOUSEHOLDS = SINGLE_AGE_MIN_RECORDS
@@ -1273,7 +1273,7 @@ class IncomeDistributionCalculator(BaseCalculator):
     times its size, as the deciles do. The ``baseline`` points rank
     everyone's income before the measure, the ``reform`` points everyone's
     income after it, each against its own distribution. Points run from
-    the 5th to the 95th percentile; see ``distribution_points`` for how
+    the 1st to the 99th percentile; see ``distribution_points`` for how
     each is made and when one is left out.
     """
 
