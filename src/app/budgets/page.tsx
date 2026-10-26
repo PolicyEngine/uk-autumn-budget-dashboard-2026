@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { eventDate } from '@/utils/historical';
 import { HISTORICAL_RELEASES } from '@/utils/publication/release';
-import '@/components/historical/HistoricalReleasePage.css';
+import '@/components/historical/PastEvent.css';
 
 export const metadata: Metadata = {
   title: 'Past UK fiscal events on today\'s model and data',

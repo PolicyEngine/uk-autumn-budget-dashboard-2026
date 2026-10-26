@@ -1,6 +1,7 @@
-/* A past fiscal event's page (HistoricalReleasePage.jsx). It reuses the
-   dashboard's title band, sections and cards; these rules are its own
-   panels: the banner, the coverage and OBR tables and the not-modelled list. */
+/* A past fiscal event, as the dashboard shows it (PastEvent.jsx), and the
+   index of past events. They reuse the dashboard's title band, sections and
+   cards; these rules are their own panels: the banner, the coverage and OBR
+   tables, the not-modelled list and the index. */
 
 .historical-banner {
   margin: 16px 0;

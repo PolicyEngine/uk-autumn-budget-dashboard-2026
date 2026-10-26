@@ -88,10 +88,16 @@ export function coverageOf(measures) {
  * replaces a path under the root with other text, or an HTTP status, after
  * the binding, so a changed file no longer matches. A past event binds no
  * area provenance; `provenance` binds a digest in the manifest, the index or
- * both, to test its refusal. Every URL is recorded.
+ * both, to test its refusal. `measures` keeps only those of the fixture's
+ * measures, and the combined runs of them, so releases can differ. Every URL
+ * is recorded.
  */
-export async function releaseFixtureFetch(release, { basePath = "", flat = {}, identity = { id: release.id, date: release.date }, overrides = {}, provenance = {} } = {}) {
+export async function releaseFixtureFetch(release, { basePath = "", flat = {}, identity = { id: release.id, date: release.date }, overrides = {}, provenance = {}, measures } = {}) {
   const manifest = { ...fixtureJson("manifest.json"), release: identity.id, budget: identity };
+  if (measures) {
+    manifest.measures = Object.fromEntries(measures.map((id) => [id, manifest.measures[id]]));
+    manifest.combined = Object.fromEntries(Object.entries(manifest.combined).filter(([, entry]) => entry.measures.every((id) => measures.includes(id))));
+  }
   manifest.flat_files = Object.fromEntries(await Promise.all(Object.entries(flat).map(async ([name, text]) => [name, await sha256Hex(text)])));
   if (provenance.manifest !== undefined) manifest.flat_provenance_sha256 = provenance.manifest;
   const manifestText = JSON.stringify(manifest);

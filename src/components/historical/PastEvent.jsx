@@ -1,8 +1,7 @@
-'use client';
-
 /**
  * A past fiscal event, replayed on today's model and data
- * (docs/historical-releases.md).
+ * (docs/historical-releases.md), as the dashboard shows it when the event is
+ * the selected release (App.jsx).
  *
  * Every figure comes from the event's own release root: its manifest, the
  * artifacts the manifest approves, and the flat views its release index
@@ -12,20 +11,14 @@
  * what was estimated at the time, and shows how much of the event they
  * cover and what they leave out.
  */
-import { useEffect, useMemo, useState } from "react";
 import BudgetaryImpactChart from "../BudgetaryImpactChart";
 import DistributionalChart from "../DistributionalChart";
 import WaterfallChart from "../WaterfallChart";
-import PolicySelector from "../PolicySelector";
-import YearSlider from "../YearSlider";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
-import ReplicationLine from "../ReplicationLine";
 import UnavailableNotice from "../publication/UnavailableNotice";
-import { MeasureCatalogueProvider, useMeasureCatalogue } from "../../utils/measureCatalogue";
-import { budgetChartData, loadDashboard } from "../../utils/loadDashboard";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { loadVerifiedFlatCsv } from "../../utils/publication/flat";
-import { getHistoricalRelease } from "../../utils/publication/release";
 import { fiscalYearLabel } from "../../utils/publication/format";
 import {
   accountsForEveryMeasure,
@@ -41,10 +34,9 @@ import {
   parseHistoricalObr,
   parseNotModelled,
   releasePair,
-  releaseYears,
   toNumber,
 } from "../../utils/historical";
-import "./HistoricalReleasePage.css";
+import "./PastEvent.css";
 
 export const SCORECARD_URL = "https://policyengine-scorecard.vercel.app/scorecard/?country=uk&view=validation";
 
@@ -260,158 +252,115 @@ function HistoricalObrTable({ rows, budgetary, selectedPolicies, selectedYear })
   );
 }
 
-function HistoricalDashboard({ release, published, views }) {
+/** The years a past event's figures span, as "2025-26 to 2029-30". */
+function yearSpan(years) {
+  if (!years.length) return null;
+  return years.length === 1
+    ? fiscalYearLabel(years[0])
+    : `${fiscalYearLabel(years[0])} to ${fiscalYearLabel(years[years.length - 1])}`;
+}
+
+/**
+ * In place of this Budget's intro: the event's figures are on today's model
+ * and data, not what was estimated at the time.
+ */
+export function PastEventBanner({ release, years }) {
   const catalogue = useMeasureCatalogue();
-  const years = useMemo(() => releaseYears(catalogue), [catalogue]);
-  const [selectedPolicies, setSelectedPolicies] = useState(() => catalogue.displayable.map((measure) => measure.id));
-  const [selectedYear, setSelectedYear] = useState(() => years[0]);
   const pair = releasePair(catalogue.manifest);
-
-  const budgetData = useMemo(
-    () => budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, years),
-    [published, catalogue, selectedPolicies, years],
-  );
-  const rawDistributional = published.distributional.filter((row) => selectedPolicies.includes(row.reform_id));
-  const rawWinnersLosers = published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id));
-  const toggle = (id) => {
-    if (!catalogue.byId.get(id)?.displayable) return;
-    setSelectedPolicies((previous) => (previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]));
-  };
-  const span = !years.length
-    ? null
-    : years.length === 1
-      ? fiscalYearLabel(years[0])
-      : `${fiscalYearLabel(years[0])} to ${fiscalYearLabel(years[years.length - 1])}`;
-
+  const span = yearSpan(years);
   return (
-    <div className="app historical-release" data-release={release.id}>
-      <main className="main-content">
-        <div className="title-row historical-title-row">
-          <h1>{release.name}</h1>
-          {years.length > 0 && (
-            <div className="band-year">
-              <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} />
-            </div>
-          )}
-          <div className="band-policy">
-            <PolicySelector policies={catalogue.measures} selectedPolicies={selectedPolicies} onPolicyToggle={toggle} />
-          </div>
-        </div>
-
-        <div className="historical-banner" role="note">
-          <p className="historical-banner-lead">
-            Today's model and data, not what was known at the time.
-          </p>
-          <p>
-            These figures cost the measures of the {release.name} ({eventDate(release.date)})
-            on {pair ?? "this dashboard's current model and data"}, each as the difference it makes to
-            today's law{span ? `, for ${span}` : ""}. They are not the estimates published at the
-            time. Each measure's description says how it is constructed and what it leaves out.
-          </p>
-        </div>
-
-        {catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
-          <p className="publication-provisional" role="status">{HISTORICAL_PROVISIONAL_LABEL}</p>
-        )}
-        {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
-          <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
-            <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
-          </UnavailableNotice>
-        ))}
-
-        <SectionHeading title="Coverage" subtitle="How much of the event the scorecard's replay computed, and how much of it has figures here." />
-        <section id="coverage" className="report-section">
-          {views.coverage.value
-            ? <CoveragePanel coverage={views.coverage.value} measures={catalogue.measures} />
-            : <UnavailableNotice reason="The coverage of this event is unavailable"><p>{views.coverage.error}</p></UnavailableNotice>}
-        </section>
-
-        {selectedPolicies.length === 0 || years.length === 0 ? (
-          <div className="empty-state">
-            <p>{years.length === 0 ? "No figures for this event are published yet." : "Select measures to see their impact."}</p>
-          </div>
-        ) : (
-          <div className="results-container">
-            <SectionHeading title="Public finances" subtitle="Net effect of the selected measures on government revenue and spending, by year." />
-            <section id="revenue" className="report-section hero-chart">
-              <BudgetaryImpactChart
-                data={budgetData}
-                selectedYear={selectedYear}
-              />
-              <p className="historical-sum-note">
-                The net impact is the sum of the measures, each costed on its
-                own against today's law, not one run of the whole event.
-              </p>
-              <Disclosure id="obr-comparison" inCard title="Compare with the OBR's costing" contentClassName="obr-content">
-                {views.obr.value
-                  ? <HistoricalObrTable rows={views.obr.value} budgetary={published.budgetary} selectedPolicies={selectedPolicies} selectedYear={selectedYear} />
-                  : <UnavailableNotice reason="The OBR comparison is unavailable"><p>{views.obr.error}</p></UnavailableNotice>}
-              </Disclosure>
-            </section>
-
-            <SectionHeading title="Households by income" subtitle="How net income changes across the income distribution in the selected year." />
-            <section id="deciles" className="report-section distributional-section">
-              <div className="charts-grid">
-                <WaterfallChart rawData={rawWinnersLosers} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
-                <DistributionalChart rawData={rawDistributional} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
-              </div>
-            </section>
-          </div>
-        )}
-
-        <SectionHeading title="Measures" subtitle="What each modelled measure does, and the measures this page does not model." />
-        <section id="policy-details" className="report-section">
-          <Disclosure title="About the modelled measures" contentClassName="policy-details-content">
-            <div className="policy-grid">
-              {catalogue.measures.map((measure) => (
-                <div key={measure.id} className="policy-detail">
-                  <p className="policy-detail-name">{measure.name}</p>
-                  <p className="policy-detail-text">{measure.description}</p>
-                </div>
-              ))}
-            </div>
-          </Disclosure>
-          <Disclosure title="Measures not modelled" contentClassName="policy-details-content">
-            {views.notModelled.value
-              ? <NotModelledList rows={views.notModelled.value} />
-              : <UnavailableNotice reason="The list of measures not modelled is unavailable"><p>{views.notModelled.error}</p></UnavailableNotice>}
-          </Disclosure>
-        </section>
-
-        <p className="historical-scorecard-link">
-          The replay, its coverage across past events and its comparison with
-          the OBR are on the{" "}
-          <a href={SCORECARD_URL} target="_blank" rel="noopener noreferrer">PolicyEngine scorecard</a>.
-        </p>
-        <ReplicationLine />
-      </main>
+    <div className="historical-banner" role="note">
+      <p className="historical-banner-lead">
+        Today's model and data, not what was known at the time.
+      </p>
+      <p>
+        These figures cost the measures of the {release.name} ({eventDate(release.date)})
+        on {pair ?? "this dashboard's current model and data"}, each as the difference it makes to
+        today's law{span ? `, for ${span}` : ""}. They are not the estimates published at the
+        time. Each measure's description says how it is constructed and what it leaves out.
+      </p>
     </div>
   );
 }
 
-function HistoricalReleasePage({ releaseId }) {
-  const release = getHistoricalRelease(releaseId);
-  const [state, setState] = useState(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-    (async () => {
-      const published = await loadDashboard(process.env.NEXT_PUBLIC_BASE_PATH || "", { signal, release });
-      if (published.status !== "ready") return { published };
-      return { published, views: await loadHistoricalViews(published.catalogue, { signal }) };
-    })()
-      .then((result) => { if (!signal.aborted) setState(result); })
-      .catch((failure) => { if (!signal.aborted) setState({ error: failure.message }); });
-    return () => controller.abort();
-  }, [release]);
-  if (state?.error) return <UnavailableNotice reason={`Published results for the ${release.name} are unavailable`}><p>{state.error}</p></UnavailableNotice>;
-  if (state?.published?.status === "no-manifest") return <UnavailableNotice reason={`No results for the ${release.name} are published yet`} />;
-  if (!state) return <p role="status">Loading published measures…</p>;
+/**
+ * Population impact for a past event: its coverage, the revenue and decile
+ * charts with the OBR comparison, and its measures, modelled and not. A past
+ * event has no other view (question 4).
+ */
+export function PastEventPopulation({ published, views, selectedPolicies, selectedYear, years, budgetData, emptyState, note }) {
+  const catalogue = useMeasureCatalogue();
+  const rawDistributional = published.distributional.filter((row) => selectedPolicies.includes(row.reform_id));
+  const rawWinnersLosers = published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id));
   return (
-    <MeasureCatalogueProvider catalogue={state.published.catalogue}>
-      <HistoricalDashboard release={release} published={state.published} views={state.views} />
-    </MeasureCatalogueProvider>
+    <>
+      {note}
+      <SectionHeading title="Coverage" subtitle="How much of the event the scorecard's replay computed, and how much of it has figures here." />
+      <section id="coverage" className="report-section">
+        {views.coverage.value
+          ? <CoveragePanel coverage={views.coverage.value} measures={catalogue.measures} />
+          : <UnavailableNotice reason="The coverage of this event is unavailable"><p>{views.coverage.error}</p></UnavailableNotice>}
+      </section>
+
+      {years.length === 0 ? (
+        <div className="empty-state">
+          <p>No figures for this event are published yet.</p>
+        </div>
+      ) : selectedPolicies.length === 0 ? (
+        emptyState
+      ) : (
+        <div className="results-container">
+          <SectionHeading title="Public finances" subtitle="Net effect of the selected measures on government revenue and spending, by year." />
+          <section id="revenue" className="report-section hero-chart">
+            <BudgetaryImpactChart
+              data={budgetData}
+              selectedYear={selectedYear}
+            />
+            <p className="historical-sum-note">
+              The net impact is the sum of the measures, each costed on its
+              own against today's law, not one run of the whole event.
+            </p>
+            <Disclosure id="obr-comparison" inCard title="Compare with the OBR's costing" contentClassName="obr-content">
+              {views.obr.value
+                ? <HistoricalObrTable rows={views.obr.value} budgetary={published.budgetary} selectedPolicies={selectedPolicies} selectedYear={selectedYear} />
+                : <UnavailableNotice reason="The OBR comparison is unavailable"><p>{views.obr.error}</p></UnavailableNotice>}
+            </Disclosure>
+          </section>
+
+          <SectionHeading title="Households by income" subtitle="How net income changes across the income distribution in the selected year." />
+          <section id="deciles" className="report-section distributional-section">
+            <div className="charts-grid">
+              <WaterfallChart rawData={rawWinnersLosers} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
+              <DistributionalChart rawData={rawDistributional} selectedPolicies={selectedPolicies} selectedYear={selectedYear} years={years} />
+            </div>
+          </section>
+        </div>
+      )}
+
+      <SectionHeading title="Measures" subtitle="What each modelled measure does, and the measures this page does not model." />
+      <section id="policy-details" className="report-section">
+        <Disclosure title="About the modelled measures" contentClassName="policy-details-content">
+          <div className="policy-grid">
+            {catalogue.measures.map((measure) => (
+              <div key={measure.id} className="policy-detail">
+                <p className="policy-detail-name">{measure.name}</p>
+                <p className="policy-detail-text">{measure.description}</p>
+              </div>
+            ))}
+          </div>
+        </Disclosure>
+        <Disclosure title="Measures not modelled" contentClassName="policy-details-content">
+          {views.notModelled.value
+            ? <NotModelledList rows={views.notModelled.value} />
+            : <UnavailableNotice reason="The list of measures not modelled is unavailable"><p>{views.notModelled.error}</p></UnavailableNotice>}
+        </Disclosure>
+      </section>
+
+      <p className="historical-scorecard-link">
+        The replay, its coverage across past events and its comparison with
+        the OBR are on the{" "}
+        <a href={SCORECARD_URL} target="_blank" rel="noopener noreferrer">PolicyEngine scorecard</a>.
+      </p>
+    </>
   );
 }
-
-export default HistoricalReleasePage;

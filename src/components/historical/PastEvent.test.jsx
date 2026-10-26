@@ -1,13 +1,12 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import HistoricalReleasePage, { CoveragePanel, formatBn, HISTORICAL_PROVISIONAL_LABEL, loadHistoricalViews, SCORECARD_URL } from "./HistoricalReleasePage";
-import { isDisplayable, PROVISIONAL_LABEL } from "../../utils/publication/manifest";
-import HistoricalRelease, { dynamicParams, generateMetadata, generateStaticParams } from "../../app/budgets/[release]/page";
+import { CoveragePanel, formatBn, loadHistoricalViews } from "./PastEvent";
+import { dynamicParams, generateMetadata, generateStaticParams } from "../../app/budgets/[release]/page";
 import HistoricalReleases from "../../app/budgets/page";
 import { coverageOf, releaseFixtureFetch, toCsv } from "../../test/historicalFixture";
 import { fixtureJson, IN_DATA } from "../../test/publicationFixture";
 import { COVERAGE_HEADER, coverageProblems, NOT_MODELLED_HEADER, OBR_HEADER, fraction, parseCoverage } from "../../utils/historical";
-import { CURRENT_BUDGET, dataRoot, HISTORICAL_RELEASES } from "../../utils/publication/release";
+import { CURRENT_BUDGET, HISTORICAL_RELEASES } from "../../utils/publication/release";
 import { loadDashboard } from "../../utils/loadDashboard";
 
 // Synthetic flat views for the publication fixture, served as a past
@@ -52,113 +51,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const ready = () => screen.findByText("Today's model and data, not what was known at the time.", {}, { timeout: 5000 });
-
-describe("a past event's page", () => {
-  it("says the figures are on today's model and data, and names that model and data", async () => {
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    expect(screen.getByRole("heading", { level: 1, name: RELEASE.name })).toBeInTheDocument();
-    const banner = screen.getByRole("note");
-    const { model, data } = fixtureJson("manifest.json").execution.identity;
-    expect(banner).toHaveTextContent(`${model.name} ${model.version}, ${data.dataset} (build ${data.build_id})`);
-    expect(banner).toHaveTextContent("They are not the estimates published at the time.");
-    // The fixture publishes one year, named once
-    expect(banner).toHaveTextContent(`today's law, for ${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}.`);
-    expect(screen.getByText(/Change in government revenue each year/)).toBeInTheDocument();
-    // A past event awaits no Treasury costing
-    expect(screen.getByText(HISTORICAL_PROVISIONAL_LABEL)).toBeInTheDocument();
-    expect(screen.queryByText(PROVISIONAL_LABEL)).toBeNull();
-    // Any sum is labelled as a sum of separately costed measures
-    expect(await screen.findByText(/sum of the measures, each costed on its own/)).toBeInTheDocument();
-  });
-
-  it("reads every file from its own release root, and nothing from this Budget's", async () => {
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    await screen.findByRole("heading", { name: "Revenue impact" });
-    const root = `${dataRoot("", RELEASE)}/`;
-    expect(fetchImpl.calls.length).toBeGreaterThan(3);
-    expect(fetchImpl.calls.every((url) => url.startsWith(root))).toBe(true);
-    for (const file of Object.keys(FLAT)) expect(fetchImpl.calls).toContain(`${root}${file}`);
-  });
-
-  it("shows the coverage with exact shares, and the replay's computed measures", async () => {
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    const coverage = document.getElementById("coverage");
-    const total = MEASURES.length;
-    expect(coverage).toHaveTextContent(`Its replay computed ${PAGE_IDS.length} of the ${total}`);
-    const partial = within(coverage).getByText("Partly expressible").closest("tr");
-    expect(partial).toHaveTextContent(`${PAGE_IDS.length}75.0%`);
-    expect(within(coverage).getByText(/No executable construction yet/)).toBeInTheDocument();
-  });
-
-  it("counts the measures with figures here apart from those the replay computed", async () => {
-    // Review's probe: the replay computed every measure the fixture
-    // publishes, but some of them are held or not computable, so the
-    // coverage once claimed more measures with figures than the page has
-    const measures = fixtureJson("manifest.json").measures;
-    const shown = PAGE_IDS.filter((id) => isDisplayable(measures[id])).length;
-    expect(shown).toBeLessThan(PAGE_IDS.length);
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    const coverage = document.getElementById("coverage");
-    expect(coverage).toHaveTextContent(`This page has figures for ${shown} of its ${PAGE_IDS.length} measures; the others are listed above as unavailable.`);
-    expect(coverage).not.toHaveTextContent("with figures on this page");
-  });
-
-  it("lists the measures it does not model by class and gap, with their reasons", async () => {
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    fireEvent.click(screen.getByRole("button", { name: "Measures not modelled" }));
-    const list = document.querySelector(".not-modelled");
-    expect(within(list).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
-      "Not expressible: No executable construction yet. This does not show that the model lacks the tax or benefit. (1)",
-      "Not expressible: A model mechanism or data input is missing. (1)",
-      "Outside household scope (1)",
-    ]);
-    expect(list).toHaveTextContent("The data has no gadgets.");
-    expect(list).toHaveTextContent("£0.3bn");
-  });
-
-  it("compares with the OBR's costing beside this page's figure and the scorecard's", async () => {
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    fireEvent.click(await screen.findByRole("button", { name: "Compare with the OBR's costing" }));
-    const table = document.querySelector(".historical-obr-table");
-    const alpha = within(table).getByText("Alpha").closest("tr");
-    expect(alpha).toHaveTextContent("£2.5bn£2.0bn");
-    expect(alpha).toHaveTextContent("£1.9bn");
-    // An empty replay cell is missing, never zero
-    expect(within(table).getByText("Beta").closest("tr")).toHaveTextContent(/—$/);
-    const note = document.querySelector(".historical-obr");
-    expect(note).toHaveTextContent(PAIR);
-    expect(within(note).getByRole("link", { name: "scorecard" })).toHaveAttribute("href", SCORECARD_URL);
-  });
-
-  it("shows nothing when its root holds another release's manifest", async () => {
-    await serve({ identity: CURRENT_BUDGET });
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    expect(await screen.findByText(`Published results for the ${RELEASE.name} are unavailable`)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Revenue impact" })).toBeNull();
-    expect(screen.queryByRole("note")).toBeNull();
-  });
-
-  it("says so when no results are published yet", async () => {
-    await serve({ overrides: { "manifest.json": 404 } });
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    expect(await screen.findByText(`No results for the ${RELEASE.name} are published yet`)).toBeInTheDocument();
-  });
-
-  it("withholds a flat view whose bytes changed, and shows the rest", async () => {
-    await serve({ overrides: { "coverage.csv": `${FLAT["coverage.csv"]}\n` } });
-    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
-    await ready();
-    expect(screen.getByText("The coverage of this event is unavailable")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Revenue impact" })).toBeInTheDocument();
-  });
-});
+// The past event's sections as the dashboard shows them are tested with
+// the dashboard (src/AppReleases.test.jsx); these are its loaders, panels
+// and routes on their own
 
 describe("the flat views are checked against each other", () => {
   const catalogueFor = async (flat) => {
@@ -214,12 +109,6 @@ describe("the routes", () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ release: RELEASE.id }) });
     expect(metadata.title).toBe(`${RELEASE.name} on today's model and data`);
     await expect(generateMetadata({ params: Promise.resolve({ release: CURRENT_BUDGET.id }) })).rejects.toThrow();
-  });
-
-  it("render the event's page for its id", async () => {
-    render(await HistoricalRelease({ params: Promise.resolve({ release: RELEASE.id }) }));
-    await ready();
-    expect(screen.getByRole("heading", { level: 1, name: RELEASE.name })).toBeInTheDocument();
   });
 
   it("list every past event, newest first, each linking to its page", () => {

@@ -31,6 +31,23 @@ export const HISTORICAL_RELEASES = Object.freeze(
   RELEASES.filter((release) => release.kind === "historical"),
 );
 
+/**
+ * The past events this build ships a manifest for, in registry order:
+ * next.config.ts lists them at build time. With no list (tests, or a build
+ * without the config) there are none, so the page requests no past event's
+ * manifest it was not built with. A listed event is a candidate only: the
+ * page offers it once its manifest verifies.
+ */
+export function publishedHistoricalReleases(list = process.env.NEXT_PUBLIC_PUBLISHED_RELEASES) {
+  const ids = new Set((list ?? "").split(",").filter(Boolean));
+  return HISTORICAL_RELEASES.filter((release) => ids.has(release.id));
+}
+
+/** Releases, newest first by date. */
+export function newestFirst(releases) {
+  return [...releases].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
 /** The registered release with this id, or undefined. */
 export function findRelease(id) {
   return RELEASES.find((release) => release.id === id);

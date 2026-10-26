@@ -34,6 +34,10 @@ import { PublicationCheckContext, serialisedChecks } from "./utils/publication/c
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import PolicyCards from "./components/PolicyCards";
+import PillSelect from "./components/PillSelect";
+import { HISTORICAL_PROVISIONAL_LABEL, loadHistoricalViews, PastEventBanner, PastEventPopulation } from "./components/historical/PastEvent";
+import { DEFAULT_RELEASE, findRelease, newestFirst, publishedHistoricalReleases } from "./utils/publication/release";
+import { releaseYears } from "./utils/historical";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
@@ -76,11 +80,42 @@ export function opensYoungPeople({ search, hash }) {
   );
 }
 
+/**
+ * The views a release has. A past event is one view, Population impact
+ * without its sub-tabs (docs/historical-releases.md, question 4): Household
+ * impact, Young people, Living standards, results by area and the example
+ * households are built on 2026 inputs, and Methodology describes this
+ * Budget's modelling.
+ */
+export function viewsFor(release = DEFAULT_RELEASE) {
+  return release.kind === "historical" ? VIEWS.filter((view) => view.value === DEFAULT_VIEW) : VIEWS;
+}
+
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
-export function viewFromLocation({ search, hash }) {
+export function viewFromLocation({ search, hash }, views = VIEWS) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
   const tab = viewKey(new URLSearchParams(search).get("tab"));
-  return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
+  return views.some((view) => view.value === tab) ? tab : DEFAULT_VIEW;
+}
+
+// The selected release, when it is not the page's own: ?budget=<id>
+export const RELEASE_PARAM = "budget";
+
+/**
+ * The address for another release: ?budget= names it (none for the page's
+ * own), and what belonged to the release left goes, since each release has
+ * its own measures, years and views: the measures, the sub-tab, the Young
+ * people hash, and a view the new release does not have.
+ */
+export function releaseAddress({ pathname, search, hash }, release, own = DEFAULT_RELEASE) {
+  const params = new URLSearchParams(search);
+  params.delete("policies");
+  params.delete(SUB_TAB_PARAM);
+  if (params.has("tab") && !viewsFor(release).some((view) => view.value === viewKey(params.get("tab")))) params.delete("tab");
+  if (release === own) params.delete(RELEASE_PARAM);
+  else params.set(RELEASE_PARAM, release.id);
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
 }
 
 
@@ -113,9 +148,19 @@ const NOTHING_PUBLISHED = Object.freeze({
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
 
-function Dashboard({ published, unavailable = null, updated = false }) {
+/**
+ * The page for one release: this Budget's by default, or a past event's.
+ * `releases` lists the releases the band offers, newest first, when there
+ * is more than one; `onReleaseChange` takes the id chosen.
+ */
+function Dashboard({ published, unavailable = null, updated = false, release = DEFAULT_RELEASE, releases = null, onReleaseChange }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
+  const past = release.kind === "historical";
+  const views = viewsFor(release);
+  // A past event's own years; this Budget's are the dashboard's
+  const pastYears = useMemo(() => (past ? releaseYears(catalogue) : null), [past, catalogue]);
+  const chartYears = pastYears ?? DISPLAY_YEARS;
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
   const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
@@ -129,7 +174,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
   const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
   const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
-  const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
+  const [distributionalYear, setDistributionalYear] = useState(() => (pastYears ? pastYears[0] : DEFAULT_DISPLAY_YEAR));
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
@@ -145,10 +190,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
   useLayoutEffect(() => {
-    if (opensYoungPeople(window.location)) dropSubTab("young");
-    setActiveTab(viewFromLocation(window.location));
+    if (!past && opensYoungPeople(window.location)) dropSubTab("young");
+    setActiveTab(viewFromLocation(window.location, views));
     setLocationReady(true);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the address is read once, at mount; a release is its own mount
 
   useEffect(() => {
     if (!locationReady) return;
@@ -169,10 +214,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   }, [selectedPolicies, selectionChosen, activeTab, locationReady, unavailable]);
 
   const results = useMemo(() => ({
-    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
+    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, chartYears),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
-  }), [published, catalogue, selectedPolicies]);
+  }), [published, catalogue, selectedPolicies, chartYears]);
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
@@ -217,6 +262,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // A link to #young-people from elsewhere on the page opens Population
   // impact's Young people sub-tab (PopulationImpactView shows it if open)
   useEffect(() => {
+    if (past) return undefined;
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
         dropSubTab("young");
@@ -225,7 +271,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [past]);
 
   // The tab bar's place in the page, before it sticks under the band
   const tabsSentinelRef = useRef(null);
@@ -284,7 +330,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
-  const yearShown = yearPillShown(activeTab);
+  // A past event with no figures yet has no years to offer
+  const yearShown = yearPillShown(activeTab) && (!pastYears || pastYears.length > 0);
+  // The release pill applies to Population impact, the one view every
+  // release has
+  const releaseShown = activeTab === DEFAULT_VIEW;
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -323,14 +373,32 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"}>
+    <div className={past ? "app historical-release" : "app"} ref={appRef} data-band={yearShown ? undefined : "compact"} data-publication={unavailable ? "unavailable" : "verified"} data-release={past ? release.id : undefined}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
             selector still in reach. The sentinel tells it when it is stuck. */}
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
-        <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
-          <h1>UK Autumn Budget 2026</h1>
+        <div className={`title-row ${titleStuck ? "is-stuck" : ""}${releases ? " has-releases" : ""}`}>
+          <h1>{past ? release.name : "UK Autumn Budget 2026"}</h1>
+
+          {/* Which Budget or past fiscal event the page shows, once more
+              than one is published: each has its own measures, years and
+              views, so choosing one starts the page afresh */}
+          {releases && (
+            <div
+              className={`band-release ${releaseShown ? "" : "is-hidden"}`}
+              aria-hidden={releaseShown ? undefined : "true"}
+              inert={!releaseShown}
+            >
+              <PillSelect
+                options={releases.map((option) => ({ value: option.id, label: option.name }))}
+                value={release.id}
+                onChange={onReleaseChange}
+                name="Budget"
+              />
+            </div>
+          )}
 
           {/* The year applies to every chart on Population impact (both
               sub-tabs) and to Household impact, and
@@ -347,6 +415,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <YearSlider
               selectedYear={distributionalYear}
               onYearChange={setDistributionalYear}
+              {...(pastYears?.length ? { years: pastYears } : {})}
             />
           </div>
           <div
@@ -364,6 +433,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
+        {past ? (
+          <PastEventBanner release={release} years={pastYears} />
+        ) : (
         <p className="dashboard-intro">
           This dashboard uses <SourceLink source="policyengine_uk_model" /> to
           show how Autumn Budget 2026 measures would affect the public
@@ -373,13 +445,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <SourceLink source="obr_efo_current" />. Choose a year and
           policies in the bar above.
         </p>
+        )}
         {updated && (
           <p className="publication-updated" role="status">
             Newer results were published while this page was open; it now shows them.
           </p>
         )}
         {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
-          <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
+          <p className="publication-provisional" role="status">{past ? HISTORICAL_PROVISIONAL_LABEL : PROVISIONAL_LABEL}</p>
         )}
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
@@ -390,14 +463,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
-          tabs={VIEWS}
+          tabs={views}
           value={activeTab}
           onChange={handleTabChange}
           tabId={tabId}
           panelId={panelId}
         />
 
-        {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
+        {views.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
         <div
           key={value}
           id={panelId(value)}
@@ -410,7 +483,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              <p>{past ? `Figures appear here once results for the ${release.name} are published.` : "Figures appear here once the 2026 Budget measures are approved for publication."}</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -425,6 +498,18 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <LivingStandardsTab active={activeTab === value} />
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
+        ) : past ? (
+          // A past event's one view (components/historical/PastEvent.jsx)
+          <PastEventPopulation
+            published={published}
+            views={published.views}
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+            years={pastYears}
+            budgetData={results.budgetData}
+            emptyState={emptyState}
+            note={showingLine}
+          />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
@@ -590,10 +675,38 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 // regains focus
 const RECHECK_MS = 5 * 60 * 1000;
 
-function App() {
+/**
+ * One release's verified publication: loadDashboard's, and for a past event
+ * its three flat views, checked against the same catalogue
+ * (components/historical/PastEvent.jsx).
+ */
+async function loadRelease(base, release, { signal }) {
+  const published = await loadDashboard(base, { signal, release });
+  if (release.kind !== "historical" || published.status !== "ready") return published;
+  return { ...published, views: await loadHistoricalViews(published.catalogue, { signal }) };
+}
+
+/**
+ * The dashboard. `releaseId` is the release the page opens with: this
+ * Budget's on `/`, a past event's on its own route. A link's ?budget= opens
+ * another registered release instead.
+ *
+ * @param {{releaseId?: string}} [props]
+ */
+function App({ releaseId } = {}) {
+  const own = (releaseId && findRelease(releaseId)) || DEFAULT_RELEASE;
+  // The server and the first render show the page's own release; the
+  // address is read before paint, and only then is anything loaded
+  const [chosen, setChosen] = useState(null);
+  const [located, setLocated] = useState(false);
+  const release = chosen ?? own;
+  // Each result is kept with the release it is of, so a release's header
+  // never shows over another release's figures, not even for one render
   const [published, setPublished] = useState(null);
   const [error, setError] = useState(null);
-  const [updated, setUpdated] = useState(false);
+  const [updated, setUpdated] = useState(null);
+  // The past events this build ships, each offered once its manifest verifies
+  const [offered, setOffered] = useState([]);
   const current = useRef(null);
   const confirmer = useRef(null);
   // Stable for the page's life: each Household impact request waits on it
@@ -601,18 +714,47 @@ function App() {
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],
   );
+  useLayoutEffect(() => {
+    const id = new URLSearchParams(window.location.search).get(RELEASE_PARAM);
+    const named = id === null ? undefined : findRelease(id);
+    if (named && named !== own) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is read once, before paint
+      setChosen(named);
+    } else if (id !== null) {
+      // An unknown release, or the page's own, leaves the address
+      const params = new URLSearchParams(window.location.search);
+      params.delete(RELEASE_PARAM);
+      window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
+    }
+    setLocated(true);
+  }, [own]);
+
   useEffect(() => {
+    const candidates = publishedHistoricalReleases();
+    // A build with no past event's manifest asks for none
+    if (!candidates.length) return undefined;
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const controller = new AbortController();
+    Promise.all(candidates.map((candidate) =>
+      loadManifest(base, { signal: controller.signal, release: candidate }).then((manifest) => (manifest ? candidate : null), () => null),
+    )).then((verified) => { if (!controller.signal.aborted) setOffered(verified.filter(Boolean)); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!located) return undefined;
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    const controller = new AbortController();
+    current.current = null;
     const show = (result) => {
       current.current = result;
-      setPublished(result);
+      setPublished({ release, result });
       setError(null);
     };
     let initialComplete = false;
-    const initial = loadDashboard(base, { signal: controller.signal })
+    const initial = loadRelease(base, release, { signal: controller.signal })
       .then((result) => { if (!controller.signal.aborted) show(result); })
-      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
+      .catch((failure) => { if (!controller.signal.aborted) setError({ release, message: failure.message }); })
       .finally(() => { initialComplete = true; });
 
     // An open page follows the publication: a newer manifest replaces the
@@ -622,22 +764,22 @@ function App() {
     // Each check resolves to the live snapshot it found, or null for none.
     const run = async () => {
       try {
-        const live = await loadManifest(base, { signal: controller.signal });
+        const live = await loadManifest(base, { signal: controller.signal, release });
         const catalogue = current.current?.catalogue;
         const shown = catalogue?.manifest?.snapshotSha256 ?? null;
         const failed = Object.keys(catalogue?.failures ?? {}).length > 0;
         if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return shown;
-        const next = await loadDashboard(base, { signal: controller.signal });
+        const next = await loadRelease(base, release, { signal: controller.signal });
         if (controller.signal.aborted) return null;
         show(next);
         const found = next.catalogue.manifest?.snapshotSha256 ?? null;
-        if (found !== shown) setUpdated(true);
+        if (found !== shown) setUpdated(release);
         return found;
       } catch (failure) {
         if (controller.signal.aborted) return null;
         current.current = null;
         setPublished(null);
-        setError(failure.message);
+        setError({ release, message: failure.message });
         return null;
       }
     };
@@ -662,21 +804,46 @@ function App() {
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
-  const unavailable = !published && !error
+  }, [release, located]);
+
+  // Another release starts the page afresh: its own address, measures,
+  // years and views
+  const changeRelease = useCallback((id) => {
+    const next = findRelease(id);
+    if (!next || next === release) return;
+    window.history.replaceState({}, "", releaseAddress(window.location, next, own));
+    setUpdated(null);
+    setChosen(next);
+  }, [release, own]);
+
+  const past = release.kind === "historical";
+  const result = published?.release === release ? published.result : null;
+  const failure = error?.release === release ? error.message : null;
+  const unavailable = !result && !failure
     ? { reason: "Loading published measures…" }
-    : error
-    ? { reason: "Published results are unavailable", detail: error }
-    : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet" }
+    : failure
+    ? { reason: past ? `Published results for the ${release.name} are unavailable` : "Published results are unavailable", detail: failure }
+    : result.status === "no-manifest"
+      ? { reason: past ? `No results for the ${release.name} are published yet` : "No Budget results are published yet" }
       : null;
-  const shown = unavailable ? NOTHING_PUBLISHED : published;
-  // One snapshot per mount: a newer one starts the views afresh
+  const shown = unavailable ? NOTHING_PUBLISHED : result;
+  // The band offers a choice once a past event's manifest verifies: this
+  // Budget, every verified past event and the one shown, newest first
+  const releases = offered.length ? newestFirst([...new Set([DEFAULT_RELEASE, ...offered, release])]) : null;
+  // One release and snapshot per mount: another starts the views afresh
   const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
   return (
     <PublicationCheckContext.Provider value={confirmPublication}>
       <MeasureCatalogueProvider catalogue={shown.catalogue}>
-        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+        <Dashboard
+          key={`${release.id}:${snapshot}`}
+          published={shown}
+          unavailable={unavailable}
+          updated={updated === release && !unavailable}
+          release={release}
+          releases={releases}
+          onReleaseChange={changeRelease}
+        />
       </MeasureCatalogueProvider>
     </PublicationCheckContext.Provider>
   );

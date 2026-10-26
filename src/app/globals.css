@@ -285,6 +285,58 @@ body {
   visibility: hidden;
 }
 
+/* The release pill: which Budget or past event the page shows. It is there
+   only once more than one is published (App.jsx sets has-releases), so the
+   band is unchanged until then. Wide: after the title. Below 900px: beside
+   the year pill, and not on a view without one. 480px and below: between
+   the year and policy pills. */
+.title-row.has-releases {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "title release year policy";
+}
+
+.band-release {
+  grid-area: release;
+}
+
+@media (max-width: 899px) {
+  .title-row.has-releases {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title policy"
+      "year release";
+  }
+
+  .band-release {
+    justify-self: end;
+  }
+
+  .app[data-band="compact"] .band-release {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Its list spans the band, as the other pills' do */
+  .band-release .pill-select {
+    position: static;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-row.has-releases {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "title title title"
+      "year release policy";
+    column-gap: 8px;
+  }
+
+  .band-release {
+    justify-self: start;
+  }
+}
+
 .tab-panel {
   padding-top: 32px;
 }
