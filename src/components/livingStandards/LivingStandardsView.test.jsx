@@ -186,7 +186,7 @@ describe("the Pre-measures forecast view", () => {
     // choice in the address, the sentence following
     choose(growth, "Growth view", "Year by year");
     choose(growth, "Income groups", "Deciles");
-    choose(growth, "Housing costs", "After (AHC)");
+    choose(growth, "Housing costs", "After housing costs");
     choose(growth, "Population", "Non-pensioners");
     const chosen = new URLSearchParams(window.location.search);
     expect([chosen.get("ls_growth"), chosen.get("ls_groups"), chosen.get("ls_housing"), chosen.get("ls_pop")]).toEqual([
@@ -203,7 +203,7 @@ describe("the Pre-measures forecast view", () => {
     // Back to the defaults: nothing left in the address
     choose(growth, "Growth view", "Whole period");
     choose(growth, "Income groups", "Quintiles");
-    choose(growth, "Housing costs", "Before (BHC)");
+    choose(growth, "Housing costs", "Before housing costs");
     choose(growth, "Population", "All people");
     for (const param of ["ls_growth", "ls_groups", "ls_housing", "ls_pop"]) {
       expect(new URLSearchParams(window.location.search).has(param)).toBe(false);

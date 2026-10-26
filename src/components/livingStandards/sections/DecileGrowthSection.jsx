@@ -8,11 +8,12 @@
 import PillSelect from "../../PillSelect";
 import YearRangeSelect from "../YearRangeSelect";
 import { LsBarChart } from "../LsCharts";
-import { divergingAxis, incomeGroupColours } from "../../../utils/chartTheme";
+import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
   changeVerb,
   fyDash,
   fyLabel,
+  fyShortLabel,
   fyStart,
   formatOneDp,
   formatPounds,
@@ -94,6 +95,7 @@ export function annualRange(values) {
  */
 export default function useQuintileGrowthView(data, range = null, setRange = null) {
   const offer = available(data);
+  const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "period");
   const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, offer.groupings[0]);
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
@@ -130,10 +132,11 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     ...Object.fromEntries(r.annual.map((v, i) => [`g${i + 1}`, v * 100])),
   }));
   const groupSeries = colours.map((colour, i) => ({ key: `g${i + 1}`, name: groupName(i), colour }));
-  // The ends of the ramp (and its middle for five or fewer groups) name it
-  const legendItems = (n <= 5 ? groupSeries : [groupSeries[0], groupSeries[n - 1]]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
-
   const annual = view === "annual" && annualRows.length > 0;
+  // The ramp's ends name it; year by year with five groups, every group
+  // (whole period, the axis numbers the groups)
+  const legendItems = (annual && n <= 5 ? groupSeries : [groupSeries[0], groupSeries[n - 1]]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
+
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
   const axis = divergingAxis(values, { pad: 0.1 });
   const lowAnnual = annualYears.map((r) => r.annual[0] * 100);
@@ -179,7 +182,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         name="Housing costs"
         value={basis}
         onChange={setBasis}
-        options={offer.bases.map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
+        options={offer.bases.map((id) => ({ value: id, label: id === "bhc" ? "Before housing costs" : "After housing costs", badge: id === "bhc" ? "Before" : "After" }))}
       />
       {offer.populations.length > 1 && (
         <PillSelect
@@ -201,7 +204,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const fileStem = `income-growth-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
 
   return {
-    period: periodLabel(annual ? annualYears[0].year : first.year, end.year),
+    period: periodLabel(first.year, end.year),
     summary,
     about,
     notes: [
@@ -246,7 +249,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
       <LsBarChart
         data={annualRows}
         xKey="year"
-        xFormat={fyLabel}
+        // On a phone "28-29", so every year is labelled
+        xFormat={narrow ? fyShortLabel : fyLabel}
         series={groupSeries}
         legendItems={legendItems}
         yFormat={pctTick}
@@ -258,6 +262,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         yTicks={axis.ticks}
         barGap={n > 10 ? 0 : 1}
         maxBarSize={n > 5 ? 14 : 24}
+        barCategoryGap={n > 10 ? "8%" : "20%"}
       />
     ) : (
       <LsBarChart

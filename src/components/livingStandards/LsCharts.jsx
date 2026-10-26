@@ -218,6 +218,7 @@ export function LsBarChart({
   baseYear = BASE_YEAR,
   cellColours = null,
   barGap = 4,
+  barCategoryGap = "20%",
   maxBarSize = 56,
   tooltipLabelFormat = null,
 }) {
@@ -230,7 +231,7 @@ export function LsBarChart({
   return (
     <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={MARGIN} barCategoryGap="20%" barGap={barGap}>
+        <BarChart data={data} margin={MARGIN} barCategoryGap={barCategoryGap} barGap={barGap}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
