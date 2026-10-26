@@ -158,6 +158,10 @@ describe("Personal impact's live answers", () => {
       // Review of d2ec6f2, finding 1
       ["another commit, though the same packages and net income (another sweep)", (answer) => ({ git_sha: "d".repeat(40), sweep: otherSweep(answer.sweep) })],
       ["no commit (a deploy from an edited checkout, or an older build)", (answer) => ({ git_sha: null, sweep: otherSweep(answer.sweep) })],
+      // W5's review of #104: an answer without its part was accepted, and
+      // the breakdown then said it was unavailable
+      ["neither part it was asked for", () => ({ by_policy: null, sweep: null })],
+      ["a malformed commit", (answer) => ({ git_sha: "not-a-commit", sweep: otherSweep(answer.sweep) })],
     ]) {
       it(`asks the main API when the detail build answers with ${why}`, async () => {
         const calls = [];

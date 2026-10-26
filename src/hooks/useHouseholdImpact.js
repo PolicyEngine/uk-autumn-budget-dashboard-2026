@@ -211,11 +211,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
-          return (
-            include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null) &&
-            stageMismatch(first, detail, { sameBuild: true }) === null &&
-            mismatch(detail) === null
-          );
+          const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
+          return answered && stageMismatch(first, detail, { sameBuild: true }) === null && mismatch(detail) === null;
         } catch {
           return false;
         }

@@ -5,7 +5,8 @@ uploaded source). A Modal deploy copies files from the checkout it runs in,
 so its commit is that checkout's HEAD, and only when every copied file has
 exactly HEAD's bytes and nothing else is copied (``checkout_commit``). The
 comparison reads the files and HEAD's tree, never git's index or status:
-review of e78fbf4, finding 1.
+review of e78fbf4, finding 1. HEAD's tree is its own commit's, never a
+replacement's: review of cc15d50, finding 1.
 """
 
 import os
@@ -18,6 +19,7 @@ from uk_budget_data.runtime_identity import (
     IMAGE_LEAVES_OUT,
     checkout_commit,
     checkout_differences,
+    printable_paths,
 )
 
 
@@ -226,3 +228,82 @@ def test_the_deployed_paths_are_what_the_modal_image_copies():
     assert IMAGE_LEAVES_OUT == {"src/uk_budget_data": "__pycache__"}
     assert source.count("ignore=") == 1
     assert 'ignore=["**/__pycache__/**"]' in source
+
+
+def _replace_head(checkout):
+    """HEAD (A), and a commit B whose reforms.py differs, which git is told
+    to read in A's place (``git replace A B``)."""
+    head = _git(checkout, "rev-parse", "HEAD")
+    target = checkout / "src" / "uk_budget_data" / "reforms.py"
+    target.write_text("X = 2\n")
+    _git(checkout, "add", "-A")
+    tree = _git(checkout, "write-tree")
+    other = _git(checkout, "commit-tree", tree, "-p", head, "-m", "other")
+    _git(checkout, "read-tree", "HEAD")
+    _git(checkout, "replace", head, other)
+    return head, other, target
+
+
+def test_a_replaced_head_never_reports_its_commit_for_the_replacement_s_files(
+    checkout,
+):
+    # Review of cc15d50, finding 1: ls-tree followed the replacement to B's
+    # tree while rev-parse named A, so B's files were reported as A
+    head, _, _ = _replace_head(checkout)
+    # The checkout holds B's files; git itself names HEAD as A
+    assert _git(checkout, "rev-parse", "HEAD") == head
+    assert checkout_differences(checkout) == ["src/uk_budget_data/reforms.py"]
+    assert checkout_commit(checkout) is None
+
+
+def test_a_replaced_head_with_its_own_files_reports_its_commit(checkout):
+    head, _, target = _replace_head(checkout)
+    target.write_text("X = 1\n")
+    assert checkout_differences(checkout) == []
+    assert checkout_commit(checkout) == head
+
+
+def _commit_raw_name(checkout, raw: bytes, data: bytes):
+    """Commit a file named by bytes that aren't UTF-8, without writing it
+    (some file systems refuse such names)."""
+    blob = subprocess.run(
+        ["git", "-C", str(checkout), "hash-object", "-w", "--stdin"],
+        input=data,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+    subprocess.run(
+        [
+            b"git",
+            b"-C",
+            os.fsencode(checkout),
+            b"update-index",
+            b"--add",
+            b"--cacheinfo",
+            b"100644," + blob + b"," + raw,
+        ],
+        capture_output=True,
+        check=True,
+    )
+    _git(checkout, "commit", "-q", "-m", "raw name")
+
+
+def test_a_committed_name_that_is_not_utf8_is_compared_not_a_crash(checkout):
+    # Review of cc15d50: such a name raised UnicodeDecodeError
+    raw = b"data_inputs/rates-\xff.csv"
+    _commit_raw_name(checkout, raw, b"a,b\n")
+    # Committed but not on disk here: missing from the copy
+    assert checkout_differences(checkout) == [os.fsdecode(raw)]
+    assert checkout_commit(checkout) is None
+    # And it can be printed
+    assert "rates-" in printable_paths(checkout_differences(checkout))
+
+
+def test_a_name_that_is_not_utf8_matches_when_its_bytes_do(checkout):
+    raw = b"data_inputs/rates-\xff.csv"
+    try:
+        (checkout / os.fsdecode(raw)).write_bytes(b"a,b\n")
+    except OSError:
+        pytest.skip("this file system refuses names that aren't UTF-8")
+    _commit_raw_name(checkout, raw, b"a,b\n")
+    assert checkout_commit(checkout) == _git(checkout, "rev-parse", "HEAD")
