@@ -17,11 +17,13 @@ function parse(text) {
     places: decimals ? decimals.length - 1 : 0,
     commas: digits.includes(","),
     minus: sign || "−",
+    // A rounded figure ("44,000") counts in its own steps (thousands)
+    step: decimals ? 1 : 10 ** ((digits.replace(/,/g, "").match(/0+$/)?.[0].length ?? 0)),
   };
 }
 
-function format(value, { places, commas, minus }) {
-  const abs = Math.abs(value);
+function format(value, { places, commas, minus, step }) {
+  const abs = step > 1 ? Math.round(Math.abs(value) / step) * step : Math.abs(value);
   const body = commas
     ? abs.toLocaleString("en-GB", { minimumFractionDigits: places, maximumFractionDigits: places })
     : abs.toFixed(places);
