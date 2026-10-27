@@ -22,12 +22,15 @@ import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
 import ObrPriceCategoriesCard from "../ObrPriceCategoriesCard";
+import FrozenThresholdsCard from "../FrozenThresholdsCard";
 
 // A section's extra card, drawn beside its forecast card in the shared pair
 // (keyed by the forecast section's title): the OBR's prices by spending
-// category beside the inflation measures
+// category beside the inflation measures, and the frozen thresholds beside
+// earnings and other income
 const HISTORY_CARDS = {
   "Inflation and price indices": ObrPriceCategoriesCard,
+  "Income and earnings": FrozenThresholdsCard,
 };
 
 // CPI after housing costs and social rent are not OBR series
@@ -260,7 +263,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               onViewChange={onViewChange}
             />
           ))}
-          {History && <History view={view} onViewChange={onViewChange} />}
+          {History && <History data={data} view={view} onViewChange={onViewChange} />}
         </div>
       </section>,
     ];
