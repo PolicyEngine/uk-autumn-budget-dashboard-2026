@@ -56,7 +56,7 @@ it("records for each entry the description it was written for, and carries no re
   }
 });
 
-// The nine candidate measures of 27 October 2026, as the file the page
+// The eight candidate measures of 27 October 2026, as the file the page
 // serves describes them (`uk-budget-data policy-table` copies reforms.py's
 // description verbatim): each entry must be written for exactly that text,
 // or its card falls back to the bare description.
@@ -67,7 +67,6 @@ const CANDIDATES = [
   "domestic_electricity_zero_vat",
   "threshold_freeze_2031_32",
   "plan_2_threshold_unfreeze",
-  "lha_unfreeze_2027",
   "employer_nics_secondary_threshold_raise",
   "unearned_income_rates_up",
 ];
