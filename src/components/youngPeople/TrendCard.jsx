@@ -42,6 +42,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import Note from "../Note";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
@@ -81,6 +82,29 @@ const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
   { value: "total", label: "Running total", summary: "Running total" },
 ];
+
+/** "2027-28 to 2031-32" for a run of years, else "2027-28, 2029-30 and 2031-32". */
+export const yearList = (years) => {
+  if (years.length > 1 && years.every((year, i) => i === 0 || year === years[i - 1] + 1)) {
+    return `${fiscalYearTick(years[0])} to ${fiscalYearTick(years[years.length - 1])}`;
+  }
+  const labels = years.map(fiscalYearTick);
+  return labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}` : labels[0] ?? "";
+};
+
+/**
+ * Why some age groups' lines stop: a selected policy publishes all ages
+ * but not those groups in some years (its age bands withheld, as too few
+ * survey records), so their sum is unavailable there. Null when every
+ * group is complete in every published year.
+ */
+export function missingGroupsNote(points, labelOf) {
+  const gaps = points.filter((point) => point.published && point.missing?.length > 0);
+  if (!gaps.length) return null;
+  const keys = [...new Set(gaps.flatMap((point) => point.missing))];
+  const groups = keys.length >= AGE_GROUPS.length - 1 ? "every age group except all ages" : keys.map(labelOf).join(", ");
+  return `Not drawn in ${yearList(gaps.map((point) => point.year))}, as a selected policy has too few survey records by age: ${groups}.`;
+}
 
 /** "+£120", "−£180": a change with a true minus. */
 export const signed = (value) => {
@@ -544,6 +568,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const unpublished = raw.filter((point) => !point.published);
   const suppressed = raw.filter((point) => point.published && point.suppressed.length > 0);
   const labelOf = (each) => SERIES.find((series) => series.key === each)?.label ?? each;
+  // A selected policy with all ages but no age bands in some years: said,
+  // never a line that silently stops
+  const missingNote = byMeasure ? null : missingGroupsNote(raw, labelOf);
   const first = fiscalYearTick(shownYears[0]);
   const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change by year, ${first} to ${last}`;
@@ -627,6 +654,18 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     ...lines.filter((line) => line.key === FOCUS),
   ];
 
+  // A faint context line has no dots, so a value with no neighbour (its
+  // line stopping either side) gets one, or it would not be drawn at all
+  const loneDot = (line) => {
+    const present = (i) => data[i]?.[line.key] !== null && data[i]?.[line.key] !== undefined;
+    return function LoneDot({ cx, cy, index }) {
+      if (!present(index) || present(index - 1) || present(index + 1) || cx === undefined || cy === undefined) {
+        return <g key={`lone-${line.key}-${index}`} />;
+      }
+      return <circle key={`lone-${line.key}-${index}`} cx={cx} cy={cy} r={2.5} fill={line.colour} stroke={CHART_COLOURS.surface} strokeWidth={1} />;
+    };
+  };
+
   const lineValue = (each) => (year) => {
     const point = lineData.find((p) => p.year === year);
     return point?.[each] ?? null;
@@ -663,6 +702,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             ...suppressed.map(
               (point) => `${fiscalYearTick(point.year)}, too few survey records: ${point.suppressed.map(labelOf).join(", ")}`,
             ),
+            ...(missingNote ? [missingNote] : []),
           ],
         });
   const download = {
@@ -796,7 +836,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                     groupsView && hovered && hovered !== line.key ? 0.22 : line.context && hovered !== line.key ? CONTEXT_OPACITY : 1
                   }
                   strokeDasharray={line.dash}
-                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
+                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : loneDot(line)}
                   activeDot={line.strong ? { r: 5 } : false}
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
@@ -886,6 +926,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
+        {missingNote && <Note>{missingNote}</Note>}
         <ChartMoreInfo
           members={members}
           year={Number(selectedYear)}

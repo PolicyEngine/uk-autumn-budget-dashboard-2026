@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import { expectStandardDownloads } from "../../test/downloadMenus";
-import TrendCard from "./TrendCard";
+import TrendCard, { missingGroupsNote, yearList } from "./TrendCard";
 import {
   SINGLE_AGE_FIRST,
   SINGLE_AGE_LAST,
@@ -112,6 +112,32 @@ describe("young people data", () => {
     expect(thin[0].suppressed).toEqual(["65+"]);
   });
 
+  it("lists the groups a selected policy withholds in a year it publishes, never zero", () => {
+    // A policy whose age bands are withheld (too few survey records) keeps
+    // its all ages row: the bands are missing, all ages is still the sum
+    const bands = ["0-15", "16-24", "25-34", "35-49", "50-64", "65+"];
+    const rows = [
+      ...[2028, 2029].flatMap((year) => [...bands, "all"].map((band) => row("two_child_limit", year, band, 100))),
+      ...bands.map((band) => row("threshold_freeze_extension", 2028, band, -40)),
+      row("threshold_freeze_extension", 2028, "all", -40),
+      row("threshold_freeze_extension", 2029, "all", -50),
+    ];
+    const [complete, withheld] = changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029]);
+    expect(complete).toMatchObject({ published: true, "16-24": 60, all: 60, missing: [], suppressed: [] });
+    expect(withheld).toMatchObject({ published: true, all: 50, missing: bands, suppressed: [] });
+    for (const band of bands) expect(withheld[band]).toBeNull();
+    expect(missingGroupsNote([complete, withheld], (key) => key)).toBe(
+      "Not drawn in 2029-30, as a selected policy has too few survey records by age: every age group except all ages.",
+    );
+    expect(missingGroupsNote([complete], (key) => key)).toBeNull();
+  });
+
+  it("says a run of years as a range, else lists them", () => {
+    expect(yearList([2027, 2028, 2029, 2030, 2031])).toBe("2027-28 to 2031-32");
+    expect(yearList([2027, 2029])).toBe("2027-28 and 2029-30");
+    expect(yearList([2029])).toBe("2029-30");
+  });
+
   it("never adds a missing, held or unknown selected measure as zero", () => {
     fc.assert(fc.property(fc.integer({ min: -10000, max: 10000 }), (value) => {
       const policies = [{ id: "alpha", name: "Alpha" }, { id: "beta", name: "Beta" }];
@@ -202,6 +228,18 @@ describe("young people cards", () => {
       /^16 to 24-year-olds gain about £30 a person in 2028-29( and lose about £230 from 2029-30, when the [\w ]+ applies)?\.$/,
     );
     expect(description).not.toHaveTextContent(/£ a year/);
+  });
+
+  it("says which years a selected policy's age bands are withheld, under the chart", () => {
+    const bands = ["0-15", "16-24", "25-34", "35-49", "50-64", "65+"];
+    const rows = [
+      ...DISPLAY_YEARS.flatMap((year) => [...bands, "all"].map((band) => row("two_child_limit", year, band, 100))),
+      ...DISPLAY_YEARS.map((year) => row("salary_sacrifice_cap", year, "all", -20)),
+    ];
+    render(<TrendCard {...props} rows={rows} selectedPolicies={["two_child_limit", "salary_sacrifice_cap"]} selectedYear={2029} />);
+    expect(document.querySelector(".young-people-trend .chart-footer .note")).toHaveTextContent(
+      `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
+    );
   });
 
   it("draws every year shown, whatever year is selected", () => {

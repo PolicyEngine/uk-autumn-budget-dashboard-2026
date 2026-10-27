@@ -83,7 +83,10 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * One point per year: for every age group (AGE_GROUPS, keyed by its key),
  * the selected policies' mean changes added up. A year with no rows is
  * `published: false` with null values, never zero; a group whose row in
- * the year is too thin is null and listed in `suppressed`.
+ * the year is too thin is null and listed in `suppressed`; a group with no
+ * row for a selected policy in a year it publishes (the generator withholds
+ * a policy's age bands when some are too thin to publish, keeping all ages)
+ * is null and listed in `missing`, so the card can say so.
  *
  * @param {Array<Object>} rows
  * @param {Array<{id: string, name: string}>} policies
@@ -94,7 +97,7 @@ export function changeByYear(rows, policies, selected, years) {
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const completeSelection = chosen.length > 0 && chosen.length === selected.length;
   return years.map((year) => {
-    const point = { year, published: false, suppressed: [] };
+    const point = { year, published: false, suppressed: [], missing: [] };
     for (const group of AGE_GROUPS) point[group.key] = null;
     if (!completeSelection || chosen.some((policy) => !(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === policy.id))) return point;
     point.published = true;
@@ -109,6 +112,7 @@ export function changeByYear(rows, policies, selected, years) {
         else total += row.mean_change;
       }
       if (thin) point.suppressed.push(group.key);
+      else if (incomplete) point.missing.push(group.key);
       if (!thin && !incomplete) point[group.key] = total;
     }
     return point;
