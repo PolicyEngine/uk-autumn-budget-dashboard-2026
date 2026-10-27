@@ -80,9 +80,9 @@ export const POLICY_DETAILS = [
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Gives people over State Pension age whose total income, the State Pension and any other income, savings interest included, is at or below the full new State Pension an income tax allowance equal to it (£13,037 in 2027-28, rising with it).",
+      "Gives people over State Pension age an income tax allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) when their total income is at or below it.",
     details:
-      "£1 of income above it takes the whole allowance away, so a larger State Pension (with increments or additional State Pension) alone can rule someone out. Based on reporting on 26 and 27 October 2026; the mechanism is an assumption made before the Budget.",
+      "Total income counts the State Pension and any other income, savings interest included. £1 of income above it takes the whole allowance away, so a larger State Pension (with increments or additional State Pension) alone can rule someone out. Based on reporting on 26 and 27 October 2026; the mechanism is an assumption made before the Budget.",
     source: {
       label: "The new State Pension: what you'll get",
       href: "https://www.gov.uk/new-state-pension/what-youll-get",
@@ -168,13 +168,13 @@ export const POLICY_DETAILS = [
       "Holds the personal allowance at £12,570 and the basic rate band at £37,700 in 2031-32, instead of £12,830 and £38,500.",
     details:
       "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
-    caveats: [
-      "The extra year of the freeze is an assumption made before the Budget. Incomes are held fixed, with no behavioural response.",
-    ],
     source: {
       label: "Finance Act 2026, section 10 (thresholds frozen to 2030-31)",
       href: "https://www.legislation.gov.uk/ukpga/2026/11/section/10",
     },
+    caveats: [
+      "The extra year of the freeze is an assumption made before the Budget. Incomes are held fixed, with no behavioural response.",
+    ],
   },
   {
     id: "badr_lifetime_limit_cut",
@@ -250,11 +250,8 @@ export const POLICY_DETAILS = [
     summary:
       "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
     starts: "April 2030",
-    affects: "Carers earning above the Carer's Allowance limit",
     type: "Benefit",
     inForce: { from: "2030-04" },
-    howCalculated:
-      "Reduces Carer's Allowance by £1 for each £1 of weekly net earnings above the £204 limit, instead of stopping it.",
     details:
       "The start year, the limit (frozen at £204) and the £1-for-£1 rate are assumptions from reports of the announcement before the Budget. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {
@@ -272,11 +269,8 @@ export const POLICY_DETAILS = [
     summary:
       "Re-sets Local Housing Allowance rates to the 30th percentile of local rents each April from 2027, ending the freeze at April 2024 levels.",
     starts: "April 2027",
-    affects: "Private renters on Universal Credit or Housing Benefit",
     type: "Benefit",
     inForce: { from: "2027-04" },
-    howCalculated:
-      "Re-sets each area's Local Housing Allowance rates to the 30th percentile of policyengine-uk's projected local rents each April from 2027.",
     details:
       "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
     source: {
@@ -294,11 +288,11 @@ export const POLICY_DETAILS = [
     summary:
       "Raises the earnings threshold for employer National Insurance from £5,000 back to £9,100 a year from April 2027.",
     starts: "April 2027",
-    affects: "Employees, through their employers' National Insurance",
+    affects: "Employers, and their employees through pay",
     type: "National Insurance",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Raises the employer National Insurance threshold from £5,000 to £9,100 a year and pays the saving to employees as higher wages in the same year.",
+      "Sets the employer threshold at £9,100 a year (£175 a week) from 2027-28, rising with CPI from 2031-32 as current law's does; the 15% rate is unchanged.",
     details:
       "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so the National Insurance saved is paid to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
     source: {
@@ -316,16 +310,16 @@ export const POLICY_DETAILS = [
     summary:
       "Raises the income tax rates on dividends, savings income and property income by 2 percentage points from April 2027.",
     starts: "April 2027",
-    affects: "People with dividend, savings or property income",
+    affects: "People with dividends, savings interest or rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Adds 2 percentage points to each income tax rate on dividends, savings income and property income from 2027-28.",
+      "Adds 2 percentage points to each rate from 2027-28: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates.",
     details:
       "The 2-point rise is an assumption made before the Budget, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how much they take in dividends or how they hold savings or property.",
     source: {
-      label: "Dividend tax rates (Finance Act 2022, section 4)",
-      href: "https://www.legislation.gov.uk/ukpga/2022/3/section/4/enacted",
+      label: "HMRC: changes to tax rates for property, savings and dividend income",
+      href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
   },
 ];

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import fc from "fast-check";
 import { measureSummary, POLICY_DETAILS, policyDetailsFor, withPolicyDetails } from "./policyDetails";
 
@@ -21,7 +21,7 @@ const catalogueMeasure = fc
     order: fc.integer(),
     displayable: fc.boolean(),
   })
-  .map(({ asWritten, ...measure }) => (asWritten && writtenFor[measure.id] ? { ...measure, description: writtenFor[measure.id] } : measure));
+  .map(({ asWritten, ...measure }) => (asWritten && Object.hasOwn(writtenFor, measure.id) ? { ...measure, description: writtenFor[measure.id] } : measure));
 
 it("keeps every field the catalogue publishes, whatever details exist for the id", () => {
   fc.assert(
@@ -85,29 +85,6 @@ it("gives every measure policyDetails was written for a tip as described now, or
   }
 });
 
-// Every measure the publication carries (public/data/policy_parameters.json):
-// each card in one form, with no long published description in its place
-const PUBLISHED = JSON.parse(
-  readFileSync(join(process.cwd(), "public/data/policy_parameters.json"), "utf8"),
-).measures;
-
-describe("every published policy's card", () => {
-  it.each(Object.keys(PUBLISHED))("%s has a one-line summary, start, timeline, how it's calculated and a source", (id) => {
-    const fields = policyDetailsFor({ id, description: PUBLISHED[id].description });
-    expect(fields, `${id}: no entry written for its published description`).toBeTruthy();
-    expect(fields.summary).toBeTruthy();
-    expect(fields.summary.length).toBeLessThanOrEqual(200);
-    expect(fields.summary).not.toMatch(/^Candidate measure/);
-    expect(fields.starts).toBeTruthy();
-    expect(fields.inForce?.from).toMatch(/^\d{4}-\d{2}$/);
-    if (fields.inForce.to) expect(fields.ends).toBeTruthy();
-    expect(fields.affects).toBeTruthy();
-    expect(fields.howCalculated).toBeTruthy();
-    expect(fields.source?.label).toBeTruthy();
-    expect(fields.source?.href).toMatch(/^https:\/\/www\.(gov\.uk|legislation\.gov\.uk)\//);
-  });
-});
-
 // The eight candidate measures of 27 October 2026, as the file the page
 // serves describes them (`uk-budget-data policy-table` copies reforms.py's
 // description verbatim): each entry must be written for exactly that text,
@@ -136,7 +113,7 @@ it("has an entry written for each candidate measure's published description, byt
 
 // Every card the page publishes is complete and parallel: a plain one-line
 // summary, a start, when it is in force, the modelling details and a source.
-it("gives every published measure a summary, start, timeline, details and source", () => {
+it("gives every published measure a summary, start, timeline, who it affects, how it is calculated and a source", () => {
   const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
   for (const [id, measure] of Object.entries(file.measures)) {
     const fields = policyDetailsFor({ id, description: measure.description });
@@ -146,6 +123,9 @@ it("gives every published measure a summary, start, timeline, details and source
     expect(fields.starts, id).toBeTruthy();
     expect(fields.inForce?.from, id).toMatch(/^\d{4}-\d{2}$/);
     if (fields.inForce.to) expect(fields.ends, id).toBeTruthy();
+    expect(fields.summary.length, id).toBeLessThanOrEqual(200);
+    expect(fields.affects, id).toBeTruthy();
+    expect(fields.howCalculated, id).toBeTruthy();
     expect(fields.details, id).toBeTruthy();
     expect(fields.source?.label, id).toBeTruthy();
     expect(fields.source?.href, id).toMatch(/^https:\/\/www\.(gov\.uk|legislation\.gov\.uk)\//);

@@ -278,6 +278,7 @@ describe("policy tabs on the household API's answers", () => {
     ]);
     expect(rows.income_tax_total).toMatchObject({ before: -148, after: -255 });
     expect(tab.effect).toBe(385);
+    // The card's short summary (policyDetails.js), not the published description
     expect(tab.how).toMatch(/^Raises the earnings threshold for employer National Insurance/);
   });
 

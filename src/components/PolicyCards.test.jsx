@@ -455,12 +455,6 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("says which year the tiles show only where the change varies by year", () => {
-    const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A threshold, 2027-28$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£1,100+£100");
-  });
-
   it("names the incidence, benefit cap and Budget 2025 caveats on the three new measures", () => {
     expect(detailsById.employer_nics_secondary_threshold_raise.details).toMatch(/total cost of employment fixed.*higher wages/);
     expect(detailsById.lha_unfreeze_2027.details).toMatch(/benefit cap still applies/);
@@ -468,6 +462,12 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "unearned_income_rates_up"]) {
       expect(detailsById[id].source.href, id).toMatch(/^https:\/\/www\.(gov|legislation\.gov)\.uk\//);
     }
+  });
+
+  it("says which year the tiles show only where the change varies by year", () => {
+    const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A threshold, 2027-28$/);
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£1,100+£100");
   });
 
   it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
