@@ -994,11 +994,14 @@
   background: var(--pe-teal-500);
 }
 
-/* New cards and charts fade in rather than pop */
+/* New cards and charts fade in rather than pop. "backwards", not "both":
+   a transform held after the fade makes the card the containing block of
+   its Options sheet (position: fixed), which then sat at the card's foot,
+   partly off the screen, instead of the window's */
 .result-card,
 .single-year-details .report-section > .card,
 .single-year-details .charts-grid > div {
-  animation: single-year-fade-in 0.3s ease-out both;
+  animation: single-year-fade-in 0.3s ease-out backwards;
 }
 
 @keyframes single-year-fade-in {
