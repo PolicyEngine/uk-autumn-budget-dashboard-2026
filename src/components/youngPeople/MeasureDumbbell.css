@@ -357,7 +357,7 @@
 /* A narrower card (half a pair, under 720px), not a phone: each row is a
    header line across the card (icon, the full name and its category on
    one line) over the plot strip, with the value and its gap at the
-   strip's right; rows 12px apart. The axis lines up with the strip. Who
+   strip's right. The axis lines up with the strip. Who
    is in poverty keeps its own columns (LivingStandards.css). */
 @media (min-width: 601px) {
   @container (max-width: 719px) {
@@ -365,11 +365,11 @@
        dumbbell itself: the column width is set on each row and the unit) */
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row,
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
-      --md-values: 148px;
+      --md-values: 184px;
     }
 
     .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
-      margin-top: 12px;
+      margin-top: 4px;
     }
 
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row {
@@ -377,8 +377,8 @@
       grid-template-areas:
         "name name"
         "plot values";
-      row-gap: 4px;
-      padding: 8px 10px;
+      row-gap: 10px;
+      padding: 10px;
     }
 
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-name {
@@ -390,8 +390,13 @@
       min-height: 36px;
     }
 
+    /* The value and its gap on one line at the strip's right */
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-values {
       grid-area: values;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
     }
 
     /* The name and its category on one line; the category drops below
@@ -452,11 +457,11 @@
 }
 
 /* Phones: the same header line (icon, full name and category on one
-   line, the category below where both do not fit), then the value and its gap, then the plot across the full width;
-   rows 12px apart */
+   line, the category below where both do not fit), then the value and
+   its gap, then the plot across the full width */
 @media (max-width: 600px) {
   .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
-    margin-top: 12px;
+    margin-top: 4px;
   }
 
   .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row {
@@ -465,8 +470,8 @@
       "name"
       "values"
       "plot";
-    row-gap: 4px;
-    padding: 8px 10px;
+    row-gap: 8px;
+    padding: 10px;
   }
 
   .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row .measure-dumbbell-values {
@@ -501,4 +506,52 @@
   .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-row {
     padding: 0 10px;
   }
+}
+
+/* A calm dumbbell (not Who is in poverty, which has its own marks): no
+   gridlines inside the rows but the £0 line, no alternating bands but a
+   hairline between rows (24px between one row's marks and the next
+   name in the stacked layouts), smaller
+   marks on a thin connector, and the gap as quiet coloured text beside
+   the bold value rather than a pill */
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row .measure-dumbbell-grid:not(.is-zero) {
+  display: none;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row.is-banded:not(:hover, :focus-within, .is-active) {
+  background: transparent;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
+  margin-top: 4px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: 6px;
+  left: 6px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-ring {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-link {
+  height: 1.5px;
+  margin-top: -0.75px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-gap {
+  padding: 0;
+  background: transparent;
 }
