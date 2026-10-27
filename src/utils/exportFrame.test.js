@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildChartCsv } from "./chartCsv";
 import {
+  EXPORT_FONT,
   MAX_PLOT_HEIGHT,
   downloadFrame,
   fontFaceCss,
@@ -15,6 +16,7 @@ import {
 import { buildChartSvg } from "./exportChartAsSvg";
 import { cardSelection, policiesLabel } from "./downloadContext";
 import { chartDownloads } from "./chartDownloads";
+import { TICK_STYLE } from "./chartTheme";
 import * as downloadFile from "./downloadFile";
 
 const NOW = new Date("2026-10-27T12:00:00Z");
@@ -93,7 +95,7 @@ describe("the CSV's frame lines", () => {
 });
 
 describe("the framed image", () => {
-  it("draws the title, subtitle and footer round the plot at 1200px", async () => {
+  it("draws the title and subtitle above the plot at 1200px, and no source line or rule below it", async () => {
     const built = { svg: '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400"><rect width="10" height="10"/></svg>', width: 800, height: 400 };
     const frame = downloadFrame({ title: "Revenue impact", period: "2027-28 to 2031-32", policies: "All 9 policies", now: NOW });
     const out = await frameSvg(built, frame, {});
@@ -101,7 +103,9 @@ describe("the framed image", () => {
     expect(out.height).toBeGreaterThan(400 * 1.42);
     expect(out.svg).toContain("Revenue impact, 2027-28 to 2031-32");
     expect(out.svg).toContain("All 9 policies");
-    expect(out.svg).toContain("Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard");
+    expect(out.svg).not.toContain("Source: PolicyEngine UK");
+    expect(out.svg).not.toContain("27 October 2026");
+    expect(out.svg).not.toContain("<line");
     expect(out.svg).toContain('viewBox="0 0 800 400"');
     expect(new DOMParser().parseFromString(out.svg, "image/svg+xml").querySelector("parsererror")).toBeNull();
   });
@@ -118,14 +122,14 @@ describe("the framed image", () => {
     }
   });
 
-  it("scales a legend below the plot apart from it, by no more than 1.25", async () => {
+  it("scales a legend below the plot at the plot's own scale", async () => {
     const built = { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="548" height="662"/>', width: 548, height: 662, legendTop: 446 };
     const [plot, legend] = framePieces(built);
     expect(plot).toMatchObject({ top: 0, sourceHeight: 446 });
     expect(plot.width).toBeCloseTo(1136);
     expect(legend.top).toBe(446);
-    expect(legend.width).toBeCloseTo(548 * 1.25);
-    expect(legend.height).toBeCloseTo(216 * 1.25);
+    expect(legend.width).toBeCloseTo(plot.width);
+    expect(legend.height / 216).toBeCloseTo(plot.width / 548);
     const out = await frameSvg(built, downloadFrame({ title: "T", now: NOW }), {});
     expect(out.svg).toContain('viewBox="0 0 548 446"');
     expect(out.svg).toContain('viewBox="0 446 548 216"');
@@ -175,6 +179,38 @@ describe("the built plot", () => {
     // The drawing (2 to 402) and 4px under it, not 410 less 60 for a legend
     expect(built.height).toBe(24 + 406 + 24);
     expect(built.svg).toMatch(/<rect x="0" y="0" width="500" height="406"/);
+  });
+});
+
+describe("the downloaded footer and legend", () => {
+  it("ends the image with the logo alone: no source, provisional or date line, no rule", async () => {
+    const built = { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"/>', width: 800, height: 400 };
+    const frame = downloadFrame({ title: "T", provisional: "Provisional figures", now: NOW });
+    const logo = { href: "data:image/png;base64,AAAA", width: 100, height: 20 };
+    const out = await frameSvg(built, frame, { logo });
+    expect(out.svg).toContain('<image x="1043" y=');
+    expect(out.svg).not.toMatch(/Source:|Provisional|27 October 2026|<line/);
+    // The CSV keeps those facts
+    expect(frameCsv("A\n1", frame)).toContain("Provisional figures");
+  });
+
+  it("draws the legend in the plot's tick text: its face, size and colour", async () => {
+    // jsdom has no canvas: measure text at 7px a character
+    const canvas = vi
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue({ font: "", measureText: (text) => ({ width: text.length * 7 }) });
+    document.body.innerHTML = '<div id="c"><div class="recharts-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="500" height="410"></svg></div></div>';
+    const svg = document.querySelector("svg");
+    svg.getBoundingClientRect = () => ({ width: 500, height: 410 });
+    const built = await buildChartSvg({ current: document.getElementById("c") }, {
+      legendItems: [{ label: "Policy A", color: "#2C6496", type: "rect" }],
+    });
+    const label = new DOMParser().parseFromString(built.svg, "image/svg+xml").querySelector(".exported-legend text");
+    expect(label.getAttribute("font-family")).toBe(EXPORT_FONT);
+    expect(label.getAttribute("font-size")).toBe(`${TICK_STYLE.fontSize}px`);
+    expect(label.getAttribute("fill")).toBe(TICK_STYLE.fill);
+    expect(label.getAttribute("font-weight")).toBe("400");
+    canvas.mockRestore();
   });
 });
 
