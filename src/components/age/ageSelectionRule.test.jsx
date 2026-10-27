@@ -4,6 +4,7 @@ import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, singleAgeSelection } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
+import { windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
 // By age's selection rule, on a publication where one single (BETA)
@@ -99,12 +100,30 @@ function expectNoHalfDrawn(container) {
   }
 }
 
-/** By age's "Average change by age" card. */
-const meanCard = (container) => container.querySelector(".young-people-mean");
+/** By age's "Average change by age" card, switched to its Age groups view (single years by default). */
+function meanCard(container) {
+  const shown = container.querySelector(".young-people-mean");
+  if (shown) return shown;
+  const single = container.querySelector(".single-age-card");
+  fireEvent.click(within(single).getByRole("button", { name: /^Options:/ }));
+  fireEvent.click(within(single).getByRole("radio", { name: "Age groups" }));
+  return container.querySelector(".young-people-mean");
+}
+
+/** The fixture with single-year rows 0 to 90+ for each key, less `without`'s. */
+function withSingleAges(fixture, without = null) {
+  const lines = [ALPHA, BETA, COMBINED].filter((id) => id !== without).flatMap((id) =>
+    Array.from({ length: 91 }, (_, age) =>
+      [id, id, YEAR, age === 90 ? "90+" : String(age), 10_000, 500, id === ALPHA ? 100 : id === BETA ? -50 : 50, 25, 20, 30, 50, 2_000].join(","),
+    ),
+  );
+  return { ...fixture, ageCsv: [fixture.ageCsv, ...lines].join("\n") };
+}
 
 describe("By age's selection rule with a single that withholds its age bands", () => {
   it("reads the published package's own rows: every band drawn, no withheld note", async () => {
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
+    meanCard(container);
     expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
     expect(container.textContent).not.toMatch(/Not drawn in/);
     expect(container.textContent).not.toMatch(/no published results by age/);
@@ -197,5 +216,50 @@ describe("Average change by age with a package whose every member has rows by ag
     // No caveat: nothing is withheld
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(within(card).queryByText(PACKAGE_PARTS_CAVEAT)).toBeNull();
+  });
+});
+
+describe("Average change by age by single year of age (the default view)", () => {
+  const singleCard = (container) => container.querySelector(".single-age-card");
+  const ageRows = (card) => chartRows(card).find((rows) => rows.some((point) => point.label === "20"));
+
+  it("opens on single years, with each policy's part offered as By policy when every member has rows", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const card = singleCard(container);
+    expect(card).not.toBeNull();
+    expect(container.querySelector(".young-people-mean")).toBeNull();
+    expect(ageRows(card).every((point) => point.netChange === 50)).toBe(true);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "Each policy" }));
+    expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
+  });
+
+  it("offers no By policy when a member withholds its single years, and names it in Caveats", async () => {
+    const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
+    const card = singleCard(container);
+    // The package's own net at every age, never its parts
+    expect(ageRows(card).every((point) => point.netChange === 50 && (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).queryByRole("radio", { name: "Each policy" })).toBeNull();
+    expect(within(card).getByRole("radio", { name: "Age groups" })).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]))).toBeInTheDocument();
+  });
+});
+
+describe("The single-year age axis", () => {
+  it("names every withheld policy in one list", () => {
+    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/as A, B and C have too few survey records by single year of age/);
+    expect(withheldPartsCaveat(["A"])).toMatch(/as A has too few/);
+  });
+
+  it("ticks every five years to 90+ on a wide screen and every ten on a phone, with no State Pension age tick", () => {
+    expect(windowTicks([0, 90], [], false)).toEqual([...Array.from({ length: 18 }, (_, i) => String(i * 5)), "90+"]);
+    expect(windowTicks([0, 90], [], true)).toEqual(["0", "10", "20", "30", "40", "50", "60", "70", "80", "90+"]);
+    expect(windowTicks([55, 90], [], false)).toEqual(["55", "60", "65", "70", "75", "80", "85", "90+"]);
+  });
+
+  it("drops a five-year tick too close to the group's ends", () => {
+    expect(windowTicks([6, 34], [16, 24], false)).toEqual(["6", "10", "16", "20", "24", "30", "34"]);
   });
 });

@@ -51,16 +51,25 @@ export const changeText = (value) => {
   return rounded > 0 ? `+${text}` : `−${text}`;
 };
 
-/** Ticks every five years (ten on a phone) across the window, and the group's ends. */
-function windowTicks([first, last], ends, narrow) {
+/**
+ * Ticks every five years (ten on a phone) across the window, ending at 90+,
+ * with the group's ends; a five-year tick too close to an end is dropped so
+ * no two labels touch (a wide window packs its ages tighter).
+ */
+export function windowTicks([first, last], ends, narrow) {
   const every = narrow ? 10 : 5;
+  const near = narrow ? 4 : last - first > 60 ? 3 : 2;
   const ticks = new Set();
   for (let age = Math.ceil(first / every) * every; age < last; age += every) {
-    if (ends.every((end) => Math.abs(age - end) >= (narrow ? 4 : 2))) ticks.add(age);
+    if (ends.every((end) => Math.abs(age - end) >= near) && last - age >= near) ticks.add(age);
   }
   for (const end of [first, ...ends, last]) ticks.add(end);
   return [...ticks].sort((a, b) => a - b).map(singleAgeKey);
 }
+
+/** Why By policy is not offered: the policies with too few records by single year of age. */
+export const withheldPartsCaveat = (names) =>
+  `Each policy's part is not shown, as ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]} ${names.length > 1 ? "have" : "has"} too few survey records by single year of age: the bars are the whole package's own result.`;
 
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
@@ -138,7 +147,18 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const combinationUnavailable = data.some((point) => point.combinationUnavailable);
   // The package's net with no policy parts: drawn as the net bars
   const netOnly = data.some((point) => point.fromPackage && !point.partsShown);
-  const stacked = byMeasure && !netOnly && !combinationUnavailable;
+  // By policy is offered only when every selected policy has rows at every
+  // age shown: a policy withheld by single year of age is never backed out
+  // of the package's own net, so then no policy parts are drawn at all
+  const partsOffered = !netOnly && !combinationUnavailable;
+  const stacked = byMeasure && partsOffered;
+  // The selected policies with no row at some age shown, named in Caveats
+  const withheldNames = netOnly
+    ? policies
+        .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+        .filter((policy) => singleAgeBars(rows, [policy], [policy.id], year, window[0], window[1]).some((point) => point.netChange === null))
+        .map((policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id)
+    : [];
   const partKeys = [...new Set(data.flatMap((point) => point.parts.map((part) => part.key)))];
   // Round £ ticks from the lowest to the highest in any year shown, through
   // £0, so the scale holds still under Play
@@ -171,8 +191,10 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const nameOf = (id) => catalogue.byId.get(id)?.label ?? id;
   const showSpa = spa >= window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
-  const ends = group === ALL_BAND ? [] : [singleAgeKey(groupFirst), singleAgeKey(groupLast)];
-  const tickEnds = [...ends, ...(showSpa ? [singleAgeKey(spa)] : [])];
+  // The group's ends in bold on the axis; State Pension age is named by its
+  // marker's label above the plot, so never again as a tick
+  const endAges = group === ALL_BAND ? [] : [groupFirst, groupLast].filter((age) => age >= window[0] && age <= window[1] && !(showSpa && age === spa));
+  const tickEnds = endAges.map(singleAgeKey);
   const title = `${titleBase}, ${yearLabel}`;
   const description =
     group === ALL_BAND
@@ -230,7 +252,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <ControlBar name={title} options={[...extraOptions, { label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]} />
+        <ControlBar name={title} options={[...extraOptions, ...(partsOffered ? [{ label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }] : [])]} />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
@@ -248,7 +270,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
               )}
               <XAxis
                 dataKey="label"
-                ticks={windowTicks(window, [groupFirst, groupLast, ...(showSpa ? [spa] : [])].filter((age) => age >= window[0] && age <= window[1]), narrow)}
+                ticks={windowTicks(window, endAges, narrow)}
                 interval={0}
                 tick={<AgeTick ends={tickEnds} />}
                 axisLine={AXIS_LINE}
@@ -354,14 +376,14 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             year={year}
             info={{
               caveats: [
-                netOnly && PACKAGE_PARTS_CAVEAT,
+                netOnly && (withheldNames.length ? withheldPartsCaveat(withheldNames) : PACKAGE_PARTS_CAVEAT),
                 missing.length > 0 && !combinationUnavailable && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`,
               ],
               how: [
                 `One bar per single year of age, ${window[0]} to ${window[1] >= 90 ? "90 and over" : window[1]}: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                "Each policy shows every selected policy's own part at each age, stacked.",
+                partsOffered && "By policy shows every selected policy's own part at each age, stacked.",
               ],
               method: AGE_METHOD,
             }}
