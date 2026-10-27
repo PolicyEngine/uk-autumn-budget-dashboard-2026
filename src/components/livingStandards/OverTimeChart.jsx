@@ -1,6 +1,7 @@
 // A level over time (Incomes over time, Inequality over time, Poverty over
 // time): official figures as a solid grey line with dots, PolicyEngine's
-// microsimulation dashed teal, both named on the plot (no key). No band
+// microsimulation solid teal (not dashed: it is not a forecast), each named
+// above its start on the plot (no key), clear of the other line. No band
 // marks the PolicyEngine years: they are not a forecast, and they overlap
 // the official ones. The y axis is fitted to the data
 // (zoomAxis), with a break mark when it does not start at 0. The years the
@@ -23,6 +24,97 @@ const X_AXIS_HEIGHT = 26;
 // Width a "2027-28" tick needs before every other year is labelled
 const TICK_WIDTH = 58;
 const LABEL = { fontSize: 12, fontWeight: 600 };
+// Width of a label: measured in the page's font where there is a canvas,
+// else estimated per character (12px semibold, or 11px regular)
+let measurer;
+function textWidth(text, size = 12, weight = 600) {
+  if (typeof document !== "undefined") {
+    try {
+      measurer ??= document.createElement("canvas").getContext("2d");
+    } catch {
+      measurer = null;
+    }
+    if (measurer) {
+      measurer.font = `${weight} ${size}px ${getComputedStyle(document.body).fontFamily}`;
+      const w = measurer.measureText(String(text)).width;
+      if (w > 0) return w;
+    }
+  }
+  return String(text).length * size * (weight >= 600 ? 0.53 : 0.5);
+}
+// Box of a label from its baseline (cap height above, descenders below)
+const textBox = (left, baseline, w) => ({ left, right: left + w, top: baseline - 10, bottom: baseline + 3 });
+const GAP = 4;
+const DOT = 4;
+
+/** Whether a box is clear of the lines (polylines of [x, y]), their dots and other boxes. */
+function isClear(box, lines, boxes) {
+  const L = box.left - GAP;
+  const R = box.right + GAP;
+  const T = box.top - GAP;
+  const B = box.bottom + GAP;
+  for (const pts of lines) {
+    for (const [px, py] of pts) {
+      if (px + DOT > L && px - DOT < R && py + DOT > T && py - DOT < B) return false;
+    }
+    for (let k = 1; k < pts.length; k += 1) {
+      const [x1, y1] = pts[k - 1];
+      const [x2, y2] = pts[k];
+      const lo = Math.max(L, x1);
+      const hi = Math.min(R, x2);
+      if (lo > hi) continue;
+      const at = (xx) => (x2 === x1 ? y1 : y1 + ((y2 - y1) * (xx - x1)) / (x2 - x1));
+      if (Math.min(at(lo), at(hi)) < B && Math.max(at(lo), at(hi)) > T) return false;
+    }
+  }
+  // Text from text: half the gap (the boxes already pad the glyphs)
+  const g = GAP / 2;
+  return boxes.every((b) => b.right + g <= box.left || b.left - g >= box.right || b.bottom + g <= box.top || b.top - g >= box.bottom);
+}
+
+/** The y of a polyline at each of its points within [x0, x1], and where it crosses x0 and x1. */
+function ysWithin(pts, x0, x1) {
+  const ys = pts.filter(([px]) => px >= x0 && px <= x1).map(([, py]) => py);
+  for (let k = 1; k < pts.length; k += 1) {
+    const [xa, ya] = pts[k - 1];
+    const [xb, yb] = pts[k];
+    [x0, x1].forEach((xx) => {
+      if (xx > xa && xx < xb) ys.push(ya + ((yb - ya) * (xx - xa)) / (xb - xa));
+    });
+  }
+  return ys;
+}
+
+/**
+ * Baseline for a label starting at x0 over its own line: 12px above the
+ * line's highest point under the label, nudged up until clear of the lines,
+ * dots and boxes, but not past another line above its start (it would read
+ * as that line's name); else just below its own line; else nudged up past the other
+ * line; else where it would first go.
+ */
+export function placeLabel({ own, x0, w, lines, boxes, top, bottom }) {
+  const ownYs = ysWithin(own, x0, x0 + w);
+  const ys = ownYs.length ? ownYs : [own[0][1]];
+  const preferred = Math.min(...ys) - 12;
+  // Another line above this one where the label starts: the label stays
+  // under it, so it is not read as that line's name
+  const above = lines
+    .filter((pts) => pts !== own)
+    .flatMap((pts) => ysWithin(pts, x0, x0))
+    .filter((v) => v < own[0][1]);
+  const ceiling = above.length ? Math.max(...above) : -Infinity;
+  const clear = (bl) => isClear(textBox(x0, bl, w), lines, boxes);
+  for (let bl = preferred; bl - 10 >= top && bl - 10 > ceiling; bl -= 2) {
+    if (clear(bl)) return bl;
+  }
+  for (let bl = Math.max(...ys) + 12; bl + 3 <= bottom; bl += 1) {
+    if (clear(bl)) return bl;
+  }
+  for (let bl = preferred; bl - 10 >= top; bl -= 2) {
+    if (clear(bl)) return bl;
+  }
+  return preferred;
+}
 
 /** "2029-30, PolicyEngine: £42,900", one line per series at the year. */
 function OverTimeTooltip({ active, payload, label, format }) {
@@ -66,54 +158,66 @@ function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showPro
     );
   }
 
-  // "Official figures" above the whole official line, from its first year
-  const official = showHistorical ? data.filter((d) => d.historical != null) : [];
-  if (official.length) {
-    const top = Math.min(...official.map((d) => y(d.historical)));
-    parts.push(
-      <text key="official" x={x(official[0].year)} y={top - 12} {...LABEL} fill={CHART_COLOURS.obrText} textAnchor="start">
-        Official figures
-      </text>,
-    );
-  }
+  // The years compared: their PolicyEngine values are labelled over the line
+  const compared =
+    compare && showProjection ? compare.map((fy) => data.find((d) => d.year === fyStart(fy))) : null;
+  const valued = compared?.every((d) => d && d.projection != null) ? compared : null;
+  const valueBoxes = (valued ?? []).map((d, i) => {
+    const w = textWidth(valueFormat(d.projection));
+    const left = i === 1 ? x(d.year) - w : x(d.year) - w / 2;
+    return textBox(left, y(d.projection) - 12, w);
+  });
 
-  // "PolicyEngine" under the end of its line; where the line ends too close
-  // to the years-compared bracket, above it (over the end value, if any)
-  const model = showProjection ? data.filter((d) => d.projection != null) : [];
-  if (model.length) {
-    const end = model[model.length - 1];
-    const below = y(end.projection) + 20;
-    const endValued = compare && fyStart(compare[1]) === end.year;
-    const labelY = below <= bottom - 32 ? below : y(end.projection) - (endValued ? 28 : 12);
+  // Each line named above its start: "Official figures" grey, "PolicyEngine"
+  // teal, clear of both lines, their dots, the values and each other
+  const lines = [
+    showHistorical && { key: "historical", text: "Official figures", fill: CHART_COLOURS.obrText },
+    showProjection && { key: "projection", text: "PolicyEngine", fill: CHART_COLOURS.highlight },
+  ].filter(Boolean);
+  const points = lines.map(({ key }) => data.filter((d) => d[key] != null).map((d) => [x(d.year), y(d[key])]));
+  // The years-compared bracket and its caption, kept clear too
+  if (valued) {
+    const [x1, x2] = valued.map((d) => x(d.year));
+    const yb = bottom - 12;
+    const cw = textWidth("Years compared", 11, 400);
+    valueBoxes.push({ left: x1, right: x2, top: yb - 5, bottom: yb });
+    valueBoxes.push({ left: (x1 + x2) / 2 - cw / 2, right: (x1 + x2) / 2 + cw / 2, top: yb - 13, bottom: yb - 5 });
+  }
+  const placed = [...valueBoxes];
+  lines.forEach(({ key, text, fill }, i) => {
+    const own = points[i];
+    if (!own.length) return;
+    const x0 = own[0][0];
+    const w = textWidth(text);
+    const baseline = placeLabel({ own, x0, w, lines: points, boxes: placed, top: offset.top - 4, bottom: bottom - 2 });
+    placed.push(textBox(x0, baseline, w));
     parts.push(
-      <text key="model" x={x(end.year)} y={labelY} {...LABEL} fill={CHART_COLOURS.highlight} textAnchor="end">
-        PolicyEngine
+      <text key={key} x={x0} y={baseline} {...LABEL} fill={fill} textAnchor="start">
+        {text}
       </text>,
     );
-  }
+  });
 
   // The years compared: a bracket under the lines, the PolicyEngine value
   // labelled at both ends
-  if (compare && showProjection) {
-    const [a, b] = compare.map((fy) => data.find((d) => d.year === fyStart(fy)));
-    if (a && b && a.projection != null && b.projection != null) {
-      const x1 = x(a.year);
-      const x2 = x(b.year);
-      const yb = bottom - 12;
-      parts.push(
-        <g key="compare" className="ls-compare">
-          <path d={`M${x1},${yb - 5} L${x1},${yb} L${x2},${yb} L${x2},${yb - 5}`} stroke={CHART_COLOURS.highlight} strokeWidth={1.2} fill="none" />
-          <text x={(x1 + x2) / 2} y={yb - 5} fontSize={11} fill={CHART_COLOURS.highlight} textAnchor="middle">
-            Years compared
+  if (valued) {
+    const [a, b] = valued;
+    const x1 = x(a.year);
+    const x2 = x(b.year);
+    const yb = bottom - 12;
+    parts.push(
+      <g key="compare" className="ls-compare">
+        <path d={`M${x1},${yb - 5} L${x1},${yb} L${x2},${yb} L${x2},${yb - 5}`} stroke={CHART_COLOURS.highlight} strokeWidth={1.2} fill="none" />
+        <text x={(x1 + x2) / 2} y={yb - 5} fontSize={11} fill={CHART_COLOURS.highlight} textAnchor="middle">
+          Years compared
+        </text>
+        {valued.map((d, i) => (
+          <text key={d.year} x={x(d.year)} y={y(d.projection) - 12} {...LABEL} fill={CHART_COLOURS.highlight} textAnchor={i === 1 ? "end" : "middle"}>
+            {valueFormat(d.projection)}
           </text>
-          {[a, b].map((d, i) => (
-            <text key={d.year} x={x(d.year)} y={y(d.projection) - 12} {...LABEL} fill={CHART_COLOURS.highlight} textAnchor={i === 1 ? "end" : "middle"}>
-              {valueFormat(d.projection)}
-            </text>
-          ))}
-        </g>,
-      );
-    }
+        ))}
+      </g>,
+    );
   }
   return <g>{parts}</g>;
 }
@@ -181,7 +285,6 @@ export default function OverTimeChart({
               name={s.name}
               stroke={s.colour}
               strokeWidth={2.5}
-              strokeDasharray={s.key === "projection" ? "8 4" : undefined}
               dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1 }}
               activeDot={{ r: 5 }}
               connectNulls={false}

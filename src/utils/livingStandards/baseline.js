@@ -122,7 +122,8 @@ export function lineSeries(viewMode, hasOutturn = true) {
       key: "projection",
       name: "PolicyEngine",
       colour: PROJECTION_COLOUR,
-      dash: DASH.long,
+      // Solid: a dashed line would read as a forecast
+      dash: DASH.solid,
       hidden: viewMode === "outturn",
     },
   ];
