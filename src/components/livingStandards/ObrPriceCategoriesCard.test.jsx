@@ -9,7 +9,7 @@ import {
 } from "../../utils/livingStandards/obrPriceCategories";
 
 // A short file of the shape tools/extract-obr-price-categories.mjs writes
-// (the published file waits on its review row), with Table 1.19's values
+// (public/data/obr_price_categories.json), with Table 1.19's values
 const series = (key, label, values) => ({ key, label, values: values.map(([year, value]) => ({ year, value })) });
 const FILE = {
   schema: "uk-budget-dashboard/obr-price-categories/v1",
@@ -44,7 +44,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Prices by spending category, OBR forecast", () => {
+describe("Prices by spending category", () => {
   it("reads the file as published, one row per fiscal year", () => {
     expect(isObrPriceCategories(FILE)).toBe(true);
     expect(isObrPriceCategories({ ...FILE, schema: "other" })).toBe(false);

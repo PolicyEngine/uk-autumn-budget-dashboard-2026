@@ -2,7 +2,7 @@ import { cloneElement } from "react";
 import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import BudgetaryImpactChart, { beforeYearsLine, measureOrder } from "./BudgetaryImpactChart";
+import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
 import { ABOUT_THIS_CHART } from "./ChartMoreInfo";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
@@ -98,57 +98,34 @@ describe("BudgetaryImpactChart", () => {
     for (const chip of chips) expect(chip).toHaveAttribute("aria-pressed", "false");
   });
 
-  describe("the year before the chart's first", () => {
-    const whd = { id: "whd", seriesKey: "measure:whd", name: "Warm Home Discount top-up" };
-    const vat = { id: "vat", seriesKey: "measure:vat", name: "Zero VAT on domestic electricity" };
-    const shown = [2027, 2028].map((year) => ({ year, "measure:whd": 0, "measure:vat": -1.38, netImpact: -1.38 }));
-    const before = { year: 2026, "measure:whd": -0.52, "measure:vat": -0.69, netImpact: -1.21, unpublished: false };
-
-    it("gives the selection's effect, naming a measure whose whole effect falls in it", () => {
-      expect(beforeYearsLine(before, shown, [whd, vat])).toBe(
-        "In 2026-27, before the years shown, the selected policies cost £1.2bn, including all of the Warm Home Discount top-up.",
-      );
-      expect(beforeYearsLine({ ...before, "measure:whd": 0, netImpact: -0.69 }, shown, [vat])).toBe(
-        "In 2026-27, before the years shown, the selected policy costs £0.7bn.",
-      );
+  describe("2026-27", () => {
+    const ids = catalogue.displayable.map((measure) => measure.id);
+    const point = (year, value) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, value])),
+      netImpact: value * catalogue.displayable.length,
+      unpublished: false,
     });
-
-    it("names a measure once: not when the card's note already does", () => {
-      expect(beforeYearsLine({ ...before, "measure:vat": 0, netImpact: -0.52 }, shown, [whd], ["whd"])).toBe(
-        "In 2026-27, before the years shown, the selected policy costs £0.5bn.",
-      );
-    });
-
-    it("says nothing when the year is zero or a selected measure has no verified figure", () => {
-      expect(beforeYearsLine({ ...before, "measure:whd": 0, "measure:vat": 0, netImpact: 0 }, shown, [whd, vat])).toBeNull();
-      expect(beforeYearsLine({ year: 2026, netImpact: null, unpublished: true }, shown, [whd])).toBeNull();
-      expect(beforeYearsLine(null, shown, [whd])).toBeNull();
-    });
-
-    it("puts the line first in About this chart, not under the chart", () => {
-      const point = { year: YEAR - 1, ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, -1])), netImpact: -catalogue.displayable.length, unpublished: false };
-      const ids = catalogue.displayable.map((measure) => measure.id);
-      const { container } = render(
+    const renderChart = (data) =>
+      render(
         <MeasureCatalogueProvider catalogue={catalogue}>
-          <BudgetaryImpactChart data={mockData} before={point} selectedYear={YEAR} selectedPolicies={ids} />
+          <BudgetaryImpactChart data={data} selectedYear={YEAR} selectedPolicies={ids} />
         </MeasureCatalogueProvider>,
       );
-      expect(container.querySelector(".chart-footer .note")).toBeNull();
+
+    it("is a bar like any other year when the data has it, with no note about it", () => {
+      const { container } = renderChart([point(2026, -1), point(YEAR, 2)]);
+      const ticks = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")].map((tick) => tick.textContent);
+      expect(ticks).toContain("2026-27");
       fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
-      const first = container.querySelector(".chart-more-info .info-section");
-      expect(first).toHaveTextContent(/^Before the years shown/);
-      expect(first).toHaveTextContent(/before the years shown, the selected polic(y|ies) costs? £\d+\.\dbn\./);
+      expect(container).not.toHaveTextContent(/before the years shown/i);
     });
 
-    it("leaves About this chart without the item when there is no line", () => {
-      const ids = catalogue.displayable.map((measure) => measure.id);
-      const { container } = render(
-        <MeasureCatalogueProvider catalogue={catalogue}>
-          <BudgetaryImpactChart data={mockData} before={null} selectedYear={YEAR} selectedPolicies={ids} />
-        </MeasureCatalogueProvider>,
-      );
-      fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
-      expect(container.querySelector(".chart-more-info")).not.toHaveTextContent(/Before the years shown/);
+    it("is absent when the data starts at 2027-28", () => {
+      const { container } = renderChart([point(YEAR, 2)]);
+      const ticks = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")].map((tick) => tick.textContent);
+      expect(ticks).not.toContain("2026-27");
+      expect(container).not.toHaveTextContent(/before the years shown/i);
     });
   });
 

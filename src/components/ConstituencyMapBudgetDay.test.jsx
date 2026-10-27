@@ -102,7 +102,7 @@ describe("ConstituencyMap on Budget day", () => {
     }
   });
 
-  it("shows one measure when no package is published, and offers no measure that moves no seat", async () => {
+  it("says the combination is not published when no package is, and never shows one policy in its place", async () => {
     vi.stubGlobal(
       "fetch",
       // No region file on Budget day either: the region view's run is separate
@@ -111,14 +111,36 @@ describe("ConstituencyMap on Budget day", () => {
     const { container } = render(
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
+    expect(
+      await screen.findByText("Constituency results for this combination of policies are not published yet."),
+    ).toBeInTheDocument();
+    // No figures from any one policy: no coloured seat, no key
+    expect(container.querySelector("path.constituency-path[data-state]")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Key" })).toBeNull();
+    // The title names the selection, never one policy
+    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    expect(container.querySelector(".map-title-focus")).not.toHaveTextContent("2 child limit repeal");
+  });
+
+  it("shows one policy only when the reader picks it, and offers no policy that moves no seat", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ "/data/constituency.csv": budgetDayTable(), "/data/regional.csv": 404 }),
+    );
+    const { container } = render(
+      <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+    );
+    await screen.findByText("Constituency results for this combination of policies are not published yet.");
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const picker = screen.getByRole("radiogroup", { name: "Policy" });
+    // The combination is the default; the flat measure is not offered
+    expect(screen.getByRole("radio", { name: "Selected policies combined" })).toBeChecked();
+    expect(picker).not.toHaveTextContent("Rail fares freeze");
+    fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
     await waitFor(() =>
       expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
     );
-    // The title names the one measure shown, never "all measures"
     expect(container.querySelector(".map-title-focus")).toHaveTextContent("2 child limit repeal");
-    // The flat measure is not offered, so there is nothing to pick between
-    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
   });
 
   it("draws a measure that moves no seat as no change and withheld, never as a figure", async () => {

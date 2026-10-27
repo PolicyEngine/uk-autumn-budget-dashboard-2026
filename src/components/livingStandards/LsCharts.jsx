@@ -258,6 +258,8 @@ export function LsLineChart({
   yFormat = (v) => v,
   tooltipFormat = yFormat,
   showPlus = false,
+  // A title under the x axis (as LsBarChart's), e.g. "Calendar year"
+  xLabel,
   yLabel,
   yDomain,
   yTicks,
@@ -316,7 +318,8 @@ export function LsLineChart({
             tick={TICK_STYLE}
             axisLine={AXIS_LINE}
             tickLine={false}
-            height={X_AXIS_HEIGHT}
+            height={X_AXIS_HEIGHT + (xLabel ? X_TITLE_HEIGHT : 0)}
+            label={xLabel ? { value: xLabel, position: "insideBottom", offset: 4, style: AXIS_TITLE_STYLE } : undefined}
             // The first year clear of the y axis's 0 label
             padding={{ left: 12, right: 4 }}
             tickMargin={6}
