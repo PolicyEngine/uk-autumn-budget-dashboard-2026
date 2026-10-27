@@ -530,15 +530,6 @@
   position: relative;
   padding: 0;
   overflow: visible;
-  border-left: 3px solid var(--pe-gray-300);
-}
-
-.result-card.is-gain {
-  border-left-color: var(--c-gain);
-}
-
-.result-card.is-loss {
-  border-left-color: var(--c-loss);
 }
 
 .result-card p {

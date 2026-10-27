@@ -1164,4 +1164,13 @@ describe("the waterfall's one line", () => {
     const rule = css.match(/\.waterfall-sentence\s*\{([^}]*)\}/)[1];
     expect(rule).not.toMatch(/max-width:\s*\d/);
   });
+
+  it("gives the result card no coloured left stripe: gain and loss colour only the numbers", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(process.cwd(), "src", "components", "personal", "SingleYear.css"), "utf8");
+    const cardRules = [...css.matchAll(/\.result-card(?:\.is-(?:gain|loss))?\s*\{([^}]*)\}/g)].map((m) => m[1]);
+    expect(cardRules.length).toBeGreaterThan(0);
+    for (const rule of cardRules) expect(rule).not.toMatch(/border-left/);
+  });
 });
