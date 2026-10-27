@@ -9,6 +9,23 @@ import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
+/**
+ * A card's sections, top to bottom, by class: the category, the title, the
+ * summary, What changes, the timeline (Starts, Ends, then the axis), About
+ * this result, the source and "See its effect". A card leaves out a
+ * section it has nothing for, never reorders them.
+ */
+export const CARD_SECTIONS = [
+  "policy-card-type",
+  "policy-card-name",
+  "policy-card-summary",
+  "pchg",
+  "policy-card-when",
+  "policy-card-details",
+  "policy-card-source",
+  "policy-card-effect",
+];
+
 /** The one name of every Policies card's disclosure. */
 export const HOW_IT_IS_MODELLED = "About this result";
 
@@ -231,8 +248,9 @@ function PolicyTimeline({ policy, highlight }) {
  * A measure without card details (no entry in policyDetails.js, or one
  * written for another description, as when a run publishes a changed
  * measure) shows its full published description and only the blocks it
- * has content for: no labelled box is ever drawn empty, and the card is
- * as tall as its content rather than its row (`is-bare`).
+ * has content for: no labelled box is ever drawn empty (`is-bare`). Every
+ * card, bare or not, is as tall as its row, its sections always in the
+ * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
 function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);

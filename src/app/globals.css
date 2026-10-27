@@ -1959,6 +1959,9 @@ body {
 .policy-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Every card in a row as tall as the row, a card with less in it too:
+     the footer, pinned to the bottom, takes up the slack */
+  align-items: stretch;
   gap: 20px;
   margin: 0;
   padding: 0;
@@ -2066,11 +2069,6 @@ body {
   overflow: visible;
   -webkit-line-clamp: unset;
   line-clamp: none;
-}
-
-/* ... and a card only as tall as what it has, not its row */
-.policy-card.is-bare {
-  align-self: start;
 }
 
 /* When: start and end in words, then the timeline */
@@ -2626,6 +2624,17 @@ body {
   font-size: var(--fs-small);
   font-weight: 500;
   color: var(--pe-gray-600);
+}
+
+/* Which year the tiles show, where the change varies by year */
+.pchg-ba-when {
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+/* The plot's caption and key, under the tiles */
+.pchg-head.is-plot {
+  margin-top: 6px;
 }
 
 .pchg-ba-label svg {
