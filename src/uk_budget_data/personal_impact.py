@@ -56,7 +56,6 @@ POLICY_IDS = [
     "domestic_electricity_zero_vat",
     "threshold_freeze_2031_32",
     "plan_2_threshold_unfreeze",
-    "lha_unfreeze_2027",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
 ]

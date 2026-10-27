@@ -41,7 +41,10 @@ def withdrawn_rows(measure_id):
     """A withdrawn measure's rows, from its builder (not in the file)."""
     from uk_budget_data.policy_table import BUILDERS
 
-    factory = {registry.FUEL_VAT_ID: registry._create_road_fuel_vat_cut}
+    factory = {
+        registry.FUEL_VAT_ID: registry._create_road_fuel_vat_cut,
+        registry.LHA_UNFREEZE_ID: registry._create_lha_unfreeze_2027,
+    }
     reform = factory[measure_id]()
     return {row["label"]: row for row in BUILDERS[measure_id](reform)}
 
@@ -203,14 +206,15 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_nine_package_measures_only(document):
+def test_the_table_covers_the_eight_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert len(document["measures"]) == 9
+    assert len(document["measures"]) == 8
     assert registry.CARERS_ALLOWANCE_TAPER_ID not in document["measures"]
+    assert registry.LHA_UNFREEZE_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
     assert registry.BADR_ID not in document["measures"]
     assert registry.EMPLOYER_NI_ID not in document["measures"]
@@ -255,15 +259,15 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "domestic_electricity_zero_vat": "switch",
         "threshold_freeze_2031_32": "table",
         "plan_2_threshold_unfreeze": "path",
-        "lha_unfreeze_2027": "before-after",
         "employer_nics_secondary_threshold_raise": "path",
         "unearned_income_rates_up": "before-after",
     }
 
 
-def test_lha_unfreeze(document):
+def test_lha_unfreeze():
+    # Withdrawn (thin cells), but its builder still reads it
     row = by_key(
-        rows(document, "lha_unfreeze_2027")[
+        withdrawn_rows(registry.LHA_UNFREEZE_ID)[
             "Local rents the LHA rates are re-set to each April, percentile"
         ]
     )

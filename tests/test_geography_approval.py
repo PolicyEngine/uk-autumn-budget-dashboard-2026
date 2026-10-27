@@ -708,7 +708,7 @@ def test_area_command_refuses_a_changed_definition_before_building(
     simulate.assert_not_called()
 
 
-# -- the registered package: the nine candidates (27 October 2026) ---------
+# -- the registered package: the eight candidates (27 October 2026) --------
 
 
 def _seven_manifest(combined_key_, members):
@@ -730,7 +730,7 @@ def test_the_area_run_takes_the_seven_package_under_its_key():
     )
 
     seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
-    key = "combined--b8648f2b17522f3e"
+    key = "combined--894152ce8c83f1d8"
     assert g.manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     manifest = _seven_manifest(key, seven)
     package = [AUTUMN_BUDGET_2026_COMBINED_ID]
@@ -753,5 +753,5 @@ def test_the_area_run_refuses_the_withdrawn_nine_measure_package():
     )
     manifest = _seven_manifest(combined_key(nine), nine)
     assert AUTUMN_BUDGET_2026_COMBINED_ID not in g.approved_reforms(manifest)
-    with pytest.raises(ValueError, match="combined--b8648f2b17522f3e"):
+    with pytest.raises(ValueError, match="combined--894152ce8c83f1d8"):
         g.approved_reforms(manifest, [AUTUMN_BUDGET_2026_COMBINED_ID])

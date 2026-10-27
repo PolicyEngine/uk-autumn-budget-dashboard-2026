@@ -34,7 +34,6 @@ MEASURE_YEARS = {
     "domestic_electricity_zero_vat": 2027,
     "threshold_freeze_2031_32": 2031,
     "plan_2_threshold_unfreeze": 2027,
-    "lha_unfreeze_2027": 2027,
     "employer_nics_secondary_threshold_raise": 2027,
     "unearned_income_rates_up": 2027,
 }

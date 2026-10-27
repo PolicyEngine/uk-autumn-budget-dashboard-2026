@@ -74,14 +74,14 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_nine_package_reason_names_its_two_hand_written_members(
+def test_the_eight_package_reason_names_its_two_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    assert key == "combined--b8648f2b17522f3e"
+    assert key == "combined--894152ce8c83f1d8"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert "hand-written plan_2_threshold_unfreeze and " in record["reason"]

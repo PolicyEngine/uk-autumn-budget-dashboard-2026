@@ -55,7 +55,6 @@ CANDIDATES = (
     "domestic_electricity_zero_vat",
     "threshold_freeze_2031_32",
     "plan_2_threshold_unfreeze",
-    "lha_unfreeze_2027",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
 )
@@ -64,7 +63,6 @@ NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
-    "lha_unfreeze_2027",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
 )
@@ -80,6 +78,8 @@ WITHDRAWN = {
     "carers_allowance_earnings_taper": (
         reforms._create_carers_allowance_earnings_taper
     ),
+    # Its cells in deciles 9 and 10 rest on fewer than 10 survey households
+    "lha_unfreeze_2027": reforms._create_lha_unfreeze_2027,
 }
 OLD_PLACEHOLDERS = (
     "two_child_limit",
@@ -127,18 +127,18 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_nine_candidates():
+def test_the_package_is_the_eight_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
-    assert len(reforms._MEASURE_FACTORIES) == 9
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    assert len(reforms._MEASURE_FACTORIES) == 8
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--b8648f2b17522f3e"
+    assert key == "combined--894152ce8c83f1d8"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All nine candidate measures")
+    assert description.startswith("All eight candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -998,18 +998,6 @@ FIRST_YEARS = {
             "student_loan_repayments": 500,
         },
         {},
-    ),
-    # A private renter in the North West on £15,000 of rent: the LHA rate
-    # that caps it is re-set from 2027-28.
-    "lha_unfreeze_2027": (
-        2027,
-        "LHA_cap",
-        {"age": 30, "employment_income": 8_000},
-        {
-            "tenure_type": "RENT_PRIVATELY",
-            "rent": 15_000,
-            "region": "NORTH_WEST",
-        },
     ),
     # £30,000 of pay: £4,100 more below the threshold, £615 a year at 15%
     # before the pay response

@@ -30,13 +30,12 @@ FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "src/test/fixtures/publication/manifest.json"
 )
-# The nine candidate measures Vahid chose for the package (27 October 2026,
+# The eight candidate measures Vahid chose for the package (27 October 2026,
 # evening), sorted by id. (The name is kept from the seven-measure package.)
 SEVEN = [
     "domestic_electricity_zero_vat",
     "employer_nics_secondary_threshold_raise",
     "fuel_duty_rise_deferral",
-    "lha_unfreeze_2027",
     "plan_2_threshold_unfreeze",
     "state_pension_income_tax_protection",
     "threshold_freeze_2031_32",
@@ -75,7 +74,7 @@ class CapturingRunner:
 def test_the_seven_compose_to_the_package_key():
     # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--b8648f2b17522f3e"
+    assert package.id == "combined--894152ce8c83f1d8"
     assert package.id == combined_key(SEVEN)
 
 
