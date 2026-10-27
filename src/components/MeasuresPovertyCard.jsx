@@ -260,7 +260,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       summary={summary}
       download={{
         filename: `${metric.file}-by-measure-${selectedYear}`,
-        image: false,
         csv: () =>
           buildChartCsv({
             title: `${metric.title} by policy, ${year}`,

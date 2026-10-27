@@ -12,6 +12,7 @@ import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonCard, comparisonSente
 const viewRadio = (label) => screen.getByRole("radio", { name: `Show as ${label.toLowerCase()}` });
 const show = (label) => fireEvent.click(viewRadio(label));
 import { DISPLAY_YEARS } from "../utils/displayYears";
+import { expectStandardDownloads } from "../test/downloadMenus";
 import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
@@ -82,7 +83,8 @@ describe("the OBR comparison table", () => {
       "Policy", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
     ]);
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);    // The table offers the same downloads as the chart
+    expect(expectStandardDownloads(document.body)).toBe(1);
   });
 
   it("starts on the static official basis and switches to post-behavioural", async () => {

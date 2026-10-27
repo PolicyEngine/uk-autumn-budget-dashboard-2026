@@ -189,6 +189,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const [view, setView] = useState("chart");
   const [scale, setScale] = useState("bn");
   const chartRef = useRef(null);
+  const tableRef = useRef(null);
   const showTable = view === "table";
 
   if (selectedPolicies.length === 0) return null;
@@ -244,18 +245,19 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         difference: row.pe !== null && row.obr !== null ? row.pe - row.obr : undefined,
       })),
     });
-  // The download follows the view: the table offers its CSV only
+  // The download follows the view: the chart's images, or the table's
+  // (redrawn from the page, chartDownloads)
   const download = {
-    chartRef,
+    chartRef: showTable ? tableRef : chartRef,
     name: `policyengine-official-costings-${selectedYear}`,
     csv,
-    image: !showTable && yearCovered,
+    image: showTable || yearCovered,
     exportOptions: {
       title,
       description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
-      svgSelector: "svg",
+      svgSelector: showTable ? undefined : "svg",
       reservedLegendHeight: 0,
     },
   };
@@ -324,7 +326,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         ))}
         {showTable && (
           <div id="obr-comparison-table" className="comparison-table-wrapper">
-            <table className="comparison-table">
+            <table ref={tableRef} className="comparison-table">
               <thead>
                 <tr>
                   <th scope="col">Policy</th>

@@ -225,10 +225,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     name: `young-people-change-by-policy-${band.replace("+", "-plus")}-${selectedYear}`,
     exportOptions,
     csv: csvText,
+    // The dumbbell is drawn in HTML: its images are redrawn from the page
+    // (chartDownloads)
     published: published && shown.length > 0,
-    // The dumbbell is drawn in HTML, not as a Recharts SVG, so there is no
-    // chart image to export: the CSV only
-    image: false,
   };
 
   return (

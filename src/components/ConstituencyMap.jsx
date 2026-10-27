@@ -26,6 +26,7 @@ import {
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { frameCsv, frameFileName, frameSvg } from "../utils/exportFrame";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import { htmlImageFormats } from "../utils/chartDownloads";
 import {
   EXPORT_UNITS,
   buildCsv,
@@ -941,6 +942,8 @@ export default function ConstituencyMap({
   // The pinned card sits just above the seat the map centres, moved down
   // and across as needed so it stays inside the map (and so on screen)
   const cardRef = useRef(null);
+  // The Table view's panel, for its image downloads
+  const [rankingsPanel, setRankingsPanel] = useState(null);
   const closeRef = useRef(null);
   const [cardPlace, setCardPlace] = useState(null);
   useLayoutEffect(() => {
@@ -1066,7 +1069,11 @@ export default function ConstituencyMap({
   // The map's full fit: the box round every seat in the view drawn
   const fit = geometry?.box ?? { x: 0, y: 0, width: WIDTH, height: HEIGHT };
   const downloadsReady = onMap ? view.kind === "rows" : tableReady;
-  const downloads = onMap ? mapDownloads : { csv: handleExportRankings };
+  // The Table view: its CSV, and the table as the page shows it as images
+  // (chartDownloads), so both views offer the same formats
+  const downloads = onMap
+    ? mapDownloads
+    : { csv: handleExportRankings, ...htmlImageFormats(() => rankingsPanel, `constituency-rankings-${reform}-${selectedYear}-by-${metric}`) };
   const notice =
     view.kind === "notice" ? (
       <UnavailableNotice reason={view.reason}>
@@ -1210,7 +1217,7 @@ export default function ConstituencyMap({
         {/* Before results are in, the Table view is the notice alone: no
             empty table, count or "no match" line behind it */}
         {!onMap && view.kind === "rows" && (
-          <div className="rankings-panel">
+          <div ref={setRankingsPanel} className="rankings-panel">
             <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
           </div>
         )}

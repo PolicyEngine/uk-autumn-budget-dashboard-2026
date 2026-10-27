@@ -17,6 +17,7 @@
  * files with HTTP 200) the "Built site" CI job checks against `next start`.
  */
 import { expectCompletePills } from "./test/optionsPills";
+import { downloadMenus, STANDARD_FORMATS } from "./test/downloadMenus";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -203,6 +204,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       await new Promise((resolve) => setTimeout(resolve, 50));
       // Every Options pill on the tab names every choice its dialog holds
       expectCompletePills(panel);
+      // Every card's Download offers the same formats (CSV, PNG, SVG)
+      for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -233,6 +236,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
           timeout: 5000,
         });
+        for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API && yours(r))
           .map((r) => JSON.parse(r.body).include);

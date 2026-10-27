@@ -446,9 +446,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         rows: published ? shown : [],
         notes,
       }),
+    // The dumbbell is HTML: its images are redrawn from the page
     published: published && shown.length > 0,
-    // The dumbbell is HTML, not a Recharts SVG: the CSV only
-    image: false,
   };
 
   return (

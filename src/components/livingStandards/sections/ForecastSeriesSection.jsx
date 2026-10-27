@@ -177,7 +177,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: `forecast-${card.id}`, image: false, csv }}>
+      <LsCard {...common} download={{ filename: `forecast-${card.id}`, csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
