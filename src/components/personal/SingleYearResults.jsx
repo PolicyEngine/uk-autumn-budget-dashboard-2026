@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
 import { InfoTip } from "../Tip";
-import { CircleSlash, ListChecks, TriangleAlert } from "lucide-react";
+import { CircleSlash, Info, ListChecks, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
@@ -277,11 +277,11 @@ const shortReason = (text) => {
 
 /**
  * The result card's "About this result", in the charts' "About this chart"
- * style (InfoSections): one bullet on assumed spending, when most of the
- * change comes from it, then two columns with matching headings: "Based
- * on" (each fact with its tip) and "No effect on you" (a chip each; an
- * employer cost's reason in its tip). Any measure's own note, or one under
- * £1 a year, below. Each fact once.
+ * style (InfoSections): two columns with matching headings, "Based on"
+ * (each fact with its tip) and "No effect on you" (a chip each; an
+ * employer cost's reason in its tip); then Notes (any measure's own note,
+ * one under £1 a year); then Caveats, on assumed spending when most of the
+ * change comes from it. Each fact once.
  */
 function AboutResult({ items, caution, bars, totals }) {
   const noEffect = bars?.noEffectItems ?? [];
@@ -291,10 +291,10 @@ function AboutResult({ items, caution, bars, totals }) {
   // The waterfall's bars start above £0 (its axis tick shows where): why
   const scaleStart = totals ? waterfallScaleStart(totals, bars ? bars.rows : null) : 0;
   const parts = [
-    caution && "Caveats",
     items.length > 0 && "Based on",
     noEffect.length > 0 && "No effect on you",
     (notes.length > 0 || under.length > 0 || scaleStart > 0) && "Notes",
+    caution && "Caveats",
   ].filter(Boolean);
   if (!caution && parts.length === 0) return null;
   const extra = [
@@ -309,19 +309,6 @@ function AboutResult({ items, caution, bars, totals }) {
   return (
     <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
       <div className="info-sections result-about">
-        {caution && (
-          <section className="info-section info-section-caveat">
-            <h4 className="info-heading">
-              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
-              Caveats
-            </h4>
-            <div className="info-body">
-              <ul className="info-list info-caveats result-about-caution">
-                <li>Most of the change comes from assumed fuel and electricity spending.</li>
-              </ul>
-            </div>
-          </section>
-        )}
         <div className="result-about-columns">
           {items.length > 0 && (
             <section className="info-section result-card-basis">
@@ -360,13 +347,36 @@ function AboutResult({ items, caution, bars, totals }) {
           )}
         </div>
         {extra.length > 0 && (
-          <ul className="info-list result-card-notes">
-            {extra.map((item, index) => (
-              <li key={index} className="single-year-quiet">
-                {item}
-              </li>
-            ))}
-          </ul>
+          <section className="info-section result-card-notes">
+            <h4 className="info-heading">
+              <Info aria-hidden="true" strokeWidth={1.75} />
+              Notes
+            </h4>
+            <div className="info-body">
+              {extra.length > 1 ? (
+                <ul className="info-list">
+                  {extra.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="info-text">{extra[0]}</div>
+              )}
+            </div>
+          </section>
+        )}
+        {caution && (
+          <section className="info-section">
+            <h4 className="info-heading">
+              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+              Caveats
+            </h4>
+            <div className="info-body">
+              <div className="info-text info-caveats result-about-caution">
+                Most of the change comes from assumed fuel and electricity spending.
+              </div>
+            </div>
+          </section>
         )}
       </div>
     </Disclosure>

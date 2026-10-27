@@ -149,18 +149,19 @@ export function comparisonSentence(rows, obrKind) {
 // About this chart: what the two bases are, why the figures differ, sources
 const COMPARISON_INFO = {
   shows:
-    "Each row sets PolicyEngine's estimate of a measure's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or reduce spending. Rows run from the largest official costing to the smallest, and the Difference column is PolicyEngine minus the official figure.",
+    "PolicyEngine's estimate of each measure's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
-    "PolicyEngine's figures are static: they hold people's behaviour fixed, so the official static costing is the like-for-like comparison.",
-    "With the scale set to % of official costing, every official costing sits at 100% and PolicyEngine's estimate is shown as a share of it, so small measures can be read beside large ones. A measure whose official costing is under £0.05bn has no % to show.",
+    "PolicyEngine's figures are static, so they sit beside the official static costing.",
+    "On the % scale each official costing is 100%; a measure costed under £0.05bn has no %.",
+    "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
-    { term: "Static costing", meaning: "The direct effect of a measure with behaviour held fixed: the same people, earnings and spending, under the new rules." },
-    { term: "Post-behavioural costing", meaning: "The static costing adjusted for how people and firms are expected to respond, for example by changing hours worked, the timing of income or what they buy." },
+    { term: "Static costing", meaning: "The direct effect, with behaviour held fixed." },
+    { term: "Post-behavioural costing", meaning: "The static costing plus expected responses, such as changes in hours worked or spending." },
   ],
   caveats: [
-    "PolicyEngine simulates households from survey data. Effects that fall outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in an official costing built from administrative data.",
-    "The two can also differ through the economic forecast each uses, the take-up of benefits and reliefs, and the parts of a measure each models.",
+    "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
+    "The two can also differ in the economic forecast, take-up and the parts of a measure each models.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
