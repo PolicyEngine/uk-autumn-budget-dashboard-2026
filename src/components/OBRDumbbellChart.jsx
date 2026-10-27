@@ -341,16 +341,15 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       >
         {/* The whole row answers the pointer, not just its dots */}
         <rect className="obr-dumbbell-hit" x={0} y={top + index * rowHeight} width={width} height={rowHeight} fill="transparent" />
-        {narrow && backing(0, nameY, approxWidth(row.name, fontSize) + SVG_LABEL_INDENT.compact)}
+        {narrow && backing(0, nameY, approxWidth(row.name, fontSize) + SVG_LABEL_INDENT.full)}
         {/* The shared measure label (MeasureRowLabel), drawn in the SVG so
-            the downloaded image keeps it; compact on a phone */}
+            the downloaded image keeps it */}
         <g className="obr-dumbbell-name">
           <SvgMeasureLabel
             measure={row.measure ?? { id: row.id, name: row.name }}
             name={row.name}
             y={nameY}
             fontSize={fontSize}
-            compact={narrow}
             textProps={HALO}
             nameColour={NAME_COLOUR}
             captionColour={TICK_STYLE.fill}

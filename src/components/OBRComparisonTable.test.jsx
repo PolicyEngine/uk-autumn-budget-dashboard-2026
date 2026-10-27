@@ -82,7 +82,7 @@ describe("the OBR comparison table", () => {
       "Policy", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
     ]);
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);
   });
 
   it("starts on the static official basis and switches to post-behavioural", async () => {
@@ -177,7 +177,7 @@ describe("the comparison at 2031-32", () => {
     expect(container.querySelector(".obr-dumbbell-dot")).toBeNull();
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "—", "—", "—"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.6bn", "—", "—", "—"]);
   });
 });
 
@@ -189,7 +189,7 @@ it("orders rows by the size of the official costing", async () => {
   const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
   await screen.findByRole("radio", { name: "Show as chart" });
   show("Table");
-  const names = [...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent);
+  const names = [...container.querySelectorAll(".policy-name-cell .mrl-name")].map((node) => node.textContent);
   expect(names).toEqual([ALPHA, BETA].map((id) => catalogue.byId.get(id).label ?? catalogue.byId.get(id).name));
 });
 

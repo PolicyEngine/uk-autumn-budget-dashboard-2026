@@ -1,5 +1,5 @@
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { MeasureIcon } from "./MeasureRowLabel";
+import MeasureRowLabel from "./MeasureRowLabel";
 import "./ChartTooltip.css";
 
 /** A signed value with a true minus, for tooltips. */
@@ -42,7 +42,8 @@ function ChartTooltip({
   note,
 }) {
   const { bySeriesKey, byId } = useMeasureCatalogue();
-  // A row that is a measure takes its category icon in place of the swatch
+  // A row that is a measure is named by the shared label (badge, name,
+  // category) in place of the swatch and name
   const measureOf = (key) => bySeriesKey?.get(key) ?? byId?.get(key) ?? null;
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
@@ -90,10 +91,16 @@ function ChartTooltip({
           {heading && <p className="chart-tooltip-heading">{heading}</p>}
           {sectionRows.map((row) => (
             <div key={row.key} className={measureOf(row.key) ? "chart-tooltip-row has-icon" : "chart-tooltip-row"}>
-              {measureOf(row.key)
-                ? <MeasureIcon compact measure={measureOf(row.key)} colour={row.color} />
-                : <span className="chart-tooltip-swatch" style={{ background: row.color }} />}
-              <span className="chart-tooltip-name">{row.name}</span>
+              {measureOf(row.key) ? (
+                <span className="chart-tooltip-name">
+                  <MeasureRowLabel tip={false} measure={measureOf(row.key)} colour={row.color} name={row.name} />
+                </span>
+              ) : (
+                <>
+                  <span className="chart-tooltip-swatch" style={{ background: row.color }} />
+                  <span className="chart-tooltip-name">{row.name}</span>
+                </>
+              )}
               <span className="chart-tooltip-value">{row.text ?? valueText(row.value)}</span>
             </div>
           ))}

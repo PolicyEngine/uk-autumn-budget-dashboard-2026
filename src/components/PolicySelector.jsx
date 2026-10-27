@@ -168,7 +168,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
                       checked={selectedPolicies.includes(policy.id)}
                       onChange={() => onPolicyToggle(policy.id)}
                     />
-                    <MeasureRowLabel compact tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
+                    <MeasureRowLabel tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
                   </label>
                   {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>

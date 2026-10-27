@@ -471,7 +471,7 @@ function SeatCard({ card }) {
           <p className="seat-card-policies-heading">{card.policiesHeading}</p>
           {card.byPolicy.map((row) => (
             <div key={row.id} className="seat-card-policy">
-              <MeasureRowLabel compact tip={false} measure={byId?.get(row.id) ?? { id: row.id, name: row.name }} name={row.name} nameClassName="seat-card-policy-name" />
+              <MeasureRowLabel tip={false} measure={byId?.get(row.id) ?? { id: row.id, name: row.name }} name={row.name} nameClassName="seat-card-policy-name" />
               {row.value !== null && (
                 <span className="seat-card-policy-bar" aria-hidden="true">
                   {largest > 0 && (

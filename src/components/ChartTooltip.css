@@ -43,9 +43,11 @@
   padding: 1px 0;
 }
 
-/* A measure's row: its icon tile (MeasureRowLabel) in place of the swatch */
+/* A measure's row: the shared label (MeasureRowLabel) in place of the
+   swatch and name */
 .chart-tooltip-row.has-icon {
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 2px 0;
 }
 
 .chart-tooltip-swatch {

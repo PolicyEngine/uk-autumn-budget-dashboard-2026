@@ -335,7 +335,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td className="policy-name-cell"><MeasureRowLabel compact measure={row.measure} name={row.name} /></td>
+                    <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                     <td className="value-cell pe">{cell(row.pe)}</td>
                     <td className="value-cell obr">{cell(row.obrStatic)}</td>
                     <td className="value-cell obr">{cell(row.obrBehavioural)}</td>

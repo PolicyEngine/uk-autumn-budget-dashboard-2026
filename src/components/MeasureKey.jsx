@@ -9,8 +9,8 @@ import "./MeasureKey.css";
  * The measure key: one compact row of chips for the measures a chart (or a
  * section of charts) colours by, in place of a long legend per card.
  *
- * - Each chip is a measure's MeasureRowLabel (compact): its category icon
- *   in its colour, and short name (its full name in the
+ * - Each chip is a measure's MeasureRowLabel: its category icon in its
+ *   colour, short name and category (its full name in the
  *   tooltip and accessible name), in one unlabelled row: measures that
  *   raise revenue, then those that cost it, then the net line. The colour,
  *   group and order are the
@@ -165,7 +165,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
   const full = member.name;
   const face = (
     <>
-      <MeasureRowLabel compact tip={false} measure={member} colour={color} name={shortNameOf(member)} nameClassName="measure-key-label" />
+      <MeasureRowLabel tip={false} measure={member} colour={color} name={shortNameOf(member)} nameClassName="measure-key-label" />
     </>
   );
   if (member.muted) {
@@ -181,7 +181,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
       <button
         type="button"
         className={`measure-key-chip${pinned ? " is-active" : ""}`}
-        aria-label={shortNameOf(member) === full ? undefined : `${shortNameOf(member)}: ${full}`}
+        aria-label={shortNameOf(member) === full ? full : `${shortNameOf(member)}: ${full}`}
         aria-pressed={pinned}
         onMouseEnter={() => onHover(keyOf(member))}
         onMouseLeave={() => onHover(null)}
