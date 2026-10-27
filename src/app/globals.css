@@ -1948,22 +1948,8 @@ body {
   gap: 6px;
 }
 
-.policy-card-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .ptl-budget-icon {
   flex: none;
-}
-
-/* A card's tags: Temporary */
-.policy-card-tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
 }
 
 /* One size and structure for every card, two to a row: fixed slots
@@ -2034,7 +2020,7 @@ body {
   min-width: 0;
 }
 
-/* The type and any "Temporary" badge share the first line */
+/* The type on the first line */
 .policy-card-topline {
   display: flex;
   align-items: center;
@@ -2059,21 +2045,6 @@ body {
   font-weight: 600;
   line-height: 1.3;
   color: var(--pe-gray-900);
-}
-
-.policy-card-badge {
-  flex: 0 0 auto;
-  padding: 3px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--c-notice-text);
-  background: var(--c-notice-bg);
-  border: 1px solid var(--c-loss-border);
-  border-radius: 999px;
-  /* Overhangs its line by a pixel each way, so a card with the tag keeps
-     the same height of head as one without */
-  margin: -2px 0;
 }
 
 .policy-card-summary {

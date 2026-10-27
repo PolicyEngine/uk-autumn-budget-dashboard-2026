@@ -80,7 +80,9 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
-    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("EnergyTemporary");
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent(/^Energy$/);
+    expect(card).not.toHaveTextContent("Temporary");
+    expect(card.querySelector(".policy-card-badge")).toBeNull();
     expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
