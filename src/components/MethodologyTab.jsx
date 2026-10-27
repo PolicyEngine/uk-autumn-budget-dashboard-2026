@@ -210,14 +210,13 @@ function MethodologyTab({ onShowTab }) {
                     value: (
                       <>
                         Built with <SourceLink id="microcosm_site">Microcosm</SourceLink>: a sequence of
-                        checked stages (the spine) adds to each Family Resources Survey household what
-                        the survey does not record; calibration then sets each record&apos;s weight.
+                        stages adds to each Family Resources Survey household what the survey does not
+                        record; calibration then sets each record&apos;s weight.
                       </>
                     ),
                     more: [
                       "The stages draw on other surveys and on administrative statistics for high incomes, wealth, spending, travel and benefit take-up.",
-                      "The spine feeds two files, calibrated separately and certified together: the national file, and a local-area file for constituencies and local authorities.",
-                      "Each file must pass release checks before it is published.",
+                      "The same stages feed two files, calibrated separately and certified together: the national file, and a local-area file for constituencies and local authorities.",
                       "Both files are built from survey microdata licensed through the UK Data Service, so they are not public downloads.",
                     ],
                   },
