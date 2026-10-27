@@ -17,6 +17,10 @@ vi.mock("./components/DistributionalChart", () => ({
   default: ({ rawData, selectedPolicies }) => <div data-testid="distributional-figures" data-rows={JSON.stringify(rawData)} data-selected={JSON.stringify(selectedPolicies)} />,
 }));
 vi.mock("./components/WaterfallChart", () => ({ default: () => null }));
+// The decile card shows £ by default; these tests read the % view's rows
+vi.mock("./components/DecileImpactCard", () => ({
+  default: ({ distributional, selectedPolicies }) => <div data-testid="distributional-figures" data-rows={JSON.stringify(distributional)} data-selected={JSON.stringify(selectedPolicies)} />,
+}));
 vi.mock("./components/ConstituencyMap", () => ({ default: () => null }));
 vi.mock("./components/HouseholdScatter", () => ({ default: () => null }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));

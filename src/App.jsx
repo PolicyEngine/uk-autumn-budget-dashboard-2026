@@ -3,8 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
-import DistributionalChart from "./components/DistributionalChart";
-import WaterfallChart from "./components/WaterfallChart";
+import DecileImpactCard from "./components/DecileImpactCard";
 import ConstituencyMap from "./components/ConstituencyMap";
 import { ObrComparisonFoot } from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
@@ -706,9 +705,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // All households: places, and how changes vary between households
     return (
       <div className="results-container">
-        {/* Three sections: by area (the constituency map), by income (the
-            decile pair) and across households (the scatter of binned groups;
-            the per-household scatter stays withdrawn, as it showed survey
+        {/* Two sections: by area (the constituency map) and by income (the
+            decile card beside the scatter of binned groups; the
+            per-household scatter stays withdrawn, as it showed survey
             households one by one). One measure key above them all
             (MeasureKey): the decile cards colour by measure and register
             with it. Results by region are hidden for now (RegionView is
@@ -733,49 +732,39 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="by-income"
             icon="wallet"
             title="By income"
-            subtitle="How the change differs between lower- and higher-income households."
+            subtitle="How the change differs between lower- and higher-income households: on average in each income decile, and across households with similar incomes and changes."
           />
+          {/* The decile card (£ or % in its Options) beside the household
+              scatter: two columns on a wide screen, stacked on a narrow one */}
           <section id={DECILES_ANCHOR} className="report-section distributional-section">
             <div className="charts-grid">
-              <WaterfallChart
-                rawData={results.rawWinnersLosers}
+              <DecileImpactCard
+                winnersLosers={results.rawWinnersLosers}
+                distributional={results.rawDistributional}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
               />
-              <DistributionalChart
-                rawData={results.rawDistributional}
+              <HouseholdScatter
                 selectedPolicies={selectedPolicies}
+                policies={POLICIES}
                 selectedYear={distributionalYear}
+                descriptionLink={
+                  <>
+                    Where would yours be?{" "}
+                    <a
+                      className="twin-link"
+                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        handleTabChange("household");
+                      }}
+                    >
+                      Work it out on Household impact →
+                    </a>
+                  </>
+                }
               />
             </div>
-          </section>
-          <SectionHeading
-            id="across-households"
-            icon="users"
-            title="Across households"
-            subtitle="Who gains and who loses at every income level, in groups of households with similar incomes and changes."
-          />
-          <section id="scatter" className="report-section charts-stack">
-            <HouseholdScatter
-              selectedPolicies={selectedPolicies}
-              policies={POLICIES}
-              selectedYear={distributionalYear}
-              descriptionLink={
-                <>
-                  Where would yours be?{" "}
-                  <a
-                    className="twin-link"
-                    href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      handleTabChange("household");
-                    }}
-                  >
-                    Work it out on Household impact →
-                  </a>
-                </>
-              }
-            />
           </section>
         </MeasureKeyProvider>
       </div>

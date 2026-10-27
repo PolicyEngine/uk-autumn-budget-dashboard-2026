@@ -68,7 +68,14 @@ const ABSOLUTE_INFO = {
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+/**
+ * @param {Object} props
+ * @param {string} [props.title] - The title before the year (DecileImpactCard
+ *   gives the merged card's)
+ * @param {React.ReactNode} [props.controls] - Controls under the sentence
+ * @param {Object} [props.info] - About this chart, in place of the card's own
+ */
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, title = "Absolute impact by income decile", controls = null, info = ABSOLUTE_INFO }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure whose segment is hovered: the others dim
@@ -195,7 +202,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   if (!rawData || rawData.length === 0) {
     return (
       <div className="waterfall-chart">
-        <h3>Absolute impact by income decile</h3>
+        <h3>{title}</h3>
         <p className="chart-description">
             {CHART_DESCRIPTION}
         </p>
@@ -235,7 +242,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       : []),
   ];
 
-  const chartTitle = `Absolute impact by income decile, ${formatYearRange(selectedYear)}`;
+  const chartTitle = `${title}, ${formatYearRange(selectedYear)}`;
 
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
@@ -283,6 +290,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
+      {controls && <div className="chart-controls ls-controls">{controls}</div>}
 
       <div ref={chartRef}>
         {published && hasIncompleteResults && (
@@ -413,7 +421,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} info={ABSOLUTE_INFO} />
+          <ChartMoreInfo members={members} year={selectedYear} info={info} />
         </div>
       )}
     </div>

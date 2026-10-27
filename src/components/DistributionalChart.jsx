@@ -82,7 +82,14 @@ const RELATIVE_INFO = {
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+/**
+ * @param {Object} props
+ * @param {string} [props.title] - The title before the year (DecileImpactCard
+ *   gives the merged card's)
+ * @param {React.ReactNode} [props.controls] - Controls under the sentence
+ * @param {Object} [props.info] - About this chart, in place of the card's own
+ */
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, title = "Relative impact by income decile", controls = null, info = RELATIVE_INFO }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure whose segment is hovered: the others dim
@@ -215,7 +222,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   if (!rawData || rawData.length === 0) {
     return (
       <div className="distributional-chart">
-        <h3>Relative impact by income decile</h3>
+        <h3>{title}</h3>
         <p className="chart-description">
             {CHART_DESCRIPTION}
         </p>
@@ -245,7 +252,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       : []),
   ];
 
-  const chartTitle = `Relative impact by income decile, ${formatYearRange(selectedYear)}`;
+  const chartTitle = `${title}, ${formatYearRange(selectedYear)}`;
 
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
@@ -293,6 +300,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
+      {controls && <div className="chart-controls ls-controls">{controls}</div>}
 
       <div ref={chartRef}>
         {published && hasIncompleteResults && (
@@ -424,7 +432,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} info={RELATIVE_INFO} />
+          <ChartMoreInfo members={members} year={selectedYear} info={info} />
         </div>
       )}
     </div>
