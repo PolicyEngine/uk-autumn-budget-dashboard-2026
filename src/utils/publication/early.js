@@ -21,6 +21,10 @@ export const PRESETS_URL_FILE = "household_presets.json";
 // BOUNDARIES_FILE), unverified, read as before. The biggest file a view
 // waits for, so it should not wait for the page's code too.
 export const BOUNDARIES_URL_FILE = "uk_constituencies_2024.topo.json";
+// A link to the Pre-measures forecast, or to Population impact's Living
+// standards or Poverty (their twins' lines): the outlook (livingStandards/outlook.js
+// OUTLOOK_PATH), unverified, read as before
+export const OUTLOOK_URL_FILE = "living_standards_outlook.json";
 
 const GLOBAL = "__ab26EarlyManifest";
 const RECEIPTS = "__ab26EarlyReceipts";
@@ -56,6 +60,7 @@ export function earlyManifestScript(basePath, { artifacts = true } = {}) {
     `p.catch(function(){});window.${GLOBAL}={url:${url},response:p};` +
     `var r=window.${RECEIPTS}={},q=new URLSearchParams(location.search);` +
     `if(q.get("tab")==="household"){var h=${data}+${JSON.stringify(PRESETS_URL_FILE)};r[h]=fetch(h);r[h].catch(function(){});}` +
+    `if(q.get("tab")==="outlook"||q.get("tab")==="living"||((!q.get("tab")||q.get("tab")==="dashboard")&&(q.get("sub")==="living"||q.get("sub")==="poverty"))){var o=${data}+${JSON.stringify(OUTLOOK_URL_FILE)};r[o]=fetch(o);r[o].catch(function(){});}` +
     `if((!q.get("tab")||q.get("tab")==="dashboard")&&q.get("sub")==="all"){var g=${data}+${JSON.stringify(BOUNDARIES_URL_FILE)};r[g]=fetch(g);r[g].catch(function(){});}` +
     `p.then(function(x){return x.ok?x.clone().json():null}).then(function(m){` +
     `var age=${JSON.stringify(AGE_VIEWS)}.indexOf(q.get("sub"))>=0;if(!m||!(${artifacts ? "true" : "age"}))return;` +
