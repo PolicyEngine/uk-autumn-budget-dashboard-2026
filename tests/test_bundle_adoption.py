@@ -933,8 +933,9 @@ def test_every_locked_package_ships_a_wheel():
     """lock.sh resolves with --no-build, which refuses any package that ships
     no wheel. One in the lock fails every adoption at its first step: the
     6.11.0 dispatch (25 October) failed on odfpy, which is source-only. A git,
-    URL or path source needs a build too, so only the project itself (an
-    editable or virtual entry) may lack wheels."""
+    URL, path or directory source may need one too (uv builds it unless its
+    metadata is static), so the test treats any entry without wheels as
+    needing a build, except the project's own editable or virtual entry."""
     lock = tomllib.loads((REPO / "uv.lock").read_text())
     needs_a_build = [
         package["name"]
