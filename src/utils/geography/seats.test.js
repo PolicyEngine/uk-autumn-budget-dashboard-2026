@@ -5,7 +5,7 @@ import {
   WITHHELD_FILL,
   approximateFill,
 } from "./palette";
-import { cardLines, describeSeat, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
+import { cardLines, constituencySentence, describeSeat, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
 import { geographyFixture } from "../../test/geographyFixture";
 
 const constituency = parseGeographyTable(geographyFixture("constituency.csv"), {
@@ -168,5 +168,60 @@ describe("a measure that moves no seat", () => {
     expect(noSeatMovedNote({ yearLabel: "2029-30", several: true })).toBe(
       "No constituency shows a change large enough to publish for these policies in 2029-30.",
     );
+  });
+});
+
+describe("the card's sentence", () => {
+  const seats = (rows) => new Map(rows.map((row, i) => [`s${i}`, { kind: row ? row.tier : "no-data", row }]));
+  const row = (areaName, value, tier = "reported") => ({ areaName, value, tier, direction: value === "0" ? "no_change" : "gain" });
+  const withheld = { tier: "withheld", direction: "", value: "" };
+  const options = { outcome: "average_change", yearLabel: "2029-30" };
+
+  it("gives the range when every seat gains", () => {
+    const rows = [row("Northfield East", "310.0"), row("Harbour, Mill and Quay", "12.0"), row("Lough Side", "85.0")];
+    expect(constituencySentence(seats(rows), options)).toBe(
+      "Households gain on average in all 3 constituencies, from £12 a year in Harbour, Mill and Quay to £310 in Northfield East.",
+    );
+    // Seats not published are counted in "with a published figure"
+    const relative = [row("Northfield East", "0.0112"), row("Lough Side", "0.0031"), withheld, null];
+    expect(constituencySentence(seats(relative), { ...options, outcome: "relative_change" })).toBe(
+      "Households gain on average in all 2 constituencies with a published figure, from 0.31% of income in Lough Side to 1.12% in Northfield East.",
+    );
+  });
+
+  it("gives the range of a loss without a minus sign", () => {
+    const rows = [row("Northfield East", "-0.0112"), row("Lough Side", "-0.0005")];
+    expect(constituencySentence(seats(rows), { ...options, outcome: "relative_change" })).toBe(
+      "Households lose on average in all 2 constituencies, from 0.05% of income in Lough Side to 1.12% in Northfield East.",
+    );
+  });
+
+  it("counts the seats each way when they differ", () => {
+    // Under half a pound reads as no change, as on the seat cards
+    const rows = [row("A", "10.0"), row("B", "20.0"), row("C", "-5.0"), row("D", "0.3"), withheld];
+    expect(constituencySentence(seats(rows), options)).toBe(
+      "Households gain on average in 2 constituencies, lose in 1 and see no change in 1; 1 constituency is not published.",
+    );
+    expect(constituencySentence(seats([row("A", "10.0"), row("C", "-5.0")]), options)).toBe(
+      "Households gain on average in 1 constituency and lose in 1.",
+    );
+  });
+
+  it("says when the policy changes no incomes", () => {
+    expect(constituencySentence(seats([row("A", "0"), row("B", "0")]), options)).toBe(
+      "This policy does not change household incomes in any constituency in 2029-30.",
+    );
+    expect(constituencySentence(seats([row("A", "0")]), { ...options, several: true })).toBe(
+      "These policies do not change household incomes in any constituency in 2029-30.",
+    );
+    // Some seats withheld: nothing is published to say there is no change
+    expect(constituencySentence(seats([row("A", "0"), withheld]), options)).toBe(
+      "No constituency shows a change large enough to publish for this policy in 2029-30.",
+    );
+  });
+
+  it("says nothing without rows", () => {
+    expect(constituencySentence(seats([null]), options)).toBeNull();
+    expect(constituencySentence(null, options)).toBeNull();
   });
 });

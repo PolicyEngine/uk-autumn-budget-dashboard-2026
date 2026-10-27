@@ -5,8 +5,8 @@
 // step closes the gap; the package total ends it. People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
-// throughout. Measures that move no one are one line in About this chart, not
-// empty rows. A run that does not carry the chosen measure (one written
+// throughout. Every selected policy has a row: one that moves no one shows
+// "No change" and why (noPovertyEffectReason), after the steps. A run that does not carry the chosen measure (one written
 // before the poverty and inequality measures) is never a step of 0: the
 // card then shows the headline measure, and says so.
 // The poverty choice is shared with the Change in the poverty rate chart
@@ -28,60 +28,18 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
-import { legendMembership, zeroForHouseholds } from "../utils/legendMembership";
-import { nestedItem } from "./InfoSections";
+import { legendMembership, noPovertyEffectReason } from "../utils/legendMembership";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
-
-// Why a policy with no effect on poverty moves no one, by what it changes:
-// [for one policy, for several]
-const PRICES = "prices, which the poverty measure's income leaves out";
-const NO_EFFECT_REASONS = {
-  prices: ["it changes " + PRICES, "they change " + PRICES],
-  gains: ["it taxes capital gains, which the poverty measure's income leaves out", "they tax capital gains, which the poverty measure's income leaves out"],
-  employer: ["it changes employers' costs, and wages are held fixed", "they change employers' costs, and wages are held fixed"],
-};
-const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
-
-/**
- * The policies with no effect on poverty, grouped by why: "Fuel duty
- * deferral — it changes prices, which the poverty measure's income leaves
- * out". A policy whose reason is not known moves no one across the line in
- * `year`. Returns [{names, text}], one per reason.
- */
-export function noPovertyEffectGroups(zero, catalogue, year) {
-  const groups = new Map();
-  for (const m of zero) {
-    const measure = catalogue.byId?.get(m.id) ?? m;
-    const type = policyDetailsFor(measure)?.type;
-    const key = zeroForHouseholds(measure)
-      ? "employer"
-      : PRICE_TYPES.has(type)
-        ? "prices"
-        : type === "Capital gains tax"
-          ? "gains"
-          : "none";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(m.name);
-  }
-  return [...groups].map(([key, names]) => {
-    const many = names.length > 1;
-    const text =
-      key === "none"
-        ? `${many ? "they move" : "it moves"} no one across the poverty line in ${year}`
-        : NO_EFFECT_REASONS[key][many ? 1 : 0];
-    const list = many ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
-    return { names, text: `${list} — ${text}` };
-  });
-}
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
  * measures that change incomes that year ({members} lists all, £0 ones
  * muted), and the package's (the combined run) when one run covers the
- * selection. {missing} lists the runs read whose rows do not carry `key`;
- * such a measure's value is null, never 0.
+ * selection. {idle} are the selected measures that change no income that
+ * year (muted), each a "No change" row. {missing} lists the runs read whose
+ * rows do not carry `key`; such a measure's value is null, never 0.
  */
 export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
@@ -95,6 +53,9 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
       value: metricValue(rowFor(member.id), key),
       colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange,
     }));
+  const idle = members
+    .filter((member) => member.muted)
+    .map((member) => ({ id: member.id, name: shortNameOf(member), value: 0, colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange }));
   const combinedId = catalogue.combinedId;
   const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
   const packageRow = combinedId && run === combinedId ? rowFor(run) : undefined;
@@ -103,7 +64,7 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
     ...measures.filter((measure) => measure.value === null).map((measure) => measure.id),
     ...(packageRow && total === null ? [run] : []),
   ];
-  return { members, measures, total, missing };
+  return { members, measures, idle, total, missing };
 }
 
 // The headline poverty measure: metrics' own column, which every run carries
@@ -129,14 +90,17 @@ export function povertyCardRows(rows, catalogue, selectedPolicies, year, chosen)
  * The waterfall's rows from the measures' changes (pp): x is people moved
  * out of poverty (or, with no population, −pp), so a fall in poverty
  * steps right. Steps by size, then an interaction step where they miss
- * the package by more than rounding, then the total from 0.
+ * the package by more than rounding, then a "No change" row (no bar) for
+ * each measure that moves no one (a value of exactly 0, or `idle`: no
+ * income changed that year), then the total from 0. A small non-zero
+ * change is a step, never "No change".
  * Returns { steps, zero, peopleMode }; each step is
- * { id, name, pp, x, start, end, colour, kind: "measure" | "interaction" | "total" }.
+ * { id, name, pp, x, start, end, colour, kind: "measure" | "interaction" | "none" | "total" }.
  */
-export function povertyWaterfall(measures, total, millions) {
+export function povertyWaterfall(measures, total, millions, idle = []) {
   const peopleMode = Boolean(millions);
   const toX = (pp) => (peopleMode ? -(pp / 100) * millions * 1e6 : -pp);
-  const zero = measures.filter((m) => m.value === 0);
+  const zero = [...measures.filter((m) => m.value === 0), ...idle];
   const moving = measures.filter((m) => m.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
   let at = 0;
   const steps = moving.map((m) => {
@@ -152,6 +116,10 @@ export function povertyWaterfall(measures, total, millions) {
       const x = toX(gap);
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
+  }
+  // At 0 to 0, so a row with no bar never widens the axis
+  for (const m of zero) steps.push({ id: m.id, name: m.name, pp: 0, x: 0, start: 0, end: 0, colour: m.colour, kind: "none" });
+  if (total !== null) {
     const x = toX(total);
     steps.push({ id: "package", name: "All policies together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
@@ -189,10 +157,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   if (!read) return null;
 
   const year = fiscalYearTick(selectedYear);
-  const { members, measures, total } = read;
+  const { measures, idle, total } = read;
   // The shown measure's people: everyone's when the card falls back
   const millions = population ? population(selectedYear, metric.group) : null;
-  const { steps, zero, peopleMode } = povertyWaterfall(measures, total, millions);
+  const { steps, peopleMode } = povertyWaterfall(measures, total, millions, idle);
   const who = metric.group === "children" ? "children" : "people";
 
   // The rate's change in words: "down 0.005 percentage points"
@@ -200,6 +168,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     `${pp < 0 ? "down" : pp > 0 ? "up" : "no change,"} ${formatPp(Math.abs(pp)).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}`;
   // "about 4,000 fewer people" (people) or the rate in words (no population)
   const main = (step) => {
+    if (step.kind === "none") return "No change";
     if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
@@ -231,6 +200,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           : CHART_COLOURS.loss;
   const pos = (v) => (x1 === x0 ? 50 : ((v - x0) / (x1 - x0)) * 100);
 
+  // Why a "No change" row moves no one: "changes prices, not incomes"
+  const reasonOf = (step) => noPovertyEffectReason(catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name }, selectedYear);
   const measureSteps = steps.filter((s) => s.kind === "measure");
   const top = measureSteps[0];
   const totalStep = steps.find((s) => s.kind === "total");
@@ -289,7 +260,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       summary={summary}
       download={{
         filename: `${metric.file}-by-measure-${selectedYear}`,
-        image: false,
         csv: () =>
           buildChartCsv({
             title: `${metric.title} by policy, ${year}`,
@@ -299,19 +269,19 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
               { key: "pp", label: "Change (pp)", decimals: 4 },
               ...(peopleMode ? [{ key: "people", label: `Change in ${who} in poverty`, decimals: 0 }] : []),
             ],
-            rows: [...steps, ...zero.map((m) => ({ name: m.name, pp: 0, x: 0 }))].map((s) => ({
+            rows: steps.map((s) => ({
               name: s.name,
               pp: s.pp,
-              people: -s.x,
+              people: s.x === 0 ? 0 : -s.x,
             })),
           }),
       }}
       // With the choice above the pair (PovertyMeasuresRow), none in the card
       controls={!choiceAbove && wide && <ControlBar name={metric.title} options={controls} />}
       footer={
+        // The policies that move no one have their rows, each with why: no
+        // list of them here
         <ChartMoreInfo
-          members={members}
-          year={selectedYear}
           info={{
             how: [
               "Each step is one selected policy modelled on its own, largest first.",
@@ -321,20 +291,12 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                 {interaction ? `: the interaction step is the gap (${main(interaction)}).` : "."}
               </>,
             ],
-            // The measures that move no one, and why, here rather than under the chart
             caveats: [
               read.fellBack && (
                 <span className="mp-fell-back">
                   Not every policy shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
                 </span>
               ),
-              zero.length > 0 &&
-                nestedItem(
-                  <strong>No effect on poverty:</strong>,
-                  // One reason: one sentence, with its full stop; several: bullets
-                  noPovertyEffectGroups(zero, catalogue, year).map((group, _, all) => (all.length === 1 ? `${group.text}.` : group.text)),
-                  "wf-none",
-                ),
             ],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty" },
           }}
@@ -347,14 +309,22 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);
             return (
-              <div className={`wf-row wf-${step.kind}`} role="row" key={step.id}>
+              <div className={`wf-row wf-${step.kind} row-band${i % 2 === 0 ? " is-banded" : ""}`} role="row" key={step.id}>
                 <span className="wf-label" role="rowheader">
-                  {step.kind === "measure" ? (
+                  {step.kind === "measure" || step.kind === "none" ? (
                     <MeasureRowLabel measure={catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name, color: step.colour }} name={step.name} colour={step.colour} />
                   ) : (
                     step.name
                   )}
                 </span>
+                {step.kind === "none" ? (
+                  // No bar: the gridlines only, so "No change" never reads as a tiny step
+                  <span className="wf-track" role="cell" aria-label={`No change: ${reasonOf(step)}`}>
+                    {ticks.map((t) => (
+                      <span key={t} className={`wf-grid${t === 0 ? " wf-zero" : ""}`} style={{ left: `${pos(t)}%` }} />
+                    ))}
+                  </span>
+                ) : (
                 <span
                   className="wf-track has-tooltip"
                   role="cell"
@@ -375,11 +345,19 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                     <span key={t} className={`wf-grid${t === 0 ? " wf-zero" : ""}`} style={{ left: `${pos(t)}%` }} />
                   ))}
                   {/* The step's start, joined to the step before */}
-                  {i > 0 && step.kind !== "total" && <span className="wf-join" style={{ left: `${pos(step.start)}%` }} />}
+                  {i > 0 && (step.kind === "measure" || step.kind === "interaction") && <span className="wf-join" style={{ left: `${pos(step.start)}%` }} />}
                   <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: fillOf(step) }} />
                 </span>
+                )}
                 <span className="wf-value" role="cell">
-                  <span className="wf-main"><CountUpText text={main(step)} /></span>
+                  {step.kind === "none" ? (
+                    <>
+                      <span className="wf-main row-band-value">No change</span>
+                      <span className="wf-reason">{reasonOf(step)}</span>
+                    </>
+                  ) : (
+                    <span className="wf-main row-band-value"><CountUpText text={main(step)} /></span>
+                  )}
                 </span>
               </div>
             );

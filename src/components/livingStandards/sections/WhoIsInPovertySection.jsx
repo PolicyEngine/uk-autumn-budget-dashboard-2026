@@ -214,7 +214,6 @@ export default function WhoIsInPovertySection({ data }) {
       sourceText={CSV_SOURCES.pe}
       download={{
         filename: `${measure}-by-${breakdown}`,
-        image: false,
         csv: () =>
           seriesCsv({
             title: `${m.label}: ${b.label.toLowerCase()}`,

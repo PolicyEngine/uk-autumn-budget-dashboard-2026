@@ -52,7 +52,7 @@ import {
   noHouseholdChange,
 } from "../utils/chartTheme";
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import {
@@ -216,6 +216,7 @@ function AgeTooltip({ active, payload }) {
  * axis for every year, so Play shows the change between years.
  */
 function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -228,14 +229,14 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   // always through £0, so the scale holds still under Play
   const { domain, ticks } = useMemo(() => {
     const values = [0];
-    for (const each of DISPLAY_YEARS) {
+    for (const each of shownYears) {
       for (const point of ageBars(each)) {
         if (point.netChange !== null) values.push(point.netChange);
       }
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies]);
+  }, [rows, policies, selectedPolicies, shownYears]);
   // The measures with no effect at these ages, for About this chart
   const members = useMemo(
     () =>
@@ -446,9 +447,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         rows: published ? shown : [],
         notes,
       }),
+    // The dumbbell is HTML: its images are redrawn from the page
     published: published && shown.length > 0,
-    // The dumbbell is HTML, not a Recharts SVG: the CSV only
-    image: false,
   };
 
   return (
@@ -586,7 +586,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
   // With no run for the whole selection: one row per measure, its own
   // shares for one group (pensioners first), filtered in the Options pill
   const [groupKey, setGroupKey] = useState("pensioners");
-  const [hide, setHide] = useState("hide");
+  const [hide, setHide] = useState("show");
   const [order, setOrder] = useState("size");
   const [direction, setDirection] = useState("both");
   const perMeasure = sharesByMeasure(pensionerShares, rows, policies, selectedPolicies, year, catalogue.combinedId, groupKey);
@@ -675,7 +675,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
-              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
+              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "show" },
               { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
               { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}

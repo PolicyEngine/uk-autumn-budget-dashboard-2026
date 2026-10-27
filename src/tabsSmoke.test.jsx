@@ -17,6 +17,7 @@
  * files with HTTP 200) the "Built site" CI job checks against `next start`.
  */
 import { expectCompletePills } from "./test/optionsPills";
+import { downloadMenus, STANDARD_FORMATS } from "./test/downloadMenus";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +43,16 @@ beforeAll(preloadAllViews, 60_000);
 vi.mock("./utils/displayYears", async (original) => {
   const actual = await original();
   const { IN_DATA } = await import("./test/publicationFixture");
-  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+  // App shows the years yearsForSelection returns and moves a year it does
+  // not offer back to DEFAULT_DISPLAY_YEAR, so the fixture year is added
+  // there too (the real function closes over the real DISPLAY_YEARS)
+  const withFixtureYear = (years) => [...new Set([...years, IN_DATA])];
+  return {
+    ...actual,
+    DEFAULT_DISPLAY_YEAR: IN_DATA,
+    DISPLAY_YEARS: withFixtureYear(actual.DISPLAY_YEARS),
+    yearsForSelection: (rows, selected) => withFixtureYear(actual.yearsForSelection(rows, selected)),
+  };
 });
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
@@ -52,14 +62,12 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
 // The official costings follow the Budget; until then Public finances shows
-// no comparison at all. The OBR's prices by spending category wait on their
-// review row; until then their card says they are not yet available.
+// no comparison at all.
 const NOT_YET_PUBLISHED = new Set([
   "/data/regional.csv",
   "/data/constituency.csv",
   "/data/release-index.json",
   "/data/official_costings.json",
-  "/data/obr_price_categories.json",
 ]);
 
 // Text that means a tab failed instead of showing its content.
@@ -205,6 +213,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       await new Promise((resolve) => setTimeout(resolve, 50));
       // Every Options pill on the tab names every choice its dialog holds
       expectCompletePills(panel);
+      // Every card's Download offers the same formats (CSV, PNG, SVG)
+      for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
 
       for (const pattern of FAILURE_TEXT) {
         expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
@@ -235,6 +245,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
           timeout: 5000,
         });
+        for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API && yours(r))
           .map((r) => JSON.parse(r.body).include);

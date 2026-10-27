@@ -67,7 +67,7 @@ describe("chart CSV downloads", () => {
     ];
     const [, units, header, ...rows] = lines(revenueCsv(data, ["Measure A", "Measure B"]));
     expect(units).toMatch(/^"# Units: £ billion per fiscal year/);
-    expect(header).toBe("Fiscal year,Measure A,Measure B,Net impact");
+    expect(header).toBe("Fiscal year,Measure A,Measure B,Net change");
     expect(rows).toEqual(["2026-27,-1.5,0,-1.5", "2027-28,-1.25,2.1,0.85"]);
   });
 
@@ -99,7 +99,7 @@ describe("years not yet published", () => {
     ];
     const rows = lines(revenueCsv(data, ["Measure A"]));
     expect(rows.slice(2)).toEqual([
-      "Fiscal year,Measure A,Net impact",
+      "Fiscal year,Measure A,Net change",
       "2030-31,1.5,1.5",
       "# 2031-32: Not yet published",
     ]);
@@ -122,7 +122,7 @@ describe("years not yet published", () => {
 it("uses published CSV headings while reading namespaced measure keys", () => {
   const policy = { seriesKey: "measure:synthetic", label: "netImpact" };
   const revenue = revenueCsv([{ year: 2029, [policy.seriesKey]: 2, netImpact: 2, unpublished: false }], [policy]);
-  expect(revenue).toContain("Fiscal year,netImpact,Net impact");
+  expect(revenue).toContain("Fiscal year,netImpact,Net change");
   expect(revenue).toContain("2029-30,2,2");
   const decile = decileCsv([{ decile: "1st", [policy.seriesKey]: 2, netChange: 2 }], [policy], { kind: "relative", year: 2029 });
   expect(decile).toContain("Income decile,netImpact,Net change");

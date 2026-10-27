@@ -12,6 +12,7 @@ import {
 import { ChevronRight } from "lucide-react";
 import TitleIcon from "../TitleIcon";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import { htmlImageFormats } from "../../utils/chartDownloads";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
 
@@ -125,7 +126,11 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
       return next;
     });
 
+  // The table, for its image downloads
+  const [table, setTable] = useState(null);
   const formats = {
+    // The table as an image, as every card's (chartDownloads)
+    ...htmlImageFormats(() => table, `household-net-income-breakdown-${yearLabel}`),
     csv: () =>
       downloadFile(
         buildChartCsv({
@@ -226,7 +231,7 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
         </button>
       )}
       <div className="programme-table-wrap">
-        <table className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
+        <table ref={setTable} className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
           <thead>
             <tr>
               <th scope="col">

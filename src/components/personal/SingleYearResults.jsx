@@ -413,8 +413,17 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const shared = Boolean(sweep.netParts && sweep.parts);
   const chips = useMemo(() => sharedSweepChips(union), [union]);
   const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, sharedLegend: shared };
+  // An answer without the parts (a calculation server deployed before they
+  // were added) draws the totals alone: said here, never silently
+  const missing = [!sweep.netParts && "net income", !sweep.parts && "the marginal tax rate"].filter(Boolean);
   return (
     <>
+      {missing.length > 0 && (
+        <p className="single-year-quiet across-earnings-no-parts" role="note">
+          The calculation server did not send the breakdown of {missing.join(" or ")} by tax and benefit, so{" "}
+          {missing.length === 2 ? "both charts show" : "that chart shows"} the total only.
+        </p>
+      )}
       {shared && (
         <div className="across-earnings-show">
           <SeriesToggle

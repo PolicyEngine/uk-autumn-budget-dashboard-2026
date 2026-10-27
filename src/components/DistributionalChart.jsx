@@ -27,7 +27,7 @@ import {
   fixedNoNegativeZero,
   noHouseholdChange,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -83,6 +83,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   // The measure whose segment is hovered: the others dim
   const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
+  const shownYears = useDisplayYears();
   const {
     displayable: POLICIES,
     allPolicyNames: ALL_POLICY_NAMES,
@@ -138,12 +139,12 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   // decile sentence's last clause, or alone when there is no sentence
   const { laterNote, laterNoteAlone } = useMemo(() => {
     const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
-    const later = laterDecileEnds(rawData, { valueKey: "value", ends: ["1st", "10th"], selectedPolicies, catalogue, selectedYear });
+    const later = laterDecileEnds(rawData, { valueKey: "value", ends: ["1st", "10th"], selectedPolicies, catalogue, selectedYear, years: shownYears });
     return {
       laterNote: laterDecileNote(ends, later, "relative"),
       laterNoteAlone: laterDecileNote(ends, later, "relative", { standalone: true }),
     };
-  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear, shownYears]);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with
