@@ -126,7 +126,8 @@ def build(data: Path, out: Path, year=2027) -> str:
 def test_several_measures_use_the_combined_run_and_check_passes(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
     assert "All measures together" in html
-    assert "The measures together: change in government revenue by year" in html
+    # Figure 1 is the combined run, titled with what it shows
+    assert '<span class="ftitle">The measures together raise revenue from 2026-27 to 2028-29</span>' in html
     assert 'class="watermark"' in html
 
 
@@ -134,7 +135,7 @@ def test_one_measure_is_named_not_called_the_measures_together(tmp_path):
     html = build(publication(tmp_path, n=1), tmp_path / "out")
     assert "The measures together" not in html
     assert "All measures together" not in html
-    assert "Measure 0: change in government revenue by year" in html
+    assert '<span class="ftitle">Measure 0 raises revenue from 2026-27 to 2028-29</span>' in html
     assert "How one measure would change" in html
     assert "Each measure on its own" not in html
 
@@ -143,6 +144,32 @@ def test_fifteen_measures(tmp_path):
     html = build(publication(tmp_path, n=15), tmp_path / "out")
     assert "How 15 measures would change" in html
     assert html.count('<th scope="row">Measure ') >= 15
+
+
+def test_figures_and_tables_are_numbered_in_order_each_with_a_source(tmp_path):
+    import re
+
+    html = build(publication(tmp_path), tmp_path / "out")
+    figs = [int(n) for n in re.findall(r'<span class="fnum">Figure (\d+)</span>', html)]
+    tabs = [int(n) for n in re.findall(r'<span class="fnum">Table (\d+)</span>', html)]
+    assert figs == list(range(1, len(figs) + 1)) and len(figs) >= 6
+    assert tabs == list(range(1, len(tabs) + 1)) and len(tabs) >= 6
+    # every figure has a source line; every table but the two descriptive annex tables
+    assert html.count('<p class="fsrc">') == len(figs) + len(tabs) - 2
+    assert "PolicyEngine UK microsimulation" in html
+
+
+def test_key_findings_box_running_header_and_annexes(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    kf = html[html.index('<div class="kf">'):]
+    kf = kf[: kf.index("</ol>")]
+    assert 4 <= kf.count("<li>") <= 6
+    assert "@top-left" in html and "counter(pages)" in html
+    for annex in ("Annex A", "Annex B", "Annex C"):
+        assert f'<p class="secnum">{annex}</p>' in html
+    # areas are not published here: no empty section, the method annex says so
+    assert 'id="areas"' not in html
+    assert "not yet published in this release" in html
 
 
 def test_no_combined_run_shows_a_notice_never_a_sum(tmp_path):

@@ -39,8 +39,10 @@ uv run --no-project --with matplotlib==3.10.1 --with pytest \
 
 Small synthetic publications: several measures, one, fifteen, no combined run, a stale member, an unsupported or missing year, approved and provisional mixed, a staged measure, a missing manifest, receipt or table, and `check` catching a changed figure. They build the HTML and `figures.json` only, so they need no Chrome. The repository's own `pytest` run (testpaths `tests/`) does not collect them.
 
-## Sections
+## Layout
 
-Summary; public finances; households by income decile; better and worse off; poverty and inequality; by age; regions and constituencies (once the manifest names `constituency.csv` or `regional.csv`, otherwise a "not yet published" notice); example households; the measures; method, data and caveats with each artifact's digests.
+A cover (title, Budget date, provisional label, logo, contents); a key findings box (four to six numbered findings generated from traced figures, each fact once); short numbered sections that flow from page to page: 1 public finances, 2 households by income decile, 3 gainers and losers, 4 poverty and inequality, 5 by age, regions and constituencies (only once the manifest names `constituency.csv` or `regional.csv`; until then the method annex says they are not yet published), example households; then Annex A the measures (and those in the release but not shown), Annex B methodology and caveats with each artifact's digests, Annex C glossary.
+
+Every chart is a numbered figure: "Figure n:" and a title saying what it shows, generated from the data in neutral words (direction and rank, no evaluative words), a subtitle with units, area and year, then "Notes:" and "Source:" lines (the model version and dataset from `manifest.execution`, which run: combined or each measure's own, and the publication revision). Tables are numbered the same way, with light rules and right-aligned tabular figures. Footnotes are numbered through the report and printed at the end of their section. The running header (title, report year) and footer (provisional label, "Page n of N") are `@page` margin boxes, so the PDF needs Chrome 131 or later; the cover has none.
 
 Inter (SIL Open Font License, `fonts/OFL.txt`) is embedded so the build needs no network.
