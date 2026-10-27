@@ -12,16 +12,25 @@ import { CHART_LOGO } from "./chartLogo";
 export const NARROW_QUERY = "(max-width: 768px)";
 
 export function useNarrowViewport() {
-  const [narrow, setNarrow] = useState(false);
+  return useViewportMatch(NARROW_QUERY);
+}
+
+// A phone's width: below this a chart drops the labels it cannot fit and
+// says the same in its sentence
+export const PHONE_QUERY = "(max-width: 480px)";
+
+/** Whether the window matches a media query, false before the page is in the browser. */
+export function useViewportMatch(query) {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
-    const media = window.matchMedia(NARROW_QUERY);
-    const update = () => setNarrow(media.matches);
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
     update();
     media.addEventListener?.("change", update);
     return () => media.removeEventListener?.("change", update);
-  }, []);
-  return narrow;
+  }, [query]);
+  return matches;
 }
 
 /**
@@ -35,7 +44,7 @@ export const CHART_COLOURS = {
   gainText: "#0F766E",
   loss: "#D97706",
   lossText: "#B45309",
-  lossSoft: "#FDF0E1",
+  lossSoft: "#FEF4E8",
   lossBorder: "#FDE68A",
   noChange: "#9CA3AF",
   before: "#9CA3AF",
@@ -43,6 +52,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
+  tenthBand: "#DDE6F3",
   hover: "#EEF6F6",
   obr: "#9CA3AF",
   obrText: "#6B7280",
@@ -66,6 +76,7 @@ export const CHART_COLOURS = {
   marketIncome: "#4A7BA7",
   pensionContributions: "#B8875A",
   gainLight: "#81E6D9",
+  mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
@@ -503,16 +514,46 @@ export function symmetricAxis(values, { pad = 0.05 } = {}) {
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
 }
 
+// The largest round step (1, 2, 2.5 or 5 x 10^n) no bigger than `raw`
+function niceStepBelow(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [10, 5, 2.5, 2, 1].map((m) => m * mag).find((s) => s <= raw * (1 + 1e-9));
+}
+
+/**
+ * An axis fitted to the data on each side of 0, never forced symmetric:
+ * [min(0, data min), max(0, data max)] padded by `pad` of each end, with
+ * ticks at a round step (about four to eight of them, always 0) and each
+ * end rounded out to half that step. Data from −0.46 to +0.13 gives
+ * −0.5 to +0.15 with ticks every 0.1. Returns { domain, ticks }.
+ */
+export function fittedAxis(values, { pad = 0.08 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const lo = Math.min(0, ...vals) * (1 + pad);
+  const hi = Math.max(0, ...vals) * (1 + pad);
+  if (hi - lo < 1e-12) return zeroBasedAxis(vals);
+  const step = niceStepBelow((hi - lo) / 4);
+  // Ends on half steps where that is itself round (0.05 for 0.1 ticks;
+  // never 1.25 for 2.5 ticks)
+  const mantissa = Math.round(step / 10 ** Math.floor(Math.log10(step)) * 10) / 10;
+  const grain = mantissa === 2.5 ? step : step / 2;
+  const clean = (v) => Math.round(v * 1e9) / 1e9 || 0;
+  const domain = [clean(Math.floor(lo / grain + 1e-9) * grain), clean(Math.ceil(hi / grain - 1e-9) * grain)];
+  const ticks = [];
+  for (let k = Math.ceil(domain[0] / step - 1e-9); k <= Math.floor(domain[1] / step + 1e-9); k += 1) ticks.push(clean(k * step));
+  return { domain, ticks };
+}
+
 /**
  * The y axis of a chart that can diverge from 0 (changes, gains and
- * costs): symmetric about 0 (symmetricAxis) when the values fall on both
- * sides of it, otherwise from 0 (zeroBasedAxis), so a chart whose values
- * are all one sign is not drawn half empty.
+ * costs): fitted to each side (fittedAxis) when the values fall on both
+ * sides of 0, so a small rise beside a large fall is not drawn in a half
+ * empty plot; otherwise from 0 (zeroBasedAxis).
  */
 export function divergingAxis(values, options) {
   const vals = values.filter((v) => v != null && Number.isFinite(v));
   const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
-  return both ? symmetricAxis(vals, options) : zeroBasedAxis(vals, options);
+  return both ? fittedAxis(vals, options) : zeroBasedAxis(vals, options);
 }
 
 /**
@@ -563,3 +604,31 @@ export function fiscalYearTicks(years, plotWidth, { base } = {}) {
   }
   return [...picked].sort((a, b) => a - b).map((i) => list[i]);
 }
+
+/**
+ * The fewest decimal places, from `min` to `max`, at which every tick reads
+ * differently: 1 for ticks 0.1 apart, 2 for ticks 0.02 apart. A small axis
+ * (one measure's change in net income, in %) otherwise repeats labels, such
+ * as "0.0%, 0.0%, 0.1%, 0.1%".
+ */
+export function tickDecimals(ticks, min = 0, max = 3) {
+  for (let decimals = min; decimals < max; decimals += 1) {
+    const shown = new Set(ticks.map((tick) => Number(tick.toFixed(decimals))));
+    if (shown.size === ticks.length) return decimals;
+  }
+  return max;
+}
+
+/** A number to `decimals` places, never "-0.0": a value that rounds to zero has no sign. */
+export function fixedNoNegativeZero(value, decimals) {
+  const text = value.toFixed(decimals);
+  return Number(text) === 0 ? (0).toFixed(decimals) : text;
+}
+
+/**
+ * In place of a plot whose selected policies change no household's income
+ * in the year shown (an employer cost alone): "None of the selected
+ * policies changes household incomes in 2027-28."
+ */
+export const noHouseholdChange = (yearText) =>
+  `None of the selected policies changes household incomes in ${yearText}.`;

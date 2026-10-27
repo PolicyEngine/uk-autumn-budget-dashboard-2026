@@ -8,8 +8,8 @@ import WaterfallChart from "./WaterfallChart";
 import ChartMoreInfo, { ABOUT_THIS_CHART, withoutMethodology } from "./ChartMoreInfo";
 import { infoParts } from "./InfoSections";
 import { GLOSSARY } from "./methodology/glossary";
-import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
-import { POLICY_DETAILS } from "../utils/policyDetails";
+import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText } from "../utils/legendMembership";
+import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // The household decile charts must list every selected measure in their
@@ -91,6 +91,10 @@ describe("legendMembership", () => {
     expect(inForceText(freeze)).toBe("in force from April 2031 (2031-32 only)");
     const fuelVat = detailsOf("road_fuel_vat_cut");
     expect(inForceText(fuelVat)).toBe("in force December 2026 to May 2027");
+    // Short, for the lists of policies with no effect
+    expect(inForceShort(freeze)).toBe("from April 2031");
+    expect(inForceShort(fuelVat)).toBe("December 2026 to May 2027");
+    expect(inForceShort(whd)).toBe("winter 2026-27");
   });
 
   it("gives a past event's £0 measure no reason written for this Budget's measures", () => {
@@ -121,6 +125,14 @@ describe.each([
     expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
   });
 
+  it("says so in place of an empty plot when no selected measure changes a household", () => {
+    render(<Chart rawData={rows} selectedPolicies={[EMPLOYER_NI]} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
+    expect(document.querySelector(".recharts-wrapper")).toBeNull();
+    // Said once: the card's sentence does not add "almost no change" at both ends
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/almost no change/);
+  });
+
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
     const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
@@ -138,17 +150,22 @@ describe.each([
     expect(container.querySelector("[data-zero-measure]")).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    within(moreInfo).getByText("3 selected measures are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
+    within(moreInfo).getByText("No effect on household incomes in 2027-28:");
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
-    expect(employer.textContent).toMatch(/Wages are held fixed/);
+    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s — employers pay less National Insurance.*wages are held fixed in the model$/);
+    // One bullet per policy, under the lead
+    expect(employer.closest("ul").classList.contains("info-sublist")).toBe(true);
+    expect(employer.closest("ul").children).toHaveLength(3);
     expect(within(employer).getByRole("link", { name: "Public finances" })).toHaveAttribute(
       "href",
       "?tab=dashboard&sub=finances",
     );
-    // The Warm Home Discount top-up is paid in 2026-27 only
-    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).not.toBeNull();
+    // The Warm Home Discount top-up is paid in 2026-27 only; the threshold
+    // freeze is from 2031: when each is in force, short
+    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).toHaveTextContent("Warm Home Discount top-up — winter 2026-27");
+    expect(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).toHaveTextContent("Threshold freeze — from April 2031");
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
@@ -164,8 +181,11 @@ describe.each([
     const zero = [...container.querySelectorAll("[data-zero-measure]")];
     // The same £0 measures as on this Budget's page, each with no reason of its own
     expect(zero.map((node) => node.dataset.zeroMeasure)).toEqual(expect.arrayContaining([EMPLOYER_NI, "warm_home_discount_top_up"]));
-    for (const node of zero) expect(node.textContent).toMatch(/: No change for the households shown\.$/);
-    expect(moreInfo.textContent).not.toMatch(/Employers pay less|held fixed|only\./);
+    // Each named as the past event's catalogue names it (main's line: "name — reason")
+    for (const node of zero) expect(node.textContent).toBe(`${catalogue.byId.get(node.dataset.zeroMeasure).label} — no change for the households shown`);
+    // Not this Budget's short names (policyDetails), which one of them has
+    expect(zero.some((node) => !node.textContent.startsWith(`${shortNameOf(catalogue.byId.get(node.dataset.zeroMeasure))} —`))).toBe(true);
+    expect(moreInfo.textContent).not.toMatch(/[Ee]mployers pay less|held fixed|only|from (January|February|March|April|May|June|July|August|September|October|November|December)/);
     expect(within(moreInfo).queryByRole("link", { name: "Public finances" })).toBeNull();
   });
 
@@ -176,7 +196,7 @@ describe.each([
       fireEvent.click(within(moreInfo).getByRole("button", { name: ABOUT_THIS_CHART }));
       const links = [...moreInfo.querySelectorAll("a.method-link")].map((link) => link.getAttribute("href"));
       // What it says of the chart's calculation is the same on both
-      const how = moreInfo.querySelector(".info-section .info-list")?.textContent;
+      const how = [...moreInfo.querySelectorAll(".info-section")].find((section) => section.querySelector(".info-heading")?.textContent === "How it's calculated")?.querySelector(".info-body").textContent;
       view.unmount();
       return { links, how };
     };
@@ -185,6 +205,7 @@ describe.each([
     const past = linksIn({ pastEvent: true });
     expect(past.links).toEqual([]);
     expect(past.how).toBe(own.how);
+    expect(own.how).toBeTruthy();
   });
 });
 
@@ -194,10 +215,11 @@ describe("ChartMoreInfo", () => {
     { id: "fuel_duty_rise_deferral", key: "measure:fuel_duty_rise_deferral", name: "Fuel duty rises deferred", muted: false },
   ];
 
-  it("says one measure in the singular, and lists only the £0 ones", () => {
+  it("says one £0 policy on one line, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+    expect(container.querySelector(".zero-measures")).toHaveTextContent(/^No effect on household incomes in 2028-29: Employer NI relief for under-25s — employers pay less/);
+    expect(container.querySelector(".info-sublist")).toBeNull();
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,
     ]);
@@ -220,12 +242,13 @@ describe("ChartMoreInfo", () => {
   it("on a past event's card, keeps every part but its links to Methodology", () => {
     const own = render(<ChartMoreInfo info={FULL_INFO} />);
     fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
-    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual([GLOSSARY.netIncome.term, "How we group households →"]);
+    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual(["How we group households", GLOSSARY.netIncome.term]);
     own.unmount();
     const { container } = render(<ChartMoreInfo info={FULL_INFO} pastEvent />);
     fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
     expect(container.querySelector("a.method-link")).toBeNull();
-    expect(container.textContent).not.toMatch(/In Methodology|How we group households/);
+    expect(container.textContent).not.toMatch(/[Ii]n Methodology|How we group households/);
+    expect(container.querySelector(".info-method")).toBeNull();
     for (const text of ["What the card shows.", "One step.", "A card's own term", "Its meaning here.", "One caveat.", "One source"]) {
       expect(container.textContent).toContain(text);
     }
@@ -275,7 +298,7 @@ describe("ChartMoreInfo", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     screen.getByText("Single years of age rest on fewer households.");
-    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+    screen.getByText(/^No effect on household incomes in 2028-29:/);
   });
 });
 

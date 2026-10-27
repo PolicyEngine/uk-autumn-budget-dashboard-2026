@@ -74,7 +74,7 @@ describe("RegionView", () => {
     renderView();
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(screen.getAllByRole("rowheader")).toHaveLength(12);
-    expect(screen.getByText("All measures (the full package)")).toBeInTheDocument();
+    expect(screen.getByText("All policies (the full package)")).toBeInTheDocument();
 
     const northEast = within(rowFor("North East"));
     expect(northEast.getByText("+1.23%")).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("RegionView", () => {
 
     const westMidlands = within(rowFor("West Midlands"));
     expect(westMidlands.getByText("Approximate")).toBeInTheDocument();
-    expect(westMidlands.getByText("Too close to call")).toBeInTheDocument();
+    expect(westMidlands.getByText("The interval includes zero")).toBeInTheDocument();
     expect(westMidlands.getByText("10 to 29")).toBeInTheDocument();
 
     const eastOfEngland = within(rowFor("East of England"));
@@ -125,7 +125,7 @@ describe("RegionView", () => {
     const london = within(rowFor("London"));
     expect(london.getByText("+£1,234.5")).toBeInTheDocument();
     expect(london.getByText("£1,100 to £1,369")).toBeInTheDocument();
-    expect(within(rowFor("Yorkshire and The Humber")).getByText("-£50")).toBeInTheDocument();
+    expect(within(rowFor("Yorkshire and The Humber")).getByText("−£50")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Show the change as: £ per household" }),
     ).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe("RegionView", () => {
     });
     expect(
       await screen.findByText(
-        "Results by region are shown for one measure at a time, or for all measures together.",
+        "Results by region are shown for one policy at a time, or for all policies together.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -182,7 +182,7 @@ describe("RegionView", () => {
     renderView({ selectedPolicies: ["two_child_limit"] });
     expect(
       await screen.findByText(
-        "Results by region are not yet published for this measure.",
+        "Results by region are not yet published for this policy.",
       ),
     ).toBeInTheDocument();
   });
@@ -232,7 +232,7 @@ describe("RegionView", () => {
         "# Year: 2029-30",
         "# Reform: autumn_budget_2026_combined",
         expect.stringMatching(
-          /^# Measures: All measures \(the full package\): 2 child limit repeal; Fuel duty freeze extension; Rail fares freeze$/,
+          /^# Policies: All policies \(the full package\): 2 child limit repeal; Fuel duty freeze extension; Rail fares freeze$/,
         ),
       ]),
     );
@@ -267,7 +267,7 @@ describe("RegionView", () => {
     expect(mimeType).toBe("text/plain;charset=utf-8");
     const lines = content.split("\n");
     expect(lines[0]).toBe("Results by region: UK Autumn Budget 2026 dashboard");
-    expect(lines).toContain("Measure: Fuel duty freeze extension");
+    expect(lines).toContain("Policy: Fuel duty freeze extension");
     expect(lines).toContain("Year: 2029-30");
     expect(lines.find((line) => line.startsWith("area_code"))).toMatch(
       /^area_code\s+area_name\s+reform\s+year\s+outcome\s+value\s+lo\s+hi\s+direction\s+tier\s+reason\s+support_band$/,

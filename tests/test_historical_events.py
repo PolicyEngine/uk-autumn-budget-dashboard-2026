@@ -33,6 +33,7 @@ from hypothesis import strategies as st
 from uk_budget_data import historical_events as h
 from uk_budget_data import releases
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.parameter_companions import COMPANIONS as _COMPANION_PAIRS
 
 HISTORICAL = [r for r in releases.RELEASES.values() if r.historical]
 EVENTS = {r.id: h.load_event(r.id) for r in HISTORICAL}
@@ -313,8 +314,14 @@ def test_the_engine_builds_the_replays_constructed_values(release_id, record):
     built = Simulation(
         situation=_situation(), scenario=Scenario(parameter_changes=side)
     ).tax_benefit_system.parameters
+    # A companion the engine charges in step is read back too, at the values
+    # of the parameter it follows (historical_events._with_companions)
+    expected = dict(record["changes"])
+    for path, companion, _ in _COMPANION_PAIRS:
+        if path in record["changes"] and companion in side:
+            expected.setdefault(companion, record["changes"][path])
     wrong = []
-    for path, values in record["changes"].items():
+    for path, values in expected.items():
         for year, intended in values.items():
             read = _read(built, path, year)
             if not _matches(read, intended):
@@ -322,6 +329,116 @@ def test_the_engine_builds_the_replays_constructed_values(release_id, record):
                     f"{path} {year}: read {read!r}, intended {intended!r}"
                 )
     assert wrong == []
+
+
+def test_no_imported_measure_changes_a_parameter_without_its_companion():
+    """Generation's own check (publication.generate._refuse_companion_gaps)
+    refuses none of the imported measures."""
+    from uk_budget_data.parameter_companions import companion_gaps
+
+    gaps = {}
+    for _, record in RECORDS:
+        reform = h.reform_for(record)
+        found = companion_gaps(
+            SimpleNamespace(
+                parameter_changes=reform.baseline_parameter_changes
+            ),
+            SimpleNamespace(parameter_changes=reform.parameter_changes),
+        )
+        if found:
+            gaps[record["id"]] = [gap.reason for gap in found]
+    assert gaps == {}
+
+
+def test_the_lha_reset_is_undone_in_northern_ireland_too():
+    """The record changes gov.dwp.LHA.freeze alone; Northern Ireland's
+    freeze takes the same values, and nothing else is added."""
+    (record,) = [
+        record
+        for _, record in RECORDS
+        if record["id"]
+        == "autumn_statement_2023__lha_reset_to_30th_percentile"
+    ]
+    assert set(record["changes"]) == {"gov.dwp.LHA.freeze"}
+    reform = h.reform_for(record)
+    side = reform.baseline_parameter_changes
+    assert set(side) == {"gov.dwp.LHA.freeze", "gov.dfc.LHA.freeze"}
+    assert side["gov.dfc.LHA.freeze"] == side["gov.dwp.LHA.freeze"]
+    assert reform.parameter_changes == {}
+
+
+def test_a_companion_the_engine_lacks_is_left_out(monkeypatch):
+    """As generation's check leaves it (an engine before gov.dfc.LHA)."""
+    from uk_budget_data import parameter_companions
+
+    def lacks_dfc(path):
+        return not path.startswith("gov.dfc.")
+
+    monkeypatch.setattr(parameter_companions, "installed", lacks_dfc)
+    (record,) = [
+        record
+        for _, record in RECORDS
+        if record["id"]
+        == "autumn_statement_2023__lha_reset_to_30th_percentile"
+    ]
+    side = h.reform_for(record).baseline_parameter_changes
+    assert set(side) == {"gov.dwp.LHA.freeze"}
+
+
+def test_a_companion_the_record_sets_keeps_its_own_values():
+    record = {
+        "id": "synthetic__cgt",
+        "name": "Synthetic CGT rates",
+        "construction": h.REVERSAL,
+        "executor_route": None,
+        "missing_legs": [],
+        "changes": {
+            "gov.hmrc.cgt.higher_rate": {"2025": 0.2},
+            "gov.hmrc.cgt.additional_rate": {"2025": 0.21},
+        },
+    }
+    side = h.reform_for(record).baseline_parameter_changes
+    assert side == {
+        "gov.hmrc.cgt.higher_rate": {"2025": 0.2},
+        "gov.hmrc.cgt.additional_rate": {"2025": 0.21},
+    }
+
+
+@given(
+    st.dictionaries(
+        st.sampled_from([pair[0] for pair in _COMPANION_PAIRS]),
+        st.dictionaries(
+            st.integers(2024, 2030).map(str),
+            st.floats(0, 1, allow_nan=False),
+            min_size=1,
+            max_size=3,
+        ),
+        min_size=1,
+    ),
+    st.sampled_from([h.REVERSAL, h.FORWARD]),
+)
+def test_every_pair_a_record_changes_is_changed_in_step(changes, construction):
+    record = {
+        "id": "synthetic__pairs",
+        "name": "Synthetic pairs",
+        "construction": construction,
+        "executor_route": None,
+        "missing_legs": [],
+        "changes": changes,
+    }
+    reform = h.reform_for(record)
+    side = (
+        reform.baseline_parameter_changes
+        if construction == h.REVERSAL
+        else reform.parameter_changes
+    )
+    for path, companion, _ in _COMPANION_PAIRS:
+        if path in changes:
+            assert side[companion] == side[path] == changes[path]
+    # Nothing but the record's parameters and their companions
+    assert set(side) == set(changes) | {
+        companion for path, companion, _ in _COMPANION_PAIRS if path in changes
+    }
 
 
 # --- generation reads only the release's registry ---------------------

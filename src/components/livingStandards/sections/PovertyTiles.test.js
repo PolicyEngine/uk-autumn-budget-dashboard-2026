@@ -4,8 +4,8 @@ import { povertyTileChange, povertyTileLevels } from "./PovertyTiles";
 describe("the poverty tiles' words", () => {
   it("lead with the change in points of the values shown", () => {
     expect(povertyTileChange(14.31, 14.28)).toBe("No change");
-    expect(povertyTileChange(11.42, 11.51)).toBe("Rises 0.1 points");
-    expect(povertyTileChange(12.0, 11.0)).toBe("Falls 1.0 point");
+    expect(povertyTileChange(11.42, 11.51)).toBe("Rises 0.1pp");
+    expect(povertyTileChange(12.0, 11.0)).toBe("Falls 1.0pp");
   });
 
   it("give the levels as the model's estimates", () => {

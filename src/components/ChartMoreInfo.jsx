@@ -1,22 +1,22 @@
 import Disclosure from "./Disclosure";
 import "./ChartMoreInfo.css";
-import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+import InfoSections, { hasInfo, infoPreview, nestedItem } from "./InfoSections";
 
 /** The one name of every chart card's disclosure. */
 export const ABOUT_THIS_CHART = "About this chart";
 import useMeasureRevenue from "../hooks/useMeasureRevenue";
-import { zeroReason } from "../utils/legendMembership";
+import { inForceShort, zeroReason } from "../utils/legendMembership";
+import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import { openPopulationSub, populationSubHref } from "../utils/populationSub";
 
 const fiscalYear = (year) => `${year}-${String(year + 1).slice(-2)}`;
-const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * An employer cost's reason: what it does instead, with its revenue in the
  * year from budgetary_impact.csv (left out until loaded), and a link to
  * Public finances.
  */
-function EmployerReason({ id, year, text }) {
+function EmployerReason({ id, year }) {
   const revenue = useMeasureRevenue(id, year);
   const finances = (
     <a
@@ -31,43 +31,40 @@ function EmployerReason({ id, year, text }) {
   );
   return (
     <>
-      Employers pay less National Insurance (
+      employers pay less National Insurance (
       {revenue !== null && <>about £{Math.abs(revenue).toFixed(1)}bn in {fiscalYear(year)}; </>}
-      see {finances}). {text}.
+      see {finances}), and wages are held fixed in the model
     </>
   );
 }
 
 /**
- * The selected measures that are £0 for households in the year shown, as
- * one caveat in a card's "About this chart": a lead line, then one measure
- * per line with why.
+ * The selected policies that are £0 for households in the year shown, as
+ * one caveat in a card's "About this chart" (nestedItem): a lead line, then
+ * one policy a bullet, its short name and why: "Threshold freeze — from
+ * April 2031". One policy reads as one line. On a past event's card
+ * (`pastEvent`) a policy is named as its own catalogue names it, and its
+ * reason is never one written for this Budget's (zeroReason).
  */
-export function ZeroMeasuresDetail({ zero, year, period, pastEvent = false }) {
-  const count = zero.length === 1 ? "1 selected measure is" : `${zero.length} selected measures are`;
-  return (
-    <div className="zero-measures">
-      <span className="zero-measures-lead">
-        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}, so the key folds{" "}
-        {zero.length === 1 ? "it" : "them"} under &ldquo;with no effect&rdquo; and the tooltip leaves{" "}
-        {zero.length === 1 ? "it" : "them"} out:
-      </span>
-      <ul className="zero-measures-list">
-        {zero.map((member) => {
-          const reason = zeroReason(member, year, { pastEvent });
-          return (
-            <li key={member.id} data-zero-measure={member.id}>
-              <strong>{member.name}</strong>:{" "}
-              {reason.kind === "employer" ? (
-                <EmployerReason id={member.id} year={year} text={reason.text} />
-              ) : (
-                <>{capitalised(reason.text)}.</>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+export function zeroMeasuresItem({ zero, year, period, pastEvent = false }) {
+  return nestedItem(
+    <>No effect on household incomes {period ?? `in ${fiscalYear(year)}`}:</>,
+    zero.map((member) => {
+      const reason = zeroReason(member, year, { pastEvent });
+      return (
+        <span key={member.id} data-zero-measure={member.id}>
+          {pastEvent ? member.name : shortNameOf(member)} —{" "}
+          {reason.kind === "employer" ? (
+            <EmployerReason id={member.id} year={year} />
+          ) : reason.kind === "not_in_force" ? (
+            inForceShort(policyDetailsFor(member))
+          ) : (
+            reason.text
+          )}
+        </span>
+      );
+    }),
+    "zero-measures",
   );
 }
 
@@ -108,7 +105,7 @@ function ChartMoreInfo({ info = {}, members = [], year, period, pastEvent = fals
     shows: info.shows ?? (legacy.length ? <span className="chart-more-info-legacy">{legacy}</span> : null),
     caveats: [
       ...(info.caveats || []),
-      zero.length > 0 && <ZeroMeasuresDetail key="zero" zero={zero} year={year} period={period} pastEvent={pastEvent} />,
+      zero.length > 0 && zeroMeasuresItem({ zero, year, period, pastEvent }),
     ],
   };
   if (!hasInfo(full)) return null;

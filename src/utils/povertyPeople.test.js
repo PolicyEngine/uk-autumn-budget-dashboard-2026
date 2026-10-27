@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { outlookPopulation, peopleInPovertyText } from "./povertyPeople";
 
 describe("peopleInPovertyText", () => {
-  it("turns a change in percentage points into people, to the nearest thousand", () => {
-    // −0.0075pp of 70 million is 5,250 people
-    expect(peopleInPovertyText(-0.0075, 70)).toBe("about 5,000 fewer people in poverty");
-    expect(peopleInPovertyText(0.02, 14.5, "children")).toBe("about 3,000 more children in poverty");
+  it("turns a change in percentage points into people, to two significant figures under 10,000 and the nearest 1,000 above", () => {
+    // −0.00205pp of 70 million is 1,435 people (the bar ends there too)
+    expect(peopleInPovertyText(-0.00205, 70)).toBe("about 1,400 fewer people in poverty");
+    expect(peopleInPovertyText(0.02, 14.5, "children")).toBe("about 2,900 more children in poverty");
     expect(peopleInPovertyText(-0.001, 70)).toBe("under 1,000 fewer people in poverty");
+    // 0.044pp of 70 million is 30,800: the nearest 1,000
+    expect(peopleInPovertyText(0.044, 70)).toBe("about 31,000 more people in poverty");
   });
 
   it("says nothing without a population or a change", () => {

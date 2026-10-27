@@ -20,17 +20,41 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-async function runScript() {
+async function runScript(options) {
   const fetchImpl = fixtureFetch();
   const stub = vi.fn(fetchImpl);
   vi.stubGlobal("fetch", stub);
   // As the browser runs the inline script in <head>
-  new Function(earlyManifestScript(BASE_PATH))();
+  new Function(earlyManifestScript(BASE_PATH, options))();
   await new Promise((resolve) => setTimeout(resolve, 20));
   return stub;
 }
 
 describe("the head's early requests", () => {
+  it("with the build's verified figures, requests the manifest only, but a link to By age still gets its table early", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard&sub=finances");
+    let urls = (await runScript({ artifacts: false })).mock.calls.map(([url]) => url);
+    expect(urls).toEqual([`${BASE_PATH}/data/manifest.json`]);
+    window.history.replaceState({}, "", "/?tab=dashboard&sub=age");
+    urls = (await runScript({ artifacts: false })).mock.calls.map(([url]) => url);
+    expect(urls.some((url) => url.endsWith("/receipt.json"))).toBe(true);
+    // (the fixture's artifacts carry no age table, so none is requested)
+    expect(urls.some((url) => url.endsWith("/budgetary_impact.csv"))).toBe(false);
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("requests the outlook for a link to the Pre-measures forecast or a view that reads it, under the name the page reads", async () => {
+    const { OUTLOOK_PATH } = await import("../livingStandards/outlook");
+    const url = `${BASE_PATH}${OUTLOOK_PATH}`;
+    for (const [address, wanted] of [["/?tab=outlook&sub=poverty", 1], ["/?tab=dashboard&sub=living", 1], ["/?tab=dashboard&sub=finances", 0]]) {
+      window.history.replaceState({}, "", address);
+      const stub = await runScript({ artifacts: false });
+      expect(stub.mock.calls.filter(([called]) => called === url)).toHaveLength(wanted);
+      expect(Boolean(takeEarlyResponse(url))).toBe(wanted === 1);
+    }
+    window.history.replaceState({}, "", "/");
+  });
+
   it("requests the manifest, then only the shown artifacts' receipts and first-chart files", async () => {
     const stub = await runScript();
     const urls = stub.mock.calls.map(([url]) => url);
@@ -181,4 +205,10 @@ describe("a past event's pages", () => {
     }
     expect(takeEarlyManifest(manifestUrl(BASE_PATH))).not.toBeNull();
   });
+});
+
+it("requests the map's boundaries under the name the map reads", async () => {
+  const { BOUNDARIES_FILE } = await import("../../hooks/useGeographyData");
+  const { BOUNDARIES_URL_FILE } = await import("./early");
+  expect(BOUNDARIES_URL_FILE).toBe(BOUNDARIES_FILE);
 });

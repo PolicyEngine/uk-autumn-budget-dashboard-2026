@@ -150,8 +150,8 @@ describe("young people cards", () => {
     const more = screen.getByRole("button", { name: "About this chart" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(more);
-    expect(screen.getByText("No effect in 2028-29 (1)")).toBeInTheDocument();
-    expect(screen.getByText("Salary sacrifice cap")).toBeInTheDocument();
+    // One policy: the lead and its name on one line
+    expect(document.querySelector(".no-effect")).toHaveTextContent(/^No effect in 2028-29: Salary sacrifice cap$/);
   });
 
   it("lets the reader choose the age group compared", () => {
@@ -182,6 +182,23 @@ describe("young people cards", () => {
     unmount();
     render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
+  });
+
+  it("says a change of about £0 as almost no change, not a gain of £0", () => {
+    render(<TrendCard {...props} selectedPolicies={["salary_sacrifice_cap"]} selectedYear={2028} />);
+    const headline = document.querySelector(".trend-headline");
+    expect(headline).toHaveTextContent(/^16 to 24-year-olds see almost no change in 2028-29/);
+    expect(headline).not.toHaveTextContent(/gain about £0/);
+  });
+
+  it("says the headline as one plain sentence, the units folded in", () => {
+    render(<TrendCard {...props} selectedYear={2028} />);
+    const description = document.querySelector(".young-people-trend .chart-description");
+    expect(description.querySelector("strong")).toBeNull();
+    expect(description).toHaveTextContent(
+      /^16 to 24-year-olds gain about £30 a person in 2028-29( and lose about £230 from 2029-30, when the [\w ]+ applies)?\.$/,
+    );
+    expect(description).not.toHaveTextContent(/£ a year/);
   });
 
   it("draws every year shown, whatever year is selected", () => {

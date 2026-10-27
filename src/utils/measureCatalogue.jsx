@@ -45,6 +45,18 @@ export function isCatalogueRowDisplayable(catalogue, id, year) {
 }
 
 /**
+ * One table's rows from every artifact the catalogue verified when the page
+ * loaded (`tablesByKey`, the receipt route), gated as every other table
+ * is: [] without a published, verified catalogue.
+ */
+export function verifiedTableRows(catalogue, table) {
+  if (!catalogue?.manifest || !catalogue.tablesByKey) return [];
+  return Object.values(catalogue.tablesByKey)
+    .flatMap((tables) => tables?.[table] ?? [])
+    .filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
+}
+
+/**
  * The one set of package versions the selected measures' verified receipts
  * record, or null when one has none recorded, is not verified, or they
  * disagree. Personal impact asks the household API live, and compares its
@@ -65,7 +77,10 @@ export function publishedEngine(catalogue, ids) {
 /** Only an explicit publication manifest supplies catalogue membership. */
 export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [], tablesByKey = null, failures = {} } = {}) {
   const rows = [...budgetary, ...distributional, ...winnersLosers, ...metrics];
-  const ids = manifest ? Object.keys(manifest.measures) : [];
+  // A withdrawn entry is taken out by decision: it does not exist for the
+  // reader (no picker row, no count, no notice), only for the package gate
+  const withdrawn = new Set(manifest ? Object.keys(manifest.measures).filter((id) => manifest.measures[id]?.status === "withdrawn") : []);
+  const ids = manifest ? Object.keys(manifest.measures).filter((id) => !withdrawn.has(id)) : [];
   const measures = ids.sort(compareIds).map((id, order) => {
     const entry = manifest?.measures[id];
     const receipt = receipts[id]?.dashboard ?? receipts[id];
@@ -82,7 +97,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
       availability.available = false;
       availability.reason = `Results unavailable: ${failures[id] || "no verified artifact"}`;
     }
-    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, size, color: NEUTRAL_COLOR, displayable: isDisplayable(entry) && verified, availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal };
+    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, size, color: NEUTRAL_COLOR, displayable: isDisplayable(entry) && verified, availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal, category: entry?.category ?? receipt?.category ?? null };
   });
   const labelCounts = new Map();
   for (const measure of measures) labelCounts.set(measure.name, (labelCounts.get(measure.name) ?? 0) + 1);
@@ -101,7 +116,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   const combined = manifest ? combinedEntryFor(manifest, displayable.map((measure) => measure.id)) : null;
   const combinedIds = combined && !combined.single ? [combined.key] : [];
   return {
-    measures, displayable, manifest, tablesByKey, failures,
+    measures, displayable, manifest, tablesByKey, failures, withdrawn,
     byId: new Map(measures.map((measure) => [measure.id, measure])),
     bySeriesKey: new Map(measures.map((measure) => [measure.seriesKey, measure])),
     policyColors: Object.fromEntries(displayable.map((measure) => [measure.seriesKey, measure.color])),
@@ -109,6 +124,17 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     revenueRaisingNames: new Set(displayable.filter((measure) => measure.direction === "revenue").map((measure) => measure.seriesKey)),
     combinedId: combinedIds.length === 1 ? combinedIds[0] : null,
   };
+}
+
+/**
+ * Whether any measure the catalogue shows is still provisional in its
+ * manifest: the page then words itself as modelled measures, not the Budget.
+ */
+export function catalogueProvisional(catalogue) {
+  return Boolean(
+    catalogue?.manifest &&
+      catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id]?.status === "provisional"),
+  );
 }
 
 const CatalogueContext = createContext(buildMeasureCatalogue());

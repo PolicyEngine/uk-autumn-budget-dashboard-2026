@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CoveragePanel, formatBn, loadHistoricalViews } from "./PastEvent";
+import { formatBn, loadHistoricalViews } from "./PastEvent";
+import { CoveragePanel } from "./PastEventPopulation";
 import { dynamicParams, generateMetadata, generateStaticParams } from "../../app/budgets/[release]/page";
 import HistoricalReleases from "../../app/budgets/page";
 import { coverageOf, releaseFixtureFetch, toCsv } from "../../test/historicalFixture";

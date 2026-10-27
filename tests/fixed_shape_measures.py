@@ -25,9 +25,11 @@ def broken_modifier(sim, message="this measure cannot run"):
     raise RuntimeError(message)
 
 
-def raise_additional_dwelling_rates(sim, year=2027, rate=0.07):
+def raise_additional_dwelling_rates(sim, year=2027, rate=0.09):
     """A structural SDLT higher-rates change: a measure the certified data
-    cannot cost, made by a modifier rather than parameter changes."""
+    cannot cost, made by a modifier rather than parameter changes. The rate
+    is law in no installed model (tests/test_data_limits.py,
+    RAISED_SURCHARGE)."""
     sim.tax_benefit_system.parameters.get_child(
         "gov.hmrc.stamp_duty.residential.purchase.additional.rate"
     ).brackets[1].rate.update(period=f"year:{year}:1", value=rate)

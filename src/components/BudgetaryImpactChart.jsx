@@ -1,16 +1,6 @@
 import { useRef, useState } from "react";
-import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Customized,
-} from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Customized } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
@@ -39,7 +29,8 @@ import {
 import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import SelectedYearShade from "./SelectedYearShade";
-import { revenueSentence } from "../utils/plainSentences";
+import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
+import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
@@ -48,8 +39,12 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 // where the dot is too near the top of the plot), and moved clear of the
 // tag beside it. They are part of the chart's SVG, so the SVG and PNG
 // downloads carry them too.
-const formatNetLabel = (value) =>
-  value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+// A net that rounds to zero (a year before a measure starts) has no sign
+const formatNetLabel = (value) => {
+  const shown = Math.abs(value).toFixed(1);
+  if (Number(shown) === 0) return `£${shown}bn`;
+  return value < 0 ? `-£${shown}bn` : `+£${shown}bn`;
+};
 
 
 // The net line's dot radius (the Line's dot below)
@@ -175,23 +170,52 @@ export function measureOrder(data, catalogue) {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the government.`;
 
 // The card's "About this chart"
-const PLAN_2_HOW = "The Plan 2 student loan measure is costed as the change in loan repayments.";
 const REVENUE_INFO = {
   how: [
-    "Above zero the measures raise money; below zero they cost the Treasury.",
-    "The net line adds up the selected measures' separate figures.",
-    PLAN_2_HOW,
+    "Above zero the policies raise money; below zero they cost the government.",
+    "The net line adds up the selected policies' separate figures.",
   ],
-  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
-// A past fiscal event's (#107): the Plan 2 line is about this Budget's
-// measure. ChartMoreInfo's `pastEvent` drops the Methodology link.
-const PAST_EVENT_REVENUE_INFO = { ...REVENUE_INFO, how: REVENUE_INFO.how.filter((line) => line !== PLAN_2_HOW) };
 
-function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
+/**
+ * One line for the year before the chart's first (2026-27), when the
+ * selected measures move revenue in it: "In 2026-27, before the years
+ * shown, the selected policies cost £2.0bn, including all of the Warm Home
+ * Discount top-up." The measures whose whole effect falls in that year are
+ * named, except those the empty plot's note already names. Null when the
+ * year's net rounds to nothing or a selected measure has no verified row.
+ *
+ * @param {Object|null} before - That year's point (budgetChartData)
+ * @param {Array<Object>} data - The chart's points
+ * @param {Array<Object>} measures - The selected measures, as the catalogue's
+ * @param {string[]} [named] - Measure ids already named elsewhere on the card
+ */
+export function beforeYearsLine(before, data, measures, named = []) {
+  if (!before || before.unpublished || before.netImpact == null) return null;
+  const net = before.netImpact;
+  if (Math.abs(net) < 0.0005) return null;
+  const amount = Math.abs(net) < 0.05 ? "less than £0.1bn" : `£${Math.abs(net).toFixed(1)}bn`;
+  const one = measures.length === 1;
+  const verb = net < 0 ? (one ? "costs" : "cost") : one ? "raises" : "raise";
+  const only = measures
+    .filter((measure) => !named.includes(measure.id))
+    .filter((measure) => Math.abs(before[measure.seriesKey] ?? 0) >= 0.0005)
+    .filter((measure) => data.every((point) => Math.abs(point[measure.seriesKey] ?? 0) < 0.0005))
+    .map((measure) => measure.name ?? measure.label);
+  const all = only.length
+    ? `, including all of the ${only.length === 1 ? only[0] : `${only.slice(0, -1).join(", ")} and ${only.at(-1)}`}`
+    : "";
+  return `In ${fiscalYearTick(before.year)}, before the years shown, the selected ${one ? "policy" : "policies"} ${verb} ${amount}${all}.`;
+}
+
+// `pastEvent`: the chart is a past fiscal event's (#107), so no measure is
+// given this Budget's in-force dates (zeroReason) and About this chart
+// links to no Methodology (ChartMoreInfo)
+function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], before = null, pastEvent = false }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
@@ -226,6 +250,27 @@ function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
     return { id: measure?.id ?? key, key, name: measure?.label ?? key, description: measure?.description, muted: false };
   });
   const netLabel = activePolicies.length > 1 ? "Net impact" : undefined;
+  // No selected measure moves revenue in any year shown (the Warm Home
+  // Discount top-up alone, in force only in winter 2026-27): a note with
+  // the reason, not five "£0.0bn" tags on an empty £0-£0.05bn axis
+  const noRevenue = activePolicies.length === 0 && data.every((point) => !point.unpublished && point.netImpact != null);
+  const outOfYears = noRevenue
+    ? orderedPolicies
+        .map((key) => bySeriesKey.get(key))
+        // Unselected measures are zeros in the data too: only the selection's
+        .filter((measure) => measure && selectedPolicies.includes(measure.id))
+        .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear, { pastEvent }) }))
+        .filter(({ reason }) => reason.kind === "not_in_force")
+        .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
+    : [];
+  const yearSpan = `${fiscalYearTick(data[0].year)} to ${fiscalYearTick(data[data.length - 1].year)}`;
+  // The year before the chart's first, as the first item of "About this
+  // chart"; a measure the empty plot's note already names is not named again
+  const selectedMeasures = displayable.filter((measure) => selectedPolicies.includes(measure.id));
+  const outOfYearIds = noRevenue
+    ? selectedMeasures.filter((measure) => zeroReason(measure, selectedYear, { pastEvent }).kind === "not_in_force").map((measure) => measure.id)
+    : [];
+  const beforeLine = beforeYearsLine(before, data, selectedMeasures, outOfYearIds);
 
   // Y axis: symmetric about zero when the year's stacks go both ways
   // (divergingAxis), with about 5% room past the tallest stack; from zero
@@ -267,6 +312,14 @@ function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
     // The key is above the plot, not a Recharts legend: crop nothing
     reservedLegendHeight: 0,
   };
+  // "Later years differ": the first later year in which the measures turn
+  // from costing revenue to raising it, or back (plainSentences.js)
+  const laterRevenue = laterRevenueNote(
+    data.find((point) => point.year === selectedYear)?.netImpact,
+    data
+      .filter((point) => point.year > selectedYear && !point.unpublished)
+      .map((point) => ({ yearLabel: fiscalYearTick(point.year), net: point.netImpact })),
+  );
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
     chartRef,
@@ -284,15 +337,24 @@ function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
             <span className="title-text">Revenue impact</span>
           </h3>
           {/* One plain sentence for the selected year; what the chart
-              measures is in More info */}
+              measures is in About this chart */}
           <p className="chart-description">
-            {revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear)) ?? CHART_DESCRIPTION}
+            {(noRevenue ? null : revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear))) ?? CHART_DESCRIPTION}
+            {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
           </p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
+        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} period={yearSpan} />
       </div>
 
       <div ref={chartRef}>
+        {noRevenue ? (
+          <div className="plot-empty" style={{ minHeight: 240 }} role="status">
+            <p>
+              None of the selected policies changes revenue in {yearSpan}.
+              {outOfYears.length > 0 && ` ${outOfYears.join("; ")}.`}
+            </p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
             data={data}
@@ -383,10 +445,12 @@ function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* The measures' key under the plot (MeasureKey), unboxed in the card: click
           chips to highlight several together. The logo below it. */}
+      {!noRevenue && (
       <div className="revenue-key">
         <MeasureKey
           members={keyMembers}
@@ -394,15 +458,20 @@ function BudgetaryImpactChart({ data, selectedYear, pastEvent = false }) {
           highlight={highlight}
           onHighlight={setHighlight}
           placement="section"
-          label="Measures"
+          label="Policies"
         />
       </div>
+      )}
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        <ChartMoreInfo year={selectedYear} info={pastEvent ? PAST_EVENT_REVENUE_INFO : REVENUE_INFO} pastEvent={pastEvent} />
+        <ChartMoreInfo
+          year={selectedYear}
+          info={beforeLine ? { lead: { title: "Before the years shown", body: beforeLine }, ...REVENUE_INFO } : REVENUE_INFO}
+          pastEvent={pastEvent}
+        />
       </div>
     </div>
   );

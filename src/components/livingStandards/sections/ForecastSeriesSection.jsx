@@ -21,11 +21,31 @@ import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
+import ObrPriceCategoriesCard from "../ObrPriceCategoriesCard";
+import FrozenThresholdsCard from "../FrozenThresholdsCard";
+
+// A section's extra card, drawn beside its forecast card in the shared pair
+// (keyed by the forecast section's title): the OBR's prices by spending
+// category beside the inflation measures, and the frozen thresholds beside
+// earnings and other income
+const HISTORY_CARDS = {
+  "Inflation and price indices": ObrPriceCategoriesCard,
+  "Income and earnings": FrozenThresholdsCard,
+};
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
   cpi_ahc: "CPI after housing costs is a PolicyEngine derivation from the OBR's CPI and rents forecast, not an OBR series.",
   social_rent: "The social rent cap is England's rent policy for social housing (CPI plus 1%), not an OBR forecast.",
+};
+
+// What each inflation measure is, one line each, first in its card's
+// "About this chart" (the derivation caveat stays in NOT_OBR)
+const MEASURES = {
+  cpi: "Price rises across a typical basket; the Bank of England's 2% target.",
+  cpih: "CPI plus owner-occupiers' housing costs and Council Tax.",
+  cpi_ahc: "CPI without housing costs; used to adjust incomes after housing costs.",
+  rpi: "Older measure including mortgage interest; still used for some charges such as fuel duty.",
 };
 
 // Notes on a series' years, said once in its card's "About this chart"
@@ -120,6 +140,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       </>
     ),
     info: {
+      definitions: seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
       caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
       sources: [
         ...forecastSources(forecast),
@@ -213,11 +234,16 @@ function cardsFor(section) {
   return { group, cards };
 }
 
-/** One section per forecast group, under its heading: one card a row, or two side by side. */
+/**
+ * One section per forecast group, under its heading: one card a row, or two
+ * side by side, with a section's extra card (HISTORY_CARDS) beside its own.
+ */
 export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
   return forecast.sections.map((section) => {
     const { group, cards } = cardsFor(section);
+    const History = HISTORY_CARDS[section.title];
+    const count = cards.length + (History ? 1 : 0);
     return [
       <SectionHeading
         key={`${section.title}-heading`}
@@ -226,7 +252,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
         subtitle={group?.subtitle}
       />,
       <section key={section.title} className="report-section ls-section">
-        <div className={cards.length > 1 ? "charts-grid" : "charts-grid forecast-single"}>
+        <div className={count > 1 ? "charts-grid" : "charts-grid forecast-single"}>
           {cards.map(({ card, seriesList }) => (
             <ForecastGroupCard
               key={card.id}
@@ -237,6 +263,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               onViewChange={onViewChange}
             />
           ))}
+          {History && <History data={data} view={view} onViewChange={onViewChange} />}
         </div>
       </section>,
     ];

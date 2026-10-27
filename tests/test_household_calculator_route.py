@@ -32,14 +32,13 @@ MEASURE_YEARS = {
     "state_pension_income_tax_protection": 2027,
     "warm_home_discount_top_up": 2026,
     "domestic_electricity_zero_vat": 2027,
-    "employer_ni_relief_under_25s": 2027,
     "threshold_freeze_2031_32": 2031,
-    "badr_lifetime_limit_cut": 2027,
     "road_fuel_vat_cut": 2026,
     "plan_2_threshold_unfreeze": 2027,
 }
-# Wages are held fixed, so employer NI moves no household's income.
-NO_HOUSEHOLD_EFFECT = {"employer_ni_relief_under_25s"}
+# Every measure the calculator shows moves some probe household (employer
+# NI, which moved none, is withdrawn).
+NO_HOUSEHOLD_EFFECT: set[str] = set()
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
     "employee_60k": personal_impact.HouseholdInput(employment_income=60_000),

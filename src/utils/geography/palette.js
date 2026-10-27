@@ -44,6 +44,25 @@ export const approximatePatternId = (category) =>
 export const approximateFill = (category) =>
   `url(#${approximatePatternId(category)})`;
 
+/**
+ * On the continuous scale, a seat too uncertain to classify is mid grey,
+ * apart from the light grey of no change.
+ */
+export const UNCERTAIN_FILL = CHART_COLOURS.noChange;
+
+/**
+ * The dot texture over one colour of the continuous scale (#rrggbb). The
+ * hex digits are spelt as letters (0 to g … 9 to p), so the id has no
+ * digits and url() resolves anywhere.
+ */
+export const approximateColourPatternId = (colour) =>
+  `approximate-dots-c${colour
+    .replace("#", "")
+    .toLowerCase()
+    .replace(/[0-9]/g, (digit) => String.fromCharCode(103 + Number(digit)))}`;
+export const approximateColourFill = (colour) =>
+  `url(#${approximateColourPatternId(colour)})`;
+
 /** The hatch pattern's id: no digits or colons, so url() resolves anywhere. */
 export const WITHHELD_PATTERN_ID = "withheld-hatch";
 export const WITHHELD_FILL = `url(#${WITHHELD_PATTERN_ID})`;

@@ -1,8 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
+import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation, preloadAllViews } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 beforeEach(() => {
   const original = fixtureJson("manifest.json");
@@ -104,7 +107,7 @@ describe("the view tabs", () => {
         expect(document.querySelector(".tip")).toBeNull();
       }
       if (!expected[view.value][1]) {
-        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", `Select policies: ${POLICIES_INACTIVE}`);
+        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", expect.stringMatching(new RegExp(`^Policies .*: ${POLICIES_INACTIVE}$`)));
         fireEvent.click(policy.querySelector(".band-control"));
         expect(policy.querySelector(".policy-selector-dropdown")).toBeNull();
         fireEvent.mouseEnter(policy.querySelector(".band-control"));
@@ -180,7 +183,7 @@ describe("the view tabs", () => {
     await renderApp();
     // Population impact neither repeats the cards nor points to them
     expect(screen.queryByText("About selected policies")).toBeNull();
-    expect(screen.queryByText(/What each measure does is on/)).toBeNull();
+    expect(screen.queryByText(/What each policy does is on/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
     // The fixture publishes one measure (beforeEach)
@@ -192,7 +195,7 @@ describe("the view tabs", () => {
     window.history.replaceState({}, "", "/?tab=policies");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
-    fireEvent.click(within(panel).getByRole("button", { name: /effect of Alpha/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /effect: Alpha,/ }));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -342,7 +345,13 @@ describe("the view tabs", () => {
   it("open By age, 16 to 24 chosen, from Methodology's link", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    fireEvent.click(screen.getByRole("link", { name: "results by age" }));
+    // The link sits in Population impact's folded "Results by age" topic
+    fireEvent.click(screen.getByRole("button", { name: "Results by age" }));
+    fireEvent.click(
+      screen
+        .getAllByRole("link", { name: "results by age", hidden: true })
+        .find((link) => link.getAttribute("href").startsWith("?tab=")),
+    );
     expect(screen.getByRole("tab", { name: "By age" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -358,17 +367,21 @@ describe("the view tabs", () => {
     for (const name of [
       "At a glance",
       "Data",
-      "Model and measures",
+      "Model and policies",
       "Population impact",
-      "Figures by area",
-      "Young people",
       "Household impact",
       "Pre-measures forecast",
       "Limitations",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
-    expect(within(panel).getByRole("heading", { level: 3, name: "Household calculation" })).toBeInTheDocument();
+    // Figures by area and results by age are folded topics of Population
+    // impact; the household calculation is one of Household impact
+    const population = within(panel).getByRole("heading", { level: 2, name: "Population impact" }).closest(".method-section");
+    for (const name of ["Figures by area", "Results by age"]) {
+      expect(within(population).getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(within(panel).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
     // No leftover link to last year's research
@@ -379,7 +392,7 @@ describe("the view tabs", () => {
     // Said once on the page
     for (const phrase of [
       /dominance and p% rules/g,
-      /leave out interactions between measures/g,
+      /leave out interactions between policies/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);
     }

@@ -35,6 +35,13 @@
   height: 400px;
 }
 
+/* No selected measure changes incomes: the note fills the plot's place */
+.household-scatter-no-change {
+  height: 100%;
+  min-height: 200px;
+  box-sizing: border-box;
+}
+
 /* Side by side with the map, the plot takes the map's controls and map
    rows (3 and 4) and fills them, and its key takes the colour scale's
    row (5). Absolutely placed, the drawing adds no height of its own, so the
@@ -52,6 +59,26 @@
     height: auto;
   }
 
+  /* Beside a card with an Options pill (All households' income decile
+     card), the plot keeps to the plot row, so both plots start level (the
+     shared Options row stands empty on this side). Its drawing adds no
+     height, so it holds the row open at the decile chart's own height
+     (410px, WaterfallChart's plotHeight with the section's key above).
+     Both draw their logo in the SVG under the same axis and margins and
+     have no key row (this card's key is in its sentence), so plots, axis
+     titles and logos sit level. */
+  .charts-grid:has(> div > .chart-controls) > div.household-scatter-template:not(:only-child) > .chart-plot {
+    grid-row: 4;
+    min-height: 410px;
+  }
+
+  /* About this chart in the footer row, level with its neighbour's */
+  .charts-grid > div.household-scatter-template:not(:only-child) > .chart-more-info {
+    grid-column: 1 / -1;
+    grid-row: 7;
+    align-self: end;
+  }
+
   /* The key takes the row of the map's colour scale, under the plot */
   .charts-grid > div.household-scatter-template:not(:only-child) > .scatter-legend {
     grid-row: 5;
@@ -65,12 +92,14 @@
   z-index: 2;
   width: max-content;
   max-width: 280px;
-  padding: 10px;
-  font-size: 12px;
-  color: var(--c-text);
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-axis);
-  border-radius: 4px;
+  padding: var(--tip-padding);
+  font-size: var(--tip-font-size);
+  line-height: var(--tip-line-height);
+  color: var(--tip-color);
+  background-color: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  box-shadow: var(--tip-shadow);
   pointer-events: none;
 }
 
@@ -96,6 +125,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The key in the sentence: a dot before "gain" and "lose" */
+.scatter-key-word {
+  white-space: nowrap;
+}
+
+.scatter-key-word .scatter-legend-dot {
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 0.05em;
 }
 
 .scatter-legend-dot {

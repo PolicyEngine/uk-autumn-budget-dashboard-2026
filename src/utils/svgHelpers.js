@@ -40,20 +40,20 @@ export function createSvgElement(tagName, attributes = {}) {
  */
 export function createSvgText(
   content,
-  { x, y, fontSize, fontWeight = "400", fill = CHART_COLOURS.text },
+  { x, y, fontSize, fontWeight = "400", fill = CHART_COLOURS.text, fontFamily = DEFAULT_FONT },
 ) {
   const text = createSvgElement("text", {
     x,
     y,
     fill,
-    "font-family": DEFAULT_FONT,
+    "font-family": fontFamily,
     "font-size": `${fontSize}px`,
     "font-weight": fontWeight,
   });
   // Also set via style attribute for broader compatibility
   text.setAttribute(
     "style",
-    `font-family: ${DEFAULT_FONT}; font-size: ${fontSize}px; font-weight: ${fontWeight}; fill: ${fill};`,
+    `font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: ${fontWeight}; fill: ${fill};`,
   );
   text.textContent = content;
   return text;

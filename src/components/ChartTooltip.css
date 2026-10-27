@@ -1,14 +1,16 @@
+/* A chart's tooltip: the shared tip card (--tip-* in globals.css, as
+   Tip.css), wider for its rows */
 .chart-tooltip {
   max-width: 300px;
   min-width: 200px;
-  padding: 10px 12px;
-  font-size: 12.5px;
+  padding: var(--tip-padding);
+  font-size: var(--tip-font-size);
   line-height: 1.35;
-  color: var(--pe-gray-800);
-  background: var(--c-surface);
-  border: 1px solid var(--pe-gray-200);
-  border-radius: var(--pe-radius-md);
-  box-shadow: 0 4px 16px var(--shadow-soft);
+  color: var(--tip-color);
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  box-shadow: var(--tip-shadow);
 }
 
 .chart-tooltip p {
@@ -39,6 +41,13 @@
   align-items: center;
   gap: 8px;
   padding: 1px 0;
+}
+
+/* A measure's row: the shared label (MeasureRowLabel) in place of the
+   swatch and name */
+.chart-tooltip-row.has-icon {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 2px 0;
 }
 
 .chart-tooltip-swatch {
@@ -98,4 +107,73 @@
   border-top: 1px solid var(--pe-gray-200);
   color: var(--pe-gray-700);
   font-size: var(--fs-micro);
+}
+
+/* A hover tooltip drawn in the window (ViewportTooltip.jsx): fixed, placed
+   by placeTooltip so it is never cut off by a card or the window's edge */
+.viewport-tooltip-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.viewport-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  max-width: calc(100vw - 16px);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.viewport-tooltip .floating-tooltip,
+.viewport-tooltip .household-scatter-tooltip {
+  position: static;
+}
+
+/* A thin scrollbar when a list scrolls inside: the hovered row is kept in
+   view, and the box takes no pointer */
+.viewport-tooltip > * {
+  scrollbar-width: thin;
+}
+
+/* Taller than the window: the rows in two columns */
+.viewport-tooltip.is-compact .chart-tooltip {
+  max-width: min(560px, calc(100vw - 16px));
+}
+
+.viewport-tooltip.is-compact .chart-tooltip-section {
+  column-count: 2;
+  column-gap: 16px;
+}
+
+.viewport-tooltip.is-compact .chart-tooltip-row {
+  break-inside: avoid;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel {
+  width: min(460px, calc(100vw - 16px)) !important;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel-list {
+  column-count: 2;
+  column-gap: 12px;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel-list li {
+  break-inside: avoid;
+}
+
+@media (max-width: 520px) {
+  .viewport-tooltip.is-compact .ls-year-panel-list li {
+    grid-template-columns: 8px minmax(0, 1fr) 3.6em;
+  }
+
+  .viewport-tooltip.is-compact .ls-year-panel-track {
+    display: none;
+  }
 }

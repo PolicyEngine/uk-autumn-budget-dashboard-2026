@@ -1,9 +1,11 @@
 import { useId, useState } from "react";
+import { InfoTip } from "../Tip";
 
 /**
  * One choice from a few, as selectable boxes: native radio buttons styled
- * as tiles, so the group has radio semantics, arrow keys move between the
- * options and Tab enters and leaves the group.
+ * as tiles (or, `layout="segmented"`, one joined row of them), so the group
+ * has radio semantics, arrow keys move between the options and Tab enters
+ * and leaves the group.
  *
  * @param {Object} props
  * @param {string} props.id - The field's id (the radios' name)
@@ -11,28 +13,38 @@ import { useId, useState } from "react";
  * @param {Array<{value: string|number|boolean, label: string, hint?: string}>} props.options
  * @param {*} props.value - The chosen option's value
  * @param {(value: *) => void} props.onChange
- * @param {string} [props.hint] - A line under the boxes
+ * @param {string} [props.hint] - A line under the boxes, or behind the info icon
+ * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
  * @param {boolean} [props.hideLabel] - Keep the question for screen readers
  *   only (a row above already shows it)
- * @param {"wide"|"compact"|"grid"} [props.layout] - wide: two to five boxes
- *   that share the row; compact: short labels (A to H, 0 to 6); grid: many
- *   boxes that wrap (regions)
+ * @param {"wide"|"compact"|"grid"|"segmented"} [props.layout] - wide: two to
+ *   five boxes that share the row; compact: short labels (A to H, 0 to 6);
+ *   grid: many boxes that wrap (regions); segmented: one joined row
  */
-export function ChoiceTiles({ id, label, options, value, onChange, hint, layout = "wide", hideLabel = false }) {
+export function ChoiceTiles({ id, label, options, value, onChange, hint, hintAs = "below", layout = "wide", hideLabel = false }) {
   const uid = useId();
-  const legendId = `${uid}-legend`;
+  const labelId = `${uid}-label`;
   const hintId = hint ? `hint-${id}` : undefined;
   return (
-    <fieldset
+    <div
       className={`choice-field choice-${layout}`}
       role="radiogroup"
-      aria-labelledby={legendId}
+      aria-labelledby={labelId}
       aria-describedby={hintId}
       data-field={id}
     >
-      <legend id={legendId} className={hideLabel ? "visually-hidden" : "field-label"}>
-        {label}
-      </legend>
+      {hideLabel ? (
+        <span id={labelId} className="visually-hidden">
+          {label}
+        </span>
+      ) : (
+        <div className="label-with-info">
+          <span id={labelId} className="field-label">
+            {label}
+          </span>
+          {hint && hintAs === "tooltip" && <InfoTip content={hint} label={`About ${label}`} />}
+        </div>
+      )}
       <div className="choice-tiles" style={{ "--choice-count": options.length }}>
         {options.map((option) => {
           const checked = option.value === value;
@@ -53,19 +65,34 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, layout 
           );
         })}
       </div>
-      {hint && (
+      {hint && hintAs !== "tooltip" && (
         <p className="field-hint" id={hintId}>
           {hint}
         </p>
       )}
-    </fieldset>
+      {hint && hintAs === "tooltip" && <HiddenHint hint={hint} hintId={hintId} />}
+    </div>
+  );
+}
+
+/**
+ * A hint shown behind the label's info icon (InfoTip, whose tip renders
+ * only while open): kept in the page, hidden, as the field's description
+ * for screen readers.
+ */
+function HiddenHint({ hint, hintId }) {
+  return (
+    <span className="visually-hidden" id={hintId}>
+      {hint}
+    </span>
   );
 }
 
 /**
  * A field's label and its hint. A short hint goes under the box; a long one
- * (`hintAs="tooltip"`) sits behind an "i" beside the label, shown on hover
- * or focus, and is still the box's description for screen readers.
+ * (`hintAs="tooltip"`) sits behind the info icon beside the label (the
+ * shared InfoTip), shown on hover, focus or a tap, and is still the box's
+ * description for screen readers.
  */
 export function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
   if (hidden) {
@@ -87,14 +114,8 @@ export function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
       <label className="field-label" htmlFor={htmlFor}>
         {label}
       </label>
-      <span className="info-icon-wrapper">
-        <button type="button" className="info-icon" aria-label={`About ${label}`} aria-describedby={hintId}>
-          i
-        </button>
-        <span className="info-tooltip" role="tooltip" id={hintId}>
-          {hint}
-        </span>
-      </span>
+      <InfoTip content={hint} label={`About ${label}`} />
+      <HiddenHint hint={hint} hintId={hintId} />
     </div>
   );
 }
@@ -166,8 +187,26 @@ export function SelectField({ id, label, options, value, onChange, hint, hintAs 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 /**
- * A number with − and + steppers. The box takes any value in range as
- * typed; the steppers move by `step`. Amounts show a £ prefix.
+ * An amount as typed: "34200", "34,200", "£34,200", "34k" or "1.2m".
+ * NaN when it is not a number.
+ */
+export function parseAmount(text) {
+  const match = String(text)
+    .trim()
+    .toLowerCase()
+    .replace(/[£,\s]/g, "")
+    .match(/^(-?\d*\.?\d+)([km])?$/);
+  if (!match) return NaN;
+  return parseFloat(match[1]) * (match[2] === "k" ? 1e3 : match[2] === "m" ? 1e6 : 1);
+}
+
+const formatAmount = (value) => value.toLocaleString("en-GB", { maximumFractionDigits: 2 });
+
+/**
+ * A number. Ages and counts have − and + steppers that move by `step`;
+ * amounts (`money`) are a plain box with £ before them, their unit after,
+ * and thousands separators once you leave the box ("34k" is taken too).
+ * The box takes any value in range as typed.
  *
  * @param {Object} props
  * @param {string} props.id
@@ -178,6 +217,8 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param {number} props.max
  * @param {number} props.step
  * @param {boolean} [props.money] - Show £ before the number
+ * @param {boolean} [props.stepper] - Show − and +; by default only for
+ *   numbers that are not amounts
  * @param {string} [props.suffix] - A unit after the number ("a month")
  * @param {string} [props.hint]
  * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
@@ -197,6 +238,7 @@ export function NumberField({
   max,
   step,
   money = false,
+  stepper = !money,
   suffix,
   hint,
   hintAs = "below",
@@ -207,8 +249,11 @@ export function NumberField({
   const hintId = hint ? `hint-${id}` : undefined;
   const fieldId = `field-${id}`;
   const shown = Number.isFinite(value) ? value : min;
+  const parse = money ? parseAmount : parseFloat;
   // The value typed before leaving the box moved it into range
   const [clampedFrom, setClampedFrom] = useState(null);
+  // An amount shows its thousands separators except while it is edited
+  const [editing, setEditing] = useState(false);
   const stepTo = (direction) => {
     // Snap to the step grid, then move one step
     const base = direction > 0 ? Math.floor(shown / step) * step : Math.ceil(shown / step) * step;
@@ -223,22 +268,33 @@ export function NumberField({
   if (synced !== shown) {
     // The value changed from outside (a stepper, an example): show it
     setSynced(shown);
-    if (parseFloat(draft) !== shown) setDraft(String(shown));
+    if (parse(draft) !== shown) setDraft(String(shown));
   }
   const name = inputLabel ?? label;
+  // The message under the box, tied to it (aria-describedby) and the box
+  // marked invalid while the typed value is out of range (WCAG 3.3.1)
+  const invalid = Boolean(outOfRangeMessage) && outOfRange(parse(draft), min, max);
+  const errorShown = Boolean(outOfRangeMessage) && (invalid || clampedFrom !== null);
+  const errorId = `error-${id}`;
+  const describedBy = [hintId, errorShown ? errorId : null].filter(Boolean).join(" ") || undefined;
+  const typed = parse(draft);
+  const boxValue = money && !editing && Number.isFinite(typed) ? formatAmount(typed) : draft;
+  const stepButton = (direction) => (
+    <button
+      type="button"
+      className="stepper-button"
+      aria-label={`${name}: ${money ? "£" : ""}${step.toLocaleString("en-GB")} ${direction > 0 ? "more" : "less"}`}
+      disabled={direction > 0 ? shown >= max : shown <= min}
+      onClick={() => stepTo(direction)}
+    >
+      {direction > 0 ? "+" : "−"}
+    </button>
+  );
   return (
-    <div className="number-field" data-field={id}>
+    <div className={`number-field ${money ? "is-money" : ""}`} data-field={id}>
       <FieldLabel htmlFor={fieldId} label={label} hint={hint} hintId={hintId} hintAs={hintAs} hidden={hideLabel} />
-      <div className="number-stepper">
-        <button
-          type="button"
-          className="stepper-button"
-          aria-label={`${name}: ${money ? "£" : ""}${step.toLocaleString("en-GB")} less`}
-          disabled={shown <= min}
-          onClick={() => stepTo(-1)}
-        >
-          −
-        </button>
+      <div className={`number-stepper ${stepper ? "" : "no-steppers"}`.trim()}>
+        {stepper && stepButton(-1)}
         <div className={`number-box ${money ? "is-money" : ""}`}>
           {money && (
             <span className="number-prefix" aria-hidden="true">
@@ -247,22 +303,28 @@ export function NumberField({
           )}
           <input
             id={fieldId}
-            type="number"
-            inputMode="numeric"
-            value={draft}
-            min={min}
-            max={max}
-            step={step}
+            // Amounts are text, so they can show "34,200"; numeric keypad
+            // on phones either way
+            type={money ? "text" : "number"}
+            inputMode={money ? "decimal" : "numeric"}
+            autoComplete="off"
+            value={boxValue}
+            min={money ? undefined : min}
+            max={money ? undefined : max}
+            step={money ? undefined : step}
             aria-label={inputLabel}
-            aria-describedby={hintId}
+            aria-describedby={describedBy}
+            aria-invalid={invalid || undefined}
+            onFocus={() => setEditing(true)}
             onChange={(event) => {
               setDraft(event.target.value);
               setClampedFrom(null);
-              const parsed = parseFloat(event.target.value);
+              const parsed = parse(event.target.value);
               if (Number.isFinite(parsed) && parsed >= min && parsed <= max) onChange(parsed);
             }}
             onBlur={() => {
-              const parsed = parseFloat(draft);
+              setEditing(false);
+              const parsed = parse(draft);
               const next = Number.isFinite(parsed) ? clamp(parsed, min, max) : shown;
               if (Number.isFinite(parsed) && next !== parsed) setClampedFrom(parsed);
               setDraft(String(next));
@@ -270,22 +332,14 @@ export function NumberField({
             }}
           />
         </div>
-        <button
-          type="button"
-          className="stepper-button"
-          aria-label={`${name}: ${money ? "£" : ""}${step.toLocaleString("en-GB")} more`}
-          disabled={shown >= max}
-          onClick={() => stepTo(1)}
-        >
-          +
-        </button>
+        {stepper && stepButton(1)}
         {suffix && <span className="number-suffix">{suffix}</span>}
       </div>
       <FieldHint hint={hint} hintId={hintId} hintAs={hintAs} />
-      {outOfRangeMessage && (outOfRange(draft, min, max) || clampedFrom !== null) && (
-        <p className="field-error" role="alert">
+      {errorShown && (
+        <p className="field-error" id={errorId} role="alert">
           {outOfRangeMessage}
-          {clampedFrom !== null && !outOfRange(draft, min, max)
+          {clampedFrom !== null && !outOfRange(parse(draft), min, max)
             ? ` ${clampedFrom.toLocaleString("en-GB")} was changed to ${shown.toLocaleString("en-GB")}.`
             : ""}
         </p>
@@ -294,8 +348,7 @@ export function NumberField({
   );
 }
 
-/** Whether typed text is a number outside min to max. */
-function outOfRange(text, min, max) {
-  const parsed = parseFloat(text);
+/** Whether a typed number is outside min to max. */
+function outOfRange(parsed, min, max) {
   return Number.isFinite(parsed) && (parsed < min || parsed > max);
 }

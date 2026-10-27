@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
-import { ExternalLink, SourceLink, Tag } from "./MethodUi";
+import { ExternalLink, SourceLink, Tag, Topic } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
 import { METHOD_ANCHORS } from "./anchors";
@@ -100,14 +100,13 @@ function ChartNotes({ outlook, meta }) {
     .filter(([, notes]) => notes.length);
   if (!groups.length) return null;
   return (
-    <div id={METHOD_ANCHORS.lsNotes} className="card method-card method-anchor">
-      <h3 className="method-card-title">Notes on the forecast charts</h3>
+    <Topic id={METHOD_ANCHORS.lsNotes} title="Notes on the forecast charts" preview={groups.map(([title]) => title).join(" · ")}>
       <FactList items={groups.map(([title, notes]) => [title, { points: notes }, TriangleAlert])} />
-    </div>
+    </Topic>
   );
 }
 
-/** The engine, data and status of the Living standards baseline, then its notes and gaps. */
+/** The engine, data and status of the Living standards baseline, then its notes and gaps, each a folded topic. */
 export default function LivingStandardsMethod() {
   const [meta, setMeta] = useState(null);
   const [outlook, setOutlook] = useState(null);
@@ -140,8 +139,7 @@ export default function LivingStandardsMethod() {
 
   return (
     <>
-      <div className="card method-card">
-        <h3 className="method-card-title">Engine and data</h3>
+      <Topic title="Engine and data" preview="Model · Data · Period · Prices · Sources">
         <FactList
           items={[
             [
@@ -178,14 +176,12 @@ export default function LivingStandardsMethod() {
             ],
           ].filter(Boolean)}
         />
-      </div>
+      </Topic>
 
       <ChartNotes outlook={outlook} meta={meta} />
 
       {caveats.length > 0 && (
-        <div className="card method-card">
-          <h3 className="method-card-title">What the baseline leaves out</h3>
-          <p className="method-lead">Gaps and simplifications that change how the projections read.</p>
+        <Topic title="What the baseline leaves out" preview="Gaps and simplifications that change how the projections read">
           <ul className="method-list method-list-icons method-list-caveats">
             {caveats.map((c) => (
               <li key={c}>
@@ -194,7 +190,7 @@ export default function LivingStandardsMethod() {
               </li>
             ))}
           </ul>
-        </div>
+        </Topic>
       )}
     </>
   );

@@ -35,9 +35,10 @@ NEWER = "microcosm-uk-2024-25-dense-20260301T000000Z-0000000c"
 PKG = "pkg_combined"
 MEASURES = ("alpha", "beta", "zero")
 YEARS = (2026, 2027)
-SURCHARGE_RATE = (
-    "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
-)
+# A parameter under a data limit in force (pip_daily_living_points), so a
+# measure on it is not computable. (These tests used the SDLT surcharge
+# until its limit lifted at the a6299504 cut.)
+LIMITED_RATE = "gov.dwp.pip.daily_living.points_thresholds.enhanced"
 MAC_TIME = (
     "        12.50 real        10.00 user         1.00 sys\n"
     "         7516192768  maximum resident set size\n"
@@ -573,7 +574,7 @@ def test_a_refused_measure_writes_no_table_and_names_the_rest(
     world = World(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+        changes_of={"alpha": {LIMITED_RATE: {"2026": 10}}},
     )
     assert world.run() == 1
     assert world.steps == [*MEASURES, PKG]
@@ -634,6 +635,63 @@ def test_an_unapproved_reform_is_refused_before_anything_runs(world, capsys):
     args = world.args("--reforms", "alpha", "unknown")
     assert c.run_constituencies(parse_args(args), api=world.hub) == 1
     assert "unknown: absent from the manifest" in printed(capsys)
+    assert world.hub.downloads == [] and world.steps == []
+
+
+def test_the_default_is_the_manifests_approved_measures_not_the_candidates(
+    monkeypatch, tmp_path
+):
+    """On Budget day the manifest approves the announced measures, not the
+    candidates a package lists: the default takes what it approves."""
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, ["alpha", "announced"], years=YEARS
+    )
+    assert c.default_reforms(manifest) == ["alpha", "announced"]
+
+
+def test_the_default_adds_a_package_only_with_its_approved_combined_run(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, [*MEASURES, PKG], packages={PKG: MEASURES}, years=YEARS
+    )
+    assert c.default_reforms(manifest) == [*MEASURES, PKG]
+
+
+def test_the_default_leaves_out_measures_not_approved(monkeypatch, tmp_path):
+    """Provisional and withdrawn measures have no approved receipt for the
+    area run to check against, so the default takes neither."""
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path,
+        list(MEASURES),
+        statuses={"beta": "provisional", "zero": "withdrawn"},
+        years=YEARS,
+    )
+    assert c.default_reforms(manifest) == ["alpha"]
+
+
+def test_with_nothing_approved_the_default_run_stops_before_fetching(
+    world, capsys, tmp_path
+):
+    """Before G3 every measure is provisional: the default run says there is
+    nothing to publish, and fetches nothing."""
+    from uk_budget_data.cli import parse_args
+
+    folder = tmp_path / "before_g3"
+    folder.mkdir()
+    manifest = publication_manifest(
+        folder,
+        list(MEASURES),
+        statuses={measure: "provisional" for measure in MEASURES},
+        years=YEARS,
+    )
+    args = world.args()
+    args[args.index("--manifest") + 1] = str(manifest)
+    assert c.run_constituencies(parse_args(args), api=world.hub) == 1
+    assert "nothing the national page may publish yet" in printed(capsys)
     assert world.hub.downloads == [] and world.steps == []
 
 
@@ -1031,7 +1089,7 @@ def test_a_reform_unlike_its_approved_receipt_is_refused_before_simulating(
     world.reforms["alpha"] = Reform(
         id="alpha",
         name="alpha",
-        parameter_changes={SURCHARGE_RATE: {"2026": 0.07}},
+        parameter_changes={LIMITED_RATE: {"2026": 10}},
     )
     assert world.run() == 1
     assert world.steps == [] and world.simulated == []

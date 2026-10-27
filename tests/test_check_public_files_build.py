@@ -296,3 +296,19 @@ def test_build_requires_every_area_csv_id_in_verified_provenance(
             "release index: regional.csv: Area CSV reform has no verified provenance"
         ]
     )
+
+
+@needs_node
+@pytest.mark.parametrize("in_tables", [True, False])
+def test_the_build_check_refuses_a_receipt_with_thin_cells(tree, in_tables):
+    """#208 review, finding 4: as CI does, whatever the review says."""
+    name = "public/data/artifacts/m/0123456789abcdef/receipt.json"
+    floor = {"thin_cells_in_tables": in_tables, "thin_cells": []}
+    write(tree, name, json.dumps({"dashboard": {"disclosure_floor": floor}}))
+    review(tree, [(name, "national_table", "")])
+    expected = (
+        [f"{name}: its tables hold cells under the floor of survey households"]
+        if in_tables
+        else []
+    )
+    assert run(tree) == expected

@@ -28,9 +28,10 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.publication_support import World
 from uk_budget_data import releases
-from uk_budget_data.data_limits import DATA_LIMITS, record
+from uk_budget_data.data_limits import record
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.receipt import is_publication_path
@@ -49,11 +50,12 @@ from uk_budget_data.publication.release_index import (
 )
 
 REPO = Path(__file__).resolve().parents[1]
-# A data limit that makes a measure not computable (uk_budget_data.data_limits)
+# A data limit that makes a measure not computable: a lifted one, registered
+# by the stand_in_data_limits fixture (tests/data_limit_stand_ins.py)
 SURCHARGE = record(
     next(
         limit
-        for limit in DATA_LIMITS
+        for limit in STAND_IN_DATA_LIMITS
         if limit.key == "additional_dwelling_purchases"
     ),
     ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
@@ -530,6 +532,7 @@ def test_both_public_gates_refuse_a_bound_view_row_missing_a_field(
     )
 
 
+@pytest.mark.usefixtures("stand_in_data_limits")
 def test_a_held_measure_keeps_its_obr_comparison_row(event_world):
     # Review's probe: Autumn Budget 2024's SDLT measure is not computable on
     # this dashboard's data, and its OBR comparison row (the OBR's and the

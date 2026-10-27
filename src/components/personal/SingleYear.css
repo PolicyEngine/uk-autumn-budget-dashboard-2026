@@ -128,115 +128,6 @@
   margin-top: 8px;
 }
 
-/* Taxes and benefits table */
-.programme-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 8px;
-}
-
-.programme-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-small);
-  font-variant-numeric: tabular-nums;
-}
-
-.programme-table th,
-.programme-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--pe-gray-100);
-}
-
-.programme-table thead th {
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  border-bottom: 1px solid var(--pe-gray-200);
-}
-
-.programme-table .num {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.programme-table tbody th {
-  font-weight: 400;
-  color: var(--pe-gray-800);
-}
-
-.programme-group th {
-  padding-top: 16px;
-  font-size: var(--fs-caption);
-  font-weight: 600 !important;
-  color: var(--pe-gray-600) !important;
-  background: var(--pe-gray-50);
-}
-
-.programme-row.depth-1 th {
-  padding-left: 34px;
-  color: var(--pe-gray-600);
-}
-
-.programme-row.depth-1 td {
-  color: var(--pe-gray-600);
-}
-
-.programme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.programme-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.programme-chevron {
-  display: inline-block;
-  width: 12px;
-  font-size: 0.9em;
-  color: var(--pe-gray-600);
-}
-
-.programme-row:not(.depth-1) th > .programme-name {
-  /* Lines up with the toggled rows' names */
-  padding-left: 18px;
-}
-
-.programme-table .change {
-  font-weight: 600;
-}
-
-.programme-table .change.is-gain {
-  color: var(--pe-teal-700);
-}
-
-.programme-table .change.is-loss {
-  color: var(--c-loss-text);
-}
-
-.programme-table .change.is-zero {
-  font-weight: 400;
-  color: var(--pe-gray-400);
-}
-
-.programme-detail td {
-  padding-top: 0;
-  padding-left: 28px;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-600);
-}
-
 /* Net income and the marginal tax rate across earnings: a pair of cards in
    the dashboard's charts-grid (globals.css), whose shared rows line up the
    titles, descriptions, plots, x-axes and legends; stacked on a phone. The
@@ -357,73 +248,6 @@
   color: var(--pe-gray-600);
 }
 
-.breakdown-table thead th {
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row.depth-0 th,
-.breakdown-table .programme-row.depth-0 td {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-.breakdown-table .programme-row.depth-0 th {
-  color: var(--pe-gray-800);
-}
-
-.breakdown-table .programme-row.depth-1 th {
-  padding-left: 34px;
-}
-
-.breakdown-table .programme-row.depth-2 th {
-  padding-left: 52px;
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row.depth-2 td {
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row:not(.depth-0) td.change {
-  font-weight: 500;
-}
-
-.breakdown-dot {
-  display: inline-block;
-  flex: none;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 2px;
-  vertical-align: baseline;
-}
-
-.breakdown-table .programme-name {
-  display: inline-flex;
-  align-items: center;
-}
-
-.breakdown-table th > .programme-name {
-  padding-left: 18px;
-}
-
-.breakdown-table .programme-toggle .programme-name {
-  padding-left: 0;
-}
-
-.breakdown-net-row th,
-.breakdown-net-row td {
-  font-weight: 600;
-  color: var(--pe-gray-900);
-  border-top: 1px solid var(--pe-gray-300);
-  border-bottom: none;
-}
-
-.breakdown-net-row th {
-  padding-left: 46px;
-}
-
 /* "About these figures" under the breakdown: the rows' notes, then the
    method, each as term then text */
 .breakdown-about-heading {
@@ -471,11 +295,6 @@
   }
 }
 
-.breakdown-table .programme-chevron {
-  width: 14px;
-  font-size: 1rem;
-  color: var(--pe-gray-700);
-}
 
 /* The breakdown and the split by policy: side by side on a wide screen,
    each column's heading and card on two shared rows, so the headings and
@@ -530,70 +349,10 @@
   position: relative;
   padding: 0;
   overflow: visible;
-  border-left: 3px solid var(--pe-gray-300);
-}
-
-.result-card.is-gain {
-  border-left-color: var(--c-gain);
-}
-
-.result-card.is-loss {
-  border-left-color: var(--c-loss);
 }
 
 .result-card p {
   margin: 0;
-}
-
-.result-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 20px 28px 0;
-}
-
-.result-card-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
-}
-
-.result-card-pills {
-  display: flex;
-  gap: 6px;
-}
-
-.result-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  background: var(--pe-gray-50);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-pill.is-link {
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.result-pill.is-link:hover {
-  background: var(--pe-teal-50);
-  border-color: var(--pe-teal-200);
-}
-
-.result-pill.is-link:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
 }
 
 .result-card-body {
@@ -606,77 +365,19 @@
   padding: 16px 28px 24px;
 }
 
-.result-card-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
+/* The change in the Your change tile: the tiles' headline size and
+   place (from .forecast-tile-value), only its colour its own. Its own
+   class name: ConstituencyMap.css's global .result-value is micro text */
+.result-change-value {
+  font: inherit;
 }
 
-/* A very light tint behind the figure only */
-.result-card-hero {
-  padding: 16px 20px;
-  background: var(--pe-gray-50);
-  border-radius: var(--pe-radius-md);
-}
-
-.result-card.is-gain .result-card-hero {
-  background: var(--pe-teal-50);
-}
-
-.result-card.is-loss .result-card-hero {
-  background: var(--c-loss-soft);
-}
-
-.result-figure {
-  line-height: 1.1;
-}
-
-.result-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-700);
-}
-
-.result-card.is-gain .result-value {
+.result-card.is-gain .result-change-value {
   color: var(--c-gain-text);
 }
 
-.result-card.is-loss .result-value {
+.result-card.is-loss .result-change-value {
   color: var(--c-loss-text);
-}
-
-.result-unit {
-  font-size: var(--fs-body-lg);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
-
-.result-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 10px !important;
-  padding: 2px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-chip.is-gain {
-  color: var(--c-gain-text);
-  border-color: var(--pe-teal-200);
-}
-
-.result-chip.is-loss {
-  color: var(--c-loss-text);
-  border-color: var(--c-loss-border);
 }
 
 /* Before and after, on one scale */
@@ -815,13 +516,8 @@
   color: var(--pe-gray-800);
 }
 
-.result-foot-item dd .info-icon-wrapper {
+.result-foot-item dd .info-tip {
   margin-left: 6px;
-  vertical-align: middle;
-}
-
-.result-foot-item dd .info-tooltip {
-  text-align: left;
 }
 
 /* A detail card while it is calculated: empty at its final height, with
@@ -994,11 +690,14 @@
   background: var(--pe-teal-500);
 }
 
-/* New cards and charts fade in rather than pop */
+/* New cards and charts fade in rather than pop. "backwards", not "both":
+   a transform held after the fade makes the card the containing block of
+   its Options sheet (position: fixed), which then sat at the card's foot,
+   partly off the screen, instead of the window's */
 .result-card,
 .single-year-details .report-section > .card,
 .single-year-details .charts-grid > div {
-  animation: single-year-fade-in 0.3s ease-out both;
+  animation: single-year-fade-in 0.3s ease-out backwards;
 }
 
 @keyframes single-year-fade-in {
@@ -1013,53 +712,6 @@
   }
 }
 
-
-/* No effect: listed in the card's More info row */
-.no-effect-title {
-  margin: 0;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.no-effect-list {
-  margin: 0;
-  padding: 8px 0 0;
-  list-style: none;
-}
-
-.no-effect-item {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  column-gap: 10px;
-  align-items: baseline;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--pe-gray-100);
-}
-
-.no-effect-item:last-child {
-  border-bottom: none;
-}
-
-.no-effect-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  align-self: center;
-}
-
-.no-effect-name {
-  font-size: var(--fs-small);
-  color: var(--pe-gray-800);
-}
-
-.no-effect-reason {
-  grid-column: 2;
-  font-size: var(--fs-caption);
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}
-
 @media (max-width: 768px) {
   .result-card-body {
     grid-template-columns: minmax(0, 1fr);
@@ -1068,15 +720,11 @@
 }
 
 @media (max-width: 600px) {
-  .result-card-head,
   .result-card-body {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .result-value {
-    font-size: 2rem;
-  }
 
 }
 
@@ -1102,13 +750,6 @@
   }
 }
 
-/* A phone's one-column breakdown: what the net row's figures are */
-.breakdown-net-label {
-  display: block;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
 
 /* Before / After / Change, above the chart */
 .chart-view-switch {
@@ -1121,67 +762,9 @@
   padding: 0;
 }
 
-/* Whose result it is, under the figure: small muted chips that wrap
-   whole, then Edit */
-.result-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.result-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px 2px 7px;
-  font-size: var(--fs-micro);
-  line-height: 1.5;
-  white-space: nowrap;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-fact svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-.result-fact:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-}
-
-.result-facts-edit {
-  padding: 2px 4px;
-  font: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--c-gain-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.result-facts-edit:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.result-facts-edit:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
 /* "About this result", at the card's foot, in the charts' "About this
-   chart" style: a bullet on assumed spending, then two columns with
-   matching headings, Based on and No effect on you; stacked on a phone */
+   chart" style: two columns with matching headings, Based on and No
+   effect on you (stacked on a phone), then Notes and Caveats */
 .result-card-about {
   margin: 0 28px 12px;
 }
@@ -1232,10 +815,6 @@
   margin-right: -4px;
 }
 
-.result-card-about .result-card-notes {
-  margin: 0;
-  padding-left: 16px;
-}
 
 @media (max-width: 599px) {
   .result-card-about {
@@ -1243,9 +822,6 @@
   }
 }
 
-.result-card-notes .single-year-quiet {
-  margin: 0 0 8px;
-}
 
 .waterfall-pending,
 .waterfall-no-effect {
@@ -1257,4 +833,507 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+/* The result card, top to bottom: the three tiles, the waterfall the
+   card's width, About this result */
+.result-card .result-tiles {
+  margin: 0;
+  padding: 20px 28px 4px;
+}
+
+.result-card .result-card-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.result-policies-link {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-policies-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .result-card .result-tiles {
+    padding: 16px 16px 4px;
+  }
+
+}
+
+/* The waterfall's panel: the tiles' tint, border, radius and padding,
+   the card's width; the gap above it the tiles' own gap */
+.result-card .result-card-body {
+  padding-top: 12px;
+}
+
+.result-card .net-income-waterfall {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--pe-teal-50);
+}
+
+@media (max-width: 900px) {
+  .result-card .result-card-body {
+    padding-top: 8px;
+  }
+}
+
+/* Its title as the tiles' (icon chip and name), the line under it */
+.waterfall-header {
+  margin: 0 0 10px;
+}
+
+.waterfall-title {
+  margin: 0;
+}
+
+.waterfall-title .forecast-tile-icon svg {
+  display: block;
+}
+
+/* Shown only when nothing changes: the panel's one note */
+.waterfall-no-change {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+/* The waterfall: one row each at one pitch (name | bar | amount), the
+   amounts right-aligned in one column. The track's left edge is the axis,
+   its one tick under the rows; the connectors join each bar's end to the
+   next row's start, so the rows sit with no gap */
+.waterfall-rows {
+  --wf-pitch: 34px;
+  --wf-bar: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.waterfall-row,
+.waterfall-axis {
+  display: grid;
+  grid-template-columns: minmax(120px, min(32%, 240px)) minmax(0, 1fr) 76px;
+  column-gap: 12px;
+  align-items: center;
+}
+
+.waterfall-row {
+  height: var(--wf-pitch);
+  border-radius: 4px;
+  outline: none;
+}
+
+.waterfall-row:hover,
+.waterfall-row:focus-visible {
+  background: var(--pe-gray-50);
+}
+
+.waterfall-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
+}
+
+.waterfall-name {
+  padding-left: 4px;
+  font-size: var(--fs-small);
+  line-height: 1.25;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waterfall-row.is-total .waterfall-name,
+.waterfall-row.is-total .waterfall-value,
+.waterfall-row.is-largest .waterfall-name,
+.waterfall-row.is-largest .waterfall-value {
+  font-weight: 600;
+}
+
+/* The largest policy's chip: in the empty run left of its bar, in the
+   bar's colour */
+.waterfall-chip {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-300);
+}
+
+.waterfall-row.is-gain .waterfall-chip {
+  color: var(--c-gain-text);
+  background: color-mix(in srgb, var(--c-gain) 14%, var(--c-surface));
+  border-color: color-mix(in srgb, var(--c-gain) 45%, var(--c-surface));
+}
+
+.waterfall-row.is-loss .waterfall-chip {
+  color: var(--c-loss-text);
+  background: color-mix(in srgb, var(--c-loss) 14%, var(--c-surface));
+  border-color: color-mix(in srgb, var(--c-loss) 45%, var(--c-surface));
+}
+
+.waterfall-track {
+  position: relative;
+  height: 100%;
+  border-left: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+.waterfall-bar {
+  position: absolute;
+  top: calc(50% - var(--wf-bar) / 2);
+  height: var(--wf-bar);
+  border-radius: 3px;
+}
+
+.waterfall-row.is-before .waterfall-bar {
+  background: var(--c-before);
+  border-radius: 0 3px 3px 0;
+}
+
+.waterfall-row.is-after .waterfall-bar {
+  background: var(--c-after);
+  border-radius: 0 3px 3px 0;
+}
+
+.waterfall-row.is-gain .waterfall-bar {
+  background: var(--c-gain);
+}
+
+.waterfall-row.is-loss .waterfall-bar {
+  background: var(--c-loss);
+}
+
+.waterfall-row.is-none .waterfall-bar {
+  background: var(--c-before);
+}
+
+/* The axis break: two slanted gaps across the before and after bars */
+.waterfall-break {
+  position: absolute;
+  left: 10px;
+  top: calc(50% - var(--wf-bar) / 2 - 3px);
+  width: 5px;
+  height: calc(var(--wf-bar) + 6px);
+  border-left: 2px solid var(--c-surface);
+  border-right: 2px solid var(--c-surface);
+  transform: skewX(-22deg);
+}
+
+.result-card .net-income-waterfall .waterfall-break {
+  border-color: var(--pe-teal-50);
+}
+
+.waterfall-link {
+  position: absolute;
+  top: calc(50% + var(--wf-bar) / 2);
+  height: calc(var(--wf-pitch) - var(--wf-bar));
+  border-left: 1px dashed var(--pe-gray-400);
+}
+
+.waterfall-value {
+  text-align: right;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.waterfall-row.is-gain .waterfall-value {
+  color: var(--c-gain-text);
+}
+
+.waterfall-row.is-loss .waterfall-value {
+  color: var(--c-loss-text);
+}
+
+/* The tick under the track's left edge: where the bars start */
+.waterfall-axis {
+  height: 18px;
+}
+
+/* The axis line along the track's foot, from the left edge; the tick
+   and its label hang from the corner, under the vertical axis */
+.waterfall-axis-line {
+  grid-column: 2;
+  align-self: start;
+  position: relative;
+  height: 100%;
+  border-top: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+.waterfall-axis-tick {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateX(-50%);
+  padding-top: 5px;
+  line-height: 1;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.waterfall-axis-tick::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 4px;
+  border-left: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+@media (max-width: 599px) {
+  .waterfall-rows {
+    --wf-pitch: 40px;
+    --wf-bar: 12px;
+  }
+
+  .waterfall-row,
+  .waterfall-axis {
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr) 62px;
+    column-gap: 8px;
+  }
+
+  /* Up to two lines on a phone, at the same pitch */
+  .waterfall-name {
+    padding-left: 0;
+    font-size: var(--fs-caption);
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .waterfall-value {
+    font-size: var(--fs-caption);
+  }
+}
+
+/* ---------- Your income, taxes and benefits: the table ---------- */
+/* The card's full width: a flexible name column, then three equal
+   fixed figure columns at its right edge, tabular and right
+   aligned. Groups are semibold on a light tint; their programmes and
+   parts indent by one step each, every name after a chevron or its
+   space. No change is a muted dash; net income is the bold total. */
+.programme-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+/* Beyond a phone: out by the cells' 12px each side, so the names start
+   under the sentence and the figures end under the download button */
+@media (min-width: 641px) {
+  .programme-table-wrap {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+
+.programme-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.programme-table th,
+.programme-table td {
+  padding: 7px 12px;
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--pe-gray-100);
+}
+
+.programme-table .num {
+  width: 7.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.programme-table thead th {
+  padding-top: 0;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  border-bottom: 1px solid var(--pe-gray-200);
+}
+
+.programme-table tbody th {
+  font-weight: 400;
+  color: var(--pe-gray-800);
+}
+
+.programme-table tbody td {
+  color: var(--pe-gray-700);
+}
+
+.programme-table tbody tr:hover > * {
+  background: var(--pe-gray-50);
+}
+
+/* Groups: semibold on a subtle tint */
+.programme-row.is-group > th,
+.programme-row.is-group > td {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+  background: color-mix(in srgb, var(--pe-teal-50) 55%, var(--c-surface));
+}
+
+.programme-table tbody tr.is-group:hover > * {
+  background: var(--pe-teal-50);
+}
+
+/* One indent step per depth */
+.programme-row.depth-1 > th {
+  padding-left: 32px;
+}
+
+.programme-row.depth-2 > th {
+  padding-left: 52px;
+  color: var(--pe-gray-600);
+}
+
+.programme-row.depth-2 > td {
+  color: var(--pe-gray-600);
+}
+
+.programme-toggle,
+.programme-leaf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.programme-toggle {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.programme-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.programme-chevron {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: transform 0.15s ease;
+}
+
+.programme-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.programme-chevron-space {
+  flex: none;
+  width: 14px;
+}
+
+/* Gains and losses in their colours; no change a muted dash */
+.programme-table td.change.is-gain {
+  color: var(--pe-teal-700);
+  font-weight: 600;
+}
+
+.programme-table td.change.is-loss {
+  color: var(--c-loss-text);
+  font-weight: 600;
+}
+
+.programme-table td.change.is-zero {
+  color: var(--pe-gray-400);
+}
+
+/* A change-only row's before: a muted dash */
+.programme-table td.is-none {
+  color: var(--pe-gray-400);
+}
+
+/* Net income: the bold total, under a rule (its name as bold as its
+   figures, over tbody th's regular weight) */
+.programme-table .breakdown-net-row > th,
+.programme-table .breakdown-net-row > td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 700;
+  color: var(--pe-gray-900);
+  border-top: 2px solid var(--pe-gray-300);
+  border-bottom: none;
+}
+
+/* A phone: Item | Change, Before and After behind one switch */
+.breakdown-columns-toggle {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .programme-table th,
+  .programme-table td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .programme-table .num {
+    width: 5.5rem;
+  }
+
+  .programme-row.depth-1 > th {
+    padding-left: 24px;
+  }
+
+  .programme-row.depth-2 > th {
+    padding-left: 40px;
+  }
+}
+
+/* ---------- Page rhythm: one heading per section, 48px between ---------- */
+.single-year-details > .section-heading {
+  margin-top: 48px;
+}
+
+.single-year-details > :first-child,
+.single-year-details > :first-child > .section-heading {
+  margin-top: 0;
+}
+
+.single-year-details > .position-block {
+  gap: 0;
+}
+
+/* The Your place tile when there is no distribution: one muted line */
+.result-tile-missing {
+  color: var(--pe-gray-500);
+}
+
+
+/* Across earnings: the boxed Show control (SeriesToggle placement
+   "section") sits as far above the pair as By age's Measures key does
+   above its cards: its own 16px plus the section's 20px gap */
+.across-earnings-show {
+  /* Its own box, so the bar's 16px does not collapse into this 20px */
+  display: flow-root;
+  margin-bottom: 20px;
 }
