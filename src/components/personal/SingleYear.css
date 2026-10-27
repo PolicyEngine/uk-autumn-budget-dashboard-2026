@@ -1352,3 +1352,8 @@
   display: flow-root;
   margin-bottom: 20px;
 }
+
+/* Said above the pair when the answer has no breakdown by tax and benefit */
+.across-earnings-no-parts {
+  margin: 0 0 16px;
+}
