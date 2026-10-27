@@ -51,8 +51,19 @@ describe("prices by spending category: data", () => {
 
   it("builds the sentence from the latest values, naming the earnings month when it differs", () => {
     expect(priceCategoriesSentence(changeRows(FILE), FILE.base_month)).toBe(
-      "By January 2022, energy prices were 67.0% above July 2021 and food prices 20.0%, against 10.0% for all prices (CPI) and 5.0% for average weekly earnings (to December 2021).",
+      "Since July 2021, energy prices are up 67.0% and food 20.0%, against 10.0% for CPI and 5.0% for earnings (to December 2021).",
     );
+  });
+
+  it("names only the earnings month when it ends earlier in the prices' year, and drops it when the months match", () => {
+    // Trim a month off the price series (ending December 2021) and, for the
+    // first case, two off earnings (ending November 2021)
+    const trim = (earningsCut) => ({
+      ...FILE,
+      series: FILE.series.map((s) => ({ ...s, values: s.values.slice(0, s.key === "earnings" ? earningsCut : -1) })),
+    });
+    expect(priceCategoriesSentence(changeRows(trim(-1)), FILE.base_month)).toMatch(/ for earnings \(to November\)\.$/);
+    expect(priceCategoriesSentence(changeRows(trim(undefined)), FILE.base_month)).toMatch(/ for earnings\.$/);
   });
 
   it("labels months and puts one axis tick on each January", () => {

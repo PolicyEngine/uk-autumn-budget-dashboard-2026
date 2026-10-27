@@ -103,15 +103,16 @@ const pct = (v) => `${formatOneDp(v)}%`;
 
 /**
  * The card's one sentence, from the latest months: energy and food against
- * all prices (CPI) and average earnings, each month named where it differs
- * from the prices' latest month.
+ * all prices (CPI) and average earnings since the base month, the earnings
+ * month named (year only when it differs) where it ends before the prices.
  */
 export function priceCategoriesSentence(rows, baseMonth) {
   const l = latestChanges(rows, ["energy", "food", "cpi", "earnings"]);
   if (!l.energy || !l.food || !l.cpi) return null;
-  const base = monthLabel(baseMonth);
-  const lead = `By ${monthLabel(l.cpi.month)}, energy prices were ${pct(l.energy.change)} above ${base} and food prices ${pct(l.food.change)}, against ${pct(l.cpi.change)} for all prices (CPI)`;
+  const lead = `Since ${monthLabel(baseMonth)}, energy prices are up ${pct(l.energy.change)} and food ${pct(l.food.change)}, against ${pct(l.cpi.change)} for CPI`;
   if (!l.earnings) return `${lead}.`;
-  const when = l.earnings.month === l.cpi.month ? "" : ` (to ${monthLabel(l.earnings.month)})`;
-  return `${lead} and ${pct(l.earnings.change)} for average weekly earnings${when}.`;
+  const sameYear = l.earnings.month.slice(0, 4) === l.cpi.month.slice(0, 4);
+  const to = sameYear ? monthLabel(l.earnings.month).split(" ")[0] : monthLabel(l.earnings.month);
+  const when = l.earnings.month === l.cpi.month ? "" : ` (to ${to})`;
+  return `${lead} and ${pct(l.earnings.change)} for earnings${when}.`;
 }

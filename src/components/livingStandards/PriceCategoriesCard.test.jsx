@@ -46,7 +46,7 @@ describe("Prices by spending category card", () => {
 
   it("shows the title with its period, the data-built sentence and a chip per line", async () => {
     render(<PriceCategoriesCard />);
-    expect(await screen.findByText(/^By .+, energy prices were /)).toBeTruthy();
+    expect(await screen.findByText(/^Since July 2021, energy prices are up /)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: PRICE_CATEGORIES_TITLE })).toBeTruthy();
     expect(PRICE_CATEGORIES_TITLE).toBe("Prices by category since 2021");
     for (const name of ["Energy", "Water", "Food", "Services", "Rents", "Rail fares", "All prices (CPI)", "Earnings"]) {
@@ -56,7 +56,7 @@ describe("Prices by spending category card", () => {
 
   it("starts at July 2021, where every line is 0%", async () => {
     render(<PriceCategoriesCard view="table" onViewChange={() => {}} />);
-    await screen.findByText(/^By /);
+    await screen.findByText(/^Since /);
     const first = document.querySelector(".ls-table tbody tr");
     expect(first.cells[0].textContent).toBe("Jul 2021");
     expect([...first.cells].slice(1).every((c) => c.textContent === "0.0%")).toBe(true);
@@ -64,7 +64,7 @@ describe("Prices by spending category card", () => {
 
   it("About this chart says it is history, not the forecast, and lists each ONS series by CDID", async () => {
     render(<PriceCategoriesCard />);
-    await screen.findByText(/^By /);
+    await screen.findByText(/^Since /);
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
     expect(screen.getByText(/history to the latest ONS release, not the OBR forecast/)).toBeTruthy();
     for (const cdid of ["D7BT", "D7CH", "D7BU", "D7CE", "D7DR", "D7EF", "D7F5", "KAB9"]) {
