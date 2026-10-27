@@ -649,6 +649,32 @@ describe("the selected policies' questions", () => {
     expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
   });
 
+  it("opens and closes each numbered group from its heading, keeping its answers", () => {
+    form(ALL_EIGHT);
+    const toggle = (title) => within(group(title)).getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
+    // Open at first: each group's policies read its answers
+    for (const title of ["You", "Household", "Spending", "Savings and investments", "Benefits and loans"]) {
+      expect(toggle(title)).toHaveAttribute("aria-expanded", "true");
+    }
+    fireEvent.change(box("Petrol"), { target: { value: "500" } });
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "false");
+    // Closed: the heading and its line, and what its answers are
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(group("Spending").querySelector(".household-step-summary")).toHaveTextContent(
+      "Petrol £500 · Diesel £340 · Electricity £1,040",
+    );
+    // A group whose answers are all as they started says nothing more
+    fireEvent.click(toggle("Savings and investments"));
+    expect(group("Savings and investments").querySelector(".household-step-summary")).toBeNull();
+    // Opened again by keyboard (a button), the answer is as it was
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "true");
+    expect(group("Spending").querySelector(".household-step-summary")).toBeNull();
+    expect(box("Petrol")).toHaveValue("500");
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+  });
+
   it("shows only You and Household when no selected policy reads anything more", () => {
     for (const selected of [[], ["threshold_freeze_2031_32"], ["employer_nics_secondary_threshold_raise", "threshold_freeze_2031_32"], ["unknown_measure"]]) {
       const { unmount } = form(selected);
