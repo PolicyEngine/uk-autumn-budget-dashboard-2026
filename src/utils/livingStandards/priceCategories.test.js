@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   changeRows,
   clearPriceCategoriesCache,
+  forecastRates,
   isPriceCategories,
   latestChanges,
   loadPriceCategories,
   monthLabel,
   monthShort,
   priceCategoriesSentence,
+  withForecast,
   yearTicks,
 } from "./priceCategories";
 
@@ -76,6 +78,58 @@ describe("prices by spending category: data", () => {
     expect(isPriceCategories(FILE)).toBe(true);
     expect(isPriceCategories({ forecast: {} })).toBe(false);
     expect(isPriceCategories({ ...FILE, base_month: "2020-01" })).toBe(false);
+  });
+});
+
+describe("prices by spending category: OBR forecast", () => {
+  // Monthly growth of exactly 1% a month, as an annual rate
+  const ONE_PC = 1.01 ** 12 - 1;
+  const OUTLOOK = {
+    forecast: {
+      sections: [
+        { series: [{ key: "cpi", pre: [{ year: "2023", value: ONE_PC }, { year: "2024", value: 0 }] }, { key: "rpi", pre: [{ year: "2023", value: 0.5 }] }] },
+        { series: [{ key: "earnings", pre: [{ year: "2023", value: 0 }, { year: "2024", value: 0 }] }] },
+      ],
+    },
+  };
+
+  it("reads the OBR growth for CPI and earnings only, by calendar year", () => {
+    const r = forecastRates(OUTLOOK);
+    expect(Object.keys(r)).toEqual(["cpi", "earnings"]);
+    expect(r.cpi.map((g) => g.year)).toEqual([2023, 2024]);
+    expect(forecastRates(null)).toBeNull();
+    expect(forecastRates({ forecast: { sections: [] } })).toBeNull();
+  });
+
+  it("chains each forecast from its last ONS month to the end of the last forecast year, joined to the outturn", () => {
+    const rows = withForecast(changeRows(FILE), FILE, forecastRates(OUTLOOK));
+    expect(rows.at(-1).month).toBe("2024-12");
+    // CPI ends January 2022 at 10% (110 on 100): the forecast starts there
+    const jan = rows.find((r) => r.month === "2022-01");
+    expect(jan.cpi_forecast).toBeCloseTo(10, 10);
+    expect(jan.forecast).not.toContain("cpi");
+    // Months before 2023 take the first forecast year's rate (1% a month)
+    const feb = rows.find((r) => r.month === "2022-02");
+    expect(feb.cpi_forecast).toBeCloseTo(11.1, 10);
+    expect(feb.cpi).toBeNull();
+    expect(feb.energy).toBeNull();
+    expect(feb.forecast).toEqual(["cpi", "earnings"]);
+    // 23 months at 1% to December 2023, then flat through 2024
+    expect(rows.find((r) => r.month === "2023-12").cpi_forecast).toBeCloseTo((110 * 1.01 ** 23) / 100 * 100 - 100, 8);
+    expect(rows.at(-1).cpi_forecast).toBeCloseTo(rows.find((r) => r.month === "2023-12").cpi_forecast, 10);
+    // Earnings end December 2021 at 5% and stay flat; January 2022 is a
+    // forecast for earnings but outturn for CPI
+    const dec = rows.find((r) => r.month === "2021-12");
+    expect(dec.earnings_forecast).toBeCloseTo(5, 10);
+    expect(jan.earnings_forecast).toBeCloseTo(5, 10);
+    expect(rows.find((r) => r.month === "2021-12").forecast).toEqual([]);
+    expect(jan.forecast).toEqual(["earnings"]);
+    // Months before either line's forecast keep null forecast columns
+    expect(rows[0].cpi_forecast).toBeNull();
+  });
+
+  it("leaves the outturn sentence unchanged by the forecast", () => {
+    expect(priceCategoriesSentence(changeRows(FILE), FILE.base_month)).toMatch(/10\.0% for CPI and 5\.0% for earnings \(to December 2021\)\.$/);
   });
 });
 

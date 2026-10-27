@@ -116,3 +116,96 @@ export function priceCategoriesSentence(rows, baseMonth) {
   const when = l.earnings.month === l.cpi.month ? "" : ` (to ${to})`;
   return `${lead} and ${pct(l.earnings.change)} for earnings${when}.`;
 }
+
+// The series with an official forecast, and the outlook series
+// (public/data/living_standards_outlook.json, forecast.sections) each
+// follows: OBR CPI inflation and average earnings growth, calendar years,
+// growth in the annual average. No category (energy, food...) has one.
+export const FORECAST_SERIES = { cpi: "cpi", earnings: "earnings" };
+
+/** The forecast line's key beside its outturn line's: "cpi" -> "cpi_forecast". */
+export const forecastKey = (key) => `${key}_forecast`;
+
+/** "2026-09" -> "2026-10". */
+export const nextMonth = (month) => {
+  const [y, m] = String(month).split("-").map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+
+/**
+ * The outlook's pre-Budget (OBR March 2026) annual growth for each
+ * forecast series: { cpi: [{ year: 2027, value: 0.02 }, ...], ... }; a
+ * series the outlook lacks is left out. Null when there is no outlook.
+ */
+export function forecastRates(outlook) {
+  const all = (outlook?.forecast?.sections ?? []).flatMap((s) => s.series ?? []);
+  const out = {};
+  for (const [key, outlookKey] of Object.entries(FORECAST_SERIES)) {
+    const s = all.find((x) => x.key === outlookKey);
+    const pre = (s?.pre ?? [])
+      .map((p) => ({ year: Number(String(p.year).slice(0, 4)), value: Number(p.value) }))
+      .filter((p) => Number.isFinite(p.year) && Number.isFinite(p.value))
+      .sort((a, b) => a.year - b.year);
+    if (pre.length) out[key] = pre;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * Each forecast series' monthly levels, chained from its last ONS month
+ * to December of the last forecast year: every month grows by
+ * (1 + g)^(1/12), g the OBR's growth for that calendar year; months
+ * before the first forecast year use the first year's rate (the outlook
+ * starts in 2027). { key: [{ month, value }] }, without the last ONS
+ * month itself.
+ */
+export function forecastLevels(data, rates) {
+  if (!rates) return {};
+  const out = {};
+  for (const [key, growth] of Object.entries(rates)) {
+    const s = data.series.find((x) => x.key === key);
+    if (!s || !growth.length) continue;
+    const last = s.values[s.values.length - 1];
+    const endYear = growth[growth.length - 1].year;
+    const rateFor = (year) => (growth.find((g) => g.year === year) ?? growth[0]).value;
+    const values = [];
+    let level = last.value;
+    for (let month = nextMonth(last.month); Number(month.slice(0, 4)) <= endYear; month = nextMonth(month)) {
+      level *= (1 + rateFor(Number(month.slice(0, 4)))) ** (1 / 12);
+      values.push({ month, value: level });
+    }
+    out[key] = values;
+  }
+  return out;
+}
+
+/**
+ * The outturn rows (changeRows) carried on to the end of the forecast.
+ * Each forecast series gets a `<key>_forecast` column, its change since
+ * the base month, which starts at the last ONS month (equal to the
+ * outturn there, so the two lines join) and runs on from it; every other
+ * column is null in the added months. `forecast` on a row lists the keys
+ * whose value there is a forecast (not the joining month).
+ */
+export function withForecast(rows, data, rates) {
+  const levels = forecastLevels(data, rates);
+  const keys = Object.keys(levels);
+  const byMonth = new Map(rows.map((r) => [r.month, { ...r, forecast: [] }]));
+  const blank = Object.fromEntries(data.series.map((s) => [s.key, null]));
+  for (const key of keys) {
+    const s = data.series.find((x) => x.key === key);
+    const base = s.values.find((v) => v.month === data.base_month).value;
+    const last = s.values[s.values.length - 1];
+    const join = byMonth.get(last.month);
+    if (join) join[forecastKey(key)] = changeOn(last.value, base);
+    for (const { month, value } of levels[key]) {
+      if (!byMonth.has(month)) byMonth.set(month, { month, ...blank, forecast: [] });
+      const row = byMonth.get(month);
+      row[forecastKey(key)] = changeOn(value, base);
+      row.forecast.push(key);
+    }
+  }
+  return [...byMonth.values()]
+    .sort((a, b) => (a.month < b.month ? -1 : 1))
+    .map((r) => ({ ...Object.fromEntries(keys.map((k) => [forecastKey(k), null])), ...r }));
+}
