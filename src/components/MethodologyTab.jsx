@@ -199,7 +199,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     The national file (<code>microcosm_uk_2024_25</code>), certified and pinned with
                     the model version by the policyengine.py release this build uses
-                    {process.env.NEXT_PUBLIC_POLICYENGINE_VERSION ? ` (${process.env.NEXT_PUBLIC_POLICYENGINE_VERSION}, in About this dashboard's Built with)` : " (in About this dashboard's Built with)"}, so the
+                    (in About this dashboard&apos;s Built with), so the
                     two cannot drift apart.
                   </>,
                 ],
