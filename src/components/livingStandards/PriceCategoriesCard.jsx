@@ -195,7 +195,10 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
     );
   }
 
-  const axis = percentAxis(rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null));
+  // The axis from 0 up: a line a fraction of a point below its July 2021
+  // level in the first months would otherwise add a whole step below 0
+  const values = rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null);
+  const axis = percentAxis(values.map((v) => (v > -1 ? Math.max(v, 0) : v)));
   return (
     <LsCard {...common} download={{ filename: "price-categories", legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart
@@ -203,8 +206,8 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
         series={lines}
         xKey="month"
         xFormat={monthShort}
-        xTickValues={[rows[0].month, ...yearTicks(rows)]}
-        xTickFormat={(m) => (m.endsWith("-01") ? monthYear(m) : monthShort(m))}
+        xTickValues={yearTicks(rows)}
+        xTickFormat={monthYear}
         dots={false}
         yFormat={pctTick}
         tooltipFormat={pctText}
