@@ -315,7 +315,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
     // The year before the charts start (2026-27), from the same verified
-    // rows: one line under Revenue impact, never a bar
+    // rows: one item in Revenue impact's "About this chart", never a bar
     budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),

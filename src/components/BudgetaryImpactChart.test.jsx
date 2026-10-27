@@ -123,7 +123,7 @@ describe("BudgetaryImpactChart", () => {
       expect(beforeYearsLine(null, shown, [whd])).toBeNull();
     });
 
-    it("shows the line under the card from the year's point", () => {
+    it("puts the line first in About this chart, not under the chart", () => {
       const point = { year: YEAR - 1, ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, -1])), netImpact: -catalogue.displayable.length, unpublished: false };
       const ids = catalogue.displayable.map((measure) => measure.id);
       const { container } = render(
@@ -131,7 +131,22 @@ describe("BudgetaryImpactChart", () => {
           <BudgetaryImpactChart data={mockData} before={point} selectedYear={YEAR} selectedPolicies={ids} />
         </MeasureCatalogueProvider>,
       );
-      expect(container.querySelector(".chart-footer .note")).toHaveTextContent(/before the years shown, the selected polic(y|ies) costs? £\d+\.\dbn\./);
+      expect(container.querySelector(".chart-footer .note")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+      const first = container.querySelector(".chart-more-info .info-section");
+      expect(first).toHaveTextContent(/^Before the years shown/);
+      expect(first).toHaveTextContent(/before the years shown, the selected polic(y|ies) costs? £\d+\.\dbn\./);
+    });
+
+    it("leaves About this chart without the item when there is no line", () => {
+      const ids = catalogue.displayable.map((measure) => measure.id);
+      const { container } = render(
+        <MeasureCatalogueProvider catalogue={catalogue}>
+          <BudgetaryImpactChart data={mockData} before={null} selectedYear={YEAR} selectedPolicies={ids} />
+        </MeasureCatalogueProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+      expect(container.querySelector(".chart-more-info")).not.toHaveTextContent(/Before the years shown/);
     });
   });
 

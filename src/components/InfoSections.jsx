@@ -1,4 +1,4 @@
-import { BookOpen, Calculator, Eye, Link2, TriangleAlert } from "lucide-react";
+import { BookOpen, Calculator, Eye, History, Link2, TriangleAlert } from "lucide-react";
 import { GLOSSARY, glossaryAnchor } from "./methodology/glossary";
 import { MethodLink } from "../utils/methodLink";
 import "./InfoSections.css";
@@ -8,6 +8,8 @@ import "./InfoSections.css";
  * shown only when it has content.
  *
  * @typedef {Object} ChartInfo
+ * @property {{title: string, body: import("react").ReactNode}} [lead] - A short
+ *   item of its own, first: e.g. "Before the years shown", one sentence
  * @property {import("react").ReactNode} [shows] - What it shows: one or two sentences
  * @property {import("react").ReactNode[]} [how] - How it's calculated: one bullet per step
  * @property {Array<{term: string, meaning: import("react").ReactNode} | {ref: keyof typeof GLOSSARY}>} [definitions]
@@ -25,6 +27,7 @@ const clean = (items) => (items || []).filter((item) => item !== null && item !=
 export function infoParts(info = {}) {
   const definitions = clean(info.definitions);
   return {
+    lead: info.lead && info.lead.body ? info.lead : null,
     shows: info.shows || null,
     how: clean(info.how),
     own: definitions.filter((d) => !d.ref),
@@ -37,13 +40,14 @@ export function infoParts(info = {}) {
 
 export const hasInfo = (info) => {
   const p = infoParts(info);
-  return Boolean(p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length || p.method);
+  return Boolean(p.lead || p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length || p.method);
 };
 
 /** The closed disclosure's one line: what is inside, in order ("How it's calculated · Caveats · Source"). */
 export function infoPreview(info) {
   const p = infoParts(info);
   const parts = [
+    p.lead && p.lead.title,
     p.how.length > 0 && "How it's calculated",
     (p.own.length > 0 || p.shared.length > 0) && "Definitions",
     p.caveats.length > 0 && "Caveats",
@@ -85,6 +89,11 @@ export default function InfoSections({ info }) {
   const p = infoParts(info);
   return (
     <div className="info-sections">
+      {p.lead && (
+        <Section icon={History} title={p.lead.title}>
+          <Bullets items={[p.lead.body]} className="info-lead" />
+        </Section>
+      )}
       {p.shows && (
         <Section icon={Eye} title="What it shows">
           <Bullets items={[p.shows]} />
