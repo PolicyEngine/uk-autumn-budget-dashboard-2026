@@ -324,7 +324,7 @@ body {
    tab rows, so nothing under them is pushed or covered by the stack
    (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top) */
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  box-shadow: 0 2px 8px var(--shadow-faint, rgba(0, 0, 0, 0.12)) !important;
+  box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
