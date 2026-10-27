@@ -98,13 +98,12 @@ describe("PolicyCards", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} />);
     const card = screen.getByRole("listitem");
-    expect(card).not.toHaveTextContent("Ends");
-    expect(card.querySelector(".policy-card-ends")).toBeEmptyDOMElement();
+    // At a glance says it once: Ends, Continues; the timeline only draws it
+    expect(card.querySelector(".policy-card-ends")).toHaveTextContent(/^Ends\s*Continues$/);
     expect(card).not.toHaveTextContent("Temporary");
     const timeline = within(card).getByRole("img", { name: "In force from April 2027; no end date." });
-    expect(timeline).toHaveTextContent("Continues");
+    expect(timeline).not.toHaveTextContent("Continues");
     expect(timeline).toHaveTextContent("Budget");
-    expect(timeline.textContent).not.toMatch(/BudgetContinues/);
     expect(timeline.querySelectorAll(".ptl-span")).toHaveLength(1);
   });
 
@@ -325,10 +324,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(within(block).getAllByRole("row")).toHaveLength(6);
   });
 
-  it("puts the block between the card's summary and its timing", () => {
+  it("puts the block after At a glance, before the footer", () => {
     const order = [...card(rising, { ...alpha, starts: "April 2027" }).children].map((child) => child.classList[0]);
-    expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-summary") + 1);
-    expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-spec") + 1);
+    expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-summary") + 1);
+    expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-when") + 1);
   });
 
   it("marks a picked step on the card's timeline, and says it in words", () => {
@@ -503,13 +502,14 @@ describe("the card's frame", () => {
     for (const name of CARD_SECTIONS) expect(full.querySelector(`.${name}`), name).toBeTruthy();
   });
 
-  it("makes cards in a row one height, with the footer pinned to the bottom", () => {
+  it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {
     const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
     const rule = (selector) => css.match(new RegExp(`\\n${selector.replace(/[.]/g, "\\.")} \\{([^}]*)\\}`))?.[1] ?? "";
     expect(rule(".policy-cards")).toMatch(/display: grid;/);
     expect(rule(".policy-cards")).toMatch(/align-items: stretch;/);
-    expect(rule(".policy-card")).toMatch(/display: flex;[\s\S]*flex-direction: column;/);
-    expect(rule(".policy-card-foot")).toMatch(/margin-top: auto;/);
+    expect(rule(".policy-card")).toMatch(/display: grid;[\s\S]*grid-row: span 5;[\s\S]*grid-template-rows: subgrid;/);
+    expect(rule(".policy-card-foot")).toMatch(/align-self: end;/);
+    expect(css).toMatch(/\.policy-card > \.policy-card-foot \{ grid-row: 5; \}/);
     expect(css).not.toMatch(/\.policy-card\.is-bare \{[^}]*align-self/);
   });
 });

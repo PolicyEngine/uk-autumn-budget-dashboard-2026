@@ -1996,10 +1996,14 @@ body {
    and the footer. */
 .policy-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 26px 24px 20px;
+  /* The card's five sections (head, summary, At a glance, What changes,
+     footer) on the list's rows, so each lines up with its neighbour's */
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  row-gap: 16px;
+  align-content: start;
+  padding: 24px 24px 20px;
   overflow: hidden;
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
@@ -2057,13 +2061,22 @@ body {
   margin-bottom: 2px;
 }
 
+/* The category as a chip in the measure's colour */
 .policy-card-type {
   margin: 0;
+  padding: 3px 10px 3px 4px;
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--pe-gray-500);
+  color: var(--pe-gray-700);
+  background: color-mix(in srgb, var(--policy-accent, var(--c-no-change)) 12%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-no-change)) 35%, var(--c-surface));
+  border-radius: 999px;
+}
+
+.policy-card-topline {
+  margin-bottom: 8px;
 }
 
 .policy-card-name {
@@ -2095,21 +2108,43 @@ body {
   line-clamp: none;
 }
 
-/* When: start and end in words, then the timeline */
+/* At a glance: Starts, Ends (or Continues) and who it affects in one
+   compact row, then the timeline */
 .policy-card-when {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   background: var(--pe-gray-50);
   border-radius: 10px;
 }
 
-.policy-card-dates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 28px;
+/* Each section on its own row of the list, so a card that leaves one out
+   keeps the rest in line with its neighbour's */
+.policy-card > .policy-card-head { grid-row: 1; }
+.policy-card > .policy-card-summary { grid-row: 2; }
+.policy-card > .policy-card-when { grid-row: 3; }
+.policy-card > .policy-card-spec { grid-row: 4; }
+.policy-card > .policy-card-foot { grid-row: 5; }
+
+.policy-card-glance-title {
   margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-dates {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 1.4fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.policy-card-dates > div {
+  min-width: 0;
 }
 
 .policy-card-dates dt {
@@ -2123,17 +2158,17 @@ body {
   color: var(--pe-gray-700);
 }
 
-.policy-card-start {
-  font-size: var(--fs-xl);
+.policy-card-dates dd {
+  margin-top: 2px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  line-height: 1.25;
-  color: var(--pe-gray-900) !important;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
 }
 
-.policy-card-end {
-  padding-top: 6px;
-  font-size: var(--fs-body);
+.policy-card-affects dd {
   font-weight: 500;
+  color: var(--pe-gray-700);
 }
 
 /* The in-force timeline (PolicyTimeline): an axis of months and years,
@@ -2180,14 +2215,6 @@ body {
 
 .ptl-budget-label {
   font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.ptl-continues {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-weight: 500;
   color: var(--pe-gray-600);
 }
 
@@ -2345,7 +2372,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: auto;
+  align-self: end;
   padding-top: 14px;
   font-size: var(--fs-small);
   border-top: 1px solid var(--c-grid);
@@ -2870,8 +2897,26 @@ body {
      empty source slot */
   .policy-card {
     display: flex;
+    flex-direction: column;
+    gap: 16px;
     grid-row: auto;
     padding: 22px 16px 16px;
+  }
+
+  .policy-card-dates {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* One column: the summary in full, never cut off */
+  .policy-card-summary {
+    display: block;
+    min-height: 0;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+
+  .policy-card-affects {
+    grid-column: 1 / -1;
   }
 
   .policy-card > .policy-card-foot {
@@ -2888,9 +2933,6 @@ body {
     display: none;
   }
 
-  .policy-card-start {
-    font-size: var(--fs-section);
-  }
 
   /* "26-27" rather than "2026-27", so the years fit on one line */
   .policy-timeline-label-full {

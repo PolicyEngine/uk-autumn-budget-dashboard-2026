@@ -1,4 +1,6 @@
-import { expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { measureSummary, POLICY_DETAILS, policyDetailsFor, withPolicyDetails } from "./policyDetails";
 
@@ -81,4 +83,27 @@ it("gives every measure policyDetails was written for a tip as described now, or
     expect(measureSummary({ id: entry.id, description: entry.writtenFor })).toBe(entry.summary);
     expect(measureSummary({ id: entry.id, description: `Candidate measure. Changed ${entry.id}.` })).toBe(`Changed ${entry.id}.`);
   }
+});
+
+// Every measure the publication carries (public/data/policy_parameters.json):
+// each card in one form, with no long published description in its place
+const PUBLISHED = JSON.parse(
+  readFileSync(join(process.cwd(), "public/data/policy_parameters.json"), "utf8"),
+).measures;
+
+describe("every published policy's card", () => {
+  it.each(Object.keys(PUBLISHED))("%s has a one-line summary, start, timeline, how it's calculated and a source", (id) => {
+    const fields = policyDetailsFor({ id, description: PUBLISHED[id].description });
+    expect(fields, `${id}: no entry written for its published description`).toBeTruthy();
+    expect(fields.summary).toBeTruthy();
+    expect(fields.summary.length).toBeLessThanOrEqual(200);
+    expect(fields.summary).not.toMatch(/^Candidate measure/);
+    expect(fields.starts).toBeTruthy();
+    expect(fields.inForce?.from).toMatch(/^\d{4}-\d{2}$/);
+    if (fields.inForce.to) expect(fields.ends).toBeTruthy();
+    expect(fields.affects).toBeTruthy();
+    expect(fields.howCalculated).toBeTruthy();
+    expect(fields.source?.label).toBeTruthy();
+    expect(fields.source?.href).toMatch(/^https:\/\/www\.(gov\.uk|legislation\.gov\.uk)\//);
+  });
 });

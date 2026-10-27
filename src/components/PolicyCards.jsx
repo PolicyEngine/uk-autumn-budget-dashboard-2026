@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical } from "lucide-react";
+import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
 import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
@@ -10,17 +10,19 @@ import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /**
- * A card's sections, top to bottom, by class: the category, the title, the
- * summary, What changes, the timeline (Starts, Ends, then the axis), About
- * this result, the source and "See its effect". A card leaves out a
- * section it has nothing for, never reorders them.
+ * A card's sections, top to bottom, by class: the category chip, the
+ * title, the one-line summary, At a glance (Starts, Ends or Continues, who
+ * it affects, then the timeline), What changes, About this result, the
+ * source and "See its effect". A card with details has every section;
+ * one without leaves out those it has nothing for. Each section keeps its
+ * own row of the list's grid, so the sections line up across a row.
  */
 export const CARD_SECTIONS = [
   "policy-card-type",
   "policy-card-name",
   "policy-card-summary",
-  "pchg",
   "policy-card-when",
+  "pchg",
   "policy-card-details",
   "policy-card-source",
   "policy-card-effect",
@@ -31,7 +33,8 @@ export const HOW_IT_IS_MODELLED = "About this result";
 
 // A details sentence that states a limitation: one of the published
 // limitations' patterns, or the words the details use for them
-const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b/i;
+const LIMIT_WORDS =
+  /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:included|identified)\b|\bassumption\b|\bheld fixed\b|\bnot the effect\b|\bnot in the model's baseline\b/i;
 const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
 
 /**
@@ -42,15 +45,17 @@ const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.som
  * state it, else in the published description's.
  */
 export function modellingInfo(policy) {
-  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.details].filter(Boolean).join(" "));
+  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.howCalculated, policy.details].filter(Boolean).join(" "));
   const details = sentences(policy.details);
   return {
     how: [
+      policy.howCalculated,
       ...details.filter((sentence) => !isLimit(sentence)),
       modelling.facts.length > 0 && `Modelled with: ${modelling.facts.join(" · ")}.`,
     ],
     caveats: [
       ...details.filter(isLimit),
+      ...(policy.caveats ?? []),
       ...modelling.limits.filter((limit) => !limit.said).map((limit) => limit.sentence),
       ...modelling.notePoints,
     ],
@@ -150,8 +155,7 @@ function PolicyTimeline({ policy, highlight }) {
           <span className="ptl-budget-label" style={{ left: share(BUDGET_DAY_MONTH) }}>
             <Flag className="ptl-budget-icon" size={11} aria-hidden="true" />
             Budget
-          </span>{" "}
-          {!to && <span className="ptl-continues">Continues</span>}
+          </span>
         </div>
         <div className="ptl-track">
           <svg
@@ -291,6 +295,44 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
         <p className="policy-card-summary">{policy.summary}</p>
       )}
 
+      {(policy.starts || policy.inForce) && (
+      <div className="policy-card-when">
+        {policy.starts && (
+        <>
+        <p className="policy-card-glance-title">At a glance</p>
+        <dl className="policy-card-dates">
+          <div>
+            <dt>
+              <CalendarCheck size={13} aria-hidden="true" />
+              Starts
+            </dt>
+            <dd className="policy-card-start">{policy.starts ?? "\u2014"}</dd>
+          </div>
+          <div className="policy-card-ends">
+            <dt>
+              <CalendarX size={13} aria-hidden="true" />
+              Ends
+            </dt>
+            <dd className="policy-card-end">{temporary ? policy.ends : "Continues"}</dd>
+          </div>
+          {policy.affects && (
+            <div className="policy-card-affects">
+              <dt>
+                <Users size={13} aria-hidden="true" />
+                Affects
+              </dt>
+              <dd>{policy.affects}</dd>
+            </div>
+          )}
+        </dl>
+        </>
+        )}
+        {policy.inForce && (
+          <PolicyTimeline policy={policy} highlight={highlight} />
+        )}
+      </div>
+      )}
+
       {parameters && (
         <div className="policy-card-spec">
           <PolicyChange
@@ -300,38 +342,6 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             onHighlight={setHighlight}
           />
         </div>
-      )}
-
-      {(policy.starts || policy.inForce) && (
-      <div className="policy-card-when">
-        {policy.starts && (
-        <dl className="policy-card-dates">
-          <div>
-            <dt>
-              <CalendarCheck size={13} aria-hidden="true" />
-              Starts
-            </dt>
-            <dd className="policy-card-start">{policy.starts}</dd>
-          </div>
-          {/* The Ends slot stays, empty for a lasting measure, so the
-              timeline sits at the same height in every card */}
-          <div className="policy-card-ends" aria-hidden={temporary ? undefined : "true"}>
-            {temporary && (
-              <>
-                <dt>
-                  <CalendarX size={13} aria-hidden="true" />
-                  Ends
-                </dt>
-                <dd className="policy-card-end">{policy.ends}</dd>
-              </>
-            )}
-          </div>
-        </dl>
-        )}
-        {policy.inForce && (
-          <PolicyTimeline policy={policy} highlight={highlight} />
-        )}
-      </div>
       )}
 
       {/* The footer: how it is modelled across the card, then the source on
