@@ -202,6 +202,28 @@ class World:
         self._dataset.write_bytes(b"dummy certified dataset")
         self.bundle = self._bundle_for(self._dataset)
         (self.root / "manifest.json").write_text(json.dumps(self.bundle))
+        self._patch()
+
+    @classmethod
+    def attach(cls, root) -> "World":
+        """The World another process made at ``root``, patched into this
+        one: a worker process (``--jobs``) shares none of the test
+        process's patches, so it builds its receipts against the same
+        bundle and dataset this way. Only that process's exit undoes it."""
+        instance = cls.__new__(cls)
+        instance.root = Path(root)
+        instance.data_root = instance.root / "public" / "data"
+        instance.artifacts = instance.data_root / "artifacts"
+        instance.inputs = instance.root / "treasury"
+        instance._dataset = instance.root / f"{DATASET_NAME}.h5"
+        instance.bundle = json.loads(
+            (instance.root / "manifest.json").read_text()
+        )
+        instance._patch()
+        return instance
+
+    def _patch(self):
+        """Point policyengine's receipt code at this World's bundle."""
         self._original_path = certification.default_bundle_source_path
         self._original_loader = receipt_module.load_bundle_manifest
         certification.default_bundle_source_path = lambda: (

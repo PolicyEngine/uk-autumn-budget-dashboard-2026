@@ -65,12 +65,33 @@ describe("a past event's page", () => {
     expect(banner).toHaveTextContent("They are not the estimates published at the time.");
     // The fixture publishes one year, named once
     expect(banner).toHaveTextContent(`today's law, for ${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}.`);
-    expect(screen.getByText(/Change in government revenue each year/)).toBeInTheDocument();
+    // The revenue chart, with its one sentence for the year shown (main's
+    // description, which replaced its fixed one)
+    const yearShown = `${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}`;
+    expect(screen.getByText(new RegExp(`^In ${yearShown}, the selected measures `))).toBeInTheDocument();
     // A past event awaits no Treasury costing
     expect(screen.getByText(HISTORICAL_PROVISIONAL_LABEL)).toBeInTheDocument();
     expect(screen.queryByText(PROVISIONAL_LABEL)).toBeNull();
     // Any sum is labelled as a sum of separately costed measures
     expect(await screen.findByText(/sum of the measures, each costed on its own/)).toBeInTheDocument();
+  });
+
+  it("offers only the event's own years in its year pill, not this Budget's", async () => {
+    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: /^Year, / }));
+    const label = `${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}`;
+    expect(screen.getAllByRole("option").map((option) => option.textContent.replace("✓", "").trim())).toEqual([label]);
+  });
+
+  it("gives every element a unique id, its section headings' included", async () => {
+    // Main's SectionHeading takes its title's slug as its id unless given one
+    const { container } = render(<HistoricalReleasePage releaseId={RELEASE.id} />);
+    await ready();
+    await screen.findByText(/sum of the measures, each costed on its own/);
+    const ids = [...container.querySelectorAll("[id]")].map((element) => element.id);
+    expect(ids).toEqual(expect.arrayContaining(["coverage", "coverage-heading", "revenue", "deciles"]));
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
   });
 
   it("reads every file from its own release root, and nothing from this Budget's", async () => {

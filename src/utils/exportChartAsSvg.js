@@ -56,7 +56,7 @@ const STYLES = {
     title: CHART_COLOURS.text,
     description: CHART_COLOURS.axisTitle,
     legendText: CHART_COLOURS.text,
-    background: "white",
+    background: CHART_COLOURS.surface,
   },
 };
 
@@ -470,7 +470,7 @@ export async function buildChartSvg(containerRef, options = {}) {
   const legendHeight = legend ? legend.height : 0;
   const logoWidth = logo?.href ? logo.width : 0;
   const logoHeight = logo?.href ? logo.height : 0;
-  const logoGap = logo?.href ? 12 : 0;
+  const logoGap = logo?.href ? (logo.gap ?? 16) : 0;
 
   const width = chartWidth + PAD * 2;
   const height =

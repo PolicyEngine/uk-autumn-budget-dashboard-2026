@@ -21,7 +21,7 @@ export const geographyFixture = (name) =>
 export const DEFAULT_FILES = Object.freeze({
   "/data/regional.csv": "regional.csv",
   "/data/constituency.csv": "constituency.csv",
-  "/data/uk_constituencies_2024.geojson": "constituencies.geojson",
+  "/data/uk_constituencies_2024.topo.json": "constituencies.geojson",
   "/data/area-routing.json": "area-routing.json",
 });
 

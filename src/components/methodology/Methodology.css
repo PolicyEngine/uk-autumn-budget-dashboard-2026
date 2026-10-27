@@ -231,64 +231,6 @@
   color: var(--pe-gray-800);
 }
 
-/* How each measure is modelled */
-.method-measures {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
-.method-measures thead th {
-  padding: 0 12px 8px 0;
-  border-bottom: 1px solid var(--card-border);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  text-align: left;
-  color: var(--pe-gray-500);
-}
-
-.method-measures tbody th,
-.method-measures td {
-  padding: 10px 12px 10px 0;
-  vertical-align: top;
-  text-align: left;
-}
-
-.method-measures tbody tr + tr th,
-.method-measures tbody tr + tr td {
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.method-measures tbody th {
-  width: 30%;
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-measures td {
-  color: var(--pe-gray-700);
-}
-
-.method-measure-note {
-  margin: 6px 0 0;
-  color: var(--pe-gray-600);
-}
-
-.method-measure-note-label {
-  font-weight: 600;
-}
-
-.method-measure-year {
-  width: 96px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.method-cell-label {
-  display: none;
-}
-
 .method-swatch {
   display: inline-block;
   width: 10px;
@@ -351,46 +293,6 @@
   .method-facts-wide .method-fact {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 2px;
-  }
-
-  /* The measures table as one block per measure */
-  .method-measures thead {
-    display: none;
-  }
-
-  .method-measures,
-  .method-measures tbody,
-  .method-measures tr,
-  .method-measures tbody th,
-  .method-measures td {
-    display: block;
-    width: auto;
-  }
-
-  .method-measures tbody th,
-  .method-measures td {
-    padding: 0;
-    border: 0 !important;
-  }
-
-  .method-measures tr {
-    padding: 12px 0;
-  }
-
-  .method-measures tbody tr + tr {
-    border-top: 1px solid var(--pe-gray-100);
-  }
-
-  .method-measures td {
-    margin-top: 4px;
-  }
-
-  .method-measure-year {
-    color: var(--pe-gray-500);
-  }
-
-  .method-cell-label {
-    display: inline;
   }
 }
 
@@ -503,41 +405,6 @@
   color: var(--band-teal);
 }
 
-/* Long text in the measures table: two lines, then "Show more" */
-.method-clamp {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.method-clamp-open {
-  display: block;
-  -webkit-line-clamp: unset;
-}
-
-.method-clamp-toggle {
-  margin-top: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  cursor: pointer;
-}
-
-.method-clamp-toggle:hover {
-  text-decoration: underline;
-}
-
-.method-clamp-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
 /* Not modelled: a quieter table */
 .method-muted-card {
   background: var(--pe-gray-50);
@@ -545,16 +412,6 @@
 
 .method-card.method-muted-card .method-more {
   margin: 0 0 12px;
-}
-
-.method-measures-muted tbody th {
-  font-weight: 500;
-  color: var(--pe-gray-700);
-}
-
-.method-row-name {
-  display: block;
-  margin-bottom: 4px;
 }
 
 /* Limitations: callouts */
@@ -674,14 +531,6 @@
     width: 34px;
     height: 34px;
   }
-
-  .method-measure-year {
-    width: auto;
-  }
-
-  .method-measures td.method-measure-year {
-    margin-top: 6px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -750,23 +599,6 @@
 
 .method-chips .method-tag {
   font-variant-numeric: tabular-nums;
-}
-
-/* Measure notes: a summary line, the rest as bullets on demand */
-.method-clamp-summary {
-  display: block;
-}
-
-.method-points-more {
-  margin-top: 6px;
-  font-size: var(--fs-small);
-}
-
-/* Not modelled: an icon before each name */
-.method-row-name {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
 }
 
 .method-row-icon {
@@ -843,15 +675,10 @@
   }
 
   /* 40px tap areas */
-  .method-clamp-toggle,
   .method-back a {
     display: inline-flex;
     align-items: center;
     min-height: 40px;
-  }
-
-  .method-clamp-toggle {
-    margin-top: 0;
   }
 
   .method-back {
@@ -974,13 +801,6 @@
   margin-top: 0;
 }
 
-/* Not modelled: a compact table */
-.method-measures-compact tbody th,
-.method-measures-compact td {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
 @media (max-width: 899px) {
   .method-summary,
   .method-details-body {
@@ -1042,3 +862,87 @@
     min-height: 40px;
   }
 }
+
+/* Section icons are circles on every tab (SectionHeading's .section-icon):
+   the title's line box tall, level with its first line */
+.method-section-heading {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.method-section-heading .method-icon {
+  width: var(--section-line, 32px);
+  height: var(--section-line, 32px);
+  border: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+}
+
+.method-section-heading .method-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .method-section-heading {
+    gap: 10px;
+  }
+
+  .method-section-heading .method-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* The pointer to Policies, where each measure's description and modelling live */
+.method-pointer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.method-pointer svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Unavailable and not modelled: a name and its reason per line */
+.mm-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-reasons li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 6px 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mm-reasons li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.mm-reason-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.mm-reason-why {
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 899px) {
+  .mm-reasons li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+

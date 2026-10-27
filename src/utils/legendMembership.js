@@ -103,7 +103,11 @@ export function inForceText(policy) {
   }
   const years = DISPLAY_YEARS.filter((year) => inForceIn(policy, year));
   const span = to ? `in force ${monthYear(from)} to ${monthYear(to)}` : `in force from ${monthYear(from)}`;
-  return years.length === 1 ? `${span} (${fiscalYear(years[0])} only)` : span;
+  // "(2031-32 only)" only when the whole window starts in that one year, so
+  // a measure also in force before the first year shown is never "only" its
+  // last part
+  const startYear = Number(from.slice(5, 7)) >= 4 ? fromYear : fromYear - 1;
+  return years.length === 1 && years[0] === startYear ? `${span} (${fiscalYear(years[0])} only)` : span;
 }
 
 /**

@@ -136,6 +136,8 @@ TABLE_KINDS = {
     "income_curve.csv": SYNTHETIC_HOUSEHOLD,
     "age_impact.csv": NATIONAL_TABLE,
     "obr_comparison.csv": NATIONAL_TABLE,
+    # UK poverty and inequality changes by measure and year (#196).
+    "poverty_inequality.csv": NATIONAL_TABLE,
     # A historical release's coverage and not-modelled lists: counts and
     # OBR totals by class and measure, no survey record
     "coverage.csv": NATIONAL_TABLE,

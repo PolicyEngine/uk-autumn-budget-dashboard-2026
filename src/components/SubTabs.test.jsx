@@ -95,16 +95,20 @@ describe("SubTabs", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("scrollTo", scrollTo);
     render(<Harness />);
-    const list = screen.getByRole("tablist");
+    // The band sticks: its place in the page is the sentinel before it,
+    // and its scroll margin holds the bars above it
+    const band = screen.getByRole("tablist").closest(".sub-tabs-band");
+    const sentinel = band.previousElementSibling;
+    expect(sentinel).toHaveClass("sub-tabs-sentinel");
     // Not scrolled past: the page stays put
     fireEvent.click(tab("Second"));
     expect(scrollTo).not.toHaveBeenCalled();
 
     // Scrolled 800px down, with the bar 500px down the page under a 112px band
-    vi.spyOn(list, "getBoundingClientRect").mockReturnValue({ top: -300 });
+    vi.spyOn(sentinel, "getBoundingClientRect").mockReturnValue({ top: -300 });
     const computed = window.getComputedStyle.bind(window);
     vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) =>
-      el === list ? { scrollMarginTop: "124px" } : computed(el, pseudo),
+      el === band ? { scrollMarginTop: "124px" } : computed(el, pseudo),
     );
     Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
     fireEvent.click(tab("Third"));
@@ -115,5 +119,17 @@ describe("SubTabs", () => {
     expect(scrollTo).not.toHaveBeenCalled();
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     vi.unstubAllGlobals();
+  });
+
+  it("sits in its band, with one sliding pill hidden from assistive tech and labels kept as names", () => {
+    const { container } = render(<Harness />);
+    const band = container.querySelector(".sub-tabs-band");
+    expect(band).toContainElement(screen.getByRole("tablist"));
+    const pill = band.querySelectorAll(".sub-tabs-pill");
+    expect(pill).toHaveLength(1);
+    expect(pill[0]).toHaveAttribute("aria-hidden", "true");
+    // The pill is not a tab, and every tab keeps its label as its name
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    for (const { label } of TABS) expect(tab(label)).toBeInTheDocument();
   });
 });

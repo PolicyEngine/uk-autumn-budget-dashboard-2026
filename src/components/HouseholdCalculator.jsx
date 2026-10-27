@@ -9,8 +9,9 @@ import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResu
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
 import useBasisIncome from "../hooks/useBasisIncome";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
-import HouseholdScatter from "./HouseholdScatter";
-import { loadPresetChanges, loadPresetResults } from "../utils/householdPresets";
+import { loadPresetChanges, loadPresetResults, presetInputs } from "../utils/householdPresets";
+import useExampleFigures from "../hooks/useExampleFigures";
+import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -315,6 +316,9 @@ const FORM_PANEL_ID = "household-form-panel";
  * as the answers change, from policyengine.py's household calculation
  * (POST /api/household-impact).
  */
+// Each example's id and full answers, for the cards' background figures
+const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+
 function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
@@ -365,6 +369,9 @@ function HouseholdCalculator({
   const [seeded, setSeeded] = useState(0);
   // and each example's change in net income, for its card
   const [presetChanges, setPresetChanges] = useState({});
+  // Whether the file has been read (until then the cards wait for it rather
+  // than ask the API)
+  const [presetsLoaded, setPresetsLoaded] = useState(false);
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
   // answers count only for exactly these, under the engine their receipts
@@ -384,7 +391,9 @@ function HouseholdCalculator({
       setSeeded((n) => n + 1);
     });
     loadPresetChanges(options).then((changes) => {
-      if (live) setPresetChanges(changes);
+      if (!live) return;
+      setPresetChanges(changes);
+      setPresetsLoaded(true);
     });
     return () => {
       live = false;
@@ -407,6 +416,21 @@ function HouseholdCalculator({
     presetPolicies.length > 0 &&
     householdPolicies.length === presetPolicies.length &&
     presetPolicies.every((id) => householdPolicies.includes(id));
+  // The file answers every card in every year: the cards show it at once
+  const presetsAnswer =
+    allSelected &&
+    HOUSEHOLD_EXAMPLES.every((example) => SELECTABLE_YEARS.every((y) => presetChanges[example.id]?.[y]));
+  // Otherwise the cards' figures are asked for in the background, for the
+  // selected measures (useExampleFigures.js)
+  const fill = useExampleFigures({
+    examples: EXAMPLE_REQUESTS,
+    policies: householdPolicies,
+    year,
+    enabled: active && presetsLoaded && !presetsAnswer,
+    publicationKey,
+    expectedEngine,
+    confirmPublication,
+  });
   // Fill the form from an example and show its result at once (no
   // Calculate); every value stays editable
   const applyPreset = (preset) => {
@@ -484,9 +508,12 @@ function HouseholdCalculator({
   // typical ones. Chosen already, it opens or closes the form.
   const chooseYours = () => {
     if (presetId === null) {
+      // Opening it brings it into view (below)
+      if (!formOpen) scrollToForm.current = true;
       setFormOpen((open) => !open);
       return;
     }
+    scrollToForm.current = true;
     setStartFrom(activePreset?.short ?? activePreset?.label ?? null);
     setPresetId(null);
     setSubmitted(null);
@@ -499,6 +526,25 @@ function HouseholdCalculator({
     presetId === null && submitted !== null && !changed && householdResult.status === "ready"
       ? (householdResult.data?.net?.change ?? null)
       : null;
+
+  // After "Your household" opens the form: bring it into view below the
+  // sticky bars (smoothly, or at once with reduced motion) and put the
+  // focus in its first box, without the focus itself jumping the page
+  const scrollToForm = useRef(false);
+  useEffect(() => {
+    if (!scrollToForm.current || !formOpen) return undefined;
+    scrollToForm.current = false;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const panel = document.getElementById(FORM_PANEL_ID);
+        const target = panel?.querySelector("form") ?? panel;
+        if (!target) return;
+        target.querySelector("input, select, textarea")?.focus({ preventScroll: true });
+        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [formOpen]);
 
   const resultsRef = useRef(null);
   // After an example card: bring its result (or its progress) into view
@@ -519,7 +565,7 @@ function HouseholdCalculator({
       const { top } = target.getBoundingClientRect();
       if (top >= offset - 1 && top <= window.innerHeight / 3) return;
       const behavior = prefersReducedMotion() ? "auto" : "smooth";
-      target.scrollIntoView({ behavior, block: "start" });
+      target.scrollIntoView?.({ behavior, block: "start" });
       const page = document.documentElement;
       let height = page.scrollHeight;
       const until = performance.now() + 1500;
@@ -528,7 +574,7 @@ function HouseholdCalculator({
         if (page.scrollHeight !== height) {
           height = page.scrollHeight;
           if (Math.abs(target.getBoundingClientRect().top - offset) > 1) {
-            target.scrollIntoView({ behavior, block: "start" });
+            target.scrollIntoView?.({ behavior, block: "start" });
           }
         }
         frame = requestAnimationFrame(follow);
@@ -550,7 +596,7 @@ function HouseholdCalculator({
       if (!target) return;
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
-        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
       }
     });
   };
@@ -767,8 +813,9 @@ function HouseholdCalculator({
     );
   };
 
-  // The result among all UK households: the Population impact scatter
-  // with this household on it, for the year and policies the result was
+  // The result among all UK households (the position card's "Among all
+  // households" view): the Population impact scatter with this household
+  // on it, for the year and policies the result was
   // asked with, once it is back and while the answers stand. The scatter's
   // y axis is baseline household net income in its basis year (2027-28),
   // so the household is placed by its own baseline income in that year.
@@ -821,7 +868,9 @@ function HouseholdCalculator({
         formId={FORM_PANEL_ID}
         onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
-        presets={allSelected ? presetChanges : null}
+        presets={noneSelected ? null : presetsAnswer ? presetChanges : fill.figures}
+        fill={noneSelected || presetsAnswer ? null : fill}
+        figurePolicies={householdPolicies}
         yoursChange={yoursChange}
         year={year}
         chosen={presetId !== null || formOpen || submitted !== null}
@@ -906,24 +955,27 @@ function HouseholdCalculator({
               policyCount={submitted?.policies.length ?? householdPolicies.length}
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
+              spendingSource={activePreset?.spendingSource ?? null}
+              household={{
+                tenure: (submitted?.inputs ?? inputs).tenure,
+                regionLabel: REGION_OPTIONS.find(([value]) => value === (submitted?.inputs ?? inputs).region)?.[1] ?? null,
+                partner: Boolean((submitted?.inputs ?? inputs).has_partner),
+                children: parseChildrenAges((submitted?.inputs ?? inputs).children_ages).length,
+              }}
+              // "Edit" under the figure: the form, opened and scrolled to,
+              // with these answers (an example's become yours to change)
+              onEdit={() => {
+                if (formOpen) {
+                  document.getElementById(FORM_PANEL_ID)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+                  return;
+                }
+                chooseYours();
+              }}
             />
           )}
         </div>
         )}
       </div>
-
-      {/* Where the result sits among all UK households, under the result */}
-      {you && (
-        <section className="report-section charts-stack household-among" aria-label="Your household among all UK households">
-          <HouseholdScatter
-            selectedPolicies={submitted.policies}
-            policies={policies}
-            selectedYear={submitted.year}
-            you={you}
-            title="Your household among all UK households"
-          />
-        </section>
-      )}
 
       {/* The results' sections, below the form and headline, once asked */}
       {submitted !== null && !noneSelected && !selectionUnavailable && (
@@ -934,6 +986,7 @@ function HouseholdCalculator({
             policies={policies}
             household={buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household}
             selected={submitted.policies}
+            you={you}
             changed={changed}
             startedAt={submitted.at}
           />

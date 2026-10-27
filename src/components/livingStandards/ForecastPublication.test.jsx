@@ -14,10 +14,15 @@ afterEach(cleanup);
 describe("the independent outlook and Budget-day forecast", () => {
   it("keeps baseline figures available without a publication manifest", async () => {
     loadOutlook.mockResolvedValue({ data: original, error: null });
+    // Current law lives on this view's Living standards and Poverty
+    // sub-tabs, whatever the publication
     window.history.replaceState({}, "", "/?tab=living");
     render(<LivingStandardsTab />);
-    expect(await screen.findByRole("heading", { name: "Incomes under current law" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
+    cleanup();
+    window.history.replaceState({}, "", "/?tab=outlook&sub=poverty");
+    render(<LivingStandardsTab />);
+    expect(await screen.findByRole("heading", { name: "Poverty under current law" })).toBeInTheDocument();
   });
 
   it("never renders an unverified Budget-day forecast, whatever its figures", async () => {
@@ -31,8 +36,7 @@ describe("the independent outlook and Budget-day forecast", () => {
       window.history.replaceState({}, "", "/?tab=living&sub=forecast");
       render(<LivingStandardsTab />);
       expect(await screen.findByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "Forecast changes" })).not.toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: "Baseline outlook" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /economic forecast$/ })).not.toBeInTheDocument();
       expect(document.querySelector(".ls-card")).toBeNull();
       cleanup();
     }), { numRuns: 20 });

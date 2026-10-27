@@ -19,7 +19,7 @@ import {
   RELEASES_DIR,
   releaseFor,
 } from "./release";
-import { loadDashboard } from "../loadDashboard";
+import { loadDashboard, loadVerifiedTables, loadVerifiedTablesOnce } from "../loadDashboard";
 import { BASE_PATH, fixtureBytes, fixtureJson } from "../../test/publicationFixture";
 import { releaseFixtureFetch } from "../../test/historicalFixture";
 
@@ -147,6 +147,26 @@ describe("no release reads another release's files", () => {
       expect(dashboard.status).toBe("ready");
       expect(dashboard.catalogue.manifest.release).toBe(release.id);
       expect(fetchImpl.calls.every((url) => url.startsWith(`${dataRoot(BASE_PATH, release)}/`))).toBe(true);
+    }
+  });
+
+  it("reads a past catalogue's other tables from its root, though no caller names the release", async () => {
+    // App's idle prefetch and its views load tables by catalogue alone
+    // (loadVerifiedTablesOnce); the catalogue's manifest names its release
+    for (const release of HISTORICAL_RELEASES) {
+      const fetchImpl = releaseFetch(release);
+      const { catalogue } = await loadDashboard(BASE_PATH, { fetchImpl, release });
+      const before = fetchImpl.calls.length;
+      const direct = await loadVerifiedTables(catalogue, "household_scatter_binned", { basePath: BASE_PATH, fetchImpl });
+      const shared = await loadVerifiedTablesOnce(catalogue, "household_scatter_binned", { basePath: BASE_PATH, fetchImpl });
+      for (const { rows, failures } of [direct, shared]) {
+        expect(failures).toEqual([]);
+        expect(rows.length).toBeGreaterThan(0);
+      }
+      expect(fetchImpl.calls.length).toBeGreaterThan(before);
+      expect(fetchImpl.calls.every((url) => url.startsWith(`${dataRoot(BASE_PATH, release)}/`))).toBe(true);
+      // Told another release, it refuses rather than read that one's root
+      await expect(loadVerifiedTables(catalogue, "household_scatter_binned", { basePath: BASE_PATH, fetchImpl, release: DEFAULT_RELEASE })).rejects.toThrow(ManifestError);
     }
   });
 

@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
-import ChartMoreInfo from "./ChartMoreInfo";
+import ChartMoreInfo, { ABOUT_THIS_CHART, withoutMethodology } from "./ChartMoreInfo";
+import { infoParts } from "./InfoSections";
+import { GLOSSARY } from "./methodology/glossary";
 import { legendMembership, zeroReason, inForceIn, inForceText } from "../utils/legendMembership";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -59,8 +62,10 @@ const render = (element) => renderReact(
   <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
 );
 
-const legendLabels = (container) =>
-  [...container.querySelectorAll(".grouped-legend-groups li:not(.grouped-legend-net-inline) .grouped-legend-label")].map((node) => node.textContent);
+// The measure key's chips (MeasureKey): one per measure, its full name in
+// the title; muted ones folded under "with no effect" but still listed
+const keyChips = (container) => [...container.querySelectorAll(".measure-key [data-measure]")];
+const legendLabels = (container) => keyChips(container).map((node) => node.title);
 
 describe("legendMembership", () => {
   it("lists every selected measure, in the legends' order, muted where it has no effect", () => {
@@ -118,18 +123,22 @@ describe.each([
 
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
-    const item = [...container.querySelectorAll(".grouped-legend-groups li")].find(
-      (node) => node.textContent === "Employer NI relief for under-25s",
-    );
+    const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
     expect(item.className).toContain("is-muted");
-    // The card's own "More info" at its foot, closed until opened
+    // Folded away until "+3 with no effect" is opened
+    const more = within(container).getByRole("button", { name: "+3 with no effect" });
+    expect(item.closest("ul")).not.toBeVisible();
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(item.closest("ul")).toBeVisible();
+    // The card's own "About this chart" at its foot, closed until opened
     const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
-    const toggle = within(moreInfo).getByRole("button", { name: "More info" });
+    const toggle = within(moreInfo).getByRole("button", { name: "About this chart" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector("[data-zero-measure]")).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    within(moreInfo).getByText("3 measures are £0 for households in 2027-28:");
+    within(moreInfo).getByText("3 selected measures are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
@@ -142,20 +151,40 @@ describe.each([
     expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).not.toBeNull();
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
-    expect(screen.getAllByText("Fuel duty rises deferred")[0].closest("li").className).not.toContain("is-muted");
-    within(container).getByText("They are greyed out in the key and left out of the tooltip.");
+    expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
+    // Closed, the title and a preview of what is inside; the £0 measures are a caveat
+    expect(moreInfo.querySelector(".disclosure-preview")).toHaveTextContent("How it's calculated · Caveats");
+    expect(moreInfo.querySelector(".disclosure-chip")).toBeNull();
   });
 
   it("on a past event's page, says only that a £0 measure changes no household shown", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} pastEvent />);
     const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
-    fireEvent.click(within(moreInfo).getByRole("button", { name: "More info" }));
+    fireEvent.click(within(moreInfo).getByRole("button", { name: ABOUT_THIS_CHART }));
     const zero = [...container.querySelectorAll("[data-zero-measure]")];
     // The same £0 measures as on this Budget's page, each with no reason of its own
     expect(zero.map((node) => node.dataset.zeroMeasure)).toEqual(expect.arrayContaining([EMPLOYER_NI, "warm_home_discount_top_up"]));
     for (const node of zero) expect(node.textContent).toMatch(/: No change for the households shown\.$/);
     expect(moreInfo.textContent).not.toMatch(/Employers pay less|held fixed|only\./);
     expect(within(moreInfo).queryByRole("link", { name: "Public finances" })).toBeNull();
+  });
+
+  it("links to Methodology on this Budget's page only: a past event's page has none", () => {
+    const linksIn = (props) => {
+      const view = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} {...props} />);
+      const moreInfo = view.container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+      fireEvent.click(within(moreInfo).getByRole("button", { name: ABOUT_THIS_CHART }));
+      const links = [...moreInfo.querySelectorAll("a.method-link")].map((link) => link.getAttribute("href"));
+      // What it says of the chart's calculation is the same on both
+      const how = moreInfo.querySelector(".info-section .info-list")?.textContent;
+      view.unmount();
+      return { links, how };
+    };
+    const own = linksIn({});
+    expect(own.links).toEqual([expect.stringMatching(/^\?tab=methodology#/)]);
+    const past = linksIn({ pastEvent: true });
+    expect(past.links).toEqual([]);
+    expect(past.how).toBe(own.how);
   });
 });
 
@@ -167,8 +196,8 @@ describe("ChartMoreInfo", () => {
 
   it("says one measure in the singular, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
-    screen.getByText("1 measure is £0 for households in 2028-29:");
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,
     ]);
@@ -179,6 +208,64 @@ describe("ChartMoreInfo", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  const FULL_INFO = {
+    shows: "What the card shows.",
+    how: ["One step."],
+    definitions: [{ term: "A card's own term", meaning: "Its meaning here." }, { ref: "netIncome" }],
+    caveats: ["One caveat."],
+    sources: [{ label: "One source" }],
+    method: { anchor: "by-income", label: "How we group households" },
+  };
+
+  it("on a past event's card, keeps every part but its links to Methodology", () => {
+    const own = render(<ChartMoreInfo info={FULL_INFO} />);
+    fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
+    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual([GLOSSARY.netIncome.term, "How we group households →"]);
+    own.unmount();
+    const { container } = render(<ChartMoreInfo info={FULL_INFO} pastEvent />);
+    fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
+    expect(container.querySelector("a.method-link")).toBeNull();
+    expect(container.textContent).not.toMatch(/In Methodology|How we group households/);
+    for (const text of ["What the card shows.", "One step.", "A card's own term", "Its meaning here.", "One caveat.", "One source"]) {
+      expect(container.textContent).toContain(text);
+    }
+  });
+
+  it("on a past event's card, renders nothing when a Methodology link was all it had", () => {
+    expect(render(<ChartMoreInfo info={{ method: FULL_INFO.method }} />).container).not.toBeEmptyDOMElement();
+    const { container } = render(<ChartMoreInfo info={{ method: FULL_INFO.method, definitions: [{ ref: "netIncome" }] }} pastEvent />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("withoutMethodology drops exactly the shared terms and the section link, for any info", () => {
+    const text = fc.string({ minLength: 1, maxLength: 8 });
+    const definition = fc.oneof(
+      fc.record({ term: text, meaning: text }),
+      fc.record({ ref: fc.constantFrom(...Object.keys(GLOSSARY), "notATerm") }),
+    );
+    const info = fc.record(
+      {
+        shows: text,
+        how: fc.array(text, { maxLength: 3 }),
+        definitions: fc.array(definition, { maxLength: 4 }),
+        caveats: fc.array(text, { maxLength: 3 }),
+        sources: fc.array(fc.record({ label: text }), { maxLength: 2 }),
+        method: fc.record({ anchor: text, label: text }),
+      },
+      { requiredKeys: [] },
+    );
+    fc.assert(
+      fc.property(info, (original) => {
+        const before = structuredClone(original);
+        const past = withoutMethodology(original);
+        expect(original).toEqual(before);
+        expect(infoParts(past)).toEqual({ ...infoParts(original), shared: [], method: null });
+        expect(withoutMethodology(past)).toEqual(past);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
   it("holds a card's other notes in the same panel", () => {
     render(
       <ChartMoreInfo members={members} year={2028}>
@@ -186,9 +273,9 @@ describe("ChartMoreInfo", () => {
       </ChartMoreInfo>,
     );
     expect(screen.getAllByRole("button")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     screen.getByText("Single years of age rest on fewer households.");
-    screen.getByText("1 measure is £0 for households in 2028-29:");
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
   });
 });
 
@@ -204,7 +291,7 @@ describe("ChartMoreInfo's employer NI revenue", () => {
         year={2027}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(
       await screen.findByText(new RegExp(`about £${Math.abs(value).toFixed(1)}bn in 2027-28`)),
     ).toBeInTheDocument();

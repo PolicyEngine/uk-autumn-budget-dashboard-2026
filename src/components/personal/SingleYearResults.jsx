@@ -1,12 +1,19 @@
 import TitleIcon from "../TitleIcon";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SectionHeading from "../SectionHeading";
+import Disclosure from "../Disclosure";
+import Tip, { InfoTip } from "../Tip";
+import { BriefcaseBusiness, CircleSlash, House, ListChecks, ReceiptText, UsersRound, Zap, TriangleAlert } from "lucide-react";
+import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import { MINUS, areaName, money, policyRows, signedPercent } from "../../utils/singleYear";
+import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
-import PolicyBars from "./PolicyBars";
+import NetIncomeWaterfall from "./NetIncomeWaterfall";
+import { layerRows, layersInUse } from "./netIncomeParts";
+import { partsInUse } from "./marginalRateParts";
+import { componentsInUse } from "./sweepComponents";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
 import IncomePositionChart from "./IncomePositionChart";
@@ -91,7 +98,7 @@ export function showDependantsNote(data) {
  * chosen) for one line under the headline. The full explanations are in
  * "About these figures".
  */
-export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null, salarySource = null } = {}) {
+export function assumptionItems(data, yearLabel, { renting = false, policies = [], spending = null, salarySource = null, spendingSource = null } = {}) {
   const items = [];
   const own = data.salaryUsed ?? 0;
   const partner = data.partnerSalaryUsed ?? 0;
@@ -135,9 +142,13 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
             ? "Spending a year (assumed)"
             : "Spending a year",
       value: parts.join(", "),
-      detail: assumed
-        ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
-        : "petrol, diesel and electricity, from More details",
+      // An example's own figures say where they come from
+      detail:
+        assumed === "example" && spendingSource
+          ? `${spendingSource}. Fuel and electricity measures scale with what you spend; change these in More details to match your household.`
+          : assumed
+            ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
+            : "petrol, diesel and electricity, from More details",
     });
   }
   if (showDependantsNote(data)) {
@@ -248,39 +259,212 @@ function scrollToSection(event, id) {
 }
 
 /**
- * Net income before and after on one scale: two thin bars, the after bar's
- * difference from before marked at its end. They grow in on arrival.
+ * What the waterfall's steps leave out: policies worth under £1 and notes
+ * on a policy's figure (an employer cost's says why it is £0). The
+ * policies with no effect are one line in the waterfall itself.
  */
-function BeforeAfterBars({ totals }) {
-  const top = Math.max(totals.before, totals.after, 1);
-  const lower = Math.min(totals.before, totals.after);
-  const share = (value) => `${Math.max(0, (value / top) * 100)}%`;
-  const [grown, setGrown] = useState(prefersReducedMotion());
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setGrown(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  const rows = [
-    { key: "before", label: "Before", value: totals.before },
-    { key: "after", label: "After", value: totals.after },
+/** An employer cost's note, without the API's leading label, as a sentence. */
+const shortReason = (text) => {
+  const rest = (text ?? "").replace(/^No household effect \(employer cost\):\s*/i, "");
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+};
+
+/**
+ * The result card's "About this result", in the charts' "About this chart"
+ * style (InfoSections): one bullet on assumed spending, when most of the
+ * change comes from it, then two columns with matching headings: "Based
+ * on" (each fact with its tip) and "No effect on you" (a chip each; an
+ * employer cost's reason in its tip). Any measure's own note, or one under
+ * £1 a year, below. Each fact once.
+ */
+function AboutResult({ items, caution, bars }) {
+  const noEffect = bars?.noEffectItems ?? [];
+  // Employer costs are said with their chip under "No effect on you"
+  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
+  const under = bars?.underAPound ?? [];
+  const parts = [
+    caution && "Caveats",
+    items.length > 0 && "Based on",
+    noEffect.length > 0 && "No effect on you",
+    (notes.length > 0 || under.length > 0) && "Notes",
+  ].filter(Boolean);
+  if (!caution && parts.length === 0) return null;
+  const extra = [
+    ...(under.length > 0 ? [`Less than £1 a year: ${under.join(", ")}.`] : []),
+    ...notes.map((note) => (
+      <span key={note.id} data-note={note.kind}>
+        <strong>{note.name}</strong>: {note.text}
+      </span>
+    )),
   ];
   return (
-    <div className={`result-bars ${grown ? "is-grown" : ""}`.trim()}>
-      {rows.map((row) => (
-        <div key={row.key} className={`result-bar-row is-${row.key}`}>
-          <span className="result-bar-label">{row.label}</span>
-          <span className="result-bar-track" aria-hidden="true">
-            <span className="result-bar-fill" style={{ width: share(row.key === "after" ? lower : row.value) }} />
-            {row.key === "after" && totals.change !== 0 && (
-              <span
-                className="result-bar-diff"
-                style={{ left: share(lower), width: share(Math.abs(totals.change)) }}
-              />
-            )}
-          </span>
-          <span className="result-bar-value">{money(row.value)}</span>
+    <Disclosure inCard title="About this result" preview={parts.join(" · ")} className="result-card-about">
+      <div className="info-sections result-about">
+        {caution && (
+          <section className="info-section info-section-caveat">
+            <h4 className="info-heading">
+              <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
+              Caveats
+            </h4>
+            <div className="info-body">
+              <ul className="info-list info-caveats result-about-caution">
+                <li>Most of the change comes from assumed fuel and electricity spending.</li>
+              </ul>
+            </div>
+          </section>
+        )}
+        <div className="result-about-columns">
+          {items.length > 0 && (
+            <section className="info-section result-card-basis">
+              <h4 className="info-heading">
+                <ListChecks aria-hidden="true" strokeWidth={1.75} />
+                Based on
+              </h4>
+              <dl className="result-foot-items" aria-label="Based on">
+                {items.map((item) => (
+                  <div key={item.id} className="result-foot-item">
+                    <dt>{item.label}</dt>
+                    <dd>
+                      {item.value}
+                      {item.detail && <InfoTip content={item.detail} label={`About ${item.label}: ${item.detail}`} />}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+          {noEffect.length > 0 && (
+            <section className="info-section result-card-no-effect">
+              <h4 className="info-heading">
+                <CircleSlash aria-hidden="true" strokeWidth={1.75} />
+                No effect on you
+              </h4>
+              <ul className="result-no-effect-chips">
+                {noEffect.map((item) => (
+                  <li key={item.id} className="result-no-effect-chip" title={item.name}>
+                    {item.label ?? item.name}
+                    {item.reason && <InfoTip content={shortReason(item.reason)} label={`Why ${item.name} has no effect`} />}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
-      ))}
+        {extra.length > 0 && (
+          <ul className="info-list result-card-notes">
+            {extra.map((item, index) => (
+              <li key={index} className="single-year-quiet">
+                {item}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Disclosure>
+  );
+}
+
+const TENURE_WORDS = {
+  RENT_PRIVATELY: "Renting",
+  RENT_FROM_COUNCIL: "Renting from the council",
+  RENT_FROM_HA: "Renting from a housing association",
+  OWNED_WITH_MORTGAGE: "Owns with a mortgage",
+  OWNED_OUTRIGHT: "Owns outright",
+};
+
+/**
+ * Whose result it is, as a few short facts in plain words, each a chip
+ * under the figure: salary, home and place, Council Tax band, family, and
+ * whether the energy and fuel spending is assumed. The details stay in
+ * "About this result".
+ *
+ * @param {Object} data - normaliseHouseholdImpact's answer
+ * @param {{tenure?: string, regionLabel?: string, partner?: boolean, children?: number}} household
+ * @param {{petrol?: number, diesel?: number, electricity?: number, assumed?: string|null}|null} [spending]
+ * @returns {Array<{key: string, icon: string, text: string, tip?: string}>}
+ */
+export function householdFacts(data, { tenure = null, regionLabel = null, partner = false, children = 0 } = {}, spending = null) {
+  const facts = [];
+  const own = data.salaryUsed ?? 0;
+  const theirs = data.partnerSalaryUsed ?? 0;
+  if (own > 0 && theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own)} and ${money(theirs)} salaries` });
+  else if (own + theirs > 0) facts.push({ key: "salary", icon: "salary", text: `${money(own + theirs)} salary` });
+  else facts.push({ key: "salary", icon: "salary", text: "No earnings" });
+  const words = TENURE_WORDS[tenure] ?? null;
+  // A renter's place is their rent area; anyone else's, their region
+  const place = tenure && tenure.startsWith("RENT") && data.area?.brma ? areaName(data.area.brma) : regionLabel;
+  if (words || place) facts.push({ key: "home", icon: "home", text: [words, place].filter(Boolean).join(", ") });
+  if (data.councilTax?.band) facts.push({ key: "council-tax", icon: "receipt", text: `Council Tax band ${data.councilTax.band}` });
+  const family = partner ? "Couple" : "Single adult";
+  facts.push({
+    key: "family",
+    icon: "family",
+    text: children > 0 ? `${family}, ${children} ${children === 1 ? "child" : "children"}` : family,
+  });
+  if (spending?.assumed) {
+    const fuel = (spending.petrol ?? 0) + (spending.diesel ?? 0);
+    facts.push({
+      key: "spending",
+      icon: "energy",
+      text: "Assumed energy and fuel spending",
+      tip: `${money(spending.electricity ?? 0)} a year on electricity and ${money(fuel)} on petrol and diesel, ${spending.assumed === "average" ? "the average household's (ONS)" : "this example's"}. Change them in the form to match your household.`,
+    });
+  }
+  return facts;
+}
+
+const FACT_ICONS = { salary: BriefcaseBusiness, home: House, receipt: ReceiptText, family: UsersRound, energy: Zap };
+
+/** The facts as small chips that wrap whole, then "Edit" to change them. */
+function HouseholdFacts({ facts, onEdit }) {
+  return (
+    <ul className="result-facts" aria-label="Your household">
+      {facts.map((fact) => {
+        const Icon = FACT_ICONS[fact.icon] ?? House;
+        const chip = (
+          <span className="result-fact" tabIndex={fact.tip ? 0 : undefined}>
+            <Icon size={13} strokeWidth={2} aria-hidden="true" />
+            {fact.text}
+          </span>
+        );
+        return <li key={fact.key}>{fact.tip ? <Tip content={fact.tip}>{chip}</Tip> : chip}</li>;
+      })}
+      {onEdit && (
+        <li>
+          <button type="button" className="result-facts-edit" onClick={onEdit}>
+            Edit
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/**
+ * The two "Across earnings" cards, in step: one Before | After | Change
+ * choice, one set of components shown (a chip toggled on one is toggled on
+ * the other), and the salary hovered on one marked on the other.
+ */
+export function AcrossEarnings({ sweep, salary, yearLabel }) {
+  const [view, setView] = useState("after");
+  const [hidden, setHidden] = useState([]);
+  const [hover, setHover] = useState(null);
+  // The "+N with no effect for you" chip, open on both or neither
+  const [expanded, setExpanded] = useState(false);
+  // The components that apply on either card: both keys show these alike
+  const union = useMemo(() => {
+    const points = sweepPoints(sweep);
+    const net = sweep.netParts
+      ? new Set(layersInUse([...layerRows(points, sweep.netParts, "before"), ...layerRows(points, sweep.netParts, "after")]).map((layer) => layer.key))
+      : new Set();
+    const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
+    return componentsInUse(net, rate);
+  }, [sweep]);
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union };
+  return (
+    <div className="charts-grid single-year-chart-pair">
+      <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+      <MarginalRateChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
     </div>
   );
 }
@@ -288,12 +472,14 @@ function BeforeAfterBars({ totals }) {
 /**
  * The result: one card. Its head names the figure and its year and
  * policies; the body has the change (said nowhere else), large and counted
- * up, with its share as a chip, beside net income before and after as
- * bars; under the figure, what it is based on, each note behind an "i". The
- * figure is one element, so it reads (and copies) once.
+ * up, with its share as a chip, beside the waterfall from net income
+ * before, through each policy's change, to net income after (each
+ * policy's change is said there only); under the figure, what it is
+ * based on, each note behind an "i". The figure is one element, so it
+ * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) {
-  const shown = Math.round(useCountUp(totals.change));
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, facts = [], onEdit = null }) {
+  const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   const tone = changeClass(totals.change);
   const share = totals.change === 0 ? null : signedPercent(Math.abs(totals.change), totals.before);
@@ -313,8 +499,9 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) 
         </div>
       </div>
       <div className="result-card-body">
-        {/* The left column: the figure, then what it is based on; the
-            right: net income before and after */}
+        {/* The left column: the figure; the right: net income before,
+            each measure with an effect, and after. The rest is under
+            "About this result" */}
         <div className="result-card-side">
           <div className="result-card-hero">
             <p className="result-figure">
@@ -330,38 +517,18 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false }) 
                 {share.replace(/^[+−]/, "")} of net income
               </p>
             )}
+            {/* Whose result it is, as chips that wrap whole */}
+            {facts.length > 0 && <HouseholdFacts facts={facts} onEdit={onEdit} />}
           </div>
-          {caution && (
-            <p className="result-caution">Most of this comes from assumed fuel and electricity spending.</p>
-          )}
-          {items.length > 0 && (
-            <div className="result-card-basis">
-              <span className="result-foot-title">Based on</span>
-              <dl className="result-foot-items" aria-label="Based on">
-                {items.map((item) => (
-                  <div key={item.id} className="result-foot-item">
-                    <dt>{item.label}</dt>
-                    <dd>
-                      {item.value}
-                      {item.detail && (
-                        <span className="info-icon-wrapper">
-                          <button type="button" className="info-icon" aria-label={`About ${item.label}: ${item.detail}`}>
-                            i
-                          </button>
-                          <span className="info-tooltip" role="tooltip">
-                            {item.detail}
-                          </span>
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
         </div>
-        <BeforeAfterBars totals={totals} />
+        <NetIncomeWaterfall
+          totals={totals}
+          steps={bars ? bars.rows : null}
+          yearLabel={yearLabel}
+          splitFailed={splitFailed}
+        />
       </div>
+      <AboutResult items={items} caution={caution} bars={bars} />
     </section>
   );
 }
@@ -385,6 +552,9 @@ export function SingleYearHeadline({
   policyCount = 0,
   startedAt = null,
   salarySource = null,
+  spendingSource = null,
+  household = null,
+  onEdit = null,
 }) {
   const { status, data, error, stale, retry } = result;
   // The figures' own year: while a new year loads, the old figures keep
@@ -428,8 +598,12 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             policyCount={policyCount}
-            items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource })}
+            items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
+            facts={household ? householdFacts(data, household, spending) : []}
+            onEdit={onEdit}
+            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
       )}
@@ -476,7 +650,7 @@ function PendingSkeleton({ kind, startedAt }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, household = null, selected = null, changed = false, startedAt = null }) {
+export function SingleYearDetails({ result, year, policies, household = null, selected = null, you = null, changed = false, startedAt = null }) {
   const { data, detailStatus, detailError, retry } = result;
   // Never an earlier result: nothing while the headline is calculated
   // again, or once the answers differ from the result's
@@ -496,6 +670,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       {household && (
         <>
           <SectionHeading
+            icon="pin"
             title="Your place in the income distribution"
             subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
           />
@@ -506,63 +681,40 @@ export function SingleYearDetails({ result, year, policies, household = null, se
               year={data.year ?? year}
               policies={selected ?? []}
               yearLabel={yearLabel}
+              you={you}
             />
           </section>
         </>
       )}
 
-      {/* The breakdown and the split by policy side by side on a wide
-          screen, stacked on a narrow one */}
-      <div className="single-year-pair">
-        <div className="single-year-pair-col">
-          <SectionHeading
-            title="Breakdown of household net income"
-            subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
+      <SectionHeading
+        icon="layers"
+        title="Breakdown of household net income"
+        subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
+      />
+      <section className="report-section" id="household-breakdown">
+        {data.programmes ? (
+          <ProgrammeTable
+            programmes={data.programmes}
+            totals={totals}
+            bars={bars?.all}
+            yearLabel={yearLabel}
+            engine={data.engine}
           />
-          <section className="report-section" id="household-breakdown">
-            {data.programmes ? (
-              <ProgrammeTable
-                programmes={data.programmes}
-                totals={totals}
-                bars={bars?.all}
-                yearLabel={yearLabel}
-                engine={data.engine}
-              />
-            ) : (
-              <div className="card single-year-card">
-                <p className="single-year-quiet">The breakdown is not available for this answer.</p>
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="single-year-pair-col">
-          <SectionHeading
-            title="Change by policy"
-            subtitle="How much each selected policy adds to or takes from your household's net income."
-          />
-          <section className="report-section" id="change-by-policy">
-            {bars ? (
-              <PolicyBars
-                rows={bars.rows}
-                noEffect={bars.noEffect}
-                noEffectItems={bars.noEffectItems}
-                underAPound={bars.underAPound}
-                notes={bars.notes}
-                yearLabel={yearLabel}
-              />
-            ) : detailFailed ? (
-              <div className="card single-year-card">
-                <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
-              </div>
-            ) : (
-              <PendingSkeleton kind="policies" startedAt={startedAt} />
-            )}
-          </section>
-        </div>
-      </div>
+        ) : (
+          <div className="card single-year-card">
+            <p className="single-year-quiet">The breakdown is not available for this answer.</p>
+          </div>
+        )}
+        {detailFailed && !bars && (
+          <div className="card single-year-card">
+            <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
+          </div>
+        )}
+      </section>
 
       <SectionHeading
+        icon="briefcase"
         title="Across earnings"
         subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
       />
@@ -570,10 +722,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
         {data.sweep ? (
           // Net income (with its Net income / Change switch) beside the
           // marginal rate, a pair of cards whose rows line up; stacked on a phone
-          <div className="charts-grid single-year-chart-pair">
-            <EarningsChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-            <MarginalRateChart sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
-          </div>
+          <AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel={yearLabel} />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />

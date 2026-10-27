@@ -3,7 +3,8 @@ import fc from "fast-check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMeasureCatalogue, COST_COLORS, REVENUE_COLORS, measureColor, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
+import { buildMeasureCatalogue, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
+import { hexToOklab, MEASURE_RAMPS, measureRamp } from "./chartTheme";
 import { budgetChartData, parseDashboardCsv } from "./loadDashboard";
 import { ALPHA, BETA, COMBINED, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
@@ -105,13 +106,60 @@ describe("published measure catalogue", () => {
     expect(parseDashboardCsv('id,name\r\na,"Public, label"\r\n')).toEqual([{ id: "a", name: "Public, label" }]);
   });
 
-  it("colours are stable functions of id and sign", () => {
-    expect(COST_COLORS.some((color) => REVENUE_COLORS.includes(color))).toBe(false);
-    fc.assert(fc.property(fc.string(), (id) => {
-      expect(COST_COLORS).toContain(measureColor(id, "cost"));
-      expect(REVENUE_COLORS).toContain(measureColor(id, "revenue"));
-      expect(measureColor(id, "neutral")).toBe(NEUTRAL_COLOR);
+  const lightness = (hex) => hexToOklab(hex)[0];
+  const deltaE = (a, b) => Math.hypot(...hexToOklab(a).map((v, k) => v - hexToOklab(b)[k]));
+  const sized = (count, sign, offset = 0) => Array.from({ length: count }, (_, i) => ({
+    reform_id: `m${String(i + offset).padStart(2, "0")}`, reform_name: `M${i + offset}`, year: 2029, value: sign * (i + 1 + offset),
+  }));
+
+  it("gives each direction's measures distinct shades, largest darkest, for up to 15", () => {
+    for (let n = 1; n <= 15; n += 1) {
+      const catalogue = fromRows([...sized(n, 1), ...sized(n, -1, 100)]);
+      for (const direction of ["revenue", "cost"]) {
+        const group = catalogue.displayable.filter((measure) => measure.direction === direction);
+        expect(group).toHaveLength(n);
+        // The catalogue's order within a direction is largest first
+        expect(group.map((measure) => measure.size)).toEqual([...group.map((measure) => measure.size)].sort((a, b) => b - a));
+        const colors = group.map((measure) => measure.color);
+        expect(new Set(colors).size).toBe(n);
+        const levels = colors.map(lightness);
+        expect(levels).toEqual([...levels].sort((a, b) => a - b));
+        for (let i = 1; i < n; i += 1) expect(deltaE(colors[i - 1], colors[i])).toBeGreaterThan(0.03);
+      }
+      // The two directions never share a colour
+      const revenue = new Set(catalogue.displayable.filter((m) => m.direction === "revenue").map((m) => m.color));
+      expect(catalogue.displayable.filter((m) => m.direction === "cost").some((m) => revenue.has(m.color))).toBe(false);
+    }
+  });
+
+  it("runs each direction's ramp from its darkest token to its lightest", () => {
+    for (const [direction, stops] of [["cost", MEASURE_RAMPS.cost.stops], ["revenue", MEASURE_RAMPS.revenue.stops]]) {
+      const colors = measureRamp(direction, 9);
+      expect(colors[0]).toBe(stops[0].toUpperCase());
+      expect(colors.at(-1)).toBe(stops.at(-1).toUpperCase());
+    }
+    expect(measureRamp("neutral", 3)).toEqual([NEUTRAL_COLOR, NEUTRAL_COLOR, NEUTRAL_COLOR]);
+  });
+
+  it("colours a measure with no published costing grey", () => {
+    const catalogue = fromRows([...sized(2, 1), { reform_id: "zero", reform_name: "Zero", year: 2029, value: 0 }]);
+    expect(catalogue.byId.get("zero")).toMatchObject({ direction: "neutral", color: NEUTRAL_COLOR });
+  });
+
+  it("colours depend only on the publication: not on row order or on the reader's selection", () => {
+    fc.assert(fc.property(fc.uniqueArray(fc.record({ id: fc.stringMatching(/^[a-z]{1,6}$/), value: fc.integer({ min: -50, max: 50 }) }), { selector: (row) => row.id, maxLength: 15 }), (records) => {
+      const rows = records.map(({ id, value }) => ({ reform_id: id, reform_name: id, year: 2029, value }));
+      const colors = (catalogue) => Object.fromEntries(catalogue.measures.map((measure) => [measure.id, measure.color]));
+      expect(colors(fromRows([...rows].reverse()))).toEqual(colors(fromRows(rows)));
     }), { numRuns: 100 });
+  });
+
+  it("adding a measure re-shades only its own direction", () => {
+    const base = [...sized(4, 1), ...sized(5, -1, 100)];
+    const before = fromRows(base);
+    const after = fromRows([...base, { reform_id: "new", reform_name: "New", year: 2029, value: 2.5 }]);
+    for (const measure of before.measures.filter((m) => m.direction === "cost")) expect(after.byId.get(measure.id).color).toBe(measure.color);
+    expect(after.byId.get("new").direction).toBe("revenue");
   });
 
   it("series keys never collide with metadata or labels, including arbitrary ids", () => {
@@ -207,7 +255,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/youngPersonPresets.js": [/^\s*(?:measure|measures|tag): .*$/gm],
     "components/personal/HouseholdCards.jsx": [/const SOURCE_NAMES = \{[\s\S]*?\n\};/],
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
-    "components/methodology/measures.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
+    "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");

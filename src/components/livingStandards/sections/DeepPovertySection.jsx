@@ -20,6 +20,7 @@ import {
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const EMPTY_ROWS = [];
 
@@ -53,19 +54,31 @@ export default function useDepthView(data) {
   const first = rows.find((r) => r.fy === headlineStartYear(data)) || rows[0];
   const end = rows.find((r) => r.fy === headlineYear(data)) || rows[rows.length - 1];
   // From the one-decimal values shown
-  const verb = changeVerb(round1(end.below40) - round1(first.below40), "pp");
+  const delta = round1(round1(end.below40) - round1(first.below40));
+  const deepChange =
+    delta === 0
+      ? `, about the same as in ${fyDash(first.fy)}`
+      : `, ${delta > 0 ? "up" : "down"} ${Math.abs(delta).toFixed(1)} percentage points since ${fyDash(first.fy)}`;
 
   return {
     period: periodLabel(rows[0].fy, rows[rows.length - 1].fy),
+    // One plain sentence; the bands and the median are defined in About
     summary: (
       <>
-        In {fyDash(end.fy)}, {formatPct(end.below40)} of people are in very deep poverty (below 40% of median income,
-        AHC), of {formatPct(end.total)} below 60%; very deep poverty <strong>{verb || "stays flat"}</strong> from{" "}
-        {fyDash(first.fy)}.
+        Under current law, <strong>{formatPct(end.below40)} of people</strong> are in very deep poverty in {fyDash(end.fy)}
+        {deepChange}.
       </>
     ),
     about:
-      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is JRF's very deep poverty; the three bands add up to the relative poverty rate.",
+      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is very deep poverty; the three bands add up to the relative poverty rate.",
+    info: {
+      how: [
+        "Bands of the model's own median income after housing costs each year: below 40%, 40% to 50%, 50% to 60%.",
+        "Below 40% is very deep poverty; the three bands add up to the relative poverty rate.",
+      ],
+      caveats: ["Read very deep poverty as a change, not a level."],
+      method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+    },
     notes: (data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n)),
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,

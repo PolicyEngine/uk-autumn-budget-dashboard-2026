@@ -21,3 +21,16 @@
   margin: 12px 0 24px;
 }
 
+
+/* By age's Age group control: the chips in one row that scrolls sideways
+   on a phone, never wider than the page */
+.age-group-control {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.age-group-control .obr-view-switch {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}

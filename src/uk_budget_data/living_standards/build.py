@@ -330,7 +330,7 @@ def build_outlook(
         "notes": [
             "Deciles are re-ranked each year, so growth compares the same position in the distribution, not the same people.",
             decile_note(ahc_deciles["cumulative_growth_to_end"]),
-            "The halves are split at the non-pensioner median and show means, not the typical (median) incomes in Resolution Foundation analysis.",
+            "The halves are split at the non-pensioner median and show means, not medians.",
         ],
     }
 
@@ -413,7 +413,7 @@ def build_outlook(
     deep = lambda y: P(y)["deep_poverty_ahc"]  # noqa: E731
     deep_poverty = {
         "measures": {
-            "below_40pc_median_ahc": "Very deep poverty: below 40% of median income (AHC, JRF-style)",
+            "below_40pc_median_ahc": "Very deep poverty: below 40% of median income (AHC)",
             "below_50pc_median_ahc": "Below 50% of median income (AHC)",
         },
         "projection": {
@@ -431,7 +431,7 @@ def build_outlook(
             for k in (40, 50)
         },
         "notes": [
-            "Lines are 40% and 50% of the model's own median equivalised AHC income each year, as JRF defines very deep poverty.",
+            "Lines are 40% and 50% of the model's own median equivalised AHC income each year.",
             "Not the model's in_deep_poverty_ahc flag, which is half the absolute poverty line.",
             deep_poverty_note(P(PROJECTION_START), PROJECTION_START),
         ],
@@ -909,9 +909,8 @@ def deep_poverty_note(v: dict, year: int) -> str:
     d = v["deep_poverty_ahc"]["below_40pc"]
     # JRF, UK Poverty 2026: about 10% (6.8m) in very deep poverty in 2023-24, older HBAI series.
     return (
-        f"Our very deep poverty ({d['rate'] * 100:.1f}%, {d['people_millions']:.1f} million in {fy(year)}) is well "
-        "below JRF's figure of about 10% (6.8 million in 2023-24, on the older survey series), so read it as a "
-        "change, not a level."
+        f"Our very deep poverty ({d['rate'] * 100:.1f}%, {d['people_millions']:.1f} million in {fy(year)}) is "
+        "below published estimates on the older survey series, so read it as a change, not a level."
     )
 
 

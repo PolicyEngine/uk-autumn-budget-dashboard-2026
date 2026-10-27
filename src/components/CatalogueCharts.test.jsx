@@ -109,18 +109,35 @@ describe("published measure catalogue in population views", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
-  it("uses published descriptions in the selector and excludes unavailable measures", () => {
+  it("lists each published measure by its short name, grouped by revenue effect, with no description, and excludes unavailable ones", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
+    expect(screen.getByRole("button", { name: "Select policies" })).toHaveTextContent(/Policies\s*All 2 policies/);
     fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
     for (const measure of catalogue.displayable) {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
-      expect(screen.getByText(measure.description)).toBeInTheDocument();
+      expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
     }
+    expect(screen.getByRole("group", { name: "Raises revenue" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Costs revenue" })).toBeInTheDocument();
     expect(screen.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
+  });
+
+  it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
+    const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
+    const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));
+    const loading = screen.getByRole("button", { name: "Select policies: loading" });
+    expect(loading).toHaveTextContent("Policies");
+    expect(loading).not.toHaveTextContent(/0 of 0/);
+    expect(loading).toBeDisabled();
+    unmount();
+    render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
+    const none = screen.getByRole("button", { name: "Select policies: No Budget results are published yet" });
+    expect(none).toHaveTextContent("No policies yet");
+    expect(none).toBeDisabled();
   });
 
   it.each([
@@ -174,11 +191,17 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
+    // The withdrawn package is never drawn: the shares card shows each
+    // measure's own run, one row per measure, and says so
+    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
-    // The shares card draws nothing; the average change and trend cards
-    // still chart (the measures card is a dumbbell, not a chart, since #128)
-    expect(container.querySelector('.young-people-shares [data-testid="chart-rows"]')).toBeNull();
+    const shares = container.querySelector(".young-people-shares");
+    expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.every((name) => [catalogue.byId.get(ALPHA), catalogue.byId.get(BETA)].some((m) => [m.label, m.name].includes(name)))).toBe(true);
+    // the average change and trend cards still chart (the measures card is a
+    // dumbbell, not a chart, since #128)
     expect(screen.getAllByTestId("chart-rows")).toHaveLength(2);
   });
 
@@ -192,7 +215,13 @@ describe("published measure catalogue in population views", () => {
     ));
     expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
-    expect(screen.getByText(/These shares come from one simulation/)).toBeInTheDocument();
+    // The combined run is refused: no package shares, only each measure's own
+    expect(screen.getByText(/each selected measure on its own/)).toBeInTheDocument();
+    const shares = container.querySelector(".young-people-shares");
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const alpha = catalogue.byId.get(ALPHA);
+    // Alpha has no supported figures this year, so it draws no row
+    expect(names.some((name) => [alpha.label, alpha.name].includes(name))).toBe(false);
   });
 
   it("recognises an unseen combined id when every measure is displayable", () => {
