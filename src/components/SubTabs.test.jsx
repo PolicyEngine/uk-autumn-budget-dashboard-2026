@@ -145,13 +145,17 @@ describe("SubTabs", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("scrollTo", scrollTo);
     render(<LinkHarness />);
-    // The band sticks: its place in the page is the sentinel before it
+    // The band sticks: its place in the page is the sentinel before it,
+    // lined up under the bars above it, measured live (utils/pageScroll):
+    // scrolled 800px down, with the bar 500px down the page under a 124px
+    // title band, as in the test above
     const band = screen.getByRole("tablist").closest(".sub-tabs-band");
+    const title = document.createElement("div");
+    title.className = "title-row";
+    document.body.prepend(title);
+    vi.spyOn(title, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 124, height: 124 });
+    vi.spyOn(band, "getBoundingClientRect").mockReturnValue({ top: 124, bottom: 173, height: 49 });
     vi.spyOn(band.previousElementSibling, "getBoundingClientRect").mockReturnValue({ top: -300 });
-    const computed = window.getComputedStyle.bind(window);
-    vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) =>
-      el === band ? { scrollMarginTop: "124px" } : computed(el, pseudo),
-    );
     Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
     const link = screen.getByRole("button", { name: "To the third" });
     link.focus();
@@ -159,8 +163,9 @@ describe("SubTabs", () => {
     expect(tab("Third")).toHaveAttribute("aria-selected", "true");
     expect(sub()).toBe("third");
     expect(tab("Third")).toHaveFocus();
-    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124 });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124, behavior: "auto" });
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    title.remove();
     vi.unstubAllGlobals();
   });
 
