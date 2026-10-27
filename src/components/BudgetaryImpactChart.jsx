@@ -34,7 +34,7 @@ import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
-// Net impact labels, one per year: the signed total in a small white tag
+// Net change labels, one per year: the signed total in a small white tag
 // beside its dot on the net line, always just above the dot (below it only
 // where the dot is too near the top of the plot), and moved clear of the
 // tag beside it. They are part of the chart's SVG, so the SVG and PNG
@@ -215,7 +215,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
     const measure = bySeriesKey.get(key);
     return { id: measure?.id ?? key, key, name: measure?.label ?? key, description: measure?.description, muted: false };
   });
-  const netLabel = activePolicies.length > 1 ? "Net impact" : undefined;
+  const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
   // No selected measure moves revenue in any year shown (2026-27 is shown
   // whenever one does in it, utils/displayYears.js): a note with the
   // reason, not five "£0.0bn" tags on an empty £0-£0.05bn axis
@@ -258,7 +258,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
       group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
-      ? [{ color: CHART_COLOURS.net, label: "Net impact", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
   ];
 
@@ -356,7 +356,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
 
               offset={16}
 
-              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net change" />}
 
             />
             {orderedPolicies.map((policyName) => (

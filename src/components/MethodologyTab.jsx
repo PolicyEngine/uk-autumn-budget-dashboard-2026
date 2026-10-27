@@ -309,7 +309,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.publicFinances}
             title="Public finances"
-            preview="Budgetary impact · Exceptions · Net impact · OBR comparison"
+            preview="Budgetary impact · Exceptions · Net change · OBR comparison"
           >
             <p className="method-more">
               The{" "}
@@ -333,7 +333,7 @@ function MethodologyTab({ onShowTab }) {
                   },
                 ],
                 [
-                  "Net impact",
+                  "Net change",
                   <>
                     With several policies selected, the net line adds their separate effects (see{" "}
                     <AnchorLink id={METHOD_SECTIONS.limitations}>limitations</AnchorLink>).
