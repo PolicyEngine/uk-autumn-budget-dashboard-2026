@@ -680,7 +680,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A change in words ("Rises 0.1 points") leads in place of a number */
+/* A change in words ("Rises 0.1pp") leads in place of a number */
 .forecast-tile-value.is-text {
   font-size: 1.5rem;
 }

@@ -28,14 +28,14 @@ const pct = (v) => formatPct(round1(v));
 
 /**
  * The tile's lead: the change in the rate over the years compared, in
- * points of the one-decimal values ("No change", "Rises 0.1 points"). The
- * change leads because the model's levels sit below the official ones.
+ * points of the one-decimal values ("No change", "Rises 0.1pp"), written
+ * as the Who is in poverty card's chips write it. The change leads because
+ * the model's levels sit below the official ones.
  */
 export function povertyTileChange(a, b) {
   const d = Math.round((round1(b) - round1(a)) * 10) / 10;
   if (d === 0) return "No change";
-  const size = Math.abs(d).toFixed(1);
-  return `${d > 0 ? "Rises" : "Falls"} ${size} ${size === "1.0" ? "point" : "points"}`;
+  return `${d > 0 ? "Rises" : "Falls"} ${Math.abs(d).toFixed(1)}pp`;
 }
 
 /** The levels behind it, said small and as the model's own. */
