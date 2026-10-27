@@ -396,7 +396,7 @@
   pointer-events: auto;
   width: max-content;
   min-width: 220px;
-  max-width: min(300px, 100%);
+  max-width: min(320px, 100%);
   box-sizing: border-box;
   overflow-y: auto;
   z-index: 100;
@@ -452,15 +452,15 @@
    width for both, so the card does not change size between seats */
 .constituency-tooltip.seat-card,
 .seat-card-hover {
-  width: 300px;
+  width: 320px;
   min-width: 0;
-  max-width: min(300px, calc(100vw - 32px));
+  max-width: min(320px, calc(100vw - 32px));
   box-sizing: border-box;
 }
 
 /* The pinned card also stays inside the map */
 .constituency-tooltip.seat-card {
-  max-width: min(300px, 100%);
+  max-width: min(320px, 100%);
 }
 
 .seat-card-title {
