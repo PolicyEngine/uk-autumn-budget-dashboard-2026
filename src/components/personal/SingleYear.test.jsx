@@ -7,7 +7,7 @@ import { fixtureJson } from "../../test/publicationFixture";
 import { mostlyFromSpending } from "./SingleYearResults";
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
-import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { clearHouseholdImpactCache, setHouseholdRetryPolicy } from "../../hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
@@ -57,6 +57,9 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  // A service that fails is asked again (starting up): milliseconds apart
+  // here, not the real 5 s
+  setHouseholdRetryPolicy({ delayMs: 1, maxRetryAfterMs: 1, minAttemptMs: 1 });
   clearBasisIncomeCache();
   resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
@@ -569,14 +572,14 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example card shows its result without Calculate, and hides it
-    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    expect(household[0].household.age).toBe(22);
+    expect(household[0].household.age).toBe(27);
     // Your household opens the form with its answers, and Calculate, to
     // change one and calculate again; the example's result goes
     fireEvent.click(householdItem(/^Your household/));
     expect(headlineCard()).toBeNull();
-    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(27);
     expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
     const before = household.length;
@@ -624,14 +627,14 @@ describe("an example card", () => {
       .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     renderTab();
     openForm();
-    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner with a small private pension/));
     expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
-    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
     // (the first scroll's own settling re-check is instant, so only smooth ones count)
     await waitFor(() => expect(smooth()).toHaveLength(1));
     expect(smooth()[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
@@ -656,7 +659,7 @@ describe("an example card", () => {
       .spyOn(document.documentElement, "scrollHeight", "get")
       .mockImplementation(() => height);
     renderTab();
-    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner with a small private pension/));
     await waitFor(() => expect(smooth()).toHaveLength(1));
     height = 3200;
     await waitFor(() => expect(smooth()).toHaveLength(2));
@@ -677,13 +680,13 @@ describe("an example card", () => {
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 140, bottom: 540, height: 400 });
     renderTab();
-    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner with a small private pension/));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" })));
     expect(scrollIntoView).not.toHaveBeenCalled();
     // Lower down, with reduced motion: an instant scroll
     rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     motion(true);
-    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "auto" });
     window.scrollTo = originalScrollTo;
@@ -723,13 +726,13 @@ describe("switching from one household's card to another", () => {
     renderTab();
     // Example A: its headline arrives; its split by policy and sweep are
     // still out when the reader moves on
-    fireEvent.click(card("A 22-year-old renting"));
+    fireEvent.click(card("A graduate on £35,000"));
     await waitFor(() => expect(held).toHaveLength(1));
     held[0].release(1111);
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
     await waitFor(() => expect(held).toHaveLength(3));
     // Example B: A's result goes at once; a loading state, not A's figures
-    fireEvent.click(card("A pensioner on the State Pension"));
+    fireEvent.click(card("A pensioner with a small private pension"));
     expect(headlineCard()).toBeNull();
     expect(screen.queryByText("+£1,111")).toBeNull();
     // A's late answers (its split by policy and sweep) change nothing
@@ -745,12 +748,12 @@ describe("switching from one household's card to another", () => {
   });
 
   it("from an example to Your household: the form opens with the example's answers, the example's result goes, Calculate gives Your household's own", async () => {
-    serve((body) => json(answerWith(body, body.household.age === 22 ? 1111 : 3333)));
+    serve((body) => json(answerWith(body, body.household.age === 27 ? 1111 : 3333)));
     renderTab();
-    fireEvent.click(card("A 22-year-old renting"));
+    fireEvent.click(card("A graduate on £35,000"));
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
     fireEvent.click(card("Your household"));
-    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(27);
     expect(headlineCard()).toBeNull();
     expect(screen.queryByText("+£1,111", { selector: ".result-change-value" })).toBeNull();
     // A changed answer and Calculate: the new result

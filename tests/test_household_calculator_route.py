@@ -33,8 +33,9 @@ MEASURE_YEARS = {
     "warm_home_discount_top_up": 2026,
     "domestic_electricity_zero_vat": 2027,
     "threshold_freeze_2031_32": 2031,
-    "road_fuel_vat_cut": 2026,
     "plan_2_threshold_unfreeze": 2027,
+    "employer_nics_secondary_threshold_raise": 2027,
+    "unearned_income_rates_up": 2027,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
@@ -63,7 +64,7 @@ HOUSEHOLDS = {
 # Circumstances the calculator's form doesn't ask for, added to the first
 # probe person or household so that each measure has someone to move.
 EXTRA_PEOPLE = {
-    "pensioner": {"age": 70, "state_pension": 13_100},
+    "pensioner": {"age": 70, "state_pension": 12_900},
     "graduate": {
         "age": 30,
         "employment_income": 45_000,
@@ -71,12 +72,29 @@ EXTRA_PEOPLE = {
         "student_loan_balance": 60_000,
         "student_loan_repayments": 500,
     },
+    # £11,000 / 52 = £211.53 a week, above the £204 earnings limit
+    "carer": {"age": 45, "employment_income": 11_000, "care_hours": 35},
+    # A private renter on Universal Credit (EXTRA_HOMES), whose rent is
+    # above the frozen Local Housing Allowance rate
+    "renter": {"age": 30, "employment_income": 8_000},
     "founder": {
         "age": 55,
         "employment_income": 100_000,
         "capital_gains": 800_000,
         "capital_gains_badr": 800_000,
     },
+}
+
+# The household and benefit unit circumstances of an EXTRA_PEOPLE probe
+EXTRA_HOMES = {
+    "renter": (
+        {
+            "tenure_type": "RENT_PRIVATELY",
+            "rent": 15_000,
+            "region": "NORTH_WEST",
+        },
+        {"would_claim_uc": True},
+    ),
 }
 
 
@@ -102,8 +120,16 @@ def situation(year: int) -> dict:
         households[name] = entry
     for name, inputs in EXTRA_PEOPLE.items():
         people[name] = {key: {year: value} for key, value in inputs.items()}
-        benunits[name] = {"members": [name]}
-        households[name] = {"members": [name], "region": {year: "LONDON"}}
+        home, benunit = EXTRA_HOMES.get(name, ({}, {}))
+        benunits[name] = {
+            "members": [name],
+            **{key: {year: value} for key, value in benunit.items()},
+        }
+        households[name] = {
+            "members": [name],
+            "region": {year: "LONDON"},
+            **{key: {year: value} for key, value in home.items()},
+        }
     return {"people": people, "benunits": benunits, "households": households}
 
 

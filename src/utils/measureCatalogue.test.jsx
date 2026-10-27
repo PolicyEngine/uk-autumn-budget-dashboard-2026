@@ -254,7 +254,6 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   const allowed = {
     "utils/policyDetails.js": [/export const POLICY_DETAILS = \[[\s\S]*?\n\];/],
     "utils/householdExamples.js": [/^\s*(?:measure|measures|tag): .*$/gm],
-    "utils/youngPersonPresets.js": [/^\s*(?:measure|measures|tag): .*$/gm],
     "components/personal/HouseholdCards.jsx": [/const SOURCE_NAMES = \{[\s\S]*?\n\};/],
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],

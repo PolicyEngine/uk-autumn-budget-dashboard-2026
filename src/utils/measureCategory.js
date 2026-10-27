@@ -25,7 +25,7 @@ export const MEASURE_CATEGORIES = [
   { label: "Energy", icon: "flame", pattern: /warm home|energy|electricity|\bgas\b|heating|\bheat\b|ofgem|\bwhd\b/ },
   { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance/ },
   { label: "Pensions", icon: "armchair", pattern: /pension|triple lock|annuit/ },
-  { label: "Benefits", icon: "piggy", pattern: /universal credit|\buc\b|benefit|tax credit|\bpip\b|disability|carer|jobseeker|\besa\b|two child|child limit|winter fuel/ },
+  { label: "Benefits", icon: "piggy", pattern: /universal credit|\buc\b|benefit|local housing allowance|\blha\b|tax credit|\bpip\b|disability|carer|jobseeker|\besa\b|two child|child limit|winter fuel/ },
   { label: "Council tax", icon: "landmark", pattern: /council tax/ },
   { label: "Property", icon: "house", pattern: /stamp duty|\bsdlt\b|property|mansion|housing|\brent\b|mortgage|inheritance|\bland\b|second home/ },
   { label: "Business", icon: "building", pattern: /business|corporation tax|employer|company|companies|\blevy\b|levies|apprenticeship|\bbank\b|windfall|digital services|duty|duties|tariff/ },

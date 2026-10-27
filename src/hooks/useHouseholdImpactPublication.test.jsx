@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, peekHouseholdImpact, rememberHouseholdHeadline, seedHouseholdImpactCache } from "./useHouseholdImpact";
+import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, setHouseholdRetryPolicy, peekHouseholdImpact, rememberHouseholdHeadline, seedHouseholdImpactCache } from "./useHouseholdImpact";
 import {
   BY_POLICY_INCLUDE,
   DefinitionMismatchError,
@@ -314,6 +314,8 @@ describe("Personal impact's live answers", () => {
     }
 
     it("refuses a retried part from another commit than the part already cached", async () => {
+      // The reader's Try again, not the page's own retry of a 503
+      setHouseholdRetryPolicy({ maxRetries: 0 });
       const calls = [];
       let splits = 0;
       twoServices(
