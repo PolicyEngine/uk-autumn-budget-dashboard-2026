@@ -9,11 +9,16 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication.receipt import ReceiptUnavailable
-from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.tables import (
+    SCATTER_MIN_HOUSEHOLDS,
+    bin_scatter,
+)
 
 FLOOR = floor.SURVEY_HOUSEHOLD_FLOOR
 YEAR = 2027
@@ -71,12 +76,11 @@ def _population(changed_survey, records_each=3):
 
 
 def test_thin_groups_count_survey_households_not_records():
-    survey = np.array(
-        [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2] + list(range(3, 13))
-    )
+    # "few": eight records, at least FLOOR, from two survey households.
+    survey = np.array([0, 0, 0, 0, 1, 1, 1, 1] + list(range(2, 12)))
     groups = {
-        "few": np.arange(len(survey)) < 12,
-        "enough": np.arange(len(survey)) >= 12,
+        "few": np.arange(len(survey)) < 8,
+        "enough": np.arange(len(survey)) >= 8,
     }
     changed = np.ones(len(survey), dtype=bool)
     assert floor.thin_groups(groups, changed, survey) == ["few"]
@@ -95,9 +99,42 @@ def test_a_decile_moved_by_two_survey_households_is_refused():
 
 
 def test_enough_survey_households_in_every_changed_group_pass():
-    # Ten survey households in decile 5, none elsewhere.
+    # FLOOR survey households in decile 5, none elsewhere.
     baseline, reformed, survey = _population(set(range(80, 80 + FLOOR)))
     assert floor.thin_cells(baseline, reformed, [YEAR], survey) == {}
+
+
+def test_the_floor_is_the_licence_minimum_threshold():
+    """CD171 v18 section 5.2.1: no cell "based on only one or two cases".
+    The 10 it advises against secondary disclosure is not required, and
+    the binned scatter keeps it."""
+    assert FLOOR == 3
+    assert SCATTER_MIN_HOUSEHOLDS == 10
+
+
+@given(
+    survey=st.lists(st.integers(0, 6), min_size=1, max_size=40),
+    data=st.data(),
+)
+def test_a_group_is_thin_exactly_when_one_or_two_households_changed(
+    survey, data
+):
+    """For every grouping and change: a group is thin if and only if the
+    rows that changed in it come from 1 to FLOOR - 1 survey households,
+    however many records each household has."""
+    n = len(survey)
+    survey = np.array(survey)
+    changed = np.array(
+        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+    )
+    labels = np.array(
+        data.draw(st.lists(st.sampled_from("abc"), min_size=n, max_size=n))
+    )
+    groups = {label: labels == label for label in "abc"}
+    thin = floor.thin_groups(groups, changed, survey)
+    for label, members in groups.items():
+        households = len(set(survey[members & changed].tolist()))
+        assert (label in thin) == (0 < households < FLOOR)
 
 
 def test_the_reason_names_tables_years_and_groups_but_no_figure():
@@ -163,7 +200,7 @@ def test_generation_refuses_a_run_with_a_thin_cell(monkeypatch):
         pipeline, "scatter_survey_households", lambda sim, path: survey
     )
     result = SimpleNamespace(household_scatter=[])
-    with pytest.raises(ReceiptUnavailable, match="fewer than 10 survey"):
+    with pytest.raises(ReceiptUnavailable, match=f"fewer than {FLOOR} survey"):
         generate._apply_disclosure_floor(
             "a", _job(refuse_thin_deciles=True), baseline, reformed, result
         )
@@ -601,7 +638,7 @@ def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
         for provisional in (False, True):
             with pytest.raises(
                 PublishError,
-                match="fewer than 10 survey households: "
+                match=f"fewer than {FLOOR} survey households: "
                 "distributional_impact 2027",
             ):
                 stage(
