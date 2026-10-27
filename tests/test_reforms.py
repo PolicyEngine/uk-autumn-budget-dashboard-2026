@@ -243,6 +243,7 @@ def test_the_april_2027_rise_is_never_made_up_and_the_card_says_so():
     assert "with no April 2027 RPI rise" in description
     assert "so that rise is never made up" in description
 
+
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
