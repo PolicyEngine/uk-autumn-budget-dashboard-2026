@@ -474,16 +474,18 @@ function SeatCard({ card }) {
           {card.byPolicy.map((row) => (
             <div key={row.id} className="seat-card-policy">
               <span className="seat-card-policy-name">{row.name}</span>
-              <span className="seat-card-policy-bar" aria-hidden="true">
-                {row.value !== null && largest > 0 && (
-                  <span
-                    style={{
-                      width: `${Math.max(4, (Math.abs(row.value) / largest) * 100)}%`,
-                      background: signColour(row.sign),
-                    }}
-                  />
-                )}
-              </span>
+              {row.value !== null && (
+                <span className="seat-card-policy-bar" aria-hidden="true">
+                  {largest > 0 && (
+                    <span
+                      style={{
+                        width: `${Math.max(4, (Math.abs(row.value) / largest) * 100)}%`,
+                        background: signColour(row.sign),
+                      }}
+                    />
+                  )}
+                </span>
+              )}
               {row.value === null ? (
                 <span className="seat-card-policy-value seat-card-withheld" title={row.title}>
                   {row.text}
