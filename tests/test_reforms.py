@@ -14,6 +14,7 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
 
+from uk_budget_data import reforms
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
@@ -80,9 +81,9 @@ def situation(people: dict, household: dict | None = None) -> dict:
     }
 
 
-def change(measure_id: str, sit: dict, variable: str, year: int):
+def change(measure_id: str, sit: dict, variable: str, year: int, measure=None):
     """(baseline, reformed) totals of a variable for one household."""
-    measure = get_reform(measure_id)
+    measure = measure or get_reform(measure_id)
     baseline = Simulation(
         situation=sit, scenario=measure.to_baseline_scenario()
     )
@@ -149,7 +150,7 @@ def test_each_measure_binds_to_a_receipt(measure_id):
     assert reform is not None and baseline is not None
 
 
-def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
+def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
     pure = {
         "pump_vat_on_fuel_duty_deferral": ["apply_vat_base_change"],
         "state_pension_income_tax_allowance": [
@@ -165,6 +166,7 @@ def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
     for name in (
         "employer_ni_relief_ages_21_to_24",
         "connect_student_loan_repayments",
+        "state_pension_only_income_tax_allowance",
     ):
         assert pure_templates(modifier(name), REVISION) is None
 
@@ -271,8 +273,9 @@ def test_a_pensioner_on_the_full_new_state_pension_alone_pays_none(year):
     assert reformed == pytest.approx(0, abs=PENNY)
 
 
-def test_the_allowance_is_withdrawn_against_other_income():
-    """2031-32, State Pension £14,390.39 and £1,000 private pension:
+def test_the_tapered_design_withdraws_the_allowance_against_other_income():
+    """The tapered design (the switch's alternative). 2031-32, State
+    Pension £14,390.39 and £1,000 private pension:
     income £15,390.39 is £990.39 over the £14,400 allowance, which falls to
     £13,409.61, rounded up to £13,410. Tax: 20% of £1,980.39, £396.08,
     against 20% of £2,560.39, £512.08."""
@@ -287,10 +290,63 @@ def test_the_allowance_is_withdrawn_against_other_income():
         }
     )
     baseline, reformed = change(
-        "state_pension_income_tax_protection", sit, "income_tax", year
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection("tapered"),
     )
     assert baseline == pytest.approx(512.08, abs=PENNY)
     assert reformed == pytest.approx(396.08, abs=PENNY)
+
+
+def test_the_tapered_design_deducts_gift_aid_once():
+    """2027-28, State Pension £13,036.97, £1,000 private pension and £400
+    of Gift Aid (£500 grossed up). Adjusted net income £14,036.97 - £500 =
+    £13,536.97 is £496.97 over £13,040, which leaves £12,543.03, below the
+    standard £12,570, so the allowance is £12,570 and the tax 20% of
+    £1,466.97, £293.39, as now. Deducting Gift Aid twice gave £13,040 and
+    £199.39."""
+    year = 2027
+    sit = situation(
+        {
+            "pensioner": {
+                "age": {year: 70},
+                "state_pension": {year: nsp(year)},
+                "private_pension_income": {year: 1_000},
+                "gift_aid": {year: 400},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection("tapered"),
+    )
+    assert baseline == pytest.approx(293.39, abs=PENNY)
+    assert reformed == pytest.approx(293.39, abs=PENNY)
+
+
+def test_the_sole_income_design_takes_the_allowance_away_for_other_income():
+    """The default design. 2031-32, State Pension £14,390.39 and £1,000
+    private pension: no allowance, so 20% of £2,560.39, £512.08, as now."""
+    year = 2031
+    sit = situation(
+        {
+            "pensioner": {
+                "age": {year: 70},
+                "state_pension": {year: nsp(year)},
+                "private_pension_income": {year: 1_000},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "state_pension_income_tax_protection", sit, "income_tax", year
+    )
+    assert baseline == pytest.approx(512.08, abs=PENNY)
+    assert reformed == pytest.approx(512.08, abs=PENNY)
 
 
 # --- 3. Warm Home Discount --------------------------------------------------

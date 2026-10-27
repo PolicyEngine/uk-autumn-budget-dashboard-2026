@@ -6,6 +6,7 @@ import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { artifactSha256, jcsSha256, sha256Hex } from "./utils/publication/digest";
 import { parseTable } from "./utils/publication/csv";
+import { MANIFEST_FILE } from "./utils/publication/manifest";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -76,6 +77,10 @@ describe("the page's verified publication catalogue", () => {
     expect(flat.some((row) => row.year === DEFAULT_DISPLAY_YEAR && Number.isFinite(row.value))).toBe(true);
     expect(readFileSync(join(process.cwd(), "public/data/obr_comparison.csv"), "utf8")).toMatch(/^autumn_budget_\d{4}_combined,/m);
     vi.stubGlobal("fetch", async (url) => {
+      // No manifest, whatever public/data holds: once one is committed (G2 on
+      // Budget day; the rehearsal of 26 October), the real flat files must still
+      // render no Budget figure without it.
+      if (String(url).endsWith(`/data/${MANIFEST_FILE}`)) return new Response(null, { status: 404 });
       try { return new Response(readFileSync(join(process.cwd(), "public", String(url)))); }
       catch { return new Response(null, { status: 404 }); }
     });
