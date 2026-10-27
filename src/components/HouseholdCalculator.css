@@ -1094,7 +1094,7 @@
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
   line-height: 1;
   font-variant-numeric: tabular-nums;
