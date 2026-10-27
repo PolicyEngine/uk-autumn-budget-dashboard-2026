@@ -1,6 +1,6 @@
 # Budget day for agents (Wednesday 28 October 2026)
 
-The agents' path from the speech to a published dashboard, in the order of the [checklist](budget-day-checklist.md). It is a working view of the [runbook](budget-day-runbook.md), not a second plan. Where the two differ, the runbook wins, and the agent stops and asks the Integrator. Who signs what, and what each person checks first, is in [`budget-day-people.md`](budget-day-people.md).
+The agents' path from the speech to a published dashboard, in the order of the [checklist](budget-day-checklist.md). It is a working view of the [runbook](budget-day-runbook.md), not a second plan. Where the two differ, the runbook wins, and the agent stops and asks the Integrator. Who signs what, and what each person checks first, is in [`budget-day-people.md`](budget-day-people.md). The day at a glance is in [`budget-day-map.md`](budget-day-map.md).
 
 | Role | Name |
 |---|---|
@@ -12,10 +12,8 @@ This page uses roles everywhere else, so a missing person changes only the table
 
 Times are UTC (UK time equals UTC this week). Every step a person must sign is marked **Signature**. An agent never signs.
 
-Written against `main` at `f690a38a` (27 October). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. Four open pull requests change a step here, and each step says what changes when one has merged:
+Written against `main` at `7c9aaa0e` (27 October). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. It also has #208 (the parameter-pair refusals and the floor of 10 survey households), #244 (the official costings export) and #258 (the seven registered measures). Two open pull requests change a step here, and each step says what changes when one has merged:
 - #174 lets Treasury inputs be committed after G2;
-- #208 adds the parameter-pair refusals and the floor of 10 survey households;
-- #244 adds the official costings export;
 - #249 adds the OBR's effect on CPI.
 
 ## Who does what
@@ -98,19 +96,16 @@ MODAL() { uv run --with modal==1.6.2 python -m uk_budget_data.cli "$@"; }
 Commands without Modal stay `uv run uk-budget-data …`.
 
 **The candidates and the hand-written modifiers** ([#207 comment, 27 October](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/207#issuecomment-6441807159)):
-- **The pre-Budget candidates are seven:** `domestic_electricity_zero_vat`, `fuel_duty_rise_deferral`, `plan_2_threshold_unfreeze`, `road_fuel_vat_cut`, `state_pension_income_tax_protection`, `threshold_freeze_2031_32` and `warm_home_discount_top_up`. Their package is `combined--5c77771791661e11`.
-- **Hand-written in code: three.**
-  - `plan_2_threshold_unfreeze`;
-  - `state_pension_income_tax_protection`, hand-written in its sole-income design since #182;
-  - `employer_ni_relief_under_25s`. It is still registered (`reforms.py`, and `draft_attestation.REASONS`), but left the candidates with BADR on 27 October.
-- **Run tonight and on the day: two,** Plan 2 and the pensioner allowance. Each goes in a `generate` call of its own, and needs a two-person attestation for every receipt. If employer NI is ever generated, the same holds for it: never put it in a shared call.
+- **The registered measures are the seven pre-Budget candidates** (#258): `domestic_electricity_zero_vat`, `fuel_duty_rise_deferral`, `plan_2_threshold_unfreeze`, `road_fuel_vat_cut`, `state_pension_income_tax_protection`, `threshold_freeze_2031_32` and `warm_home_discount_top_up`. Their package, `autumn_budget_2026_combined`, is `combined--5c77771791661e11`.
+- **BADR and employer NI were withdrawn on 27 October and are unregistered** (#258). Their code remains, but they can't be generated.
+- **Two hand-written modifiers,** Plan 2 and the pensioner allowance (hand-written in its sole-income design since #182). Each goes in a `generate` call of its own, and needs a two-person attestation for every receipt.
 - **The package needs its own attestation:** it binds hand-written members.
-- These rules hold while the data-limit registry isn't empty, and on 6.11.1 it lists 25 limits.
+- These rules hold while the data-limit registry isn't empty. On 6.11.1 it lists 25 limits.
 
 ## Before the day: what to check on Wednesday morning
 
 These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday the agent checks they happened and records what it finds. It doesn't redo them.
-- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #208, #174, #244 and #249. #237 merged before it.
+- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #174 and #249. #237, #208, #244 and #258 merged before it.
 - **Both Modal images built** on the final `uv.lock` before 18:00. Measured at 2:40 for the image (#239), and about 12 min after a lock change (#225).
 - **The 18:00 regeneration** (the Coordinator; #207 comment):
   - the five template and parameter candidates in one call: `domestic_electricity_zero_vat fuel_duty_rise_deferral road_fuel_vat_cut threshold_freeze_2031_32 warm_home_discount_top_up`;
@@ -226,11 +221,11 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
 3. **Declare the taxes it changes** in `DECLARED` in `tests/test_measure_descriptions.py`. Its name and description name only those, and never say "Candidate measure".
 4. **Add one numerical test** on a made-up household, with the arithmetic done by hand.
 5. **Its household check fixture** goes in this same commit under `data_inputs/household_fixtures/`, or in `~/private/uk-budget-2026/fixtures/`. It is a calculation path either way, so it never goes into the release checkout after G2.
-6. **Until #208 merges, check the engine's paired parameters by hand.** The engine charges each pair together, so a measure that sets the first sets the second too, in every scored year, to its new or current value:
+6. **Set the engine's paired parameters together.** The engine charges each pair together, and since #208 generation refuses a measure, single or combined, that changes the first of a pair in a year without the second (`parameter_companions.py`). So a measure that sets the first sets the second too, in every scored year, to its new or current value:
    - `gov.hmrc.cgt.higher_rate` with `gov.hmrc.cgt.additional_rate`, and the same pair under `gov.hmrc.cgt.residential_property` and `gov.hmrc.cgt.carried_interest`;
    - `gov.hmrc.income_tax.rates.dividends[2].rate` with `[3].rate`, since the dividend scale's fourth bracket starts at £10m;
    - `gov.hmrc.income_tax.rates.uk[2].rate` with `uk[3].rate`, for the same £10m bracket;
-   - `gov.dwp.LHA.freeze` with `gov.dfc.LHA.freeze`, and the percentile. policyengine-uk 2.151.0, on `main` since #237, has `gov.dfc`.
+   - `gov.dwp.LHA.freeze` with `gov.dfc.LHA.freeze`, and `gov.dwp.LHA.percentile` with `gov.dfc.LHA.percentile`: Northern Ireland follows `gov.dfc`.
 7. **Run the tests you touched:**
 
    ```sh
@@ -243,7 +238,7 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
 **5. The candidates already published.** Each of the seven pre-Budget candidates is either announced as modelled, or withdrawn in G2's first manifest write. Agents list them; the Integrator decides.
 - If announced as modelled, update its name, description and any parameters in the measures PR, and regenerate it at G2.
 - If not, withdraw it: `uv run uk-budget-data publish withdraw <id> --reason "Not in the Autumn Budget 2026"`.
-- BADR and employer NI were never staged, so neither needs a withdrawal.
+- BADR and employer NI were never staged, and are unregistered since #258, so neither needs a withdrawal.
 
 None stays on the page under the statement label.
 
@@ -299,9 +294,15 @@ None stays on the page under the statement label.
   Reconcile, stage and check take 3, 20 and 3 s (#225).
 - **A hand-written modifier can't be staged until it is attested.** Move its artifact directory to `~/private/uk-budget-2026/held/` straight away, so `review-rows` can't delete it. Stage it once its attestation is committed (G3, step 4).
 - **Gates:**
-  - `REFUSED <id>: …` lines: a data limit, a scored year left out, a wealth-tax scale, and once #208 is in, a parameter pair or a thin decile cell;
+  - `REFUSED <id>: …` lines: a data limit, a scored year left out, a wealth-tax scale, or a parameter pair set alone (#208);
   - staging refuses a measure that doesn't move in its declared direction;
   - `publish check` re-runs every gate.
+- **The floor of 10 survey households** (#208; runbook G2). A measure with a decile cell whose change rests on 1 to 9 survey households is written with `<id>: WARNING: cells resting on fewer than 10 survey households: …`. The warning names tables, years and groups, never a figure.
+  - Such an artifact can't be staged at any level, so it is never shown. `publish review-rows` deletes it: never commit it by hand.
+  - Its figures stay private, its costing included.
+  - Leave it out of the combined run, as for a held measure. Wherever the package total appears, say why: too few households in the survey data are affected to publish its effects by income decile.
+  - To stop such a run instead, writing nothing, set `UK_BUDGET_THIN_DECILES=refuse` in the shell that starts `generate`.
+  - The age table withholds rather than refuses: a blank single-age or pensioners chart for one measure and year is the floor at work.
 - **Household check, for each measure,** against the redeployed API:
 
   ```sh
@@ -410,7 +411,7 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
 
 **4. Attestations.** For every hand-written modifier generated today, and every combined run that holds one:
 - **Drafting:**
-  - `uv run python scripts/draft_attestation.py <artifact dir>` drafts the file for the hand-written measures in code (Plan 2, the pensioner allowance, employer NI) and for combined runs that hold them;
+  - `uv run python scripts/draft_attestation.py <artifact dir>` drafts the file for Plan 2, the pensioner allowance and the combined runs that hold them;
   - for a new hand-written measure, the script stops ("no drafted reason"), and editing the script is a calculation path. Draft the file by hand instead, into `data_inputs/publication/attestations/<key>.json`:
 
     ```sh
@@ -422,10 +423,11 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   - They fill `reason` (factual, with no survey-level values), `checker` and `second`, and `released_at` (ISO 8601 with a timezone).
 - **Then** commit the file, and stage the artifact back from `held/`. The gate reads the attestation from git HEAD, so an uncommitted file releases nothing.
 
-**5. Official costings for the Public finances card** (once #244 has merged).
+**5. Official costings for the Public finances card** (#244; runbook G4).
 - After the Treasury sheets and the mapping are filled, run `uv run python -m uk_budget_data.publication.official_costings`, with `--inputs <treasury dir>` if they are still private.
-- It writes `public/data/official_costings.json`, which needs its review row (**Signature: the Integrator**). Set `obr_budget_2026_costings.url` in `src/utils/sources.js`.
-- If #244 hasn't merged, its own description gives a route that leaves every receipt valid.
+- It writes `public/data/official_costings.json`: the sums the reconciliation compares, on both bases, under the manifest's keys, with no PolicyEngine figure. Rerun it after any change to the Treasury sheets or the mapping, not after restaging.
+- It needs its review row, kind `national_table`, signed on the final bytes (**Signature: the Integrator**).
+- Set `obr_budget_2026_costings.url` in `src/utils/sources.js` to the costings document at the same time.
 
 **6. The OBR's effect on CPI inflation** (once #249 has merged). Write `public/data/obr_cpi_policy_effect.json` from the EFO policy chapter's workbook, as `docs/obr-cpi-policy-effect.md` (added by #249) says. It needs its review row (**Signature: the Integrator**).
 
@@ -465,7 +467,10 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   - **Time:** 6:13 for the app, plus about 1 min of planning (#225).
   - **Members:** leave out any measure that is held, not computable or stopped by the floor, and say so wherever the package total appears.
   - **Staging:** stage it like a measure. The Integrator approves it once every member is approved (**Signature: the Integrator**). A combined run holding a hand-written modifier needs its own attestation.
-- **The area run, once G3's approvals are in, alongside the combined run and from the same clean commit.** Always name the ids. Since #234, the command's default includes the package once the manifest approves it, and there is no package by constituency on the day (#235).
+- **The area run, once G3's approvals are in, alongside the combined run and from the same clean commit.** Always name the ids.
+  - Since #234 the command's default adds the package once the manifest approves it, and since #258 that package is the seven.
+  - The runbook publishes it by constituency only if the announced measures are exactly those seven.
+  - Publishing a package by area waits for the licence holder's agreement (open on the PR that adds this page). Until then, name the single measures.
 
   ```sh
   UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026/audit MODAL constituencies --backend modal --reforms <the approved single measure ids> --run-id constituencies-<the cut's 8 hex digits>-<HHMM>
@@ -600,12 +605,11 @@ The figures derive from UK Data Service safeguarded unit records (the Family Res
   - no household, benefit unit or person id or weight columns;
   - the area-code guard;
 - **the page,** which never sums across measures;
-- **once #208 merges,** a floor of 10 survey households in the national household tables.
+- **#208's floor in the national household tables:** a decile table with a cell resting on fewer than 10 survey households is never staged, the age table withholds thin ages and bands, and the binned scatter counts survey households.
 
 **What nothing checks, so people must:**
 - **everything people write.** Quote no figure from a private file, an audit, `summary.json`, or a cell not already published, and no difference of published figures that isolates few households;
-- **the national household tables until #208 merges.** The person signing their review rows checks them by hand;
-- **the map after a correction.** Never republish a corrected measure's results by area without the licence holder's check, and publish no package by area;
+- **the map after a correction, and any package by area.** Never republish a corrected measure's results by area without the licence holder's check. Publish no package by area without the licence holder's agreement;
 - **area-run files, audits and arrays.** They never go into any repository.
 
 **Agents never sign review rows.** A review row is a person's statement that they read those exact bytes.

@@ -1,6 +1,6 @@
 # Budget day for people: who does what, and every signature (28 October 2026)
 
-What agents do on Budget day, what each person does and when, and every signature: who signs, with which command, and what they check first. The order of the day is the [checklist](budget-day-checklist.md), and each step's detail is in the [runbook](budget-day-runbook.md). Where this page differs from either, they win. The agents' own path is [`budget-day-agents.md`](budget-day-agents.md). Times are UTC.
+What agents do on Budget day, what each person does and when, and every signature: who signs, with which command, and what they check first. The order of the day is the [checklist](budget-day-checklist.md), and each step's detail is in the [runbook](budget-day-runbook.md). Where this page differs from either, they win. The agents' own path is [`budget-day-agents.md`](budget-day-agents.md), and the day at a glance is [`budget-day-map.md`](budget-day-map.md). Times are UTC.
 
 | Role | Name |
 |---|---|
@@ -127,7 +127,7 @@ Agents never:
 ### 8. Attestation of a hand-written modifier
 - **Who:** two different people: the second is the second signer, and who checks first is open.
 - **How:**
-  - `uv run python scripts/draft_attestation.py <artifact dir>` drafts the file for the hand-written measures in code (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`, `employer_ni_relief_under_25s`) and their combined runs, such as `combined--5c77771791661e11.json`. For a new hand-written measure, the agents' page has the one-line draft.
+  - `uv run python scripts/draft_attestation.py <artifact dir>` drafts the file for the two hand-written measures (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and the combined runs that hold them, such as `combined--5c77771791661e11.json`. For a new hand-written measure, the agents' page has the one-line draft.
   - The signers fill `checker`, `second` and `released_at` (ISO 8601 with a timezone), then the file is committed.
 - **Check first:**
   - both read the modifier's code at the receipt's commit;
@@ -136,7 +136,7 @@ Agents never:
 - **When:** every regeneration. A hand-written receipt changes each time it is made, so each needs a fresh attestation.
 
 ### 9. Review rows
-- **Who:** the Integrator. Open: whether the licence holder reads the bytes of new public tables first, since the national household tables have no survey-household floor until #208 merges.
+- **Who:** the Integrator. Open: whether the licence holder reads the bytes of new public tables first.
 - **How:**
   - `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <name>`, never while a `generate` is running;
   - then, by hand in `data_inputs/public_data_review.csv`, the rows the command doesn't write:
@@ -144,10 +144,12 @@ Agents never:
     - `constituency.csv` (kind `disclosure_table`);
     - `household_presets.json`;
     - the outlook after the OBR import;
-    - `official_costings.json` (#244) and `obr_cpi_policy_effect.json` (#249), once those merge.
+    - `official_costings.json` (#244, kind `national_table`);
+    - `obr_cpi_policy_effect.json`, once #249 merges.
 - **Check first:**
   - each new public file's bytes, against the disclosure rules on the agents' page: no unit record, no cell resting on fewer than 10 survey households, no difference that isolates fewer;
   - each file is the one the gate bound (`publish check` passes);
+  - no artifact that #208's floor flagged (its `WARNING: cells resting on fewer than 10 survey households` line) is among them. Such an artifact is never staged: leave it out, never sign around it;
   - for `constituency.csv`, the private summary of its run, fetched to the private audit directory, never the checkout.
 
   Copy no figure from any of them anywhere.
