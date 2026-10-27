@@ -1,0 +1,135 @@
+{
+  "basis": {
+    "calibration": {
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+      "status": "pre_budget",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "forecast": {
+      "source": "policyengine-uk default economic assumptions",
+      "status": "pre_budget",
+      "vintage": "as shipped in the installed policyengine-uk"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
+  "combined": {
+    "combined--badr_lifetime_limit_cut+road_fuel_vat_cut": {
+      "artifact": "artifacts/combined--badr_lifetime_limit_cut+road_fuel_vat_cut/9c3713820d7c5d06",
+      "artifact_sha256": "9c3713820d7c5d067ff8bcf36fd28e29c42261f1bf6818840c5a63af9484da36",
+      "data_limits": [],
+      "description": "One simulation of: badr_lifetime_limit_cut, road_fuel_vat_cut",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "measures": [
+        "badr_lifetime_limit_cut",
+        "road_fuel_vat_cut"
+      ],
+      "member_outputs_sha256": {
+        "badr_lifetime_limit_cut": "f9a2df47b8222f96da2e5d25951f4f1acc0300458f371ce1abfdf85ffb562571",
+        "road_fuel_vat_cut": "97ad3f14fed075627fbb4af3d18f0e515b3f8e34508ad20b263f4242df7cf93b"
+      },
+      "name": "Combined: Business Asset Disposal Relief restricted, VAT cut on road fuel",
+      "outputs_sha256": "2682bb1ce2902f651a816684f4a9c89721fdde75b5fb52fe9f0a59e989eba286",
+      "receipt_sha256": "6959d4a176677cd4d52b4de82e3761a87ce06568e1520a72dd6cf4f3c11d9be5",
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027
+      ]
+    }
+  },
+  "execution": {
+    "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+    "identity": {
+      "certificate": {
+        "bundle_version": "6.10.2",
+        "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "certified_for_core_version": "3.33.3",
+        "certified_for_model_version": "2.132.6",
+        "compatibility_basis": "built_with_model_package",
+        "country_id": "uk"
+      },
+      "certification_status": "certified",
+      "core": {
+        "name": "policyengine-core",
+        "version": "3.33.3"
+      },
+      "country_id": "uk",
+      "data": {
+        "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "build_model_version": "2.132.6",
+        "data_package": "microcosm-data",
+        "dataset": "microcosm_uk_2024_25",
+        "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_version": "0.1.0"
+      },
+      "model": {
+        "name": "policyengine-uk",
+        "version": "2.132.6"
+      },
+      "schema_version": 1,
+      "wrapper": {
+        "name": "policyengine",
+        "version": "6.10.2"
+      }
+    }
+  },
+  "flat_aliases": {},
+  "flat_files": {},
+  "measures": {
+    "badr_lifetime_limit_cut": {
+      "artifact": "artifacts/badr_lifetime_limit_cut/de1e7f261f8dab9d",
+      "artifact_sha256": "de1e7f261f8dab9d21d808dbf67abf031a79536d2b3d07b96d0cc044b59f1180",
+      "data_limits": [],
+      "description": "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from \u00a31 million to \u00a3500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "Business Asset Disposal Relief restricted",
+      "outputs_sha256": "f9a2df47b8222f96da2e5d25951f4f1acc0300458f371ce1abfdf85ffb562571",
+      "receipt_sha256": "23da53a52652f33b25d33a314808a047fd1045762c8a8666baa960275c5c5925",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027
+      ]
+    },
+    "road_fuel_vat_cut": {
+      "artifact": "artifacts/road_fuel_vat_cut/24bd805975a0509d",
+      "artifact_sha256": "24bd805975a0509d6cd3ddcabb1b3e23647aa8863dc62c005388fb5e00f4405f",
+      "data_limits": [],
+      "description": "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "name": "VAT cut on road fuel",
+      "outputs_sha256": "97ad3f14fed075627fbb4af3d18f0e515b3f8e34508ad20b263f4242df7cf93b",
+      "receipt_sha256": "b43714c439d6747ea2c632c3ab9215bf2a6ba4e49b87fb32d8c679bd2f9c0a14",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027
+      ]
+    }
+  },
+  "release": "uk-autumn-budget-2026",
+  "revision": 2,
+  "schema": "uk-budget-dashboard/publication-manifest/v1",
+  "superseded": [],
+  "updated_at": "2026-10-27T01:34:12.499006+00:00"
+}
