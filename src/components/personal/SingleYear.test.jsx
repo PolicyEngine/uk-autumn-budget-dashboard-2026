@@ -559,9 +559,11 @@ describe("an example card", () => {
   it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
     serve((body) => json(householdAnswerFor(body)));
     motion(false);
-    // jsdom has no scrolling
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     // The result appears below the screen's foot
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
@@ -571,22 +573,26 @@ describe("an example card", () => {
     fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
     expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
     fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    // (the first scroll's own settling re-check is instant, so only smooth ones count)
+    await waitFor(() => expect(smooth()).toHaveLength(1));
+    expect(smooth()[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
   });
 
   it("asks the scroll again while the page grows under the result, so it is not cut short", async () => {
     serve((body) => json(householdAnswerFor(body)));
     motion(false);
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
@@ -597,19 +603,22 @@ describe("an example card", () => {
       .mockImplementation(() => height);
     renderTab();
     fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(smooth()).toHaveLength(1));
     height = 3200;
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
-    expect(scrollIntoView.mock.calls[1][0]).toEqual({ behavior: "smooth", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    await waitFor(() => expect(smooth()).toHaveLength(2));
+    expect(smooth()[1][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
     scrollHeight.mockRestore();
   });
 
   it("does not scroll when the result already starts in the top third of the screen, and is instant with reduced motion", async () => {
     serve((body) => json(householdAnswerFor(body)));
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 140, bottom: 540, height: 400 });
@@ -622,8 +631,8 @@ describe("an example card", () => {
     motion(true);
     fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "auto" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
   });
 });

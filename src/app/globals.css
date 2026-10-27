@@ -354,6 +354,9 @@ body {
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
+  /* A link's own jump to a card clears the sticky bars; the page's own
+     scrolls measure the bars live (utils/pageScroll) */
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
 /* Title band: the full-width teal band under the site nav that the

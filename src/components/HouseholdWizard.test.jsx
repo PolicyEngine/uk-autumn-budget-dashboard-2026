@@ -349,18 +349,24 @@ describe("the personal impact form", () => {
   });
 
   it("scrolls to the form when Your household opens it, its first box focused", async () => {
-    const scrollIntoView = vi.fn();
-    const original = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = scrollIntoView;
+    // The page's scroll (utils/pageScroll): the form's top, 16px below the bars
+    const scrollTo = vi.fn();
+    const original = window.scrollTo;
+    window.scrollTo = scrollTo;
     try {
       render(<HouseholdCalculator />);
+      const form = () => screen.queryByRole("form", { name: "Your household" });
+      const rect = Element.prototype.getBoundingClientRect;
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+        return this === form() ? { top: 900, bottom: 1400, height: 500 } : rect.call(this);
+      });
       fireEvent.click(yoursCard());
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-      expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("form", { name: "Your household" }));
-      expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 900 - 16 });
       expect(document.activeElement).toBe(box("Age"));
     } finally {
-      Element.prototype.scrollIntoView = original;
+      window.scrollTo = original;
+      vi.restoreAllMocks();
     }
   });
 

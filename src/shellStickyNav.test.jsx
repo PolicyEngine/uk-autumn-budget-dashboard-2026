@@ -4,6 +4,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import App, { preloadAllViews } from "./App";
+import { resetPageScroll, scrollPageTo } from "./utils/pageScroll";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -97,6 +98,21 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(false);
     wait(10_000);
     expect(shown()).toBe(false);
+  });
+
+  it("does not show for the page's own scroll up (utils/pageScroll), only the reader's", () => {
+    const { scrollTo, shown } = setup();
+    scrollTo(1_000);
+    act(() => {
+      window.scrollTo = () => {};
+      scrollPageTo(200);
+    });
+    scrollTo(600);
+    scrollTo(200);
+    expect(shown()).toBe(false);
+    resetPageScroll();
+    scrollTo(100);
+    expect(shown()).toBe(true);
   });
 
   it("stays 3s whatever the scroll, then hides only on a run down of over 120px", () => {
