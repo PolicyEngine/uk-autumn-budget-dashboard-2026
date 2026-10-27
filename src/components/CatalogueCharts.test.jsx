@@ -184,8 +184,8 @@ describe("published measure catalogue in population views", () => {
   });
 
   it.each([
-    ["relative", DistributionalChart, "distributional", "value", -1, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
-    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+    ["relative", DistributionalChart, "distributional", "value", -1, /; in 2030-31 both lose\.$/],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, /; in 2030-31 both lose\.$/],
   ])("points the %s view to a later year in which the ends turn", (_name, Chart, source, key, later, note) => {
     const fixture = measureCatalogueFixture({ held: false });
     // The same rows a year on, with the first measure turned to a loss
@@ -193,13 +193,14 @@ describe("published measure catalogue in population views", () => {
     const { container, unmount } = render(withCatalogue(catalogueFor(fixture),
       <Chart rawData={[...fixture[source], ...next]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(container.querySelector(".later-years-note")).toHaveTextContent(note);
+    // The turn is the decile sentence's last clause
+    expect(container.querySelector(".chart-description").textContent).toMatch(note);
     unmount();
     // The same rows in both years: no turn, no pointer
     const same = render(withCatalogue(catalogueFor(fixture),
       <Chart rawData={[...fixture[source], ...fixture[source].map((row) => ({ ...row, year: YEAR + 1 }))]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(same.container.querySelector(".later-years-note")).toBeNull();
+    expect(same.container.querySelector(".chart-description").textContent).not.toMatch(/; in \d/);
   });
 
   it("shares the catalogue's colours between standalone legends and tooltips", () => {

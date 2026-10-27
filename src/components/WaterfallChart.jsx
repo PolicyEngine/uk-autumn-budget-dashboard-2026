@@ -116,11 +116,15 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
 
   // "Later years differ": the first later year whose lowest- or
-  // highest-income tenth moves the other way (plainSentences.js)
-  const laterNote = useMemo(() => {
+  // highest-income tenth moves the other way (plainSentences.js), as the
+  // decile sentence's last clause, or alone when there is no sentence
+  const { laterNote, laterNoteAlone } = useMemo(() => {
     const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
     const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear });
-    return laterDecileNote(ends, later, "absolute");
+    return {
+      laterNote: laterDecileNote(ends, later, "absolute"),
+      laterNoteAlone: laterDecileNote(ends, later, "absolute", { standalone: true }),
+    };
   }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
 
   // Every selected measure is in the legend in every year (so the legend,
@@ -272,8 +276,12 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           </h3>
           {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {(nothingChanges ? null : decileSentence(data, "absolute")) ?? CHART_DESCRIPTION}
-            {laterNote && <span className="later-years-note"> {laterNote}</span>}
+            {(nothingChanges ? null : decileSentence(data, "absolute", laterNote)) ?? (
+              <>
+                {CHART_DESCRIPTION}
+                {laterNoteAlone && <span className="later-years-note"> {laterNoteAlone}</span>}
+              </>
+            )}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
