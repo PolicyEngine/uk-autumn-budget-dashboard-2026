@@ -90,7 +90,10 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         // The name starts with the pill's visible text, "Policies All 7
         // policies" (WCAG 2.5.3, label in name), and says what it chooses
         aria-label={
-          loading
+          // A faded pill says why first, even while the policies load
+          inactiveReason && (loading || none)
+            ? `Policies: ${inactiveReason}`
+            : loading
             ? "Policies: loading"
             : none
             ? `No policies yet${reason ? `: ${reason}` : ""}`
