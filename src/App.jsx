@@ -56,7 +56,7 @@ import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
 // PopulationImpactView; the Pre-measures forecast tab's (Living standards,
-// Poverty, Forecast changes) in LivingStandardsTab. Living standards and Poverty
+// Poverty, Forecast changes, Forecast vintages) in LivingStandardsTab. Living standards and Poverty
 // are twins: with the selected measures on Population impact, without them
 // (current law) on the Pre-measures forecast.
 export const VIEWS = [
