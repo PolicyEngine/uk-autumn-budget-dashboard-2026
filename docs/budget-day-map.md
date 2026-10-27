@@ -4,9 +4,29 @@
 
 A one-page map of the day for people: what happens, in what order, and who acts. The steps' detail is in the [checklist](budget-day-checklist.md) and the [runbook](budget-day-runbook.md), the agents' commands are in [`budget-day-agents.md`](budget-day-agents.md), and every signature is in [`budget-day-people.md`](budget-day-people.md). Times are UTC, which is UK time this week.
 
+## The four PRs
+
+The day's dashboard work goes in four PRs, in this order ([Vahid, 27 October](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Each holds one kind of change, so the code, the Treasury's figures, the national results and the map are each reviewed, signed and merged without holding up the others. Small hotfix PRs are opened only if something breaks.
+1. **Measures: the code.** The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries.
+   - It merges at about 14:30, once the documents have landed and CI is green, so the code matches what the documents say.
+   - Its merged commit is the one every published figure is generated from.
+   - The Integrator reviews it; the second signer attests any hand-written modifier.
+2. **Treasury figures (G3): what the results are checked against.** The Treasury's costings in `data_inputs/treasury/`. The reconciliation compares each measure with them, and they fill the "Official costings" card.
+   - It merges any time after 13:40. With #174 merged, it doesn't touch the code the receipts bind.
+   - The Integrator signs it off.
+3. **Publication: the national results.** The single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit, with their review rows and attestations.
+   - It merges at about 16:00, after `publish approve`, so only approved figures go out.
+   - It is the day's first publication: there is no separate provisional one.
+   - The Integrator signs the review rows and the second signer the attestations.
+4. **Map: the results by constituency.** The area run takes about an hour, so the map follows the national results instead of holding them up.
+   - It carries its own disclosure sign-off, from the Integrator and the licence holder.
+   - It merges at about 17:30.
+
+Between the start of #3's generation and its merge, nothing that touches a calculation path merges, because receipts bind the commit they were made at.
+
 ## The day
 
-Vahid's plans of 27 October set the shape of the day. Four PRs, in this order: the measures (#1, about 14:30), the Treasury figures (#2, from 13:40), the publication (#3, about 16:00, after approval) and the map (#4, about 17:30). There is no separate provisional publication. Preview runs don't wait for CI, each measure runs in a Modal call of its own, and the disclosure floor settles the package before it runs ([four PRs](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671), [decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328)).
+Vahid's decisions of 27 October also shape the day: preview runs don't wait for CI, each measure runs in a Modal call of its own, and the disclosure floor settles the package before it runs ([decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328)).
 
 1. **Tuesday evening.**
    - At 17:30 calculation code freezes (#222).
@@ -16,6 +36,10 @@ Vahid's plans of 27 October set the shape of the day. Four PRs, in this order: t
 2. **Wednesday morning.**
    - The final cut is confirmed by 06:00, and the Coordinator holds the go/no-go at 07:00. After it, only an emergency revert changes the release.
    - By 11:30 the start receipt records the code, data, versions and limits (G0): about 15 min.
+   - **A newer build may be on offer.** A new data build will probably be published, with an open policyengine.py PR.
+     - The Coordinator runs the UK hub on it and compares it with the current versions: policyengine 6.11.1, with policyengine-uk 2.151.0 and the a6299504 and c9df4b86 cuts.
+     - The Coordinator then decides whether to bump. The decision weighs the data's quality and the new policyengine-uk's runtime against what the build brings: it carries gambling and some other fixes the current one doesn't.
+     - #262 has the bump's checklist.
    - #174, #260, and #207 or its rerun are on `main` (Vahid's list).
    - The team test link is ready, with someone named to send it (#247; the script is in #260).
 3. **The speech, 12:30, and the measures PR (#1).** Agents list every measure and sort it: parameter change, template, hand-written code, ledger only, or not computable (G1, 15 min).
