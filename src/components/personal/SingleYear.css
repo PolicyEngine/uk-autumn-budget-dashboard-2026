@@ -1157,6 +1157,7 @@
 
 .breakdown-header .chart-description {
   margin: 0;
+  align-self: center;
 }
 
 .programme-table-wrap {
@@ -1177,6 +1178,8 @@
 .programme-table td {
   padding: 7px 12px;
   text-align: left;
+  vertical-align: middle;
+  line-height: 1.4;
   border-bottom: 1px solid var(--pe-gray-100);
 }
 
@@ -1343,4 +1346,12 @@
 /* Across earnings: one Show control above the two cards */
 .across-earnings-show {
   margin: 0 0 16px;
+}
+
+.across-earnings-show .series-toggle {
+  justify-content: flex-start;
+}
+
+.across-earnings-show .series-toggle-hint {
+  text-align: left;
 }
