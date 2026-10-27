@@ -23,14 +23,16 @@
  * the age from 18 to 80 but takes a fraction, so the form can give one:
  * a partner's age of 30.5, then no partner, then Calculate.
  *
- * That is for answers of the kinds the form's state holds (numbers or
- * null, and the form's codes or unknown ones), as the property test
- * generates them. Two inputs the form never holds differ too, and are
- * recorded below: a partner age as text without a partner ("30", which
- * api.py takes as 30), left out like any age without a partner; and a
- * region named for a property every object has ("__proto__"), whose
- * prefilled rent the old code read off the prototype. api.py refuses that
- * region.
+ * That is for answers of the kinds the form's state holds, as the property
+ * test generates them: numbers or null, the form's codes, and a few
+ * unknown codes (for the region, "ATLANTIS", null and ""). Two kinds of
+ * input the form never holds differ too, and are recorded below:
+ * - a partner age as text without a partner ("30", which api.py takes as
+ *   30), left out like any age without a partner;
+ * - a region named for one of Object.prototype's properties ("__proto__",
+ *   "constructor", "toString" and the rest), at the prefilled rent: the
+ *   old code read the rent off the prototype. api.py refuses such a
+ *   region. Any other region text gives the old request.
  */
 import fc from "fast-check";
 import { createHash } from "node:crypto";
@@ -210,7 +212,7 @@ describe("the household request, against a copy of the old code", () => {
     expect(codes(together)).toEqual(["partner.age.notWhole"]);
   });
 
-  it("differs on two inputs the form never holds", () => {
+  it("differs on two kinds of input the form never holds", () => {
     const options = { year: 2027, policies: ["a"] };
     // A partner age as text, without a partner: the old request carried it
     // (api.py takes "30" as 30); the new one leaves it out, as it does any
@@ -218,13 +220,37 @@ describe("the household request, against a copy of the old code", () => {
     const text = { ...WIZARD_DEFAULTS, has_partner: false, partner_age: "30" };
     expect(reference.buildHouseholdRequest(text, options).household.partner_age).toBe("30");
     expect(buildHouseholdRequest(text, options).household).not.toHaveProperty("partner_age");
-    // A region named for a property every object has, renting at the
-    // prefilled rent: the old code read the rent off the prototype; the new
-    // one gives the UK's average. api.py refuses the region either way
-    const region = { ...WIZARD_DEFAULTS, region: "__proto__", tenure: "RENT_PRIVATELY", monthly_rent: null };
-    expect(reference.buildHouseholdRequest(region, options).household.monthly_rent).toEqual({});
-    expect(buildHouseholdRequest(region, options).household.monthly_rent).toBe(1406);
-    expect(UK_REGIONS.map(({ code }) => code)).not.toContain("__proto__");
+    // A region named for one of Object.prototype's properties, renting at
+    // the prefilled rent: the old code read the rent off the prototype ({}
+    // for "__proto__"; a function for the rest, which JSON leaves out); the
+    // new one gives the UK's average. api.py refuses such a region. Any
+    // other region text gives the old request
+    const prototypeNames = Object.getOwnPropertyNames(Object.prototype);
+    expect(prototypeNames).toContain("__proto__");
+    for (const code of UK_REGIONS.map((region) => region.code)) expect(prototypeNames).not.toContain(code);
+    // The body as JSON has it, without its rent
+    const withoutRent = (body) => {
+      const { monthly_rent: _, ...household } = JSON.parse(JSON.stringify(body)).household;
+      return JSON.stringify({ ...body, household });
+    };
+    let named = 0;
+    fc.assert(
+      fc.property(fc.oneof(fc.string(), fc.constantFrom(...prototypeNames)), (region) => {
+        const inputs = { ...WIZARD_DEFAULTS, region, tenure: "RENT_PRIVATELY", monthly_rent: null };
+        const now = buildHouseholdRequest(inputs, options);
+        const before = reference.buildHouseholdRequest(inputs, options);
+        if (!prototypeNames.includes(region)) {
+          expect(JSON.stringify(now)).toBe(JSON.stringify(before));
+          return;
+        }
+        named += 1;
+        expect(now.household.monthly_rent).toBe(1406);
+        expect(JSON.parse(JSON.stringify(before)).household.monthly_rent).not.toBe(1406);
+        expect(withoutRent(now)).toBe(withoutRent(before));
+      }),
+      { numRuns: 500 },
+    );
+    expect(named).toBeGreaterThan(0);
   });
 
   it("is the same text for the examples in every year, stage and measure list", () => {
