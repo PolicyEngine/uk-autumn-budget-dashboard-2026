@@ -448,7 +448,7 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 
 
 # =============================================================================
-# DEFERRED: CARER'S ALLOWANCE EARNINGS TAPER (NOT REGISTERED)
+# CARER'S ALLOWANCE EARNINGS TAPER (INDIVIDUAL CANDIDATE, NOT IN THE PACKAGE)
 # =============================================================================
 
 
@@ -467,19 +467,6 @@ def _create_carers_allowance_earnings_taper() -> Reform:
         ),
         simulation_modifier=carers_allowance_earnings_taper,
     )
-
-
-# Built only on request, and in no list or lookup: not in
-# ``_MEASURE_FACTORIES``, so not in ``get_all_reforms()``,
-# ``list_reform_ids()``, the CLI's default set or the combined package's
-# members. Registering it changes the combined package (its members, its
-# modifier composition and its description), which the 27 October 18:00Z
-# regeneration binds; it waits until after Budget-day publication
-# (PolicyEngine/uk-autumn-budget-dashboard-2026, branch
-# carers-allowance-taper).
-DEFERRED_MEASURE_FACTORIES = {
-    CARERS_ALLOWANCE_TAPER_ID: _create_carers_allowance_earnings_taper,
-}
 
 
 # =============================================================================
@@ -512,6 +499,9 @@ _MEASURE_FACTORIES = (
     _create_badr_lifetime_limit_cut,
     _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
+    # An individual candidate only: not in
+    # AUTUMN_BUDGET_2026_COMBINED_COMPONENTS, so not in the combined run.
+    _create_carers_allowance_earnings_taper,
 )
 
 
@@ -555,8 +545,16 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         members = [factory() for factory in _MEASURE_FACTORIES]
+        # The package holds its components only; a measure registered as
+        # an individual candidate outside them (the Carer's Allowance
+        # taper) is listed but not combined.
+        package = [
+            member
+            for member in members
+            if member.id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        ]
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(members),  # Combined first
+            _create_combined_autumn_budget_reform(package),  # Combined first
             *members,
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -572,7 +570,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the nine candidate measures."""
+    """The combined package, then every individual candidate measure."""
     return _get_autumn_budget_2026_reforms()
 
 

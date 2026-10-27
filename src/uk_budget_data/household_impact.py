@@ -1742,6 +1742,7 @@ SKIP_REASONS = {
     "fuel_duty_rise_deferral": "no petrol or diesel spending",
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
+    "carers_allowance_earnings_taper": "no caring hours are asked for",
 }
 
 
@@ -1773,6 +1774,11 @@ def provably_unaffected(
         return no_fuel or year >= 2028
     if measure_id == "domestic_electricity_zero_vat":
         return not answers.electricity_spending or year >= 2028
+    if measure_id == "carers_allowance_earnings_taper":
+        # The questions carry no caring hours (care_hours stays 0) and no
+        # reported Carer's Allowance, so no one meets its conditions, in
+        # any year, under current law or the taper.
+        return True
     return False
 
 

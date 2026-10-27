@@ -2,10 +2,9 @@
 earnings limit, in place of the cliff edge
 (``carers_allowance_earnings_taper``). Hand-written.
 
-One modifier in a module of its own: see the package docstring. Not
-registered: ``reforms.py`` keeps its measure out of the candidate list and
-the combined package until after Budget-day publication
-(``DEFERRED_MEASURE_FACTORIES``).
+One modifier in a module of its own: see the package docstring.
+Registered in ``reforms.py`` as an individual candidate measure; it is not
+one of the combined package's components.
 """
 
 import numpy as np

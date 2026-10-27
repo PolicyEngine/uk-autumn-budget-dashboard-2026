@@ -57,6 +57,7 @@ const SOURCE_NAMES = {
   warm_home_discount_top_up: "the Warm Home Discount top-up",
   employer_ni_relief_under_25s: "employer National Insurance relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
+  carers_allowance_earnings_taper: "the Carer's Allowance taper",
 };
 // A short name where there is one, else the catalogue's published name
 const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;

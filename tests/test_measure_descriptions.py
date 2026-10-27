@@ -168,6 +168,9 @@ DECLARED = {
     "road_fuel_vat_cut": {"VAT"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
+    # A benefit's entitlement test; the allowance is taxable, but its
+    # rules are unchanged.
+    "carers_allowance_earnings_taper": set(),
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(

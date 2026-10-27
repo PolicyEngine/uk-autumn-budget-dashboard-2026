@@ -1733,6 +1733,13 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             True,
         ),
         ("domestic_electricity_zero_vat", {}, 2028, True),
+        ("carers_allowance_earnings_taper", {}, 2030, True),
+        (
+            "carers_allowance_earnings_taper",
+            {"employment_income": 11_000, "claims_universal_credit": True},
+            2031,
+            True,
+        ),
         ("some_future_measure", {}, 2027, False),
     ],
 )

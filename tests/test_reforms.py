@@ -58,7 +58,13 @@ CANDIDATES = (
     "badr_lifetime_limit_cut",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
+    "carers_allowance_earnings_taper",
 )
+# Individual candidates that are not components of the combined package.
+NOT_IN_PACKAGE = ("carers_allowance_earnings_taper",)
+# Registered on 27 October, before its first national generation: its rows
+# are checked once budgetary_impact.csv has them.
+NOT_YET_GENERATED = ("carers_allowance_earnings_taper",)
 OLD_PLACEHOLDERS = (
     "two_child_limit",
     "fuel_duty_freeze",
@@ -100,7 +106,9 @@ def change(measure_id: str, sit: dict, variable: str, year: int, measure=None):
 def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     assert list_reform_ids() == [AUTUMN_BUDGET_2026_COMBINED_ID, *CANDIDATES]
     assert get_all_reforms() == get_autumn_budget_2026_reforms()
-    assert set(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == set(CANDIDATES)
+    assert set(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == (
+        set(CANDIDATES) - set(NOT_IN_PACKAGE)
+    )
 
 
 def test_the_2025_placeholders_are_gone():
@@ -125,7 +133,7 @@ def test_default_years_are_the_policy_years():
 
 def test_the_combined_package_merges_every_members_changes():
     combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
-    for measure_id in CANDIDATES:
+    for measure_id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         for path, values in (
             get_reform(measure_id).parameter_changes or {}
         ).items():
@@ -958,6 +966,14 @@ FIRST_YEARS = {
         },
         {},
     ),
+    # £11,000 / 52 = £211.53 a week, above the £204 limit (not uprated in
+    # the engine) and below the personal allowance and primary threshold.
+    "carers_allowance_earnings_taper": (
+        2030,
+        "carers_allowance",
+        {"care_hours": 35, "employment_income": 11_000},
+        {},
+    ),
 }
 
 
@@ -997,6 +1013,10 @@ def test_the_published_revenue_starts_in_each_measures_first_year():
         for row in csv.DictReader(path.open())
     }
     for measure_id, (first, *_) in FIRST_YEARS.items():
+        if measure_id in NOT_YET_GENERATED and (
+            (measure_id, first) not in values
+        ):
+            continue
         assert abs(values[(measure_id, first)]) > 0.01, measure_id
         for year in POLICY_YEARS:
             if year < first:

@@ -59,6 +59,7 @@ POLICY_IDS = [
     "badr_lifetime_limit_cut",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
+    "carers_allowance_earnings_taper",
 ]
 
 

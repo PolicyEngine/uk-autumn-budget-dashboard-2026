@@ -28,11 +28,12 @@ Most modifiers are made only of the registered measure templates
 (``measure_templates.TEMPLATES``), so ``template_proof.pure_templates``
 proves them. They keep to the shape it proves: no docstring, only
 assignments of template calls on parameters and literals, then a returned
-template call. Two are hand-written, and need the two-person attestation
+template call. Three are hand-written, and need the two-person attestation
 before an artifact of theirs can be approved: the employer National
-Insurance relief for 21 to 24 year olds (no template changes employer NI)
-and the student loan connection (it deletes the survey's reported
-repayments so the model's own are used).
+Insurance relief for 21 to 24 year olds (no template changes employer NI),
+the student loan connection (it deletes the survey's reported repayments
+so the model's own are used) and the Carer's Allowance earnings taper (no
+template changes an entitlement test).
 
 Fiscal years: year Y is Y-(Y+1). The road fuel VAT cut weights a part
 year by its days from 1 April, the public finances' year; the electricity

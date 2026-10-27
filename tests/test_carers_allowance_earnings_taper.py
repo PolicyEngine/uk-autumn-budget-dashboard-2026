@@ -19,9 +19,9 @@ from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
 from uk_budget_data.reforms import (
+    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+    AUTUMN_BUDGET_2026_COMBINED_ID,
     CARERS_ALLOWANCE_TAPER_ID,
-    DEFERRED_MEASURE_FACTORIES,
-    get_all_reforms,
     get_reform,
     list_reform_ids,
 )
@@ -221,15 +221,18 @@ def test_universal_credit_takes_it_all_back_and_tax_leaves_a_loss():
     assert net_after - net_before == pytest.approx(-506.68, abs=0.01)
 
 
-def test_not_registered_with_the_candidates():
-    # Kept out of the candidate list and the combined package until after
-    # Budget-day publication.
-    assert CARERS_ALLOWANCE_TAPER_ID not in list_reform_ids()
-    assert get_reform(CARERS_ALLOWANCE_TAPER_ID) is None
-    assert all(
-        reform.simulation_modifier is not carers_allowance_earnings_taper
-        for reform in get_all_reforms()
-    )
-    measure = DEFERRED_MEASURE_FACTORIES[CARERS_ALLOWANCE_TAPER_ID]()
-    assert measure.id == CARERS_ALLOWANCE_TAPER_ID
+def test_registered_as_a_candidate_but_not_in_the_package():
+    # An individual candidate measure in the policy picker; the combined
+    # package keeps its own components and does not include it.
+    assert CARERS_ALLOWANCE_TAPER_ID in list_reform_ids()
+    measure = get_reform(CARERS_ALLOWANCE_TAPER_ID)
     assert measure.simulation_modifier is carers_allowance_earnings_taper
+    assert measure.description.startswith("Candidate measure.")
+    assert CARERS_ALLOWANCE_TAPER_ID not in (
+        AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+    )
+    combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
+    assert carers_allowance_earnings_taper.__name__ not in (
+        combined.description
+    )
+    assert measure.name not in combined.description
