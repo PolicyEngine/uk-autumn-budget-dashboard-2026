@@ -52,12 +52,14 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
 // The official costings follow the Budget; until then Public finances shows
-// no comparison at all.
+// no comparison at all. The OBR's prices by spending category wait on their
+// review row; until then their card says they are not yet available.
 const NOT_YET_PUBLISHED = new Set([
   "/data/regional.csv",
   "/data/constituency.csv",
   "/data/release-index.json",
   "/data/official_costings.json",
+  "/data/obr_price_categories.json",
 ]);
 
 // Text that means a tab failed instead of showing its content.

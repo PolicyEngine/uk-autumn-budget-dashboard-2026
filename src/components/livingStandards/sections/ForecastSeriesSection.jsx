@@ -21,10 +21,14 @@ import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
+import ObrPriceCategoriesCard from "../ObrPriceCategoriesCard";
 
 // A section's extra card, drawn beside its forecast card in the shared pair
-// (keyed by the forecast section's title); none at present
-const HISTORY_CARDS = {};
+// (keyed by the forecast section's title): the OBR's prices by spending
+// category beside the inflation measures
+const HISTORY_CARDS = {
+  "Inflation and price indices": ObrPriceCategoriesCard,
+};
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
