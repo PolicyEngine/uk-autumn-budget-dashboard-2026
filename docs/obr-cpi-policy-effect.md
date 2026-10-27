@@ -8,6 +8,8 @@ In the EFO published with the Budget, chapter 3 ("Policy measures"), find the ch
 
 ## The file
 
+The values below are illustrative (the chart, sheet, page and figures come from the new EFO):
+
 ```json
 {
   "schema": "uk-budget-obr-cpi-policy-effect/v1",
