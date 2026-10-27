@@ -319,3 +319,16 @@ def test_per_year_units_write_the_same_bytes_on_the_engine(
         # Something to compare: rows for the measure and the package
         assert whole.count(b"\n") > 10, name
         assert whole == (tmp_path / "True" / name).read_bytes(), name
+
+
+def test_per_year_cost_guards():
+    """The per-year cap and timeout, read as the app's own guards are."""
+    from pathlib import Path
+
+    from uk_budget_data import modal_runner
+
+    assert modal_runner.YEAR_MAX_CONTAINERS == 64
+    assert modal_runner.YEAR_TIMEOUT_S == 15 * 60
+    source = Path(modal_runner.__file__).read_text()
+    assert "max_containers=YEAR_MAX_CONTAINERS" in source
+    assert "timeout=YEAR_TIMEOUT_S" in source
