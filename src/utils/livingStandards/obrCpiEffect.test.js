@@ -119,10 +119,10 @@ describe("obrCpiEffectSentence", () => {
 
 describe("chart helpers", () => {
   it("signs points and shows no negative zero", () => {
-    expect(ppText(-0.43)).toBe("-0.4");
+    expect(ppText(-0.43)).toBe("−0.4");
     expect(ppText(0.09)).toBe("+0.1");
     expect(ppText(-0.003)).toBe("0.0");
-    expect(ppText2(-0.0455)).toBe("-0.05");
+    expect(ppText2(-0.0455)).toBe("−0.05");
     expect(ppText2(0.0898)).toBe("+0.09");
     expect(ppText2(-0.001)).toBe("0.00");
   });

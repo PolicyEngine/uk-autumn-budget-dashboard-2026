@@ -24,6 +24,7 @@ import {
   ppAxis,
   ppText,
   ppText2,
+  ppSize2,
 } from "../../utils/livingStandards/obrCpiEffect";
 
 export const OBR_CPI_EFFECT_ANCHOR = "obr-cpi-effect";
@@ -206,7 +207,8 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
         series={series}
         xFormat={String}
         yFormat={ppText}
-        tooltipFormat={ppText2}
+        tooltipFormat={ppSize2}
+        showPlus
         yLabel="Effect on CPI inflation (percentage points)"
         yDomain={axis.domain}
         yTicks={axis.ticks}

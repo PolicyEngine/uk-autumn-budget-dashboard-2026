@@ -139,17 +139,20 @@ export function obrCpiEffectSentence(years) {
   return `The OBR estimates the Budget's measures ${list}.`;
 }
 
-/** Signed points for ticks and tooltips: "+0.1", "-0.4", "0.0". */
+/** Signed points for ticks and sentences' figures: "+0.1", "−0.4", "0.0". */
 export function ppText(pp) {
   const v = shown(pp);
-  return `${v > 0 ? "+" : ""}${formatOneDp(v)}`;
+  return `${v > 0 ? "+" : v < 0 ? "−" : ""}${formatOneDp(Math.abs(v))}`;
 }
 
-/** Signed points to two places, for tooltips and the table, where a measure's part can be under 0.05: "-0.43", "+0.09". */
+/** Signed points to two places, for tooltips and the table, where a measure's part can be under 0.05: "−0.43", "+0.09". */
 export function ppText2(pp) {
   const v = Math.round(pp * 100) / 100 + 0;
-  return `${v > 0 ? "+" : ""}${v.toFixed(2)}`;
+  return `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}`;
 }
+
+/** Unsigned, for the shared tooltip, which signs the value itself. */
+export const ppSize2 = (pp) => Math.abs(pp).toFixed(2);
 
 /**
  * The y axis in steps of 0.1 points (0.2 or 0.5 for larger effects),

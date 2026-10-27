@@ -53,7 +53,7 @@ describe("Effect of the Budget's measures on CPI inflation (OBR)", () => {
     const heading = await screen.findByRole("heading", { level: 3, name: PREVIEW_TITLE });
     const table = within(heading.closest(".ls-card")).getByRole("table");
     const row = within(table).getByRole("row", { name: /2026-27/ });
-    expect(within(row).getAllByRole("cell").map((c) => c.textContent)).toEqual(["2026-27", "-0.43"]);
+    expect(within(row).getAllByRole("cell").map((c) => c.textContent)).toEqual(["2026-27", "−0.43"]);
   });
 
   it("is not drawn before the file is published, nor for an unlabelled earlier Budget", async () => {
