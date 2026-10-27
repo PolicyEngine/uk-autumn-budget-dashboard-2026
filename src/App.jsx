@@ -790,7 +790,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
       data-band-hidden={bandHidden && titleStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
-      <main className="main-content" ref={mainRef}>
+      {/* A div, not <main>: the PolicyEngine shell around the page is the
+          main landmark, and a second one inside it is a landmark error */}
+      <div className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
             selector still in reach. The sentinel tells it when it is stuck. */}
@@ -954,7 +956,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             />
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }
