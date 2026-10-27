@@ -50,7 +50,10 @@ describe("the ui-kit shell's sticky site nav", () => {
 });
 
 describe("showing the site nav", () => {
+  afterEach(() => vi.useRealTimers());
+
   const setup = (inShell = false) => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     vi.stubGlobal("fetch", async () => new Promise(() => {}));
     // Runs the frame at once; 0 so the next scroll asks for another
     vi.stubGlobal("requestAnimationFrame", (fn) => { fn(); return 0; });
@@ -64,12 +67,23 @@ describe("showing the site nav", () => {
       window.scrollY = y;
       window.dispatchEvent(new Event("scroll"));
     });
+    const wait = (ms) => act(() => vi.advanceTimersByTime(ms));
     const shown = () => root.hasAttribute("data-site-nav-shown");
-    return { root, scrollTo, shown };
+    const nav = () => document.querySelector(SELECTOR);
+    // Off the nav, at clientY; or over the nav (from one of its links)
+    const move = (clientY) => act(() => {
+      window.dispatchEvent(new MouseEvent("mousemove", { clientY }));
+    });
+    const moveOver = () => act(() => {
+      nav().querySelector("a, button").dispatchEvent(
+        new MouseEvent("mousemove", { clientY: 30, bubbles: true }),
+      );
+    });
+    return { root, scrollTo, wait, shown, nav, move, moveOver };
   };
 
-  it("is hidden on load, shows scrolling up, hides scrolling down, and ignores scrolls under 6px", () => {
-    const { scrollTo, shown } = setup();
+  it("is hidden on load, shows scrolling up, and ignores scrolls under 6px", () => {
+    const { scrollTo, wait, shown } = setup();
     expect(shown()).toBe(false);
     scrollTo(4);
     expect(shown()).toBe(false);
@@ -79,33 +93,98 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(false);
     scrollTo(300);
     expect(shown()).toBe(true);
-    scrollTo(304);
-    expect(shown()).toBe(true);
-    scrollTo(600);
-    expect(shown()).toBe(false);
-    scrollTo(0);
-    expect(shown()).toBe(true);
-    scrollTo(200);
-    expect(shown()).toBe(false);
     cleanup();
+    expect(shown()).toBe(false);
+    wait(10_000);
     expect(shown()).toBe(false);
   });
 
-  it("shows while the pointer is at the top 8px of the window, and when focus enters it", () => {
-    const { shown } = setup(true);
-    const move = (clientY) => act(() => {
-      window.dispatchEvent(new MouseEvent("mousemove", { clientY }));
-    });
+  it("stays 3s whatever the scroll, then hides only on a run down of over 120px", () => {
+    const { scrollTo, wait, shown } = setup();
+    scrollTo(400);
+    scrollTo(300);
+    expect(shown()).toBe(true);
+    // A big scroll down inside the 3s waits for the 3s
+    scrollTo(600);
+    wait(2_999);
+    expect(shown()).toBe(true);
+    wait(1);
+    expect(shown()).toBe(false);
+    scrollTo(500);
+    expect(shown()).toBe(true);
+    wait(3_000);
+    // Small scrolls down after the 3s keep it: 60px, then up 4px, then 100px
+    scrollTo(560);
+    expect(shown()).toBe(true);
+    scrollTo(556);
+    scrollTo(656);
+    wait(0);
+    expect(shown()).toBe(true);
+    // ...until the run down passes 120px
+    scrollTo(680);
+    wait(0);
+    expect(shown()).toBe(false);
+    scrollTo(0);
+    expect(shown()).toBe(true);
+  });
+
+  it("shows at the top 8px of the window, holds while the pointer is over it, and hides 1.5s after it leaves", () => {
+    const { scrollTo, wait, shown, move, moveOver } = setup(true);
     move(300);
     expect(shown()).toBe(false);
     move(6);
     expect(shown()).toBe(true);
+    moveOver();
+    wait(10_000);
+    scrollTo(2_000);
+    wait(10_000);
+    expect(shown()).toBe(true);
     move(400);
+    wait(1_499);
+    expect(shown()).toBe(true);
+    // Coming back cancels the hide
+    moveOver();
+    wait(5_000);
+    expect(shown()).toBe(true);
+    move(400);
+    wait(1_500);
     expect(shown()).toBe(false);
-    const link = document.querySelector(SELECTOR).querySelector("a, button");
+    // Leaving straight after it shows still keeps the 3s
+    move(6);
+    move(400);
+    wait(2_999);
+    expect(shown()).toBe(true);
+    wait(1);
+    expect(shown()).toBe(false);
+  });
+
+  it("holds while focus is in it, and hides 1.5s after focus leaves", () => {
+    const { wait, shown, nav } = setup(true);
+    const link = nav().querySelector("a, button");
     act(() => link.focus());
     expect(shown()).toBe(true);
+    wait(10_000);
+    expect(shown()).toBe(true);
     act(() => link.blur());
+    wait(1_499);
+    expect(shown()).toBe(true);
+    wait(1);
+    expect(shown()).toBe(false);
+  });
+
+  it("holds while one of its menus is open", () => {
+    const { wait, shown, nav, move, moveOver } = setup(true);
+    move(6);
+    moveOver();
+    // An open ui-kit menu puts a role="presentation" overlay in the nav
+    const overlay = document.createElement("div");
+    overlay.setAttribute("role", "presentation");
+    act(() => nav().appendChild(overlay));
+    move(400);
+    wait(10_000);
+    expect(shown()).toBe(true);
+    act(() => overlay.remove());
+    wait(1_500);
     expect(shown()).toBe(false);
   });
 });

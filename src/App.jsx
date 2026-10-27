@@ -199,6 +199,12 @@ export function viewFromLocation({ search, hash }) {
 // until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
+// Once shown, the site nav stays at least this long; hides this long after
+// the pointer or focus leaves it; and a run down the page longer than this
+// (px) hides it after the minimum.
+export const SITE_NAV_MIN_MS = 3000;
+export const SITE_NAV_LEAVE_MS = 1500;
+export const SITE_NAV_SCROLL_HIDE_PX = 120;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -435,9 +441,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. It slides in above the band when the
   // reader scrolls up (by 6px or more), points at the top 8px of the
-  // window, or tabs into it, and hides again when they scroll down or the
-  // pointer or focus leaves it (globals.css: data-site-nav-shown on
-  // <html>, --site-nav-height).
+  // window, or tabs into it (globals.css: data-site-nav-shown on <html>,
+  // --site-nav-height; the slide is instant under reduced motion). Once in,
+  // it stays long enough to be clicked: at least SITE_NAV_MIN_MS whatever
+  // small scrolls happen, never while the pointer or focus is in it or one
+  // of its menus is open, and SITE_NAV_LEAVE_MS after the pointer or focus
+  // leaves. Only a deliberate scroll down (over SITE_NAV_SCROLL_HIDE_PX in
+  // one run) hides it, once the minimum is up.
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -448,21 +458,51 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     if (nav) resize?.observe(nav);
     let last = window.scrollY;
+    let prev = last;
+    let runFrom = last;
     let frame = 0;
-    let byPointer = false;
-    const setShown = (shown) => {
-      if (!shown) byPointer = false;
-      root.toggleAttribute("data-site-nav-shown", shown);
+    let shownAt = 0;
+    let timer = 0;
+    let pointerIn = false;
+    const isShown = () => root.hasAttribute("data-site-nav-shown");
+    // The ui-kit menus (About, country) put a full-window overlay with
+    // role="presentation" inside the nav while they are open
+    const holds = () =>
+      !!nav &&
+      (pointerIn ||
+        nav.contains(document.activeElement) ||
+        !!nav.querySelector('[role="presentation"]'));
+    const clear = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = 0;
     };
-    const holds = () => !!nav && nav.contains(document.activeElement);
+    const show = () => {
+      clear();
+      shownAt = Date.now();
+      runFrom = window.scrollY;
+      root.setAttribute("data-site-nav-shown", "");
+    };
+    const hideAfter = (delay) => {
+      if (!isShown()) return;
+      clear();
+      const wait = Math.max(delay, shownAt + SITE_NAV_MIN_MS - Date.now());
+      timer = window.setTimeout(() => {
+        timer = 0;
+        if (holds()) hideAfter(SITE_NAV_LEAVE_MS);
+        else root.removeAttribute("data-site-nav-shown");
+      }, wait);
+    };
     const check = () => {
       frame = 0;
       const y = window.scrollY;
+      // runFrom: where the current run down began
+      if (y < prev) runFrom = y;
+      prev = y;
       if (y > last + 6) {
-        if (!holds()) setShown(false);
         last = y;
+        if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);
       } else if (y < last - 6) {
-        setShown(true);
+        show();
         last = y;
       }
     };
@@ -470,22 +510,26 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       if (!frame) frame = window.requestAnimationFrame(check);
     };
     const onPointer = (event) => {
+      const over =
+        !!nav &&
+        isShown() &&
+        ((event.target instanceof Node && nav.contains(event.target)) ||
+          event.clientY <= nav.offsetHeight);
       if (event.clientY <= 8) {
-        if (!root.hasAttribute("data-site-nav-shown")) byPointer = true;
-        setShown(true);
-      } else if (
-        byPointer &&
-        !(nav && event.target instanceof Node && nav.contains(event.target)) &&
-        event.clientY > (nav ? nav.offsetHeight : 0) &&
-        !holds()
-      ) {
-        setShown(false);
+        pointerIn = true;
+        show();
+      } else if (over) {
+        if (!pointerIn) clear();
+        pointerIn = true;
+      } else if (pointerIn) {
+        pointerIn = false;
+        hideAfter(SITE_NAV_LEAVE_MS);
       }
     };
-    const onFocusIn = () => setShown(true);
+    const onFocusIn = () => show();
     const onFocusOut = (event) => {
       if (!(nav && event.relatedTarget instanceof Node && nav.contains(event.relatedTarget))) {
-        setShown(false);
+        hideAfter(SITE_NAV_LEAVE_MS);
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -498,6 +542,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
+      clear();
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
       root.style.removeProperty("--site-nav-height");
