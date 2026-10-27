@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import MeasureEffectsView from "./MeasureEffectsView";
 import { SUMMARY_METRICS } from "./SummaryMetricChart";
+import { CHART_COLOURS } from "../utils/chartTheme";
 
 const BY_MEASURE = [
-  { id: "a", name: "Measure A", colour: "#123456", points: [{ year: 2027, value: -0.5 }, { year: 2028, value: 0.4 }] },
+  { id: "a", name: "Measure A", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: -0.5 }, { year: 2028, value: 0.4 }] },
 ];
 const YEARS = [2027, 2028];
 
