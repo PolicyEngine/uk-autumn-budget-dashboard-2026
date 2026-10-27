@@ -775,11 +775,12 @@ body {
 }
 
 /* The band's two controls (year, measures; YearSlider.jsx and
-   PolicySelector.jsx): the card Options pill's shape (a full pill, a
-   1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent dark pill with a white border and white text. The label and the value share
-   one line, the label regular and muted, the value bold. Their lists stay
-   white. */
+   PolicySelector.jsx): the page's selectable-row box (--pe-radius-md,
+   40px high, like the Show all households button and the household
+   rows), a 1px border, an icon, the value, a chevron, on the teal band as
+   a translucent dark box with a white border and white text. The label
+   and the value share one line, the label regular and muted, the value
+   bold. Their lists stay white, in the same box shape. */
 .title-row .band-control {
   height: 40px;
   min-width: 0;
@@ -788,7 +789,7 @@ body {
   color: var(--band-ink);
   background: var(--band-control-fill);
   border: 1px solid var(--band-ink-border);
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
 }
 
 .title-row .band-control:disabled {
