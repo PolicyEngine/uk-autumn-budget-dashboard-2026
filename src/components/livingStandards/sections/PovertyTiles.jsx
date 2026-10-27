@@ -52,9 +52,9 @@ function trendRows(projection, startYear, end) {
     .sort((a, b) => a.start - b.start);
 }
 
-/** The info tip: the measure, and why the levels sit below official figures. */
+/** The info tip: the measure, and that the levels sit below official figures. */
 const tileInfo = (measure) =>
-  `${povertyDefinition(measure)} The tile leads with the change: PolicyEngine's levels sit well below DWP's official rates because its data are reweighted to 2025 totals, so the levels are model estimates. Official rates are on the Poverty over time card.`;
+  `${povertyDefinition(measure)} The tile leads with the change: the model's levels sit below DWP's official rates, so the levels are model estimates. Official rates are on the Poverty over time card.`;
 
 export default function PovertyTiles({ data }) {
   const years = rangeYears(data);

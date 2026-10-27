@@ -891,12 +891,12 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               info={{
                 how: [
                   `Your place is how many in 100 people in the UK ${PLACE_MEANING}, in ${yearLabel}, before or after the selected policies as chosen above.`,
-                  `Household income is net income after all taxes; yours is divided by ${position.factor.toFixed(2)} for your household's size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
+                  `Your household's net income is divided by ${position.factor.toFixed(2)} for its size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
                   "Spread shows how many people have each household income; Rank shows how many have a lower one than each. Both are the same distribution, on the same axis.",
                   "Your place before ranks among everyone's income before the policies; after, among everyone's after.",
                 ],
                 caveats: [
-                  "The curves before and after overlap almost exactly: the changes are small next to incomes.",
+                  "Where the changes are small next to incomes, the curves before and after overlap almost exactly.",
                   !run.exact && "The UK distribution after is the whole package's run; your own income after uses only your selection.",
                 ],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your place in the UK is worked out" },
