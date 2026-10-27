@@ -912,6 +912,8 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 
 ## The full run on Modal: order, timings and failures (26 October)
 
+The day's order on one page, with who runs what and what runs side by side: [`budget-day-checklist.md`](budget-day-checklist.md).
+
 The measured version of G2 to G4 on Modal, from Monday's full regeneration (26 October, `main` at 0fc752f, policyengine-uk 2.132.6, $1.13 in all) and the Modal app history. The timing table in "Faster generation on Budget day" above is older and partly estimated; where they differ, this one is measured.
 
 **Before the day (Tuesday evening, after the final lock):** build both images, or the first run of the day waits about 12 minutes for one. Neither needs the secret or data.
