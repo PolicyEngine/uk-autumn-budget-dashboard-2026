@@ -91,8 +91,9 @@ describe("the page's verified publication catalogue", () => {
     manifest.combined = {};
     const artifact = manifest.measures.alpha.artifact;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest), "budgetary_impact.csv": fixtureText(`${artifact}/budgetary_impact.csv`) } }));
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha");
     render(<App />);
-    expect(await screen.findByText(/Alpha: Results unavailable/)).toBeInTheDocument();
+    expect(await screen.findByText(/Alpha \(Results unavailable/)).toBeInTheDocument();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
@@ -133,14 +134,14 @@ describe("an open page follows the publication", () => {
   };
   const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
 
-  it("takes a chosen selection's figures away when one of its measures is withdrawn", async () => {
+  it("takes a chosen selection's figures away when one of its measures goes stale", async () => {
     window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
     expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
-    // A correction withdraws beta while the page is open
-    const next = twoMeasures("withdrawn");
+    // A correction marks beta stale while the page is open
+    const next = twoMeasures("stale");
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
@@ -151,14 +152,14 @@ describe("an open page follows the publication", () => {
     expect(screen.getByText(/Updated with the latest published results/)).toBeInTheDocument();
   });
 
-  it("lets the reader remove a withdrawn measure and keep the rest", async () => {
-    // Review of 62febdd, finding 4: the selector cannot offer a withdrawn
+  it("lets the reader remove an unavailable measure and keep the rest", async () => {
+    // Review of 62febdd, finding 4: the selector cannot offer an unavailable
     // measure, so the notice must, or a chosen selection never recovers
     window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
-    const next = twoMeasures("withdrawn");
+    const next = twoMeasures("stale");
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
@@ -184,8 +185,45 @@ describe("an open page follows the publication", () => {
     expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
     await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
     expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
-    expect(screen.getAllByText("This measure is excluded from the displayed figures. Totals cover the selected available measures.").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Withdrawn/)).toBeNull();
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
+  });
+
+  // A withdrawn entry (taken out by decision) does not exist for the reader
+  it("drops a withdrawn measure in the link silently and rewrites the address", async () => {
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures("withdrawn")) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    expect(rowIds()).toEqual(new Set(["alpha"]));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("policies")).toBe("alpha"));
+    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText(/Withdrawn/)).toBeNull();
+    expect(document.querySelector(".publication-unavailable")).toBeNull();
+  });
+
+  it("leaves a withdrawn measure out of the picker and the counts", async () => {
+    window.history.replaceState({}, "", "/?sub=all");
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures("withdrawn")) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    expect(Number(document.querySelector(".band-policy .policy-selector-count")?.textContent)).toBe(1);
+    expect(document.querySelector(".band-policy").textContent).toMatch(/All\s*1/);
+    fireEvent.click(document.querySelector(".band-policy button"));
+    const beta = fixtureJson("manifest.json").measures.beta.name;
+    expect(screen.queryByText(beta)).toBeNull();
+    expect(screen.getAllByText(fixtureJson("manifest.json").measures.alpha.name).length).toBeGreaterThan(0);
+  });
+
+  it("names a selected unavailable measure and its reason in one line inside the view, not a box above the tabs", async () => {
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures("stale")) } }));
+    render(<App />);
+    const notice = (await screen.findByText("Some selected measures are unavailable")).closest(".publication-unavailable");
+    expect(notice.closest(".view-stage")).not.toBeNull();
+    expect(within(notice).getByText(/\(Stale/)).toBeInTheDocument();
+    expect(document.querySelectorAll(".publication-unavailable")).toHaveLength(1);
+    expect(screen.queryByText(/excluded from the displayed figures/)).toBeNull();
   });
 
   it("replaces an approved measure's figures with its newly verified artifact", async () => {

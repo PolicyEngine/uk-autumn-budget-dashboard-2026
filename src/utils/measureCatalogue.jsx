@@ -77,7 +77,10 @@ export function publishedEngine(catalogue, ids) {
 /** Only an explicit publication manifest supplies catalogue membership. */
 export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [], tablesByKey = null, failures = {} } = {}) {
   const rows = [...budgetary, ...distributional, ...winnersLosers, ...metrics];
-  const ids = manifest ? Object.keys(manifest.measures) : [];
+  // A withdrawn entry is taken out by decision: it does not exist for the
+  // reader (no picker row, no count, no notice), only for the package gate
+  const withdrawn = new Set(manifest ? Object.keys(manifest.measures).filter((id) => manifest.measures[id]?.status === "withdrawn") : []);
+  const ids = manifest ? Object.keys(manifest.measures).filter((id) => !withdrawn.has(id)) : [];
   const measures = ids.sort(compareIds).map((id, order) => {
     const entry = manifest?.measures[id];
     const receipt = receipts[id]?.dashboard ?? receipts[id];
@@ -113,7 +116,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   const combined = manifest ? combinedEntryFor(manifest, displayable.map((measure) => measure.id)) : null;
   const combinedIds = combined && !combined.single ? [combined.key] : [];
   return {
-    measures, displayable, manifest, tablesByKey, failures,
+    measures, displayable, manifest, tablesByKey, failures, withdrawn,
     byId: new Map(measures.map((measure) => [measure.id, measure])),
     bySeriesKey: new Map(measures.map((measure) => [measure.seriesKey, measure])),
     policyColors: Object.fromEntries(displayable.map((measure) => [measure.seriesKey, measure.color])),

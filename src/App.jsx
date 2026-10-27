@@ -260,7 +260,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // under the same manifest joins it, as on a fresh load (review of
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
-  const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
+  // A withdrawn measure in a link or a kept selection drops out silently;
+  // the address writer below then rewrites ?policies= without it
+  const selectedPolicies = useMemo(() => {
+    const chosen = selectionChosen ? chosenPolicies : defaultPolicies;
+    return catalogue.withdrawn?.size ? chosen.filter((id) => !catalogue.withdrawn.has(id)) : chosen;
+  }, [selectionChosen, chosenPolicies, defaultPolicies, catalogue]);
   // Once the first view has painted, every other view's tables load and
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
@@ -666,7 +671,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const unavailableIds = selectedPolicies.filter((id) => !catalogue.byId.get(id)?.displayable);
   const selectionUnavailable = unavailableIds.length ? {
     reason: "Some selected measures are unavailable",
-    detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
+    // One line inside the view: each selected measure and why it is out
+    // (a withdrawn one never reaches here; it drops from the selection)
+    detail: unavailableIds.map((id) => {
+      const measure = catalogue.byId.get(id);
+      return `${measure?.name ?? id} (${measure?.availability.reason || "Not yet published"})`;
+    }).join("; "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
   // The views with sub-tabs open into their band (SubTabs); not while
@@ -946,12 +956,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         {/* A newer publication replaced the figures: a passing note, once */}
         <UpdateToast show={updated} />
-        {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
-          <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
-            <p>{measure.description}</p>
-            <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
-          </UnavailableNotice>
-        ))}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs

@@ -93,16 +93,16 @@ describe("a later snapshot keeps the reader's selection", () => {
   };
   const householdCalls = (calls) => calls.filter((call) => call.method === "POST" || call.url.includes("/api/household-impact"));
 
-  it("shows a withdrawn personal measure as unavailable instead of dropping it", async () => {
+  it("shows a stale personal measure as unavailable instead of dropping it", async () => {
     const calls = [];
     open("/?tab=household&policies=alpha,beta", await serve(), calls);
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
     // Before the withdrawal the example cards may ask the household API in
-    // the background (useExampleFigures); once beta is withdrawn nothing more
+    // the background (useExampleFigures); once beta is stale nothing more
     // is asked for the selection
-    await publish(await serve({ beta: "withdrawn" }, 1), calls);
+    await publish(await serve({ beta: "stale" }, 1), calls);
     expect(await screen.findByText(REASON)).toBeInTheDocument();
     expect(policies()).toBe("alpha,beta");
     const asked = householdCalls(calls).length;
