@@ -12,8 +12,8 @@ export const SOURCES = {
   // this at the new Economic and fiscal outlook; the Methodology text
   // names whatever this label says.
   obr_efo_current: {
-    label: "OBR, Economic and fiscal outlook – March 2026",
-    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+    label: "OBR, Economic and fiscal outlook – November 2025",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/",
   },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",
@@ -125,8 +125,8 @@ Object.assign(SOURCES, {
   // Update on Budget day (runbook step): the Autumn Budget 2026 document and
   // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
   budget_documents: {
-    label: "HM Treasury",
-    url: "https://www.gov.uk/government/organisations/hm-treasury",
+    label: "HM Treasury, Budget 2025 document",
+    url: "https://www.gov.uk/government/publications/budget-2025-document",
   },
   // Published with the Budget on 28 October 2026; linked once it exists
   obr_budget_2026_costings: {
