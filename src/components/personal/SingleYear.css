@@ -1144,7 +1144,7 @@
 .waterfall-row,
 .waterfall-axis {
   display: grid;
-  grid-template-columns: minmax(120px, 32%) minmax(0, 1fr) 76px;
+  grid-template-columns: minmax(120px, min(32%, 240px)) minmax(0, 1fr) 76px;
   column-gap: 12px;
   align-items: center;
 }
