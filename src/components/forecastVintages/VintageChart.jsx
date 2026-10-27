@@ -18,7 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import GroupedLegend from "../GroupedLegend";
-import ChartUnitLabel from "../../utils/ChartUnitLabel";
+import ChartUnitLabel, { ABOVE_PLOT, FONT_SIZE as UNIT_SIZE } from "../../utils/ChartUnitLabel";
 import useElementWidth from "../../hooks/useElementWidth";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import {
@@ -54,10 +54,6 @@ const MAX_LEVEL = 40;
 // The caption's size, and the space kept between two labels' text
 const CAPTION_SIZE = 11;
 const LABEL_GAP = { x: 6, y: 2 };
-// The unit label over the y axis (ChartUnitLabel): 12px, its baseline 12px
-// above the plot
-const UNIT_SIZE = 12;
-const UNIT_BASELINE = -12;
 // A labelled dot's radius, its outline included
 const DOT_REACH = 6;
 // A label that would leave the plot gets room made for it above or below
@@ -258,6 +254,21 @@ export function textWidth(text, size, bold = false) {
   return em * size * WIDTH_SPARE;
 }
 
+/**
+ * The room the unit label over the y axis takes, in pixels from the
+ * plot's top left, for a y axis `yWidth` wide: ChartUnitLabel draws it
+ * from the axis's left, its baseline ABOVE_PLOT over the plot, in
+ * UNIT_SIZE text, so this moves with it.
+ */
+export function unitLabelBox(text, yWidth) {
+  return {
+    left: -yWidth,
+    right: -yWidth + textWidth(text, UNIT_SIZE),
+    top: -ABOVE_PLOT - 0.8 * UNIT_SIZE,
+    bottom: -ABOVE_PLOT + 3,
+  };
+}
+
 /** Whether two boxes overlap, or come within `gap` of each other. */
 export function boxesMeet(a, b, gap = { x: 0, y: 0 }) {
   return a.left < b.right + gap.x && b.left < a.right + gap.x && a.top < b.bottom + gap.y && b.top < a.bottom + gap.y;
@@ -440,12 +451,7 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
       top: 2 - MARGIN.top,
       bottom: plotHeight,
     };
-    const unitLabel = {
-      left: -yWidth,
-      right: -yWidth + textWidth(view.axisLabel, UNIT_SIZE),
-      top: UNIT_BASELINE - 0.8 * UNIT_SIZE,
-      bottom: UNIT_BASELINE + 3,
-    };
+    const unitLabel = unitLabelBox(view.axisLabel, yWidth);
     const labels = pointLabels(points, {
       px,
       py,

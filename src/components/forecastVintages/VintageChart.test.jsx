@@ -8,6 +8,8 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import fc from "fast-check";
+import { Customized, Line, LineChart, XAxis, YAxis } from "recharts";
+import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import VintageChart, {
   MARGIN,
   boxesMeet,
@@ -17,6 +19,7 @@ import VintageChart, {
   legendItems,
   pointLabels,
   textWidth,
+  unitLabelBox,
   xTicks,
   yAxisFor,
 } from "./VintageChart";
@@ -92,6 +95,20 @@ describe("the labelled points' text", () => {
           expect(l.level).toBeGreaterThanOrEqual(0);
           expect(l.lift).toBe(l.level * 34);
         }
+        expect(collisions(labels)).toEqual([]);
+      }),
+    );
+  });
+
+  it("keeps every label's text off an obstacle, wherever it is", () => {
+    // A box the size of a unit label, anywhere over or in the plot
+    const obstacleArb = fc
+      .record({ left: fc.integer({ min: -60, max: 600 }), top: fc.integer({ min: -60, max: 300 }), width: fc.integer({ min: 1, max: 200 }) })
+      .map(({ left, top, width }) => ({ left, right: left + width, top, bottom: top + 13 }));
+    fc.assert(
+      fc.property(pointsArb, obstacleArb, fc.boolean(), (points, obstacle, narrow) => {
+        const labels = pointLabels(points, { ...place, format, narrow, obstacles: [obstacle] });
+        for (const l of labels) for (const t of l.boxes.text) expect(boxesMeet(t, obstacle), `${l.role} on the obstacle`).toBe(false);
         expect(collisions(labels)).toEqual([]);
       }),
     );
@@ -252,6 +269,8 @@ describe("the chart's layout", () => {
             for (const c of collisions([l], apart)) problems.push(`${where}: ${c}`);
           }
           for (const c of collisions(layout.labels)) problems.push(`${where}: ${c}`);
+          const unitLabel = unitLabelBox(view.axisLabel, layout.yWidth);
+          for (const l of layout.labels) if (l.boxes.text.some((t) => boxesMeet(t, unitLabel))) problems.push(`${where}: ${l.role} on the unit label`);
           for (const l of layout.labels) if (l.conflicts > 1) problems.push(`${where}: ${l.role} has ${l.conflicts} conflicts`);
           for (const l of layout.labels) {
             for (const t of l.boxes.text) {
@@ -469,6 +488,40 @@ describe("the chart's layout", () => {
     const layout = chartLayout(view, view.rows, { canvasWidth: 0 });
     expect(layout.labels.every((l) => l.boxes === null)).toBe(true);
     expect(layout.room).toEqual({ headroom: 0, footroom: 0 });
+  });
+});
+
+describe("the unit label's room", () => {
+  // Found after ChartUnitLabel moved the label from 12px to 25px over the
+  // plot: the room the labels kept clear for it had stayed at 12px
+  it("is where Recharts and ChartUnitLabel draw the label, on the chart's margin", () => {
+    const view = buildView(DATA, variable("real_gdp"), { unit: "level" });
+    const yWidth = 52;
+    // The plot's top left, as Recharts lays it out
+    const Plot = ({ offset }) => <rect className="plot-probe" x={offset.left} y={offset.top} width={1} height={1} />;
+    const { container } = render(
+      <LineChart width={900} height={440} margin={MARGIN} data={view.rows}>
+        <XAxis dataKey="x" />
+        <YAxis width={yWidth} />
+        <Line dataKey={OUTTURN_KEY} />
+        <Customized component={<Plot />} />
+        <Customized component={<ChartUnitLabel text={view.axisLabel} horizontal />} />
+      </LineChart>,
+    );
+    const text = container.querySelector(".chart-unit-label");
+    const plot = container.querySelector(".plot-probe");
+    const x = Number(text.getAttribute("x")) - Number(plot.getAttribute("x"));
+    const baseline = Number(text.getAttribute("y")) - Number(plot.getAttribute("y"));
+    const size = Number(text.getAttribute("font-size"));
+    const box = unitLabelBox(view.axisLabel, yWidth);
+    expect(box.left).toBe(x);
+    expect(box.right - box.left).toBeCloseTo(textWidth(view.axisLabel, size));
+    // The glyphs over the baseline, and descenders under it
+    expect(box.top).toBeLessThanOrEqual(baseline - 0.8 * size);
+    expect(box.bottom).toBeGreaterThanOrEqual(baseline + 2);
+    expect(box.bottom).toBeLessThanOrEqual(baseline + 4);
+    // And inside the chart, under its top
+    expect(box.top).toBeGreaterThanOrEqual(-MARGIN.top);
   });
 });
 
