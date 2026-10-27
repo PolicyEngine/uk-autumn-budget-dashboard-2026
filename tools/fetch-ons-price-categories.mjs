@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Fetch the ONS series behind the "Prices by spending category since July
-// 2021" card and write public/data/price_categories.json.
+// Fetch the ONS series behind the "Prices by category since 2021" card (base July
+// 2021) and write public/data/price_categories.json.
 //
 // Each series comes from the ONS time series API (www.ons.gov.uk/<topic>/
 // timeseries/<cdid>/<dataset>/data): CPI indices (2015=100) from the

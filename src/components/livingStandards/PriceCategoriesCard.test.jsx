@@ -48,7 +48,7 @@ describe("Prices by spending category card", () => {
     render(<PriceCategoriesCard />);
     expect(await screen.findByText(/^By .+, energy prices were /)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: PRICE_CATEGORIES_TITLE })).toBeTruthy();
-    expect(PRICE_CATEGORIES_TITLE).toMatch(/since July 2021$/);
+    expect(PRICE_CATEGORIES_TITLE).toBe("Prices by category since 2021");
     for (const name of ["Energy", "Water", "Food", "Services", "Rents", "Rail fares", "All prices (CPI)", "Earnings"]) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }

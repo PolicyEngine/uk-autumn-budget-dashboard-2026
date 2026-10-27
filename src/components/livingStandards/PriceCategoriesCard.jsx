@@ -1,4 +1,4 @@
-// Prices by spending category since July 2021: ONS price indices for a few
+// Prices by category since 2021 (July 2021 base): ONS price indices for a few
 // spending categories, all prices (CPI) and average weekly earnings, each
 // as its change since July 2021. History up to the latest ONS release,
 // drawn beside the OBR's inflation forecast (ForecastSeriesSection). The
@@ -25,7 +25,7 @@ import {
   yearTicks,
 } from "../../utils/livingStandards/priceCategories";
 
-export const PRICE_CATEGORIES_TITLE = "Prices by spending category since July 2021";
+export const PRICE_CATEGORIES_TITLE = "Prices by category since 2021";
 
 // Each line: its name, chip name on a phone, colour and pattern, and what
 // it covers (About this chart). All prices are drawn dark and thicker;
