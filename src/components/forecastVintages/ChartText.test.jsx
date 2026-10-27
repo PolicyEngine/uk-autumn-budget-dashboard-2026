@@ -46,6 +46,11 @@ function packageStylesheet(spec) {
   return join(root, typeof target === "string" ? target : target.style);
 }
 
+/** An imported stylesheet's file: under src for the "@/" alias (tsconfig's paths), else a package's. */
+function importedStylesheet(spec) {
+  return spec.startsWith("@/") ? join("src", spec.slice(2)) : packageStylesheet(spec);
+}
+
 /**
  * Every stylesheet in src, and every package stylesheet the page's code or
  * those stylesheets import, but the two the build generates: Tailwind's
@@ -59,7 +64,7 @@ function stylesheets() {
       .filter((file) => /\.[jt]sx?$/.test(file) && !/\.test\./.test(file))
       .flatMap((file) =>
         [...readFileSync(join("src", file), "utf8").matchAll(/^import\s+["']([^."'][^"']*\.css)["']/gm)].map(
-          ([, spec]) => packageStylesheet(spec),
+          ([, spec]) => importedStylesheet(spec),
         ),
       ),
   ];
@@ -70,7 +75,7 @@ function stylesheets() {
     seen.add(file);
     postcss.parse(readFileSync(file, "utf8")).walkAtRules("import", (rule) => {
       const spec = rule.params.replace(/url\(|\)/g, "").replace(/["']/g, "").trim().split(/\s/)[0];
-      if (spec !== "tailwindcss") queue.push(spec.startsWith(".") ? join(dirname(file), spec) : packageStylesheet(spec));
+      if (spec !== "tailwindcss") queue.push(spec.startsWith(".") ? join(dirname(file), spec) : importedStylesheet(spec));
     });
   }
   return [...seen];
@@ -141,6 +146,14 @@ function picks(el, selector, unreadable) {
   if (!read) unreadable.add(selector);
   return false;
 }
+
+// A page that imports its stylesheet as "@/components/…" (tsconfig's alias
+// for src) would otherwise be looked for as a package, "@/…", and fail
+it("reads a stylesheet imported through the @/ alias from src", () => {
+  const file = importedStylesheet("@/app/globals.css");
+  expect(file).toBe(join("src", "app", "globals.css"));
+  expect(readFileSync(file, "utf8")).toMatch(/:root/);
+});
 
 it("draws every text in the pixels its layout measured, under every stylesheet the page loads", async () => {
   const files = stylesheets();
