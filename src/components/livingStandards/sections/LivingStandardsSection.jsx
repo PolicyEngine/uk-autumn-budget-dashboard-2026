@@ -221,7 +221,6 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
         </div>
       ) : (
         <OverTimeChart
-          compare={range}
           data={chartData}
           series={series}
           yFormat={yFormat}

@@ -162,7 +162,6 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       </div>
     ) : (
       <OverTimeChart
-        compare={range}
         data={chartData}
         series={series}
         // A fitted axis can step by half a point: one decimal where a tick

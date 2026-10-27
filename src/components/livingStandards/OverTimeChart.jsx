@@ -4,11 +4,10 @@
 // above its start on the plot (no key), clear of the other line. No band
 // marks the PolicyEngine years: they are not a forecast, and they overlap
 // the official ones. The y axis is fitted to the data
-// (zoomAxis), with a break mark when it does not start at 0. The years the
-// card's sentence compares are bracketed under the lines; no values are
-// printed on the plot (the sentence states them, the tooltip gives them
-// exactly). Ticks every year on a wide
-// plot, every other year on a phone.
+// (zoomAxis), with a break mark when it does not start at 0. No values are
+// printed on the plot (the card's sentence states the years it compares,
+// the tooltip gives each value exactly). Ticks every year on a wide plot,
+// every other year on a phone.
 
 import { CartesianGrid, Customized, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Tooltip } from "../ViewportTooltip";
@@ -18,7 +17,7 @@ import { TOOLTIP_PROPS } from "../ChartTooltip";
 import useElementWidth from "../../hooks/useElementWidth";
 import { AXIS_LINE, CHART_COLOURS, GRID_PROPS, TICK_STYLE, axisWidth, useNarrowViewport } from "../../utils/chartTheme";
 import { zoomAxis } from "../../utils/livingStandards/baseline";
-import { fyLabel, fyStart } from "../../utils/livingStandards/outlook";
+import { fyLabel } from "../../utils/livingStandards/outlook";
 
 const MARGIN = { top: UNIT_LABEL_TOP_MARGIN, right: 24, left: 0, bottom: 0 };
 const X_AXIS_HEIGHT = 26;
@@ -138,7 +137,7 @@ function OverTimeTooltip({ active, payload, label, format }) {
 }
 
 /** The plot's annotations, in its SVG (so the downloads carry them). */
-function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showProjection, compare, broken }) {
+function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showProjection, broken }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale || !offset) return null;
@@ -159,29 +158,14 @@ function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showPro
     );
   }
 
-  // The years compared (bracketed; no values on the plot: the sentence
-  // states them and the tooltip gives them exactly)
-  const compared =
-    compare && showProjection ? compare.map((fy) => data.find((d) => d.year === fyStart(fy))) : null;
-  const valued = compared?.every((d) => d && d.projection != null) ? compared : null;
-  const valueBoxes = [];
-
   // Each line named above its start: "Official figures" grey, "PolicyEngine"
-  // teal, clear of both lines, their dots, the bracket and each other
+  // teal, clear of both lines, their dots and each other
   const lines = [
     showHistorical && { key: "historical", text: "Official figures", fill: CHART_COLOURS.obrText },
     showProjection && { key: "projection", text: "PolicyEngine", fill: CHART_COLOURS.highlight },
   ].filter(Boolean);
   const points = lines.map(({ key }) => data.filter((d) => d[key] != null).map((d) => [x(d.year), y(d[key])]));
-  // The years-compared bracket and its caption, kept clear too
-  if (valued) {
-    const [x1, x2] = valued.map((d) => x(d.year));
-    const yb = bottom - 12;
-    const cw = textWidth("Years compared", 11, 400);
-    valueBoxes.push({ left: x1, right: x2, top: yb - 5, bottom: yb });
-    valueBoxes.push({ left: (x1 + x2) / 2 - cw / 2, right: (x1 + x2) / 2 + cw / 2, top: yb - 13, bottom: yb - 5 });
-  }
-  const placed = [...valueBoxes];
+  const placed = [];
   lines.forEach(({ key, text, fill }, i) => {
     const own = points[i];
     if (!own.length) return;
@@ -196,27 +180,11 @@ function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showPro
     );
   });
 
-  // The years compared: a bracket under the lines
-  if (valued) {
-    const [a, b] = valued;
-    const x1 = x(a.year);
-    const x2 = x(b.year);
-    const yb = bottom - 12;
-    parts.push(
-      <g key="compare" className="ls-compare">
-        <path d={`M${x1},${yb - 5} L${x1},${yb} L${x2},${yb} L${x2},${yb - 5}`} stroke={CHART_COLOURS.highlight} strokeWidth={1.2} fill="none" />
-        <text x={(x1 + x2) / 2} y={yb - 5} fontSize={11} fill={CHART_COLOURS.highlight} textAnchor="middle">
-          Years compared
-        </text>
-      </g>,
-    );
-  }
   return <g>{parts}</g>;
 }
 
 /**
  * series: lineSeries(viewMode, hasOutturn) (keys historical, projection).
- * compare: the years compared, ["2027-28", "2031-32"], or null.
  */
 export default function OverTimeChart({
   data,
@@ -224,7 +192,6 @@ export default function OverTimeChart({
   yFormat,
   tooltipFormat,
   yLabel,
-  compare = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -289,7 +256,6 @@ export default function OverTimeChart({
                 data={data}
                 showHistorical={show.historical}
                 showProjection={show.projection}
-                compare={compare}
                 broken={axis.broken}
               />
             }

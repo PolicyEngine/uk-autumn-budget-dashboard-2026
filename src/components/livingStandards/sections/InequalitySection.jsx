@@ -119,7 +119,6 @@ export default function useInequalityView(data, range = null, setRange = null) {
     },
     chart: (
       <OverTimeChart
-        compare={range}
         data={rows}
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}
