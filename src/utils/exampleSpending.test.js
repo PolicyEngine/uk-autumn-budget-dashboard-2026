@@ -26,7 +26,7 @@ describe("the example households' spending", () => {
       return [inputs.electricity_spending_per_year, inputs.petrol_spending_per_year, inputs.diesel_spending_per_year];
     };
     const pensioner = spend("pensioner-70");
-    const renter = spend("renter-london");
+    const renter = spend("part-time-worker");
     const family = spend("family-uc");
     const higher = spend("landlord-saver");
     for (const [a, b] of [[pensioner, renter], [renter, family], [family, higher], [pensioner, higher]]) expect(a).not.toEqual(b);

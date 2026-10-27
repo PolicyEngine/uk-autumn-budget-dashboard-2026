@@ -8,13 +8,12 @@
  * (exampleAnswers.js, never the form's defaults) and shows its result at
  * once; every value stays editable.
  *
- * The eight were chosen for the ten candidate measures (PR #261), and each
+ * The eight were chosen for the candidate measures (PR #261), and each
  * checked against the household test API running candidates-ten on 27
  * October 2026 (include by_policy), so that the measure its card features
  * changes its net income in a year the page offers: 2027-28, or 2031-32
- * for the threshold freeze. Two candidates have no example: the Carer's
- * Allowance taper (the form asks for no caring hours) and the Warm Home
- * Discount top-up (paid in 2026-27, before the examples' first year).
+ * for the threshold freeze. The Warm Home Discount top-up has no example:
+ * it is paid in 2026-27, before the examples' first year.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -59,29 +58,24 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(1).source,
   },
   {
-    id: "renter-london",
-    label: "A London renter on Universal Credit",
-    short: "London renter",
-    description: "£15,000, renting at £1,600 a month, no car",
+    id: "part-time-worker",
+    label: "A part-time worker on £13,000",
+    short: "Part-time worker",
+    description: "Aged 45, works part time, owns with a mortgage",
     icon: "key",
-    measure: "lha_unfreeze_2027",
-    tag: "Housing allowance",
+    measure: "employer_nics_secondary_threshold_raise",
+    tag: "Employer NI threshold",
     inputs: {
       ...RESET,
-      current_age: 35,
-      current_salary: 15000,
-      region: "LONDON",
-      tenure: "RENT_PRIVATELY",
-      // Illustrative: a one-bedroom flat, below London's average private
-      // rent (£2,338, ONS, September 2026)
-      monthly_rent: 1600,
-      claims_universal_credit: true,
+      current_age: 45,
+      // About 20 hours a week at the National Living Wage from April 2026
+      // (£12.71 an hour, GOV.UK)
+      current_salary: 13000,
+      tenure: "OWNED_WITH_MORTGAGE",
       ...spendingInputs(3),
-      petrol_spending_per_year: 0,
-      diesel_spending_per_year: 0,
     },
-    note: "Aged 35, single, earns £15,000 and rents privately in London at £1,600 a month, an illustrative figure below London's average (ONS, September 2026). Claims the Universal Credit they are due; earns enough not to be affected by the benefit cap. No car. Spends £910 a year on electricity, the average for households in the third tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: own("No petrol or diesel: no car. Electricity", 3),
+    note: "Aged 45, single, earns £13,000 working about 20 hours a week at the 2026 National Living Wage, and owns with a mortgage. Spends £910 a year on electricity and £650 on petrol and diesel, the average for households in the third tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(3).source,
   },
   {
     id: "graduate-35k",
@@ -195,10 +189,10 @@ export const HOUSEHOLD_EXAMPLES = [
     label: "A lone parent working part time",
     // On its chip once the cards fold into a strip
     short: "Lone parent",
-    description: "One child aged 4, £14,000 part time, renting",
+    description: "One child aged 4, £14,000, electric heating",
     icon: "baby",
-    measure: "employer_nics_secondary_threshold_raise",
-    tag: "Employer NI threshold",
+    measure: "domestic_electricity_zero_vat",
+    tag: "Zero VAT on electricity",
     inputs: {
       ...RESET,
       // The average age at a first birth (29.4 in 2024: ONS, Births in
@@ -224,9 +218,11 @@ export const HOUSEHOLD_EXAMPLES = [
       // income (£627 a week in 2027-28), ONS Family Spending FYE
       // 2025, Table A6 (exampleSpending.js)
       ...spendingInputs(4),
+      // A flat heated by electric storage heaters: its own figure
+      electricity_spending_per_year: 1600,
     },
-    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Spends £1,010 a year on electricity and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
+    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Their flat is heated by electric storage heaters: spends £1,600 a year on electricity, and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
     // The spending's source, in the result's "Based on"
-    spendingSource: decileSpending(4).source,
+    spendingSource: own("Electricity: its own, electric storage heating. Petrol and diesel", 4),
   },
 ];

@@ -102,10 +102,10 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     // nothing before 2031-32
     expect(figures("middle-earner", 2027).top.own).toBe(false);
     expect(Math.round(figures("middle-earner", 2031).ownPart)).not.toBe(0);
-    // The London renter's own measure gives most of its change
-    expect(figures("renter-london", 2027).top).toMatchObject({ own: true });
+    // The part-time worker's own measure gives most of its change
+    expect(figures("part-time-worker", 2027).top).toMatchObject({ own: true });
     // A bar for each year a reader can choose
-    expect(figures("renter-london", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
+    expect(figures("part-time-worker", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
   });
 });
 
