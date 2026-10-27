@@ -160,7 +160,26 @@ function textLines(node, style, opacity) {
     range.setEnd(node, match.index + match[0].length);
     const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0 || r.height > 0);
     if (!rects.length) continue;
-    words.push({ text: match[0], rect: rects[0] });
+    if (rects.length === 1) {
+      words.push({ text: match[0], rect: rects[0] });
+      continue;
+    }
+    // A word broken across lines ("2026-" / "27" at a hyphen): each piece
+    // on its own line, found character by character
+    let piece = null;
+    for (let i = 0; i < match[0].length; i += 1) {
+      range.setStart(node, match.index + i);
+      range.setEnd(node, match.index + i + 1);
+      const rect = Array.from(range.getClientRects()).find((r) => r.width > 0 || r.height > 0);
+      if (!rect) continue;
+      if (piece && Math.abs(piece.rect.top - rect.top) < rect.height / 2) {
+        piece.text += match[0][i];
+      } else {
+        if (piece) words.push(piece);
+        piece = { text: match[0][i], rect };
+      }
+    }
+    if (piece) words.push(piece);
   }
   range.detach?.();
   const lines = [];

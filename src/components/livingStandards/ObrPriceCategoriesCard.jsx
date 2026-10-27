@@ -174,7 +174,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: "obr-price-categories", image: false, csv }}>
+      <LsCard {...common} download={{ filename: "obr-price-categories", csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>

@@ -202,7 +202,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   if (view === "table") {
     return (
-      <LsCard {...common} download={{ filename: "frozen-thresholds", image: false, csv }}>
+      <LsCard {...common} download={{ filename: "frozen-thresholds", csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
