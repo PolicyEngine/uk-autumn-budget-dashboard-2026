@@ -30,6 +30,9 @@ describe("measureCategoryOf", () => {
     expect(measureCategoryOf({ id: "childcare_100k_taper" }).label).toBe("Childcare");
     expect(measureCategoryOf({ id: "stamp_duty_holiday" }).label).toBe("Property");
     expect(measureCategoryOf({ id: "triple_lock_plus" }).label).toBe("Pensions");
+    // A threshold alone says nothing of the tax: these are not income tax
+    expect(measureCategoryOf({ id: "pension_credit_threshold" }).label).toBe("Pensions");
+    expect(measureCategoryOf({ id: "uc_work_allowance_threshold" }).label).toBe("Benefits");
   });
 
   it("gives an unknown Budget-day measure a sensible category and icon", () => {

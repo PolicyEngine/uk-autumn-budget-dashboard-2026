@@ -43,6 +43,11 @@
   padding: 1px 0;
 }
 
+/* A measure's row: its icon tile (MeasureRowLabel) in place of the swatch */
+.chart-tooltip-row.has-icon {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+}
+
 .chart-tooltip-swatch {
   width: 10px;
   height: 10px;

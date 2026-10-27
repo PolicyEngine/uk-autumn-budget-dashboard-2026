@@ -8,6 +8,8 @@ import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
+import MeasureRowLabel from "./MeasureRowLabel";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   buildRankingCsv,
   rankingEntries,
@@ -441,6 +443,7 @@ const signColour = (sign) => DIRECTION_TEXT_COLOURS[sign] ?? CHART_COLOURS.axisT
  * figure is. The hover card and the pinned card (with its ×) are the same.
  */
 function SeatCard({ card }) {
+  const { byId } = useMeasureCatalogue();
   const largest = Math.max(0, ...card.byPolicy.map((row) => Math.abs(row.value ?? 0)));
   return (
     <>
@@ -468,7 +471,7 @@ function SeatCard({ card }) {
           <p className="seat-card-policies-heading">{card.policiesHeading}</p>
           {card.byPolicy.map((row) => (
             <div key={row.id} className="seat-card-policy">
-              <span className="seat-card-policy-name">{row.name}</span>
+              <MeasureRowLabel compact tip={false} measure={byId?.get(row.id) ?? { id: row.id, name: row.name }} name={row.name} nameClassName="seat-card-policy-name" />
               {row.value !== null && (
                 <span className="seat-card-policy-bar" aria-hidden="true">
                   {largest > 0 && (

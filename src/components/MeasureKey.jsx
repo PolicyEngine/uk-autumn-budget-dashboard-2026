@@ -2,13 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useId, useMemo, useS
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { shortNameOf } from "../utils/policyDetails";
 import { MUTED_SWATCH } from "../utils/legendMembership";
+import MeasureRowLabel from "./MeasureRowLabel";
 import "./MeasureKey.css";
 
 /**
  * The measure key: one compact row of chips for the measures a chart (or a
  * section of charts) colours by, in place of a long legend per card.
  *
- * - Each chip is a measure's colour and short name (its full name in the
+ * - Each chip is a measure's MeasureRowLabel (compact): its category icon
+ *   in its colour, and short name (its full name in the
  *   tooltip and accessible name), in one unlabelled row: measures that
  *   raise revenue, then those that cost it, then the net line. The colour,
  *   group and order are the
@@ -163,8 +165,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
   const full = member.name;
   const face = (
     <>
-      <span className="measure-key-swatch" style={{ "--swatch": color }} aria-hidden="true" />
-      <span className="measure-key-label">{shortNameOf(member)}</span>
+      <MeasureRowLabel compact tip={false} measure={member} colour={color} name={shortNameOf(member)} nameClassName="measure-key-label" />
     </>
   );
   if (member.muted) {

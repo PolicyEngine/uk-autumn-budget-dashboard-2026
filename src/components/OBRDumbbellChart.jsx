@@ -2,6 +2,7 @@ import { useNarrowViewport, TICK_STYLE, CHART_COLOURS } from "../utils/chartThem
 import { CHART_LOGO } from "../utils/chartLogo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import useElementWidth from "../hooks/useElementWidth";
+import { SvgMeasureLabel, SVG_LABEL_INDENT } from "./MeasureRowLabel";
 import "./OBRDumbbellChart.css";
 
 /**
@@ -155,7 +156,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const diffWidth = narrow ? 0 : 84;
   const nameWidth = narrow
     ? 0
-    : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16, width * 0.34);
+    : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + SVG_LABEL_INDENT.full, width * 0.38);
   const rowHeight = narrow ? 54 : 40;
   const top = 24;
   const axisHeight = 26;
@@ -340,10 +341,21 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       >
         {/* The whole row answers the pointer, not just its dots */}
         <rect className="obr-dumbbell-hit" x={0} y={top + index * rowHeight} width={width} height={rowHeight} fill="transparent" />
-        {narrow && backing(0, nameY, approxWidth(row.name, fontSize))}
-        <text className="obr-dumbbell-name" x={0} y={nameY} dy="0.35em" {...HALO} fill={NAME_COLOUR} fontSize={fontSize} fontWeight={500}>
-          {row.name}
-        </text>
+        {narrow && backing(0, nameY, approxWidth(row.name, fontSize) + SVG_LABEL_INDENT.compact)}
+        {/* The shared measure label (MeasureRowLabel), drawn in the SVG so
+            the downloaded image keeps it; compact on a phone */}
+        <g className="obr-dumbbell-name">
+          <SvgMeasureLabel
+            measure={row.measure ?? { id: row.id, name: row.name }}
+            name={row.name}
+            y={nameY}
+            fontSize={fontSize}
+            compact={narrow}
+            textProps={HALO}
+            nameColour={NAME_COLOUR}
+            captionColour={TICK_STYLE.fill}
+          />
+        </g>
         {parts}
         <text
           className="obr-dumbbell-difference"

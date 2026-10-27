@@ -216,8 +216,9 @@ describe("published measure catalogue in population views", () => {
     </>));
     for (const measure of catalogue.displayable) {
       const row = [...container.querySelectorAll(".chart-tooltip-row")].find((node) => node.textContent.includes(measure.name));
-      const swatch = row.querySelector(".chart-tooltip-swatch");
-      expect(swatch).toHaveStyle({ background: measure.color });
+      // A measure's row shows its category icon tile in the catalogue colour
+      const tile = row.querySelector(".mrl-icon");
+      expect(tile.style.getPropertyValue("--mrl-colour")).toBe(measure.color);
     }
     expect(screen.getAllByText("Raise revenue")).toHaveLength(2);
     expect(screen.getAllByText("Cost revenue")).toHaveLength(2);

@@ -6,6 +6,7 @@ import ViewToggle from "./ViewToggle";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
 import TitleIcon from "./TitleIcon";
+import MeasureRowLabel from "./MeasureRowLabel";
 import NoBreakYear from "./NoBreakYear";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
@@ -105,6 +106,8 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
     return {
       id,
       name: shortNameOf(catalogue.byId?.get(id) ?? { id, name: row.reform_name }),
+      // The catalogue's measure, for its row label (icon, colour, category)
+      measure: catalogue.byId?.get(id) ?? { id, name: row.reform_name },
       pe: isValue(row.policyengine_value) ? row.policyengine_value : null,
       obr: obrValue(yearData, showBehavioural),
       obrStatic: isValue(row.obr_static) ? row.obr_static : null,
@@ -332,7 +335,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td className="policy-name-cell">{row.name}</td>
+                    <td className="policy-name-cell"><MeasureRowLabel compact measure={row.measure} name={row.name} /></td>
                     <td className="value-cell pe">{cell(row.pe)}</td>
                     <td className="value-cell obr">{cell(row.obrStatic)}</td>
                     <td className="value-cell obr">{cell(row.obrBehavioural)}</td>
