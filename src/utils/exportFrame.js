@@ -23,6 +23,9 @@ export const FRAME_WIDTH = 1200;
 // The plot is scaled to fill the frame's width, a half-width card's plot
 // as much as a full-width one's, unless that makes it taller than this
 export const MAX_PLOT_HEIGHT = 1000;
+// A legend below the plot is scaled apart from it, no more than this, so a
+// half-width card's legend does not grow with its plot
+export const MAX_LEGEND_SCALE = 1.25;
 const PAD = 32;
 const TITLE_SIZE = 24;
 const SUBTITLE_SIZE = 15;
@@ -197,6 +200,28 @@ export function plotScale(built, inner = FRAME_WIDTH - PAD * 2) {
   return Math.min(inner / built.width, MAX_PLOT_HEIGHT / built.height);
 }
 
+/**
+ * The parts of a built export the frame draws, top to bottom, each with
+ * its own scale: the plot filling the width (plotScale), then its legend,
+ * where the builder marks one (legendTop), at no more than
+ * MAX_LEGEND_SCALE. Without a legend, the whole at the plot's scale.
+ *
+ * @returns {Array<{top: number, sourceHeight: number, width: number, height: number}>}
+ *   `top` and `sourceHeight` in the built SVG's units, the size in the frame's
+ */
+export function framePieces(built, inner = FRAME_WIDTH - PAD * 2) {
+  const split = built.legendTop > 0 && built.legendTop < built.height ? built.legendTop : null;
+  const plot = { width: built.width, height: split ?? built.height };
+  const scale = plotScale(plot, inner);
+  const pieces = [{ top: 0, sourceHeight: plot.height, width: built.width * scale, height: plot.height * scale }];
+  if (split) {
+    const legendScale = Math.min(scale, MAX_LEGEND_SCALE);
+    const sourceHeight = built.height - split;
+    pieces.push({ top: split, sourceHeight, width: built.width * legendScale, height: sourceHeight * legendScale });
+  }
+  return pieces;
+}
+
 const toBase64 = (buffer) => {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -276,10 +301,8 @@ export async function frameSvg(built, frame, { logo } = {}) {
   if (!built || !frame) return built;
   const width = FRAME_WIDTH;
   const inner = width - PAD * 2;
-  const scale = plotScale(built, inner);
-  const plotWidth = built.width * scale;
-  const plotHeight = built.height * scale;
-  const plotX = PAD + (inner - plotWidth) / 2;
+  const pieces = framePieces(built, inner);
+  const plotHeight = pieces.reduce((sum, piece) => sum + piece.height, 0);
 
   // Header: the title, then what is shown
   const titleLines = wrapLines(frame.title, inner, TITLE_SIZE, 600);
@@ -325,15 +348,23 @@ export async function frameSvg(built, frame, { logo } = {}) {
   // sees none of the page's fonts) and the SVG away from the page use it
   const fontCss = await embeddedFontCss();
 
-  // The plot: the built SVG as a nested <svg>, scaled by its viewBox
-  const plot = built.svg
-    .replace(/^\s*<\?xml[^>]*\?>\s*/, "")
-    .replace(/^<svg\b([^>]*)>/, (match, attributes) => {
-      const kept = attributes
-        .replace(/\s(width|height|x|y)="[^"]*"/g, "")
-        .replace(/\sviewBox="[^"]*"/, "");
-      return `<svg${kept} x="${plotX}" y="${plotTop}" width="${plotWidth}" height="${plotHeight}" viewBox="0 0 ${built.width} ${built.height}">`;
-    });
+  // The plot (and its legend): the built SVG as nested <svg>s, each
+  // showing its part through its viewBox, scaled and centred
+  const body = built.svg.replace(/^\s*<\?xml[^>]*\?>\s*/, "");
+  let pieceTop = plotTop;
+  const plot = pieces
+    .map((piece) => {
+      const x = PAD + (inner - piece.width) / 2;
+      const nested = body.replace(/^<svg\b([^>]*)>/, (match, attributes) => {
+        const kept = attributes
+          .replace(/\s(width|height|x|y)="[^"]*"/g, "")
+          .replace(/\sviewBox="[^"]*"/, "");
+        return `<svg${kept} x="${x}" y="${pieceTop}" width="${piece.width}" height="${piece.height}" viewBox="0 ${piece.top} ${built.width} ${piece.sourceHeight}">`;
+      });
+      pieceTop += piece.height;
+      return nested;
+    })
+    .join("");
 
   const svg =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +

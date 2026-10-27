@@ -7,6 +7,7 @@ import {
   frameCsv,
   frameFileName,
   frameSvg,
+  framePieces,
   plotScale,
   slugify,
   titleWithPeriod,
@@ -115,6 +116,20 @@ describe("the framed image", () => {
       expect(Number(nested[2])).toBeCloseTo(1136);
       expect(Number(nested[3]) / Number(nested[2])).toBeCloseTo(h / w);
     }
+  });
+
+  it("scales a legend below the plot apart from it, by no more than 1.25", async () => {
+    const built = { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="548" height="662"/>', width: 548, height: 662, legendTop: 446 };
+    const [plot, legend] = framePieces(built);
+    expect(plot).toMatchObject({ top: 0, sourceHeight: 446 });
+    expect(plot.width).toBeCloseTo(1136);
+    expect(legend.top).toBe(446);
+    expect(legend.width).toBeCloseTo(548 * 1.25);
+    expect(legend.height).toBeCloseTo(216 * 1.25);
+    const out = await frameSvg(built, downloadFrame({ title: "T", now: NOW }), {});
+    expect(out.svg).toContain('viewBox="0 0 548 446"');
+    expect(out.svg).toContain('viewBox="0 446 548 216"');
+    expect(framePieces({ width: 800, height: 400 })).toHaveLength(1);
   });
 
   it("keeps the aspect ratio and caps the height of a tall plot", () => {

@@ -576,6 +576,9 @@ export async function buildChartSvg(containerRef, options = {}) {
     svg: serializeSvg(clonedSvg),
     width,
     height,
+    // Where the legend starts, so a frame can scale the plot and the
+    // legend apart (exportFrame.frameSvg)
+    ...(legend ? { legendTop: PAD + plotHeight + legendGap / 2 } : {}),
   };
 }
 
