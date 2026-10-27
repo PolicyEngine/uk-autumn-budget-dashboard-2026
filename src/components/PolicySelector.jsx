@@ -5,7 +5,7 @@ import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
+import { measureSummary, shortNameOf } from "../utils/policyDetails";
 import Tip, { InfoTip } from "./Tip";
 
 // The menu's order: measures that raise revenue, then those that cost it,
@@ -158,7 +158,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
             {DIRECTION_ORDER.flatMap((direction) =>
               policies.filter((policy) => (DIRECTION_ORDER.includes(policy.direction) ? policy.direction : "neutral") === direction),
             ).map((policy) => {
-              const summary = policyDetailsFor(policy)?.summary;
+              const summary = measureSummary(policy);
               return (
                 // The info button sits outside the label, so it never ticks the box
                 <div key={policy.id} className="policy-item">

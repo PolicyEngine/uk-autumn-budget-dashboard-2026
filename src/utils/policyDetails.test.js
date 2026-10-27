@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import fc from "fast-check";
-import { POLICY_DETAILS, policyDetailsFor, withPolicyDetails } from "./policyDetails";
+import { measureSummary, POLICY_DETAILS, policyDetailsFor, withPolicyDetails } from "./policyDetails";
 
 // The catalogue decides which measures exist, their names, descriptions,
 // order and colours (#104); a details entry only adds a card's text, and
@@ -51,5 +51,35 @@ it("records for each entry the description it was written for, and carries no re
     expect(typeof entry.writtenFor, entry.id).toBe("string");
     expect(entry.writtenFor.length, entry.id).toBeGreaterThan(0);
     for (const field of ["cost", "revenue", "budgetaryImpact", "impact", "values"]) expect(entry).not.toHaveProperty(field);
+  }
+});
+
+it("gives every measure with a description a summary: its entry's while it holds, else the description's first sentence", () => {
+  fc.assert(
+    fc.property(catalogueMeasure, (measure) => {
+      const summary = measureSummary(measure);
+      const details = policyDetailsFor(measure);
+      if (details?.summary) expect(summary).toBe(details.summary);
+      else if (measure.description.trim().replace(/^Candidate measure\.\s*/i, "").trim()) {
+        expect(summary).toBeTruthy();
+        expect(summary.length).toBeLessThanOrEqual(161);
+      } else expect(summary).toBeNull();
+    }),
+  );
+});
+
+it("falls back to the first published sentence, without its Candidate measure label, cut on a word", () => {
+  expect(measureSummary({ id: "x", description: "Candidate measure. Rates rise by 2p. Then more." })).toBe("Rates rise by 2p.");
+  const long = `Candidate measure. ${"word ".repeat(60)}end.`;
+  const cut = measureSummary({ id: "x", description: long });
+  expect(cut.length).toBeLessThanOrEqual(161);
+  expect(cut).toMatch(/^word( word)*…$/);
+  expect(measureSummary({ id: "x", description: "" })).toBeNull();
+});
+
+it("gives every measure policyDetails was written for a tip as described now, or as published if changed", () => {
+  for (const entry of POLICY_DETAILS) {
+    expect(measureSummary({ id: entry.id, description: entry.writtenFor })).toBe(entry.summary);
+    expect(measureSummary({ id: entry.id, description: `Candidate measure. Changed ${entry.id}.` })).toBe(`Changed ${entry.id}.`);
   }
 });

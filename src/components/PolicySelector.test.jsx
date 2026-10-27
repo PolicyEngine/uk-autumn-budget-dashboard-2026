@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import PolicySelector from "./PolicySelector";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { shortNameOf } from "../utils/policyDetails";
 
 afterEach(cleanup);
 
@@ -82,5 +83,16 @@ describe("PolicySelector Select all and Clear", () => {
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(pill).toHaveAttribute("aria-expanded", "false");
     expect(selection()).toEqual(allIds);
+  });
+});
+
+describe("PolicySelector info tips", () => {
+  it("gives every published measure an info tip, with or without a policyDetails entry", () => {
+    render(<Harness initial={allIds} />);
+    open();
+    expect(boxes()).toHaveLength(catalogue.displayable.length);
+    for (const measure of catalogue.displayable) {
+      expect(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` })).toBeTruthy();
+    }
   });
 });
