@@ -242,7 +242,9 @@ describe("ConstituencyMap", () => {
     expect(root.getAttribute("viewBox")).toMatch(/^0 0 1200 /);
     expect(root.querySelector(":scope > svg").getAttribute("viewBox")).toMatch(/^0 0 800 /);
     expect(root.querySelector(":scope > title").textContent).toBe("Constituency-level impacts, 2029-30");
-    expect(svgText).toContain("Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard");
+    // The file's footer is the logo alone: no source line (the CSV keeps it)
+    expect(svgText).not.toContain("Source: PolicyEngine UK");
+    expect(root.querySelector(":scope > image")).not.toBeNull();
   });
 
   it("has no footnote under the map; the search box says what to do", async () => {
