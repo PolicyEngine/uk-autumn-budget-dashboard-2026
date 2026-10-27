@@ -231,10 +231,10 @@ export const POLICY_DETAILS = [
     type: "Benefit",
     inForce: { from: "2027-04" },
     details:
-      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
+      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
     source: {
-      label: "Local Housing Allowance",
-      href: "https://www.gov.uk/government/collections/local-housing-allowance-lha-rates",
+      label: "Local Housing Allowance rates (SI 2013/2978, article 4)",
+      href: "https://www.legislation.gov.uk/uksi/2013/2978/article/4/made",
     },
   },
   {
@@ -252,8 +252,8 @@ export const POLICY_DETAILS = [
     details:
       "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so the National Insurance saved is paid to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
     source: {
-      label: "National Insurance rates and thresholds",
-      href: "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027",
+      label: "National Insurance Contributions (Secondary Class 1 Contributions) Act 2025, section 2",
+      href: "https://www.legislation.gov.uk/ukpga/2025/11/section/2",
     },
   },
   {
@@ -270,6 +270,10 @@ export const POLICY_DETAILS = [
     inForce: { from: "2027-04" },
     details:
       "The 2-point rise is an assumption made before the Budget, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how much they take in dividends or how they hold savings or property.",
+    source: {
+      label: "Dividend tax rates (Finance Act 2022, section 4)",
+      href: "https://www.legislation.gov.uk/ukpga/2022/3/section/4/enacted",
+    },
   },
 ];
 
