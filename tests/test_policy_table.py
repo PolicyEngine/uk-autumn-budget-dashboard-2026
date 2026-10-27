@@ -126,9 +126,9 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
         weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
             f"{year}-04-06"
         )
-        assert row[str(year)][1] == math.ceil(weekly * 52 / 10) * 10
-    assert row["2027"] == (12_570, 13_040)
-    assert row["2031"] == (12_830, 14_400)
+        assert row[str(year)][1] == math.ceil(weekly * 52)
+    assert row["2027"] == (12_570, 13_037)
+    assert row["2031"] == (12_830, 14_391)
 
 
 def test_warm_home_discount(document):
