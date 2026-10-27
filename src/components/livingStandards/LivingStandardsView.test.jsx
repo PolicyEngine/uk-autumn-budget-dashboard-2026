@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "../../App";
+import App, { preloadAllViews } from "../../App";
 import { dashboardFixtureFetch } from "../../test/dashboardFixture";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 // The receipt fixture's supported year follows the engine's projection end;
 // show Population impact in that verified year (as tabsSmoke.test.jsx does)

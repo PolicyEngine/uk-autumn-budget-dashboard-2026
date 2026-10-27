@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "./App";
+import App, { preloadAllViews } from "./App";
 import fc from "fast-check";
 import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
@@ -9,6 +9,9 @@ import { parseTable } from "./utils/publication/csv";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 vi.mock("./components/BudgetaryImpactChart", () => ({
   default: ({ data }) => <div data-testid="budget-figures" data-rows={JSON.stringify(data)} />,

@@ -1,10 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "./App";
+import App, { preloadAllViews } from "./App";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson, fixtureText } from "./test/publicationFixture";
 import { artifactSha256 } from "./utils/publication/digest";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 

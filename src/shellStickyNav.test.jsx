@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act, cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
-import App from "./App";
+import App, { preloadAllViews } from "./App";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 const SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';

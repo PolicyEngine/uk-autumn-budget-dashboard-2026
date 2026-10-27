@@ -20,9 +20,9 @@ import { expectCompletePills } from "./test/optionsPills";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { VIEWS } from "./App";
+import App, { VIEWS, preloadAllViews } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "./hooks/useBasisIncome";
 import { clearOutlookCache } from "./utils/livingStandards/outlook";
@@ -32,6 +32,9 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 // The receipt fixture's supported year follows the engine's projection
 // end (currently beyond the dashboard's Budget-year window). Exercise the

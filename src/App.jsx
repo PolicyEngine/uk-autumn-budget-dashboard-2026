@@ -1,13 +1,7 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import PolicySelector from "./components/PolicySelector";
-import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
-import DecileImpactCard from "./components/DecileImpactCard";
-import ConstituencyMap from "./components/ConstituencyMap";
-import { ObrComparisonFoot } from "./components/OBRComparisonTable";
-import PersonalImpactTab from "./components/PersonalImpactTab";
-import HouseholdScatter from "./components/HouseholdScatter";
 import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
@@ -15,15 +9,9 @@ import LandingBackdrop from "./components/landing/LandingBackdrop";
 import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
-import MethodologyTab from "./components/MethodologyTab";
 import SectionHeading from "./components/SectionHeading";
-import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
-import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
-import GrowthWithMeasuresCard from "./components/livingStandards/GrowthWithMeasuresCard";
-import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections/ViewCards";
-import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
-import AgeSection from "./components/AgeSection";
+import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnchors";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
@@ -43,9 +31,70 @@ import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
-import PolicyCards from "./components/PolicyCards";
-import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
+import { lazyView, preloadViewCode } from "./utils/lazyView";
+
+// Each view's code (and the chart library, the map's and the household
+// calculator's) loads when the view first opens, or while the page is idle,
+// not with the page: the landing page, the band and the placeholders need
+// none of it. A view whose code has loaded renders at once.
+const BudgetaryImpactChart = lazyView(() => import("./components/BudgetaryImpactChart"));
+const ObrComparisonFoot = lazyView(() => import("./components/OBRComparisonTable"), (m) => m.ObrComparisonFoot);
+const ConstituencyMap = lazyView(() => import("./components/ConstituencyMap"));
+const DecileImpactCard = lazyView(() => import("./components/DecileImpactCard"));
+const HouseholdScatter = lazyView(() => import("./components/HouseholdScatter"));
+const AgeSection = lazyView(() => import("./components/AgeSection"));
+const GrowthWithMeasuresCard = lazyView(() => import("./components/livingStandards/GrowthWithMeasuresCard"));
+const InequalityChart = lazyView(() => import("./components/SummaryMetricChart"), (m) => {
+  const Chart = m.default;
+  const inequality = m.SUMMARY_METRICS.inequality;
+  return function InequalityChart(props) {
+    return <Chart metric={inequality} {...props} />;
+  };
+});
+const PovertyMeasuresRow = lazyView(() => import("./components/MeasuresPovertyCard"), (m) => m.PovertyMeasuresRow);
+const PersonalImpactTab = lazyView(() => import("./components/PersonalImpactTab"));
+const LivingStandardsTab = lazyView(() => import("./components/livingStandards/LivingStandardsTab"));
+const PolicyCards = lazyView(() => import("./components/PolicyCards"));
+const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
+
+// The code each view ("tab" or "tab:sub", as bootView names them) needs
+const VIEW_CODE = {
+  "dashboard:finances": [BudgetaryImpactChart, ObrComparisonFoot],
+  "dashboard:all": [ConstituencyMap, DecileImpactCard, HouseholdScatter],
+  "dashboard:age": [AgeSection],
+  "dashboard:living": [GrowthWithMeasuresCard, InequalityChart],
+  "dashboard:poverty": [PovertyMeasuresRow],
+  household: [PersonalImpactTab],
+  outlook: [LivingStandardsTab],
+  policies: [PolicyCards],
+  methodology: [MethodologyTab],
+};
+
+/** Load every view's code (tests: views then render without suspending). */
+export function preloadAllViews() {
+  return Promise.all(Object.values(VIEW_CODE).flat().map((view) => view.preload()));
+}
+
+/** Start loading one view's code ("tab" or "tab:sub"); never throws. */
+export function preloadView(view) {
+  preloadViewCode(VIEW_CODE[view] ?? VIEW_CODE[view.split(":")[0]] ?? []);
+}
+
+// A link to a view starts that view's code now, beside the page's own,
+// rather than after hydration and the publication check
+if (typeof window !== "undefined" && !opensLanding(window.location)) {
+  preloadView(bootView(window.location));
+}
+
+/** The placeholder a view shows while its code loads. */
+function viewFallback(value) {
+  if (value === "dashboard") return <ViewSkeleton view={loadingView(value)} />;
+  if (value !== "outlook") return <ViewSkeleton view={value} />;
+  const params = new URLSearchParams(window.location.search);
+  params.set("tab", value);
+  return <ViewSkeleton view={bootView({ search: `?${params}`, hash: "" })} />;
+}
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
@@ -218,6 +267,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
     // One step per idle period, the views' own tables first
     const steps = [
+      // Every view's code, so a tab switch need not wait for it
+      ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
       ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
       () => prefetchGeography(catalogue),
       () => loadOutlook().catch(() => {}),
@@ -646,7 +697,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // A Population impact sub-tab's content. With no policies chosen, each
   // offers the full Budget; the charts wait for the CSVs.
-  const populationPanel = (sub) => {
+  // Each sub-tab's code loads when it first opens (lazyView), its
+  // placeholder showing meanwhile
+  const populationPanel = (sub) => (
+    <Suspense fallback={<ViewSkeleton view={`dashboard:${sub}`} subTabs={false} />}>
+      {populationContent(sub)}
+    </Suspense>
+  );
+  const populationContent = (sub) => {
     if (selectedPolicies.length === 0) return emptyState;
     // Living standards and Poverty show the selected measures' effect; their
     // twins on the Pre-measures forecast (same names) show current law
@@ -682,8 +740,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
-              <SummaryMetricChart
-                metric={SUMMARY_METRICS.inequality}
+              <InequalityChart
                 rows={results.rawMetrics}
                 policies={POLICIES}
                 selectedPolicies={selectedPolicies}
@@ -915,6 +972,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
+        <Suspense fallback={viewFallback(value)}>
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
           // "not published yet" line is only for an empty publication
@@ -971,6 +1029,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             {populationPanel}
           </PopulationImpactView>
         )}
+        </Suspense>
         </div>
         ))}
         </div>
