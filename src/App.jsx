@@ -681,7 +681,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} />
+            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
             {/* OBR comparison: an expandable row at the foot of the card
                 once the OBR has costed the measures */}
             <ObrComparisonFoot

@@ -192,7 +192,7 @@ const REVENUE_INFO = {
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
 };
 
-function BudgetaryImpactChart({ data, selectedYear }) {
+function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
@@ -234,7 +234,8 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const outOfYears = noRevenue
     ? orderedPolicies
         .map((key) => bySeriesKey.get(key))
-        .filter(Boolean)
+        // Unselected measures are zeros in the data too: only the selection's
+        .filter((measure) => measure && selectedPolicies.includes(measure.id))
         .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear) }))
         .filter(({ reason }) => reason.kind === "not_in_force")
         .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
