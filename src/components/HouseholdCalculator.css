@@ -1656,22 +1656,19 @@
   color: var(--pe-gray-800);
 }
 
-/* The essentials: three a row on a wide screen, two below 900px, one
-   below 480px; More details' groups: two a row, one below 640px. Each
-   label takes one line, so the boxes in a row line up. */
+/* Three boxes a row on a wide screen, in the essentials and in each More
+   details group alike, so their columns line up; two below 900px; one
+   below 480px (More details' groups: below 640px). Each label takes one
+   line, so the boxes in a row line up. */
 .household-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 20px;
   align-items: start;
 }
 
-.household-grid-essentials {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 @media (max-width: 900px) {
-  .household-grid-essentials {
+  .household-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2335,7 +2332,7 @@
 }
 
 .household-detail-panel {
-  padding: 4px 4px 18px;
+  padding: 4px 0 18px;
 }
 
 @media (max-width: 480px) {
