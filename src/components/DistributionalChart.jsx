@@ -395,7 +395,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDotTitled((row) => `${row.decile} decile: net change ${formatPercent(row.netChange)}`)}
+                shape={netDotTitled((row) => `Decile ${formatDecile(String(row.decile))}: net change ${formatPercent(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}

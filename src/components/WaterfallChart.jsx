@@ -384,7 +384,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDotTitled((row) => `${row.decile} decile: net change ${formatCurrency(row.netChange)}`)}
+                shape={netDotTitled((row) => `Decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}: net change ${formatCurrency(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}
