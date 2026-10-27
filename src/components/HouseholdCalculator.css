@@ -1997,6 +1997,20 @@
   visibility: visible;
 }
 
+/* Under the icon where the sticky band would cover it above
+   (utils/infoTooltip.js) */
+.info-icon-wrapper.info-tooltip-below .info-tooltip {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+.info-icon-wrapper.info-tooltip-below .info-tooltip::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--pe-gray-800);
+}
+
 /* More details: a full-width label row that opens the remaining groups */
 .household-more {
   padding: 0;

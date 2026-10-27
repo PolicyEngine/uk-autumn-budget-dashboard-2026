@@ -359,13 +359,14 @@ describe("the Pre-measures forecast view", () => {
     // the reference group
     const area = couples.querySelector(".ls-bar-area");
     fireEvent.focus(area);
-    const tip = within(who).getByRole("tooltip");
+    // Drawn in the window (ViewportTooltip), outside the card
+    const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
     expect(tip).toHaveTextContent("2027-2819.8%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
-    expect(within(who).queryByRole("tooltip")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);

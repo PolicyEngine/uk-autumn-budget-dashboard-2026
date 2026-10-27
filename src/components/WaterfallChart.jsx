@@ -1,18 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  Customized,
-  Scatter,
-} from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ReferenceLine, Customized, Scatter } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";

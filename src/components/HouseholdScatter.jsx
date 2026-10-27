@@ -28,6 +28,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { ViewportBox, pointIn } from "./ViewportTooltip";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
@@ -330,7 +331,6 @@ function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
 function GroupTooltip({ hover, basisLabel, yearLabel }) {
   if (!hover) return null;
   const point = hover.dot;
-  const plotWidth = hover.width ?? 0;
   const incomeTop = Math.min(
     point.incomeBand + SCATTER_BINS.income_band_width,
     SCATTER_BINS.income_max,
@@ -340,17 +340,9 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
     kind === "zero"
       ? "no change"
       : `a change of ${pounds(point.changeBand)} to ${pounds(point.changeBandUpper)}`;
-  const flip = plotWidth > 0 && hover.x > plotWidth / 2;
   return (
-    <div
-      className="household-scatter-tooltip"
-      role="tooltip"
-      style={{
-        top: hover.y + 10,
-        left: flip ? undefined : hover.x + 12,
-        right: flip ? plotWidth - hover.x + 12 : undefined,
-      }}
-    >
+    <ViewportBox locate={(probe) => pointIn(probe, hover.x, hover.y)} offset={12}>
+    <div className="household-scatter-tooltip">
       <p>
         In {yearLabel}, about <strong>{number(point.households)} households</strong> with{" "}
         {basisLabel} income{" "}
@@ -361,6 +353,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
         {point.clamped ? " Beyond the axis range, so drawn at its edge." : ""}
       </p>
     </div>
+    </ViewportBox>
   );
 }
 

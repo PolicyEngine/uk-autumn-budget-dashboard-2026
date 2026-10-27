@@ -99,3 +99,72 @@
   color: var(--pe-gray-700);
   font-size: var(--fs-micro);
 }
+
+/* A hover tooltip drawn in the window (ViewportTooltip.jsx): fixed, placed
+   by placeTooltip so it is never cut off by a card or the window's edge */
+.viewport-tooltip-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.viewport-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  max-width: calc(100vw - 16px);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.viewport-tooltip .floating-tooltip,
+.viewport-tooltip .household-scatter-tooltip {
+  position: static;
+}
+
+/* A thin scrollbar when a list scrolls inside: the hovered row is kept in
+   view, and the box takes no pointer */
+.viewport-tooltip > * {
+  scrollbar-width: thin;
+}
+
+/* Taller than the window: the rows in two columns */
+.viewport-tooltip.is-compact .chart-tooltip {
+  max-width: min(560px, calc(100vw - 16px));
+}
+
+.viewport-tooltip.is-compact .chart-tooltip-section {
+  column-count: 2;
+  column-gap: 16px;
+}
+
+.viewport-tooltip.is-compact .chart-tooltip-row {
+  break-inside: avoid;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel {
+  width: min(460px, calc(100vw - 16px)) !important;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel-list {
+  column-count: 2;
+  column-gap: 12px;
+}
+
+.viewport-tooltip.is-compact .ls-year-panel-list li {
+  break-inside: avoid;
+}
+
+@media (max-width: 520px) {
+  .viewport-tooltip.is-compact .ls-year-panel-list li {
+    grid-template-columns: 8px minmax(0, 1fr) 3.6em;
+  }
+
+  .viewport-tooltip.is-compact .ls-year-panel-track {
+    display: none;
+  }
+}
