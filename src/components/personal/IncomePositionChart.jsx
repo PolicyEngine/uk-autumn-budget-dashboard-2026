@@ -34,6 +34,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import useDataFile from "../../hooks/useDataFile";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
+import GroupedLegend from "../GroupedLegend";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import TitleIcon from "../TitleIcon";
 import SectionHeading from "../SectionHeading";
@@ -208,10 +209,24 @@ function spreadTip({ income, x, youIncome, curve, position, side, anchors, edges
   if (edges && mix) {
     const i = edges.findIndex((edge) => edge > income) - 1;
     if (i >= 0 && i < mix.length) {
-      near = `; about ${(mix[i] * 100).toFixed(1)}% have between ${formatPounds(Math.round(edges[i] / 100) * 100)} and ${formatPounds(Math.round(edges[i + 1] / 100) * 100)}`;
+      near = `; ${(mix[i] * 100).toFixed(1)}% have between ${formatPounds(Math.round(edges[i] / 100) * 100)} and ${formatPounds(Math.round(edges[i + 1] / 100) * 100)}`;
     }
   }
-  return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people have a lower household income, adjusted for household size${near}.` };
+  return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people live in a household with a lower income (adjusted for size)${near}.` };
+}
+
+/**
+ * The dashed lines at half, once and twice the median, labelled in full
+ * where a doubling spans room for "Twice the median", else "Half" and
+ * "Twice" (the legend names them).
+ */
+function medianAnchors(median, x) {
+  const roomy = x(median) - x(median / 2) >= 88;
+  return [
+    { value: median / 2, label: roomy ? "Half the median" : "Half", full: "Half the median income" },
+    { value: median, label: "Median", full: "Median income" },
+    { value: median * 2, label: roomy ? "Twice the median" : "Twice", full: "Twice the median income" },
+  ];
 }
 
 function WhereView({ width, narrow, curves, position, side, decile }) {
@@ -259,12 +274,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   const last = (x(edges[edges.length - 2]) + x(edges[edges.length - 1])) / 2;
   const area = `${outline}L${last.toFixed(1)},${y(0)}L${first.toFixed(1)},${y(0)}Z`;
 
-  const anchors = [
-    // Short names where the card is narrow (a half-width card too)
-    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income", full: "Half the middle income" },
-    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income", full: "Middle income" },
-    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income", full: "Twice the middle income" },
-  ];
+  const anchors = medianAnchors(median, x);
   const bounds = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((p) =>
     p === 0 ? lo : p === 100 ? hi : incomeAt(side === "after" ? curves.after : curves.before, p),
   );
@@ -289,13 +299,8 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
           y={top}
           width={Math.max(0, x(bounds[decile]) - x(bounds[decile - 1]))}
           height={plotH}
-          fill={CHART_COLOURS.highlightBand}
+          fill={CHART_COLOURS.tenthBand}
         />
-      )}
-      {decile && x(bounds[decile]) - x(bounds[decile - 1]) > (narrow ? 50 : 96) && (
-        <text x={x(bounds[decile - 1]) + 4} y={top + 12} textAnchor="start" fontSize={10.5} fill={CHART_COLOURS.highlight}>
-          {tenthName(decile)}
-        </text>
       )}
       {anchors.map((a) => (
         <g key={a.label}>
@@ -313,8 +318,8 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
       <line x1={left} x2={left + plotW} y1={y(0)} y2={y(0)} stroke={CHART_COLOURS.axis} />
       <text x={left + plotW / 2} y={height - 4} textAnchor="middle" fill={AXIS_TITLE_STYLE.fill} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight}>
         {narrow
-          ? `Income adjusted for household size, ${side === "after" ? "after" : "before"}`
-          : `Income adjusted for household size, ${side === "after" ? "after" : "before"} the selected policies (log scale)`}
+          ? `Adjusted income, ${side === "after" ? "after" : "before"}`
+          : `Adjusted income ${side === "after" ? "after" : "before"} the policies (log scale)`}
       </text>
 
       <line x1={youX} x2={youX} y1={36} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
@@ -540,12 +545,7 @@ function RankView({ width, narrow, curves, position, side }) {
   const youX = x(youIncome);
   const onRight = youX > left + plotW * 0.6;
   const colour = side === "after" ? AFTER : BEFORE;
-  const anchors = [
-    // Short names where the card is narrow (a half-width card too)
-    { value: median / 2, label: narrow || width < 640 ? "Half middle" : "Half the middle income", full: "Half the middle income" },
-    { value: median, label: narrow || width < 640 ? "Middle" : "Middle income", full: "Middle income" },
-    { value: median * 2, label: narrow || width < 640 ? "Twice middle" : "Twice the middle income", full: "Twice the middle income" },
-  ];
+  const anchors = medianAnchors(median, x);
   // Hover: an income under the pointer, on the same log axis as the spread
   const STEPS = 80;
   const incomeOf = (i) => Math.exp(Math.log(lo) + ((Math.log(hi) - Math.log(lo)) * (i + 0.5)) / STEPS);
@@ -579,20 +579,26 @@ function RankView({ width, narrow, curves, position, side }) {
       <path d={path} fill="none" stroke={colour} strokeWidth={2.25} strokeDasharray={side === "after" ? undefined : BEFORE_DASH} />
       <text x={left + plotW / 2} y={height - 4} textAnchor="middle" fill={AXIS_TITLE_STYLE.fill} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight}>
         {narrow
-          ? `Income adjusted for household size, ${side}`
-          : `Income adjusted for household size, ${side} the selected policies (log scale)`}
+          ? `Adjusted income, ${side}`
+          : `Adjusted income ${side} the policies (log scale)`}
       </text>
       {/* You: across to the axis, up to the curve */}
       <line x1={youX} x2={youX} y1={y(0)} y2={y(youP)} stroke={TEXT} strokeWidth={1.75} />
       <line x1={left} x2={youX} y1={y(youP)} y2={y(youP)} stroke={TEXT} strokeWidth={1} strokeDasharray={REFERENCE_DASH} />
       <circle cx={youX} cy={y(youP)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
-      {/* Two short lines, so it fits a half-width card */}
-      <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 26} anchor={onRight ? "end" : "start"} size={13}>
-        {`You: ${Math.round(youP)} in 100`}
-      </Label>
-      <Label x={youX + (onRight ? -8 : 8)} y={y(youP) - 10} anchor={onRight ? "end" : "start"} size={11.5} weight={500}>
-        have a lower household income
-      </Label>
+      {/* Short lines, so it fits a half-width card (three on a phone) */}
+      {[`You: ${Math.round(youP)} in 100`, ...(narrow ? ["live in a household", "with a lower income"] : ["live in a lower-income household"])].map((line, i, lines) => (
+        <Label
+          key={line}
+          x={youX + (onRight ? -8 : 8)}
+          y={y(youP) - 10 - 16 * (lines.length - 1 - i)}
+          anchor={onRight ? "end" : "start"}
+          size={i === 0 ? 13 : 11.5}
+          weight={i === 0 ? 600 : 500}
+        >
+          {line}
+        </Label>
+      ))}
       {tip && <line className="position-guide" x1={x(tip.income)} x2={x(tip.income)} y1={top} y2={y(0)} />}
     </svg>
     {tip && (
@@ -822,10 +828,22 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       ? `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => `${i + 1}: ${unit === "pct" ? (percents ? signedPct(percents[i + 1], 2) : "n/a") : averages ? signedPounds(averages[i + 1]) : "n/a"}`).join(", ")}. You, in the ${tenthName(decile).toLowerCase()}: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`
       : compareRows.map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`).join("; ");
 
-  const exportOptions = (cardTitle, svgSelector) => ({
+  // The Spread view's key: your tenth's band, the curve, you, the dashed
+  // median lines (Rank draws no band and labels its own lines)
+  const whereLegend =
+    showAs === "rank"
+      ? []
+      : [
+          ...(decile ? [{ key: "tenth", label: `Your income tenth (${tenthName(decile).toLowerCase()})`, color: CHART_COLOURS.tenthBand, type: "rect" }] : []),
+          { key: "curve", label: "Share of people at each income", color: side === "after" ? AFTER : BEFORE, type: "line", dash: side === "after" ? undefined : BEFORE_DASH },
+          { key: "you", label: "You", color: TEXT, type: "line" },
+          { key: "median", label: "Median and its half/double", color: CHART_COLOURS.reference, type: "line", dash: REFERENCE_DASH },
+        ];
+
+  const exportOptions = (cardTitle, svgSelector, legendItems = []) => ({
     title: cardTitle,
     description: textLine,
-    legendItems: [],
+    legendItems,
     logo: CHART_LOGO,
     svgSelector,
     reservedLegendHeight: 0,
@@ -852,7 +870,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {showAs === "rank"
-                  ? "The share of people with a lower household income than each point (adjusted for household size), with yours marked."
+                  ? "The share of people living in a household with a lower income than each point (adjusted for household size), with yours marked."
                   : "How many people live at each household income (adjusted for household size), with yours marked."}
               </p>
             </div>
@@ -860,7 +878,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               download={{
                 chartRef: whereRef,
                 name: `income-position-${showAs}-${yearLabel}`,
-                exportOptions: exportOptions(whereTitle, `svg.position-${showAs === "rank" ? "rank" : "where"}`),
+                exportOptions: exportOptions(whereTitle, `svg.position-${showAs === "rank" ? "rank" : "where"}`, whereLegend),
                 csv: whereCsv,
               }}
               chartTitle={whereTitle}
@@ -888,6 +906,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </div>
             )}
           </Measured>
+          {whereLegend.length > 0 && (
+            <div className="single-year-legend chart-legend">
+              <GroupedLegend items={whereLegend} />
+            </div>
+          )}
           <div className="chart-footer">
             <ChartMoreInfo
               year={year}

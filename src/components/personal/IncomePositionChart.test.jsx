@@ -107,4 +107,18 @@ describe("Where you sit, for the published package (issue 228)", () => {
     expect(fetched).not.toContain("winners_losers.csv");
     expect(fetched).not.toContain("distributional_impact.csv");
   });
+  it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    const { container } = await renderChart();
+    await screen.findByText(/Your place in the distribution/);
+    const legend = container.querySelector(".position-card .chart-legend");
+    expect(legend).toBeTruthy();
+    const labels = [...legend.querySelectorAll(".grouped-legend-label")].map((node) => node.textContent);
+    expect(labels).toEqual([
+      expect.stringMatching(/^Your income tenth \(.+ tenth\)$/),
+      "Share of people at each income",
+      "You",
+      "Median and its half/double",
+    ]);
+  });
 });

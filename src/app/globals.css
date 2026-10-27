@@ -211,6 +211,7 @@ code {
   --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
   --c-highlight: #285e61; /* the highlighted group, such as the age band */
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
+  --c-tenth-band: #dde6f3; /* your income tenth behind a teal or grey distribution */
   --c-hover: #eef6f6; /* behind the hovered bar or row */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
   --c-obr-text: #6b7280;
