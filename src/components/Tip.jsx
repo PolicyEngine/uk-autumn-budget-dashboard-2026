@@ -6,6 +6,8 @@ import "./Tip.css";
 
 const GAP = 8;
 const EDGE = 8;
+// How long after a tap a made-up mouseleave is ignored (ms)
+const TAP_GRACE = 600;
 
 // Whether the last input was a pointer (a tap or a click) rather than a key.
 // A focus that follows a pointer, such as the About drawer moving focus to
@@ -36,6 +38,10 @@ export default function Tip({ content, children }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [pos, setPos] = useState(null);
+  // When this anchor was last tapped: the mouse events a browser makes up
+  // after a tap (a mouseleave as its emulated pointer moves on) must not
+  // close the tip the tap just opened
+  const tappedAt = useRef(-Infinity);
 
   useEffect(() => setMounted(true), []);
 
@@ -89,13 +95,18 @@ export default function Tip({ content, children }) {
       ref={wrapRef}
       className="tip-anchor"
       onMouseEnter={show}
-      onMouseLeave={hide}
+      onMouseLeave={() => {
+        if (performance.now() - tappedAt.current > TAP_GRACE) hide();
+      }}
       onFocus={() => {
         if (!pointerLast) show();
       }}
       onBlur={hide}
       onPointerDown={(event) => {
-        if (event.pointerType === "touch") setOpen((value) => !value);
+        if (event.pointerType === "touch") {
+          tappedAt.current = performance.now();
+          setOpen((value) => !value);
+        }
       }}
     >
       {child}

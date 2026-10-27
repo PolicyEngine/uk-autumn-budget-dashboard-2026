@@ -33,6 +33,9 @@ describe("Tip", () => {
     expect(button.textContent).toBe("");
     fireEvent.pointerDown(button, { pointerType: "touch" });
     expect(screen.getByRole("tooltip")).toHaveTextContent("Absolute poverty");
+    // The mouseleave a browser makes up just after a tap leaves it open
+    fireEvent.mouseLeave(button);
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
     fireEvent.pointerDown(button, { pointerType: "touch" });
     expect(screen.queryByRole("tooltip")).toBeNull();
     render(<Tip content={null}><span className="bare">x</span></Tip>, { container });

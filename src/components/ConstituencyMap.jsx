@@ -386,12 +386,10 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
         <InfoTip
           label="How to read the key"
           content={
-            <>
-              Amber is a loss, light grey no change and teal a gain, on one scale from {low} to {high} for every
-              policy and year. Mid grey is too uncertain to classify, dotted is approximate (under 30 survey
-              households), hatched is not published to protect survey respondents&apos; confidentiality, and
-              solid is reported.
-            </>
+            `Amber is a loss, light grey no change and teal a gain, on one scale from ${low} to ${high} for every ` +
+            "policy and year. Mid grey is too uncertain to classify; dotted is approximate (under 30 effective survey " +
+            "households); hatched is not published, to protect survey respondents' confidentiality (under 10 survey " +
+            "households, or one or two would make up too much of the figure); solid is reported."
           }
         />
         <span className="map-key-count" aria-live="polite">
