@@ -183,6 +183,62 @@ def test_fan_out_with_no_commit_keeps_runs_with_no_commit(environ):
     assert fan_out_answers(run_map, [0, 1], environ) == [0, 1]
 
 
+def test_fan_out_hands_over_each_run_as_it_arrives():
+    """Each answer of this build is handed to on_result as the map gives
+    it, before the later runs are answered (the headline's before and after
+    runs, jobs 0 and 1, are not held back by a breakdown's other runs)."""
+    seen = []
+    produced = []
+
+    def run_map(jobs):
+        for index in jobs:
+            # By the time run ``index`` is produced, every earlier run has
+            # been handed over
+            assert seen == [(i, {"run": i}) for i in range(index)]
+            produced.append(index)
+            yield run_answer({"run": index}, 1.0, "c1", BUILD)
+
+    results = fan_out_answers(
+        run_map,
+        [0, 1, 2],
+        {"GIT_SHA": BUILD},
+        on_result=lambda i, result: seen.append((i, result)),
+    )
+    assert produced == [0, 1, 2]
+    assert seen == [(0, {"run": 0}), (1, {"run": 1}), (2, {"run": 2})]
+    assert results == [{"run": 0}, {"run": 1}, {"run": 2}]
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        run_answer({"run": 1}, 1.0, "c9", OTHER),
+        {"run": 1},
+        run_answer({"run": 1}, 1.0, "c9", None),
+    ],
+    ids=["another commit", "bare result", "no commit"],
+)
+def test_fan_out_hands_over_nothing_from_or_after_another_build(other):
+    """A run of another build is never handed over, nor any run after it,
+    and the request is still refused as a whole."""
+    seen = []
+    run_map, _ = _run_map(
+        [
+            run_answer({"run": 0}, 1.0, "c1", BUILD),
+            other,
+            run_answer({"run": 2}, 1.0, "c1", BUILD),
+        ]
+    )
+    with pytest.raises(OtherBuildError, match="1 of 3 runs"):
+        fan_out_answers(
+            run_map,
+            [0, 1, 2],
+            {"GIT_SHA": BUILD},
+            on_result=lambda i, result: seen.append(i),
+        )
+    assert seen == [0]
+
+
 _environs = st.sampled_from(
     [
         ({"GIT_SHA": BUILD}, BUILD),
@@ -275,7 +331,12 @@ def test_modal_household_reports_each_runs_build_and_fan_out_checks_them():
     ]
     assert _is_call_to(returned, "fan_out_answers")
     run_map, jobs = returned.args
-    assert not returned.keywords
+    # Only on_result, passed on as given: the container's own environment
+    # (the default) is the build the runs are compared with
+    ((keyword),) = returned.keywords
+    assert keyword.arg == "on_result"
+    assert isinstance(keyword.value, ast.Name)
+    assert keyword.value.id == "on_result"
     # Household().run.map
     assert isinstance(run_map, ast.Attribute) and run_map.attr == "map"
     assert isinstance(run_map.value, ast.Attribute)

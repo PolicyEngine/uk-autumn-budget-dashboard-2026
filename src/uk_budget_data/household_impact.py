@@ -1632,8 +1632,11 @@ def _run_key(job: tuple) -> str:
 _IN_FLIGHT: "dict[str, Future]" = {}
 
 
-def _compute(jobs: list, todo: list, workers: int) -> list:
-    """The runs ``todo`` (indices into ``jobs``), by the instance's runner."""
+def _compute(jobs: list, todo: list, workers: int, on_result=None) -> list:
+    """The runs ``todo`` (indices into ``jobs``), by the instance's runner.
+    On Modal, ``on_result(position, result)`` is called for each run as it
+    arrives (``position`` in ``todo``); the other runners answer together,
+    and the caller hands those over itself."""
     # With workers, even one run goes to a worker: requests run at once, and
     # two runs in this process at the same time would share its engine.
     if os.environ.get("HOUSEHOLD_RUNNER") == "modal":
@@ -1641,7 +1644,7 @@ def _compute(jobs: list, todo: list, workers: int) -> list:
         # once, each with the engine already loaded.
         from uk_budget_data.modal_household import fan_out
 
-        return fan_out([jobs[i] for i in todo])
+        return fan_out([jobs[i] for i in todo], on_result=on_result)
     if workers > 1:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
@@ -1663,7 +1666,14 @@ def _run_all(jobs: list, workers: int) -> list:
     workers (``personal_impact.run_in_workers``, taking the instance's
     shared slots, so concurrent requests share the processes fairly), else
     here, in turn. A run already done for the same inputs is reused, and
-    one another request is computing now is waited for, not run twice."""
+    one another request is computing now is waited for, not run twice.
+
+    Each run is handed over as soon as it is done, not when its whole batch
+    is: on Modal the page asks for the headline, the split by policy and
+    the sweep at once, and whichever request starts first owns the shared
+    before and after runs (jobs 0 and 1); the headline request waiting on
+    them is answered when those two are done, not when the split by
+    policy's other runs are."""
     keys = [_run_key(job) for job in jobs]
     results: list = [None] * len(jobs)
     owned: dict = {}
@@ -1684,23 +1694,42 @@ def _run_all(jobs: list, workers: int) -> list:
         for i, key in enumerate(keys)
         if results[i] is None and i not in waiting
     ]
-    try:
-        done = _compute(jobs, todo, workers) if todo else []
-    except BaseException as error:
+    delivered: set = set()
+
+    def deliver(position: int, result) -> None:
+        # One run done: kept, and its waiters (this request's own repeats
+        # and other requests') answered now
+        i = todo[position]
         with _RUNS_LOCK:
-            for key, future in owned.items():
-                _IN_FLIGHT.pop(key, None)
-                future.set_exception(error)
-        raise
-    with _RUNS_LOCK:
-        for i, result in zip(todo, done):
+            if i in delivered:
+                return
+            delivered.add(i)
             results[i] = result
             _RUNS[keys[i]] = copy.deepcopy(result)
             _RUNS.move_to_end(keys[i])
             _IN_FLIGHT.pop(keys[i], None)
-            owned[keys[i]].set_result(result)
-        while len(_RUNS) > RUNS_KEPT:
-            _RUNS.popitem(last=False)
+            future = owned[keys[i]]
+            if not future.done():
+                future.set_result(result)
+            while len(_RUNS) > RUNS_KEPT:
+                _RUNS.popitem(last=False)
+
+    try:
+        done = _compute(jobs, todo, workers, on_result=deliver) if todo else []
+    except BaseException as error:
+        # The runs not handed over fail, for this request and its waiters;
+        # those handed over were answered by this build and stay kept
+        with _RUNS_LOCK:
+            for i in todo:
+                if i in delivered:
+                    continue
+                _IN_FLIGHT.pop(keys[i], None)
+                future = owned[keys[i]]
+                if not future.done():
+                    future.set_exception(error)
+        raise
+    for position, result in enumerate(done):
+        deliver(position, result)
     for i, future in waiting.items():
         results[i] = copy.deepcopy(future.result())
     return results

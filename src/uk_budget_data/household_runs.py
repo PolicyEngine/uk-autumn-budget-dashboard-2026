@@ -78,10 +78,18 @@ def fan_out_answers(
     run_map: Callable[[list], Iterable],
     jobs: list,
     environ: Mapping[str, str] = os.environ,
+    on_result: Callable[[int, object], None] | None = None,
 ) -> list:
     """What ``fan_out`` does, given the map that sends each job to its own
     ``Household`` container (``Household().run.map``) and this container's
     environment: the runs' results, in order, logged with their times.
+
+    ``on_result(index, result)`` is called for each run as its answer
+    arrives (the map gives them in order), so a request waiting on the
+    first runs (the headline's before and after, jobs 0 and 1) is answered
+    without waiting for the rest of the batch (the split by policy's or the
+    sweep's runs). Only answers of this container's build are handed over,
+    and none after the first of another build.
 
     Raises:
         OtherBuildError: when a container of another build than this
@@ -89,10 +97,18 @@ def fan_out_answers(
             then asks Cloud Run.
     """
     started = time.perf_counter()
+    build = container_build(environ)
+    answers = []
+    handing_over = on_result is not None
+    for index, answer in enumerate(run_map(jobs)):
+        answers.append(answer)
+        if handing_over:
+            if _is_run_answer(answer) and answer["git_sha"] == build:
+                on_result(index, answer["result"])
+            else:
+                handing_over = False
     try:
-        results, detail = kept_results(
-            list(run_map(jobs)), container_build(environ)
-        )
+        results, detail = kept_results(answers, build)
     except OtherBuildError as error:
         print(f"household fan-out refused: {error}")
         raise

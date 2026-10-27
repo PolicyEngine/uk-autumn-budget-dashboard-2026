@@ -1498,7 +1498,7 @@ def test_modal_runner_sends_every_run_to_fan_out_and_keeps_their_order(
     household_impact.clear_runs()
     sent = []
 
-    def fan_out(jobs):
+    def fan_out(jobs, on_result=None):
         sent.append(list(jobs))
         return [{"household_net_income": float(i)} for i in range(len(jobs))]
 
@@ -1534,7 +1534,7 @@ def test_a_run_another_request_is_computing_is_waited_for_not_run_again(
     first_started = threading.Event()
     finish_first = threading.Event()
 
-    def fan_out(jobs):
+    def fan_out(jobs, on_result=None):
         sent.append(list(jobs))
         if len(sent) == 1:
             first_started.set()
@@ -1592,7 +1592,7 @@ def test_a_failed_run_fails_every_request_waiting_for_it(monkeypatch):
     release = threading.Event()
     calls = []
 
-    def fan_out(jobs):
+    def fan_out(jobs, on_result=None):
         calls.append(list(jobs))
         if len(calls) == 1:
             started.set()
@@ -1641,6 +1641,152 @@ def test_a_failed_run_fails_every_request_waiting_for_it(monkeypatch):
     assert household_impact._run_all([("job", 0)], workers=1) == [
         {"household_net_income": 1.0}
     ]
+    household_impact.clear_runs()
+
+
+def test_a_waiting_request_gets_a_shared_run_before_the_owners_batch_ends(
+    monkeypatch,
+):
+    """The page asks for the headline and the split by policy at once. When
+    the split by policy's request owns the shared before and after runs
+    (jobs 0 and 1 of a longer batch), the headline's request is answered
+    as soon as those two arrive, not when the whole batch is done."""
+    import sys
+    import threading
+    import types
+
+    household_impact.clear_runs()
+    owner_started = threading.Event()
+    headline_answered = threading.Event()
+    sent = []
+
+    def fan_out(jobs, on_result=None):
+        sent.append(list(jobs))
+        results = []
+        for position, job in enumerate(jobs):
+            result = {"household_net_income": float(job[1])}
+            if position == 2:
+                # The rest of the batch waits until the headline is in
+                owner_started.set()
+                assert headline_answered.wait(5)
+            if on_result is not None:
+                on_result(position, result)
+            results.append(result)
+        return results
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    breakdown = [("job", i) for i in range(6)]
+    answers = {}
+
+    def ask(name, jobs, done=None):
+        answers[name] = household_impact._run_all(jobs, workers=1)
+        if done is not None:
+            done.set()
+
+    owner = threading.Thread(target=ask, args=("breakdown", breakdown))
+    owner.start()
+    assert owner_started.wait(5)
+    headline = threading.Thread(
+        target=ask, args=("headline", breakdown[:2], headline_answered)
+    )
+    headline.start()
+    # Answered while the owner's batch is still held at its third run
+    assert headline_answered.wait(5)
+    assert [r["household_net_income"] for r in answers["headline"]] == [0, 1]
+    owner.join(5)
+    headline.join(5)
+    assert [r["household_net_income"] for r in answers["breakdown"]] == [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]
+    # The headline sent nothing of its own: both its runs were the owner's
+    assert sent == [breakdown]
+    household_impact.clear_runs()
+
+
+def test_a_batch_failing_part_way_keeps_the_runs_already_handed_over(
+    monkeypatch,
+):
+    """A batch that fails after its first runs arrived (a run of another
+    build, say): those runs stay answered and kept, the owner fails, and a
+    request waiting on a run not yet answered fails with it; that run is
+    not kept, so a later request runs it again."""
+    import sys
+    import threading
+    import types
+
+    from uk_budget_data.household_runs import OtherBuildError
+
+    household_impact.clear_runs()
+    started = threading.Event()
+    release = threading.Event()
+    calls = []
+
+    def fan_out(jobs, on_result=None):
+        calls.append(list(jobs))
+        if len(calls) == 1:
+            on_result(0, {"household_net_income": 0.0})
+            on_result(1, {"household_net_income": 1.0})
+            started.set()
+            assert release.wait(5)
+            raise OtherBuildError("1 of 3 runs were answered by another build")
+        return [{"household_net_income": 2.0} for _ in jobs]
+
+    monkeypatch.setenv("HOUSEHOLD_RUNNER", "modal")
+    monkeypatch.setitem(
+        sys.modules,
+        "uk_budget_data.modal_household",
+        types.SimpleNamespace(fan_out=fan_out),
+    )
+    from concurrent.futures import Future
+
+    waiting = threading.Event()
+
+    class SignallingFuture(Future):
+        def result(self, timeout=None):
+            waiting.set()
+            return super().result(timeout)
+
+    monkeypatch.setattr(household_impact, "Future", SignallingFuture)
+    jobs = [("job", 0), ("job", 1), ("job", 2)]
+    outcome = {}
+
+    def ask(name, asked):
+        try:
+            outcome[name] = household_impact._run_all(asked, workers=1)
+        except OtherBuildError as error:
+            outcome[name] = error
+
+    owner = threading.Thread(target=ask, args=("owner", jobs))
+    owner.start()
+    assert started.wait(5)
+    # The first two are answered already, from what was kept
+    assert household_impact._run_all(jobs[:2], workers=1) == [
+        {"household_net_income": 0.0},
+        {"household_net_income": 1.0},
+    ]
+    third = threading.Thread(target=ask, args=("third", [jobs[2]]))
+    third.start()
+    assert waiting.wait(5)
+    release.set()
+    owner.join(5)
+    third.join(5)
+    assert isinstance(outcome["owner"], OtherBuildError)
+    assert isinstance(outcome["third"], OtherBuildError)
+    # The failed run was not kept: asked again, it is run again
+    assert household_impact._run_all([jobs[2]], workers=1) == [
+        {"household_net_income": 2.0}
+    ]
+    assert calls[1:] == [[jobs[2]]]
     household_impact.clear_runs()
 
 

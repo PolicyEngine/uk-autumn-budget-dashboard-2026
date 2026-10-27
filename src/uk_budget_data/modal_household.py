@@ -253,14 +253,17 @@ class Household:
         )
 
 
-def fan_out(jobs: list) -> list:
-    """Each job in its own ``Household`` container, at once, in order.
+def fan_out(jobs: list, on_result=None) -> list:
+    """Each job in its own ``Household`` container, at once, in order;
+    ``on_result(index, result)`` is called for each run as it arrives
+    (``fan_out_answers``), so ``_run_all`` hands the headline's runs to the
+    request waiting for them before the rest of the batch is done.
 
     Raises:
         OtherBuildError: when a container of another build (a deploy's
             change-over) answered any run; the page then asks Cloud Run.
     """
-    return fan_out_answers(Household().run.map, jobs)
+    return fan_out_answers(Household().run.map, jobs, on_result=on_result)
 
 
 @app.cls(
