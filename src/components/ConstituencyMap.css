@@ -320,7 +320,10 @@
 }
 
 .map-key-segment:focus-visible,
-.map-key-item:focus-visible {
+.map-key-item:focus-visible,
+/* The plot scrolls on a wide screen, so the browser lets it take focus:
+   the page's ring, not the browser's 1px default */
+.constituency-body:focus-visible {
   outline: 2px solid var(--pe-teal-500);
   outline-offset: 2px;
 }
