@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import {
   EngineMismatchError,
@@ -11,8 +11,10 @@ import {
   mergeStages,
   normaliseHouseholdImpact,
   requestKey,
+  sharedBuild,
   stageMismatch,
   statePensionFor,
+  versionUrl,
 } from "./householdImpactApi";
 import {
   areaName,
@@ -935,5 +937,58 @@ describe("postHouseholdDetail", () => {
     } finally {
       process.env = saved;
     }
+  });
+});
+
+describe("sharedBuild: may Modal answer the headline?", () => {
+  const MAIN = "https://main.test/api/household-impact";
+  const DETAIL = "https://detail.test/api/household-impact";
+  const BUILD = "e".repeat(40);
+  const PACKAGES = { policyengine: "6.10.2", "policyengine-uk": "2.132.6", "policyengine-core": "3.33.3", uk_budget_data: "0.1.0" };
+  const serveVersions = (main, detail) => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
+    vi.stubGlobal("fetch", async (url) => {
+      const reply = url === "https://main.test/api/version" ? main : url === "https://detail.test/api/version" ? detail : null;
+      if (reply instanceof Error) throw reply;
+      return reply ? Response.json(reply) : new Response("not found", { status: 404 });
+    });
+  };
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("finds /api/version beside the household route", () => {
+    expect(versionUrl(MAIN)).toBe("https://main.test/api/version");
+    expect(versionUrl("not a url")).toBeNull();
+  });
+
+  it("is the commit when both report it and the same model packages", async () => {
+    serveVersions({ git_sha: BUILD, packages: PACKAGES }, { git_sha: BUILD, packages: { ...PACKAGES, uk_budget_data: null } });
+    await expect(sharedBuild()).resolves.toBe(BUILD);
+  });
+
+  for (const [why, main, detail] of [
+    ["Cloud Run reports no commit", { git_sha: null, packages: PACKAGES }, { git_sha: BUILD, packages: PACKAGES }],
+    ["the commits differ", { git_sha: BUILD, packages: PACKAGES }, { git_sha: "f".repeat(40), packages: PACKAGES }],
+    ["a commit is malformed", { git_sha: "abc", packages: PACKAGES }, { git_sha: "abc", packages: PACKAGES }],
+    ["a model package differs", { git_sha: BUILD, packages: PACKAGES }, { git_sha: BUILD, packages: { ...PACKAGES, "policyengine-uk": "2.151.0" } }],
+    ["Modal can't be reached", { git_sha: BUILD, packages: PACKAGES }, new TypeError("Failed to fetch")],
+    ["Modal has no /api/version", { git_sha: BUILD, packages: PACKAGES }, null],
+  ]) {
+    it(`is null when ${why}`, async () => {
+      serveVersions(main, detail);
+      await expect(sharedBuild()).resolves.toBeNull();
+    });
+  }
+
+  it("is null, asking nothing, without a detail URL", async () => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", "");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(sharedBuild()).resolves.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

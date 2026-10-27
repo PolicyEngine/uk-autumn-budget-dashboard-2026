@@ -190,11 +190,11 @@ describe("the household calculation, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  // #170 asked for all three parts at once and raced the headline across
-  // both services. Merged with #104, the headline stays Cloud Run's: it is
-  // what the detail service's parts are checked against (same build), and
-  // a Modal headline would have nothing to be checked against.
-  it("with a detail URL, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
+  // The headline is Modal's only when both services' /api/version report
+  // one build commit and the same packages (useHouseholdImpactModalHeadline
+  // .test.jsx). Here neither answers /api/version (404), so it is Cloud
+  // Run's, and the parts follow it, checked against its build.
+  it("with a detail URL whose build can't be checked, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
     const DETAIL_API = "https://modal.test/api/household-impact";
     const BUILD = "b".repeat(40);
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);

@@ -19,6 +19,11 @@
  * waiting for the split by policy. A part a request did not compute comes
  * back as null; `normaliseHouseholdImpact` turns the answer into the page's
  * own shape.
+ *
+ * With a detail service (Modal) of the same build as the main API
+ * (`sharedBuild`, from each one's `/api/version`), all three are asked of
+ * Modal at once, and Cloud Run only when Modal's answer can't be used
+ * (useHouseholdImpact).
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
@@ -678,61 +683,72 @@ export function consistentRound(values, total) {
 }
 
 /**
- * The headline (`include: []`) when the build has a detail URL: asked of
- * both services at once, the first answer kept and the other request
- * stopped. A warm Modal answers in a run's time; while it is starting,
- * Cloud Run answers first, so the headline is never slower than Cloud
- * Run's. An answer the API refuses as invalid is final; if both fail, the
- * Cloud Run error is thrown, as without a detail URL.
- *
- * Not used by the page for now: its headline is Cloud Run's, the build
- * the detail service's parts are checked against (useHouseholdImpact). A
- * Modal headline can be used once it is checked against Cloud Run's
- * commit, as the parts are.
- *
- * @param {Object} body - A request from buildHouseholdRequest
- * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: Function }} [options]
+ * How long the detail service (Modal) may take over a headline before the
+ * page asks Cloud Run for it instead. A warm Modal answers in about 8-21 s
+ * and a cold one in about 17 s (#253); Cloud Run's own headline takes
+ * about 15 s, so a Modal headline that is slower than this is no gain.
  */
-export async function postHouseholdHeadline(body, options = {}) {
-  const detailUrl = householdDetailApiUrl();
-  if (!detailUrl) return postHouseholdImpact(body, options);
-  const loser = new AbortController();
-  const onAbort = () => loser.abort();
-  options.signal?.addEventListener("abort", onAbort);
-  const ask = (url) => postHouseholdImpact(body, { ...options, signal: loser.signal, url });
-  const primary = ask(undefined);
-  const modal = ask(detailUrl);
+export const MODAL_HEADLINE_TIMEOUT_MS = 25_000;
+/** How long a service's `/api/version` may take. */
+export const VERSION_TIMEOUT_MS = 10_000;
+
+/** A service's `/api/version` URL, from its household URL (…/api/household-impact). */
+export function versionUrl(householdUrl) {
   try {
-    return await new Promise((resolve, reject) => {
-      let failures = 0;
-      let primaryError = null;
-      const failed = (error, isPrimary) => {
-        if (error instanceof HouseholdApiError && error.kind === "invalid") {
-          reject(error);
-          return;
-        }
-        if (isPrimary) primaryError = error;
-        failures += 1;
-        if (failures === 2) reject(primaryError ?? error);
-      };
-      primary.then(resolve, (error) => failed(error, true));
-      modal.then(resolve, (error) => failed(error, false));
-    });
-  } finally {
-    // The answer is in (or both failed): stop the other request
-    loser.abort();
-    options.signal?.removeEventListener("abort", onAbort);
+    return new URL("version", householdUrl).toString();
+  } catch {
+    return null;
   }
 }
 
 /**
- * Whether the headline, the sweep and the split by policy can be asked for
- * all at once: only with a detail URL (Modal), where each run has its own
- * container. On Cloud Run alone the headline goes first, so it is not
- * queued behind the slower parts on the instance's worker slots. Not used
- * by the page for now (see postHouseholdHeadline).
+ * A service's identity from its `/api/version`: { git_sha, packages }.
+ * Rejects when it cannot be read.
  */
-export const askAllAtOnce = () => householdDetailApiUrl() !== null;
+export async function getServiceVersion(url, { timeoutMs = VERSION_TIMEOUT_MS, fetchImpl } = {}) {
+  const doFetch = fetchImpl ?? globalThis.fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await doFetch(url, { method: "GET", signal: controller.signal });
+    if (!response.ok) throw new HouseholdApiError("server", `${url} answered ${response.status}`);
+    const payload = await response.json();
+    if (!payload || typeof payload !== "object") throw new HouseholdApiError("server", `${url} sent no identity`);
+    return payload;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * The build commit the main API (Cloud Run) and the detail service (Modal)
+ * share, or null. The detail service may answer the headline only when
+ * both report the same well-formed commit and the same model packages: the
+ * main API's build is the one every Cloud Run answer is checked against
+ * (#104), and the receipts record package versions only, so a Modal
+ * deploy of other repository code under the same packages would otherwise
+ * go unnoticed. Null too when either cannot be read, or the build has no
+ * detail URL: the page then asks Cloud Run for the headline, as before.
+ */
+export async function sharedBuild(options = {}) {
+  const main = householdApiUrl();
+  const detail = householdDetailApiUrl();
+  if (!main || !detail) return null;
+  try {
+    const [a, b] = await Promise.all([
+      getServiceVersion(versionUrl(main), options),
+      getServiceVersion(versionUrl(detail), options),
+    ]);
+    const commit = buildOf(a.git_sha);
+    if (typeof commit !== "string" || !sameCommit(commit, buildOf(b.git_sha))) return null;
+    const same = STAGE_ENGINE_PACKAGES.every(
+      (name) => typeof a.packages?.[name] === "string" && a.packages[name] === b.packages?.[name],
+    );
+    return same ? commit : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * A detail part (sweep or split by policy): from the detail URL when the
