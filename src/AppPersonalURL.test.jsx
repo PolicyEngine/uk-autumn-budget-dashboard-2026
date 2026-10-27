@@ -181,7 +181,7 @@ describe("a later snapshot keeps the reader's selection", () => {
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const all = selectedCount();
     expect(policies()).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     await waitFor(() => expect(selectedCount()).toBe(all - 1));
     expect(policies().split(",")).toHaveLength(all - 1);
@@ -215,7 +215,7 @@ describe("the header's year in the address", () => {
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     window.history.replaceState({}, "", "/?tab=policies&year=2030");
     render(<App />);
-    expect(await screen.findByRole("button", { name: /^Year, 2030-31/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /^Year 2030-31/ })).toBeInTheDocument();
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBe("2030"));
   });
 

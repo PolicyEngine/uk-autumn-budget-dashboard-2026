@@ -75,14 +75,16 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
         aria-expanded={isExpanded}
         aria-disabled={inactiveReason ? "true" : undefined}
+        // The name starts with the pill's visible text, "Policies All 7
+        // policies" (WCAG 2.5.3, label in name), and says what it chooses
         aria-label={
-          inactiveReason
-            ? `Select policies: ${inactiveReason}`
-            : loading
-            ? "Select policies: loading"
-            : reason
-            ? `Select policies: ${reason}`
-            : "Select policies"
+          loading
+            ? "Policies: loading"
+            : none
+            ? `No policies yet${reason ? `: ${reason}` : ""}`
+            : `Policies ${selectedCount === policies.length ? "All " : ""}${selectedCount}${selectedCount === policies.length ? "" : ` of ${policies.length}`} ${unit(policies.length)}${
+                inactiveReason ? `: ${inactiveReason}` : reason ? `: ${reason}` : ", choose which to include"
+              }`
         }
         aria-busy={loading || undefined}
         disabled={disabled}
@@ -97,6 +99,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
           ) : (
             <>
               <span className="band-control-label">Policies</span>
+              {" "}
               {/* "All 9 policies" or "3 of 9 policies"; on a phone "All 9"
                   or "3 of 9" (the unit is hidden) */}
               <span className="band-control-value">

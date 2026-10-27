@@ -113,8 +113,8 @@ describe("published measure catalogue in population views", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
-    expect(screen.getByRole("button", { name: "Select policies" })).toHaveTextContent(/Policies\s*All 2 policies/);
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    expect(screen.getByRole("button", { name: /^Policies / })).toHaveTextContent(/Policies\s*All 2 policies/);
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     for (const measure of catalogue.displayable) {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
       expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
@@ -129,13 +129,13 @@ describe("published measure catalogue in population views", () => {
   it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
     const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
     const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));
-    const loading = screen.getByRole("button", { name: "Select policies: loading" });
+    const loading = screen.getByRole("button", { name: "Policies: loading" });
     expect(loading).toHaveTextContent("Policies");
     expect(loading).not.toHaveTextContent(/0 of 0/);
     expect(loading).toBeDisabled();
     unmount();
     render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
-    const none = screen.getByRole("button", { name: "Select policies: No Budget results are published yet" });
+    const none = screen.getByRole("button", { name: "No policies yet: No Budget results are published yet" });
     expect(none).toHaveTextContent("No policies yet");
     expect(none).toBeDisabled();
   });

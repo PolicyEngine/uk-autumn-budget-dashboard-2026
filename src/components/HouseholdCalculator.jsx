@@ -865,7 +865,8 @@ function HouseholdCalculator({
         examples={HOUSEHOLD_EXAMPLES}
         value={presetId}
         formOpen={formOpen}
-        formId={FORM_PANEL_ID}
+        // aria-controls names the panel only while it is in the page
+        formId={form.mounted ? FORM_PANEL_ID : undefined}
         onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
         presets={noneSelected ? null : presetsAnswer ? presetChanges : fill.figures}

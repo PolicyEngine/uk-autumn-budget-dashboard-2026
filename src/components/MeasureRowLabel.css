@@ -32,14 +32,14 @@
   border-radius: 3px;
 }
 
-/* The short name wraps to a second line on a narrow card rather than
-   ending in "…" ("State Pension tax protection" at 360px); two lines at
-   most, as a backstop */
+/* The short name wraps on a narrow card rather than ending in "…"
+   ("State Pension protection", "Business sale relief limit halved" at
+   360px); three lines at most, as a backstop */
 .mrl-name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   overflow-wrap: break-word;
   font-weight: 500;
