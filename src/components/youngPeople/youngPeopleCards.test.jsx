@@ -184,6 +184,13 @@ describe("young people cards", () => {
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
   });
 
+  it("says a change of about £0 as almost no change, not a gain of £0", () => {
+    render(<TrendCard {...props} selectedPolicies={["salary_sacrifice_cap"]} selectedYear={2028} />);
+    const headline = document.querySelector(".trend-headline");
+    expect(headline).toHaveTextContent(/^16 to 24-year-olds see almost no change in 2028-29/);
+    expect(headline).not.toHaveTextContent(/gain about £0/);
+  });
+
   it("draws every year shown, whatever year is selected", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const first = DISPLAY_YEARS[0];

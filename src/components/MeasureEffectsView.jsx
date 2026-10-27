@@ -3,8 +3,10 @@
 // "This year": one horizontal bar per measure for the selected year, from a
 // zero line, sorted by size, the value at the bar's end; measures that read
 // as zero are left out and counted. "Year by year": a compact table of
-// measures by years, each cell shaded by size and sign (a fall in the
-// gain colour, a rise in the loss colour) with its value.
+// measures by years, each cell shaded by size and sign (for poverty, a fall
+// in the gain colour and a rise in the loss colour; for inequality, one
+// neutral colour, as a change in inequality is no household's gain or loss)
+// with its value.
 
 import { CHART_LOGO } from "../utils/chartLogo";
 import MeasureRowLabel from "./MeasureRowLabel";
@@ -66,7 +68,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
         </p>
       ) : view === "years" ? (
         <div className="mev-table-wrap">
-          <table className="mev-table">
+          <table className={`mev-table${metric.choices === "inequality" ? " is-neutral" : ""}`}>
             <thead>
               <tr>
                 <th scope="col">Measure</th>

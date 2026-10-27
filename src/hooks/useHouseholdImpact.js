@@ -39,9 +39,23 @@ export function peekHouseholdImpact(key, expectedEngine = null) {
   return underEngine(cache.get(key), expectedEngine)?.data ?? null;
 }
 
-/** Empty the session cache (for tests). */
+// Whether the detail service (NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL) may
+// still be asked this session. Its answer is used only under a headline
+// that reports a build commit, and only from that commit; once it has
+// answered from another build (another commit, none, other package versions
+// or another net income), every later answer would be refused too, so the
+// page stops waiting for it and asks the main API at once.
+let detailServiceUsable = true;
+
+/** Whether the detail service may still be asked this session (for tests). */
+export function detailServiceAsked() {
+  return detailServiceUsable;
+}
+
+/** Empty the session cache, and ask the detail service again (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();
+  detailServiceUsable = true;
 }
 
 /**
@@ -167,6 +181,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
+      // Whether this request fetched its headline: one kept in the cache
+      // (an example card's, or this household's from earlier in the session)
+      // may come from a deploy that has since been replaced
+      const headlineFetched = !first;
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
@@ -223,22 +241,35 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       );
       // The detail service's answer is used only if it has the part asked
       // for, reports the headline's build commit and matches it; otherwise
-      // the part is asked of the main API
+      // the part is asked of the main API. An answer from another build than
+      // a headline fetched just now stops the page asking the detail service
+      // for the rest of the session
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
           const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
-          return answered && stageMismatch(first, detail, { sameBuild: true }) === null;
+          const otherBuild = stageMismatch(first, detail, { sameBuild: true }) !== null;
+          // Only a headline fetched just now stands for the main API's
+          // current build: under one kept from an earlier deploy, a detail
+          // answer from the new one is refused for this request but says
+          // nothing about the next
+          if (otherBuild && headlineFetched) detailServiceUsable = false;
+          return answered && !otherBuild;
         } catch {
           return false;
         }
       };
+      // Under a headline that reports no build commit (a deploy from before
+      // answers carried one), no detail answer can be accepted: asking the
+      // detail service would only add its time, up to a cold start, before
+      // the main API is asked anyway
+      const askDetail = detailServiceUsable && typeof first.build === "string";
       await Promise.all(
         parts.map(async (include) => {
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include) },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include), detail: askDetail },
             );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,

@@ -12,7 +12,7 @@ import MeasureRowLabel from "./MeasureRowLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import { CHART_COLOURS } from "../utils/chartTheme";
-import { formatShare, visibleSegments } from "../utils/shareFormat";
+import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import "./MeasureSharesChart.css";
 
 const OUTCOMES = [
@@ -31,6 +31,9 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
   // A measure's row gets the shared label; an age group's its name
   const { byId } = useMeasureCatalogue();
   const { tip, handlers } = useFloatingTooltip(ref, `${groupLabel}-${yearLabel}-${rows.length}`);
+  // One precision per column: "96.3%" beside "99.0%", never "96%" beside "99.0%"
+  const betterDecimals = shareDecimals(rows.map(({ row }) => row.pct_better_off ?? 0));
+  const worseDecimals = shareDecimals(rows.map(({ row }) => row.pct_worse_off ?? 0));
   return (
     <div className="msc-wrap">
     <div ref={ref} className="msc" role="table" aria-label={`Better and worse off, ${groupLabel}, each measure on its own, ${yearLabel}`}>
@@ -73,10 +76,10 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
               </span>
             </span>
             <span className="msc-num" role="cell">
-              {formatShare(drawn.real.pct_better_off)}
+              {formatShare(drawn.real.pct_better_off, betterDecimals)}
             </span>
             <span className="msc-num" role="cell">
-              {formatShare(drawn.real.pct_worse_off)}
+              {formatShare(drawn.real.pct_worse_off, worseDecimals)}
             </span>
           </div>
         );
