@@ -10,7 +10,7 @@ Vahid's decisions of 27 October change the middle of the day: generation doesn't
 
 1. **Tuesday evening.**
    - At 17:30 calculation code freezes (#222).
-   - At 18:00 the Coordinator regenerates the pre-Budget candidates on Modal. The run started at 18:01 on the seven, before #261 (the eight) merged at 19:07. #222 records what was staged and what the floor held.
+   - At 18:00 the Coordinator regenerates the pre-Budget candidates on Modal. The 18:01 run on the seven was superseded, and the regeneration restarted from `9cfbdb4e` on #261's eight at about 19:20. #222 records what was staged and what the floor held.
    - Two people then attest each hand-written receipt that was staged, and the package that holds one.
    - Before 08:00 the household calculator is redeployed from the same commit: the test app, then production (6–7 min for Cloud Run, #231). From a commit after #264 (merged 27 Oct), the production Modal redeploy also brings its warm schedule: 07:00 to 24:00 from Wednesday.
 2. **Wednesday morning.**

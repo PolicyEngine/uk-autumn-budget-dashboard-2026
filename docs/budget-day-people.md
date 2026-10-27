@@ -44,7 +44,7 @@ Agents never:
   - decides on every correction and withdrawal.
 - **The Coordinator:** runs Tuesday's 18:00 regeneration, and holds the go/no-go at 07:00 on Wednesday.
 - **The second signer and licence holder:**
-  - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means each hand-written receipt staged (Plan 2, and the State Pension protection if the floor lets it be staged) and the package that holds one (#222). Parameter changes need no attestation, which is one reason Vahid prefers them on the day;
+  - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means each hand-written receipt staged (Plan 2, and the State Pension protection in its total-income design if the floor lets it be staged) and the package that holds one (#222). Parameter changes need no attestation, which is one reason Vahid prefers them on the day;
   - checks the map before a corrected measure's results by area are republished;
   - answers the disclosure questions the UK Data Service licence raises.
 - **Media first cut** (open: who) sends the 15:45 figures and the webinar slides, from approved entries of one manifest revision only, after the comparables review.
