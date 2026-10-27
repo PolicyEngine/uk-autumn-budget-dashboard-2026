@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import ChartTooltip from "./ChartTooltip";
+import { ViewportBox, pointIn } from "./ViewportTooltip";
 import "./ChartTooltip.css";
 
 // Away from the hovered point, as TOOLTIP_PROPS.offset
@@ -73,51 +74,17 @@ export function useFloatingTooltip(containerRef, resetKey) {
 }
 
 /**
- * The tooltip of a hand-drawn chart, in the ChartTooltip style, inside its
- * plot (the nearest positioned ancestor): beside the point, right by
- * default and flipped left near the right edge, below it and flipped
- * above near the bottom, and never past the plot's edges, so on a phone it
- * stays inside the card.
+ * The tooltip of a hand-drawn chart, in the ChartTooltip style, beside the
+ * point (tip.x, tip.y from its plot, the nearest positioned ancestor) and
+ * drawn in the window by ViewportBox: flipped left or above near an edge
+ * and kept wholly inside the window, clear of the sticky band.
  */
 export function FloatingTooltip({ tip }) {
-  const ref = useRef(null);
-  const [place, setPlace] = useState(null);
-
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!node || !tip) {
-      setPlace(null);
-      return;
-    }
-    const parent = node.offsetParent;
-    const width = node.offsetWidth;
-    const height = node.offsetHeight;
-    const maxX = Math.max(0, (parent?.clientWidth ?? width) - width);
-    const maxY = Math.max(0, (parent?.clientHeight ?? height) - height);
-    let left = tip.x + OFFSET;
-    if (left > maxX) left = tip.x - OFFSET - width;
-    let top = tip.y + OFFSET;
-    if (top > maxY) top = tip.y - OFFSET - height;
-    setPlace({
-      left: Math.min(Math.max(0, left), maxX),
-      top: Math.min(Math.max(0, top), maxY),
-    });
-  }, [tip]);
-
   if (!tip) return null;
   return (
-    <div
-      ref={ref}
-      className="floating-tooltip"
-      role="tooltip"
-      style={{
-        left: place?.left ?? tip.x + OFFSET,
-        top: place?.top ?? tip.y + OFFSET,
-        visibility: place ? "visible" : "hidden",
-      }}
-    >
-      {tip.content}
-    </div>
+    <ViewportBox locate={(probe) => pointIn(probe, tip.x, tip.y)} offset={OFFSET}>
+      <div className="floating-tooltip">{tip.content}</div>
+    </ViewportBox>
   );
 }
 

@@ -7,20 +7,18 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import Tip, { InfoTip } from "./Tip";
 
-// The menu's groups, in the catalogue's order
-const GROUPS = [
-  { direction: "revenue", label: "Raises revenue" },
-  { direction: "cost", label: "Costs revenue" },
-  { direction: "neutral", label: "No published costing" },
-];
+// The menu's order: measures that raise revenue, then those that cost it,
+// then the rest, each in the catalogue's order. One flat list: no group
+// labels or dividers.
+const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
 
 /**
  * The band's policies control: "Policies All 9 policies" or "Policies 3 of
  * 9 policies"; while the publication loads, "Policies" with no count; with
  * none published, "No policies yet", disabled, its reason in a Tip. Its
  * menu is one compact row per policy (checkbox, colour, short name, the
- * one-line summary in a Tip), grouped by revenue effect, with Select all,
- * Clear and Done.
+ * one-line summary in a Tip), one flat list in the catalogue's revenue
+ * order, with Select all, Clear and Done.
  *
  * @param {Object} props
  * @param {boolean} [props.loading] - The publication is still loading
@@ -133,30 +131,23 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       {presence.mounted && (
         <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
           <div className="policy-list" role="group" aria-label="Policies">
-            {GROUPS.map(({ direction, label }) => {
-              const members = policies.filter((policy) => (policy.direction ?? "neutral") === direction);
-              if (!members.length) return null;
+            {DIRECTION_ORDER.flatMap((direction) =>
+              policies.filter((policy) => (DIRECTION_ORDER.includes(policy.direction) ? policy.direction : "neutral") === direction),
+            ).map((policy) => {
+              const summary = policyDetailsFor(policy)?.summary;
               return (
-                <div key={direction} className="policy-group" role="group" aria-label={label}>
-                  <p className="policy-group-label" aria-hidden="true">{label}</p>
-                  {members.map((policy) => {
-                    const summary = policyDetailsFor(policy)?.summary;
-                    return (
-                      // The info button sits outside the label, so it never ticks the box
-                      <div key={policy.id} className="policy-item">
-                        <label className="policy-item-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedPolicies.includes(policy.id)}
-                            onChange={() => onPolicyToggle(policy.id)}
-                          />
-                          <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
-                          <span className="policy-selector-name">{shortNameOf(policy)}</span>
-                        </label>
-                        {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
-                      </div>
-                    );
-                  })}
+                // The info button sits outside the label, so it never ticks the box
+                <div key={policy.id} className="policy-item">
+                  <label className="policy-item-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedPolicies.includes(policy.id)}
+                      onChange={() => onPolicyToggle(policy.id)}
+                    />
+                    <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
+                    <span className="policy-selector-name">{shortNameOf(policy)}</span>
+                  </label>
+                  {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>
               );
             })}

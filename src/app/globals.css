@@ -128,11 +128,25 @@ code {
   --card-radius: 12px;
   --card-padding: 24px;
   --title-row-height: 64px;
+  /* The two tab rows (view tabs and sub-tabs) share one height: each
+     row, each tab and the chosen tab's tint. Compact once stuck. */
+  --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
-  --view-tabs-height: 48px;
+  --view-tabs-height: var(--tab-row-height);
+  /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
+     between items, the padding inside each (chosen or not) and the gap
+     from icon to label */
+  --tab-gap: 8px;
+  --tab-pad-x: 12px;
+  --tab-icon-gap: 8px;
+  /* Both rows' one font and underline (icons are 18px in both) */
+  --tab-font-size: 1rem;
+  --tab-font-weight: 600;
+  --tab-underline: 3px;
+  --tab-underline-inset: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
-  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
      the heading and paragraph; less around and below the boxes), its blur,
@@ -217,6 +231,7 @@ code {
   --c-market-income: #4a7ba7;
   --c-pension-contributions: #b8875a;
   --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
   --c-loss-light: #fbbf24; /* a small loss */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */
@@ -277,15 +292,43 @@ body {
   background: var(--page-bg);
 }
 
-/* Only the title row is sticky: the ui-kit site nav (PolicyEngineShell
-   renders it with an inline position:sticky) scrolls away normally.
+/* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
+   inline position:sticky; top:0) and the title band. The site nav is out
+   of the page's flow and hidden above the window by default, so the band
+   sits at the very top of the page with the tab rows under it, from the
+   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
+   scrolls up, points at the top 8px of the window or tabs into it, keeps
+   it a few seconds and while it is in use, and hides it after a deliberate
+   scroll down or once the pointer or focus has left; it measures the nav into
+   --site-nav-height. --nav-offset is how much of the window's top the nav
+   covers, so the band, the tab rows and --sticky-offset sit under it in
+   either state. --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
    child. If a ui-kit upgrade changes that markup this selector stops
    matching: App.jsx warns in the console in development, and
    src/shellStickyNav.test.jsx fails. */
+:root {
+  --nav-offset: 0px;
+}
+
+:root[data-site-nav-shown] {
+  --nav-offset: var(--site-nav-height, 0px);
+}
+
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  position: relative !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0;
+  right: 0;
+  /* Above the title band (1100), so its About menu opens over it */
+  z-index: 1110 !important;
+  transition: transform var(--motion-slide) var(--ease-out);
+}
+
+:root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  transform: translateY(-100%);
+  box-shadow: none !important;
 }
 
 .app {
@@ -329,7 +372,7 @@ body {
 
 .title-row {
   position: sticky;
-  top: 0;
+  top: var(--nav-offset);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
   /* One row on a wide screen: the title, then the year and policy pills
@@ -354,22 +397,12 @@ body {
   box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
-/* Scrolling down, the band hides and the tab rows close up under the top
-   of the window; scrolling up, it slides back in (App.jsx,
-   data-band-hidden; --motion-slide is 0 under reduced motion) */
+/* The band and the tab rows move with the site nav above them (the
+   site-nav rule above) */
 .title-row,
 .view-tabs-bar,
 .sub-tabs-band {
-  transition: transform var(--motion-slide) ease;
-}
-
-.app[data-band-hidden] .title-row.is-stuck {
-  transform: translateY(-100%);
-}
-
-.app[data-band-hidden][data-tabs-stuck] .view-tabs-bar,
-.app[data-band-hidden][data-tabs-stuck] .sub-tabs-band {
-  transform: translateY(calc(-1 * var(--title-row-height)));
+  transition: top var(--motion-slide) var(--ease-out);
 }
 
 .title-row h1 {
@@ -454,21 +487,20 @@ body {
    Once stuck the view tabs and band are compact (App.jsx sets
    data-tabs-stuck). */
 .app {
+  /* Redeclared here so a stuck .app's own --tab-row-height counts */
+  --view-tabs-height: var(--tab-row-height, 48px);
   --sub-band-height: 0px;
-  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
+  --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
 }
 
 .app[data-sub-band] {
-  --sub-band-height: 45px;
+  /* The sub-tab row and the band's 1px rule */
+  --sub-band-height: calc(var(--tab-row-height, 48px) + 1px);
 }
 
 @media (min-width: 601px) {
   .app[data-tabs-stuck] {
-    --view-tabs-height: 40px;
-  }
-
-  .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 39px;
+    --tab-row-height: 40px;
   }
 
   .app[data-tabs-stuck] .view-tabs-bar {
@@ -482,7 +514,7 @@ body {
 
 .view-tabs-bar {
   position: sticky;
-  top: var(--title-row-height);
+  top: calc(var(--nav-offset) + var(--title-row-height));
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
@@ -497,8 +529,8 @@ body {
 .view-tabs {
   position: relative;
   display: flex;
-  gap: 4px;
-  height: var(--view-tabs-height);
+  gap: var(--tab-gap, 8px);
+  height: var(--tab-row-height, 48px);
   transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
@@ -535,13 +567,14 @@ body {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--tab-icon-gap, 8px);
   height: 100%;
-  padding: 0 16px;
+  padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--tab-font-size, 1rem);
   /* One weight for every tab, so choosing one never moves the others */
-  font-weight: 600;
+  font-weight: var(--tab-font-weight, 600);
+  line-height: 1.2;
   white-space: nowrap;
   color: var(--pe-gray-600);
   background: transparent;
@@ -588,10 +621,10 @@ body {
 .view-tabs-indicator::after {
   content: "";
   position: absolute;
-  left: 8px;
-  right: 8px;
+  left: var(--tab-underline-inset, 8px);
+  right: var(--tab-underline-inset, 8px);
   bottom: 0;
-  height: 3px;
+  height: var(--tab-underline, 3px);
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
 }
@@ -620,26 +653,15 @@ body {
    sub-tab band under the title row: nothing scrolls away. Stuck, both show
    icons only, the names kept for assistive tech. */
 @media (max-width: 600px) {
-  :root {
-    --view-tabs-height: 48px;
-  }
-
   .app[data-tabs-stuck] {
-    --view-tabs-height: 44px;
+    --tab-row-height: 44px;
   }
 
-  .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 39px;
-  }
-
-  .view-tab {
-    gap: 6px;
-    padding: 0 12px;
-    font-size: 0.9375rem;
-  }
-
-  .app[data-tabs-stuck] .view-tab {
-    padding: 0 14px;
+  :root {
+    --tab-gap: 4px;
+    --tab-pad-x: 12px;
+    --tab-icon-gap: 6px;
+    --tab-font-size: 0.9375rem;
   }
 
   .app[data-tabs-stuck] .view-tab-label {
@@ -1150,16 +1172,6 @@ body {
   color: var(--pe-gray-600);
 }
 
-.obr-content .obr-comparison-section {
-  margin: 0;
-  padding: 0;
-  border-top: none;
-}
-
-.obr-content .obr-comparison-section h2 {
-  margin-top: 0;
-}
-
 .policy-detail {
   padding: 8px 0;
   font-size: var(--fs-small);
@@ -1290,6 +1302,46 @@ body {
   .charts-grid > div:not(:only-child) > .note {
     grid-column: 1 / -1;
     grid-row: 7;
+  }
+
+  /* A Recharts plot with no legend of its own beside a card that has one
+     (By age's Average change by age, whose key is above the section; All
+     households' income decile card beside the scatter): the plot takes the
+     empty legend row too (and the logo row when its logo is in the SVG)
+     and, when its chart is drawn at height="100%", grows to fill them, so
+     no empty band opens under its axis. Its size is contained, so it
+     follows the shared rows and never props them open. */
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))) {
+    grid-row: 4 / span 3;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))):has(~ .chart-logo) {
+    grid-row: 4 / span 2;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty)))
+    > .swap-transition-inner {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:not(:has(~ .chart-legend:not(:empty)))
+    .recharts-responsive-container {
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 300px;
+    contain: size;
   }
 
   /* A Recharts chart draws its plot, legend and logo in one SVG: it takes
@@ -1732,7 +1784,16 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: 0;
+  /* The gap between the last card and the site footer, on every tab and
+     at every width (the replication line that used to own it is gone).
+     80px; 64px on a phone (the ui-kit's --pe-space-5xl). */
+  padding-bottom: 80px;
+}
+
+@media (max-width: 600px) {
+  .app > .main-content {
+    padding-bottom: var(--pe-space-5xl, 64px);
+  }
 }
 
 .app > .main-content > * {
@@ -1818,53 +1879,6 @@ body {
   padding: 4px 0 20px;
 }
 
-/* The filter above the cards: All, Raises revenue, Costs revenue, each
-   with its direction's dot (the shared ViewSwitch) */
-.policy-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin: 0 0 16px;
-}
-
-.policy-filter-label {
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.policy-filter .obr-view-option {
-  height: 36px;
-  padding: 0 14px;
-}
-
-.policy-filter-count {
-  min-width: 20px;
-  padding: 0 6px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-600);
-  background: var(--pe-gray-100);
-  border-radius: 999px;
-}
-
-.obr-view-option[aria-pressed="true"] .policy-filter-count {
-  color: var(--pe-teal-800);
-  background: var(--c-highlight-band);
-}
-
-.policy-filter-arrow.is-revenue {
-  color: var(--c-loss-text);
-}
-
-.policy-filter-arrow.is-cost {
-  color: var(--c-gain-text);
-}
-
 /* Small muted icons beside the cards' labels, for scanning: never on a value */
 .policy-card-type,
 .policy-card-dates dt,
@@ -1902,59 +1916,12 @@ body {
   flex: none;
 }
 
-/* Each segment on one line; on a narrow phone the switch scrolls sideways
-   rather than wrap "All (9)" */
-.policy-filter .obr-view-switch {
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.policy-filter .obr-view-option {
-  white-space: nowrap;
-}
-
-@media (max-width: 480px) {
-  .policy-filter .obr-view-option {
-    gap: 4px;
-    padding-inline: 8px;
-    font-size: var(--fs-caption);
-  }
-
-  /* The switch needs the whole line on a phone */
-  .policy-filter-label {
-    display: none;
-  }
-}
-
-/* A card's tags: its direction, then Temporary */
+/* A card's tags: Temporary */
 .policy-card-tags {
   display: inline-flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-}
-
-.policy-card-direction {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: -2px 0;
-  padding: 3px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.5;
-  border-radius: 999px;
-}
-
-.policy-card-direction.is-revenue {
-  color: var(--c-loss-text);
-  background: var(--c-loss-soft);
-}
-
-.policy-card-direction.is-cost {
-  color: var(--c-gain-text);
-  background: var(--c-highlight-band);
 }
 
 /* One size and structure for every card, two to a row: fixed slots
@@ -2078,6 +2045,19 @@ body {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
+}
+
+/* A measure with no card details: its published description in full */
+.policy-card-summary.is-full {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+/* ... and a card only as tall as what it has, not its row */
+.policy-card.is-bare {
+  align-self: start;
 }
 
 /* When: start and end in words, then the timeline */

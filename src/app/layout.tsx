@@ -9,7 +9,7 @@ import './globals.css';
 // every token the page uses (it differs only in colours nothing here reads).
 import '@policyengine/ui-kit/legacy/tokens.css';
 import './fonts.css';
-import { Inter } from 'next/font/google';
+import localFont from 'next/font/local';
 import SiteFooter from '@/components/SiteFooter';
 import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
@@ -19,12 +19,18 @@ const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
   'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
 
-// Self-hosted at build time: no request to a third party before first paint
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+// Inter, committed with the page (fonts/: the variable face, every weight,
+// Latin subset; SIL Open Font License in fonts/OFL.txt): the
+// build fetches nothing from Google, and the page asks no third party for a
+// font. Preloaded, swapped in when it arrives, over an Arial fallback sized
+// to Inter's metrics so the swap does not move the text.
+const inter = localFont({
+  src: './fonts/inter-latin-variable.woff2',
+  weight: '100 900',
+  style: 'normal',
   display: 'swap',
   variable: '--font-inter',
+  adjustFontFallback: 'Arial',
 });
 
 export const metadata: Metadata = {

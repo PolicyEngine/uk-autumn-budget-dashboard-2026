@@ -65,3 +65,9 @@ it("requests the examples' file under the name Household impact reads", async ()
   const { PRESETS_URL_FILE } = await import("./early");
   expect(PRESETS_URL_FILE).toBe(PRESETS_FILE);
 });
+
+it("requests the map's boundaries under the name the map reads", async () => {
+  const { BOUNDARIES_FILE } = await import("../../hooks/useGeographyData");
+  const { BOUNDARIES_URL_FILE } = await import("./early");
+  expect(BOUNDARIES_URL_FILE).toBe(BOUNDARIES_FILE);
+});

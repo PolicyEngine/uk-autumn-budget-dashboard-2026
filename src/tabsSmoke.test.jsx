@@ -20,9 +20,9 @@ import { expectCompletePills } from "./test/optionsPills";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { VIEWS } from "./App";
+import App, { VIEWS, preloadAllViews } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "./hooks/useBasisIncome";
 import { clearOutlookCache } from "./utils/livingStandards/outlook";
@@ -32,6 +32,9 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 // The receipt fixture's supported year follows the engine's projection
 // end (currently beyond the dashboard's Budget-year window). Exercise the
@@ -48,7 +51,9 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json"]);
+// The official costings follow the Budget; until then Public finances shows
+// no comparison at all.
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json", "/data/official_costings.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -353,7 +358,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
     expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: "Compare with OBR estimates" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Compare with the official costings" })).toBeNull();
   });
 
   it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {
@@ -402,30 +407,38 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   });
 });
 
-describe("the income decile pair", () => {
-  it("is on All households, after the map and before the household scatter, and not on Living standards", async () => {
+describe("the income decile card", () => {
+  it("is on All households after the map: one card, £ or % in its Options, beside the household scatter, and not on Living standards", async () => {
     window.history.replaceState({}, "", "/?sub=all");
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const panel = await screen.findByRole("tabpanel", { name: "All households" });
-    const absolute = await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 });
-    const relative = within(panel).getByRole("heading", { level: 3, name: /^Relative impact by income decile/ });
-    // Side by side, under the tab's one measure key, above every section
-    const section = absolute.closest("#deciles");
+    const title = await within(panel).findByRole("heading", { level: 3, name: /^Impact by income decile, \d{4}-\d{2}$/ }, { timeout: 5000 });
+    expect(within(panel).queryByRole("heading", { level: 3, name: /^(Absolute|Relative) impact by income decile/ })).toBeNull();
+    const section = title.closest("#deciles");
     expect(section).not.toBeNull();
-    expect(relative.closest("#deciles")).toBe(section);
+    // The scatter shares the decile card's row
+    const scatter = await within(section).findByRole("heading", { level: 3, name: /^Household income impacts/ }, { timeout: 5000 });
+    expect(scatter.closest(".charts-grid")).toBe(title.closest(".charts-grid"));
     await waitFor(() => expect(panel.querySelectorAll(".measure-key")).toHaveLength(1));
     const key = panel.querySelector(".measure-key");
     expect(key.compareDocumentPosition(panel.querySelector("#constituencies")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(panel).getByRole("heading", { level: 2, name: "By income" })).toBeInTheDocument();
-    const map = panel.querySelector("#constituencies");
-    const scatter = panel.querySelector("#scatter");
-    expect(map.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(section.compareDocumentPosition(scatter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.querySelector("#constituencies").compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // £ by default; % of net income in the Options, kept in the address
+    const card = title.closest(".waterfall-chart");
+    expect(card).not.toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(card).getByRole("radiogroup", { name: "Show the change as" })).getByRole("radio", { name: "% of net income (relative)" }));
+    await waitFor(() => expect(section.querySelector(".distributional-chart")).not.toBeNull());
+    expect(section.querySelector(".waterfall-chart")).toBeNull();
+    expect(within(section).getByRole("heading", { level: 3, name: /^Impact by income decile, / })).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("decile")).toBe("relative");
+    window.history.replaceState({}, "", "/");
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
     const living = screen.getByRole("tabpanel", { name: "Living standards" });
     await within(living).findAllByRole("heading", { name: /^Change in income inequality/ }, { timeout: 5000 });
-    expect(within(living).queryByRole("heading", { name: /impact by income decile/ })).toBeNull();
+    expect(within(living).queryByRole("heading", { name: /impact by income decile/i })).toBeNull();
   }, 15000);
 
   it("opens All households from an old #deciles link", async () => {
@@ -434,6 +447,6 @@ describe("the income decile pair", () => {
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const panel = await screen.findByRole("tabpanel", { name: "All households" });
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("all");
-    expect(await within(panel).findByRole("heading", { level: 3, name: /^Absolute impact by income decile/ }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await within(panel).findByRole("heading", { level: 3, name: /^Impact by income decile/ }, { timeout: 5000 })).toBeInTheDocument();
   }, 15000);
 });

@@ -1,22 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import LoadingSkeleton from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Scatter,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Customized, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, XAxis, YAxis, Scatter } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { loadVerifiedTable, peekVerifiedTables } from "../utils/loadDashboard";
@@ -70,8 +56,9 @@ import {
   drawnNames,
 } from "../utils/legendMembership";
 
-/** The section's anchor: link to it as #young-people. */
-export const YOUNG_PEOPLE_ANCHOR = "young-people";
+/** The section's anchor: link to it as #young-people (utils/viewAnchors). */
+import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+export { YOUNG_PEOPLE_ANCHOR };
 
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
@@ -474,7 +461,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             <p>{noHouseholdChange(yearLabel)}</p>
           </div>
         ) : single ? (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
@@ -521,7 +509,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               {youngLabel && <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />}
@@ -815,7 +804,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
             groupLabel=""
             yearLabel={yearLabel}
-            emphasis={YOUNG_BAND}
+            emphasis={group}
             labelFor={({ name }) => `People aged ${name}, ${yearLabel}`}
           />
         ) : (

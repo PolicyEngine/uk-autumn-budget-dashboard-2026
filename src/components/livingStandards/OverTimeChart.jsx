@@ -7,7 +7,8 @@
 // projection's value labelled at both ends. Ticks every year on a wide
 // plot, every other year on a phone.
 
-import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { ChartRows, lineLegendItems } from "./LsCharts";
 import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
 import { TOOLTIP_PROPS } from "../ChartTooltip";

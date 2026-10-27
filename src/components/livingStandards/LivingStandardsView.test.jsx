@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "../../App";
+import App, { preloadAllViews } from "../../App";
 import { dashboardFixtureFetch } from "../../test/dashboardFixture";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 // The receipt fixture's supported year follows the engine's projection end;
 // show Population impact in that verified year (as tabsSmoke.test.jsx does)
@@ -359,13 +362,14 @@ describe("the Pre-measures forecast view", () => {
     // the reference group
     const area = couples.querySelector(".ls-bar-area");
     fireEvent.focus(area);
-    const tip = within(who).getByRole("tooltip");
+    // Drawn in the window (ViewportTooltip), outside the card
+    const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
     expect(tip).toHaveTextContent("2027-2819.8%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
-    expect(within(who).queryByRole("tooltip")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);

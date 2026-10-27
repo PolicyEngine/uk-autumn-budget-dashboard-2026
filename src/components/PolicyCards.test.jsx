@@ -50,28 +50,21 @@ describe("the card details (policyDetails.js)", () => {
 });
 
 describe("PolicyCards", () => {
-  it("shows selected verified catalogue measures, raises first, each tagged and coloured like the charts", () => {
+  it("shows selected verified catalogue measures, raises first, coloured like the charts, with no revenue tag", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA, HELD]} />);
     const cards = screen.getAllByRole("listitem");
     expect(cards.map((card) => card.querySelector("h3").textContent)).toEqual([
       catalogue.byId.get(BETA).label, catalogue.byId.get(ALPHA).label,
     ]);
-    for (const [tag, card, id] of [["Raises revenue", cards[0], BETA], ["Costs revenue", cards[1], ALPHA]]) {
+    for (const [card, id] of [[cards[0], BETA], [cards[1], ALPHA]]) {
       const measure = catalogue.byId.get(id);
-      expect(card.querySelector(".policy-card-direction")).toHaveTextContent(tag);
+      expect(card).not.toHaveTextContent(/Raises revenue|Costs revenue/);
       // No card details for a mock id: the published description
       expect(card).toHaveTextContent(measure.description);
       expect(card.style.getPropertyValue("--policy-accent")).toBe(measure.color);
     }
     expect(screen.queryByText(catalogue.byId.get(HELD).label)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Raises revenue" })).toBeNull();
-  });
-
-  it("gives a neutral measure no direction tag, and its filter no segment", () => {
-    const policy = { ...catalogue.byId.get(ALPHA), direction: "neutral" };
-    render(<PolicyCards policies={[policy]} selectedPolicies={[ALPHA]} />);
-    expect(screen.getByRole("listitem").querySelector(".policy-card-direction")).toBeNull();
-    expect(within(screen.getByRole("group", { name: "Show measures" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["All 1"]);
   });
 
   it("shows no cards when the catalogue has no verified measures", () => {
@@ -87,7 +80,7 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
-    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitCosts revenueTemporary");
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitTemporary");
     expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
@@ -119,12 +112,36 @@ describe("PolicyCards", () => {
     const card = screen.getByRole("listitem");
     expect(card).toHaveTextContent(changed.description);
     expect(card).not.toHaveTextContent(detailsById[id].summary);
-    // The rows stay, for the grid, but empty: as for a measure with no entry
-    expect(card.querySelector(".policy-card-start")).toBeEmptyDOMElement();
-    expect(card.querySelector(".policy-card-type")).toBeEmptyDOMElement();
+    // No empty blocks: as for a measure with no entry
+    expect(card.querySelector(".policy-card-start")).toBeNull();
+    expect(card.querySelector(".policy-card-when")).toBeNull();
+    expect(card.querySelector(".policy-card-type")).toBeNull();
     expect(card).not.toHaveTextContent("Temporary");
     expect(card.querySelector(".policy-card-details")).toBeNull();
     expect(screen.queryByRole("img", { name: /^In force/ })).toBeNull();
+  });
+
+  it("shows a run's older description in full, with no empty labelled box and no reserved space", () => {
+    const id = "domestic_electricity_zero_vat";
+    const description = `An older run's wording. ${detailsById[id].writtenFor}`;
+    const older = { ...published(id, "Zero VAT on domestic electricity"), description };
+    render(<PolicyCards policies={[older]} selectedPolicies={[id]} onShowEffect={() => {}} />);
+    const card = screen.getByRole("listitem");
+    expect(card).toHaveClass("is-bare");
+    const summary = card.querySelector(".policy-card-summary");
+    expect(summary).toHaveClass("is-full");
+    expect(summary.textContent).toBe(description);
+    expect(card).not.toHaveTextContent(detailsById[id].summary);
+    expect(card).not.toHaveTextContent("Starts");
+    expect(card).not.toHaveTextContent("Ends");
+    for (const slot of [".policy-card-spec", ".policy-card-when", ".policy-card-modelling", ".policy-card-type"]) {
+      expect(card.querySelector(slot), slot).toBeNull();
+    }
+    // Every element left in the card has something in it
+    for (const element of card.querySelectorAll("div, p, dl, dd, dt")) {
+      expect(element.textContent.trim(), element.className).not.toBe("");
+    }
+    expect(within(card).getByRole("button", { name: /^See its effect/ })).toBeTruthy();
   });
 
   it("shows fuel duty's two-step restore as diamonds", () => {
@@ -134,27 +151,13 @@ describe("PolicyCards", () => {
     expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
   });
 
-  it("filters by direction, counting each, and keeps the filter in the address", () => {
-    window.history.replaceState(null, "", "/?tab=policies");
-    render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
-    const filter = screen.getByRole("group", { name: "Show measures" });
-    expect(within(filter).getAllByRole("button").map((b) => b.textContent)).toEqual([
-      "All 2", "Raises revenue 1", "Costs revenue 1",
-    ]);
-    // Each fact once: the badges give the counts, no summary line repeats them
-    expect(document.querySelector(".policy-filter-summary")).toBeNull();
-    expect(within(filter).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue 1" }));
-    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h3").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);
-    expect(new URLSearchParams(window.location.search).get("pf")).toBe("costs");
-    expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
-    fireEvent.click(within(filter).getByRole("button", { name: "All 2" }));
-    expect(window.location.search).toBe("?tab=policies");
-    cleanup();
-    // Read back from the address
+  it("has no revenue filter: every selected card shows, whatever the address says", () => {
     window.history.replaceState(null, "", "/?tab=policies&pf=raises");
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
-    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h3").textContent)).toEqual([catalogue.byId.get(BETA).label]);
+    expect(screen.queryByRole("group", { name: "Show measures" })).toBeNull();
+    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h3").textContent)).toEqual([
+      catalogue.byId.get(BETA).label, catalogue.byId.get(ALPHA).label,
+    ]);
     window.history.replaceState(null, "", "/");
   });
 
@@ -317,7 +320,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
   });
 
   it("puts the block between the card's summary and its timing", () => {
-    const order = [...card(rising).children].map((child) => child.className);
+    const order = [...card(rising, { ...alpha, starts: "April 2027" }).children].map((child) => child.classList[0]);
     expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-summary") + 1);
     expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-spec") + 1);
   });
@@ -417,10 +420,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
   });
 
-  it("shows nothing for a measure described otherwise than when the file was built, keeping the empty slot", () => {
+  it("shows nothing for a measure described otherwise than when the file was built, with no empty slot", () => {
     const item = card(rising, { ...alpha, description: "Changed on Budget day." });
     expect(within(item).queryByRole("region", { name: /^What changes/ })).toBeNull();
-    expect(item.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
+    expect(item.querySelector(".policy-card-spec")).toBeNull();
   });
 
   it("shows nothing without the file", () => {

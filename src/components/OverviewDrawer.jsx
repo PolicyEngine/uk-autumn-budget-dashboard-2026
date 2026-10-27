@@ -75,7 +75,12 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
 
   // Focus goes in once it is shown (a hidden drawer cannot take it)
   useEffect(() => {
-    if (open && entered) closeRef.current?.focus({ preventScroll: true });
+    // Quietly: no focus ring until a key is pressed on it (a drawer opened
+    // by a click would otherwise show a ring at rest)
+    if (open && entered && closeRef.current) {
+      closeRef.current.dataset.quiet = "";
+      closeRef.current.focus({ preventScroll: true });
+    }
   }, [open, entered]);
 
   // Tab and Shift+Tab go round inside the drawer
@@ -115,7 +120,15 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
             <span className="overview-title">About this dashboard</span>
           </span>
           <Tip content="Close (Esc)">
-            <button ref={closeRef} type="button" className="overview-close" aria-label="Close the overview" onClick={onClose}>
+            <button
+              ref={closeRef}
+              type="button"
+              className="overview-close"
+              aria-label="Close"
+              onClick={onClose}
+              onKeyDown={(event) => { delete event.currentTarget.dataset.quiet; }}
+              onBlur={(event) => { delete event.currentTarget.dataset.quiet; }}
+            >
               <X size={20} strokeWidth={2} aria-hidden="true" />
             </button>
           </Tip>

@@ -1,30 +1,17 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import PolicySelector from "./components/PolicySelector";
-import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
-import DistributionalChart from "./components/DistributionalChart";
-import WaterfallChart from "./components/WaterfallChart";
-import ConstituencyMap from "./components/ConstituencyMap";
-import { ObrComparisonFoot } from "./components/OBRComparisonTable";
-import PersonalImpactTab from "./components/PersonalImpactTab";
-import HouseholdScatter from "./components/HouseholdScatter";
 import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
 import LandingBackdrop from "./components/landing/LandingBackdrop";
 import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
-import { SUB_TAB_PARAM } from "./components/SubTabs";
-import MethodologyTab from "./components/MethodologyTab";
+import { SUB_TAB_PARAM, subTabId } from "./components/SubTabs";
 import SectionHeading from "./components/SectionHeading";
-import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
-import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
-import GrowthWithMeasuresCard from "./components/livingStandards/GrowthWithMeasuresCard";
-import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections/ViewCards";
-import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
-import AgeSection from "./components/AgeSection";
+import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnchors";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
@@ -43,10 +30,74 @@ import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleto
 import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
+import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
-import PolicyCards from "./components/PolicyCards";
-import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricChart";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
+import { lazyView, preloadViewCode } from "./utils/lazyView";
+
+// Each view's code (the chart library, the map's and the household
+// calculator's) loads when a view first opens, or while the page is idle,
+// not with the page: the landing page, the band and the placeholders need
+// none of it. The chart views share one chunk (components/chartViews.js);
+// the text views have their own. A view whose code has loaded renders at once.
+const chartViews = () => import("./components/chartViews");
+const BudgetaryImpactChart = lazyView(chartViews, (m) => m.BudgetaryImpactChart);
+const ObrComparisonCard = lazyView(chartViews, (m) => m.ObrComparisonCard);
+const ConstituencyMap = lazyView(chartViews, (m) => m.ConstituencyMap);
+const DecileImpactCard = lazyView(chartViews, (m) => m.DecileImpactCard);
+const HouseholdScatter = lazyView(chartViews, (m) => m.HouseholdScatter);
+const AgeSection = lazyView(chartViews, (m) => m.AgeSection);
+const GrowthWithMeasuresCard = lazyView(chartViews, (m) => m.GrowthWithMeasuresCard);
+const InequalityChart = lazyView(chartViews, (m) => {
+  const Chart = m.SummaryMetricChart;
+  const inequality = m.SUMMARY_METRICS.inequality;
+  return function InequalityChart(props) {
+    return <Chart metric={inequality} {...props} />;
+  };
+});
+const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
+const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
+const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
+const PolicyCards = lazyView(() => import("./components/PolicyCards"));
+const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
+
+// The code each view ("tab" or "tab:sub", as bootView names them) needs
+const VIEW_CODE = {
+  "dashboard:finances": [BudgetaryImpactChart, ObrComparisonCard],
+  "dashboard:all": [ConstituencyMap, DecileImpactCard, HouseholdScatter],
+  "dashboard:age": [AgeSection],
+  "dashboard:living": [GrowthWithMeasuresCard, InequalityChart],
+  "dashboard:poverty": [PovertyMeasuresRow],
+  household: [PersonalImpactTab],
+  outlook: [LivingStandardsTab],
+  policies: [PolicyCards],
+  methodology: [MethodologyTab],
+};
+
+/** Load every view's code (tests: views then render without suspending). */
+export function preloadAllViews() {
+  return Promise.all(Object.values(VIEW_CODE).flat().map((view) => view.preload()));
+}
+
+/** Load one view's code ("tab" or "tab:sub"); resolves when in, never rejects. */
+export function preloadView(view) {
+  return preloadViewCode(VIEW_CODE[view] ?? VIEW_CODE[view.split(":")[0]] ?? []);
+}
+
+// A link to a view starts that view's code now, beside the page's own,
+// rather than after hydration and the publication check
+if (typeof window !== "undefined" && !opensLanding(window.location)) {
+  preloadView(bootView(window.location));
+}
+
+/** The placeholder a view shows while its code loads. */
+function viewFallback(value) {
+  if (value === "dashboard") return <ViewSkeleton view={loadingView(value)} />;
+  if (value !== "outlook") return <ViewSkeleton view={value} />;
+  const params = new URLSearchParams(window.location.search);
+  params.set("tab", value);
+  return <ViewSkeleton view={bootView({ search: `?${params}`, hash: "" })} />;
+}
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
@@ -147,10 +198,16 @@ export function viewFromLocation({ search, hash }) {
 }
 
 
-// The ui-kit shell's sticky site nav, as globals.css selects it to make it
-// scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// The ui-kit shell's sticky site nav, as globals.css selects it to hide it
+// until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
+// Once shown, the site nav stays at least this long; hides this long after
+// the pointer or focus leaves it; and a run down the page longer than this
+// (px) hides it after the minimum.
+export const SITE_NAV_MIN_MS = 3000;
+export const SITE_NAV_LEAVE_MS = 1500;
+export const SITE_NAV_SCROLL_HIDE_PX = 120;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -212,17 +269,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // under the same manifest joins it, as on a fresh load (review of
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
-  const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
+  // A withdrawn measure in a link or a kept selection drops out silently;
+  // the address writer below then rewrites ?policies= without it
+  const selectedPolicies = useMemo(() => {
+    const chosen = selectionChosen ? chosenPolicies : defaultPolicies;
+    return catalogue.withdrawn?.size ? chosen.filter((id) => !catalogue.withdrawn.has(id)) : chosen;
+  }, [selectionChosen, chosenPolicies, defaultPolicies, catalogue]);
   // Once the first view has painted, every other view's tables load and
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
     // One step per idle period, the views' own tables first
     const steps = [
+      // Every view's code, so a tab switch need not wait for it
+      ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
       ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
-      () => prefetchGeography(catalogue),
       () => loadOutlook().catch(() => {}),
-      () => loadPresetChanges().catch(() => {}),
       () => pruneVerifiedCache().catch(() => {}),
     ];
     let cancel;
@@ -233,10 +295,39 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         Promise.resolve(step()).finally(next);
       });
     };
-    next();
+    // Not before the opened view's own code is in: on a slow connection the
+    // prefetches would otherwise share the line with it
+    const opened = opensLanding(window.location) ? Promise.resolve() : preloadView(bootView(window.location));
+    opened.then(next);
     return () => {
       steps.length = 0;
       cancel?.();
+    };
+  }, [catalogue]);
+  // The two big files (the map's boundaries and results by area; the
+  // example households' answers) load only for the views that show them:
+  // when one opens (its cards ask), or a little before, as the pointer or
+  // focus reaches its tab, through the same checks
+  useEffect(() => {
+    if (!catalogue.manifest) return undefined;
+    const done = new Set();
+    const onIntent = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (!done.has("map") && target.closest(`#${subTabId("population", "all")}`)) {
+        done.add("map");
+        prefetchGeography(catalogue);
+      }
+      if (!done.has("presets") && target.closest("#tab-household")) {
+        done.add("presets");
+        loadPresetChanges().catch(() => {});
+      }
+    };
+    document.addEventListener("pointerover", onIntent, { passive: true });
+    document.addEventListener("focusin", onIntent);
+    return () => {
+      document.removeEventListener("pointerover", onIntent);
+      document.removeEventListener("focusin", onIntent);
     };
   }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
@@ -316,7 +407,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
     // The year before the charts start (2026-27), from the same verified
-    // rows: one line under Revenue impact, never a bar
+    // rows: one item in Revenue impact's "About this chart", never a bar
     budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
@@ -353,47 +444,125 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => observer.disconnect();
   }, []);
 
-  // Once scrolled past its place, the title band hides while the reader
-  // scrolls down and slides back in when they scroll up (globals.css,
-  // data-band-hidden); at the top it sits in its place
-  const [bandHidden, setBandHidden] = useState(false);
+  // The site nav is hidden above the window by default, so the title band
+  // sits at the top of the page. It slides in above the band when the
+  // reader scrolls up (by 6px or more), points at the top 8px of the
+  // window, or tabs into it (globals.css: data-site-nav-shown on <html>,
+  // --site-nav-height; the slide is instant under reduced motion). Once in,
+  // it stays long enough to be clicked: at least SITE_NAV_MIN_MS whatever
+  // small scrolls happen, never while the pointer or focus is in it or one
+  // of its menus is open, and SITE_NAV_LEAVE_MS after the pointer or focus
+  // leaves. Only a deliberate scroll down (over SITE_NAV_SCROLL_HIDE_PX in
+  // one run) hides it, once the minimum is up.
   useEffect(() => {
+    const root = document.documentElement;
+    const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
+    const measure = () => {
+      if (nav) root.style.setProperty("--site-nav-height", `${nav.offsetHeight}px`);
+    };
+    measure();
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    if (nav) resize?.observe(nav);
     let last = window.scrollY;
+    let prev = last;
+    let runFrom = last;
     let frame = 0;
+    let shownAt = 0;
+    let timer = 0;
+    let pointerIn = false;
+    const isShown = () => root.hasAttribute("data-site-nav-shown");
+    // The ui-kit menus (About, country) put a full-window overlay with
+    // role="presentation" inside the nav while they are open
+    const holds = () =>
+      !!nav &&
+      (pointerIn ||
+        nav.contains(document.activeElement) ||
+        !!nav.querySelector('[role="presentation"]'));
+    const clear = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = 0;
+    };
+    const show = () => {
+      clear();
+      shownAt = Date.now();
+      runFrom = window.scrollY;
+      root.setAttribute("data-site-nav-shown", "");
+    };
+    const hideAfter = (delay) => {
+      if (!isShown()) return;
+      clear();
+      const wait = Math.max(delay, shownAt + SITE_NAV_MIN_MS - Date.now());
+      timer = window.setTimeout(() => {
+        timer = 0;
+        if (holds()) hideAfter(SITE_NAV_LEAVE_MS);
+        else root.removeAttribute("data-site-nav-shown");
+      }, wait);
+    };
     const check = () => {
       frame = 0;
       const y = window.scrollY;
-      const sentinel = titleSentinelRef.current;
-      const past = sentinel ? sentinel.getBoundingClientRect().top < 0 : y > 0;
-      if (!past) {
-        setBandHidden(false);
+      // runFrom: where the current run down began
+      if (y < prev) runFrom = y;
+      prev = y;
+      if (y > last + 6) {
         last = y;
-      } else if (y > last + 6) {
-        setBandHidden(true);
-        last = y;
+        if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);
       } else if (y < last - 6) {
-        setBandHidden(false);
+        show();
         last = y;
       }
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
     };
+    const onPointer = (event) => {
+      const over =
+        !!nav &&
+        isShown() &&
+        ((event.target instanceof Node && nav.contains(event.target)) ||
+          event.clientY <= nav.offsetHeight);
+      if (event.clientY <= 8) {
+        pointerIn = true;
+        show();
+      } else if (over) {
+        if (!pointerIn) clear();
+        pointerIn = true;
+      } else if (pointerIn) {
+        pointerIn = false;
+        hideAfter(SITE_NAV_LEAVE_MS);
+      }
+    };
+    const onFocusIn = () => show();
+    const onFocusOut = (event) => {
+      if (!(nav && event.relatedTarget instanceof Node && nav.contains(event.relatedTarget))) {
+        hideAfter(SITE_NAV_LEAVE_MS);
+      }
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("mousemove", onPointer, { passive: true });
+    nav?.addEventListener("focusin", onFocusIn);
+    nav?.addEventListener("focusout", onFocusOut);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("mousemove", onPointer);
+      nav?.removeEventListener("focusin", onFocusIn);
+      nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
+      clear();
+      resize?.disconnect();
+      root.removeAttribute("data-site-nav-shown");
+      root.style.removeProperty("--site-nav-height");
     };
   }, []);
 
-  // globals.css un-sticks the ui-kit site nav with a selector written
+  // globals.css moves the ui-kit site nav with a selector written
   // against the shell's markup. Say so in development if it stops matching.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     if (!document.querySelector(SHELL_STICKY_NAV_SELECTOR)) {
       console.warn(
         "The ui-kit site nav was not found by SHELL_STICKY_NAV_SELECTOR; " +
-          "update it in App.jsx and globals.css so only the title row is sticky.",
+          "update it in App.jsx and globals.css so the site nav hides on scroll down.",
       );
     }
   }, []);
@@ -426,7 +595,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       const sentinel = tabsSentinelRef.current;
       const app = appRef.current;
       if (!sentinel || !app) return;
-      const band = parseFloat(getComputedStyle(app).getPropertyValue("--title-row-height")) || 0;
+      const style = getComputedStyle(app);
+      const band =
+        (parseFloat(style.getPropertyValue("--nav-offset")) || 0) +
+        (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
       setTabsStuck(sentinel.getBoundingClientRect().top < band - 1);
     };
     const onScroll = () => {
@@ -529,8 +701,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     tabScrollPending.current = false;
     const sentinel = tabsSentinelRef.current;
     if (!sentinel || !appRef.current) return;
+    // Scrolling back up brings the site nav back, so its height counts
+    const style = getComputedStyle(appRef.current);
     const band =
-      parseFloat(getComputedStyle(appRef.current).getPropertyValue("--title-row-height")) || 0;
+      (parseFloat(style.getPropertyValue("--site-nav-height")) || 0) +
+      (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
     const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
     // A view opened before returns to where it was left, if that was below
     // the tabs; otherwise the tabs come back up under the band
@@ -547,7 +722,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const unavailableIds = selectedPolicies.filter((id) => !catalogue.byId.get(id)?.displayable);
   const selectionUnavailable = unavailableIds.length ? {
     reason: "Some selected measures are unavailable",
-    detail: unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id).join(", "),
+    // One line inside the view: each selected measure and why it is out
+    // (a withdrawn one never reaches here; it drops from the selection)
+    detail: unavailableIds.map((id) => {
+      const measure = catalogue.byId.get(id);
+      return `${measure?.name ?? id} (${measure?.availability.reason || "Not yet published"})`;
+    }).join("; "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
   // The views with sub-tabs open into their band (SubTabs); not while
@@ -564,6 +744,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
   const provisional = catalogueProvisional(catalogue);
+
+  // What a downloaded chart says it shows (ChartDownloadMenu's frame): the
+  // band's policies on the views it drives, the provisional label while
+  // any shown measure is provisional
+  const downloadContext = (value) =>
+    VIEW_BY_KEY[value]?.policies
+      ? {
+          policies: policiesLabel(selectedPolicies, POLICIES),
+          provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
+        }
+      : { policies: value === "outlook" ? "Current law (before the Budget measures)" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -602,7 +793,14 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // A Population impact sub-tab's content. With no policies chosen, each
   // offers the full Budget; the charts wait for the CSVs.
-  const populationPanel = (sub) => {
+  // Each sub-tab's code loads when it first opens (lazyView), its
+  // placeholder showing meanwhile
+  const populationPanel = (sub) => (
+    <Suspense fallback={<ViewSkeleton view={`dashboard:${sub}`} subTabs={false} />}>
+      {populationContent(sub)}
+    </Suspense>
+  );
+  const populationContent = (sub) => {
     if (selectedPolicies.length === 0) return emptyState;
     // Living standards and Poverty show the selected measures' effect; their
     // twins on the Pre-measures forecast (same names) show current law
@@ -638,8 +836,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
-              <SummaryMetricChart
-                metric={SUMMARY_METRICS.inequality}
+              <InequalityChart
                 rows={results.rawMetrics}
                 policies={POLICIES}
                 selectedPolicies={selectedPolicies}
@@ -693,22 +890,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
           <section id="revenue" className="report-section hero-chart">
             <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
-            {/* OBR comparison: an expandable row at the foot of the card
-                once the OBR has costed the measures */}
-            <ObrComparisonFoot
-              selectedPolicies={selectedPolicies}
-              selectedYear={distributionalYear}
-            />
           </section>
+          {/* The official costings beside our estimates: a card of its own,
+              once the official costings cover a selected measure */}
+          <ObrComparisonCard
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+          />
         </div>
       );
     }
     // All households: places, and how changes vary between households
     return (
       <div className="results-container">
-        {/* Three sections: by area (the constituency map), by income (the
-            decile pair) and across households (the scatter of binned groups;
-            the per-household scatter stays withdrawn, as it showed survey
+        {/* Two sections: by area (the constituency map) and by income (the
+            decile card beside the scatter of binned groups; the
+            per-household scatter stays withdrawn, as it showed survey
             households one by one). One measure key above them all
             (MeasureKey): the decile cards colour by measure and register
             with it. Results by region are hidden for now (RegionView is
@@ -733,49 +930,39 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="by-income"
             icon="wallet"
             title="By income"
-            subtitle="How the change differs between lower- and higher-income households."
+            subtitle="How the change differs between lower- and higher-income households: on average in each income decile, and across households with similar incomes and changes."
           />
+          {/* The decile card (£ or % in its Options) beside the household
+              scatter: two columns on a wide screen, stacked on a narrow one */}
           <section id={DECILES_ANCHOR} className="report-section distributional-section">
             <div className="charts-grid">
-              <WaterfallChart
-                rawData={results.rawWinnersLosers}
+              <DecileImpactCard
+                winnersLosers={results.rawWinnersLosers}
+                distributional={results.rawDistributional}
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
               />
-              <DistributionalChart
-                rawData={results.rawDistributional}
+              <HouseholdScatter
                 selectedPolicies={selectedPolicies}
+                policies={POLICIES}
                 selectedYear={distributionalYear}
+                descriptionLink={
+                  <>
+                    Where would yours be?{" "}
+                    <a
+                      className="twin-link"
+                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        handleTabChange("household");
+                      }}
+                    >
+                      Work it out on Household impact →
+                    </a>
+                  </>
+                }
               />
             </div>
-          </section>
-          <SectionHeading
-            id="across-households"
-            icon="users"
-            title="Across households"
-            subtitle="Who gains and who loses at every income level, in groups of households with similar incomes and changes."
-          />
-          <section id="scatter" className="report-section charts-stack">
-            <HouseholdScatter
-              selectedPolicies={selectedPolicies}
-              policies={POLICIES}
-              selectedYear={distributionalYear}
-              descriptionLink={
-                <>
-                  Where would yours be?{" "}
-                  <a
-                    className="twin-link"
-                    href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      handleTabChange("household");
-                    }}
-                  >
-                    Work it out on Household impact →
-                  </a>
-                </>
-              }
-            />
           </section>
         </MeasureKeyProvider>
       </div>
@@ -789,7 +976,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
-      data-band-hidden={bandHidden && titleStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
+      data-publication={unavailable ? "unavailable" : "verified"}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
           main landmark, and a second one inside it is a landmark error */}
       <div className="main-content" ref={mainRef}>
@@ -831,12 +1018,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         {/* A newer publication replaced the figures: a passing note, once */}
         <UpdateToast show={updated} />
-        {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
-          <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
-            <p>{measure.description}</p>
-            <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
-          </UnavailableNotice>
-        ))}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
@@ -881,6 +1062,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
+        <DownloadContext.Provider value={downloadContext(value)}>
+        <Suspense fallback={viewFallback(value)}>
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
           // "not published yet" line is only for an empty publication
@@ -937,6 +1120,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             {populationPanel}
           </PopulationImpactView>
         )}
+        </Suspense>
+        </DownloadContext.Provider>
         </div>
         ))}
         </div>

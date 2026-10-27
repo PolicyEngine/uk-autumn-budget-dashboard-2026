@@ -5,8 +5,8 @@ import "./Disclosure.css";
 /**
  * A disclosure, closed by default: a full-width button with a chevron, and
  * its content below once opened. One style for every expander on the
- * page: in a card's foot ("About this chart", "Compare with OBR
- * estimates"), where `inCard` puts a rule above it, or as a card of its own
+ * page: in a card's foot ("About this chart", "Compare with the
+ * official costings"), where `inCard` puts a rule above it, or as a card of its own
  * ("About this data").
  *
  * While closed, `preview` is a one-line index of what is inside ("How it's

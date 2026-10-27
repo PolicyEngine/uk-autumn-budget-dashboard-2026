@@ -28,23 +28,34 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
-import { NumberField, SelectField } from "./personal/FormControls";
+import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
 
-// The form: one card of questions in labelled sections, each a grid of
-// boxes. The essentials first, then the optional details in More details,
-// closed at first, in groups of their own. `children` stands for each
-// child's answers (their age and, from 16, their education).
+// The form: one card. The essentials first, as one grid of boxes and
+// segmented choices; then More details, four groups that each open on
+// their own and, closed, say what they hold. `children` stands for each
+// child's answers (their age and, from 16, their education); `rent_from`
+// is the landlord, the renting half of the tenure.
 export const FORM_SECTIONS = [
-  { title: "You", icon: "user", fields: ["current_age", "current_salary", "region"] },
   {
-    title: "Family and home",
-    icon: "house",
-    fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
+    title: "About your household",
+    fields: [
+      "current_age",
+      "current_salary",
+      "region",
+      "has_partner",
+      "children_count",
+      "tenure",
+      "partner_age",
+      "partner_salary",
+      "rent_from",
+      "monthly_rent",
+      "children",
+    ],
   },
   {
     title: "More details",
@@ -100,6 +111,8 @@ const YES_NO = [
 ];
 
 const MAX_CHILDREN = 6;
+// The tenure choice's "Rent": whichever landlord, asked beside the rent
+const RENTING = "RENTING";
 // A child's age when added (as Spring Statement's calculator does)
 const NEW_CHILD_AGE = 5;
 
@@ -108,23 +121,33 @@ const CHOICE_CONFIGS = {
   has_partner: {
     label: "Partner",
     question: "Do you live with a partner?",
+    layout: "segmented",
     options: YES_NO,
     hint: "Universal Credit and the High Income Child Benefit Charge are assessed per couple.",
   },
   children_count: {
     label: "Children",
     question: "Number of children",
-    layout: "compact",
+    layout: "segmented",
     options: Array.from({ length: MAX_CHILDREN + 1 }, (_, n) => ({ value: n, label: String(n) })),
   },
+  // Rent, mortgage or own outright; a renter's landlord is asked beside
+  // the rent (rent_from), so the tenure sent is one of the five as before
   tenure: {
     label: "Housing",
+    layout: "segmented",
     options: [
-      { value: "RENT_PRIVATELY", label: "Rent privately" },
-      { value: "RENT_FROM_COUNCIL", label: "Rent from the council" },
-      { value: "RENT_FROM_HA", label: "Rent from a housing association" },
-      { value: "OWNED_WITH_MORTGAGE", label: "Own with a mortgage" },
+      { value: RENTING, label: "Rent" },
+      { value: "OWNED_WITH_MORTGAGE", label: "Mortgage" },
       { value: "OWNED_OUTRIGHT", label: "Own outright" },
+    ],
+  },
+  rent_from: {
+    label: "Rent from",
+    options: [
+      { value: "RENT_PRIVATELY", label: "Private landlord" },
+      { value: "RENT_FROM_COUNCIL", label: "Council" },
+      { value: "RENT_FROM_HA", label: "Housing association" },
     ],
   },
   student_loan_plan: {
@@ -142,13 +165,14 @@ const CHOICE_CONFIGS = {
   council_tax_band: {
     label: "Council tax band",
     summary: (value) => `Band ${value}`,
-    layout: "compact",
+    layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
     hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), not your own council's, grown with the OBR's forecast. Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
     question: "Would your household claim Universal Credit if entitled?",
+    layout: "segmented",
     options: [
       { value: true, label: "Yes" },
       { value: false, label: "No" },
@@ -158,12 +182,12 @@ const CHOICE_CONFIGS = {
   },
 };
 
-// Amounts and ages, as number boxes with − and + steppers
+// Ages, as number boxes with − and + steppers; amounts, as £ boxes
 const NUMBER_CONFIGS = {
   current_age: { label: "Age", min: 18, max: 80, step: 1 },
-  current_salary: { label: "Salary in 2026", min: 0, max: 500000, step: 1000, money: true, hint: SALARY_SOURCE },
+  current_salary: { label: "Salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year", hint: SALARY_SOURCE },
   partner_age: { label: "Partner's age", min: 18, max: 80, step: 1 },
-  partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true },
+  partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year" },
   monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
   savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
@@ -244,6 +268,7 @@ const NUMBER_CONFIGS = {
 // Shown only when they apply
 const FIELD_APPLIES = {
   monthly_rent: (inputs) => isRenting(inputs.tenure),
+  rent_from: (inputs) => isRenting(inputs.tenure),
   partner_age: (inputs) => inputs.has_partner,
   partner_salary: (inputs) => inputs.has_partner,
   children_ages: (inputs, childrenCount) => childrenCount > 0,
@@ -298,12 +323,122 @@ export function spendingAssumed(answers, presetId) {
   return presetId !== null ? "example" : null;
 }
 
+const pounds = (value) => `£${d3.format(",.0f")(value)}`;
+const sentence = (parts) => {
+  const text = parts.join(" · ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+/**
+ * What a More details group holds, in one line, for its closed row:
+ * "Petrol £620 · diesel £340 · electricity £1,040 a year (UK average)".
+ */
+export function groupSummary(title, { answer, applies, inputs, presetId }) {
+  const amounts = (ids) =>
+    ids.filter((id) => applies(id) && answer(id) > 0).map((id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`);
+  if (title === "Other income") {
+    return sentence(amounts(["savings_interest_per_year", "dividends_per_year", "property_income_per_year"])) || "None";
+  }
+  if (title === "Pension and student loan") {
+    const parts = amounts([
+      "private_pension_per_year",
+      "partner_private_pension_per_year",
+      "state_pension_per_year",
+      "partner_state_pension_per_year",
+      "salary_sacrifice_per_year",
+    ]).map((part) => part.replace(/^your state pension/, "State Pension").replace(/state pension/, "State Pension"));
+    if (parts.length === 0) parts.push("no pension income");
+    const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
+    parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
+    return sentence(parts);
+  }
+  if (title === "Spending") {
+    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"].map(
+      (id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`,
+    );
+    let text = `${sentence(fuel)} a year`;
+    if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
+    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) text += ` · childcare ${pounds(answer("monthly_childcare"))} a month`;
+    return text;
+  }
+  const parts = [];
+  if (applies("council_tax_band")) parts.push(`Council Tax band ${inputs.council_tax_band}`);
+  parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
+  return sentence(parts);
+}
+
+/**
+ * One More details group: a row that opens it, saying what it holds and
+ * how many answers differ from the typical ones while closed, with "Reset
+ * to typical" beside it once any do.
+ */
+function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onReset, children }) {
+  const collapse = useCollapse(open);
+  const panelId = `${id}-panel`;
+  const titleId = `${id}-title`;
+  return (
+    <div className={`household-detail ${open ? "is-open" : ""}`.trim()}>
+      <div className="household-detail-head">
+        <h4 className="household-detail-heading">
+          <button
+            type="button"
+            className="household-detail-toggle"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={onToggle}
+          >
+            <TitleIcon name={icon} bare size={14} className="household-label-icon" />
+            <span className="household-detail-title" id={titleId}>
+              {title}
+            </span>
+            {!open && <span className="household-detail-summary">{summary}</span>}
+            {changed > 0 && (
+              <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
+            )}
+            <svg
+              className="household-more-chevron"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </h4>
+        {changed > 0 && (
+          <button type="button" className="text-button household-detail-reset" aria-label={`Reset ${title} to typical`} onClick={onReset}>
+            Reset to typical
+          </button>
+        )}
+      </div>
+      {collapse.mounted && (
+        <div
+          id={panelId}
+          role="group"
+          aria-labelledby={titleId}
+          className={`expander-body ${collapse.expanded ? "is-expanded" : ""}`}
+        >
+          <div className="expander-inner">
+            <div className="household-detail-panel">{children}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, startFrom: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: false, submitted: null, startFrom: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -337,9 +472,9 @@ function HouseholdCalculator({
   // The example Your household started from, named at the top of the form
   const [startFrom, setStartFrom] = useState(() => savedWizard.startFrom);
   const form = useCollapse(formOpen);
-  // More details, closed at first; kept between tab switches for the session
+  // More details' groups open, by title: closed at first; kept between tab
+  // switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
-  const more = useCollapse(moreOpen);
   // The answers, year and policies last sent with Calculate: nothing is
   // asked before it, and a result stays tied to what it was asked with
   const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
@@ -354,7 +489,7 @@ function HouseholdCalculator({
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
-  // Remember the inputs and whether More details is open for this session
+  // Remember the inputs and which More details groups are open for this session
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
@@ -635,12 +770,39 @@ function HouseholdCalculator({
     let field;
     if (id === "children_count") {
       field = (
-        <SelectField
+        <ChoiceTiles
           id={id}
           label={CHOICE_CONFIGS.children_count.label}
+          layout="segmented"
           options={CHOICE_CONFIGS.children_count.options}
           value={childrenCount}
           onChange={setChildrenCount}
+        />
+      );
+    } else if (id === "tenure") {
+      const config = CHOICE_CONFIGS.tenure;
+      field = (
+        <ChoiceTiles
+          id={id}
+          label={config.label}
+          layout="segmented"
+          options={config.options}
+          value={isRenting(inputs.tenure) ? RENTING : inputs.tenure}
+          // "Rent" keeps the landlord already chosen; private at first
+          onChange={(value) =>
+            handleInputChange(id, value !== RENTING ? value : isRenting(inputs.tenure) ? inputs.tenure : "RENT_PRIVATELY")
+          }
+        />
+      );
+    } else if (id === "rent_from") {
+      const config = CHOICE_CONFIGS.rent_from;
+      field = (
+        <SelectField
+          id={id}
+          label={config.label}
+          options={config.options}
+          value={inputs.tenure}
+          onChange={(value) => handleInputChange("tenure", value)}
         />
       );
     } else if (id === "region") {
@@ -661,14 +823,16 @@ function HouseholdCalculator({
       const config = CHOICE_CONFIGS[id];
       // An option's own note (a loan plan's) stands in for the field's
       const chosen = config.options.find((option) => option.value === inputs[id]);
+      const Control = config.layout === "segmented" ? ChoiceTiles : SelectField;
       field = (
-        <SelectField
+        <Control
           id={id}
           label={config.label}
           options={config.options}
           value={inputs[id]}
           hint={chosen?.hint ?? config.hint}
           hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
+          {...(config.layout === "segmented" ? { layout: "segmented" } : {})}
           onChange={(value) => handleInputChange(id, value)}
         />
       );
@@ -739,80 +903,59 @@ function HouseholdCalculator({
     </div>
   );
 
-  const renderGrid = (fields) => <div className="household-grid">{fields.map(renderField)}</div>;
+  const renderGrid = (fields, className = "") => (
+    <div className={`household-grid ${className}`.trim()}>{fields.map(renderField)}</div>
+  );
+
+  // An answer as the calculation reads it (a prefilled field's prefill)
+  const answer = (id) => inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
+  // Whether an answer differs from where it started (WIZARD_DEFAULTS)
+  const changedFromTypical = (id) => (PREFILLED[id] ? inputs[id] !== null && inputs[id] !== undefined : inputs[id] !== WIZARD_DEFAULTS[id]);
+  // A group's answers back to where they started
+  const resetGroup = (group) => {
+    setPresetId(null);
+    setInputs((prev) => ({ ...prev, ...Object.fromEntries(group.fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
+  };
 
   const renderSection = (section, index) => {
-    const labelId = `household-section-${index}`;
     if (!section.collapsible) {
       return (
-        <section key={section.title} className="household-group" aria-labelledby={labelId}>
-          <h3 className="household-group-label" id={labelId}>
-            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
-            {section.title}
-          </h3>
-          {renderGrid(section.fields)}
+        <section key={section.title} className="household-group household-essentials" aria-label={section.title}>
+          {renderGrid(section.fields, "household-grid-essentials")}
         </section>
       );
     }
-    const fields = section.groups.flatMap((group) => group.fields);
-    const shown = fields.filter(fieldApplies).length;
-    const panelId = `${labelId}-panel`;
+    const labelId = `household-section-${index}`;
     return (
-      <section key={section.title} className="household-group household-more">
-        <h3 className="household-group-label">
-          <button
-            type="button"
-            className="household-more-toggle"
-            id={labelId}
-            aria-expanded={moreOpen}
-            aria-controls={panelId}
-            onClick={() => setMoreOpen((value) => !value)}
-          >
-            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
-            {section.title}{" "}
-            <span className="household-more-count">{shown} questions</span>
-            <svg
-              className="household-more-chevron"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </h3>
-        {more.mounted && (
-          <div
-            id={panelId}
-            role="region"
-            aria-labelledby={labelId}
-            className={`expander-body ${more.expanded ? "is-expanded" : ""}`}
-          >
-            <div className="expander-inner">
-            <div className="household-more-panel">
-            {section.groups.map((group) => {
-              if (!group.fields.some(fieldApplies)) return null;
-              const groupId = `${labelId}-${group.title.toLowerCase().replace(/[^a-z]+/g, "-")}`;
-              return (
-                <div key={group.title} className="household-subgroup" role="group" aria-labelledby={groupId}>
-                  <h4 className="household-subgroup-label" id={groupId}>
-                    <TitleIcon name={group.icon} bare size={13} className="household-label-icon" />
-                    {group.title}
-                  </h4>
-                  {renderGrid(group.fields)}
-                </div>
-              );
-            })}
-            </div>
-            </div>
-          </div>
-        )}
+      <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
+        <div className="household-more-head">
+          <h3 className="household-group-label" id={labelId}>
+            {section.title}
+          </h3>
+          <p className="household-more-note">Optional: each starts at a typical value.</p>
+        </div>
+        <div className="household-details">
+          {section.groups.map((group) => {
+            const shown = group.fields.filter(fieldApplies);
+            if (shown.length === 0) return null;
+            const slug = group.title.toLowerCase().replace(/[^a-z]+/g, "-");
+            return (
+              <DetailsGroup
+                key={group.title}
+                id={`${labelId}-${slug}`}
+                title={group.title}
+                icon={group.icon}
+                open={Boolean(moreOpen[group.title])}
+                onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
+                summary={groupSummary(group.title, { answer, applies: fieldApplies, inputs, presetId })}
+                changed={shown.filter(changedFromTypical).length}
+                onReset={() => resetGroup(group)}
+              >
+                {renderGrid(group.fields, "household-grid-details")}
+              </DetailsGroup>
+            );
+          })}
+        </div>
       </section>
     );
   };

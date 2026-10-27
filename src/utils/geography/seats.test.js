@@ -60,12 +60,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([
-      {
-        kind: "note",
-        text: "Not published, to protect survey respondents' confidentiality.",
-      },
-    ]);
+    expect(lines).toEqual([{ kind: "note", text: "Not published: too few survey households" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {

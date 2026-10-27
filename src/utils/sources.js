@@ -129,8 +129,10 @@ Object.assign(SOURCES, {
     url: "https://www.gov.uk/government/organisations/hm-treasury",
   },
   // Published with the Budget on 28 October 2026; linked once it exists
+  // HM Treasury's policy costings, certified by the OBR: the figures the
+  // reconciliation gate compares (public/data/official_costings.json)
   obr_budget_2026_costings: {
-    label: "the OBR's Autumn Budget 2026 costings",
+    label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
     url: null,
   },
   ons_ashe: {
