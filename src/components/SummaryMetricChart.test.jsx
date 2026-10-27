@@ -5,12 +5,17 @@ import SummaryMetricChart, {
   SUMMARY_METRICS,
   choiceRows,
   hasColumn,
+  INEQUALITY_FILL,
+  INEQUALITY_METRICS,
   metricByYear,
+  metricSentence,
   metricValue,
   parsePovertyChoice,
   povertyMetric,
+  sigFigs,
   tightAxis,
 } from "./SummaryMetricChart";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // #185 on #104: the measures come from the catalogue, and its combined run
@@ -217,5 +222,50 @@ describe("tightAxis", () => {
   it("fits the bars: to each side with round ticks when they go both ways, from zero when one way", () => {
     expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.02, 0.05], ticks: [-0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.04, 0.05] });
     expect(tightAxis([-0.007, -0.004]).domain).toEqual([-0.01, 0]);
+  });
+});
+
+describe("the card's sentence", () => {
+  const top10 = INEQUALITY_METRICS["top-10"];
+  it("is plain and precise: two significant digits, never 'less than 0.1'", () => {
+    expect(sigFigs(0.00832)).toBe("0.0083");
+    expect(sigFigs(0.16)).toBe("0.16");
+    expect(sigFigs(1.234)).toBe("1.2");
+    expect(metricSentence(top10, "2029-30", -0.00832)).toBe(
+      "In 2029-30 the selected policies lower the top 10% income share by about 0.0083 percentage points.",
+    );
+    expect(metricSentence(INEQUALITY_METRICS.gini, "2029-30", 0.16)).toBe(
+      "In 2029-30 the selected policies raise income inequality (the Gini coefficient) by about 0.16%.",
+    );
+    expect(metricSentence(povertyMetric(parsePovertyChoice(null)), "2029-30", -0.012, "about 4,200 people")).toBe(
+      "In 2029-30 the selected policies move about 4,200 people out of absolute poverty before housing costs, lowering the rate by about 0.012 percentage points.",
+    );
+  });
+  it("says almost no change only when the change rounds to 0.00", () => {
+    expect(metricSentence(top10, "2029-30", 0.004)).toBe("In 2029-30 the selected policies make almost no change to the top 10% income share.");
+    expect(metricSentence(top10, "2029-30", 0.005)).toMatch(/raise the top 10% income share by about 0.005 percentage points/);
+  });
+});
+
+describe("the inequality chart", () => {
+  it("draws its bars in the neutral teal-slate, never gain or loss, with unit ticks", () => {
+    expect(INEQUALITY_FILL).toBe(CHART_COLOURS.highlight);
+    expect([CHART_COLOURS.gain, CHART_COLOURS.loss, CHART_COLOURS.noChange]).not.toContain(INEQUALITY_FILL);
+    const { container } = render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.inequality}
+        rows={[
+          { reform_id: "fuel_duty_rise_deferral", year: "2027", gini_change: "-0.0004", p90_p10_change: "0.001", top_10_share_change_pp: "-0.008" },
+          { reform_id: "fuel_duty_rise_deferral", year: "2028", gini_change: "-0.0006", p90_p10_change: "0.001", top_10_share_change_pp: "-0.012" },
+        ]}
+        policies={POLICIES}
+        selectedPolicies={["fuel_duty_rise_deferral"]}
+        selectedYear={2027}
+      />,
+    );
+    expect(container.querySelector(".chart-description")).toHaveTextContent(
+      "In 2027-28 the selected policies lower income inequality (the Gini coefficient) by about 0.04%.",
+    );
+    expect(container.querySelector(".chart-description strong")).toBeNull();
   });
 });
