@@ -9,6 +9,9 @@ import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
 import ChartTooltip from "./ChartTooltip";
 import PolicySelector from "./PolicySelector";
+import { MeasureKeyProvider } from "./MeasureKey";
+import { LOGO_ROOM as SCATTER_LOGO_ROOM } from "./HouseholdScatter";
+import { chartMargin } from "../utils/chartTheme";
 import {
   buildMeasureCatalogue,
   MeasureCatalogueProvider,
@@ -25,11 +28,11 @@ vi.setConfig({ testTimeout: 30000 });
 vi.mock("recharts", async () => {
   const React = await import("react");
   const ChartData = React.createContext([]);
-  const Chart = ({ data, children }) => {
+  const Chart = ({ data, margin, children }) => {
     const rows = data ?? React.Children.toArray(children).find((child) => Array.isArray(child.props?.data))?.props.data ?? [];
     return (
       <ChartData.Provider value={rows}>
-        <div data-testid="chart-rows" data-rows={JSON.stringify(rows)}>{children}</div>
+        <div data-testid="chart-rows" data-rows={JSON.stringify(rows)} data-margin={JSON.stringify(margin ?? null)}>{children}</div>
       </ChartData.Provider>
     );
   };
@@ -71,7 +74,7 @@ vi.mock("../utils/loadDashboard", async (importOriginal) => {
 });
 vi.mock("../utils/chartLogo", () => ({
   PolicyEngineLogo: () => null,
-  CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17 },
+  CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17, padding: 8 },
 }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -334,5 +337,29 @@ describe("measure chart keys", () => {
     expect(headings).toEqual(["Raise revenue", "Other policies"]);
     expect(screen.getByText(catalogue.byId.get(ALPHA).label)).toBeInTheDocument();
     expect(screen.queryByText("Cost revenue")).not.toBeInTheDocument();
+  });
+});
+
+// All households' By income pair: the decile card (either view) beside the
+// household scatter. Both draw their logo in the SVG under the same axis
+// margins, so the plots, axis titles and logos sit level (HouseholdScatter
+// .test.jsx checks the scatter's side).
+describe("income decile card beside the household scatter", () => {
+  it("draws both decile views with the scatter's top margin and logo room under the axis", () => {
+    const fixture = measureCatalogueFixture();
+    const catalogue = catalogueFor(fixture);
+    const selected = [ALPHA, BETA];
+    render(withCatalogue(catalogue, (
+      <MeasureKeyProvider>
+        <div data-testid="relative"><DistributionalChart rawData={fixture.distributional} selectedPolicies={selected} selectedYear={YEAR} /></div>
+        <div data-testid="absolute"><WaterfallChart rawData={fixture.winnersLosers} selectedPolicies={selected} selectedYear={YEAR} /></div>
+      </MeasureKeyProvider>
+    )));
+    expect(SCATTER_LOGO_ROOM).toBe(31);
+    for (const chart of ["relative", "absolute"]) {
+      const margin = JSON.parse(within(screen.getByTestId(chart)).getByTestId("chart-rows").dataset.margin);
+      expect(margin.top).toBe(chartMargin(false).top);
+      expect(margin.bottom).toBe(SCATTER_LOGO_ROOM);
+    }
   });
 });

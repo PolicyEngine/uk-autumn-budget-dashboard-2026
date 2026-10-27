@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO, PolicyEngineLogo } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
@@ -22,7 +22,7 @@ import {
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
@@ -61,10 +61,14 @@ const DOT_OPACITY = 0.51;
 const GRID = { strokeDasharray: "3 3", stroke: CHART_COLOURS.grid };
 const TICK = { fontSize: 11, fill: CHART_COLOURS.tick };
 const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
-// Below the side-by-side layout the plot keeps the 2025 chart's height; in
-// it, the plot fills the rows the map beside it uses for its controls, map
-// and colour scale (see HouseholdScatterTemplate.css).
+// Below the side-by-side layout the plot keeps the 2025 chart's height;
+// beside the income decile card it takes that card's plot height (see
+// HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
+// Room under the axis for the logo, drawn in the SVG as the decile card
+// beside it draws its own (WaterfallChart's LOGO_ROOM), so the two plots,
+// axis titles and logos sit level
+export const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
 
 // The dots' colours, as colourFor draws them; the key under the plot
 // carries them. Groups beyond the axis sit at its edge, coloured alike.
@@ -90,6 +94,22 @@ const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 100
 // One short line; the income basis and how dots follow across years are in About this chart
 const describe = (perDot) =>
   `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
+
+// The same line on the card, with the gain and loss colours as dots
+// beside their words: the chart's key, so no key row under the plot
+const KeyWord = ({ color, children }) => (
+  <span className="scatter-key-word">
+    <span className="scatter-legend-dot" style={{ background: color }} aria-hidden="true" />
+    {children}
+  </span>
+);
+const describeWithKey = (perDot) => (
+  <>
+    Each dot is about {roundedThousands(perDot)} households: right of the line they{" "}
+    <KeyWord color={CHART_COLOURS.gain}>gain</KeyWord>, left they{" "}
+    <KeyWord color={CHART_COLOURS.loss}>lose</KeyWord>.
+  </>
+);
 
 /**
  * The card's "About this chart": how to read a dot and the axes. The
@@ -505,9 +525,16 @@ function HouseholdScatter({
     // The download changes with what it describes, not with every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onDownload, ready, view, description, chartTitle, exportName]);
-  const incomeTitle = basisLabel
-    ? `Household net income, ${basisLabel} (£k)`
-    : "Household net income (£k)";
+  // Households keep their basis-year band in every year (the y axis does
+  // not move with the year), so the title names no year; About this chart
+  // and the tooltip give the basis year
+  const incomeTitle = "Household net income before the policies (£k)";
+  // The key: in the sentence, with the logo in the SVG as on the decile
+  // card; with the reader's household, a key row under the plot and the
+  // logo below it. A note instead of a plot keeps the logo row.
+  const keyRow = ready && !nothingChanges && Boolean(youShown);
+  const svgLogo = !embedded && !youShown;
+  const htmlLogo = !embedded && (Boolean(youShown) || nothingChanges);
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
@@ -583,7 +610,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description">
-              {description}
+              {ready && !youShown && !nothingChanges ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
               {descriptionLink && <> {descriptionLink}</>}
             </p>
           </div>
@@ -617,7 +644,14 @@ function HouseholdScatter({
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
-            <ScatterChart margin={{ top: 6, right: narrow ? 22 : 20, left: 0, bottom: 0 }}>
+            <ScatterChart
+              margin={{
+                top: chartMargin(narrow).top,
+                right: narrow ? 22 : 20,
+                left: 0,
+                bottom: svgLogo ? LOGO_ROOM : 0,
+              }}
+            >
               <CartesianGrid {...GRID} />
               <XAxis
                 type="number"
@@ -633,7 +667,7 @@ function HouseholdScatter({
                 label={{
                   value: "Net income change (£ a year)",
                   position: "insideBottom",
-                  offset: 4,
+                  offset: 2,
                   style: AXIS_TITLE,
                 }}
               />
@@ -657,6 +691,7 @@ function HouseholdScatter({
                 />
               )}
               <Customized component={<ChartUnitLabel text={incomeTitle} />} />
+              {svgLogo && <Customized component={PolicyEngineLogo} />}
             </ScatterChart>
           </ResponsiveContainer>
           )}
@@ -680,7 +715,7 @@ function HouseholdScatter({
         )}
       </div>
 
-      {ready && !nothingChanges && (
+      {keyRow && (
         <ul className="scatter-legend chart-legend" aria-label="Key">
           {key.map((item) => (
             <li key={item.label}>
@@ -695,7 +730,7 @@ function HouseholdScatter({
         </ul>
       )}
 
-      {!embedded && (
+      {htmlLogo && (
         <div className="chart-logo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={CHART_LOGO.href} alt="PolicyEngine" />
