@@ -56,8 +56,9 @@ import {
   drawnNames,
 } from "../utils/legendMembership";
 
-/** The section's anchor: link to it as #young-people. */
-export const YOUNG_PEOPLE_ANCHOR = "young-people";
+/** The section's anchor: link to it as #young-people (utils/viewAnchors). */
+import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+export { YOUNG_PEOPLE_ANCHOR };
 
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
