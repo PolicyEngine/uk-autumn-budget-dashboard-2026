@@ -56,7 +56,7 @@ describe("the landing page", () => {
     expect(container).not.toHaveTextContent("Choose a year and policies");
     // Each box: a title, one short line and "Explore", and no figure
     expect(within(page).getAllByRole("link", { name: /Explore$/ }).map((link) => [link.getAttribute("href"), link.textContent])).toEqual([
-      ["?tab=dashboard&sub=finances", "The Budget and societyPublic finances, and who gains and losesExplore→"],
+      ["?tab=dashboard&sub=finances", "The Budget and societyCosts and who gains or losesExplore→"],
       ["?tab=household", "Your householdSee how your income changesExplore→"],
       ["?tab=policies", "What's in the BudgetEvery measure, and how we model itExplore→"],
     ]);
@@ -86,7 +86,7 @@ describe("the landing page", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("keeps the provisional caveat in one place: a small badge on the landing page, none over the views", async () => {
+  it("keeps the provisional badge on the landing page only, and words the Policies view and box as modelled measures", async () => {
     const original = fixtureJson("manifest.json");
     const manifest = {
       ...original,
@@ -100,9 +100,23 @@ describe("the landing page", () => {
     // Once, under the paragraph, in the manifest's own wording
     expect(notes()).toHaveLength(1);
     expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
-    fireEvent.click(box("policies"));
+    // While provisional, the policies box names modelled measures, not the Budget's contents
+    expect(screen.queryByRole("link", { name: BOXES.policies })).toBeNull();
+    fireEvent.click(screen.getByRole("link", { name: /^The measures modelled/ }));
     // Not over any view (the overview drawer has it only while open)
     expect(notes()).toHaveLength(0);
+    // The Policies view's subtitle says the measures are provisional
+    expect(
+      screen.getByText(`${provisionalLabel(manifest)}. What each measure changes, when, and how it is modelled.`),
+    ).toBeInTheDocument();
+  });
+
+  it("names the policies box after the Budget, with no provisional subtitle, once every measure is approved", async () => {
+    const { container } = await renderApp();
+    expect(container.querySelectorAll(".publication-provisional")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: /^The measures modelled/ })).toBeNull();
+    fireEvent.click(box("policies"));
+    expect(screen.getByText("What each measure changes, when, and how it is modelled.")).toBeInTheDocument();
   });
 
   it("draws a silhouette of Public finances behind it, with no view mounted", async () => {
@@ -182,8 +196,8 @@ describe("the mark beside the title", () => {
   });
 });
 
-describe("the About tab on the window's edge, and its overview drawer", () => {
-  const edge = () => screen.queryByRole("button", { name: "About this dashboard: open the overview" });
+describe("the About pill in the tab row, and its overview drawer", () => {
+  const edge = () => screen.queryByRole("button", { name: "About this dashboard" });
   const drawer = () => screen.queryByRole("dialog", { name: "Autumn Budget 2026: fiscal and distributional analysis" });
   const openDrawer = async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
@@ -199,14 +213,24 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     expect(drawer()).toBeNull();
   });
 
-  it("says what the dashboard is on hover or focus", async () => {
+  it("is a tab-styled button with no hover card", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     await renderApp();
-    expect(edge().querySelector("img")).toHaveAttribute("alt", "");
+    // Styled as the tabs are, with no logo; a button, never a chosen tab
+    expect(edge()).toHaveClass("view-tab");
+    expect(edge()).toHaveTextContent(/^About$/);
+    expect(edge().querySelector("img")).toBeNull();
+    expect(edge()).not.toHaveAttribute("role");
+    expect(edge()).not.toHaveAttribute("aria-selected");
+    // At the start of the view tabs row, before the tabs, outside them
+    const bar = edge().closest(".view-tabs-bar");
+    expect(bar).not.toBeNull();
+    expect(bar.firstElementChild.contains(edge())).toBe(true);
+    expect(edge().closest('[role="tablist"]')).toBeNull();
     expect(edge()).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(edge());
-    const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/^About this dashboard.*Click to open the overview\.$/);
+    fireEvent.mouseEnter(edge());
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("opens a modal drawer with the overview, focus inside and the page locked", async () => {
@@ -218,10 +242,15 @@ describe("the About tab on the window's edge, and its overview drawer", () => {
     // The ways in, as a list of three rows under "Go to"
     const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
     expect(rows.map((row) => row.textContent)).toEqual([
-      "The Budget and societyPublic finances, and who gains and loses",
+      "The Budget and societyCosts and who gains or loses",
       "Your householdSee how your income changes",
       "What's in the BudgetEvery measure, and how we model it",
+      "PolicyEngineMore research, the model and the API (opens in a new tab)",
     ]);
+    const site = rows.at(-1);
+    expect(site).toHaveAttribute("href", "https://policyengine.org/uk");
+    expect(site).toHaveAttribute("target", "_blank");
+    expect(site).toHaveAttribute("rel", "noopener noreferrer");
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was

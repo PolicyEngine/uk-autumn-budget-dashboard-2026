@@ -174,8 +174,12 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       ...sides.flatMap((side) => (side ? [side.top, side.bottom] : [])),
     ];
   }, [isChange, netParts, points, layers]);
+  // The change's axis: symmetric about £0 (gains above, losses below), so
+  // a change that is the same at every salary reads as a band above zero,
+  // not as a block filling the plot
+  const changeReach = Math.max(Math.abs(stack.top), Math.abs(stack.bottom), ...points.map((p) => Math.abs(p.change)), 1);
   const yTicks = isChange
-    ? divergingAxis([...points.map((p) => Math.round(p.change * 100) / 100), stack.top, stack.bottom]).ticks
+    ? divergingAxis([changeReach, -changeReach]).ticks
     : zeroBasedAxis(levelReach).ticks;
   const yLo = yTicks[0];
   const yHi = yTicks[yTicks.length - 1];
@@ -241,6 +245,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
+  // A change within £5 of itself at every salary: said in the sentence
+  const flatChange =
+    points.length > 1 && Math.max(...points.map((p) => p.change)) - Math.min(...points.map((p) => p.change)) < 5;
   // With no earnings there is no salary to name
   const at = salary === 0 ? "With no earnings" : `At your ${formatPounds(salary)} salary`;
   const youSentence =
@@ -249,7 +256,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       : isChange
         ? youRounded === 0
           ? `${at}, the selected policies barely change your household's net income.`
-          : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income.`
+          : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income${flatChange ? ", about the same at every salary" : ""}.`
         : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
     ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
@@ -381,7 +388,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 data-layer={layer.key}
                 d={bandPath(rows, stack.bands[layer.key], x, y)}
                 fill={layer.color}
-                fillOpacity={highlighted ? (highlighted.includes(layer.key) ? 0.95 : 0.2) : 0.85}
+                fillOpacity={highlighted ? (highlighted.includes(layer.key) ? 0.95 : 0.2) : isChange ? 0.55 : 0.85}
                 stroke="none"
                 style={{ transition: "fill-opacity 0.15s ease" }}
               />
@@ -559,7 +566,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               isChange && smallChange && "The change is under 1% of net income at every salary.",
-              drops.length > 0 && "In the shaded bands net income falls as salary rises, as benefits are withdrawn.",
+              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and withdrawn benefits take more than the extra pay.",
             ],
           }}
         />

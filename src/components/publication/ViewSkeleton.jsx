@@ -42,7 +42,7 @@ const LAYOUTS = {
     { icon: "wallet", title: "By income", subtitle: "How the change differs between lower- and higher-income households.", cards: [["bars"], ["bars"]] },
   ],
   "dashboard:age": [
-    { icon: "usersRound", title: "How much each age group gains", cards: [["lines", "wide"], ["bars"], ["bars"]] },
+    { icon: "usersRound", title: "How each age group's income changes", cards: [["lines", "wide"], ["bars"], ["bars"]] },
   ],
   "dashboard:living": [
     { icon: "wallet", title: "How the measures change incomes", subtitle: "With the selected measures: how they change income growth across the income distribution.", cards: [["lines", "wide"]] },

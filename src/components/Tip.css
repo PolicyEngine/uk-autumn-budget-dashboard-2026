@@ -6,7 +6,9 @@
 /* A tip: dark text on the surface, a soft border and shadow, fading in */
 .tip {
   position: fixed;
-  z-index: 1000;
+  /* Above everything it can be opened from: the sticky band (1100) and
+     its popovers, the sub-tab bar, the overview drawer (1300) */
+  z-index: 1400;
   max-width: 280px;
   padding: 6px 10px;
   border: 1px solid var(--pe-gray-200);

@@ -501,7 +501,7 @@ Record in the clock table:
 - the manifest revision and its execution identity;
 - the dataset SHA-256;
 - the household API identity;
-- the basis in `data_inputs/publication_basis.json` (expected `pre_budget`);
+- the basis in `data_inputs/publication_basis.json` (expected `pre_budget`). The page's provisional label does not read it: a manifest last written before its `budget.date` (28 October) calls provisional entries candidates, and the first Budget-day stage, approval or withdrawal turns that to "statement figures, awaiting Treasury costing". Withdraw or replace the candidates in that first write, so none is shown under the statement label;
 - which model limits are active: each key the model-limit check prints with `False`. While active, `state_pension_add_on_uprating` holds every State Pension measure at provisional and `vat_consumption_coverage` every VAT measure, in every year; `benefit_uprating_september_cpi` and `pc_minimum_guarantee_uprating` hold their measures from 2027 (see "How a measure must be written").
 
 **The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check can pass on plumbing alone, and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
