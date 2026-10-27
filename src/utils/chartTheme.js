@@ -54,6 +54,7 @@ export const CHART_COLOURS = {
   highlightBand: "#EAF5F4",
   tenthBand: "#DDE6F3",
   hover: "#EEF6F6",
+  rowBand: "#F9FAFB",
   obr: "#9CA3AF",
   obrText: "#6B7280",
   net: "#000000",
@@ -281,6 +282,9 @@ export const GRID_PROPS = {
 // with a small gap between stacked segments.
 /** The radius of a bar's outer end, in px (capped at half its thickness) */
 export const BAR_RADIUS = 5;
+// A chart row's band: the zebra and hover bands of the per-policy row
+// charts (the --row-radius token)
+export const ROW_RADIUS = 6;
 /** The gap between two stacked segments, in px */
 export const BAR_GAP = 1.5;
 

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import FrozenThresholdsCard, { FROZEN_THRESHOLDS_TITLE } from "./FrozenThresholdsCard";
 import { resetPolicyParameters } from "../../utils/policyParameters";
-import { earningsIndex, indexAxis, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
+import { earningsIndex, relativeAxis, sameThresholds, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "data");
 const read = (name) => JSON.parse(readFileSync(join(PUBLIC, name), "utf8"));
@@ -34,21 +34,34 @@ describe("Frozen thresholds against pay: data", () => {
     expect(index[2031]).toBeUndefined();
   });
 
-  it("indexes the current-law thresholds and earnings to 2026-27, ending with the earnings forecast", () => {
+  it("puts each current-law threshold relative to average earnings, 2026-27 = 100, ending with the earnings forecast", () => {
     const rows = thresholdRows(PARAMETERS, OUTLOOK);
     expect(rows.map((r) => r.year)).toEqual([2026, 2027, 2028, 2029, 2030]);
     expect(rows[0]).toEqual({ year: 2026, earnings: 100, personal_allowance: 100, higher_rate: 100, plan_2: 100 });
     const last = rows.at(-1);
-    expect(last.personal_allowance).toBe(100);
-    expect(last.higher_rate).toBe(100);
+    const earnings = 100 * 1.024 * 1.021 * 1.022 * 1.024;
+    expect(last.earnings).toBeCloseTo(earnings, 9);
+    // Frozen: 100 / the earnings index
+    expect(last.personal_allowance).toBeCloseTo((100 * 100) / earnings, 9);
+    expect(last.higher_rate).toBe(last.personal_allowance);
     // Plan 2 is uprated from April 2030 under current law
-    expect(last.plan_2).toBeCloseTo((100 * 30060.868375) / 29385, 9);
-    expect(last.earnings).toBeCloseTo(100 * 1.024 * 1.021 * 1.022 * 1.024, 9);
+    expect(last.plan_2).toBeCloseTo((100 * ((100 * 30060.868375) / 29385)) / earnings, 9);
   });
 
-  it("says earnings' rise against the frozen thresholds in one sentence", () => {
-    expect(thresholdsSentence(thresholdRows(PARAMETERS, OUTLOOK))).toBe(
-      "By 2030-31 average earnings are 9.4% higher than in 2026-27, while the personal allowance and higher rate threshold are unchanged.",
+  it("draws one line for the two income tax thresholds only while they are equal", () => {
+    const rows = thresholdRows(PARAMETERS, OUTLOOK);
+    expect(sameThresholds(rows)).toBe(true);
+    expect(sameThresholds(rows.map((r, i) => (i === 2 ? { ...r, higher_rate: r.higher_rate + 1 } : r)))).toBe(false);
+  });
+
+  it("says what the income tax thresholds are worth against earnings in one sentence", () => {
+    const rows = thresholdRows(PARAMETERS, OUTLOOK);
+    expect(thresholdsSentence(rows)).toBe(
+      "By 2030-31 the personal allowance and higher rate threshold are worth 8.6% less relative to average earnings than in 2026-27.",
+    );
+    const apart = rows.map((r) => ({ ...r, higher_rate: 100 }));
+    expect(thresholdsSentence(apart)).toBe(
+      "By 2030-31 the personal allowance is worth 8.6% less and the higher rate threshold 0.0% more relative to average earnings than in 2026-27.",
     );
   });
 
@@ -58,17 +71,20 @@ describe("Frozen thresholds against pay: data", () => {
     expect(thresholdRows(PARAMETERS, null)).toBeNull();
   });
 
-  it("puts the axis on whole steps around 100", () => {
-    expect(indexAxis([100, 102.3, 109.4])).toEqual({ domain: [98, 110], ticks: [98, 100, 102, 104, 106, 108, 110] });
+  it("fits the axis to the gaps from 100, with room above the reference line", () => {
+    const { domain, ticks } = relativeAxis([100, 93.5, 91.4]);
+    expect(domain[0]).toBeLessThanOrEqual(91.4);
+    expect(domain[1]).toBeGreaterThan(100);
+    expect(ticks).toContain(100);
   });
 });
 
 describe("Frozen thresholds against pay: card", () => {
   it("shows the title, the sentence and a chip per line", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
-    expect(await screen.findByText(/^By 2030-31 average earnings are 9\.4% higher/)).toBeTruthy();
+    expect(await screen.findByText(/^By 2030-31 the personal allowance and higher rate threshold are worth 8\.6% less/)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: FROZEN_THRESHOLDS_TITLE })).toBeTruthy();
-    for (const name of ["Personal allowance", "Higher rate threshold", "Plan 2 student loan threshold", "Average earnings"]) {
+    for (const name of ["Personal allowance and higher rate threshold", "Plan 2 student loan threshold", "Keeps pace with pay"]) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
     // The pound values live on Policies: the card links there, not repeats them
@@ -77,11 +93,11 @@ describe("Frozen thresholds against pay: card", () => {
     expect(screen.getByRole("link", { name: "Policies" }).getAttribute("href")).toBe("?tab=policies");
   });
 
-  it("table view lists each fiscal year's index", async () => {
+  it("table view lists earnings' index and each threshold relative to it", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} view="table" onViewChange={() => {}} />);
     await screen.findByText(/^By 2030-31/);
     const last = [...document.querySelectorAll(".ls-table tbody tr")].at(-1);
-    expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "100.0", "100.0", "102.3", "109.4"]);
+    expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "109.4", "91.4", "93.5"]);
   });
 
   it("says the 2031-32 freeze year is not shown", async () => {

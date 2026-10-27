@@ -26,6 +26,7 @@ import {
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { frameCsv, frameFileName, frameSvg } from "../utils/exportFrame";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import { htmlImageFormats } from "../utils/chartDownloads";
 import {
   EXPORT_UNITS,
   buildCsv,
@@ -63,8 +64,7 @@ import {
   seatCode,
   seatName,
   seatStates,
-  movesNoSeat,
-  noSeatMovedNote,
+  constituencySentence,
   seatStyle,
   seatSummary,
   unchangedLine,
@@ -85,7 +85,10 @@ import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
 
-const CHART_TITLE = "Constituency-level impacts";
+const CHART_TITLE = "Constituency impacts";
+
+// The Policy option that shows the whole selection (the default)
+const SELECTION_OPTION = "__selection__";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -579,8 +582,16 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
-  // A selection with no single reform: the measure shown (Measure picker)
+  // Several policies selected: the one the reader picked to see on its own,
+  // or null for the selection's combined results (the default). A new
+  // selection goes back to the combination.
   const [focusId, setFocusId] = useState(null);
+  const selectionStamp = [...new Set(selectedPolicies)].sort().join("|");
+  const [focusStamp, setFocusStamp] = useState(selectionStamp);
+  if (focusStamp !== selectionStamp) {
+    setFocusStamp(selectionStamp);
+    setFocusId(null);
+  }
   const [panel, setPanelParam] = usePanelParam();
   // The map view drawn: the one shown, or in the Table view the last one
   // shown, kept mounted so it keeps its zoom
@@ -620,6 +631,13 @@ export default function ConstituencyMap({
   const notRouted = areaViewsNotAvailable(routing);
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
+  // What the title names: the one policy shown, or the selection
+  const titleSubject =
+    choice.kind === "measure"
+      ? focusName(choice.reform)
+      : choice.kind === "package" || choice.kind === "no-package"
+        ? "selected policies"
+        : null;
   const yearLabel = fiscalYearLabel(selectedYear);
   // A hover from another year, measure or outcome is not shown, so the
   // tooltip never shows the figures it had while the year pill plays
@@ -841,11 +859,15 @@ export default function ConstituencyMap({
   // (a style on the page only; the exported file never carries it)
   const [keyHighlight, setKeyHighlight] = useState(null);
   const counts = useMemo(() => keyCounts(states), [states]);
-  // Every seat zero or withheld: say so, so the map's grey and hatching
-  // are not left to explain themselves
-  const flatNote = useMemo(
-    () => (movesNoSeat(states) ? noSeatMovedNote({ yearLabel, several: choice.kind === "package" }) : null),
-    [states, yearLabel, choice.kind],
+  // The card's one sentence under its title, from the rows the map
+  // colours; when every seat is zero or withheld it says so, so the map's
+  // grey and hatching are not left to explain themselves
+  const sentence = useMemo(
+    () =>
+      view.kind === "rows"
+        ? constituencySentence(states, { outcome, yearLabel, several: choice.kind === "package" })
+        : null,
+    [view.kind, states, outcome, yearLabel, choice.kind],
   );
   useEffect(() => {
     const map = mapRef.current;
@@ -893,7 +915,7 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
-          label: choice.kind === "package" ? "All policies" : null,
+          label: choice.kind === "package" ? (choice.all ? "All policies" : "Selected policies") : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -923,6 +945,8 @@ export default function ConstituencyMap({
   // The pinned card sits just above the seat the map centres, moved down
   // and across as needed so it stays inside the map (and so on screen)
   const cardRef = useRef(null);
+  // The Table view's panel, for its image downloads
+  const [rankingsPanel, setRankingsPanel] = useState(null);
   const closeRef = useRef(null);
   const [cardPlace, setCardPlace] = useState(null);
   useLayoutEffect(() => {
@@ -1048,7 +1072,11 @@ export default function ConstituencyMap({
   // The map's full fit: the box round every seat in the view drawn
   const fit = geometry?.box ?? { x: 0, y: 0, width: WIDTH, height: HEIGHT };
   const downloadsReady = onMap ? view.kind === "rows" : tableReady;
-  const downloads = onMap ? mapDownloads : { csv: handleExportRankings };
+  // The Table view: its CSV, and the table as the page shows it as images
+  // (chartDownloads), so both views offer the same formats
+  const downloads = onMap
+    ? mapDownloads
+    : { csv: handleExportRankings, ...htmlImageFormats(() => rankingsPanel, `constituency-rankings-${reform}-${selectedYear}-by-${metric}`) };
   const notice =
     view.kind === "notice" ? (
       <UnavailableNotice reason={view.reason}>
@@ -1064,11 +1092,14 @@ export default function ConstituencyMap({
   // several selected measures have constituency results), how the change
   // is shown, and the view
   const optionGroups = [
-    choice.focus && choice.focus.options.length > 1 && {
+    choice.focus && {
       label: "Policy",
-      value: choice.reform,
-      onChange: setFocusId,
-      options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
+      value: choice.kind === "measure" ? choice.reform : SELECTION_OPTION,
+      onChange: (value) => setFocusId(value === SELECTION_OPTION ? null : value),
+      options: [
+        { value: SELECTION_OPTION, label: "Selected policies combined" },
+        ...choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
+      ],
     },
     {
       label: "Show the change as",
@@ -1100,16 +1131,19 @@ export default function ConstituencyMap({
               <TitleIcon name="map" />
               <span className="title-text">
                 {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
-                {choice.focus && <span className="map-title-focus">: {focusName(choice.reform)}</span>}
+                {titleSubject && <span className="map-title-focus">: {titleSubject}</span>}
               </span>
             </h3>
-            {/* What the card shows is the section's subtitle, and how to
-                read it is in About this chart; a release that routes no
-                results by area gets a line describing the measure only */}
-            {notRouted && (
+            {/* One plain sentence from the map's figures, as the other
+                cards have; how to read the map is in About this chart. A
+                release that routes no results by area gets a line
+                describing the measure only */}
+            {notRouted ? (
               <p className="chart-description">
                 Average change in household net income by constituency.
               </p>
+            ) : (
+              sentence && <p className="chart-description">{sentence}</p>
             )}
           </div>
           {downloadsReady ? (
@@ -1189,7 +1223,7 @@ export default function ConstituencyMap({
         {/* Before results are in, the Table view is the notice alone: no
             empty table, count or "no match" line behind it */}
         {!onMap && view.kind === "rows" && (
-          <div className="rankings-panel">
+          <div ref={setRankingsPanel} className="rankings-panel">
             <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
           </div>
         )}
@@ -1304,7 +1338,6 @@ export default function ConstituencyMap({
               )}
               <FloatingTooltip tip={hoverTip} />
             </div>
-            {flatNote && <p className="map-flat-note">{flatNote}</p>}
           </div>
         )}
       </SwapTransition>

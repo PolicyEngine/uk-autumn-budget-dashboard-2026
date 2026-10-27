@@ -36,9 +36,16 @@ vi.mock("./components/BudgetaryImpactChart", async () => {
     },
   };
 });
-vi.mock("./components/DistributionalChart", () => ({
-  default: ({ rawData, selectedPolicies, selectedYear }) => <div data-testid="distributional-figures" data-year={selectedYear} data-rows={JSON.stringify(inOrder(rawData))} data-selected={JSON.stringify(selectedPolicies)} />,
-}));
+// With the years shown that the decile charts read (useDisplayYears)
+vi.mock("./components/DistributionalChart", async () => {
+  const { useDisplayYears } = await vi.importActual("./utils/displayYears");
+  return {
+    default: function DistributionalFigures({ rawData, selectedPolicies, selectedYear }) {
+      const years = useDisplayYears();
+      return <div data-testid="distributional-figures" data-year={selectedYear} data-years={JSON.stringify(years)} data-rows={JSON.stringify(inOrder(rawData))} data-selected={JSON.stringify(selectedPolicies)} />;
+    },
+  };
+});
 vi.mock("./components/WaterfallChart", () => ({
   default: ({ rawData, selectedYear }) => <div data-testid="winners-losers-figures" data-year={selectedYear} data-rows={JSON.stringify(inOrder(rawData))} />,
 }));
@@ -637,6 +644,13 @@ describe("a past event in the dashboard", () => {
     // Its own years, the first chosen
     expect(screen.getByTestId("budget-figures").dataset.year).toBe(String(IN_DATA));
     expect(JSON.parse(screen.getByTestId("budget-figures").dataset.rows).map((point) => point.year)).toEqual([IN_DATA]);
+  });
+
+  it("gives its charts its own years as the years shown, not this Budget's", async () => {
+    await openPast();
+    const chart = await screen.findByTestId("distributional-figures");
+    expect(JSON.parse(chart.dataset.years)).toEqual([IN_DATA]);
+    expect(chart.dataset.year).toBe(String(IN_DATA));
   });
 
   it("offers only the event's own years in its year pill, not this Budget's", async () => {

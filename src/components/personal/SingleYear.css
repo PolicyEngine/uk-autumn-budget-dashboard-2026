@@ -114,6 +114,21 @@
   font-family: inherit;
 }
 
+/* Change by policy: the hovered or focused row's band is stronger (drawn in
+   the chart) and its name is in bold */
+.policy-bar.is-active .policy-bar-name {
+  font-weight: 600;
+}
+
+.policy-bar:focus {
+  outline: none;
+}
+
+.policy-bar:focus-visible .policy-bar-band {
+  stroke: var(--c-gain);
+  stroke-width: 2;
+}
+
 .earnings-plot-inner {
   position: relative;
 }
@@ -1336,4 +1351,9 @@
   /* Its own box, so the bar's 16px does not collapse into this 20px */
   display: flow-root;
   margin-bottom: 20px;
+}
+
+/* Said above the pair when the answer has no breakdown by tax and benefit */
+.across-earnings-no-parts {
+  margin: 0 0 16px;
 }

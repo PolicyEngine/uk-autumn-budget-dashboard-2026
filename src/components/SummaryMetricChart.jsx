@@ -28,7 +28,7 @@ import {
   tickDecimals,
   useNarrowViewport,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, useDisplayYears } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
@@ -428,9 +428,9 @@ export function metricValue(row, key) {
  * @param {string|null} run - The run to read (wholeSelectionRun)
  * @param {{key: string, scale?: number}} metric
  */
-export function metricByYear(rows, run, metric) {
+export function metricByYear(rows, run, metric, years = DISPLAY_YEARS) {
   if (!run) return [];
-  return DISPLAY_YEARS.map((year) => {
+  return years.map((year) => {
     const row = (rows ?? []).find(
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
@@ -447,6 +447,7 @@ export function metricByYear(rows, run, metric) {
  * statistics are never added up across measures.
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   // The whole selection's run: one measure's own, or the package's combined
   // run (the catalogue's, #104) when every displayable measure is selected
@@ -470,18 +471,18 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           name: shortNameOf(policy),
           fullName: policy.label ?? policy.name,
           colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
-          points: metricByYear(rows, policy.id, metric),
+          points: metricByYear(rows, policy.id, metric, shownYears),
         }))
     : null;
   const measureData = byMeasure
-    ? DISPLAY_YEARS.map((year, i) => ({
+    ? shownYears.map((year, i) => ({
         year,
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  // Every year shown, from 2027-28 (FIRST_DISPLAY_YEAR)
-  const years = DISPLAY_YEARS;
-  const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
+  // Every year shown (2026-27 first while a selected policy has an effect in it)
+  const years = shownYears;
+  const data = byMeasure ? [] : metricByYear(rows, run, metric, years).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);

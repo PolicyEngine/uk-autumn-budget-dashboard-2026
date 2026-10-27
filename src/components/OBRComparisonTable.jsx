@@ -10,7 +10,7 @@ import MeasureRowLabel from "./MeasureRowLabel";
 import NoBreakYear from "./NoBreakYear";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, shownDifference } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -189,6 +189,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const [view, setView] = useState("chart");
   const [scale, setScale] = useState("bn");
   const chartRef = useRef(null);
+  const tableRef = useRef(null);
   const showTable = view === "table";
 
   if (selectedPolicies.length === 0) return null;
@@ -244,18 +245,19 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         difference: row.pe !== null && row.obr !== null ? row.pe - row.obr : undefined,
       })),
     });
-  // The download follows the view: the table offers its CSV only
+  // The download follows the view: the chart's images, or the table's
+  // (redrawn from the page, chartDownloads)
   const download = {
-    chartRef,
+    chartRef: showTable ? tableRef : chartRef,
     name: `policyengine-official-costings-${selectedYear}`,
     csv,
-    image: !showTable && yearCovered,
+    image: showTable || yearCovered,
     exportOptions: {
       title,
       description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
-      svgSelector: "svg",
+      svgSelector: showTable ? undefined : "svg",
       reservedLegendHeight: 0,
     },
   };
@@ -281,7 +283,27 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     },
   ].filter(Boolean);
 
-  const cell = (value) => (isValue(value) ? formatBn(value) : "—");
+  // A row's figures at the chart's precision for that row (two decimals
+  // where they round equal to £0.1bn but are apart). No figure: a muted
+  // dash, said why in the note; a figure that rounds to zero (no effect
+  // that year): muted, as the household table's zero change
+  const shownZero = (text) => /^£0\.0+bn$/.test(text);
+  const cell = (value, decimals, kind) => {
+    if (!isValue(value)) return <td className={`value-cell ${kind} is-none`}>—</td>;
+    const text = formatFigure(value, decimals);
+    return <td className={`value-cell ${kind}${shownZero(text) ? " is-zero" : ""}`}>{text}</td>;
+  };
+  // What the note says under the table: the difference, then why a cell
+  // has no figure, only where one is missing
+  const officialMissing = rows.some((row) => row.obrStatic === null || row.obrBehavioural === null);
+  const peMissing = rows.some((row) => row.pe === null);
+  // A row with no figure on the chosen basis is differenced on the other
+  const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (showBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
+  const tableNote = [
+    `Difference: PolicyEngine minus the official ${obrKind} costing, £bn${otherBasis ? ` (the ${showBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
+    officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
+    peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
+  ].filter(Boolean);
 
   return (
     <div className="obr-comparison-card">
@@ -322,33 +344,53 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         ))}
         {showTable && (
           <div id="obr-comparison-table" className="comparison-table-wrapper">
-            <table className="comparison-table">
+            <table ref={tableRef} className="comparison-table">
               <thead>
                 <tr>
                   <th scope="col">Policy</th>
-                  <th scope="col" className="source-header pe">PolicyEngine</th>
-                  <th scope="col" className="source-header obr">Official static</th>
-                  <th scope="col" className="source-header obr">Official post-behavioural</th>
-                  <th scope="col" className="source-header">Difference</th>
+                  <th scope="col" className="num">PolicyEngine</th>
+                  <th scope="col" className="num">Official static</th>
+                  <th scope="col" className="num">Official post-behavioural</th>
+                  <th scope="col" className="num">Difference</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
-                    <td className="value-cell pe">{cell(row.pe)}</td>
-                    <td className="value-cell obr">{cell(row.obrStatic)}</td>
-                    <td className="value-cell obr">{cell(row.obrBehavioural)}</td>
-                    <td className="value-cell difference">
-                      {formatDifference(shownDifference(row.pe, row.obr))}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row, index) => {
+                  // The chart's precision, or two decimals where a figure
+                  // that is not zero would read £0.0bn (−£0.05bn is a cost,
+                  // not no effect)
+                  const tiny = [row.pe, row.obrStatic, row.obrBehavioural].some(
+                    (value) => isValue(value) && value !== 0 && shownZero(formatFigure(value, 1)),
+                  );
+                  const decimals = Math.max(rowDecimals(row.pe, row.obr), tiny ? 2 : 1);
+                  const difference = shownDifference(row.pe, row.obr, decimals);
+                  return (
+                    // Every second row on the faint band, as the chart's rows
+                    <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
+                      <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
+                      {cell(row.pe, decimals, "pe")}
+                      {cell(row.obrStatic, decimals, "obr")}
+                      {cell(row.obrBehavioural, decimals, "obr")}
+                      {/* No effect on either side: the zero difference muted too */}
+                      <td
+                        className={`value-cell difference${
+                          difference === null
+                            ? " is-none"
+                            : shownZero(formatFigure(row.pe, decimals)) && shownZero(formatFigure(row.obr, decimals))
+                              ? " is-zero"
+                              : ""
+                        }`}
+                      >
+                        {formatDifference(difference, decimals)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-            <p className="comparison-table-note">
-              Difference: PolicyEngine minus the official {obrKind} costing, £bn.
-            </p>
+            {tableNote.map((line) => (
+              <p key={line} className="comparison-table-note">{line}</p>
+            ))}
           </div>
         )}
       </SwapTransition>

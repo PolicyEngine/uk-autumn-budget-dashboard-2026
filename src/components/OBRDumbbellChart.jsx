@@ -1,4 +1,5 @@
-import { useNarrowViewport, TICK_STYLE, CHART_COLOURS } from "../utils/chartTheme";
+import { useState } from "react";
+import { useNarrowViewport, TICK_STYLE, CHART_COLOURS, ROW_RADIUS } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import useElementWidth from "../hooks/useElementWidth";
@@ -13,7 +14,14 @@ import "./OBRDumbbellChart.css";
  * costing, and a neutral line between them. A column on the right gives
  * the difference, PolicyEngine minus official, in £bn. Where the two
  * round to the same figure, the dot sits inside the ring and one label
- * reads "£0.4bn, same".
+ * reads "£0.4bn, same"; where they round equal to £0.1bn but not to
+ * £0.01bn, the row takes two decimals (−£0.53bn vs −£0.55bn, a difference
+ * of −£0.02bn), so visibly apart dots never read "same".
+ *
+ * Every second row sits on a faint band (--c-row-band), and the hovered or
+ * focused row's band is stronger (--c-hover) with its name and difference
+ * in bold, so a row's dots and difference read with its name. The bands
+ * are drawn under the gridlines, the zero line and the dots.
  *
  * Scale "bn" plots £bn; scale "pct" plots each estimate as a % of its
  * official costing (the ring at 100%), so small measures are not squashed
@@ -37,43 +45,60 @@ const SAME_LABEL_COLOUR = CHART_COLOURS.zeroLine;
 // The PolicyEngine dot sits inside the official ring when the two coincide
 export const PE_RADIUS = 5;
 export const OBR_RADIUS = 8;
+// The row band's inset: the name and the difference sit this far in from its ends
+const BAND_PAD = 8;
 // Under this the official costing has no meaningful % (and none at zero)
 export const MIN_PCT_BASE = 0.05;
-// A white outline so labels stay legible where they cross a gridline
-const HALO = {
-  stroke: CHART_COLOURS.surface,
+// An outline in the row's background so labels stay legible where they
+// cross a gridline
+const halo = (background) => ({
+  stroke: background,
   strokeWidth: 4,
   strokeLinejoin: "round",
   paintOrder: "stroke",
-};
+});
 
 const MINUS = "−";
 const isValue = (value) => typeof value === "number" && Number.isFinite(value);
 
-/** −£3.1bn: one decimal, a true minus, and never a "−£0.0bn". */
-export function formatBn(value) {
+const roundTo = (value, decimals) => Math.round(value * 10 ** decimals) / 10 ** decimals;
+
+/** −£3.1bn: one decimal (or `decimals`), a true minus, and never a "−£0.0bn". */
+export function formatBn(value, decimals = 1) {
   if (!isValue(value)) return "";
-  const rounded = Math.round(value * 10) / 10;
+  const rounded = roundTo(value, decimals);
   const sign = rounded < 0 ? MINUS : "";
-  return `${sign}£${Math.abs(rounded).toFixed(1)}bn`;
+  return `${sign}£${Math.abs(rounded).toFixed(decimals)}bn`;
 }
 
 /** +£0.3bn / −£0.3bn / £0.0bn: a difference, always signed. */
-export function formatDifference(value) {
+export function formatDifference(value, decimals = 1) {
   if (!isValue(value)) return "—";
-  const rounded = Math.round(value * 10) / 10;
-  if (rounded === 0) return "£0.0bn";
-  return `${rounded < 0 ? MINUS : "+"}£${Math.abs(rounded).toFixed(1)}bn`;
+  const rounded = roundTo(value, decimals);
+  if (rounded === 0) return `£${(0).toFixed(decimals)}bn`;
+  return `${rounded < 0 ? MINUS : "+"}£${Math.abs(rounded).toFixed(decimals)}bn`;
+}
+
+/**
+ * A row's precision: one decimal, or two where the two figures round equal
+ * to £0.1bn but not to £0.01bn (−£0.53bn vs −£0.55bn, never "−£0.5bn,
+ * same" beside dots that are visibly apart).
+ */
+export function rowDecimals(pe, obr) {
+  if (!isValue(pe) || !isValue(obr)) return 1;
+  return formatBn(pe) === formatBn(obr) && formatBn(pe, 2) !== formatBn(obr, 2) ? 2 : 1;
 }
 
 /**
  * The difference a reader can check against the labels: PolicyEngine minus
- * official, each rounded to £0.1bn first (−£6.2bn vs −£6.5bn is +£0.3bn,
- * never +£0.4bn). Null without both figures. Downloads keep the raw one.
+ * official, each rounded to the shown precision first (−£6.2bn vs −£6.5bn
+ * is +£0.3bn, never +£0.4bn). Null without both figures. Downloads keep the
+ * raw one.
  */
-export function shownDifference(pe, obr) {
+export function shownDifference(pe, obr, decimals = 1) {
   if (!isValue(pe) || !isValue(obr)) return null;
-  return (Math.round(pe * 10) - Math.round(obr * 10)) / 10;
+  const scale = 10 ** decimals;
+  return (Math.round(pe * scale) - Math.round(obr * scale)) / scale;
 }
 
 /** PolicyEngine's estimate as a % of the official costing, or null. */
@@ -129,6 +154,33 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const width = measuredWidth > 0 ? measuredWidth : narrow ? 358 : 800;
   // Cleared when the year, basis or scale changes
   const { tip, handlers } = useFloatingTooltip(wrapperRef, `${tooltipKey}-${scale}`);
+  // The hovered or focused row, whose band is stronger
+  const [active, setActive] = useState(null);
+  const rowHandlers = (id, content) => {
+    const base = handlers(id, content);
+    return {
+      ...base,
+      onMouseEnter: (event) => {
+        setActive(id);
+        base.onMouseEnter(event);
+      },
+      onMouseLeave: () => {
+        setActive(null);
+        base.onMouseLeave();
+      },
+      onFocus: (event) => {
+        setActive(id);
+        base.onFocus(event);
+      },
+      onBlur: () => {
+        setActive(null);
+        base.onBlur();
+      },
+    };
+  };
+  // A row's background: its band, the hover band, or the card
+  const rowBackground = (row, index) =>
+    active === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
   const pct = scale === "pct";
 
   // Where each mark sits: £bn, or % of the official costing
@@ -153,10 +205,10 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const labelGap = OBR_RADIUS + 5;
   const labelRoom = narrow ? 54 : 62;
   // The difference column at the right (on a phone, on the name line)
-  const diffWidth = narrow ? 0 : 84;
+  const diffWidth = narrow ? 0 : 84 + BAND_PAD;
   const nameWidth = narrow
     ? 0
-    : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + SVG_LABEL_INDENT.full, width * 0.38);
+    : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + BAND_PAD + SVG_LABEL_INDENT.full, width * 0.38);
   const rowHeight = narrow ? 54 : 40;
   const top = 24;
   const axisHeight = 26;
@@ -174,16 +226,17 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const x = (value) => plotLeft + ((value - axis.min) / (axis.max - axis.min || 1)) * (plotRight - plotLeft);
   const dotY = (index) => top + index * rowHeight + (narrow ? 38 : rowHeight / 2);
 
-  // A white backing so a gridline or the zero line never runs through a label
-  const backing = (left, cy, w) => (
-    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill={CHART_COLOURS.surface} />
+  // A backing in the row's background so a gridline or the zero line never
+  // runs through a label
+  const backing = (left, cy, w, background) => (
+    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill={background} />
   );
   const fits = (text, side, cx) => {
     const w = approxWidth(text, 12);
     return side === "left" ? cx - labelGap - w >= nameWidth : cx + labelGap + w <= width - diffWidth;
   };
 
-  const valueLabel = (text, side, cx, cy, colour, key) => {
+  const valueLabel = (text, side, cx, cy, colour, key, background) => {
     const tx = side === "left" ? cx - labelGap : cx + labelGap;
     const w = approxWidth(text, 12);
     if (!fits(text, side, cx)) return null;
@@ -191,13 +244,13 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     // slides the label with its dot (OBRDumbbellChart.css)
     return (
       <g key={key} className="obr-dumbbell-move" style={{ transform: `translate(${tx}px, ${cy}px)` }}>
-        {backing(side === "left" ? -w : 0, 0, w)}
+        {backing(side === "left" ? -w : 0, 0, w, background)}
         <text
           className="obr-dumbbell-value"
           x={0}
           y={0}
           dy="0.35em"
-          {...HALO}
+          {...halo(background)}
           textAnchor={side === "left" ? "end" : "start"}
           fill={colour}
           fontSize={12}
@@ -232,7 +285,11 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     const pePart = row.xPe !== null && row.xPe !== undefined;
     const obrPart = row.xObr !== null && row.xObr !== undefined;
     const centre = (plotLeft + plotRight) / 2;
-    const difference = shownDifference(row.pe, row.obr);
+    const decimals = rowDecimals(row.pe, row.obr);
+    const difference = shownDifference(row.pe, row.obr, decimals);
+    const background = rowBackground(row, index);
+    const bn = (value) => formatBn(value, decimals);
+    const differenceText = difference === null ? "—" : formatDifference(difference, decimals);
 
     if (pePart && obrPart) {
       const xPe = x(row.xPe);
@@ -255,19 +312,19 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         />,
       );
       const peLeft = row.xPe < row.xObr || (row.xPe === row.xObr && row.xPe < 0);
-      if (formatBn(row.pe) === formatBn(row.obr)) {
-        // The same to one decimal: one label for both, on the outer side
+      if (bn(row.pe) === bn(row.obr)) {
+        // The same at the row's precision: one label for both, on the outer side
         const text = `${formatBn(row.pe)}, same`;
         const cx = (xPe + xObr) / 2;
         const outer = row.xPe < 0 ? "left" : "right";
         const side = fits(text, outer, cx) ? outer : outer === "left" ? "right" : "left";
         parts.push(
-          valueLabel(text, side, side === "left" ? Math.min(xPe, xObr) : Math.max(xPe, xObr), cy, SAME_LABEL_COLOUR, "same-label"),
+          valueLabel(text, side, side === "left" ? Math.min(xPe, xObr) : Math.max(xPe, xObr), cy, SAME_LABEL_COLOUR, "same-label", background),
         );
       } else {
         parts.push(
-          valueLabel(formatBn(row.pe), peLeft ? "left" : "right", xPe, cy, PE_LABEL_COLOUR, "pe-label"),
-          valueLabel(formatBn(row.obr), peLeft ? "right" : "left", xObr, cy, OBR_LABEL_COLOUR, "obr-label"),
+          valueLabel(bn(row.pe), peLeft ? "left" : "right", xPe, cy, PE_LABEL_COLOUR, "pe-label", background),
+          valueLabel(bn(row.obr), peLeft ? "right" : "left", xObr, cy, OBR_LABEL_COLOUR, "obr-label", background),
         );
       }
     } else if (pct && row.noBase) {
@@ -278,7 +335,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       const labelSide = cx > centre ? "left" : "right";
       const otherSide = labelSide === "left" ? "right" : "left";
       parts.push(
-        valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label"),
+        valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
         missingLabel(
           pePart ? "Not in the official costings" : "PolicyEngine not yet published",
           otherSide,
@@ -291,10 +348,11 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       parts.push(missingLabel(pct && isValue(row.pe) ? "Not in the official costings" : "Not yet published", "right", plotLeft - labelGap, cy, "missing"));
     }
 
-    // A white disc behind the ring keeps lines out of it; the teal dot
-    // goes over the disc and the ring over both, so neither hides the other
+    // A disc in the row's background behind the ring keeps lines out of it;
+    // the teal dot goes over the disc and the ring over both, so neither
+    // hides the other
     if (obrPart) {
-      parts.push(<circle key="obr-backing" className="obr-dumbbell-dot-move" cx={x(row.xObr)} cy={cy} r={OBR_RADIUS} fill={CHART_COLOURS.surface} />);
+      parts.push(<circle key="obr-backing" className="obr-dumbbell-dot-move" cx={x(row.xObr)} cy={cy} r={OBR_RADIUS} fill={background} />);
     }
     if (pePart) {
       parts.push(<circle key="pe" className="obr-dumbbell-dot pe obr-dumbbell-dot-move" cx={x(row.xPe)} cy={cy} r={PE_RADIUS} fill={PE_COLOUR} />);
@@ -319,46 +377,50 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       <TooltipRows
         label={`${row.name}, ${yearLabel}`}
         rows={[
-          { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? formatBn(row.pe) : "Not yet published", color: PE_COLOUR },
-          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? formatBn(row.obr) : "Not in the official costings", color: OBR_COLOUR },
+          { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
+          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : "Not in the official costings", color: OBR_COLOUR },
           ...(difference !== null
-            ? [{ key: "difference", name: "Difference (PolicyEngine − official)", text: formatDifference(difference), color: GAP_COLOUR }]
+            ? [{ key: "difference", name: "Difference (PolicyEngine − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]
             : []),
           ...(share !== null ? [{ key: "share", name: "PolicyEngine as % of official", text: `${Math.round(share)}%`, color: GAP_COLOUR }] : []),
         ]}
       />
     );
-    const summary = `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr) : "none"}`;
+    const summary = `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : "none"}`;
 
     return (
       <g
         key={row.id}
-        className="obr-dumbbell-row has-tooltip"
+        className={`obr-dumbbell-row has-tooltip${active === row.id ? " is-active" : ""}`}
         data-policy={row.id}
         tabIndex={0}
         aria-label={`${summary}, ${yearLabel}`}
-        {...handlers(row.id, tooltip)}
+        {...rowHandlers(row.id, tooltip)}
       >
         {/* The whole row answers the pointer, not just its dots */}
-        <rect className="obr-dumbbell-hit" x={0} y={top + index * rowHeight} width={width} height={rowHeight} fill="transparent" />
-        {narrow && backing(0, nameY, approxWidth(row.name, fontSize) + SVG_LABEL_INDENT.full)}
+        <rect className="obr-dumbbell-hit" x={1} y={top + index * rowHeight + 1} width={width - 2} height={rowHeight - 2} rx={ROW_RADIUS} fill="transparent" />
+        {narrow && backing(BAND_PAD, nameY, approxWidth(row.name, fontSize) + SVG_LABEL_INDENT.full, background)}
         {/* The shared measure label (MeasureRowLabel), drawn in the SVG so
             the downloaded image keeps it */}
         <g className="obr-dumbbell-name">
           <SvgMeasureLabel
             measure={row.measure ?? { id: row.id, name: row.name }}
             name={row.name}
+            x={BAND_PAD}
             y={nameY}
             fontSize={fontSize}
-            textProps={HALO}
+            textProps={halo(background)}
             nameColour={NAME_COLOUR}
             captionColour={TICK_STYLE.fill}
           />
         </g>
         {parts}
+        {/* On a phone the difference shares the name's line, where the zero
+            line can run: a backing in the row's background keeps it clear */}
+        {narrow && backing(width - BAND_PAD - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
         <text
           className="obr-dumbbell-difference"
-          x={width}
+          x={width - BAND_PAD}
           y={narrow ? nameY : cy}
           dy="0.35em"
           textAnchor="end"
@@ -366,7 +428,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
           fontSize={12}
           style={{ fontVariantNumeric: "tabular-nums" }}
         >
-          {difference === null ? "—" : formatDifference(difference)}
+          {differenceText}
         </text>
       </g>
     );
@@ -385,12 +447,15 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               viewBox={`0 0 ${width} ${height}`}
               role="img"
               aria-label={`${rows
-                .map((row) => `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr) : "none"}`)
+                .map((row) => {
+                  const decimals = rowDecimals(row.pe, row.obr);
+                  return `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : "none"}`;
+                })
                 .join("; ")}.`}
               style={{ fontFamily: "inherit", display: "block" }}
             >
               {/* The difference column's heading */}
-              <text className="obr-dumbbell-column-head" x={width} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
+              <text className="obr-dumbbell-column-head" x={width - BAND_PAD} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
                 Difference
               </text>
               {pct && (
@@ -398,6 +463,25 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
                   Official costing = 100%
                 </text>
               )}
+              {/* The row bands, under the gridlines, the zero line and the
+                  dots: every second row, and the hovered or focused one */}
+              <g className="obr-dumbbell-bands" aria-hidden="true">
+                {plotted.map((row, index) => {
+                  const fill = rowBackground(row, index);
+                  return fill === CHART_COLOURS.surface ? null : (
+                    <rect
+                      key={row.id}
+                      className={`obr-dumbbell-band${active === row.id ? " is-active" : ""}`}
+                      x={0}
+                      y={top + index * rowHeight + 1}
+                      width={width}
+                      height={rowHeight - 2}
+                      rx={ROW_RADIUS}
+                      fill={fill}
+                    />
+                  );
+                })}
+              </g>
               {axis.ticks.map((tick) => (
                 <g key={tick}>
                   <line

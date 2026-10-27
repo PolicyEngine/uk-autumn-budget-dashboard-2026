@@ -32,7 +32,7 @@ function ChartTooltip({
   format,
   labelFormat = (value) => value,
   netKey,
-  netLabel = "Net impact",
+  netLabel = "Net change",
   grouped = true,
   single,
   showPlus = false,

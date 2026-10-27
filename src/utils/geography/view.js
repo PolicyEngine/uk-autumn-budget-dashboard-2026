@@ -101,6 +101,7 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
     );
   }
   if (choice.kind === "no-package") {
+    if (choice.reason) return notice(choice.reason);
     return notice(`Results ${place} are not yet published for the full package.`);
   }
   if (!hasReform(data.table, choice.reform)) {

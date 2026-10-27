@@ -47,6 +47,18 @@ describe("the two Across earnings cards", () => {
     expect(optionsLabel(net)).toBe("Change");
   });
 
+  it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
+    const data = answer("higher-earner");
+    const bare = { ...data.sweep, netParts: null, parts: null };
+    const { container } = render(<AcrossEarnings sweep={bare} salary={data.salaryUsed} yearLabel="2027-28" />);
+    expect(container.querySelector(".across-earnings-no-parts")).toHaveTextContent(
+      "The calculation server did not send the breakdown of net income or the marginal tax rate by tax and benefit, so both charts show the total only.",
+    );
+    // With the parts, no note
+    const full = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
+    expect(full.container.querySelector(".across-earnings-no-parts")).toBeNull();
+  });
+
   it("say 'With no earnings' for the pensioner, with the You marker at £0 and the allowance caveat", () => {
     const data = answer("pensioner-70");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);

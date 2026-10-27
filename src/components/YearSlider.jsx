@@ -5,21 +5,21 @@ import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { SELECTABLE_YEARS, yearLabel } from "../utils/displayYears";
 
+
 // Play shows each year for 2.25s: long enough for the charts' 850ms
 // tween (utils/chartMotion.js) to settle and the year to be read
 export const PLAY_STEP_MS = 2250;
 
 /**
  * @param {Object} props
- * @param {number[]} [props.years] - The years offered: by default the ones a
- *   reader can choose (from 2027-28; see utils/displayYears.js), or a past
- *   event's own years
+ * @param {number[]} [props.years] - The years a reader can choose (the
+ *   selection's, utils/displayYears.js: 2026-27 only when a selected policy
+ *   has an effect in it), or a past event's own years
  * @param {string} [props.inactiveReason] - Why the year does not change the
  *   view shown: the pill stays in place, faded, does not open; the reason
  *   is in its accessible name only (no visible tip)
  */
-function YearSlider({ selectedYear, onYearChange, years = SELECTABLE_YEARS, inactiveReason }) {
-  const YEARS = years;
+function YearSlider({ selectedYear, onYearChange, inactiveReason, years: YEARS = SELECTABLE_YEARS }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const intervalRef = useRef(null);
 

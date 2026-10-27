@@ -56,12 +56,17 @@ export function choiceLabel(choice, policies) {
       choice.reform
     );
   }
-  if (choice.kind === "package") return "All policies (the full package)";
+  if (choice.kind === "package") {
+    return choice.members && !choice.all ? "Selected policies (combined)" : "All policies (the full package)";
+  }
   return "";
 }
 
 /** The measure names a choice covers, for export metadata. */
 export function choiceMeasureNames(choice, policies) {
+  if (choice.kind === "package" && choice.members) {
+    return choice.members.map((id) => (policies ?? []).find((policy) => policy.id === id)?.name ?? id);
+  }
   if (choice.kind === "package") {
     return (policies ?? []).map((policy) => policy.name);
   }
@@ -88,4 +93,63 @@ export function focusChoice(choice, { selectedIds, policyIds, reforms, focusId =
     ? focusId
     : options.reduce((best, id) => (size(id) > size(best) ? id : best), options[0]);
   return { kind: "measure", reform, focus: { options } };
+}
+
+/** The constituency card's notice when a selection has no area result. */
+export const SELECTION_NOT_PUBLISHED =
+  "Constituency results for this combination of policies are not published yet.";
+
+/**
+ * Which published reform the constituency views show for a selection: the
+ * selection itself, as every other chart on the page does.
+ *
+ * - one policy selected: that policy's reform;
+ * - several: the combined run of exactly those policies (`packageKey`, the
+ *   manifest's verified combined entry for the set, from combinedEntryFor),
+ *   when the area run published rows for it;
+ * - otherwise `no-package` with the notice to show. One policy's results
+ *   never stand in for the selection's, and figures are never summed.
+ *
+ * @param {{selectedIds: Array<string>, policyIds: Array<string>,
+ *   reforms: Iterable<string>, packageKey?: string|null}} options
+ * @returns {{kind: "none"}
+ *   | {kind: "measure", reform: string}
+ *   | {kind: "package", reform: string, members: string[], all: boolean}
+ *   | {kind: "no-package", reason: string, members: string[], all: boolean}}
+ */
+export function chooseSelectionReform({ selectedIds, policyIds, reforms, packageKey = null }) {
+  const ids = [...new Set(selectedIds ?? [])];
+  if (ids.length === 0) return { kind: "none" };
+  if (ids.length === 1) return { kind: "measure", reform: ids[0] };
+  const order = policyIds ?? [];
+  const members = [...ids].sort((a, b) => {
+    const left = order.indexOf(a);
+    const right = order.indexOf(b);
+    return (left < 0 ? Infinity : left) - (right < 0 ? Infinity : right);
+  });
+  const all = order.length > 0 && order.length === ids.length && order.every((id) => ids.includes(id));
+  if (typeof packageKey === "string" && [...(reforms ?? [])].includes(packageKey)) {
+    return { kind: "package", reform: packageKey, members, all };
+  }
+  return { kind: "no-package", reason: SELECTION_NOT_PUBLISHED, members, all };
+}
+
+/**
+ * The card's optional per-policy view of a selection of several policies.
+ * The default (`focusId` null, or one no longer offered) is the selection
+ * itself; a reader who picks one policy sees that policy alone, named.
+ *
+ * @returns {Object} the choice with `focus: {options}` added (options: the
+ *   selected policies with constituency results, in the page's order), or,
+ *   for a picked policy, {kind: "measure", reform, focus: {options}}.
+ */
+export function selectionFocus(choice, { reforms, focusId = null }) {
+  if (choice.kind !== "package" && choice.kind !== "no-package") return choice;
+  const carried = new Set(reforms ?? []);
+  const options = choice.members.filter((id) => carried.has(id));
+  if (!options.length) return choice;
+  if (focusId && options.includes(focusId)) {
+    return { kind: "measure", reform: focusId, focus: { options, selection: choice } };
+  }
+  return { ...choice, focus: { options } };
 }

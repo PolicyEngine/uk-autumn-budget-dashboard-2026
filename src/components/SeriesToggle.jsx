@@ -178,7 +178,8 @@ export default function SeriesToggle({
         ))}
       </div>
       {hint && (
-        <p className="series-toggle-hint">
+        // An instruction for the page, not part of an exported image
+        <p className="series-toggle-hint" data-export="skip">
           {/* "Tap" on a touch screen, "Click" with a mouse (CSS picks one) */}
           <span className="series-toggle-hint-click">Click to show or hide</span>
           <span className="series-toggle-hint-tap">Tap to show or hide</span>
