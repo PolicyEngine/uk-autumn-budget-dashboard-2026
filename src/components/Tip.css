@@ -1,0 +1,70 @@
+/* The anchor's wrapper adds no box */
+.tip-anchor {
+  display: contents;
+}
+
+/* A tip: dark text on the surface, a soft border and shadow, fading in */
+.tip {
+  position: fixed;
+  /* Above everything it can be opened from: the sticky band (1100) and
+     its popovers, the sub-tab bar, the overview drawer (1300) */
+  z-index: 1400;
+  max-width: 280px;
+  padding: 6px 10px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 4px 16px var(--shadow-soft);
+  color: var(--pe-gray-800);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  animation: tip-in 100ms ease-out;
+}
+
+.tip[hidden] {
+  display: none;
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    animation: none;
+  }
+}
+
+/* The info icon a definition hangs from */
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--pe-gray-400);
+  cursor: help;
+}
+
+.info-tip:hover,
+.info-tip:focus-visible {
+  color: var(--c-gain-text);
+}
+
+.info-tip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}

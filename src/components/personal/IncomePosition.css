@@ -222,3 +222,131 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Where you sit: the headline and tiles, then two cards side by side
+   (stacked on a phone), then a link to every household's change */
+.position-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.position-summary .position-controls {
+  margin: 12px 0 0;
+}
+
+.position-controls-note {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+.position-pair {
+  align-items: stretch;
+}
+
+.position-segment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 10px;
+}
+
+.position-segment-lead {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+.position-rank {
+  display: block;
+  overflow: visible;
+}
+
+.position-chip dt .info-tip {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* In a half-width card the comparison rows stack their label */
+.position-pair .position-compare-row {
+  grid-template-columns: minmax(110px, 1.1fr) 1fr minmax(80px, auto);
+}
+
+/* The summary card: one sentence in the cards' style, then the tiles */
+/* The tiles keep one height; their contents start at the top */
+.position-tiles {
+  align-items: stretch;
+}
+
+.position-tiles .forecast-tile {
+  justify-content: flex-start;
+}
+
+.position-tiles {
+  margin-bottom: 0;
+}
+
+/* The Your place tile's caption, the full sentence, wraps inside the
+   tile; its figure a little smaller, so "47th percentile" fits */
+.position-tiles .forecast-tile,
+.position-tiles .forecast-tile > div {
+  min-width: 0;
+}
+
+.position-tiles .forecast-tile-sub {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.position-tiles .forecast-tile-value {
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  overflow-wrap: anywhere;
+}
+
+/* Hover on the charts: a guide line and a tooltip in the shared tip style */
+.position-hover {
+  position: relative;
+  outline: none;
+  touch-action: pan-y;
+}
+
+.position-hover:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.position-guide {
+  stroke: var(--c-no-change);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.position-tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 6px 10px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 4px 16px var(--shadow-soft);
+  color: var(--pe-gray-800);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.position-compare-row:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* No forced room: each tile as tall as the tallest one's content (the
+   grid stretches them), the footnote at the foot so the three line up */
+.position-tiles .forecast-tile-meaning {
+  margin-top: auto;
+}

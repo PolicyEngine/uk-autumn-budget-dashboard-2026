@@ -16,8 +16,51 @@ export const STATUSES = contract.statuses;
 export const DISPLAYABLE = contract.displayable;
 export const NOT_COMPUTABLE = "not_computable";
 
+/**
+ * The provisional label once the Budget is announced: the entries are the
+ * statement's measures, not yet approved against the Treasury's costing.
+ */
 export const PROVISIONAL_LABEL =
   "Provisional: statement figures, awaiting Treasury costing";
+
+/** The provisional label before the Budget: the entries are candidates. */
+export const CANDIDATE_PROVISIONAL_LABEL =
+  "Provisional: candidate measures modelled before the Budget, not announced policy";
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * Whether this manifest's entries are pre-Budget candidates: it was last
+ * written before the Budget date it names itself (`budget.date`, from the
+ * Python side's `CURRENT_BUDGET`), and its forecast has not been rebased.
+ *
+ * The forecast basis alone cannot say this: the runbook keeps it at
+ * `pre_budget` on Budget day unless the forecast is rebased, so announced
+ * measures would read as candidates. Every stage, approval or withdrawal
+ * rewrites `updated_at`, so the first Budget-day write ends the candidate
+ * wording. Without both dates the manifest is not called a candidate one:
+ * "not announced policy" is said only on evidence.
+ */
+export function isCandidateManifest(manifest) {
+  if (manifest?.basis?.forecast?.status === "updated") return false;
+  const updated = manifest?.updated_at;
+  const budgetDate = manifest?.budget?.date;
+  if (typeof updated !== "string" || typeof budgetDate !== "string") return false;
+  if (!ISO_DATE.test(updated) || !ISO_DATE.test(budgetDate)) return false;
+  // Both are UTC ISO dates; on 28 October the UK is on GMT
+  return updated.slice(0, 10) < budgetDate.slice(0, 10);
+}
+
+/**
+ * The label for provisional figures in this manifest: the candidate label
+ * before the Budget, the statement label from Budget day. Approved figures
+ * carry no label (`publicationLabel`).
+ */
+export function provisionalLabel(manifest) {
+  return isCandidateManifest(manifest)
+    ? CANDIDATE_PROVISIONAL_LABEL
+    : PROVISIONAL_LABEL;
+}
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -393,7 +436,10 @@ export function measureAvailability(manifest, key) {
   };
 }
 
-/** The label a displayed entry must carry: empty for approved figures. */
-export function publicationLabel(entry) {
-  return entry?.status === "provisional" ? PROVISIONAL_LABEL : "";
+/**
+ * The label a displayed entry must carry: empty for approved figures, the
+ * manifest's provisional label (candidate or statement) otherwise.
+ */
+export function publicationLabel(entry, manifest) {
+  return entry?.status === "provisional" ? provisionalLabel(manifest) : "";
 }

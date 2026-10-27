@@ -1,19 +1,10 @@
-// Small presentational pieces of the Methodology view: an icon in a tinted
-// chip, a tag (a pill, optionally a link), a callout and a back-to-top link.
+// Small presentational pieces of the Methodology view:
+// a tag (a pill, optionally a link), links and a folded topic.
 
-import { ArrowUp } from "lucide-react";
-import { goToSection } from "./MethodContents";
+import { CircleSlash } from "lucide-react";
+import Disclosure from "../Disclosure";
+import { revealAnchor } from "./MethodContents";
 import { EXTERNAL, SOURCES } from "../../utils/sources";
-
-/** An icon in a tinted square chip; decorative, so hidden from assistive tech. */
-export function IconChip({ icon: Icon, size = "md", tone = "teal" }) {
-  if (!Icon) return null;
-  return (
-    <span className={`method-icon method-icon-${size} method-icon-${tone}`} aria-hidden="true">
-      <Icon strokeWidth={1.75} />
-    </span>
-  );
-}
 
 /**
  * A small pill. With `onClick` it is a button that goes somewhere (another
@@ -38,47 +29,69 @@ export function Tag({ children, tone = "neutral", onClick, href }) {
   return <span className={className}>{children}</span>;
 }
 
-/** A note set off from the text, with an information or warning icon. */
-export function Callout({ icon: Icon, tone = "info", title, children }) {
+/** A link to another site, in a new tab, saying so to screen readers. */
+export function ExternalLink({ href, children }) {
   return (
-    <div className={`method-callout method-callout-${tone}`}>
-      {Icon && (
-        <span className="method-callout-icon" aria-hidden="true">
-          <Icon strokeWidth={1.75} />
-        </span>
-      )}
-      <div className="method-callout-body">
-        <h3 className="method-callout-title">{title}</h3>
-        <div className="method-callout-text">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/** A link back to the contents at the top of the view. */
-export function BackToTop({ targetId }) {
-  return (
-    <p className="method-back">
-      <a
-        href={`#${targetId}`}
-        onClick={(event) => {
-          event.preventDefault();
-          goToSection(targetId);
-        }}
-      >
-        <ArrowUp aria-hidden="true" strokeWidth={1.75} />
-        Back to top
-      </a>
-    </p>
+    <a href={href} {...EXTERNAL}>
+      {children}
+      <span className="policy-sr-only"> (opens in a new tab)</span>
+    </a>
   );
 }
 
 /** A link to a named external source (src/utils/sources.js), in a new tab. */
 export function SourceLink({ id, children }) {
   const source = SOURCES[id];
+  return <ExternalLink href={source.url}>{children ?? source.label}</ExternalLink>;
+}
+
+/**
+ * A link to an anchor in this view: a section, a topic folded in a "More
+ * info" (opened first) or a term.
+ */
+export function AnchorLink({ id, children }) {
   return (
-    <a href={source.url} {...EXTERNAL}>
-      {children ?? source.label}
+    <a
+      href={`#${id}`}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+        event.preventDefault();
+        if (!revealAnchor(id)) return;
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
+      }}
+    >
+      {children}
     </a>
+  );
+}
+
+/** A compact list of measures and a reason each ("Unavailable", "Not modelled"). */
+export function ReasonList({ items, icon = false }) {
+  return (
+    <ul className="mm-reasons">
+      {items.map((item) => (
+        <li key={item.name}>
+          <span className="mm-reason-name">
+            {icon && <CircleSlash className="method-row-icon" aria-hidden="true" strokeWidth={1.75} />}
+            {item.name}
+          </span>
+          <span className="mm-reason-why">{item.why}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * One folded topic of a section ("More info", "Household scatter"): the
+ * shared Disclosure, closed until asked for, with a one-line preview of
+ * what is inside. Its content stays in the page while closed, so a link
+ * to an id inside it (a term, a heading) finds it and opens it.
+ */
+export function Topic({ id, title, preview, children }) {
+  return (
+    <Disclosure id={id} keepMounted title={title} preview={preview} className="method-topic method-anchor">
+      {children}
+    </Disclosure>
   );
 }

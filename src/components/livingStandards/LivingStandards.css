@@ -607,16 +607,16 @@
   }
 }
 
-/* Forecast headline tiles: icon and name, then the figure with the Budget
-   tag or comparison on its right */
+/* Forecast headline tiles: icon and name, the figure with a small line of
+   the forecast years on its right, then one line on what it means */
 .forecast-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-/* One tile a row below 900px, where three are too narrow for the tag */
+/* One tile a row below 900px */
 @media (max-width: 900px) {
   .forecast-tiles {
     grid-template-columns: minmax(0, 1fr);
@@ -627,11 +627,15 @@
 .forecast-tile {
   display: flex;
   flex-direction: column;
+  /* A grid cell that may shrink below its content: long captions wrap */
+  min-width: 0;
   gap: 10px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid var(--pe-gray-200);
   border-radius: 12px;
-  background: var(--c-surface);
+  /* A light teal tint, so the tiles stand apart from the white cards
+     they sit in or beside; the same on every tab */
+  background: var(--pe-teal-50);
 }
 
 .forecast-tile-head {
@@ -642,6 +646,7 @@
 
 .forecast-tile-icon {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 28px;
@@ -666,54 +671,171 @@
   text-decoration: underline;
 }
 
-/* The tag drops to its own row when it does not fit beside the figure */
-.forecast-tile-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px 12px;
-}
-
-.forecast-tile-sub {
-  white-space: nowrap;
-}
-
 .forecast-tile-value {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 600;
   line-height: 1.1;
   color: var(--pe-gray-800);
   font-variant-numeric: tabular-nums;
 }
 
+/* A change in words ("Rises 0.1pp") leads in place of a number */
+.forecast-tile-value.is-text {
+  font-size: 1.5rem;
+}
+
+.poverty-tiles .forecast-tile-sub {
+  white-space: normal;
+}
+
+/* The model's levels, said small under a change-led tile */
+.forecast-tile-meaning.is-small {
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
+}
+
 .forecast-tile-sub {
   margin: 2px 0 0;
   font-size: 0.75rem;
   color: var(--pe-gray-500);
+  white-space: nowrap;
 }
 
-.forecast-tile-tag {
-  flex-shrink: 0;
-  max-width: 100%;
-  margin: 0 0 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--pe-gray-100);
-  font-size: 0.75rem;
-  color: var(--pe-gray-500);
-}
-
-.forecast-tile-compare {
-  margin: 0 0 4px;
-  text-align: right;
-  font-size: 0.75rem;
+.forecast-tile-meaning {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pe-gray-100);
+  font-size: var(--fs-small);
+  line-height: 1.45;
   color: var(--pe-gray-600);
 }
 
-.forecast-tile-delta {
+/* A tile's trend (HeadlineTile): its series named above, a line over a
+   light area, the first and last values labelled, the figure's year
+   ringed; a guide and tip on hover or focus */
+.tile-trend {
+  min-width: 0;
+}
+
+.tile-trend-series {
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
   font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.tile-trend-plot {
+  position: relative;
+  border-radius: 6px;
+  outline: none;
+  cursor: crosshair;
+}
+
+.tile-trend-plot:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.tile-trend-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.tile-trend-area {
+  fill: var(--c-gain);
+  fill-opacity: 0.1;
+}
+
+.tile-trend-line {
+  fill: none;
+  stroke: var(--c-gain);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tile-trend-line.is-dashed {
+  stroke-dasharray: 5 3;
+}
+
+.tile-trend-dot {
+  fill: var(--c-gain);
+}
+
+.tile-trend-hero {
+  fill: var(--c-surface);
+  stroke: var(--c-gain-text);
+  stroke-width: 2.5;
+}
+
+.tile-trend-value {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--c-gain-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-trend-hover {
+  fill: var(--c-gain-text);
+  stroke: var(--c-surface);
+  stroke-width: 1.5;
+}
+
+.tile-trend-guide {
+  stroke: var(--c-axis);
+  stroke-width: 1;
+}
+
+.tile-trend-tip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 6px;
+  background: var(--c-surface);
+  box-shadow: 0 2px 8px var(--shadow-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tile-trend-years {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-tile-info {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+/* The poverty tiles sit as one more row of the section's cards */
+.poverty-tiles {
+  margin-bottom: 20px;
+}
+
+.forecast-feed-params {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: circle;
+}
+
+.forecast-feed-params code {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* A section with one card: the card takes the full width */
+.charts-grid.forecast-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* Who is in poverty: a bar per group for the end year, a dark tick at the
@@ -889,4 +1011,92 @@
   color: var(--pe-gray-600);
   font-size: var(--fs-micro);
   line-height: 1.4;
+}
+
+/* A card's one-line subtitle under its title: which side of a with/without
+   pair it is, and the link to its twin (GrowthWithMeasuresCard) */
+.main-content .chart-description .ls-card-subtitle {
+  margin: 0 0 8px;
+}
+.main-content .chart-description > p {
+  margin: 0;
+}
+.main-content .chart-description .ls-card-subtitle a {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A light-to-dark key for many ordered groups (Growth across the
+   distribution by twentieths): "Lowest income [ramp] Highest income" */
+.ls-ramp-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-micro);
+}
+
+.ls-ramp-bar {
+  width: 120px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* The growth chart's year panel: every group's value for the hovered
+   year, as one compact list */
+.ls-nowrap {
+  white-space: nowrap;
+}
+
+.ls-year-panel-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-micro);
+}
+
+.ls-year-panel-list li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 48px 3.6em;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+  border-radius: 3px;
+}
+
+.ls-year-panel-list li.is-hovered {
+  background: var(--pe-gray-100);
+}
+
+.ls-year-panel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.ls-year-panel-group {
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+/* A small bar from a centre line: right for a gain, left for a loss */
+.ls-year-panel-track {
+  position: relative;
+  height: 6px;
+  background: linear-gradient(var(--pe-gray-300), var(--pe-gray-300)) center / 1px 100% no-repeat;
+}
+
+.ls-year-panel-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 1px;
+}
+
+.ls-year-panel-value {
+  text-align: right;
 }

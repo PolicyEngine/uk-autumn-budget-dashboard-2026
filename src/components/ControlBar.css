@@ -26,16 +26,16 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  height: 32px;
-  padding: 0 10px 0 10px;
+  min-height: 32px;
+  padding: 5px 10px;
+  text-align: left;
   font-family: inherit;
   font-size: var(--fs-micro);
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--pe-gray-300);
-  border-radius: 999px;
+  border-radius: 16px;
   cursor: pointer;
-  white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -67,10 +67,11 @@
   fill: var(--pe-surface);
 }
 
+/* The whole summary, wrapping to a second line rather than cut off */
 .control-bar-summary {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
   font-weight: 600;
   color: var(--pe-teal-800);
 }
@@ -92,6 +93,22 @@
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
   box-shadow: 0 8px 24px var(--shadow-strong);
+}
+
+/* Kept in the window on a tablet or desktop (dialogPlacement in
+   ControlBar.jsx): above the pill when there is more room there, and
+   scrolling inside when taller than the room, as the phone sheet does */
+@media (min-width: 641px) {
+  .control-bar-dialog.is-above {
+    top: auto;
+    bottom: calc(100% + 8px);
+    transform-origin: bottom center;
+  }
+
+  .control-bar-dialog.is-scrolling {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .control-bar-backdrop {
@@ -146,6 +163,28 @@
   color: var(--pe-gray-500);
 }
 
+/* The years compared: a From row and a To row of segments; a phone shows
+   the years short ("27-28") so a row fits */
+.control-bar-years {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-bar-year-short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .control-bar-year-full {
+    display: none;
+  }
+
+  .control-bar-year-short {
+    display: inline;
+  }
+}
+
 .control-bar-segments {
   display: flex;
   flex-wrap: wrap;
@@ -191,21 +230,37 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 999;
+    /* Over the sticky title band (1100) and tab rows, under the About
+       drawer (1300) and tips (1400): the sheet and its shade cover the
+       whole page, so no tab row hides the sheet's title */
+    z-index: 1250;
     background: color-mix(in srgb, var(--c-ink) 35%, transparent);
   }
 
   .control-bar-dialog {
     position: fixed;
+    z-index: 1260;
     top: auto;
     left: 0;
     right: 0;
     bottom: 0;
     width: auto;
     max-width: none;
+    /* A tall sheet (the growth card's six groups) scrolls inside the window */
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
-    animation: control-bar-sheet 0.18s ease-out;
+  }
+
+  /* On a phone the dialog is a sheet: it rises from the foot, not scales */
+  .control-bar-dialog.popover-motion {
+    animation: control-bar-sheet var(--motion-base) var(--ease-out);
+  }
+
+  .control-bar-dialog.popover-motion.is-leaving {
+    animation: popover-out var(--motion-fast) ease-in forwards;
   }
 
   .control-bar-segment {
@@ -225,7 +280,9 @@
     transition: none;
   }
 
-  .control-bar-dialog {
+  .control-bar-dialog,
+  .control-bar-dialog.popover-motion,
+  .control-bar-dialog.popover-motion.is-leaving {
     animation: none;
   }
 }
@@ -283,4 +340,12 @@
 .section-controls .pill-select-list {
   left: 0;
   right: auto;
+}
+
+/* Why an option is unavailable, under its control */
+.control-bar-note {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--pe-gray-500);
 }

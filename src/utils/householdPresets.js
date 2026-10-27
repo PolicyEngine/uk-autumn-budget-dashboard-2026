@@ -8,6 +8,7 @@
  * own requests byte for byte. Any other request (an edited answer, another set
  * of measures) goes to the live API.
  */
+import { takeEarlyResponse } from "./publication/early";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { WIZARD_DEFAULTS } from "./householdDefaults";
@@ -91,7 +92,15 @@ export function presetChanges(file, { policies, expectedEngine = null } = {}) {
         .filter((measure) => Number.isFinite(Number(measure.change)))
         .map((measure) => [measure.id, Number(measure.change)]),
     );
-    (changes[entry.preset_id] ??= {})[entry.year] = { change, byPolicy };
+    // Net income before and after too, for where the household sits
+    const before = Number(entry.response.net_income?.baseline);
+    const after = Number(entry.response.net_income?.reform);
+    (changes[entry.preset_id] ??= {})[entry.year] = {
+      change,
+      byPolicy,
+      before: Number.isFinite(before) ? before : null,
+      after: Number.isFinite(after) ? after : null,
+    };
   }
   return changes;
 }
@@ -122,8 +131,10 @@ let loading = null;
 function loadPresetFile(fetchImpl) {
   if (!loading) {
     const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/${PRESETS_FILE}`;
+    // The head script may have requested it already (publication/early.js)
+    const early = fetchImpl === globalThis.fetch ? takeEarlyResponse(url) : null;
     loading = Promise.resolve()
-      .then(() => fetchImpl(url))
+      .then(() => (early ? early.catch(() => fetchImpl(url)) : fetchImpl(url)))
       .then((response) => (response?.ok ? response.json() : null))
       .catch(() => null);
   }

@@ -81,10 +81,28 @@ from uk_budget_data.scored_years import missing_scored_years
 
 @dataclass
 class GenerationReport:
-    """What a generation run wrote and what it refused."""
+    """What a generation run wrote and what it refused; on Modal, also
+    which runs failed in their containers (key to error) and the combined
+    runs not started because a measure failed (key to member ids)."""
 
     written: list[ArtifactRef] = field(default_factory=list)
     refused: dict[str, str] = field(default_factory=dict)
+    failed: dict[str, str] = field(default_factory=dict)
+    not_started: dict[str, list[str]] = field(default_factory=dict)
+
+
+def _columns(rows: list[dict], table: str) -> list[dict]:
+    """The rows cut to one table's columns. A row from before the poverty
+    and inequality measures (none of them) gives no poverty_inequality row;
+    one with only some of them is refused when the table is written."""
+    names = TABLES[table].column_names
+    if table == "poverty_inequality":
+        extra = set(names) - {"reform_id", "reform_name", "year"}
+        rows = [row for row in rows if extra & set(row)]
+    return [
+        {column: row[column] for column in names if column in row}
+        for row in rows
+    ]
 
 
 def result_tables(
@@ -101,13 +119,12 @@ def result_tables(
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,
-        # The flat metrics.csv also carries the poverty and inequality
-        # measures the charts choose between; a receipted artifact keeps its
-        # contracted columns (TABLES["metrics"]) until the contract adds them.
-        "metrics": [
-            {column: row[column] for column in TABLES["metrics"].column_names}
-            for row in result.metrics
-        ],
+        # The flat metrics.csv carries the poverty and inequality measures
+        # beside the headline ones; a receipted artifact splits them: the
+        # headline columns in metrics (TABLES["metrics"]), the rest in
+        # poverty_inequality, so older artifacts' metrics.csv stays valid.
+        "metrics": _columns(result.metrics, "metrics"),
+        "poverty_inequality": _columns(result.metrics, "poverty_inequality"),
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "age_impact": result.age_impact,
@@ -846,7 +863,21 @@ def generate_artifacts(
                 **common,
             )
         )
-    run_all(slots)
+    from uk_budget_data.modal_runner import ModalRunsFailed
+
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        # Every other measure is written and reported. A combined run binds
+        # its members' outputs, so none starts until the failed measures
+        # are rerun: they are listed, with their members, for that rerun.
+        from uk_budget_data.publication import combine
+
+        report.failed.update(error.failed)
+        for members in combined_sets or []:
+            ids = sorted(member.id for member in members)
+            report.not_started[combine.combined_key(ids)] = ids
+        return report
 
     slots = []
     for members in combined_sets or []:
@@ -953,5 +984,8 @@ def generate_artifacts(
                     progress=[f"{key}: REFUSED: {error}"],
                 )
             )
-    run_all(slots)
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        report.failed.update(error.failed)
     return report

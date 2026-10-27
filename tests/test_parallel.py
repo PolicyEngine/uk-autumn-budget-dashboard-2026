@@ -470,6 +470,73 @@ def test_artifacts_are_the_same_whatever_order_they_run_in(world, tmp_path):
     assert tables(tmp_path / "serial") == tables(tmp_path / "parallel")
 
 
+def test_a_failed_modal_container_leaves_the_rest_reported(world, tmp_path):
+    """On Modal, one container failing (here the second of three) leaves
+    every later measure written and reported in order, its own result
+    apart from the refusals, and no combined run started: the failure is
+    not a refusal, and a combined run must not bind a missing member."""
+    import io
+    import tarfile
+
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.modal_runner import ModalRunner
+    from uk_budget_data.publication.generate import (
+        generate_artifacts,
+        run_artifact,
+    )
+
+    values = {
+        key: {2027: -1.0, 2028: -2.0} for key in ("alpha", "beta", "gamma")
+    }
+
+    def container(job):
+        """What ``modal_generate.run_artifact_here`` sends back."""
+        root = tmp_path / "container" / job.key
+        outcome = run_artifact(dataclasses.replace(job, artifacts_root=root))
+        if outcome.reference is None:
+            return outcome, None, None
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+            for path in sorted(outcome.reference.path.iterdir()):
+                archive.add(path, arcname=path.name, recursive=False)
+        relative = outcome.reference.path.relative_to(root)
+        return outcome, str(relative), buffer.getvalue()
+
+    def remote_artifacts(jobs, smoke):
+        for job in jobs:
+            if job.key == "beta":
+                yield MemoryError("container out of memory")
+            else:
+                yield container(job)
+
+    measures = [reform("alpha"), reform("beta"), reform("gamma")]
+    lines = []
+    report = generate_artifacts(
+        measures + [reform("combined--x")],
+        DataConfig(years=YEARS),
+        combined_sets=[measures],
+        artifacts_root=world.artifacts,
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+        on_progress=lines.append,
+        runner=ModalRunner(
+            say=lambda line: None, remote_artifacts=remote_artifacts
+        ),
+    )
+    assert [r.key for r in report.written] == ["alpha", "gamma"]
+    assert report.failed == {"beta": "MemoryError: container out of memory"}
+    assert list(report.refused) == ["combined--x"]
+    assert list(report.not_started.values()) == [["alpha", "beta", "gamma"]]
+    keys = [line.split(":")[0] for line in lines]
+    assert "gamma" in keys
+    assert keys.index("beta") < keys.index("gamma")
+    assert not any(
+        path.name.startswith("combined--")
+        for path in world.artifacts.iterdir()
+    )
+
+
 # --- receipted artifacts in worker processes (#173) ------------------------
 
 
@@ -991,6 +1058,8 @@ def test_the_modal_app_exposes_no_web_endpoint_and_one_secret():
     assert "asgi_app" not in source and "web_endpoint" not in source
     assert "fastapi_endpoint" not in source and "wsgi_app" not in source
     assert source.count("modal.Secret.from_name(") == 1
+    # The smoke test's app has no secret at all.
+    assert "smoke_app = modal.App(" in source
     assert 'required_keys=["HUGGING_FACE_TOKEN"]' in source
     assert ".uv_sync(" in source and "frozen=True" in source
     # The workspace's existing read token (#119), and the cost guards.
@@ -1053,12 +1122,21 @@ def test_a_missing_modal_secret_is_named_with_its_owner(monkeypatch):
     assert "Owner: Anthony" in str(raised.value)
 
 
-def test_artifacts_refuse_the_modal_backend(capsys):
+def test_artifacts_on_modal_never_send_a_dataset_file(capsys):
     from uk_budget_data import cli
 
-    parsed = cli.parse_args(["generate", "--artifacts", "--backend", "modal"])
+    parsed = cli.parse_args(
+        [
+            "generate",
+            "--artifacts",
+            "--backend",
+            "modal",
+            "--dataset",
+            "local.h5",
+        ]
+    )
     assert cli.run_generate(parsed) == 1
-    assert "runs locally only" in capsys.readouterr().out
+    assert "never sends a dataset file" in capsys.readouterr().out
 
 
 def test_jobs_must_be_a_whole_number_or_auto():

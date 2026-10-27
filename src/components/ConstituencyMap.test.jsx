@@ -88,6 +88,13 @@ const seat = (container, code) =>
 
 const tooltip = (container) => container.querySelector(".constituency-tooltip");
 
+/** Choose how the change is shown, in the card's Options pill. */
+function showChangeAs(name) {
+  fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+  // A click applies the choice and closes the popover
+  fireEvent.click(screen.getByRole("radio", { name }));
+}
+
 describe("ConstituencyMap", () => {
   it("defines the withheld hatch as a vector pattern in the map's own defs", async () => {
     const { container } = await renderMap();
@@ -179,8 +186,7 @@ describe("ConstituencyMap", () => {
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
         "Large gain: £100 or more",
@@ -188,34 +194,33 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("keeps the legend and logo in the corners of what is shown", async () => {
-    const observed = new Map();
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(callback) {
-          this.callback = callback;
-        }
-        observe(target) {
-          observed.set(target, this.callback);
-        }
-        disconnect() {}
-      },
-    );
+  it("puts the key under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
+    // On screen the key is HTML, outside the map's SVG: a ramp from loss
+    // to gain, too uncertain, and the three status textures
+    const key = screen.getByRole("group", { name: "Key" });
+    expect(map.contains(key)).toBe(false);
+    expect(key).toHaveTextContent("Change in household net income, % of income");
+    const entries = [...key.querySelectorAll("button[data-key]")].map((button) => button.getAttribute("aria-label"));
+    expect(entries.slice(0, 5)).toEqual([
+      expect.stringMatching(/^Large loss, 1% or more: \d+ seats?$/),
+      expect.stringMatching(/^Small loss, 0.1% to 1%: /),
+      expect.stringMatching(/^Little change, under 0.1% either way: /),
+      expect.stringMatching(/^Small gain, 0.1% to 1%: /),
+      expect.stringMatching(/^Large gain, 1% or more: /),
+    ]);
+    expect(key).toHaveTextContent("Too uncertain");
+    expect(key).not.toHaveTextContent("Shown by pattern:");
+    expect(key).toHaveTextContent("Approximate");
+    expect(key).toHaveTextContent("Not published");
+    expect(key).toHaveTextContent("No data");
+    expect(key).not.toHaveTextContent("Reported");
+    // The SVG carries no logo of its own; the card's logo row does
+    expect(map.querySelector("image")).toBeNull();
+    // The SVG's legend, for the exported file, sits in its corner
     const legend = map.querySelector(":scope > g.map-legend");
-    const logo = map.querySelector(":scope > image.map-logo");
     expect(legend.getAttribute("transform")).toBe("translate(12, 12)");
-
-    // Twice as wide as it is tall: 200 units show on either side of the
-    // drawing area, so the legend moves left and the logo right.
-    act(() => observed.get(map)([{ contentRect: { width: 1200, height: 600 } }]));
-    expect(legend.getAttribute("transform")).toBe("translate(-188, 12)");
-    expect(logo.getAttribute("x")).toBe("912");
-    expect(logo.getAttribute("y")).toBe("575");
-
-    // The file shows the drawing area alone, with the legend in its corner.
     fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
@@ -225,6 +230,7 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
       "translate(12, 12)",
     );
+    expect(root.getAttribute("viewBox")).toMatch(/^0 0 800 /);
   });
 
   it("has no footnote under the map; the search box says what to do", async () => {
@@ -306,7 +312,8 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("Too close to call: the interval includes zero");
+    expect(card).toHaveTextContent("The interval includes zero");
+    expect(card).not.toHaveTextContent("Too close to call");
     expect(card).toHaveTextContent("Map category: Too uncertain to classify");
   });
 
@@ -324,7 +331,7 @@ describe("ConstituencyMap", () => {
 
   it("finds a constituency by name, with its published figure", async () => {
     const { container } = await renderMap();
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "harbour" },
     });
     const result = screen.getByRole("button", { name: /Harbour, Mill and Quay/ });
@@ -333,7 +340,7 @@ describe("ConstituencyMap", () => {
     expect(within(tooltip(container)).getByRole("heading")).toHaveTextContent(
       "Harbour, Mill and Quay",
     );
-    fireEvent.change(screen.getByLabelText("Search constituency"), {
+    fireEvent.change(screen.getByLabelText("Search or select a constituency"), {
       target: { value: "west" },
     });
     expect(screen.getByRole("button", { name: /Westmoor/ })).toHaveTextContent(
@@ -343,8 +350,7 @@ describe("ConstituencyMap", () => {
 
   it("switches to £ per household with the published digits", async () => {
     const { container } = await renderMap();
-    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
-    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
+    showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
         approximateFill("large_gain"),
@@ -370,28 +376,22 @@ describe("ConstituencyMap", () => {
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums: several measures but not all draws no map and no figures", async () => {
-    const { container } = render(
+  it("never sums, and offers no measure without constituency results in the Measure picker", async () => {
+    render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
         selectedYear={2029}
         policies={POLICIES}
       />,
     );
-    expect(
-      await screen.findByText(
-        "Results by constituency are shown for one measure at a time, or for all measures together.",
-      ),
-    ).toBeInTheDocument();
-    // No results map: at most the unpublished template, every seat grey.
-    const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .pill-select, .title-icon"),
-    );
-    expect(drawn).toEqual([]);
-    container
-      .querySelectorAll(".map-template-svg path")
-      .forEach((path) => expect(path.getAttribute("fill")).toBe(CHART_COLOURS.axis));
-    expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
+    // Neither selected measure has constituency results (the fuel duty
+    // freeze is published by region only), so there is no measure to pick
+    // and the card says it shows one measure at a time
+    expect(await screen.findByText(/shown for one measure at a time/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    expect(screen.queryByRole("radiogroup", { name: "Measure" })).toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
+    expect(document.querySelector(".map-title-focus")).toBeNull();
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -440,7 +440,10 @@ describe("ConstituencyMap", () => {
     ).toBeInTheDocument();
     // No results map: at most the unpublished template, every seat grey.
     const drawn = [...container.querySelectorAll("svg path")].filter(
-      (path) => !path.closest(".map-template-svg, .chart-download, .pill-select, .title-icon"),
+      (path) =>
+        !path.closest(
+          ".map-template-svg, .chart-download, .pill-select, .title-icon, .control-bar-options, .chart-more-info",
+        ),
     );
     expect(drawn).toEqual([]);
     container
@@ -527,9 +530,9 @@ describe("ConstituencyMap and the release's area routing", () => {
   const NOT_AVAILABLE = "Results by constituency are not available on this release.";
   const NOT_LOADED = "Results by constituency could not be loaded.";
   const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
-  // The redesign's only how-to-read sentence; the search box's placeholder
-  // says what to do.
-  const HOW_TO_READ = /Uncoloured where the estimate is too uncertain/;
+  // How to read the map is in "About this chart", whose closed line names
+  // its parts; on a release that routes nothing it describes the measure only.
+  const HOW_TO_READ = /How it's calculated/;
   // A fetch that fails, as on a network error, only when it is awaited.
   const NETWORK_FAILURE = {
     then: (_, reject) => reject(new TypeError("network down")),
@@ -546,9 +549,14 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(
       screen.getByRole("button", { name: /Download chart/ }),
     ).toBeDisabled();
-    const search = screen.queryByLabelText("Search constituency");
+    const search = screen.queryByLabelText("Search or select a constituency");
     if (search) expect(search).toBeDisabled();
-    expect(container.textContent).not.toMatch(FIGURES);
+    // Each text node apart, so the title's year and the Options pill's
+    // "% of income" are not read as one figure ("2029-30% of income")
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (walker.nextNode()) texts.push(walker.currentNode.textContent);
+    expect(texts.join(" ")).not.toMatch(FIGURES);
   };
 
   it.each([

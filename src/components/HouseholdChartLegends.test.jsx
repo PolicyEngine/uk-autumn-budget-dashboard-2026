@@ -109,6 +109,14 @@ describe.each([
     expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
   });
 
+  it("says so in place of an empty plot when no selected measure changes a household", () => {
+    render(<Chart rawData={rows} selectedPolicies={[EMPLOYER_NI]} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
+    expect(document.querySelector(".recharts-wrapper")).toBeNull();
+    // Said once: the card's sentence does not add "almost no change" at both ends
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/almost no change/);
+  });
+
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
     const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
@@ -119,14 +127,14 @@ describe.each([
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "true");
     expect(item.closest("ul")).toBeVisible();
-    // The card's own "More info" at its foot, closed until opened
+    // The card's own "About this chart" at its foot, closed until opened
     const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
-    const toggle = within(moreInfo).getByRole("button", { name: "More info" });
+    const toggle = within(moreInfo).getByRole("button", { name: "About this chart" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector("[data-zero-measure]")).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    within(moreInfo).getByText("3 measures are £0 for households in 2027-28:");
+    within(moreInfo).getByText("3 selected measures are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
@@ -140,7 +148,9 @@ describe.each([
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
-    within(container).getByText("They are folded under “with no effect” in the key and left out of the tooltip.");
+    // Closed, the title and a preview of what is inside; the £0 measures are a caveat
+    expect(moreInfo.querySelector(".disclosure-preview")).toHaveTextContent("How it's calculated · Caveats");
+    expect(moreInfo.querySelector(".disclosure-chip")).toBeNull();
   });
 });
 
@@ -152,8 +162,8 @@ describe("ChartMoreInfo", () => {
 
   it("says one measure in the singular, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
-    screen.getByText("1 measure is £0 for households in 2028-29:");
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,
     ]);
@@ -171,9 +181,9 @@ describe("ChartMoreInfo", () => {
       </ChartMoreInfo>,
     );
     expect(screen.getAllByRole("button")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     screen.getByText("Single years of age rest on fewer households.");
-    screen.getByText("1 measure is £0 for households in 2028-29:");
+    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
   });
 });
 
@@ -189,7 +199,7 @@ describe("ChartMoreInfo's employer NI revenue", () => {
         year={2027}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "More info" }));
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(
       await screen.findByText(new RegExp(`about £${Math.abs(value).toFixed(1)}bn in 2027-28`)),
     ).toBeInTheDocument();

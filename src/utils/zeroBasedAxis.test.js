@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { zeroBasedAxis } from "./chartTheme";
+import { fixedNoNegativeZero, tickDecimals, zeroBasedAxis } from "./chartTheme";
 
 describe("zeroBasedAxis", () => {
   it("starts an all-positive axis at 0", () => {
@@ -23,5 +23,21 @@ describe("zeroBasedAxis", () => {
 
   it("copes with no values", () => {
     expect(zeroBasedAxis([]).domain[0]).toBe(0);
+  });
+});
+
+describe("tickDecimals", () => {
+  it("adds a decimal place where one place would repeat labels", () => {
+    // One measure's relative change: ticks 0.02% apart
+    expect(tickDecimals([-0.06, -0.04, -0.02, 0], 1)).toBe(2);
+    expect(tickDecimals([0, 0.1, 0.2, 0.3], 1)).toBe(1);
+    expect(tickDecimals([0, 20, 40, 60])).toBe(0);
+  });
+});
+
+describe("fixedNoNegativeZero", () => {
+  it("drops the sign of a value that rounds to zero", () => {
+    expect(fixedNoNegativeZero(-0.04, 1)).toBe("0.0");
+    expect(fixedNoNegativeZero(-0.06, 1)).toBe("-0.1");
   });
 });

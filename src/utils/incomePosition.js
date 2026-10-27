@@ -12,10 +12,6 @@
  * the baseline curve and its position after off the reform curve, since
  * everyone else's income changes too.
  */
-// The whole package's run in the pipeline's own CSVs (reforms.py's
-// AUTUMN_BUDGET_2026_COMBINED_ID); policyConfig.js, which held it, is gone
-// on #104
-export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { parseCsv } from "./publication/csv";
 
 export const DISTRIBUTION_FILE = "income_distribution.csv";
@@ -74,18 +70,65 @@ const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id
 
 /**
  * Which published run stands for the selection: one measure is its own
- * run; two or more are the whole package's run, which is exact (`exact`)
- * only when every published measure is selected and the package was run
- * with exactly those (`packageIds`, the catalogue's package members, or
- * null when it publishes none), since runs for part of the package are not
- * published. After a measure is withdrawn the package's run still holds it,
- * so it is never exact then (#104 review).
+ * run; two or more are the published package's run, which is exact
+ * (`exact`) only when every published measure is selected and the package
+ * was run with exactly those (`packageIds`, the catalogue's package
+ * members, or null when it publishes none), since runs for part of the
+ * package are not published. After a measure is withdrawn the package's
+ * run still holds it, so it is never exact then (#104 review).
+ *
+ * The package's rows are read under `combinedId`, the manifest's key for
+ * the combined run of exactly the published measures (`combined--...`,
+ * the catalogue's combinedId), never under a fixed id: the flat files'
+ * rows for any other package, such as the registry's nine-measure
+ * `autumn_budget_2026_combined`, are not taken for it (#228). With no
+ * published package `reformId` is null and there is nothing to read.
  */
-export function distributionRunFor(selected, allIds, packageIds = null) {
+export function distributionRunFor(selected, allIds, packageIds = null, combinedId = null) {
   const ids = [...new Set(selected ?? [])];
-  if (ids.length === 1) return { reformId: ids[0], exact: true };
-  const exact = Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
-  return { reformId: COMBINED_REFORM_ID, exact };
+  if (ids.length === 1) return { reformId: ids[0], exact: true, package: false };
+  const reformId = combinedId || null;
+  const exact = Boolean(reformId) && Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
+  return { reformId, exact, package: true };
+}
+
+/** distributionRunFor for a measure catalogue (utils/measureCatalogue.jsx). */
+export function distributionRunOf(selected, catalogue) {
+  const combinedId = catalogue?.combinedId ?? null;
+  return distributionRunFor(
+    selected,
+    (catalogue?.displayable ?? []).map((measure) => measure.id),
+    combinedId ? (catalogue.manifest?.combined?.[combinedId]?.measures ?? null) : null,
+    combinedId,
+  );
+}
+
+/** Whether a flat file's rows (each with `reformId` or `reform_id`) hold a run. */
+export function hasRun(rows, reformId) {
+  return Boolean(reformId) && Array.isArray(rows) && rows.some((row) => (row.reformId ?? row.reform_id) === reformId);
+}
+
+/**
+ * Why a run's rows are missing, said on the card: for the package, that the
+ * file holds another package's rows (it was not regenerated for the
+ * measures published), so its figures are not shown.
+ */
+export const PACKAGE_NOT_IN_FILE =
+  "Results for the selected policies together are not available yet: this file holds a different set of policies, so it is not used.";
+
+/** The same, when the manifest publishes no combined run of the measures at all. */
+export const NO_PACKAGE_PUBLISHED =
+  "Results for the selected policies together are not available yet: no combined run of them has been published.";
+
+/**
+ * The note a card shows in place of the package's figures, or null: the
+ * package's run is wanted (two or more measures) and the file has no rows
+ * for it, either because none is published (`reformId` null) or because the
+ * file holds another package.
+ */
+export function missingPackageNote(run, rows) {
+  if (!run?.package || hasRun(rows, run.reformId)) return null;
+  return run.reformId ? PACKAGE_NOT_IN_FILE : NO_PACKAGE_PUBLISHED;
 }
 
 /** One curve, sorted by percentile: [{ percentile, income }]. */
@@ -308,20 +351,37 @@ export function placeLabel(pos) {
 }
 
 /**
+ * How many in every 100 people live in households with a lower income than
+ * this position, as words: "47", or "fewer than 1" / "more than 99" off the
+ * published range. One rounding everywhere (the tiles' percentile too).
+ */
+export function lowerCount(pos) {
+  if (pos.below) return `fewer than ${pos.edge ?? LOWEST_PERCENTILE}`;
+  if (pos.above) return `more than ${pos.edge ?? HIGHEST_PERCENTILE}`;
+  if (pos.percentile === null) return null;
+  return String(Math.round(pos.percentile));
+}
+
+/** What the number measures, said once and the same everywhere. */
+export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
+
+/**
  * The card's text: a one-sentence headline and three labelled chips (your
  * change, its share of your net income, your place before and after).
- * Each fact once. The headline names the top or bottom tenth as "the top
- * (bottom) N%" and anyone else by how many in every 100 people have a
- * lower income.
+ * Each fact once. The headline says exactly what the number is: how many
+ * in every 100 people in the UK live in households with a lower income,
+ * both adjusted for household size, on `side` ("before" or "after" the
+ * selected policies), naming the side only when the two differ.
  */
-export function positionSummary(position, change, netBefore) {
+export function positionSummary(position, change, netBefore, side = "after") {
+  const shown = side === "before" ? position.before : position.after;
+  const differs = lowerCount(position.before) !== lowerCount(position.after);
+  const count = lowerCount(shown);
+  const capital = count ? count.charAt(0).toUpperCase() + count.slice(1) : null;
+  const headline = count
+    ? `${capital} in 100 people in the UK ${PLACE_MEANING}${differs ? `, ${side === "before" ? "before" : "after"} the selected policies` : ""}.`
+    : "Your place in the UK income distribution is not available.";
   const after = position.after;
-  let headline;
-  if (after.above) headline = `You're in the top ${100 - (after.edge ?? HIGHEST_PERCENTILE)}% of UK incomes.`;
-  else if (after.below) headline = `You're in the bottom ${after.edge ?? LOWEST_PERCENTILE}% of UK incomes.`;
-  else if (after.percentile >= 90) headline = `You're in the top ${Math.max(1, Math.ceil(100 - after.percentile))}% of UK incomes.`;
-  else if (after.percentile < 10) headline = `You're in the bottom ${Math.max(1, Math.ceil(after.percentile))}% of UK incomes.`;
-  else headline = `${Math.round(after.percentile)} in every 100 people in the UK have a lower income than you.`;
   const before = placeLabel(position.before);
   const now = placeLabel(after);
   const moved = before !== now;

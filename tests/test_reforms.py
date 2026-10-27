@@ -34,6 +34,7 @@ from uk_budget_data.reforms import (
     get_reform,
     list_reform_ids,
     plan_2_unfrozen_thresholds,
+    static_capital_gains,
 )
 
 
@@ -469,9 +470,10 @@ def test_receipt_rates_come_in_pairs():
 
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: 182 of 365
-    # days from 1 October, £24.93; 2027-28: all of it; 2028-29: none.
-    [(2026, 24.93), (2027, 50.00), (2028, 0.0)],
+    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
+    # October to March share of a year's use (WINTER_SHARE), £28.34;
+    # 2027-28: all of it; 2028-29: none.
+    [(2026, 28.34), (2027, 50.00), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -651,7 +653,11 @@ def test_a_single_person_on_30000_pounds_in_2031_pays_52_pounds_more():
 
 
 def test_the_freeze_changes_only_2031():
-    changes = get_reform("threshold_freeze_2031_32").parameter_changes
+    """Its thresholds change in 2031 alone. It also carries the static
+    capital gains pin, in every policy year (test_capital_gains_pin)."""
+    changes = dict(get_reform("threshold_freeze_2031_32").parameter_changes)
+    for path in static_capital_gains():
+        changes.pop(path)
     assert all(set(values) == {"2031"} for values in changes.values())
 
 
@@ -802,14 +808,14 @@ def test_each_card_text_block_is_still_there():
 
 def test_the_methodology_note_is_for_a_registered_measure():
     """The one modelling note the page keeps by hand (MODELLING_NOTE in
-    measures.js, #113's scope note) names a registered measure, so renaming
-    the measure can't leave its note unshown without a failure here."""
+    src/utils/measureModelling.js, #113's scope note) names a registered
+    measure, so renaming the measure can't leave its note unshown without a
+    failure here."""
     import re
     from pathlib import Path
 
     source = (
-        Path(__file__).resolve().parents[1]
-        / "src/components/methodology/measures.js"
+        Path(__file__).resolve().parents[1] / "src/utils/measureModelling.js"
     ).read_text()
     (measure_id,) = re.findall(
         r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source

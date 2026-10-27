@@ -1,0 +1,72 @@
+/* Disclosure.jsx's title and closed-state preview. The
+   toggle itself (full width, chevron) is styled in globals.css. */
+.disclosure-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* One line of what is inside, while closed */
+.disclosure-preview {
+  overflow: hidden;
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity var(--pe-transition-fast, 150ms ease);
+}
+
+.disclosure.is-open .disclosure-preview {
+  opacity: 0.6;
+}
+
+.disclosure-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.disclosure-toggle .disclosure-chevron {
+  transition: transform var(--pe-transition-base, 220ms ease);
+}
+
+.disclosure-in-card > .expander-body .disclosure-content {
+  margin-top: 12px;
+}
+
+/* Compact: a Policies card's "How it is modelled", inline in its footer
+   row; the content opens across the card below the row */
+.disclosure-compact {
+  display: contents;
+}
+
+.disclosure-compact > .disclosure-toggle {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  padding: 6px 0;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--pe-teal-700);
+}
+
+.disclosure-compact > .disclosure-toggle .disclosure-chevron {
+  margin-left: 2px;
+}
+
+.disclosure-compact > .expander-body {
+  order: 10;
+  flex: 1 0 100%;
+}
+
+.disclosure-compact .disclosure-content {
+  padding: 10px 0 4px;
+}
+
+/* keepMounted: closed content stays in the page, out of view and out of the Tab order */
+.expander-body[hidden] {
+  display: none;
+}

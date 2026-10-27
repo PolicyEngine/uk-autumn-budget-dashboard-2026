@@ -1,9 +1,11 @@
+import { HOUSEHOLD_ABOUT_ID } from "../methodology/anchors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
 import { mostlyFromSpending } from "./SingleYearResults";
+import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
@@ -91,7 +93,9 @@ function renderTab(props = {}) {
 /** A household's card in the grid, or its chip once the cards fold into a strip. */
 function householdItem(name) {
   const region = screen.getByRole("region", { name: "Choose a household" });
-  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name });
+  // A chip's name starts with its short text and ends with the full one
+  const chip = typeof name === "string" ? (n) => n === name || n.startsWith(`${name},`) || n.endsWith(`: ${name}`) : name;
+  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name: chip });
 }
 
 // Nothing is asked until Calculate: every answer has a default, so one
@@ -108,7 +112,7 @@ function toResults() {
 }
 
 // The headline card's label, once a result is shown
-const HEADLINE = /^Change in your net income$/;
+const HEADLINE = /^Your change$/;
 /** The headline card (there is none before a result). */
 const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
@@ -137,8 +141,9 @@ describe("Household impact's results", () => {
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
     // income charts below the calculator, the published household scatter
-    // (the result among all households) and the UK files "Where you sit"
-    // reads, only the household route
+    // (the result among all households, loaded on demand through its
+    // artifact's receipt) and the UK files "Where you sit" reads, only the
+    // household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
@@ -146,6 +151,7 @@ describe("Household impact's results", () => {
           !url.endsWith("/household_presets.json") &&
           !url.endsWith("/income_curve.csv") &&
           !url.endsWith("/household_scatter_binned.csv") &&
+          !url.endsWith("/receipt.json") &&
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
           !url.endsWith("/distributional_impact.csv") &&
@@ -278,22 +284,33 @@ describe("the household calculation, from the fixture", () => {
     await within(panel).findByText("+£3,765");
     const card = headlineCard();
     expect(card).toHaveClass("is-gain");
-    expect(card.querySelector(".result-card-label")).toHaveTextContent("Change in your net income");
-    // The year and the number of policies as pills
-    const pills = [...card.querySelectorAll(".result-pill")].map((pill) => pill.textContent);
-    expect(pills).toEqual(["2029-30", `${SUPPORTED_POLICY_IDS.length} policies`]);
+    // No eyebrow: the tiles lead the card
+    expect(card.querySelector(".result-card-label")).toBeNull();
+    // Three tiles on top: the change (the year and policies under it), its
+    // share, your place
+    const tiles = [...card.querySelectorAll(".result-tiles .forecast-tile")];
+    expect(tiles.map((tile) => tile.querySelector(".forecast-tile-name").textContent)).toEqual([
+      "Your change",
+      "Share of your income",
+      "Your place (percentile)",
+    ]);
+    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(card.querySelector(".result-figure")).toHaveTextContent(/^\+£3,765 a year$/);
-    // Its share as a chip, and the waterfall from net income before to after
-    expect(card.querySelector(".result-chip")).toHaveTextContent("Up 5.8% of net income");
+    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
+    // Its share, and the waterfall from net income before to after
+    expect(tiles[1].querySelector(".forecast-tile-value")).toHaveTextContent("+5.76%");
     const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
     expect(ends).toEqual(["Net income before£65,371", "Net income after£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
-    expect(panel).not.toHaveTextContent("before and after the selected policies.");
+    expect(card).not.toHaveTextContent("before and after the selected policies.");
+    // Only the essentials show: what it is based on is under "About this
+    // result", closed at first
+    expect(card.querySelector("dl.result-foot-items")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "About this result" }));
     // What it is based on: a strip, each a label over its value, the note
     // behind an "i"; the rail explanation is in "About these figures"
     const assumptions = panel.querySelector("dl.result-foot-items");
@@ -304,7 +321,16 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Salary in 2029-30").querySelector("dd")).toHaveTextContent("£34,192, partner £12,822");
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
-    expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
+    // Each detail in a tip, shown on focus or hover
+    const tipOf = (label) => {
+      const button = within(box(label)).getByRole("button");
+      fireEvent.focus(button);
+      const id = button.getAttribute("aria-describedby").split(" ").pop();
+      const text = document.getElementById(id).textContent;
+      fireEvent.blur(button);
+      return text;
+    };
+    expect(tipOf("Rent area")).toBe("region default");
     // A supported selection has nothing left out: an unmodelled measure
     // makes the whole selection unavailable instead (#104)
     expect(assumptions).not.toHaveTextContent("not shown");
@@ -316,9 +342,12 @@ describe("the household calculation, from the fixture", () => {
     expect(box("Spending a year").querySelector("dd")).toHaveTextContent("fuel £960, electricity £1,040");
     // Not entered by the reader: marked as assumed, with what it does
     expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
-    expect(within(box("Spending a year")).getByRole("tooltip")).toHaveTextContent(
+    expect(tipOf("Spending a year")).toBe(
       "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
     );
+    // Whose result it is, in one line under the figure
+    // No chip row of household facts: the details are in About this result
+    expect(card.querySelector(".result-facts")).toBeNull();
     // No child of 16 or over: no item on who counts as a child
     expect(panel).not.toHaveTextContent("Children 16 to 19");
   });
@@ -343,11 +372,14 @@ describe("the household calculation, from the fixture", () => {
       .reduce((a, b) => a + b, 0);
     expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
-    // The measures that leave the household where it was: one muted line
-    // under the steps, not a row each, with each full name on hover
-    const noEffect = container.querySelector(".net-income-waterfall .waterfall-no-effect");
-    expect(noEffect).toHaveTextContent(/^No effect on you: /);
-    const names = [...noEffect.querySelectorAll("span")].map((span) => span.title);
+    // The measures that leave the household where it was: not under the
+    // steps but under "About this result", one bullet each, each full
+    // name on hover
+    expect(container.querySelector(".net-income-waterfall .waterfall-no-effect")).toBeNull();
+    fireEvent.click(within(headlineCard()).getByRole("button", { name: "About this result" }));
+    const noEffect = container.querySelector(".result-card-no-effect");
+    expect(noEffect).toHaveTextContent(/^No effect on you/);
+    const names = [...noEffect.querySelectorAll("li")].map((item) => item.title);
     expect(names).toContain("Dividend tax increase (+2pp)");
     expect(names).not.toContain("Interaction between policies");
     expect(container.querySelector(".no-effect-item")).toBeNull();
@@ -393,23 +425,26 @@ describe("the household calculation, from the fixture", () => {
     const sums = [0, 1, 2].map((col) => top.reduce((acc, row) => acc + row[col], 0));
     expect(sums).toEqual([65371, 69136, 3765]);
 
-    // About these figures: closed under the table, then the rows' notes
-    // and the method as definition lists
-    const about = screen.getByRole("button", { name: "About these figures" });
+    // About this chart: closed under the table, then only how this table's
+    // rows are estimated; the calculation's method is in Methodology
+    const about = within(table.closest(".single-year-breakdown") ?? document.body)
+      .getAllByRole("button", { name: "About this chart" })
+      .find((button) => button.closest(`#${HOUSEHOLD_ABOUT_ID}`));
     expect(about).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/Elements are before the earnings taper/)).not.toBeInTheDocument();
     fireEvent.click(about);
     expect(about).toHaveAttribute("aria-expanded", "true");
     const panel = about.closest(".disclosure");
     expect(panel).toHaveClass("disclosure-in-card");
-    const terms = [...panel.querySelectorAll("dt")].map((term) => term.textContent);
-    expect(terms).toContain("Universal Credit");
-    expect(terms).toContain("Change by policy");
-    expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
-    expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
-    // The marginal rate's known limits
-    expect(within(panel).getByText(/^Known limits: Council Tax Reduction/)).toBeInTheDocument();
-    expect(within(panel).getByText(/policyengine-uk 2\.134\.3 fixes this/)).toBeInTheDocument();
+    expect(within(panel).getByText("Universal Credit")).toBeInTheDocument();
+    expect(within(panel).getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
+    // No internal names, and the general method is not repeated here
+    expect(panel.textContent).not.toMatch(/[A-Z]+_[A-Z_]+/);
+    expect(panel).not.toHaveTextContent("Each bar is one policy on its own");
+    expect(within(panel).getByRole("link", { name: /How the household calculation works/ })).toHaveAttribute(
+      "href",
+      "?tab=methodology#method-household-calc",
+    );
   });
 
   it("shows net income, with a Net income / Change switch, beside the marginal rate in one pair of cards marking you", async () => {
@@ -429,16 +464,16 @@ describe("the household calculation, from the fixture", () => {
     expect(within(earnings).getByRole("heading", { name: "Household net income, 2029-30" })).toBeInTheDocument();
     expect(within(rate).getByRole("heading", { name: "Marginal tax rate across earnings, 2029-30" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Net income change, 2029-30" })).not.toBeInTheDocument();
-    // Each card's switch sits in the controls row, so the pair's rows line up
-    expect(earnings.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
-    expect(rate.querySelector(".chart-controls .obr-view-switch")).not.toBeNull();
-    // Net income first: before and after, marking you
-    const net = within(earnings).getByRole("button", { name: "Net income" });
-    expect(net).toHaveAttribute("aria-pressed", "true");
+    // Each card's view is in its Options pill, in the controls row, so the
+    // pair's rows line up
+    expect(earnings.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
+    expect(rate.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
+    // After first, as the marginal rate card, marking you
+    expect(optionsLabel(earnings)).toBe("After");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
     expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
     // Change: the gain and loss key, still marking you
-    fireEvent.click(within(earnings).getByRole("button", { name: "Change" }));
+    chooseOption(earnings, "Change");
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
     expect(within(earnings).getByText("Higher net income")).toBeInTheDocument();
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
@@ -474,7 +509,7 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example card shows its result without Calculate, and hides it
-    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     expect(household[0].household.age).toBe(22);
     // Your household opens the form with its answers, and Calculate, to
@@ -527,14 +562,14 @@ describe("an example card", () => {
       .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     renderTab();
     openForm();
-    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
     expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
-    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
     delete Element.prototype.scrollIntoView;
@@ -555,7 +590,7 @@ describe("an example card", () => {
       .spyOn(document.documentElement, "scrollHeight", "get")
       .mockImplementation(() => height);
     renderTab();
-    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
     height = 3200;
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
@@ -573,13 +608,13 @@ describe("an example card", () => {
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 140, bottom: 540, height: 400 });
     renderTab();
-    fireEvent.click(householdItem(/^A pensioner on the State Pension/));
+    fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" })));
     expect(scrollIntoView).not.toHaveBeenCalled();
     // Lower down, with reduced motion: an instant scroll
     rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     motion(true);
-    fireEvent.click(householdItem(/^A 22-year-old renting/));
+    fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
     delete Element.prototype.scrollIntoView;
@@ -612,7 +647,7 @@ describe("switching from one household's card to another", () => {
     );
     return held;
   }
-  const card = (name) => householdItem(new RegExp(`^${name}`));
+  const card = (name) => householdItem(new RegExp(`(^|: )${name}`));
 
   it("clears the previous card's result at once, shows the new one when it arrives, and ignores a late answer for the previous card", async () => {
     const held = serveHeld();
@@ -690,7 +725,7 @@ describe("the examples' precomputed results", () => {
       { wrapper: PublishedMeasures },
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    fireEvent.click(householdItem(/^A graduate on £35,000/));
+    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     await splitShown();
     expect(household).toEqual([]);
@@ -767,6 +802,16 @@ describe("while a new answer loads", () => {
       held,
     };
   }
+
+  it("moves keyboard focus from Calculate, disabled while it runs, to the results", async () => {
+    serveSlowly().slowDown();
+    renderTab();
+    openForm();
+    calculateButton().focus();
+    fireEvent.click(calculateButton());
+    expect(calculateButton()).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole("region", { name: "Results" })).toHaveFocus());
+  });
 
   it("shows only the processing panel while it calculates again, never the earlier result", async () => {
     const server = serveSlowly();
@@ -1036,5 +1081,64 @@ describe("the assumed-spending caution", () => {
     const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
     expect(spendingAssumed(own, "driver")).toBe("example");
     expect(spendingAssumed(own, null)).toBeNull();
+  });
+});
+
+
+describe("the Across earnings cards together", () => {
+  it("switch view together, and a chip toggled on one is toggled on the other", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { container } = renderTab();
+    toResults();
+    await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
+    const pair = container.querySelector(".single-year-chart-pair");
+    const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
+    chooseOption(netCard, "Before");
+    expect(optionsLabel(rateCard)).toBe("Before");
+    // Where both cards have their parts, a chip toggled on one is toggled
+    // on the other, and both keys list the same components in order
+    const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });
+    const netChip = within(netCard).queryByRole("button", { name: "Income tax" });
+    if (rateChip && netChip) {
+      expect(rateChip).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(netChip);
+      expect(within(rateCard).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
+      const labels = (card) => [...card.querySelectorAll(".series-toggle-chip")].map((button) => button.textContent).slice(0, -1);
+      expect(labels(netCard)).toEqual(labels(rateCard));
+    }
+  });
+});
+
+describe("the breakdown's one line", () => {
+  it("says which groups the policies change, and which they leave", async () => {
+    const { breakdownSentence } = await import("./ProgrammeTable");
+    const group = (id, change) => ({ id, shown: { change } });
+    expect(breakdownSentence([group("income", 0), group("tax", 60), group("benefit", 0)])).toBe(
+      "Your taxes fall by £60 a year with the selected policies; income and benefits are unchanged.",
+    );
+    expect(breakdownSentence([group("income", 0), group("tax", -20), group("benefit", 15)])).toBe(
+      "Your taxes rise by £20 a year and benefits rise by £15 a year with the selected policies; income is unchanged.",
+    );
+    expect(breakdownSentence([group("income", 0), group("tax", 0)])).toBe("The selected policies leave your income, taxes and benefits unchanged.");
+  });
+});
+
+describe("the waterfall's one line", () => {
+  it("says where net income goes and which policy moves it most, gains and losses alike", async () => {
+    const { waterfallSentence } = await import("./NetIncomeWaterfall");
+    const totals = { before: 70050, after: 70159 };
+    const step = (name, rounded) => ({ id: name, name, rounded });
+    expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56), step("Fuel duty deferral", 53)], "2027-28")).toBe(
+      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£56).",
+    );
+    expect(waterfallSentence(totals, [step("Zero VAT on electricity", 204), step("Threshold freeze", -95)], "2027-28")).toBe(
+      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+    );
+    expect(waterfallSentence({ before: 100, after: 80 }, [step("Threshold freeze", -20)], "2031-32")).toBe(
+      "Your net income falls from £100 to £80 in 2031-32; threshold freeze takes £20 a year.",
+    );
+    expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("Your net income stays at £100 in 2027-28.");
+    // While the split is calculated, the totals alone
+    expect(waterfallSentence(totals, null, "2027-28")).toBe("Your net income rises from £70,050 to £70,159 in 2027-28.");
   });
 });

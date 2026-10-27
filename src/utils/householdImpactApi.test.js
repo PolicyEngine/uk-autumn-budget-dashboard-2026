@@ -215,6 +215,29 @@ describe("normaliseHouseholdImpact", () => {
     expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
     expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
   });
+
+  it("reads net income's parts at each point when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.netParts).toBeNull();
+    const points = HOUSEHOLD_FIXTURE.sweep.points.map((point) => ({
+      employment_income: point.employment_income,
+      income_tax: -100,
+      other_taxes: point.reform - point.employment_income + 100,
+    }));
+    const withParts = (baseline) =>
+      normaliseHouseholdImpact({
+        ...HOUSEHOLD_FIXTURE,
+        sweep: {
+          ...HOUSEHOLD_FIXTURE.sweep,
+          net_income_parts: { parts: ["employment_income", "income_tax", "other_taxes"], baseline, reform: points },
+        },
+      }).sweep.netParts;
+    const parts = withParts(points);
+    expect(parts.names).toEqual(["employment_income", "income_tax", "other_taxes"]);
+    expect(parts.after).toHaveLength(HOUSEHOLD_FIXTURE.sweep.points.length);
+    expect(parts.before[1].income_tax).toBe(-100);
+    // A side with the wrong number of points is not drawn
+    expect(withParts(points.slice(1))).toBeNull();
+  });
 });
 
 // Review of 428d209, finding 2: a breakdown from one deployment was merged
@@ -865,6 +888,31 @@ describe("postHouseholdDetail", () => {
       postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(seen).toEqual([true]);
+  });
+
+  it("uses the main API alone when told not to ask the detail URL, though the build has one", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = "https://detail.example/api/household-impact";
+    try {
+      const asked = [];
+      const payload = await postHouseholdDetail(
+        { include: ["sweep"] },
+        {
+          detail: false,
+          fetchImpl: async (url) => {
+            asked.push(url);
+            return respond(200, ok);
+          },
+        },
+      );
+      expect(payload).toEqual(ok);
+      expect(asked).toEqual([main]);
+    } finally {
+      process.env = saved;
+    }
   });
 
   it("uses the main API alone when no detail URL is set", async () => {

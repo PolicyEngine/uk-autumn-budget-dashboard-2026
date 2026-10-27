@@ -42,7 +42,7 @@
 
 .measure-key-heading,
 .measure-key-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--pe-gray-500);
@@ -118,10 +118,9 @@ button.measure-key-chip:focus-visible,
   box-shadow: inset 0 0 0 1px var(--swatch);
 }
 
+/* The net line's chip: a pill like the measures', chosen the same way */
 .measure-key-chip.is-net {
-  border-color: transparent;
-  background: transparent;
-  padding-left: 4px;
+  padding-left: 6px;
 }
 
 .measure-key-net-icon line {
@@ -131,19 +130,6 @@ button.measure-key-chip:focus-visible,
 
 .measure-key-net-icon circle {
   fill: var(--c-net);
-}
-
-/* Visually hidden: the full name for screen readers */
-.measure-key-full {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .measure-key-more {
@@ -165,6 +151,30 @@ button.measure-key-chip:focus-visible,
 
 .measure-key-more[aria-expanded="true"] {
   background: var(--pe-gray-100);
+}
+
+/* "Clear": unpins every highlighted measure; shown while any is pinned */
+.measure-key-clear {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--pe-teal-100);
+  border-radius: 999px;
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.measure-key-clear:hover,
+.measure-key-clear:focus-visible {
+  border-color: var(--c-gain);
+}
+
+.measure-key-clear:focus-visible {
+  outline: 2px solid var(--pe-accent);
+  outline-offset: 2px;
 }
 
 /* In a card: under the plot, as the legend was */
@@ -217,6 +227,9 @@ button.measure-key-chip:focus-visible,
   .measure-key.is-section .measure-key-scroll {
     flex-wrap: nowrap;
     overflow-x: auto;
+    /* The chips' touch areas (globals.css) reach past the strip; they must
+       not make it scroll up and down */
+    overflow-y: hidden;
     padding: 2px 12px 4px 0;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
@@ -242,5 +255,24 @@ button.measure-key-chip:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .recharts-bar-rectangle path {
     transition: none;
+  }
+}
+
+/* The same titled key inside a card (Revenue impact, under its plot): no
+   box of its own, as the card is the box; the chips sit under the plot
+   with the logo below. Only a key above several cards is boxed. */
+.revenue-key > .measure-key.is-section,
+.chart-legend > .measure-key.is-section {
+  margin: 0;
+  padding: 12px 0 4px;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+@media (max-width: 640px) {
+  .revenue-key > .measure-key.is-section,
+  .chart-legend > .measure-key.is-section {
+    padding: 12px 0 4px;
   }
 }

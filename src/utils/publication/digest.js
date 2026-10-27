@@ -18,7 +18,9 @@ import { attestationProblems, personalSeriesProblems } from "./manifest";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
-  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  // By tag, not instanceof: a fetch Response from another realm (a test
+  // runner's, a worker's) hands back an ArrayBuffer of that realm
+  if (Object.prototype.toString.call(input) === "[object ArrayBuffer]") return new Uint8Array(input);
   if (ArrayBuffer.isView(input)) {
     return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
   }

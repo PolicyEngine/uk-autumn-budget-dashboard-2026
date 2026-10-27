@@ -104,14 +104,6 @@
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
-.method-card-title {
-  margin: 0 0 12px;
-  font-size: var(--fs-card-title);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-800);
-}
-
 .method-card .method-lead {
   margin: 0 0 16px;
   color: var(--pe-gray-700);
@@ -231,64 +223,6 @@
   color: var(--pe-gray-800);
 }
 
-/* How each measure is modelled */
-.method-measures {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
-.method-measures thead th {
-  padding: 0 12px 8px 0;
-  border-bottom: 1px solid var(--card-border);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  text-align: left;
-  color: var(--pe-gray-500);
-}
-
-.method-measures tbody th,
-.method-measures td {
-  padding: 10px 12px 10px 0;
-  vertical-align: top;
-  text-align: left;
-}
-
-.method-measures tbody tr + tr th,
-.method-measures tbody tr + tr td {
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.method-measures tbody th {
-  width: 30%;
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-measures td {
-  color: var(--pe-gray-700);
-}
-
-.method-measure-note {
-  margin: 6px 0 0;
-  color: var(--pe-gray-600);
-}
-
-.method-measure-note-label {
-  font-weight: 600;
-}
-
-.method-measure-year {
-  width: 96px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.method-cell-label {
-  display: none;
-}
-
 .method-swatch {
   display: inline-block;
   width: 10px;
@@ -352,58 +286,6 @@
     grid-template-columns: minmax(0, 1fr);
     row-gap: 2px;
   }
-
-  /* The measures table as one block per measure */
-  .method-measures thead {
-    display: none;
-  }
-
-  .method-measures,
-  .method-measures tbody,
-  .method-measures tr,
-  .method-measures tbody th,
-  .method-measures td {
-    display: block;
-    width: auto;
-  }
-
-  .method-measures tbody th,
-  .method-measures td {
-    padding: 0;
-    border: 0 !important;
-  }
-
-  .method-measures tr {
-    padding: 12px 0;
-  }
-
-  .method-measures tbody tr + tr {
-    border-top: 1px solid var(--pe-gray-100);
-  }
-
-  .method-measures td {
-    margin-top: 4px;
-  }
-
-  .method-measure-year {
-    color: var(--pe-gray-500);
-  }
-
-  .method-cell-label {
-    display: inline;
-  }
-}
-
-/* Section headers: an icon chip, the title and subtitle, and tags ------- */
-
-.method-section-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.method-section-titles {
-  min-width: 0;
 }
 
 .method-tags {
@@ -411,37 +293,6 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px !important;
-}
-
-.method-icon {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-100);
-  color: var(--pe-teal-700);
-}
-
-.method-icon-md {
-  width: 40px;
-  height: 40px;
-}
-
-.method-icon-md svg {
-  width: 20px;
-  height: 20px;
-}
-
-.method-icon-sm {
-  width: 32px;
-  height: 32px;
-}
-
-.method-icon-sm svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* Tags */
@@ -503,111 +354,6 @@
   color: var(--band-teal);
 }
 
-/* Long text in the measures table: two lines, then "Show more" */
-.method-clamp {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.method-clamp-open {
-  display: block;
-  -webkit-line-clamp: unset;
-}
-
-.method-clamp-toggle {
-  margin-top: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  cursor: pointer;
-}
-
-.method-clamp-toggle:hover {
-  text-decoration: underline;
-}
-
-.method-clamp-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
-/* Not modelled: a quieter table */
-.method-muted-card {
-  background: var(--pe-gray-50);
-}
-
-.method-card.method-muted-card .method-more {
-  margin: 0 0 12px;
-}
-
-.method-measures-muted tbody th {
-  font-weight: 500;
-  color: var(--pe-gray-700);
-}
-
-.method-row-name {
-  display: block;
-  margin-bottom: 4px;
-}
-
-/* Limitations: callouts */
-.method-callouts {
-  display: grid;
-  gap: 12px;
-}
-
-.method-callout {
-  display: flex;
-  gap: 12px;
-  padding: 16px 18px;
-  border: 1px solid var(--pe-teal-100);
-  border-left: 3px solid var(--pe-teal-500);
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-surface);
-}
-
-.method-callout-warning {
-  border-color: var(--c-loss-border);
-  border-left-color: var(--c-loss);
-  background: var(--c-notice-bg);
-}
-
-.method-callout-icon {
-  display: inline-flex;
-  flex: none;
-  padding-top: 2px;
-  color: var(--pe-teal-600);
-}
-
-.method-callout-warning .method-callout-icon {
-  color: var(--c-loss-text);
-}
-
-.method-callout-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.method-callout-title {
-  margin: 0 0 4px;
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-callout-text {
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
 /* Living standards' gaps: a list with a muted marker */
 .method-card .method-list-caveats {
   padding-left: 0;
@@ -630,30 +376,6 @@
   background: var(--c-loss);
 }
 
-/* Back to top */
-.method-back {
-  margin: 12px 0 0;
-  text-align: right;
-  font-size: var(--fs-caption);
-}
-
-.method-back a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--pe-gray-500);
-  text-decoration: none;
-}
-
-.method-back a:hover {
-  color: var(--pe-teal-700);
-}
-
-.method-back svg {
-  width: 14px;
-  height: 14px;
-}
-
 @media (max-width: 899px) {
   /* The jump menu sticks under the band and tabs */
   .method-contents {
@@ -664,23 +386,6 @@
     padding: 8px 16px;
     background: var(--pe-background);
     border-bottom: 1px solid var(--card-border);
-  }
-
-  .method-section-heading {
-    gap: 12px;
-  }
-
-  .method-icon-md {
-    width: 34px;
-    height: 34px;
-  }
-
-  .method-measure-year {
-    width: auto;
-  }
-
-  .method-measures td.method-measure-year {
-    margin-top: 6px;
   }
 }
 
@@ -736,10 +441,6 @@
   color: var(--pe-gray-700);
 }
 
-.method-callout-text p {
-  margin: 0 0 6px;
-}
-
 /* The scatter's band edges as a row of chips */
 .method-chips {
   display: flex;
@@ -750,23 +451,6 @@
 
 .method-chips .method-tag {
   font-variant-numeric: tabular-nums;
-}
-
-/* Measure notes: a summary line, the rest as bullets on demand */
-.method-clamp-summary {
-  display: block;
-}
-
-.method-points-more {
-  margin-top: 6px;
-  font-size: var(--fs-small);
-}
-
-/* Not modelled: an icon before each name */
-.method-row-name {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
 }
 
 .method-row-icon {
@@ -842,125 +526,10 @@
     margin-top: 32px;
   }
 
-  /* 40px tap areas */
-  .method-clamp-toggle,
-  .method-back a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-  }
-
-  .method-clamp-toggle {
-    margin-top: 0;
-  }
-
-  .method-back {
-    margin-top: 4px;
-  }
 }
 
-/* Flow: the step a section explains, a summary that reads on its own, and
-   the technical details behind a toggle ------------------------------- */
-
-.method-section-heading {
-  align-items: center;
-}
-
-.method-summary {
-  padding: 20px 24px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  background: var(--pe-surface);
-}
-
-/* Intros and text run the card's full width, like the cards below them */
-.method-summary > p {
-  margin: 0;
-  font-size: var(--fs-body-lg);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.method-summary a,
-.method-details a {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.method-summary a:hover,
-.method-details a:hover {
-  text-decoration-color: currentColor;
-}
-
-.method-summary .method-card-title {
-  margin-bottom: 6px;
-}
-
-.method-section > .method-summary + *,
 .method-section > .card + .card {
   margin-top: 16px;
-}
-
-.method-details {
-  margin-top: 12px;
-}
-
-.method-details > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  background: var(--pe-surface);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  cursor: pointer;
-  list-style: none;
-}
-
-.method-details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.method-details > summary:hover {
-  border-color: var(--pe-teal-300);
-}
-
-.method-details > summary:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.method-details > summary svg {
-  width: 16px;
-  height: 16px;
-  transition: transform var(--pe-transition-fast);
-}
-
-.method-details[open] > summary svg {
-  transform: rotate(180deg);
-}
-
-.method-details-body {
-  margin-top: 12px;
-  padding: 20px 24px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  background: var(--pe-surface);
-}
-
-.method-details-body > .card {
-  border: 0;
-  padding: 0;
-}
-
-.method-details-body > .card + .card {
-  margin-top: 24px;
 }
 
 .method-details-title {
@@ -972,35 +541,6 @@
 
 .method-details-title:first-child {
   margin-top: 0;
-}
-
-/* Not modelled: a compact table */
-.method-measures-compact tbody th,
-.method-measures-compact td {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-@media (max-width: 899px) {
-  .method-summary,
-  .method-details-body {
-    padding: 16px;
-  }
-
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .method-details > summary svg {
-    transition: none;
-  }
-}
-
-.method-details-body .method-more {
-  margin: 0 0 12px;
-}
-
-.method-details-body > .method-facts + .method-more {
-  margin: 16px 0 0;
 }
 
 /* A term's one-line value, with its detail folded under "Details" */
@@ -1040,5 +580,161 @@
 @media (max-width: 899px) {
   .method-fact-more > summary {
     min-height: 40px;
+  }
+}
+
+/* The pointer to Policies, where each measure's description and modelling live */
+/* Unavailable and not modelled: a name and its reason per line */
+.mm-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-reasons li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 6px 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mm-reasons li + li {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.mm-reason-name {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.mm-reason-why {
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 899px) {
+  .mm-reasons li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* Consolidated layout (26 October): each section is a SectionHeading
+   (icon, title, one-line summary) and one card of folded topics, each a
+   shared Disclosure with a one-line preview of what is inside ---------- */
+
+.methodology-tab .section-heading {
+  margin-bottom: 16px;
+}
+
+.methodology-tab .section-heading p a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.methodology-tab .section-heading p a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-topics.card {
+  padding: 0;
+}
+
+.method-topics > .method-topic {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.method-topics > .method-topic + .method-topic {
+  border-top: 1px solid var(--card-border);
+}
+
+.method-topic > .disclosure-toggle {
+  padding: 14px 0;
+}
+
+.method-topic .disclosure-title {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-topic > .disclosure-toggle:hover .disclosure-title {
+  color: var(--pe-teal-700);
+}
+
+.method-topic .disclosure-content {
+  padding: 0 0 20px;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-topic .disclosure-content > .method-more:first-child,
+.method-topic .disclosure-content > .method-lead:first-child {
+  margin-top: 0;
+}
+
+.method-topic .disclosure-content > .method-more:first-child {
+  margin-bottom: 12px;
+}
+
+.method-topic .disclosure-content a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.method-topic .disclosure-content a:hover {
+  text-decoration-color: currentColor;
+}
+
+.method-topic .method-details-title:first-child {
+  margin-top: 0;
+}
+
+/* Terms used on the charts: term and one line, scannable */
+.method-glossary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.method-glossary-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.3fr) minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 7px 0;
+}
+
+.method-glossary-row + .method-glossary-row {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.method-glossary-row dt {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-glossary-row dd {
+  margin: 0;
+}
+
+/* A term linked to from a chart: briefly marked when it is the address's target */
+.method-glossary-row:target {
+  background: var(--pe-teal-50);
+}
+
+@media (max-width: 599px) {
+  .method-glossary-row {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
   }
 }
