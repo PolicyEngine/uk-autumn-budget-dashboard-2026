@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import GrowthWithMeasuresCard, { WITH_MEASURES_TITLE, clearGrowthWithMeasuresCache } from "./GrowthWithMeasuresCard";
 import { clearOutlookCache } from "../../utils/livingStandards/outlook";
 import { MeasureCatalogueProvider } from "../../utils/measureCatalogue";
-import { PACKAGE_NOT_IN_FILE } from "../../utils/incomePosition";
+import { NO_PACKAGE_PUBLISHED, PACKAGE_NOT_IN_FILE } from "../../utils/incomePosition";
 
 const PUBLIC = join(__dirname, "..", "..", "..", "public", "data");
 const OUTLOOK = readFileSync(join(PUBLIC, "living_standards_outlook.json"), "utf8");
@@ -89,8 +89,9 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(screen.queryByText(/Difference from current law/)).toBeNull();
   });
 
-  it("refuses when no package is published at all", async () => {
+  it("refuses when no package is published at all, saying that rather than blaming the file", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />);
-    expect(await screen.findByText(PACKAGE_NOT_IN_FILE)).toBeTruthy();
+    expect(await screen.findByText(NO_PACKAGE_PUBLISHED)).toBeTruthy();
+    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
   });
 });

@@ -6,14 +6,14 @@
 // this links back.
 //
 // The run that stands for the selection is the one the household position
-// card uses (distributionRunFor): a single measure's own run, else the
+// card uses (distributionRunOf): a single measure's own run, else the
 // package's, with a note when only part of the package is selected.
 
 import { useEffect, useState } from "react";
 import ViewCard from "./ViewCard";
 import useQuintileGrowthView from "./sections/DecileGrowthSection";
 import { useOutlook } from "./useOutlook";
-import { PACKAGE_NOT_IN_FILE, distributionRunOf, hasRun } from "../../utils/incomePosition";
+import { distributionRunOf, hasRun, missingPackageNote } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { GROWTH_WITH_MEASURES_FILE, changesNothing, parseGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
 import { defaultRange, rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
@@ -109,9 +109,7 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
               <p>
                 {noEffect
                   ? "The selected measures do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
-                  : run.package && !hasRun(rows, run.reformId)
-                    ? PACKAGE_NOT_IN_FILE
-                    : "There are no results for this selection."}
+                  : missingPackageNote(run, rows) || "There are no results for this selection."}
               </p>
             </div>
           </div>

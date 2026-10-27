@@ -14,7 +14,6 @@ import {
   decilePercents,
   describePosition,
   distributionRunOf,
-  hasRun,
   householdPosition,
   incomeAt,
   logEdges,
@@ -26,7 +25,7 @@ import {
   positionSummary,
   percentileOn,
   lowerCount,
-  PACKAGE_NOT_IN_FILE,
+  missingPackageNote,
   PLACE_MEANING,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
@@ -701,9 +700,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           <span className="title-text">{title}</span>
         </h3>
         <p className="single-year-quiet">
-          {distribution.status === "ready" && run.package && !hasRun(distribution.rows, run.reformId)
-            ? PACKAGE_NOT_IN_FILE
-            : "The UK income distribution is not available for this year."}
+          {(distribution.status === "ready" && missingPackageNote(run, distribution.rows)) ||
+            "The UK income distribution is not available for this year."}
         </p>
       </div>
     );

@@ -116,6 +116,21 @@ export function hasRun(rows, reformId) {
 export const PACKAGE_NOT_IN_FILE =
   "Results for the selected policies together are not available yet: this file holds a different set of policies, so it is not used.";
 
+/** The same, when the manifest publishes no combined run of the measures at all. */
+export const NO_PACKAGE_PUBLISHED =
+  "Results for the selected policies together are not available yet: no combined run of them has been published.";
+
+/**
+ * The note a card shows in place of the package's figures, or null: the
+ * package's run is wanted (two or more measures) and the file has no rows
+ * for it, either because none is published (`reformId` null) or because the
+ * file holds another package.
+ */
+export function missingPackageNote(run, rows) {
+  if (!run?.package || hasRun(rows, run.reformId)) return null;
+  return run.reformId ? PACKAGE_NOT_IN_FILE : NO_PACKAGE_PUBLISHED;
+}
+
 /** One curve, sorted by percentile: [{ percentile, income }]. */
 export function curveOf(rows, { reformId, year, side }) {
   return rows

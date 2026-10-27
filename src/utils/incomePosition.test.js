@@ -6,6 +6,9 @@ import {
   distributionRunFor,
   distributionRunOf,
   hasRun,
+  missingPackageNote,
+  NO_PACKAGE_PUBLISHED,
+  PACKAGE_NOT_IN_FILE,
   equivalenceFactor,
   householdPosition,
   ordinal,
@@ -161,6 +164,13 @@ describe("distributionRunOf", () => {
     expect(hasRun(rows, "a")).toBe(true);
     expect(hasRun([...rows, { reformId: KEY }], KEY)).toBe(true);
     expect(hasRun(rows, null)).toBe(false);
+  });
+  it("names why the package's rows are missing: another package in the file, or none published", () => {
+    const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
+    expect(missingPackageNote({ reformId: KEY, package: true }, rows)).toBe(PACKAGE_NOT_IN_FILE);
+    expect(missingPackageNote({ reformId: null, package: true }, rows)).toBe(NO_PACKAGE_PUBLISHED);
+    expect(missingPackageNote({ reformId: KEY, package: true }, [...rows, { reformId: KEY }])).toBeNull();
+    expect(missingPackageNote({ reformId: "a", package: false }, rows)).toBeNull();
   });
 });
 
