@@ -55,7 +55,6 @@ CANDIDATES = (
     "domestic_electricity_zero_vat",
     "threshold_freeze_2031_32",
     "plan_2_threshold_unfreeze",
-    "carers_allowance_earnings_taper",
     "lha_unfreeze_2027",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
@@ -65,7 +64,6 @@ NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
-    "carers_allowance_earnings_taper",
     "lha_unfreeze_2027",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
@@ -78,6 +76,10 @@ WITHDRAWN = {
     "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
     # Withdrawn the same evening, when Vahid chose the ten candidates
     "road_fuel_vat_cut": reforms._create_road_fuel_vat_cut,
+    # Its cells by decile rest on fewer than 10 survey households (#263)
+    "carers_allowance_earnings_taper": (
+        reforms._create_carers_allowance_earnings_taper
+    ),
 }
 OLD_PLACEHOLDERS = (
     "two_child_limit",
@@ -125,18 +127,18 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_ten_candidates():
+def test_the_package_is_the_nine_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 10
-    assert len(reforms._MEASURE_FACTORIES) == 10
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
+    assert len(reforms._MEASURE_FACTORIES) == 9
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--ab77fb6718bca371"
+    assert key == "combined--b8648f2b17522f3e"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All ten candidate measures")
+    assert description.startswith("All nine candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -995,14 +997,6 @@ FIRST_YEARS = {
             "student_loan_balance": 60_000,
             "student_loan_repayments": 500,
         },
-        {},
-    ),
-    # £11,000 / 52 = £211.53 a week, above the £204 limit (not uprated in
-    # the engine) and below the personal allowance and primary threshold.
-    "carers_allowance_earnings_taper": (
-        2030,
-        "carers_allowance",
-        {"care_hours": 35, "employment_income": 11_000},
         {},
     ),
     # A private renter in the North West on £15,000 of rent: the LHA rate

@@ -387,7 +387,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });
 
-  it("draws the real file's ten measures each their own way", () => {
+  it("draws the real file's nine measures each their own way", () => {
     const cases = [
       ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "cost", ".pchg-svg"],
       ["state_pension_income_tax_protection", "State Pension income tax protection", "cost", ".pchg-svg"],
@@ -395,7 +395,6 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "revenue", ".pchg-table"],
       ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5%0%−5 points"],
-      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "cost", ".pchg-svg"],
       ["lha_unfreeze_2027", "Local Housing Allowance unfrozen", "cost", ".pchg-ba"],
       ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "cost", ".pchg-svg"],
       ["unearned_income_rates_up", "Dividend, savings and property income tax up", "revenue", ".pchg-ba", "10.75%12.75%+2 points"],

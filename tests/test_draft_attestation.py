@@ -15,7 +15,6 @@ SCRIPT = (
 HAND_WRITTEN = (
     reforms.PLAN_2_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
-    reforms.CARERS_ALLOWANCE_TAPER_ID,
 )
 
 
@@ -75,22 +74,19 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_ten_package_reason_names_its_three_hand_written_members(
+def test_the_nine_package_reason_names_its_two_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    assert key == "combined--ab77fb6718bca371"
+    assert key == "combined--b8648f2b17522f3e"
     record = drafted(key, members)
     assert record["measure_id"] == key
-    assert (
-        "hand-written carers_allowance_earnings_taper and "
-        "plan_2_threshold_unfreeze and " in record["reason"]
-    )
+    assert "hand-written plan_2_threshold_unfreeze and " in record["reason"]
     assert reforms.STATE_PENSION_ALLOWANCE_ID in record["reason"]
-    assert reforms.CARERS_ALLOWANCE_TAPER_ID in record["reason"]
+    assert reforms.CARERS_ALLOWANCE_TAPER_ID not in record["reason"]
     assert reforms.EMPLOYER_NI_ID not in record["reason"]
     assert record["checker"] == record["second"] == record["released_at"] == ""
 

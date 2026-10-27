@@ -164,9 +164,6 @@ DECLARED = {
     "threshold_freeze_2031_32": {"income tax", "National Insurance"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
-    # A benefit's entitlement test; the allowance is taxable, but its
-    # rules are unchanged.
-    "carers_allowance_earnings_taper": set(),
     # A benefit's housing cost cap.
     "lha_unfreeze_2027": set(),
     "employer_nics_secondary_threshold_raise": {"National Insurance"},

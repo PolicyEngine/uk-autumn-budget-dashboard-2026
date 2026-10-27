@@ -640,9 +640,12 @@ def _create_unearned_income_rates_up() -> Reform:
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
 # The candidate set Vahid chose on the evening of 27 October 2026 (#222):
-# every registered measure, ten. Withdrawn, so in neither the package nor
+# every registered measure, nine. Withdrawn, so in neither the package nor
 # the registry (``_MEASURE_FACTORIES``), and run or published by no default
-# command: the road fuel VAT cut (``FUEL_VAT_ID``) that evening, and
+# command: the Carer's Allowance earnings taper
+# (``CARERS_ALLOWANCE_TAPER_ID``; its cells by decile rest on fewer than
+# 10 survey households, #263) and the road fuel VAT cut (``FUEL_VAT_ID``)
+# that evening, and
 # earlier that day the Business Asset Disposal Relief cut (``BADR_ID``) and
 # the employer NI relief for under-25s (``EMPLOYER_NI_ID``). Their
 # factories stay above, unregistered. Considered that evening and left out:
@@ -661,7 +664,6 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     ELECTRICITY_VAT_ID,
     THRESHOLD_FREEZE_ID,
     PLAN_2_ID,
-    CARERS_ALLOWANCE_TAPER_ID,
     LHA_UNFREEZE_ID,
     EMPLOYER_NI_THRESHOLD_ID,
     UNEARNED_INCOME_RATES_ID,
@@ -674,7 +676,6 @@ _MEASURE_FACTORIES = (
     _create_domestic_electricity_zero_vat,
     _create_threshold_freeze_2031_32,
     _create_plan_2_threshold_unfreeze,
-    _create_carers_allowance_earnings_taper,
     _create_lha_unfreeze_2027,
     _create_employer_nics_secondary_threshold_raise,
     _create_unearned_income_rates_up,
@@ -698,7 +699,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All ten candidate measures simulated together: "
+            "All nine candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -746,7 +747,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the ten candidate measures."""
+    """The combined package, then the nine candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 

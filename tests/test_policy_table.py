@@ -203,13 +203,14 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_ten_package_measures_only(document):
+def test_the_table_covers_the_nine_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert len(document["measures"]) == 10
+    assert len(document["measures"]) == 9
+    assert registry.CARERS_ALLOWANCE_TAPER_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
     assert registry.BADR_ID not in document["measures"]
     assert registry.EMPLOYER_NI_ID not in document["measures"]
@@ -254,7 +255,6 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "domestic_electricity_zero_vat": "switch",
         "threshold_freeze_2031_32": "table",
         "plan_2_threshold_unfreeze": "path",
-        "carers_allowance_earnings_taper": "path",
         "lha_unfreeze_2027": "before-after",
         "employer_nics_secondary_threshold_raise": "path",
         "unearned_income_rates_up": "before-after",

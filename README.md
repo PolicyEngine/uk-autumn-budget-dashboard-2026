@@ -38,12 +38,11 @@ The list on `main` today:
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
 | `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 (hand-written) |
-| `carers_allowance_earnings_taper` | Carer's Allowance withdrawn £1 for £1 above the £204 weekly earnings limit, from 2030-31 (hand-written) |
 | `lha_unfreeze_2027` | Local Housing Allowance re-set to the 30th percentile of rents each April from 2027 |
 | `employer_nics_secondary_threshold_raise` | Employer NI secondary threshold back to £9,100 from April 2027 |
 | `unearned_income_rates_up` | Dividend, savings and property income tax rates up 2 points from April 2027 |
 
-These ten are the combined package (`autumn_budget_2026_combined`, key `combined--ab77fb6718bca371`), chosen on the evening of 27 October 2026. Withdrawn and not registered: Business Asset Disposal Relief restricted and employer NI relief for under-25s (27 October), and the road fuel VAT cut (that evening).
+These nine are the combined package (`autumn_budget_2026_combined`, key `combined--b8648f2b17522f3e`), chosen on the evening of 27 October 2026. Withdrawn and not registered: Business Asset Disposal Relief restricted and employer NI relief for under-25s (27 October), and the road fuel VAT cut and the Carer's Allowance earnings taper (that evening; the taper's cells by decile rest on fewer than 10 survey households, #263).
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 
