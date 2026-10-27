@@ -62,13 +62,13 @@ describe("OBRDumbbellChart", () => {
     ]);
   });
 
-  it("says 'not yet published' for a missing OBR figure instead of plotting zero", () => {
+  it("says 'not in the official costings' for a missing official figure instead of plotting zero", () => {
     const { container } = render(
       <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
     );
     const row = container.querySelector('[data-policy="salary_sacrifice_cap"]');
     expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe(
-      "Official costing not yet published",
+      "Not in the official costings",
     );
     expect(row.querySelector(".obr-dumbbell-dot.obr")).toBeNull();
     expect(row.querySelector(".obr-dumbbell-dot.pe")).not.toBeNull();

@@ -153,7 +153,7 @@ describe("the OBR comparison's chart and table switch", () => {
 });
 
 describe("the OBR comparison at 2031-32", () => {
-  it("plots PolicyEngine's 2031-32 figure on the dumbbell, with the official costing not yet published", async () => {
+  it("plots PolicyEngine's 2031-32 figure on the dumbbell, with no official costing for that year", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -180,7 +180,7 @@ describe("the OBR comparison at 2031-32", () => {
     expect(row.querySelectorAll(".obr-dumbbell-dot.pe")).toHaveLength(1);
     expect(row.querySelectorAll(".obr-dumbbell-dot.obr")).toHaveLength(0);
     expect(row).toHaveTextContent("−£3.6bn");
-    expect(row).toHaveTextContent("Official costing not yet published");
+    expect(row).toHaveTextContent("Not in the official costings");
   });
 
   it("reads 'Not yet published' when no file covers 2031-32, never £0", async () => {

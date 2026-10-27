@@ -390,7 +390,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
           "label",
         ),
         missingLabel(
-          pePart ? "Official costing not yet published" : "PolicyEngine not yet published",
+          pePart ? "Not in the official costings" : "PolicyEngine not yet published",
           otherSide,
           cx + (otherSide === "right" ? 2 : -2),
           cy,
@@ -452,7 +452,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
     const summary = `${row.name}: PolicyEngine ${
       pePart ? formatBn(row.pe) : "not yet published"
-    }, OBR ${obrPart ? formatBn(row.obr) : "not yet published"}`;
+    }, official ${obrPart ? formatBn(row.obr) : "none"}`;
 
     const tooltip = (
       <TooltipRows
@@ -551,7 +551,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
                   (row) =>
                     `${row.name}: PolicyEngine ${
                       row.pe !== null ? formatBn(row.pe) : "not yet published"
-                    }, OBR ${row.obr !== null ? formatBn(row.obr) : "not yet published"}`,
+                    }, official ${row.obr !== null ? formatBn(row.obr) : "none"}`,
                 )
                 .join("; ")}.`}
               style={{ fontFamily: "inherit", display: "block" }}
