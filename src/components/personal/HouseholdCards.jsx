@@ -5,7 +5,6 @@ import {
   Baby,
   BriefcaseBusiness,
   Car,
-  Check,
   ChevronDown,
   LayoutGrid,
   GraduationCap,
@@ -389,11 +388,6 @@ export default function HouseholdCards({
               >
                 <span className="household-card-name">{example.label}</span>
               </button>
-              {pressed && (
-                <span className="household-card-check" aria-hidden="true">
-                  <Check size={14} strokeWidth={2.6} />
-                </span>
-              )}
               <span className="household-card-result">
                 {figures ? (
                   <>
@@ -505,11 +499,6 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
           )}
         </span>
       </span>
-      {selected && (
-        <span className="household-card-check" aria-hidden="true">
-          <Check size={14} strokeWidth={2.6} />
-        </span>
-      )}
     </button>
   );
 }
@@ -602,7 +591,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 }}
               >
                 <span className="household-chip-icon" aria-hidden="true">
-                  {isSelected ? <Check size={13} strokeWidth={2.6} /> : <item.Icon size={14} strokeWidth={1.9} />}
+                  <item.Icon size={14} strokeWidth={1.9} />
                 </span>
                 <span className="household-chip-name">
                   {item.id === null ? (

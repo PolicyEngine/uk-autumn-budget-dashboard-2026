@@ -909,25 +909,6 @@
   background: var(--card-ink);
 }
 
-/* Top right: a tick on the chosen card */
-.household-card-check {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-}
-
-.household-card-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: var(--pe-surface);
-  background: var(--card-ink);
-  border-radius: 50%;
-  animation: household-check-in 0.22s ease-out;
-}
-
 @keyframes household-check-in {
   from {
     opacity: 0;
@@ -1445,13 +1426,6 @@
   transform: rotate(180deg);
 }
 
-.household-yours .household-card-check {
-  top: 14px;
-  right: 14px;
-  color: var(--pe-teal-800);
-  background: var(--band-ink);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .household-yours,
   .household-yours-result {
@@ -1573,16 +1547,6 @@
     line-clamp: 1;
     min-height: var(--card-line);
     font-size: 1rem;
-  }
-
-  /* Clear of the tick in the corner */
-  .household-card.is-selected .household-card-name {
-    padding-right: 28px;
-  }
-
-  .household-card-check {
-    top: 14px;
-    right: 14px;
   }
 
   .household-card-result {
@@ -2152,8 +2116,7 @@
     transition: none;
   }
 
-  .household-card,
-  .household-card-check {
+  .household-card {
     animation: none;
   }
 
