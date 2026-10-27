@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import YearSlider from "./YearSlider";
 
 const open = () =>
-  fireEvent.click(screen.getByRole("button", { name: "Year, 2029-30" }));
+  fireEvent.click(screen.getByRole("button", { name: "Year 2029-30" }));
 
 describe("YearSlider", () => {
   it("opens a list of the choosable years, from 2027-28 (not 2026-27), the chosen one selected", () => {
@@ -43,16 +43,16 @@ describe("YearSlider", () => {
       key: "Escape",
     });
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Year, 2029-30" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Year 2029-30" })).toHaveFocus();
   });
 
   it("plays from the list, and the pill pauses it", () => {
     render(<YearSlider selectedYear={2029} onYearChange={() => {}} />);
     open();
     fireEvent.click(screen.getByRole("button", { name: "▶ Play through years" }));
-    const pause = screen.getByRole("button", { name: "Playing, 2029-30: pause" });
+    const pause = screen.getByRole("button", { name: "Playing 2029-30: pause" });
     expect(pause).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(pause);
-    expect(screen.getByRole("button", { name: "Year, 2029-30" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Year 2029-30" })).toBeInTheDocument();
   });
 });

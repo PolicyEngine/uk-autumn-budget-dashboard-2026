@@ -1378,7 +1378,7 @@ def test_no_adapter_reports_a_receipt_model_defect_as_a_refusal(
     config = DataConfig(
         years=[2027, 2028],
         baseline_parameter_changes=(
-            {"gov.hmrc.income_tax.rates.uk[2].rate": {"2027": 0.46}}
+            {"gov.hmrc.income_tax.rates.uk[1].rate": {"2027": 0.41}}
             if configured
             else None
         ),

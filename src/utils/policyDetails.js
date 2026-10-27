@@ -44,7 +44,7 @@ export const POLICY_DETAILS = [
     sentence: "deferring the fuel duty rises",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
       "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
     starts: "January 2027",
@@ -56,7 +56,7 @@ export const POLICY_DETAILS = [
     ],
     stepsLabel: "5p restored",
     details:
-      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the measure costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed.",
+      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the policy costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -69,14 +69,14 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose only income is the State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
     summary:
       "People whose only income is the full new State Pension pay no income tax.",
     starts: "April 2027",
     type: "Income tax",
     inForce: { from: "2027-04" },
     details:
-      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is an assumption made before the Budget.",
+      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose only income is the State Pension, savings interest aside. Any other income, such as a private pension, takes the allowance away. Based on reporting on 26 October 2026; the mechanism is an assumption made before the Budget.",
   },
   {
     id: "warm_home_discount_top_up",
@@ -106,7 +106,7 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
-    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
+    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
     summary:
       "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to March 2028.",
     starts: "October 2026",
@@ -114,7 +114,7 @@ export const POLICY_DETAILS = [
     inForce: { from: "2026-10", to: "2028-03" },
     ends: "March 2028",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%.",
+      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
@@ -133,7 +133,7 @@ export const POLICY_DETAILS = [
     type: "National Insurance",
     inForce: { from: "2027-04" },
     details:
-      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
+      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the policy changes revenue but not household incomes, and shows no change in the household charts.",
   },
   {
     id: "threshold_freeze_2031_32",
@@ -163,7 +163,7 @@ export const POLICY_DETAILS = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before.",
+      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before. The figure is the extra tax on each year's disposals, most of which is paid in the January after the tax year ends.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
@@ -198,7 +198,7 @@ export const POLICY_DETAILS = [
     type: "Student loans",
     inForce: { from: "2027-04" },
     details:
-      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey.",
+      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey. The revenue figure is the change in graduates' cash repayments each year, not the effect on public sector borrowing, which treats changes to loan terms differently.",
     source: {
       label: "Repaying your student loan",
       href: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",

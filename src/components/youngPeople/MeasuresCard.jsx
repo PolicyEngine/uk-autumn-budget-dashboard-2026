@@ -6,7 +6,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, noHouseholdChange } from "../../utils/chartTheme";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
@@ -14,6 +14,7 @@ import { pensionerMeasures } from "../pensioners/pensionersData";
 import { NoEffectList } from "../personal/PolicyBars";
 import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { noEffectRow } from "../../utils/legendMembership";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
@@ -200,12 +201,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's About this chart, each with its colour. No reason
-  // per measure: a list of them by id would be a measure list of the page's
-  // own (the catalogue carries none)
+  // No effect: in the card's About this chart, each by its short name, and
+  // when it is in force where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: byId.get(policy.id)?.color,
+    ...noEffectRow(byId.get(policy.id) ?? policy, Number(selectedYear)),
   }));
   const csvText = () =>
     buildChartCsv({
@@ -226,6 +226,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     exportOptions,
     csv: csvText,
     published: published && shown.length > 0,
+    // The dumbbell is drawn in HTML, not as a Recharts SVG, so there is no
+    // chart image to export: the CSV only
+    image: false,
   };
 
   return (
@@ -280,7 +283,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
-              ? `None of the selected policies changes household incomes in ${yearLabel}.`
+              ? noHouseholdChange(yearLabel)
               : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
           </div>
         )}

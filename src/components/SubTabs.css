@@ -9,7 +9,7 @@
 
 .sub-tabs-band {
   position: sticky;
-  top: calc(var(--title-row-height) + var(--view-tabs-height));
+  top: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
   /* Under the view tabs, above the charts */
   z-index: 1085;
   /* The tab panel's top padding is the band's place: it sits flush under
@@ -18,9 +18,6 @@
   padding: 0 max(40px, calc((100vw - 1120px) / 2));
   background: var(--pe-surface);
   border-bottom: 1px solid var(--card-border);
-  /* Choosing a sub-tab brings the panel's top back to just under the band;
-     SubTabs.jsx reads this: the height of the bars above it */
-  scroll-margin-top: calc(var(--title-row-height) + var(--view-tabs-height));
 }
 
 /* Stuck, the view tabs and the band are one compact bar */
@@ -34,7 +31,7 @@
   display: flex;
   width: fit-content;
   max-width: calc(100% - var(--view-tab-x, 0px));
-  gap: 4px;
+  gap: var(--tab-gap, 8px);
   margin: 0 0 0 var(--view-tab-x, 0px);
   padding: 0;
   /* A narrow screen scrolls the row, never the page */
@@ -70,15 +67,15 @@
   pointer-events: none;
 }
 
-/* Its underline, as the chosen view tab's, a step thinner */
+/* Its underline, the chosen view tab's */
 .sub-tabs-pill::after {
   content: "";
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: var(--tab-underline-inset, 8px);
+  right: var(--tab-underline-inset, 8px);
   bottom: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
+  height: var(--tab-underline, 3px);
+  border-radius: 3px 3px 0 0;
   background: var(--band-teal);
 }
 
@@ -95,13 +92,16 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--tab-icon-gap, 8px);
   min-width: 0;
-  min-height: 44px;
-  padding: 0 16px;
+  /* The view tabs' height, font and weight (globals.css --tab-*); the
+     fallbacks hold if globals.css arrives late */
+  height: var(--tab-row-height, var(--view-tabs-height, 48px));
+  padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: var(--tab-font-size, 1rem);
+  /* One weight for every tab, so choosing one never moves the others */
+  font-weight: var(--tab-font-weight, 600);
   line-height: 1.2;
   white-space: nowrap;
   color: var(--c-subtab-muted);
@@ -109,11 +109,7 @@
   border: none;
   border-radius: 0;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, min-height 180ms ease-out;
-}
-
-.app[data-tabs-stuck] .sub-tab {
-  min-height: 38px;
+  transition: color 0.15s ease, background-color 0.15s ease, height 180ms ease-out;
 }
 
 .sub-tab-icon {
@@ -133,7 +129,6 @@
 }
 
 .sub-tab[aria-selected="true"] {
-  font-weight: 600;
   color: var(--band-teal);
 }
 
@@ -161,15 +156,10 @@
   }
 
   .sub-tab {
-    padding: 0 14px;
-    font-size: 0.875rem;
+    font-size: var(--tab-font-size, 0.9375rem);
   }
 
   /* Stuck on a phone: icons only, the names kept for assistive tech */
-  .app[data-tabs-stuck] .sub-tab {
-    padding: 0 12px;
-  }
-
   .app[data-tabs-stuck] .sub-tab-label {
     position: absolute;
     width: 1px;

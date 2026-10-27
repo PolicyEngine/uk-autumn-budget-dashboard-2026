@@ -5,7 +5,6 @@ import {
   Baby,
   BriefcaseBusiness,
   Car,
-  Check,
   ChevronDown,
   LayoutGrid,
   GraduationCap,
@@ -19,8 +18,8 @@ import SectionHeading from "../SectionHeading";
 import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
-import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
-import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { DISTRIBUTION_FILE, curveOf, distributionRunOf, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
+import { catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
@@ -115,11 +114,7 @@ export function cardFigures(example, byYear, year, catalogue = null) {
  */
 export function examplePercentile(example, point, { year, policies, rows, catalogue }) {
   if (!rows || !point || !Number.isFinite(point.before) || !Number.isFinite(point.after)) return null;
-  const run = distributionRunFor(
-    policies,
-    catalogue?.displayable?.map((measure) => measure.id) ?? [],
-    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
   const before = curveOf(rows, { reformId: run.reformId, year, side: "baseline" });
   const after = curveOf(rows, { reformId: run.reformId, year, side: "reform" });
   if (before.length < 2 || after.length < 2) return null;
@@ -132,7 +127,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`${percentile} in 100 people in the UK have a lower household income than this household, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <Tip content={`${percentile} in 100 people in the UK live in a household with a lower income than this one, adjusted for household size (${yearLabel}, after the selected policies)`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -304,7 +299,7 @@ export default function HouseholdCards({
   const positionPolicies = fill?.reduced ?? figurePolicies;
   // What the figures are with, on hover (no line above the cards): every
   // measure (the file), the selected ones, or those the calculator supports
-  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
+  const figuresWith = !fill ? "every policy" : fill.reduced ? "the policies the calculator supports" : "the selected policies";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -319,23 +314,21 @@ export default function HouseholdCards({
           households" beside it once a household is chosen */}
       <div className="household-cards-head">
         <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
-        {/* Open again: back to the strip; folded, the button is at the
-            strip's start, where the eye begins */}
-        {chosen && !folded && (
+        {/* At the end of the heading row, a teal button: plain to see */}
+        {chosen && (
           <button
             type="button"
-            className="household-cards-toggle"
-            aria-expanded
+            className="household-cards-back"
+            aria-expanded={!folded}
             aria-controls="household-cards-grid"
-            onClick={() => setShowAll(false)}
+            onClick={() => setShowAll((open) => !open)}
           >
-            <LayoutGrid size={14} strokeWidth={2} aria-hidden="true" />
-            Show fewer
+            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
+            {folded ? "Show all households" : "Show fewer"}
           </button>
         )}
       </div>
       <HouseholdStrip
-        onShowAll={() => setShowAll(true)}
         examples={examples}
         value={value}
         presets={presets}
@@ -395,11 +388,6 @@ export default function HouseholdCards({
               >
                 <span className="household-card-name">{example.label}</span>
               </button>
-              {pressed && (
-                <span className="household-card-check" aria-hidden="true">
-                  <Check size={14} strokeWidth={2.6} />
-                </span>
-              )}
               <span className="household-card-result">
                 {figures ? (
                   <>
@@ -468,6 +456,8 @@ export default function HouseholdCards({
  * a tick, as an example is); pressing it again closes it.
  */
 function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
+  // While the measures are provisional, they are the selected measures, not the Budget
+  const provisional = catalogueProvisional(useMeasureCatalogue());
   const calculated = Number.isFinite(change);
   const action = formOpen ? "Hide your answers" : calculated ? "Change your answers" : "Enter your household";
   return (
@@ -485,7 +475,10 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         {/* The card's name, for the button's: the title says it on screen */}
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
+        <span className="household-yours-lead">
+          {provisional ? "See how the selected policies change your income" : "See how the Budget changes your income"}
+          {", in about 30 seconds."}
+        </span>
       </span>
       <span className="household-yours-side">
         {calculated && (
@@ -506,11 +499,6 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
           )}
         </span>
       </span>
-      {selected && (
-        <span className="household-card-check" aria-hidden="true">
-          <Check size={14} strokeWidth={2.6} />
-        </span>
-      )}
     </button>
   );
 }
@@ -519,12 +507,12 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * The cards folded: a chip for each card, in the cards' order and grid
  * (Your household the width of the grid, then the eight examples below
  * it), each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household first (choosing it opens
+ * colour (fill and border). One listbox, Your household first (choosing it opens
  * the form, which it controls; choosing it again while chosen closes or
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
  */
-function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose, onShowAll = null }) {
+function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
   const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
@@ -566,23 +554,17 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       activate(items[focus]);
     }
   };
+  const chipName = (item, figure) => {
+    const shown = item.id === null ? "Your household" : item.short ?? item.label;
+    const amount = figure ? `, ${figure}${figure === "No change" ? "" : " a year"}` : item.id === null ? ", enter your own" : "";
+    const full = item.id !== null && item.label && item.label !== shown ? `: ${item.label}` : "";
+    return `${shown}${amount}${full}`;
+  };
   const figureText = (change) =>
     Number.isFinite(change) ? (Math.round(change) === 0 ? "No change" : signedMoney(change)) : null;
   return (
     <div className={`household-strip-fold ${shown ? "is-open" : ""}`.trim()} aria-hidden={!shown || undefined} inert={!shown || undefined}>
       <div className="household-strip-fold-inner">
-        {onShowAll && (
-          <button
-            type="button"
-            className="household-cards-back"
-            aria-expanded={false}
-            aria-controls="household-cards-grid"
-            onClick={onShowAll}
-          >
-            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
-            Show all households
-          </button>
-        )}
         <ul className="household-strip" role="listbox" aria-label="Households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
           {items.map((item, index) => {
             const isSelected = index === selected;
@@ -596,7 +578,9 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 role="option"
                 aria-selected={isSelected}
                 aria-controls={item.id === null ? formId : undefined}
-                aria-label={figure ? `${item.label}, ${figure}${figure === "No change" ? "" : " a year"}` : item.label}
+                // The name starts with the chip's visible text (WCAG 2.5.3, label
+                // in name), then the full description where the chip shortens it
+                aria-label={chipName(item, figure)}
                 tabIndex={index === focus ? 0 : -1}
                 className={`household-chip ${item.id === null ? "is-yours" : ""}`.trim()}
                 title={item.label}
@@ -607,7 +591,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 }}
               >
                 <span className="household-chip-icon" aria-hidden="true">
-                  {isSelected ? <Check size={13} strokeWidth={2.6} /> : <item.Icon size={14} strokeWidth={1.9} />}
+                  <item.Icon size={14} strokeWidth={1.9} />
                 </span>
                 <span className="household-chip-name">
                   {item.id === null ? (

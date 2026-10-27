@@ -5,7 +5,7 @@
 // step closes the gap; the package total ends it. People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
-// throughout. Measures that move no one are one line in More info, not
+// throughout. Measures that move no one are one line in About this chart, not
 // empty rows. A run that does not carry the chosen measure (one written
 // before the poverty and inequality measures) is never a step of 0: the
 // card then shows the headline measure, and says so.
@@ -22,21 +22,59 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
-import { formatPp, outlookPopulation } from "../utils/povertyPeople";
+import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
-import { legendMembership } from "../utils/legendMembership";
+import { legendMembership, zeroForHouseholds } from "../utils/legendMembership";
+import { nestedItem } from "./InfoSections";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
 
-// Why the measures with no effect move no one: one sentence, true of every
-// such measure, not a reason per measure
-const NO_EFFECT_TEXT =
-  "They change prices, capital gains or employers' costs, which the income poverty is measured on leaves out, or move no one across the line this year.";
+// Why a policy with no effect on poverty moves no one, by what it changes:
+// [for one policy, for several]
+const PRICES = "prices, which the poverty measure's income leaves out";
+const NO_EFFECT_REASONS = {
+  prices: ["it changes " + PRICES, "they change " + PRICES],
+  gains: ["it taxes capital gains, which the poverty measure's income leaves out", "they tax capital gains, which the poverty measure's income leaves out"],
+  employer: ["it changes employers' costs, and wages are held fixed", "they change employers' costs, and wages are held fixed"],
+};
+const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
+
+/**
+ * The policies with no effect on poverty, grouped by why: "Fuel duty
+ * deferral — it changes prices, which the poverty measure's income leaves
+ * out". A policy whose reason is not known moves no one across the line in
+ * `year`. Returns [{names, text}], one per reason.
+ */
+export function noPovertyEffectGroups(zero, catalogue, year) {
+  const groups = new Map();
+  for (const m of zero) {
+    const measure = catalogue.byId?.get(m.id) ?? m;
+    const type = policyDetailsFor(measure)?.type;
+    const key = zeroForHouseholds(measure)
+      ? "employer"
+      : PRICE_TYPES.has(type)
+        ? "prices"
+        : type === "Capital gains tax"
+          ? "gains"
+          : "none";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m.name);
+  }
+  return [...groups].map(([key, names]) => {
+    const many = names.length > 1;
+    const text =
+      key === "none"
+        ? `${many ? "they move" : "it moves"} no one across the poverty line in ${year}`
+        : NO_EFFECT_REASONS[key][many ? 1 : 0];
+    const list = many ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+    return { names, text: `${list} — ${text}` };
+  });
+}
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -115,7 +153,7 @@ export function povertyWaterfall(measures, total, millions) {
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
     const x = toX(total);
-    steps.push({ id: "package", name: "All measures together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
+    steps.push({ id: "package", name: "All policies together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
@@ -165,7 +203,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
-    const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    const count = n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
     return `${count} ${way} ${who}`;
   };
   // Thousands with commas ("4,000"); the ticks are spaced so they never meet
@@ -200,7 +238,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
-    return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
@@ -208,34 +246,42 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const subjectOf = (step) => {
     const measure = catalogue.byId?.get(step.id);
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
-    return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
+    return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the policies, ${step.name}`;
   };
-  const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
+  const direction = (step) => (step.x > 0 ? "out of" : "into");
+  // Mid-sentence, the measure's own sentence form as it is published
+  // ("unfreezing the student loan threshold"), else its name
+  const inSentence = (step) => {
+    const measure = catalogue.byId?.get(step.id);
+    return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;
+  };
+  // Led by the package's total, then the measure that moves the most, its
+  // direction named only when it differs from the total's
   const summary = top ? (
     peopleMode ? (
-      <>
-        {subjectOf(top)} does most, {moves(top)}
-        {totalStep ? (
-          <>
-            ; all the measures together {totalStep.x > 0 ? "lift" : "push"} {about(totalStep)}
-            {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
-          </>
-        ) : (
-          "."
-        )}
-      </>
+      totalStep ? (
+        <>
+          All the policies together move {about(totalStep)} {who} {direction(totalStep)} poverty; {inSentence(top)} moves the most (
+          {about(top)}
+          {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
+        </>
+      ) : (
+        <>
+          {subjectOf(top)} moves {about(top)} {who} {direction(top)} poverty.
+        </>
+      )
     ) : (
       <>
         {top.name} moves the rate most, by {formatPp(top.pp).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}.
       </>
     )
   ) : (
-    <>No measure on its own moves anyone across this line in {year}.</>
+    <>No policy on its own moves anyone across this line in {year}.</>
   );
 
   return (
     <LsCard
-      title="Which measures move poverty"
+      title="Which policies move poverty"
       icon="bars"
       className="mp-card"
       period={year}
@@ -246,10 +292,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
         image: false,
         csv: () =>
           buildChartCsv({
-            title: `${metric.title} by measure, ${year}`,
+            title: `${metric.title} by policy, ${year}`,
             units: metric.csvUnits,
             columns: [
-              { key: "name", label: "Measure" },
+              { key: "name", label: "Policy" },
               { key: "pp", label: "Change (pp)", decimals: 4 },
               ...(peopleMode ? [{ key: "people", label: `Change in ${who} in poverty`, decimals: 0 }] : []),
             ],
@@ -268,24 +314,27 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           year={selectedYear}
           info={{
             how: [
-              `Each step is one selected measure modelled on its own, largest first; the package bar is all of them together.`,
+              "Each step is one selected policy modelled on its own, largest first.",
+              "The package bar is all of them together.",
               <>
-                Measures can reach the same households, so their separate effects need not add up to the package&apos;s
-                {interaction ? `: here they miss it by ${main(interaction)}, shown as the interaction step.` : "."}
+                Policies can reach the same households, so their own effects need not add up to the package&apos;s
+                {interaction ? `: the interaction step is the gap (${main(interaction)}).` : "."}
               </>,
             ],
             // The measures that move no one, and why, here rather than under the chart
             caveats: [
               read.fellBack && (
                 <span className="mp-fell-back">
-                  Not every measure shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
+                  Not every policy shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
                 </span>
               ),
-              zero.length > 0 && (
-                <span className="wf-none">
-                  <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
-                </span>
-              ),
+              zero.length > 0 &&
+                nestedItem(
+                  <strong>No effect on poverty:</strong>,
+                  // One reason: one sentence, with its full stop; several: bullets
+                  noPovertyEffectGroups(zero, catalogue, year).map((group, _, all) => (all.length === 1 ? `${group.text}.` : group.text)),
+                  "wf-none",
+                ),
             ],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty" },
           }}
@@ -293,7 +342,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       }
     >
       <div className="chart-plot">
-        <div ref={plotRef} className="wf" role="table" aria-label={`${metric.title} by measure, ${year}`}>
+        <div ref={plotRef} className="wf" role="table" aria-label={`${metric.title} by policy, ${year}`}>
           {steps.map((step, i) => {
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);

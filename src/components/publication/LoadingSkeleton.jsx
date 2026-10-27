@@ -17,7 +17,7 @@ export function SkeletonCard({ height = 260, label = null }) {
 }
 
 /** A view's placeholder: `cards` chart cards, announced once as loading. */
-export default function LoadingSkeleton({ cards = 2, height = 260, label = "Loading published measures…" }) {
+export default function LoadingSkeleton({ cards = 2, height = 260, label = "Loading published policies…" }) {
   return (
     <div className="skeleton-view" role="status" aria-busy="true">
       <span className="visually-hidden">{label}</span>

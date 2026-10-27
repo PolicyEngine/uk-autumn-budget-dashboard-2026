@@ -28,14 +28,14 @@ const pct = (v) => formatPct(round1(v));
 
 /**
  * The tile's lead: the change in the rate over the years compared, in
- * points of the one-decimal values ("No change", "Rises 0.1 points"). The
- * change leads because the model's levels sit below the official ones.
+ * points of the one-decimal values ("No change", "Rises 0.1pp"), written
+ * as the Who is in poverty card's chips write it. The change leads because
+ * the model's levels sit below the official ones.
  */
 export function povertyTileChange(a, b) {
   const d = Math.round((round1(b) - round1(a)) * 10) / 10;
   if (d === 0) return "No change";
-  const size = Math.abs(d).toFixed(1);
-  return `${d > 0 ? "Rises" : "Falls"} ${size} ${size === "1.0" ? "point" : "points"}`;
+  return `${d > 0 ? "Rises" : "Falls"} ${Math.abs(d).toFixed(1)}pp`;
 }
 
 /** The levels behind it, said small and as the model's own. */
@@ -52,9 +52,9 @@ function trendRows(projection, startYear, end) {
     .sort((a, b) => a.start - b.start);
 }
 
-/** The info tip: the measure, and why the levels sit below official figures. */
+/** The info tip: the measure, and that the levels sit below official figures. */
 const tileInfo = (measure) =>
-  `${povertyDefinition(measure)} The tile leads with the change: PolicyEngine's levels sit well below DWP's official rates because its data are reweighted to 2025 totals, so the levels are model estimates. Official rates are on the Poverty over time card.`;
+  `${povertyDefinition(measure)} The tile leads with the change, as the model's levels sit below DWP's official rates (shown on the Poverty over time card).`;
 
 export default function PovertyTiles({ data }) {
   const years = rangeYears(data);

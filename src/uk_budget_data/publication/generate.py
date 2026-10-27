@@ -8,14 +8,22 @@ members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
 still written. One that leaves out a scored year of an uprated amount
-(``uk_budget_data.scored_years``), or changes one of the engine's
-wealth-tax scales in its ``parameter_changes``, is refused the same way,
-before any simulation is built; one whose two built simulations differ in a
-wealth-tax scale (a modifier that edits it) is refused once they are built,
-before any figure is made. A measure or combined run the certified data
+(``uk_budget_data.scored_years``), changes one of the engine's wealth-tax
+scales in its ``parameter_changes``, or changes a parameter the engine
+charges in step with another without that other
+(``uk_budget_data.parameter_companions``), is refused the same way, before
+any simulation is built; one whose two built simulations differ in a
+wealth-tax scale, or in such a parameter but not its companion (a modifier
+that edits it), is refused once they are built, before any figure is made.
+A measure or combined run the certified data
 cannot cost (its run records a data limit) is still processed, since the
 limits are observed while it runs, but its artifact is receipt-only: it is
-listed as not computable and binds no figure, so no table is written.
+listed as not computable and binds no figure, so no table is written. A run
+whose decile tables have a cell resting on fewer than the floor of survey
+households (``disclosure_floor``) is written with a warning, and its
+receipt names the cells, so the gate never stages or shows it; under
+``UK_BUDGET_THIN_DECILES=refuse`` it is refused once its figures are made,
+before anything is written. The age table's thin cells are withheld.
 """
 
 import atexit
@@ -35,6 +43,12 @@ from uk_budget_data.measure_templates import (
     wealth_tax_refusal,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
+from uk_budget_data.parameter_companions import (
+    built_companion_gaps,
+    companion_gaps,
+    companion_refusal,
+)
+from uk_budget_data.publication import disclosure_floor
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
@@ -69,10 +83,14 @@ from uk_budget_data.scored_years import missing_scored_years
 
 @dataclass
 class GenerationReport:
-    """What a generation run wrote and what it refused."""
+    """What a generation run wrote and what it refused; on Modal, also
+    which runs failed in their containers (key to error) and the combined
+    runs not started because a measure failed (key to member ids)."""
 
     written: list[ArtifactRef] = field(default_factory=list)
     refused: dict[str, str] = field(default_factory=dict)
+    failed: dict[str, str] = field(default_factory=dict)
+    not_started: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _columns(rows: list[dict], table: str) -> list[dict]:
@@ -318,6 +336,12 @@ class ArtifactRun:
     # A combined run's members read from the manifest, by id, with the
     # revision each is bound at (``receipt.approved_revision``).
     member_revisions: Optional[dict] = None
+    # Whether a thin decile cell refuses the run, or is written with a
+    # warning (``disclosure_floor.refuses_thin_deciles``), as the process
+    # that planned the runs reads it: a worker or a Modal container does not
+    # share that process's environment. generate_artifacts always sets it; a
+    # run made any other way refuses.
+    refuse_thin_deciles: bool = True
 
 
 @dataclass
@@ -396,7 +420,7 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
     be receipted is refused, not raised; any other failure raises."""
     outcome = ArtifactOutcome(key=job.key)
     try:
-        reference, limited = _write_run(job)
+        reference, limited, warnings = _write_run(job)
     except ReceiptUnavailable as error:
         outcome.refused = error.reason
         outcome.progress.append(f"{job.key}: REFUSED: {error.reason}")
@@ -407,10 +431,11 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
         f"{job.key}: {'wrote' if reference.created else 'unchanged'} "
         f"{reference.path}{note if limited else ''}"
     )
+    outcome.progress.extend(f"{job.key}: WARNING: {w}" for w in warnings)
     return outcome
 
 
-def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
+def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     config = job.config
     reform, members = _run_reform(job)
     key = job.key
@@ -424,6 +449,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     _refuse_unscored_years(
         key, baseline_scenario, reform_scenario, config.years
     )
+    _refuse_companion_gaps(key, baseline_scenario, reform_scenario)
     # Built under data_limits.building: a modifier that reads a limited
     # input while its simulation is built carries it past the watch, so
     # the build is watched too.
@@ -434,6 +460,14 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
         job.build, job.dataset_path, reform_scenario
     )
     _refuse_wealth_tax_built(key, baseline, reformed)
+    _refuse_companion_built(
+        key,
+        baseline,
+        reformed,
+        config.years,
+        baseline_scenario,
+        reform_scenario,
+    )
     # What the code that differs reads is watched while the run makes the
     # figures; a measure the data cannot cost is then published as not
     # computable.
@@ -447,6 +481,11 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     # A measure the installed model mis-costs is held at provisional.
     held = _model_limits(
         baseline, reformed, baseline_scenario, reform_scenario
+    )
+    warnings, floor = (
+        ([], None)
+        if limits
+        else _apply_disclosure_floor(key, job, baseline, reformed, result)
     )
     configured_identity: list = []
 
@@ -492,6 +531,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
                 if job.modifier_templates is not None
                 else measure_templates_proof(reform, config, job.revision)
             ),
+            disclosure_floor=floor,
         )
         if job.argv is not None:
             inputs.generator_argv = job.argv
@@ -505,20 +545,142 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
         build_receipt,
         job.artifacts_root,
     )
-    return reference, bool(limits)
+    return reference, bool(limits), warnings
+
+
+# What the receipt records of the floor for a run whose simulations were
+# not built from a dataset (a household situation, or a stand-in in tests).
+NO_DATASET = (
+    "its simulations were not built from a dataset with tables by year, so "
+    "they name no survey households"
+)
+
+
+def _built_from_a_dataset(simulation) -> bool:
+    """Whether ``simulation`` was built from a dataset with tables by year,
+    as ``geography.dataset_tables`` reads them."""
+    dataset = getattr(simulation, "dataset", None)
+    return hasattr(dataset, "years") and hasattr(dataset, "__getitem__")
+
+
+def _certifiable(dataset_path: Optional[str]) -> bool:
+    """Whether a run on ``dataset_path`` could be certified, and so
+    approved: the bundle's default dataset (None), or the dataset the
+    bundle's certificate or default names, given by name or as a local copy
+    under that name. A run on any other dataset is uncertified, which the
+    gate never approves (``receipt.certificate_problems``)."""
+    if dataset_path is None:
+        return True
+    from policyengine.provenance.manifest import (
+        dataset_logical_name,
+        get_release_manifest,
+    )
+
+    manifest = get_release_manifest("uk")
+    names = {manifest.default_dataset}
+    if manifest.certified_data_artifact is not None:
+        names.add(manifest.certified_data_artifact.dataset)
+    return dataset_logical_name(str(dataset_path)) in names
+
+
+def _apply_disclosure_floor(
+    subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
+) -> tuple[list[str], Optional[dict]]:
+    """Hold a run's household tables to the floor of survey households
+    (``disclosure_floor``): withhold the age table's thin cells, return a
+    warning naming a thin decile cell (or, when the run was planned under
+    ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
+    refuse the run), and make the binned scatter count survey households
+    rather than records. Only for simulations built from a
+    dataset, whose household and person tables name the survey households;
+    any other run (a household situation, or a stand-in in tests) is
+    recorded as not checked (NO_DATASET). The certified-data job's real run
+    checks that a run on a dataset never records that.
+
+    A run whose survey households cannot be told apart is refused when its
+    data could be certified (:func:`_certifiable`). On any other data, such
+    as the tests' small enhanced FRS or the Modal smoke test's synthetic
+    file, it is written without the floor, with a warning: uncertified data
+    is never approved, so nothing made from it is shown.
+
+    Returns the warnings and what the receipt records of the floor
+    (``disclosure_floor.floor_record``). The gate shows no artifact whose
+    receipt lacks it (#208 review, finding 9)."""
+    if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
+        return [], disclosure_floor.floor_record(
+            {}, not_checked_because=NO_DATASET
+        )
+    from uk_budget_data.pipeline import scatter_survey_households
+
+    try:
+        survey = scatter_survey_households(baseline, job.dataset_path)
+    except ValueError as error:
+        if not _certifiable(job.dataset_path):
+            return [
+                "not held to the floor of survey households, which cannot "
+                f"be told apart ({error}); the data is not certified, so "
+                "the artifact can never be approved"
+            ], disclosure_floor.floor_record(
+                {}, not_checked_because=str(error)
+            )
+        raise ReceiptUnavailable(
+            subject,
+            "the survey households behind the records cannot be told "
+            f"apart, so no table can be checked against the floor: {error}",
+        ) from error
+    years = list(job.config.years)
+    found = disclosure_floor.thin_cells(baseline, reformed, years, survey)
+    warnings = []
+    deciles = {
+        cell: labels
+        for cell, labels in found.items()
+        if cell[0] in disclosure_floor.DECILE_TABLES
+    }
+    if deciles:
+        reason = disclosure_floor.thin_cells_reason(deciles)
+        if job.refuse_thin_deciles:
+            raise ReceiptUnavailable(
+                subject, f"{reason}; a decile table cannot withhold one"
+            )
+        warnings.append(
+            f"{reason}; recorded in its receipt, so it can be neither staged "
+            "nor shown, and publish review-rows deletes it: never commit it"
+        )
+    result.age_impact = disclosure_floor.withhold_thin_age_rows(
+        result.age_impact, found
+    )
+    household_ids = baseline.calculate(
+        "household_id", period=years[0], map_to="household"
+    ).values
+    result.household_scatter = disclosure_floor.survey_scatter_rows(
+        result.household_scatter, household_ids, survey
+    )
+    return warnings, disclosure_floor.floor_record(found)
 
 
 def _refuse_wealth_tax_base(
     subject: str, baseline_scenario, reform_scenario
 ) -> None:
     """Refuse a run whose either side changes one of the engine's
-    wealth-tax scales in its ``parameter_changes``: they tax gross wealth,
-    the wrong base for a wealth tax on net assets (the UK hub's
+    wealth-tax scales in its ``parameter_changes``: for a wealth tax on net
+    assets, one taxes the wrong base and the other one not yet checked
+    against the data (``measure_templates.WEALTH_TAX_SCALES``; the UK hub's
     budget-triage/JUDGED.md, S4). The templates refuse the path; this
     refuses it written as plain ``parameter_changes``."""
     paths = wealth_tax_paths(baseline_scenario, reform_scenario)
     if paths:
         raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
+def _refuse_companion_gaps(
+    subject: str, baseline_scenario, reform_scenario
+) -> None:
+    """Refuse a run whose either side changes a parameter the engine
+    charges in step with another, in a year the other is not changed
+    (``parameter_companions``): it would change less than it says."""
+    gaps = companion_gaps(baseline_scenario, reform_scenario)
+    if gaps:
+        raise ReceiptUnavailable(subject, companion_refusal(gaps))
 
 
 def _refuse_wealth_tax_built(subject: str, baseline, reformed) -> None:
@@ -533,6 +695,24 @@ def _refuse_wealth_tax_built(subject: str, baseline, reformed) -> None:
     paths = wealth_tax_paths_differing(baseline, reformed)
     if paths:
         raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
+def _refuse_companion_built(
+    subject: str, baseline, reformed, years, *scenarios
+) -> None:
+    """Refuse a run whose two built simulations differ in a parameter the
+    engine charges in step with another, in a scored year the other does
+    not differ in and no scenario names it, as a modifier that edits the
+    first alone leaves them (``parameter_companions.built_companion_gaps``).
+    Only for simulations with parameter trees, as
+    :func:`_refuse_wealth_tax_built` reads them."""
+    if not all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
+    ):
+        return
+    gaps = built_companion_gaps(baseline, reformed, years, *scenarios)
+    if gaps:
+        raise ReceiptUnavailable(subject, companion_refusal(gaps))
 
 
 def generate_artifacts(
@@ -570,6 +750,10 @@ def generate_artifacts(
     the member's artifact from this run if it was generated here, otherwise
     its entry in the manifest beside ``artifacts_root``. A combined run
     whose members are in neither can be written but never staged.
+
+    Whether a thin decile cell refuses a run is read here, from
+    ``UK_BUDGET_THIN_DECILES``, and carried on every run, so a run sent to
+    a worker or a Modal container does as this process says.
     """
     from uk_budget_data.parallel import SerialRunner, portable
 
@@ -590,6 +774,7 @@ def generate_artifacts(
         dataset_path=dataset_path,
         build=build,
         process=process,
+        refuse_thin_deciles=disclosure_floor.refuses_thin_deciles(),
     )
     checked_commits: dict = {}
 
@@ -696,7 +881,21 @@ def generate_artifacts(
                 **common,
             )
         )
-    run_all(slots)
+    from uk_budget_data.modal_runner import ModalRunsFailed
+
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        # Every other measure is written and reported. A combined run binds
+        # its members' outputs, so none starts until the failed measures
+        # are rerun: they are listed, with their members, for that rerun.
+        from uk_budget_data.publication import combine
+
+        report.failed.update(error.failed)
+        for members in combined_sets or []:
+            ids = sorted(member.id for member in members)
+            report.not_started[combine.combined_key(ids)] = ids
+        return report
 
     slots = []
     for members in combined_sets or []:
@@ -723,6 +922,11 @@ def generate_artifacts(
                 combined.baseline_scenario_for(config, uses_config),
                 combined.to_scenario(),
                 config.years,
+            )
+            _refuse_companion_gaps(
+                key,
+                combined.baseline_scenario_for(config, uses_config),
+                combined.to_scenario(),
             )
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
@@ -798,5 +1002,8 @@ def generate_artifacts(
                     progress=[f"{key}: REFUSED: {error}"],
                 )
             )
-    run_all(slots)
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        report.failed.update(error.failed)
     return report

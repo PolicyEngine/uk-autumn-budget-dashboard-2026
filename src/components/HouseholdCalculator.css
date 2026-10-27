@@ -600,34 +600,8 @@
 }
 
 .household-strip-fold-inner {
-  padding: 10px 0 0;
-}
-
-/* "Show all households" / "Show fewer", right of the title */
-.household-cards-toggle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.household-cards-toggle:hover {
-  border-color: var(--pe-teal-300);
-  background: var(--pe-teal-50);
-}
-
-.household-cards-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
+  padding: 10px 3px 3px;
+  margin: 0 -3px -3px;
 }
 
 .household-cards.is-folded {
@@ -646,7 +620,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
-  padding: 3px;
+  padding: 0;
   list-style: none;
 }
 
@@ -657,7 +631,9 @@
 }
 
 /* A chip: icon, short name (cut with an ellipsis if long; the full name
-   on hover), its figure at the right */
+   on hover), its figure at the right. The dashboard's selectable-row box
+   (the form's choice tiles, the Calculate button): --pe-radius-md, the card
+   border and the small shadow, 40px high like the button above it */
 .household-chip {
   --card-accent: var(--pe-teal-600);
   --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
@@ -675,7 +651,7 @@
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
   box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
@@ -756,6 +732,8 @@
 }
 
 .household-chip-figure {
+  justify-self: end;
+  text-align: right;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -790,7 +768,6 @@
     height: 22px;
   }
 }
-
 
 .household-cards-grid {
   display: grid;
@@ -937,32 +914,12 @@
   background: var(--card-ink);
 }
 
-/* Top right: a tick on the chosen card */
-.household-card-check {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-}
-
-.household-card-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: var(--pe-surface);
-  background: var(--card-ink);
-  border-radius: 50%;
-  animation: household-check-in 0.22s ease-out;
-}
-
 @keyframes household-check-in {
   from {
     opacity: 0;
     transform: scale(0.6);
   }
 }
-
 
 /* Two lines, always: a one-line name keeps the second line's room */
 .household-card-name {
@@ -1094,7 +1051,7 @@
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1474,13 +1431,6 @@
   transform: rotate(180deg);
 }
 
-.household-yours .household-card-check {
-  top: 14px;
-  right: 14px;
-  color: var(--pe-teal-800);
-  background: var(--band-ink);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .household-yours,
   .household-yours-result {
@@ -1604,16 +1554,6 @@
     font-size: 1rem;
   }
 
-  /* Clear of the tick in the corner */
-  .household-card.is-selected .household-card-name {
-    padding-right: 28px;
-  }
-
-  .household-card-check {
-    top: 14px;
-    right: 14px;
-  }
-
   .household-card-result {
     height: 54px;
     padding-top: 2px;
@@ -1646,7 +1586,8 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--pe-surface);
-  background: var(--pe-teal-500);
+  /* Teal 700, not 500: white on it is 5.5:1 (on 500, 3.5; WCAG 1.4.3) */
+  background: var(--pe-teal-700);
   border: none;
   border-radius: var(--pe-radius-md);
   cursor: pointer;
@@ -1654,7 +1595,7 @@
 }
 
 .calculate-button:hover:not(:disabled) {
-  background: var(--pe-teal-700);
+  background: var(--pe-teal-800);
 }
 
 .calculate-button:active:not(:disabled) {
@@ -1703,7 +1644,7 @@
   }
 }
 
-/* Groups: a small spaced label, then a grid of boxes; hairlines between */
+/* Groups: the essentials' grid, then More details; a hairline between */
 .household-group {
   padding: 20px 28px;
 }
@@ -1712,32 +1653,34 @@
   border-top: 1px solid var(--pe-gray-100);
 }
 
-.household-group-label,
-.household-subgroup-label {
-  margin: 0 0 14px;
-  font-size: 0.75rem;
+/* Sentence case, as the house style: no spaced capitals */
+.household-group-label {
+  margin: 0;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-800);
 }
 
-.household-subgroup-label {
-  color: var(--pe-gray-500);
-}
-
-/* Three boxes a row, as every group holds three; two below 900px; one
-   below 480px. Each label takes one line, so the boxes in a row line up. */
+/* Three boxes a row on a wide screen, in the essentials and in each More
+   details group alike, so their columns line up; two below 900px; one
+   below 480px (More details' groups: below 640px). Each label takes one
+   line, so the boxes in a row line up. */
 .household-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: 14px 20px;
   align-items: start;
 }
 
 @media (max-width: 900px) {
   .household-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .household-grid-details {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1776,18 +1719,16 @@
   }
 }
 
-/* Labels: small, spaced capitals above the box */
+/* Labels: sentence case, small and plain above the box */
 .household-field .field-label {
   min-height: 1rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0 0 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
 }
 
 .household-field .label-with-info {
@@ -1803,7 +1744,7 @@
   margin: 0;
 }
 
-.household-field .label-with-info .info-icon-wrapper {
+.household-field .label-with-info .info-tip {
   flex: none;
 }
 
@@ -1812,7 +1753,7 @@
   margin: 6px 0 0;
   font-size: 0.7rem;
   line-height: 1.3;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
 }
 
 /* A number: one 40px box holding £, the number, its unit and the − and +
@@ -1968,155 +1909,17 @@
   pointer-events: none;
 }
 
-/* "i" beside a label: its note on hover or focus */
-.info-icon-wrapper {
-  position: relative;
-  display: inline-flex;
-}
-
-.info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  font-family: Georgia, serif;
-  font-size: 9px;
-  font-style: italic;
-  font-weight: 600;
-  color: var(--pe-gray-500);
-  background: var(--pe-gray-200);
-  border: none;
-  border-radius: 50%;
-  cursor: help;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-/* A 40px tap target around the small circle on a touch screen */
+/* A 40px tap target for the steppers on a touch screen */
 @media (pointer: coarse) {
-  .info-icon {
-    position: relative;
-  }
-
-  .info-icon::before {
-    content: "";
-    position: absolute;
-    inset: -13px;
-  }
-
   .household-field .stepper-button {
     width: 40px;
   }
 }
 
-.info-icon:hover,
-.info-icon:focus-visible {
-  color: var(--pe-surface);
-  background: var(--pe-teal-500);
-  outline: none;
-}
-
-.info-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 100;
-  width: 260px;
-  /* Never wider than the screen less a 16px margin each side; shifted
-     inside it by --tip-shift (utils/infoTooltip.js) near an edge */
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-  padding: 12px 14px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--pe-gray-100);
-  background: var(--pe-gray-800);
-  border-radius: 8px;
-  box-shadow: var(--pe-shadow-lg);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
-/* The arrow stays over the icon when the box is shifted */
-.info-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: clamp(12px, calc(50% - var(--tip-shift, 0px)), calc(100% - 12px));
-  border: 6px solid transparent;
-  border-top-color: var(--pe-gray-800);
-  transform: translateX(-50%);
-}
-
-.info-icon-wrapper:hover .info-tooltip,
-.info-icon-wrapper:focus-within .info-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* More details: a full-width label row that opens the remaining groups */
-.household-more {
-  padding: 0;
-}
-
-.household-more .household-group-label {
-  margin: 0;
-}
-
-.household-more-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 16px 28px;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  border-radius: 0 0 var(--card-radius) var(--card-radius);
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.household-more-toggle:hover {
-  background: var(--pe-gray-50);
-}
-
-.household-more-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: -2px;
-}
-
-.household-more-toggle[aria-expanded="true"] {
-  border-radius: 0;
-}
-
-.household-more-count {
-  font-weight: 400;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--pe-gray-400);
-}
-
+/* A group row's chevron: turned while open */
 .household-more-chevron {
   color: var(--pe-gray-400);
   transition: transform 0.2s ease;
-}
-
-.household-more-toggle[aria-expanded="true"] .household-more-chevron {
-  transform: rotate(180deg);
-}
-
-.household-more-panel {
-  padding: 4px 28px 20px;
 }
 
 /* Press feedback on the steppers */
@@ -2124,17 +1927,9 @@
   background: var(--pe-teal-100);
 }
 
-.household-subgroup + .household-subgroup {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--pe-gray-100);
-}
-
 @media (max-width: 480px) {
   .household-form-header,
-  .household-group,
-  .household-more-toggle,
-  .household-more-panel {
+  .household-group {
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -2146,10 +1941,6 @@
 
   .calculate-button {
     flex: 1 1 0;
-  }
-
-  .household-more {
-    padding: 0;
   }
 }
 
@@ -2169,7 +1960,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .household-more-chevron,
-  .info-tooltip,
   .calculate-button,
   .calculate-arrow,
   .household-card,
@@ -2179,8 +1969,7 @@
     transition: none;
   }
 
-  .household-card,
-  .household-card-check {
+  .household-card {
     animation: none;
   }
 
@@ -2196,13 +1985,11 @@
 
 /* Scrolled to on Calculate: clear of the sticky title band and tabs */
 .household-results {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
 /* Section and group labels: a small muted icon before the text */
-.household-group-label,
-.household-subgroup-label,
-.household-more-toggle {
+.household-group-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2216,17 +2003,20 @@
 
 /* The form, scrolled to from "Your household": clear of the sticky bars */
 .household-form {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
-/* "Show all households", at the start of the folded strip: a filled teal
-   secondary button, plain to see */
+/* "Show all households" / "Show fewer", at the end of the heading row: a
+   filled teal secondary button, plain to see. The chips' box: the same
+   radius, height and small shadow, its right edge the list's */
 .household-cards-back {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 7px;
-  margin: 0 0 10px 3px;
-  padding: 7px 14px 7px 11px;
+  height: 40px;
+  margin: 0 0 0 auto;
+  padding: 0 14px 0 11px;
   font: inherit;
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -2234,6 +2024,7 @@
   background: var(--pe-teal-50);
   border: 1px solid var(--pe-teal-300);
   border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -2248,4 +2039,273 @@
 .household-cards-back:focus-visible {
   outline: 2px solid var(--pe-teal-600);
   outline-offset: 2px;
+}
+
+/* A phone: the heading keeps its width, the button goes under it, at the
+   list's right edge, as tall as the chips */
+@media (max-width: 599px) {
+  .household-cards-head {
+    flex-wrap: wrap;
+  }
+
+  .household-cards-back {
+    height: 36px;
+  }
+
+  .household-cards-head .section-heading {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---------- The form, consolidated ---------- */
+
+/* Amounts: one box of £, the number and its unit; no steppers */
+.household-field .number-stepper.no-steppers .number-box input {
+  padding-left: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.household-field .number-suffix {
+  color: var(--pe-gray-500);
+}
+
+/* Ages: − and + small, inside the box's right end */
+.household-field .stepper-button {
+  width: 32px;
+}
+
+/* Segmented choices (Partner, Children, Housing, the band, Universal
+   Credit): one 40px row of joined options, the chosen one teal */
+.household-field .choice-segmented {
+  min-width: 0;
+}
+
+.household-field .choice-field .label-with-info,
+.household-field .choice-field > .field-label {
+  margin: 0 0 6px;
+}
+
+.choice-segmented .choice-tiles {
+  display: flex;
+  gap: 0;
+  height: 40px;
+  overflow: hidden;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+}
+
+.choice-segmented .choice-tile {
+  flex: 1 1 0;
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--pe-gray-700);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.choice-segmented .choice-tile + .choice-tile {
+  border-left: 1px solid var(--card-border);
+}
+
+.choice-segmented .choice-tile:hover {
+  background: var(--pe-gray-50);
+}
+
+.choice-segmented .choice-tile.is-checked {
+  color: var(--pe-surface);
+  font-weight: 600;
+  background: var(--pe-teal-600);
+  box-shadow: none;
+}
+
+.choice-segmented .choice-tile:has(input:focus-visible) {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -3px;
+}
+
+.choice-segmented .choice-tile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* More details: a header as the form's own, in small (a tinted icon, the
+   title with an "Optional" tag, one muted line), then a row per group
+   that opens it. One hairline above the section, from .household-group;
+   the rows are parted by hairlines between them, none above the first.
+   Header icon, row icons and the open groups' boxes share the card's left
+   edge, so the boxes' columns line up with the essentials' above. */
+.household-more {
+  padding: 22px 28px 10px;
+}
+
+.household-more-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.household-more-head .household-more-icon {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border-radius: 7px;
+}
+
+.household-more-text {
+  min-width: 0;
+}
+
+.household-more-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 26px;
+}
+
+.household-more-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--pe-gray-800);
+}
+
+.household-more-tag {
+  padding: 1px 8px;
+  font-size: var(--fs-micro, 0.6875rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 999px;
+}
+
+.household-more-note {
+  margin: 2px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.household-detail + .household-detail {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.household-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.household-detail-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font: inherit;
+}
+
+.household-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+  padding: 8px;
+  font: inherit;
+  text-align: left;
+  color: var(--pe-gray-800);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.household-detail-toggle:hover {
+  background: var(--pe-gray-50);
+}
+
+.household-detail-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+}
+
+.household-detail-title {
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* Closed: what the group holds, on the rest of the row, cut to one line */
+.household-detail-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-500);
+}
+
+.household-detail.is-open .household-detail-title {
+  flex: 1 1 auto;
+}
+
+.household-detail-changed {
+  flex: none;
+  padding: 1px 8px;
+  font-size: var(--fs-micro, 0.6875rem);
+  font-weight: 600;
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
+}
+
+.household-detail-toggle .household-more-chevron {
+  flex: none;
+  margin-left: auto;
+}
+
+.household-detail-toggle[aria-expanded="true"] .household-more-chevron {
+  transform: rotate(180deg);
+}
+
+.household-detail-reset {
+  flex: none;
+  white-space: nowrap;
+}
+
+.household-detail-panel {
+  padding: 4px 0 18px;
+}
+
+@media (max-width: 480px) {
+  .household-more {
+    padding: 18px 16px 6px;
+  }
+
+  /* On a phone the summary goes under the title */
+  .household-detail-toggle {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .household-detail-summary {
+    order: 5;
+    flex-basis: 100%;
+    padding-left: 22px;
+    white-space: normal;
+  }
 }

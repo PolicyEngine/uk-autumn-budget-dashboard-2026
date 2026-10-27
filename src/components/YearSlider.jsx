@@ -151,10 +151,10 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
         aria-pressed={isPlaying ? true : undefined}
         aria-label={
           inactiveReason
-            ? `Year, ${label(selectedYear)}: ${inactiveReason}`
+            ? `Year ${label(selectedYear)}: ${inactiveReason}`
             : isPlaying
-            ? `Playing, ${label(selectedYear)}: pause`
-            : `Year, ${label(selectedYear)}`
+            ? `Playing ${label(selectedYear)}: pause`
+            : `Year ${label(selectedYear)}`
         }
         onClick={handleToggle}
       >
@@ -163,6 +163,10 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
         <CalendarDays className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
         <span className="band-control-text">
           <span className="band-control-label">{isPlaying ? "Playing" : "Year"}</span>
+          {/* A space read between the two (the flex row lays it out as
+              nothing), so the visible text reads "Year 2027-28" as the
+              name does (WCAG 2.5.3, label in name) */}
+          {" "}
           <span className="band-control-value year-picker-value">{label(selectedYear)}</span>
         </span>
         {isPlaying ? (

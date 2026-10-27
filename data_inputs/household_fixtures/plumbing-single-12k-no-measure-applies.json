@@ -1,5 +1,5 @@
 {
-  "name": "PLUMBING CHECK: single employee on £12,000, nine measures change nothing",
+  "name": "PLUMBING CHECK: single employee on £12,000, seven measures change nothing",
   "kind": "plumbing check, not an accuracy check",
   "route": "/api/personal-impact",
   "request": {
@@ -179,30 +179,6 @@
       "value": 0.0
     },
     {
-      "path": "policies.employer_ni_relief_under_25s.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.employer_ni_relief_under_25s.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.employer_ni_relief_under_25s.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.employer_ni_relief_under_25s.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.employer_ni_relief_under_25s.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.employer_ni_relief_under_25s.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
       "path": "policies.threshold_freeze_2031_32.years.2025.net_income_change",
       "value": 0.0
     },
@@ -224,30 +200,6 @@
     },
     {
       "path": "policies.threshold_freeze_2031_32.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.badr_lifetime_limit_cut.years.2030.net_income_change",
       "value": 0.0
     },
     {
@@ -307,11 +259,9 @@
     "state_pension_income_tax_protection": "An extra allowance for people over State Pension age. The adult is 35 to 40, and below the personal allowance anyway: £0.",
     "warm_home_discount_top_up": "£100 in 2026 to households receiving Universal Credit or Pension Credit. The household receives neither: £0.",
     "domestic_electricity_zero_vat": "Removes VAT from electricity spending. The route sets no electricity spending: £0.",
-    "employer_ni_relief_under_25s": "Changes employer National Insurance for employees aged 21 to 24 only, with wages fixed. The adult is over 25, and no household income depends on employer NI: £0.",
     "threshold_freeze_2031_32": "Changes the personal allowance and basic rate band in 2031 only, a year the route does not calculate: £0.",
-    "badr_lifetime_limit_cut": "Changes the Business Asset Disposal Relief lifetime limit. No capital gains: £0.",
     "road_fuel_vat_cut": "Cuts VAT on petrol and diesel spending in 2026 and 2027. No fuel: £0.",
     "plan_2_threshold_unfreeze": "Raises the Plan 2 student loan threshold. No student loan: £0."
   },
-  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; rewritten for the candidate measures on 24 October 2026, and for the nine left when the salary sacrifice cap measure was dropped that day; see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check."
+  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; rewritten for the candidate measures on 24 October 2026, and for the nine left when the salary sacrifice cap measure was dropped that day, and for the seven kept on 27 October 2026 (Business Asset Disposal Relief and employer NI relief withdrawn); see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check."
 }

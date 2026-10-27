@@ -155,6 +155,14 @@
   order: 1;
 }
 
+/* The line under the map when no seat shows a published change */
+.map-flat-note {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+  text-align: center;
+}
+
 .map-canvas {
   position: relative;
   flex: 1 1 auto;
@@ -180,113 +188,116 @@
   display: none;
 }
 
+/* Centred under the map, in the type and chips of the keys under the
+   other cards' plots (MeasureKey, SeriesToggle) */
 .map-key {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  font-size: var(--fs-micro);
-  line-height: 16px;
-  color: var(--pe-gray-700);
+  width: 100%;
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--c-text);
 }
 
-/* The title and its info icon on their own line */
+/* The title, its info icon and the hovered entry's seat count, centred */
 .map-key-head {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 4px 6px;
+  max-width: 100%;
 }
 
 .map-key-title {
   margin: 0;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  text-align: center;
 }
 
 .map-key-count {
-  margin-left: auto;
+  min-width: 0;
   color: var(--pe-teal-700);
+  font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-/* The ramp, its breaks under the joins, Loss and Gain under its ends */
+.map-key-count:empty {
+  display: none;
+}
+
+/* The scale, as on the 2025 dashboard: one smooth gradient from a loss
+   (amber) through no change (light grey) to a gain (teal), its two ends
+   and 0 labelled under it */
 .map-key-scale {
-  width: min(320px, 100%);
+  width: 180px;
+  max-width: 100%;
 }
 
-.map-key-ramp {
-  display: flex;
+.map-key-gradient {
   height: 12px;
-  border-radius: 6px;
-  overflow: hidden;
+  border-radius: 3px;
 }
 
-.map-key-segment {
-  flex: 1;
-  height: 12px;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-  transition: opacity var(--motion-fast, 150ms) ease;
-}
-
-.map-key-ticks {
-  position: relative;
-  height: 18px;
-}
-
-.map-key-tick {
-  position: absolute;
-  top: 5px;
-  transform: translateX(-50%);
-  font-size: 10px;
-  line-height: 12px;
-  color: var(--pe-gray-600);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* A small mark from the join down to its label */
-.map-key-tick::before {
-  content: "";
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  height: 4px;
-  border-left: 1px solid var(--pe-gray-400);
-}
-
-.map-key-ends {
+.map-key-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  line-height: 12px;
+  margin-top: 3px;
+  font-size: 0.75rem;
   color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
 }
 
+.map-key-labels span {
+  flex: 1;
+  text-align: center;
+}
+
+.map-key-labels span:first-child {
+  text-align: left;
+}
+
+.map-key-labels span:last-child {
+  text-align: right;
+}
+
+/* The status patterns as chips, like MeasureKey's */
 .map-key-statuses {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 4px 14px;
+  gap: 4px;
+  max-width: 100%;
 }
 
-.map-key-statuses-label {
-  color: var(--pe-gray-500);
-}
-
+/* Compact chips */
 .map-key-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: none;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px 0 5px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--c-surface);
   font: inherit;
-  color: inherit;
+  font-size: 11px;
+  color: var(--c-text);
+  white-space: nowrap;
   cursor: pointer;
-  transition: opacity var(--motion-fast, 150ms) ease;
+  transition: opacity var(--motion-fast, 150ms) ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.map-key-item:hover,
+.map-key-item.is-active {
+  border-color: var(--pe-gray-400);
+  background: var(--c-hover);
 }
 
 .map-key-swatch {
@@ -294,12 +305,14 @@
 }
 
 /* While an entry is hovered the others fade, as do the seats it leaves out */
-.map-key.is-highlighting :is(.map-key-segment, .map-key-item):not(.is-active) {
+.map-key.is-highlighting  .map-key-item:not(.is-active) {
   opacity: 0.35;
 }
 
-.map-key-segment:focus-visible,
-.map-key-item:focus-visible {
+.map-key-item:focus-visible,
+/* The plot scrolls on a wide screen, so the browser lets it take focus:
+   the page's ring, not the browser's 1px default */
+.constituency-body:focus-visible {
   outline: 2px solid var(--pe-teal-500);
   outline-offset: 2px;
 }
@@ -313,34 +326,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .map-key-segment,
   .map-key-item,
   .map-canvas svg path.constituency-path {
     transition: none;
   }
 }
-
-/* The view switch: the shared segmented control on the row, its name
-   for screen readers only */
-.map-view-switch .control-bar-group {
-  display: block;
-}
-
-.map-view-switch .control-bar-group-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.map-view-switch .control-bar-segments {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  position: relative;
-}
-
 
 /* Map controls container */
 .map-controls-container {
@@ -394,22 +384,23 @@
   transform: scale(0.95);
 }
 
-/* Tooltip: the selected seat is zoomed to the map's centre, so the card
-   sits just above the centre. */
+/* The selected seat's card: the seat is zoomed to the map's centre and the
+   card sits just above it, placed in script so it stays inside the map. */
 .constituency-tooltip {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  background: var(--c-surface);
-  border: 2px solid var(--pe-teal-500);
-  border-radius: var(--pe-radius-md);
+  /* The shared tip card (--tip-* in globals.css), with room for its rows */
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
   padding: 12px 16px;
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--tip-font-size);
   pointer-events: auto;
+  width: max-content;
   min-width: 220px;
-  max-width: 300px;
-  transform: translate(-50%, -100%);
-  margin-top: -10px;
+  max-width: min(320px, 100%);
+  box-sizing: border-box;
+  overflow-y: auto;
   z-index: 100;
   animation: tooltipFadeIn 0.2s ease;
 }
@@ -417,11 +408,9 @@
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -90%);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -100%);
   }
 }
 
@@ -459,6 +448,152 @@
 .constituency-tooltip p {
   margin: 4px 0 0 0;
   line-height: 1.4;
+}
+
+/* A seat's card, pinned or on hover (ConstituencyMap's SeatCard): one
+   width for both, so the card does not change size between seats */
+.constituency-tooltip.seat-card,
+.seat-card-hover {
+  width: 320px;
+  min-width: 0;
+  max-width: min(320px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+
+/* The pinned card also stays inside the map */
+.constituency-tooltip.seat-card {
+  max-width: min(320px, 100%);
+}
+
+.seat-card-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+  margin: 0 0 4px 0 !important;
+}
+
+.seat-card p {
+  margin: 0;
+}
+
+.seat-card-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0;
+  line-height: 1.15;
+}
+
+.seat-card-value {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.seat-card-value-secondary {
+  font-size: var(--fs-body-lg);
+}
+
+.seat-card-dot {
+  color: var(--pe-gray-400);
+  font-size: var(--fs-body-lg);
+  white-space: pre;
+}
+
+.seat-card-unit {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+.seat-card-label {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+  margin-top: 1px !important;
+}
+
+.seat-card-policies {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--pe-gray-200);
+}
+
+.seat-card-policies-heading {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+  margin-bottom: 2px !important;
+}
+
+.seat-card-policy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px auto;
+  align-items: center;
+  column-gap: 6px;
+  font-size: var(--fs-caption);
+  line-height: 1.3;
+  padding: 1px 0;
+}
+
+.seat-card-policy-name {
+  color: var(--pe-gray-700);
+  min-width: 0;
+}
+
+.seat-card-policy-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pe-gray-100);
+  overflow: hidden;
+}
+
+.seat-card-policy-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.seat-card-policy-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Not published has no bar: it takes the bar's column too */
+.seat-card-withheld {
+  grid-column: 2 / 4;
+  font-weight: 400;
+  color: var(--pe-gray-500);
+  cursor: help;
+}
+
+.seat-card-unchanged {
+  margin-top: 2px !important;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.seat-card-note {
+  margin-top: 8px !important;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+  line-height: 1.4;
+}
+
+.seat-card-status {
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+}
+
+.seat-card-region {
+  margin-top: 8px !important;
+  padding-top: 6px;
+  border-top: 1px solid var(--pe-gray-200);
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
 }
 
 /* Kept as they were: other views share these global names. */
@@ -627,13 +762,10 @@
   color: var(--pe-gray-700);
 }
 
-.map-scale-swatch {
-  width: 28px;
-  height: 10px;
-}
-
-.map-scale-end {
-  padding: 0 6px;
+.map-scale-gradient {
+  width: 180px;
+  height: 12px;
+  border-radius: 3px;
 }
 
 /* The card's body: the map view (search box, then map) or the Rankings
@@ -687,7 +819,20 @@
   align-self: flex-start;
 }
 
-/* The Table view, with the notice over it before results are published */
+/* The Table view; before results are published, the notice alone */
 .rankings-panel {
   position: relative;
+}
+
+.rankings-panel-notice {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.rankings-panel-notice .publication-unavailable {
+  width: min(100%, 360px);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
 }

@@ -1,186 +1,114 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import OBRDumbbellChart, {
+  GAP_COLOUR,
   OBR_COLOUR,
   PE_COLOUR,
   formatBn,
-  bandFor,
+  formatDifference,
   obrValue,
+  pctOfOfficial,
+  shownDifference,
 } from "./OBRDumbbellChart";
 
-// The comparison table's grouped data, in its order
-const policies = [
-  [
-    "two_child_limit",
-    {
-      name: "2 child limit repeal",
-      years: {
-        2029: { policyengine: -3.56, obr_static: -2.7, obr_behavioural: -3.0 },
-      },
-    },
-  ],
-  [
-    "threshold_freeze_extension",
-    {
-      name: "Threshold freeze extension",
-      years: {
-        2027: { policyengine: 0, obr_static: 0, obr_behavioural: 0 },
-        2029: { policyengine: 7.77, obr_static: 7.4, obr_behavioural: 7.6 },
-      },
-    },
-  ],
-  [
-    "salary_sacrifice_cap",
-    {
-      name: "Salary sacrifice cap",
-      years: {
-        2029: { policyengine: 2.78, obr_static: NaN, obr_behavioural: NaN },
-      },
-    },
-  ],
+// comparisonRows() output, largest official costing first
+const rows = [
+  { id: "threshold_freeze", name: "Threshold freeze", pe: 7.77, obr: 7.6, obrStatic: 7.4, obrBehavioural: 7.6 },
+  { id: "two_child_limit", name: "2 child limit repeal", pe: -3.56, obr: -3.0, obrStatic: -2.7, obrBehavioural: -3.0 },
+  { id: "salary_sacrifice_cap", name: "Salary sacrifice cap", pe: 2.78, obr: null, obrStatic: null, obrBehavioural: null },
 ];
 
-const rowNames = (container) =>
-  Array.from(container.querySelectorAll(".obr-dumbbell-name")).map(
-    (n) => n.textContent,
-  );
+const chart = (props = {}) => render(<OBRDumbbellChart rows={rows} yearLabel="2029-30" obrKind="post-behavioural" {...props} />);
+const rowEl = (container, id) => container.querySelector(`[data-policy="${id}"]`);
+const labels = (container, id) => [...rowEl(container, id).querySelectorAll(".obr-dumbbell-value")].map((n) => n.textContent);
 
 describe("OBRDumbbellChart", () => {
-  it("titles the chart with the selected year and keeps the table's row order", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
-    expect(
-      screen.getByRole("heading", {
-        name: "PolicyEngine and OBR estimates, 2029-30",
-      }),
-    ).toBeInTheDocument();
-    expect(rowNames(container)).toEqual([
+  it("keeps the rows in the order given", () => {
+    const { container } = chart();
+    expect([...container.querySelectorAll(".obr-dumbbell-name .mrl-svg-name")].map((n) => n.textContent)).toEqual([
+      "Threshold freeze",
       "2 child limit repeal",
-      "Threshold freeze extension",
       "Salary sacrifice cap",
     ]);
   });
 
-  it("says 'not yet published' for a missing OBR figure instead of plotting zero", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
-    const row = container.querySelector('[data-policy="salary_sacrifice_cap"]');
-    expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe(
-      "OBR not yet published",
-    );
+  it("labels each row with the shared measure label: an icon and a derived category", () => {
+    const { container } = chart();
+    const names = [...container.querySelectorAll(".obr-dumbbell-name")];
+    expect(names.every((name) => name.querySelector("svg path, svg circle, svg rect, svg line, svg polyline"))).toBe(true);
+    expect(names.map((name) => name.querySelector(".mrl-svg-caption")?.textContent)).toEqual(["Other", "Benefits", "National Insurance"]);
+  });
+
+  it("says 'not in the official costings' for a missing official figure instead of plotting zero", () => {
+    const { container } = chart();
+    const row = rowEl(container, "salary_sacrifice_cap");
+    expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe("Not in the official costings");
     expect(row.querySelector(".obr-dumbbell-dot.obr")).toBeNull();
     expect(row.querySelector(".obr-dumbbell-dot.pe")).not.toBeNull();
+    expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("—");
   });
 
-  it("moves the OBR dot when the static / post-behavioural switch changes", () => {
-    const { container, rerender } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
-    const obrText = () =>
-      Array.from(
-        container.querySelectorAll(
-          '[data-policy="two_child_limit"] .obr-dumbbell-value',
-        ),
-      ).map((n) => n.textContent);
-    expect(obrText()).toContain("−£3.0bn");
-    rerender(
-      <OBRDumbbellChart
-        policies={policies}
-        year={2029}
-        showBehavioural={false}
-      />,
-    );
-    expect(obrText()).toContain("−£2.7bn");
+  it("gives the difference, PolicyEngine minus official, in a column at the right", () => {
+    const { container } = chart();
+    expect(container.querySelector(".obr-dumbbell-column-head").textContent).toBe("Difference");
+    expect(rowEl(container, "two_child_limit").querySelector(".obr-dumbbell-difference").textContent).toBe("−£0.6bn");
+    expect(rowEl(container, "threshold_freeze").querySelector(".obr-dumbbell-difference").textContent).toBe("+£0.2bn");
   });
 
-  it("colours the connecting line by the difference band", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
-    const band = (id) =>
-      container.querySelector(`[data-policy="${id}"] .obr-dumbbell-gap`).dataset
-        .band;
-    expect(band("two_child_limit")).toBe("medium");
-    expect(band("threshold_freeze_extension")).toBe("small");
+  it("draws the connecting line in one neutral colour, with no difference bands", () => {
+    const { container } = chart();
+    const gaps = [...container.querySelectorAll(".obr-dumbbell-gap")];
+    expect(gaps.length).toBe(2);
+    gaps.forEach((gap) => {
+      expect(gap.getAttribute("stroke")).toBe(GAP_COLOUR);
+      expect(gap.dataset.band).toBeUndefined();
+    });
+    expect(container).not.toHaveTextContent("under £0.5bn");
   });
 
-  it("shows 'Not yet published' for a year with no data, never zeros", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2030} showBehavioural />,
-    );
-    expect(screen.getByText("Not yet published")).toBeInTheDocument();
+  it("shows 'Not yet published' when no row has a figure, never zeros", () => {
+    const { container, getByText } = chart({ rows: [{ id: "a", name: "A", pe: null, obr: null, obrStatic: null, obrBehavioural: null }] });
+    expect(getByText("Not yet published")).toBeInTheDocument();
     expect(container.querySelector("svg circle")).toBeNull();
   });
 
-  it("plots a genuine zero as zero", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2027} showBehavioural />,
-    );
-    const row = container.querySelector(
-      '[data-policy="threshold_freeze_extension"]',
-    );
-    expect(row.querySelectorAll(".obr-dumbbell-dot")).toHaveLength(2);
-    expect(row.querySelector(".obr-dumbbell-value").textContent).toBe(
-      "£0.0bn (both)",
-    );
-  });
-
-  it("keeps both marks visible when the estimates are equal: a dot inside a ring", () => {
-    const equal = [
-      [
-        "rail_fares_freeze",
-        {
-          name: "Rail fares freeze",
-          years: {
-            2029: { policyengine: -0.2, obr_static: -0.2, obr_behavioural: -0.2 },
-          },
-        },
-      ],
-    ];
-    const { container } = render(
-      <OBRDumbbellChart policies={equal} year={2029} showBehavioural />,
-    );
-    const row = container.querySelector('[data-policy="rail_fares_freeze"]');
+  it("labels estimates that round equal once, as 'same', a dot inside a ring", () => {
+    const { container } = chart({ rows: [{ id: "rail", name: "Rail fares freeze", pe: -0.2, obr: -0.2, obrStatic: -0.2, obrBehavioural: -0.2 }] });
+    const row = rowEl(container, "rail");
     const pe = row.querySelector(".obr-dumbbell-dot.pe");
     const obr = row.querySelector(".obr-dumbbell-dot.obr");
-    // A solid teal dot, and a hollow grey ring drawn over it, larger
     expect(pe.getAttribute("fill")).toBe(PE_COLOUR);
     expect(obr.getAttribute("fill")).toBe("none");
     expect(obr.getAttribute("stroke")).toBe(OBR_COLOUR);
-    expect(Number(obr.getAttribute("r"))).toBeGreaterThan(
-      Number(pe.getAttribute("r")),
-    );
+    expect(Number(obr.getAttribute("r"))).toBeGreaterThan(Number(pe.getAttribute("r")));
     expect(pe.getAttribute("cx")).toBe(obr.getAttribute("cx"));
     const circles = [...row.querySelectorAll("circle")];
     expect(circles.indexOf(obr)).toBeGreaterThan(circles.indexOf(pe));
-    // One label for both values, not two on top of each other
-    const labels = [...row.querySelectorAll(".obr-dumbbell-value")].map(
-      (n) => n.textContent,
-    );
-    expect(labels).toEqual(["−£0.2bn (both)"]);
+    expect(labels(container, "rail")).toEqual(["−£0.2bn, same"]);
+    expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("£0.0bn");
   });
 
-  it("labels close but different estimates separately", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
-    const labels = [
-      ...container.querySelectorAll(
-        '[data-policy="threshold_freeze_extension"] .obr-dumbbell-value',
-      ),
-    ].map((n) => n.textContent);
-    expect(labels.sort()).toEqual(["£7.6bn", "£7.8bn"]);
+  it("labels different estimates separately", () => {
+    const { container } = chart();
+    expect(labels(container, "threshold_freeze").sort()).toEqual(["£7.6bn", "£7.8bn"]);
   });
 
-  it("keys the OBR as a ring, as the chart draws it", () => {
-    const { container } = render(
-      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
-    );
+  it("keys PolicyEngine and the official costing by name, never 'OBR'", () => {
+    const { container } = chart();
     const legend = container.querySelector('[aria-label="Legend"]');
+    expect(legend.textContent).toBe("PolicyEngine (static)Official costing (post-behavioural)");
     expect(legend.querySelector(".obr-dumbbell-key-ring")).not.toBeNull();
-    expect(legend.querySelectorAll(".obr-dumbbell-key-dot")).toHaveLength(1);
+  });
+
+  it("on the % scale puts every official costing at 100% and skips one too small for a %", () => {
+    const small = { id: "tiny", name: "Tiny", pe: 0.03, obr: 0.0, obrStatic: 0.0, obrBehavioural: 0.0 };
+    const { container } = chart({ rows: [...rows, small], scale: "pct" });
+    const rings = [...container.querySelectorAll(".obr-dumbbell-dot.obr")].map((ring) => ring.getAttribute("cx"));
+    expect(new Set(rings).size).toBe(1);
+    expect(rowEl(container, "tiny").querySelector(".obr-dumbbell-missing").textContent).toBe("Official costing £0.0bn: no % to show");
+    // No dot: the only circles left are the label's own (its tile and icon)
+    expect([...rowEl(container, "tiny").querySelectorAll("circle")].filter((circle) => !circle.closest(".mrl-svg")).length).toBe(0);
+    expect(container).toHaveTextContent("100%");
   });
 });
 
@@ -192,17 +120,27 @@ describe("helpers", () => {
     expect(formatBn(NaN)).toBe("");
   });
 
-  it("uses the table's bands", () => {
-    expect(bandFor(1, 1.4).key).toBe("small");
-    expect(bandFor(1, 2.9).key).toBe("medium");
-    expect(bandFor(1, 3.1).key).toBe("large");
-    expect(bandFor(1, NaN)).toBeNull();
+  it("signs a difference", () => {
+    expect(formatDifference(0.31)).toBe("+£0.3bn");
+    expect(formatDifference(-0.31)).toBe("−£0.3bn");
+    expect(formatDifference(0.01)).toBe("£0.0bn");
+    expect(formatDifference(null)).toBe("—");
   });
 
-  it("falls back to the other OBR figure when one is missing", () => {
+  it("takes the difference of the figures as shown", () => {
+    expect(shownDifference(-6.16, -6.5)).toBeCloseTo(0.3);
+    expect(formatDifference(shownDifference(-0.16, -0.1))).toBe("−£0.1bn");
+    expect(shownDifference(1, null)).toBeNull();
+  });
+
+  it("gives a % of the official costing only where it has a base", () => {
+    expect(pctOfOfficial(1.1, 1)).toBeCloseTo(110);
+    expect(pctOfOfficial(1, 0)).toBeNull();
+    expect(pctOfOfficial(null, 1)).toBeNull();
+  });
+
+  it("falls back to the other official figure when one is missing", () => {
     expect(obrValue({ obr_static: 1, obr_behavioural: NaN }, true)).toBe(1);
-    expect(
-      obrValue({ obr_static: NaN, obr_behavioural: NaN }, true),
-    ).toBeNull();
+    expect(obrValue({ obr_static: NaN, obr_behavioural: NaN }, true)).toBeNull();
   });
 });

@@ -21,6 +21,7 @@ from uk_budget_data.publication.combine import (
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
+    _create_badr_lifetime_limit_cut,
     get_reform,
 )
 
@@ -97,6 +98,36 @@ def test_two_members_may_never_touch_one_parameter(second):
     assert BASIC_RATE in message and "both a and b" in message
 
 
+ELASTICITY = "gov.simulation.capital_gains_responses.elasticity"
+
+
+def test_members_may_share_a_setting_at_the_same_values():
+    """A shared setting (combine.SHARED_SETTINGS) is merged once."""
+    pin = {ELASTICITY: {"2027": 0.0, "2028": 0.0}}
+    combined = combine_measures(
+        [
+            measure("a", {BADR_LIMIT: {"2027": 500_000}, **pin}),
+            measure("b", {BASIC_RATE: {"2027": 0.21}, **pin}),
+        ],
+        CONFIG,
+    )
+    assert combined.parameter_changes == {
+        BADR_LIMIT: {"2027": 500_000},
+        BASIC_RATE: {"2027": 0.21},
+        **pin,
+    }
+
+
+@pytest.mark.parametrize(
+    "second",
+    [{"2027": 1.0, "2028": 0.0}, {"2027": 0.0}],  # a value; a year
+)
+def test_members_may_not_share_a_setting_at_different_values(second):
+    first = measure("a", {ELASTICITY: {"2027": 0.0, "2028": 0.0}})
+    with pytest.raises(CombineConflict, match="set differently by a and b"):
+        combine_measures([first, measure("b", {ELASTICITY: second})], CONFIG)
+
+
 def test_members_sharing_the_configured_baseline_combine():
     config = DataConfig(
         years=YEARS, baseline_parameter_changes={BASIC_RATE: {"2027": 0.19}}
@@ -145,11 +176,10 @@ def test_the_registered_package_is_the_generic_combination_of_its_members():
     ]
     assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
         "zero_vat_on_domestic_electricity",
-        "employer_ni_relief_ages_21_to_24",
         "pump_vat_on_fuel_duty_deferral",
         "connect_student_loan_repayments",
         "road_fuel_vat_cut",
-        "state_pension_income_tax_allowance",
+        "state_pension_only_income_tax_allowance",
         "warm_home_discount_top_up",
     ]
 
@@ -158,7 +188,7 @@ def test_the_engine_and_the_combiner_agree_on_two_members_changes():
     """Differential: a hand-written scenario holding both members' parameter
     changes and the combiner's give the same parameters."""
     freeze = get_reform("threshold_freeze_2031_32")
-    badr = get_reform("badr_lifetime_limit_cut")
+    badr = _create_badr_lifetime_limit_cut()
     instants = ["2027-04-06", "2031-04-30"]
     engine = parameter_snapshot(
         Scenario(
@@ -235,7 +265,7 @@ def test_a_member_gives_the_same_household_result_combined_as_alone():
 
 def test_combination_keeps_each_members_parameters_and_is_consistent():
     freeze = get_reform("threshold_freeze_2031_32")
-    badr = get_reform("badr_lifetime_limit_cut")
+    badr = _create_badr_lifetime_limit_cut()
     combined = combine_measures([freeze, badr], CONFIG)
     check_consistency(combined, [freeze, badr], CONFIG, [2027, 2031])
     reform = parameter_snapshot(
@@ -269,7 +299,7 @@ def test_a_combination_that_changes_more_than_its_members_is_inconsistent():
 
 def test_a_measure_that_cannot_run_on_a_household_cannot_be_combined():
     broken = measure("broken", simulation_modifier=broken_modifier)
-    badr = get_reform("badr_lifetime_limit_cut")
+    badr = _create_badr_lifetime_limit_cut()
     combined = combine_measures([broken, badr], CONFIG)
     with pytest.raises(CombineInconsistent, match="could not be applied"):
         check_consistency(combined, [broken, badr], CONFIG, YEARS)
@@ -279,7 +309,7 @@ def test_the_student_loan_measure_combines_consistently():
     """Its modifier deletes the survey's reported repayments; it crashed on
     policyengine-uk 2.125.1 until it was fixed."""
     student_loans = get_reform("plan_2_threshold_unfreeze")
-    badr = get_reform("badr_lifetime_limit_cut")
+    badr = _create_badr_lifetime_limit_cut()
     combined = combine_measures([student_loans, badr], CONFIG)
     check_consistency(combined, [student_loans, badr], CONFIG, YEARS)
 

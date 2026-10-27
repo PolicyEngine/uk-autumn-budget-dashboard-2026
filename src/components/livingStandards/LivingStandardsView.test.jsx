@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "../../App";
+import App, { preloadAllViews } from "../../App";
 import { dashboardFixtureFetch } from "../../test/dashboardFixture";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 // The receipt fixture's supported year follows the engine's projection end;
 // show Population impact in that verified year (as tabsSmoke.test.jsx does)
@@ -130,8 +133,8 @@ describe("the Pre-measures forecast view", () => {
     // One heading, without the measures, linking to its twin with them
     const heading = await within(living).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 });
     const intro = heading.closest(".section-heading");
-    expect(intro).toHaveTextContent(/^Living standards under current lawCurrent law, before any Budget measure\. See with the measures →$/);
-    expect(within(intro).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
+    expect(intro).toHaveTextContent(/^Living standards under current lawCurrent law, before any Budget policy\. See with the policies →$/);
+    expect(within(intro).getByRole("link", { name: "See with the policies →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
     await within(living).findByRole("heading", { level: 3, name: /^Incomes over time$/ });
     const incomes = card(living, /^Incomes over time$/);
     // One card a row, full width: growth first, then incomes, then inequality
@@ -157,7 +160,7 @@ describe("the Pre-measures forecast view", () => {
     expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality, measured by the Gini coefficient, (rises|falls|stays)/);
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
     // Nothing with the measures here
-    expect(living).not.toHaveTextContent(/With the selected measures/);
+    expect(living).not.toHaveTextContent(/With the selected policies/);
     expect(within(living).queryByRole("heading", { name: /^Change in income inequality/ })).toBeNull();
 
     const panel = () => living;
@@ -190,8 +193,8 @@ describe("the Pre-measures forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook&sub=poverty");
     const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
     const povertyHeading = await within(poverty).findByRole("heading", { name: "Poverty under current law" });
-    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget measure\./);
-    expect(within(poverty).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
+    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget policy\./);
+    expect(within(poverty).getByRole("link", { name: "See with the policies →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ });
     // One card a row, both on the same measure at first, under the age
     // groups' tiles
@@ -221,25 +224,25 @@ describe("the Pre-measures forecast view", () => {
       expect(await within(panel).findByRole("heading", { level: 3, name })).toBeInTheDocument();
     }
     expect(within(panel).queryByText(/^Select policies to analyse/)).toBeNull();
-    expect(panel).not.toHaveTextContent(/With the selected measures/);
+    expect(panel).not.toHaveTextContent(/With the selected policies/);
   });
 
   it.each([
     ["living", "Living standards", "Inequality"],
-    ["poverty", "Poverty", "How the measures change poverty"],
+    ["poverty", "Poverty", "How the policies change poverty"],
   ])("Population impact's %s shows only the measures, linking to its twin without them", async (sub, label, measures) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: label });
     const heading = await within(panel).findByRole("heading", { level: 2, name: measures }, { timeout: 5000 });
-    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures[.:,]/);
+    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected policies[.:,]/);
     const link = within(panel).getByRole("link", { name: "See without them →" });
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here
     expect(within(panel).queryByRole("heading", { name: /under current law|^Inequality over time|^Incomes over time$|^Poverty over time$/ })).toBeNull();
     // (Living standards' growth card with the measures links to its twin
     // as "Without the measures"; no current-law card says it is one)
-    expect(panel).not.toHaveTextContent(/Without the measures \(current law\)|Without the measures:/);
+    expect(panel).not.toHaveTextContent(/Without the policies \(current law\)|Without the policies:/);
     // The link opens the twin in place, the address following
     fireEvent.click(link);
     expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
@@ -249,7 +252,7 @@ describe("the Pre-measures forecast view", () => {
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", sub === "living" ? null : sub]);
     // And back
-    fireEvent.click(within(twin).getByRole("link", { name: "See with the measures →" }));
+    fireEvent.click(within(twin).getByRole("link", { name: "See with the policies →" }));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: label })).toBe(panel);
     expect(new URLSearchParams(window.location.search).get("sub")).toBe(sub);
@@ -349,23 +352,37 @@ describe("the Pre-measures forecast view", () => {
     // from here
     expect(optionsSummary(who)).toMatch(/· Absolute · Before housing costs$/);
     choose(who, "Poverty line", "Relative");
-    choose(who, "Housing costs", "After housing costs");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    // Couples with children: 19.8% in both years, said once on the bar
-    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
-    expect(couples).toHaveTextContent("Couples with children19.8%no change");
+    const couplesRow = () => within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
+    // Couples with children, relative before housing costs: 14.5% in both
+    // years, said once on the bar
+    let couples = couplesRow();
+    expect(couples).toHaveTextContent("Couples with children14.5%no change");
     expect(couples.querySelector(".ls-bar-start")).not.toBeNull();
     // Its tooltip, on hover or keyboard focus: both years, the change and
     // the reference group
-    const area = couples.querySelector(".ls-bar-area");
+    let area = couples.querySelector(".ls-bar-area");
     fireEvent.focus(area);
-    const tip = within(who).getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2027-2819.8%");
+    // Drawn in the window (ViewportTooltip), outside the card
+    let tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (BHC)");
+    expect(tip).toHaveTextContent("2027-2814.5%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
-    expect(within(who).queryByRole("tooltip")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    // After housing costs, from here: 20.1% in 2027-28, 20.5% in 2031-32
+    choose(who, "Housing costs", "After housing costs");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    couples = couplesRow();
+    expect(couples).toHaveTextContent("Couples with children20.5%+0.4pp");
+    area = couples.querySelector(".ls-bar-area");
+    fireEvent.focus(area);
+    tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("2027-2820.1%");
+    expect(tip).toHaveTextContent("Change+0.4pp");
+    fireEvent.blur(area);
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);
@@ -544,25 +561,24 @@ describe("the Pre-measures forecast view", () => {
     await renderVerified();
     const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     // The engine's two packages, each linked to its release
-    expect(await within(section).findByRole("link", { name: /^policyengine 6\.10\.2/ })).toHaveAttribute(
+    expect(await within(section).findByRole("link", { name: /^policyengine 6\.11\.1/, hidden: true })).toHaveAttribute(
       "href",
-      "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2",
+      "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.11.1",
     );
-    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.132\.6/ })).toHaveAttribute(
+    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.151\.0/, hidden: true })).toHaveAttribute(
       "href",
-      "https://github.com/PolicyEngine/policyengine-uk/releases/tag/2.132.6",
+      "https://github.com/PolicyEngine/policyengine-uk/releases/tag/2.151.0",
     );
-    expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
+    expect(within(section).getByText("Microcosm UK national, 25 Oct 2026 (a6299504)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
     expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
     expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
-    // The UC health element fix, with its upstream pull request
-    expect(within(section).getByRole("link", { name: /^policyengine-uk #2428/ })).toHaveAttribute(
-      "href",
-      "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
-    );
-    expect(within(section).getByText(/Patched for 2030-31 and 2031-32/)).toBeInTheDocument();
-    expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
+    // No UC health element row: from policyengine-uk 2.134.4 the engine has
+    // the fix, so the baseline no longer applies it (FIXED_IN)
+    expect(within(section).queryByRole("link", { name: /^policyengine-uk #2428/, hidden: true })).toBeNull();
+    expect(within(section).queryByText(/Patched for 2030-31 and 2031-32/)).toBeNull();
+    // Each folded in its own topic, closed until asked for
+    expect(within(section).getByRole("button", { name: "What the baseline leaves out" })).toHaveAttribute("aria-expanded", "false");
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 

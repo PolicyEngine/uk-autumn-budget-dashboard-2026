@@ -470,6 +470,73 @@ def test_artifacts_are_the_same_whatever_order_they_run_in(world, tmp_path):
     assert tables(tmp_path / "serial") == tables(tmp_path / "parallel")
 
 
+def test_a_failed_modal_container_leaves_the_rest_reported(world, tmp_path):
+    """On Modal, one container failing (here the second of three) leaves
+    every later measure written and reported in order, its own result
+    apart from the refusals, and no combined run started: the failure is
+    not a refusal, and a combined run must not bind a missing member."""
+    import io
+    import tarfile
+
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.modal_runner import ModalRunner
+    from uk_budget_data.publication.generate import (
+        generate_artifacts,
+        run_artifact,
+    )
+
+    values = {
+        key: {2027: -1.0, 2028: -2.0} for key in ("alpha", "beta", "gamma")
+    }
+
+    def container(job):
+        """What ``modal_generate.run_artifact_here`` sends back."""
+        root = tmp_path / "container" / job.key
+        outcome = run_artifact(dataclasses.replace(job, artifacts_root=root))
+        if outcome.reference is None:
+            return outcome, None, None
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+            for path in sorted(outcome.reference.path.iterdir()):
+                archive.add(path, arcname=path.name, recursive=False)
+        relative = outcome.reference.path.relative_to(root)
+        return outcome, str(relative), buffer.getvalue()
+
+    def remote_artifacts(jobs, smoke):
+        for job in jobs:
+            if job.key == "beta":
+                yield MemoryError("container out of memory")
+            else:
+                yield container(job)
+
+    measures = [reform("alpha"), reform("beta"), reform("gamma")]
+    lines = []
+    report = generate_artifacts(
+        measures + [reform("combined--x")],
+        DataConfig(years=YEARS),
+        combined_sets=[measures],
+        artifacts_root=world.artifacts,
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+        on_progress=lines.append,
+        runner=ModalRunner(
+            say=lambda line: None, remote_artifacts=remote_artifacts
+        ),
+    )
+    assert [r.key for r in report.written] == ["alpha", "gamma"]
+    assert report.failed == {"beta": "MemoryError: container out of memory"}
+    assert list(report.refused) == ["combined--x"]
+    assert list(report.not_started.values()) == [["alpha", "beta", "gamma"]]
+    keys = [line.split(":")[0] for line in lines]
+    assert "gamma" in keys
+    assert keys.index("beta") < keys.index("gamma")
+    assert not any(
+        path.name.startswith("combined--")
+        for path in world.artifacts.iterdir()
+    )
+
+
 # --- receipted artifacts in worker processes (#173) ------------------------
 
 
@@ -727,12 +794,14 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
 
 # Disjoint parameters, as members of a combined run must change
 # (combine._merge): each member's own, the first member's own baseline and
-# the configured baseline. None is uprated, so no scored year is refused.
+# the configured baseline. None is uprated, so no scored year is refused,
+# and none is charged with a companion (parameter_companions), so none is
+# refused for leaving one out.
 _MEMBER_PATHS = (
     "gov.hmrc.income_tax.rates.uk[0].rate",
     "gov.hmrc.income_tax.rates.uk[1].rate",
 )
-_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.uk[2].rate"
+_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[1].rate"
 _CONFIGURED_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[0].rate"
 
 

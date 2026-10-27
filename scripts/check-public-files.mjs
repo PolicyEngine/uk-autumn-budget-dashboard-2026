@@ -6,7 +6,10 @@
 // reviewed, tables from the disclosure layer included; a pending entry
 // passes only until its expiry date. A file reviewed as a disclosure table
 // must carry the layer's public columns, and a CSV that carries them must be
-// reviewed as one. No public file may carry record-level identifiers. The
+// reviewed as one. No public file may carry record-level identifiers, and no
+// artifact whose receipt records cells under the floor of survey households
+// left in its tables (as generation writes such a run unless
+// UK_BUDGET_THIN_DECILES=refuse; the gate never stages it). The
 // page's area routing status takes no review entry, and must be one of the
 // few texts uk_budget_data.area_routing writes.
 //
@@ -218,6 +221,16 @@ function* walk(directory) {
   }
 }
 
+// Whether an artifact's receipt records cells under the floor of survey
+// households still in its tables (dashboard.disclosure_floor).
+function thinCellsInTables(text) {
+  try {
+    return Boolean(JSON.parse(text)?.dashboard?.disclosure_floor?.thin_cells_in_tables);
+  } catch {
+    return false;
+  }
+}
+
 export function checkPublicFiles(root, today = new Date()) {
   const { required, optional } = JSON.parse(
     readFileSync(join(root, "scripts", "disclosure_public_columns.json"), "utf8"),
@@ -236,6 +249,9 @@ export function checkPublicFiles(root, today = new Date()) {
     const text = data.subarray(0, 8192).includes(0) ? null : data.toString("utf8");
     if (text !== null && RECORD_LEVEL.test(text)) {
       problems.push(`${name}: record-level identifiers`);
+    }
+    if (text !== null && name.endsWith("/receipt.json") && thinCellsInTables(text)) {
+      problems.push(`${name}: its tables hold cells under the floor of survey households`);
     }
     if (name === AREA_ROUTING_FILE) {
       if (text === null || !AREA_ROUTING_CONTENTS.has(text)) {

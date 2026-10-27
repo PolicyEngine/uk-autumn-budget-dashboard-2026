@@ -52,7 +52,9 @@ export function InequalityOverTimeCard({ data }) {
 InequalityOverTimeCard.requires = "inequality";
 
 // The id of this card, which its twin with the measures links to
-export const GROWTH_CURRENT_LAW_ANCHOR = "growth-current-law";
+// (utils/viewAnchors)
+import { GROWTH_CURRENT_LAW_ANCHOR } from "../../../utils/viewAnchors";
+export { GROWTH_CURRENT_LAW_ANCHOR };
 
 export function GrowthCard({ data, onShowTab, selectedYear = null }) {
   // One year range for the card (and every card comparing two years)
@@ -66,7 +68,7 @@ export function GrowthCard({ data, onShowTab, selectedYear = null }) {
       id={GROWTH_CURRENT_LAW_ANCHOR}
       title="Growth across the distribution"
       // The link to its twin with the measures sits in About this chart
-      moreNotes={[<TwinLink key="twin" tab="dashboard" sub="living" onShow={onShowTab} label="With the measures" anchor="growth-with-measures" />]}
+      moreNotes={[<TwinLink key="twin" tab="dashboard" sub="living" onShow={onShowTab} label="With the policies" anchor="growth-with-measures" />]}
       icon="bars"
       name="Distribution view"
       value="quintile"

@@ -8,9 +8,13 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
+)
 from uk_budget_data.cli import main
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
+    YEAR_WEIGHTS,
     build,
     in_force_rate_change,
     render,
@@ -122,9 +126,9 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
         weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
             f"{year}-04-06"
         )
-        assert row[str(year)][1] == math.ceil(weekly * 52 / 10) * 10
-    assert row["2027"] == (12_570, 13_040)
-    assert row["2031"] == (12_830, 14_400)
+        assert row[str(year)][1] == math.ceil(weekly * 52)
+    assert row["2027"] == (12_570, 13_037)
+    assert row["2031"] == (12_830, 14_391)
 
 
 def test_warm_home_discount(document):
@@ -157,16 +161,43 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
 
 
-def test_employer_ni(document):
-    table = rows(document, "employer_ni_relief_under_25s")
-    rate = by_key(
-        table["Employer National Insurance rate, employees aged 21 to 24"]
+def test_electricity_2026_carries_the_winter_share(document):
+    """Electricity's 2026-27 constant is the zero rate weighted by the
+    October to March share of a year's use, not by its 182 days of 365;
+    the road fuel cut stays weighted by its days."""
+    yearly = rows(document, "domestic_electricity_zero_vat")[
+        "VAT on domestic electricity in Great Britain, averaged over the year"
+    ]
+    averages = by_key(yearly)
+    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
+    assert averages["2027"] == (0.05, 0.0)
+    assert "2026-27 by the October to March share" in yearly["note"]
+    fuel = rows(document, "road_fuel_vat_cut")[
+        "VAT on petrol and diesel, averaged over the year"
+    ]
+    assert "weighted by the days it is in force" in fuel["note"]
+    # Weighted by its days, electricity's 2026 constant no longer fits
+    with pytest.raises(ValueError, match="do not fit"):
+        in_force_rate_change(
+            registry.ELECTRICITY_VAT_ID,
+            {2026: -0.05 * 182 / 365, 2027: -0.05},
+        )
+
+
+def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
+    monkeypatch.setitem(YEAR_WEIGHTS, registry.FUEL_VAT_ID, {2028: 0.5})
+    with pytest.raises(ValueError, match="not in force"):
+        in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
+
+
+def test_the_table_covers_the_seven_package_measures_only(document):
+    # BADR and employer NI are withdrawn (27 October 2026)
+    assert list(document["measures"]) == list(
+        registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert rate["2026"] == (0.15, 0.15)
-    assert all(rate[str(year)] == (0.15, 0.0) for year in range(2027, 2032))
-    limit = by_key(table["Earnings relieved for ages 21 to 24, up to"])
-    assert limit["2027"] == (None, 50_270)
-    assert limit["2031"] == (None, 51_330)
+    assert len(document["measures"]) == 7
+    assert registry.BADR_ID not in document["measures"]
+    assert registry.EMPLOYER_NI_ID not in document["measures"]
 
 
 def test_threshold_freeze(document):
@@ -181,14 +212,7 @@ def test_threshold_freeze(document):
         )
 
 
-def test_badr_and_plan_2(document):
-    limit = by_key(
-        rows(document, "badr_lifetime_limit_cut")[
-            "Business Asset Disposal Relief lifetime limit"
-        ]
-    )
-    assert limit["2026"] == (1_000_000, 1_000_000)
-    assert limit["2027"] == (1_000_000, 500_000)
+def test_plan_2(document):
     plan_2 = by_key(
         rows(document, "plan_2_threshold_unfreeze")[
             "Plan 2 repayment threshold"
@@ -213,9 +237,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "warm_home_discount_top_up": "switch",
         "domestic_electricity_zero_vat": "switch",
-        "employer_ni_relief_under_25s": "before-after",
         "threshold_freeze_2031_32": "table",
-        "badr_lifetime_limit_cut": "before-after",
         "road_fuel_vat_cut": "switch",
         "plan_2_threshold_unfreeze": "path",
     }

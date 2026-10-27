@@ -14,6 +14,7 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
 
+from uk_budget_data import reforms
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
@@ -34,6 +35,7 @@ from uk_budget_data.reforms import (
     get_reform,
     list_reform_ids,
     plan_2_unfrozen_thresholds,
+    static_capital_gains,
 )
 
 
@@ -51,12 +53,17 @@ CANDIDATES = (
     "state_pension_income_tax_protection",
     "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
-    "employer_ni_relief_under_25s",
     "threshold_freeze_2031_32",
-    "badr_lifetime_limit_cut",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
 )
+# Withdrawn on 27 October 2026 (Vahid): out of the registry and the
+# package, so no default command runs or publishes them. Their factories
+# stay, unregistered, and are still tested here as code.
+WITHDRAWN = {
+    "employer_ni_relief_under_25s": reforms._create_employer_ni_relief_under_25s,
+    "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
+}
 OLD_PLACEHOLDERS = (
     "two_child_limit",
     "fuel_duty_freeze",
@@ -79,9 +86,9 @@ def situation(people: dict, household: dict | None = None) -> dict:
     }
 
 
-def change(measure_id: str, sit: dict, variable: str, year: int):
+def change(measure_id: str, sit: dict, variable: str, year: int, measure=None):
     """(baseline, reformed) totals of a variable for one household."""
-    measure = get_reform(measure_id)
+    measure = measure or get_reform(measure_id) or WITHDRAWN[measure_id]()
     baseline = Simulation(
         situation=sit, scenario=measure.to_baseline_scenario()
     )
@@ -99,6 +106,28 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     assert list_reform_ids() == [AUTUMN_BUDGET_2026_COMBINED_ID, *CANDIDATES]
     assert get_all_reforms() == get_autumn_budget_2026_reforms()
     assert set(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == set(CANDIDATES)
+
+
+def test_the_package_is_the_seven_kept_measures():
+    from uk_budget_data.geography import manifest_key
+    from uk_budget_data.publication.combine import combined_key
+
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
+    assert len(reforms._MEASURE_FACTORIES) == 7
+    key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
+    assert key == "combined--5c77771791661e11"
+    # The area run's package alias stands for that key
+    assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
+    description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
+    assert description.startswith("All seven candidate measures")
+
+
+def test_the_withdrawn_measures_are_not_registered():
+    for withdrawn, factory in WITHDRAWN.items():
+        assert get_reform(withdrawn) is None, withdrawn
+        assert withdrawn not in list_reform_ids()
+        assert withdrawn not in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        assert factory().id == withdrawn
 
 
 def test_the_2025_placeholders_are_gone():
@@ -148,7 +177,7 @@ def test_each_measure_binds_to_a_receipt(measure_id):
     assert reform is not None and baseline is not None
 
 
-def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
+def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
     pure = {
         "pump_vat_on_fuel_duty_deferral": ["apply_vat_base_change"],
         "state_pension_income_tax_allowance": [
@@ -164,6 +193,7 @@ def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
     for name in (
         "employer_ni_relief_ages_21_to_24",
         "connect_student_loan_repayments",
+        "state_pension_only_income_tax_allowance",
     ):
         assert pure_templates(modifier(name), REVISION) is None
 
@@ -196,6 +226,22 @@ def test_the_fuel_duty_path_by_hand():
         (360 * 0.5969 + 5 * 0.6135) / 365, abs=1e-6
     )
     assert set(rates) == {str(year) for year in POLICY_YEARS}
+
+
+def test_the_april_2027_rise_is_never_made_up_and_the_card_says_so():
+    """From 2028-29 the measure's rate stays a year's RPI below current
+    law (57.95p against 59.75p, uprated alike), so it costs revenue in
+    every later year; the description says the rise is never made up."""
+    rates = fuel_duty_deferral_rates()
+    current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
+    for year in (y for y in POLICY_YEARS if y >= 2028):
+        assert rates[str(year)] == pytest.approx(
+            current[str(year)] * 0.5795 / 0.5975, abs=1e-4
+        ), year
+        assert rates[str(year)] < current[str(year)], year
+    description = get_reform("fuel_duty_rise_deferral").description
+    assert "with no April 2027 RPI rise" in description
+    assert "so that rise is never made up" in description
 
 
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
@@ -270,8 +316,9 @@ def test_a_pensioner_on_the_full_new_state_pension_alone_pays_none(year):
     assert reformed == pytest.approx(0, abs=PENNY)
 
 
-def test_the_allowance_is_withdrawn_against_other_income():
-    """2031-32, State Pension £14,390.39 and £1,000 private pension:
+def test_the_tapered_design_withdraws_the_allowance_against_other_income():
+    """The tapered design (the switch's alternative). 2031-32, State
+    Pension £14,390.39 and £1,000 private pension:
     income £15,390.39 is £990.39 over the £14,400 allowance, which falls to
     £13,409.61, rounded up to £13,410. Tax: 20% of £1,980.39, £396.08,
     against 20% of £2,560.39, £512.08."""
@@ -286,10 +333,63 @@ def test_the_allowance_is_withdrawn_against_other_income():
         }
     )
     baseline, reformed = change(
-        "state_pension_income_tax_protection", sit, "income_tax", year
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection("tapered"),
     )
     assert baseline == pytest.approx(512.08, abs=PENNY)
     assert reformed == pytest.approx(396.08, abs=PENNY)
+
+
+def test_the_tapered_design_deducts_gift_aid_once():
+    """2027-28, State Pension £13,036.97, £1,000 private pension and £400
+    of Gift Aid (£500 grossed up). Adjusted net income £14,036.97 - £500 =
+    £13,536.97 is £496.97 over £13,040, which leaves £12,543.03, below the
+    standard £12,570, so the allowance is £12,570 and the tax 20% of
+    £1,466.97, £293.39, as now. Deducting Gift Aid twice gave £13,040 and
+    £199.39."""
+    year = 2027
+    sit = situation(
+        {
+            "pensioner": {
+                "age": {year: 70},
+                "state_pension": {year: nsp(year)},
+                "private_pension_income": {year: 1_000},
+                "gift_aid": {year: 400},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "state_pension_income_tax_protection",
+        sit,
+        "income_tax",
+        year,
+        measure=reforms._create_state_pension_income_tax_protection("tapered"),
+    )
+    assert baseline == pytest.approx(293.39, abs=PENNY)
+    assert reformed == pytest.approx(293.39, abs=PENNY)
+
+
+def test_the_sole_income_design_takes_the_allowance_away_for_other_income():
+    """The default design. 2031-32, State Pension £14,390.39 and £1,000
+    private pension: no allowance, so 20% of £2,560.39, £512.08, as now."""
+    year = 2031
+    sit = situation(
+        {
+            "pensioner": {
+                "age": {year: 70},
+                "state_pension": {year: nsp(year)},
+                "private_pension_income": {year: 1_000},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "state_pension_income_tax_protection", sit, "income_tax", year
+    )
+    assert baseline == pytest.approx(512.08, abs=PENNY)
+    assert reformed == pytest.approx(512.08, abs=PENNY)
 
 
 # --- 3. Warm Home Discount --------------------------------------------------
@@ -469,9 +569,10 @@ def test_receipt_rates_come_in_pairs():
 
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: 182 of 365
-    # days from 1 October, £24.93; 2027-28: all of it; 2028-29: none.
-    [(2026, 24.93), (2027, 50.00), (2028, 0.0)],
+    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
+    # October to March share of a year's use (WINTER_SHARE), £28.34;
+    # 2027-28: all of it; 2028-29: none.
+    [(2026, 28.34), (2027, 50.00), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -572,7 +673,7 @@ def test_the_employer_ni_description_states_the_apprentice_default():
     input, the description must say the data identify no apprentices."""
     source = inspect.getsource(modifier("employer_ni_relief_ages_21_to_24"))
     assert '"is_apprentice"' in source
-    description = get_reform("employer_ni_relief_under_25s").description
+    description = WITHDRAWN["employer_ni_relief_under_25s"]().description
     assert "identify no apprentices" in description
     assert "cost includes 21 to 24-year-old apprentices" in description
 
@@ -581,7 +682,7 @@ def test_the_badr_description_carries_the_capital_gains_caveat():
     """#127 put the capital gains calibration caveat in the Methodology
     table, which now shows each measure's registry description (#104), so
     the caveat lives here, in the text G3 approves."""
-    description = get_reform("badr_lifetime_limit_cut").description
+    description = WITHDRAWN["badr_lifetime_limit_cut"]().description
     assert "calibrated to 2024-25" in description
     assert "1.5 to 1.7 times too high" in description
 
@@ -651,7 +752,11 @@ def test_a_single_person_on_30000_pounds_in_2031_pays_52_pounds_more():
 
 
 def test_the_freeze_changes_only_2031():
-    changes = get_reform("threshold_freeze_2031_32").parameter_changes
+    """Its thresholds change in 2031 alone. It also carries the static
+    capital gains pin, in every policy year (test_capital_gains_pin)."""
+    changes = dict(get_reform("threshold_freeze_2031_32").parameter_changes)
+    for path in static_capital_gains():
+        changes.pop(path)
     assert all(set(values) == {"2031"} for values in changes.values())
 
 
@@ -814,7 +919,9 @@ def test_the_methodology_note_is_for_a_registered_measure():
     (measure_id,) = re.findall(
         r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source
     )
-    assert get_reform(measure_id) is not None
+    # Or a withdrawn one: the page shows the note only while its measure
+    # is displayed, so a withdrawn measure's note is never shown.
+    assert get_reform(measure_id) is not None or measure_id in WITHDRAWN
 
 
 # --- Every year the policy differs is covered ---------------------------------
@@ -855,27 +962,10 @@ FIRST_YEARS = {
         {"employment_income": 20_000},
         {"electricity_consumption": 1_050},
     ),
-    "employer_ni_relief_under_25s": (
-        2027,
-        "ni_class_1_employer",
-        {"age": 22, "employment_income": 30_000},
-        {},
-    ),
     "threshold_freeze_2031_32": (
         2031,
         "income_tax",
         {"employment_income": 30_000},
-        {},
-    ),
-    "badr_lifetime_limit_cut": (
-        2027,
-        "capital_gains_tax",
-        {
-            "age": 55,
-            "employment_income": 100_000,
-            "capital_gains": 800_000,
-            "capital_gains_badr": 800_000,
-        },
         {},
     ),
     "road_fuel_vat_cut": (

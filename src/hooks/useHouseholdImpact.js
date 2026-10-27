@@ -8,6 +8,7 @@ import {
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  householdDetailApiUrl,
   postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
@@ -39,9 +40,31 @@ export function peekHouseholdImpact(key, expectedEngine = null) {
   return underEngine(cache.get(key), expectedEngine)?.data ?? null;
 }
 
-/** Empty the session cache (for tests). */
+// Whether the detail service (NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL) may
+// still be asked this session. Its answer is used only under a headline
+// that reports a build commit, and only from that commit; once it has
+// answered from another build (another commit, none, other package versions
+// or another net income), every later answer would be refused too, so the
+// page stops waiting for it and asks the main API at once.
+let detailServiceUsable = true;
+
+// The build commit the last headline fetched this session reported:
+// undefined before the first, null when it reported none. The detail
+// service's parts are asked for early (with the headline) only while it is
+// not null: under a headline that reports no commit, no detail answer can
+// be used, so asking early would only spend its runs.
+let lastHeadlineBuild;
+
+/** Whether the detail service may still be asked this session (for tests). */
+export function detailServiceAsked() {
+  return detailServiceUsable;
+}
+
+/** Empty the session cache, and ask the detail service again (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();
+  detailServiceUsable = true;
+  lastHeadlineBuild = undefined;
 }
 
 /**
@@ -167,15 +190,49 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
+      // Whether this request fetched its headline: one kept in the cache
+      // (an example card's, or this household's from earlier in the session)
+      // may come from a deploy that has since been replaced
+      const headlineFetched = !first;
+      // With a detail service (Modal), its parts are asked for at the same
+      // time as Cloud Run's headline rather than after it: each run has its
+      // own container there, so they take no worker slot from the headline,
+      // and the breakdown arrives about when the headline does instead of a
+      // detail's time later (#253: 34 s to 15-20 s on a warm Modal). An
+      // early answer is still used only under the headline once it arrives,
+      // from its build (acceptFor below); otherwise the part is asked of
+      // Cloud Run, as before. Not under a cached headline: the parts are
+      // asked at once then anyway.
+      const detailUrl = householdDetailApiUrl();
+      const early = new Map();
+      const earlyController = new AbortController();
+      signal.addEventListener("abort", () => earlyController.abort());
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
+          if (detailUrl && detailServiceUsable && lastHeadlineBuild !== null) {
+            for (const include of DETAIL_PARTS) {
+              early.set(
+                include,
+                postHouseholdImpact(
+                  { ...body, include },
+                  { signal: earlyController.signal, timeoutMs: DETAIL_TIMEOUT_MS, url: detailUrl },
+                ).then(
+                  (raw) => ({ raw }),
+                  (error) => ({ error }),
+                ),
+              );
+            }
+          }
           const raw = await postHouseholdImpact(
             { ...body, include: HEADLINE_INCLUDE },
             { signal },
           );
           first = normaliseHouseholdImpact(raw);
+          lastHeadlineBuild = typeof first.build === "string" ? first.build : null;
         } catch (error) {
+          // No headline: nothing asked early can be shown
+          earlyController.abort();
           if (signal.aborted) return;
           setState({
             key,
@@ -208,13 +265,19 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           detailStatus: complete ? "ready" : "loading",
           detailError: null,
         });
-        if (complete) return;
+        if (complete) {
+          earlyController.abort();
+          return;
+        }
       }
       // The sweep and the split by policy, asked for at once: each part is
       // shown as soon as its own answer arrives. They wait for a check of the
       // live publication, and a part answered by other package versions than
       // the headline's refuses the whole result.
-      if (!(await current()) || signal.aborted) return;
+      if (!(await current()) || signal.aborted) {
+        earlyController.abort();
+        return;
+      }
       let merged = first;
       let failure = null;
       let refused = false;
@@ -223,23 +286,51 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       );
       // The detail service's answer is used only if it has the part asked
       // for, reports the headline's build commit and matches it; otherwise
-      // the part is asked of the main API
+      // the part is asked of the main API. An answer from another build than
+      // a headline fetched just now stops the page asking the detail service
+      // for the rest of the session
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
           const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
-          return answered && stageMismatch(first, detail, { sameBuild: true }) === null;
+          const otherBuild = stageMismatch(first, detail, { sameBuild: true }) !== null;
+          // Only a headline fetched just now stands for the main API's
+          // current build: under one kept from an earlier deploy, a detail
+          // answer from the new one is refused for this request but says
+          // nothing about the next
+          if (otherBuild && headlineFetched) detailServiceUsable = false;
+          return answered && !otherBuild;
         } catch {
           return false;
         }
       };
+      // Under a headline that reports no build commit (a deploy from before
+      // answers carried one), no detail answer can be accepted: asking the
+      // detail service would only add its time, up to a cold start, before
+      // the main API is asked anyway
+      const askDetail = detailServiceUsable && typeof first.build === "string";
       await Promise.all(
         parts.map(async (include) => {
           try {
-            const raw = await postHouseholdDetail(
-              { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include) },
-            );
+            const accept = acceptFor(include);
+            // An early answer from the detail service, kept if it passes
+            // the same check a later one would; otherwise Cloud Run's
+            const asked = askDetail ? await early.get(include) : undefined;
+            if (!askDetail) earlyController.abort();
+            const raw =
+              asked && !asked.error && accept(asked.raw)
+                ? asked.raw
+                : await postHouseholdDetail(
+                    { ...body, include },
+                    {
+                      signal,
+                      timeoutMs: DETAIL_TIMEOUT_MS,
+                      accept,
+                      // Asked early already: an answer that failed or was
+                      // refused there goes to Cloud Run at once
+                      detail: askDetail && !early.has(include),
+                    },
+                  );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,
             // where both report one, its build commit

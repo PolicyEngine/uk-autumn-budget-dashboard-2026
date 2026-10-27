@@ -55,7 +55,9 @@ def add_generate_arguments(parser: argparse.ArgumentParser) -> None:
         default=None,
         metavar="ID",
         help="Simulate these measures together as one combined run "
-        "(repeatable; implies --artifacts)",
+        "(repeatable; implies --artifacts, except with --only "
+        "income_distribution or income_growth, where it adds the run's "
+        "rows to that flat file under its combined key)",
     )
 
 
@@ -408,7 +410,62 @@ def run_generate_artifacts(
     out(
         f"{len(report.written)} artifacts written, "
         f"{len(report.refused)} refused"
+        + (
+            f", {len(report.failed)} failed in their Modal containers"
+            if report.failed
+            else ""
+        )
+        + (
+            f", {len(report.not_started)} combined runs not started"
+            if report.not_started
+            else ""
+        )
     )
     for key, reason in report.refused.items():
         out(f"REFUSED {key}: {reason}")
-    return 1 if report.refused else 0
+    for key, error in report.failed.items():
+        out(f"FAILED {key}: {error}")
+    for key in report.not_started:
+        out(f"NOT STARTED {key}: a measure failed in its container first")
+    if report.failed or report.not_started:
+        for line in _rerun_steps(report, combined_sets):
+            out(line)
+    return 1 if (report.refused or report.failed or report.not_started) else 0
+
+
+def _rerun_steps(report, combined_sets) -> list[str]:
+    """What to run after Modal runs failed: only the failed ones, at the
+    same commit and with the same options, and never a written one again (a
+    hand-written modifier would get a new directory and need a new
+    attestation)."""
+    from uk_budget_data.publication import combine
+
+    members_of = {
+        combine.combined_key(ids): ids
+        for ids in (
+            sorted(member.id for member in members)
+            for members in combined_sets
+        )
+    }
+    measures = [key for key in report.failed if key not in members_of]
+    combined = [
+        members_of[key] for key in report.failed if key in members_of
+    ] + list(report.not_started.values())
+    lines = [
+        "A failure is not a refusal: rerun only these, at the same commit "
+        "and with the same options. Don't rerun the written ones.",
+        "  1. Stage the written ones (a combined run reads its members from "
+        "the manifest).",
+    ]
+    if measures:
+        lines.append(
+            f"  {len(lines)}. Rerun the failed measures (each hand-written "
+            "modifier in a call of its own), then stage them: --reforms "
+            + " ".join(measures)
+        )
+    for ids in combined:
+        lines.append(
+            f"  {len(lines)}. Then the combined run, once its members are "
+            "staged: --combined " + " ".join(ids)
+        )
+    return lines

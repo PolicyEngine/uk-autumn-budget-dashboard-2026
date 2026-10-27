@@ -1,6 +1,7 @@
 import TitleIcon from "./TitleIcon";
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import "./SubTabs.css";
+import { scrollBelowBars } from "../utils/pageScroll";
 
 /** The ids that tie a sub-tab to its panel. */
 export const subTabId = (idPrefix, value) => `${idPrefix}-subtab-${value}`;
@@ -148,13 +149,10 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix, re
   useLayoutEffect(() => {
     if (!scrollPending.current) return;
     scrollPending.current = false;
-    const bar = barRef.current;
     const sentinel = sentinelRef.current;
-    if (!bar || !sentinel) return;
-    // scroll-margin-top (SubTabs.css) holds the height of the bars above
-    const offset = parseFloat(getComputedStyle(bar).scrollMarginTop) || 0;
-    const top = sentinel.getBoundingClientRect().top + window.scrollY - offset;
-    if (window.scrollY > top) window.scrollTo({ top });
+    if (!sentinel) return;
+    // The bars above it measured as they are (utils/pageScroll)
+    scrollBelowBars(sentinel, { gap: 0, above: true, onlyUp: true });
   }, [value]);
 
   // Keep the chosen tab in sight in a scrolling row (the row only, never
@@ -228,7 +226,7 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix, re
               className="sub-tab"
               onClick={() => choose(tab.value)}
             >
-              {tab.icon && <TitleIcon name={tab.icon} bare size={16} className="sub-tab-icon" />}
+              {tab.icon && <TitleIcon name={tab.icon} bare size={18} className="sub-tab-icon" />}
               <span className="sub-tab-label">{tab.label}</span>
             </button>
           );

@@ -15,7 +15,8 @@ import {
 import { measureTextWidth, wrapText, estimateTextHeight } from "./textMeasure";
 import { downloadSvg } from "./downloadFile";
 import { GROUP_GAP, SUB_GAP, legendLayout, subColumns, wrapLabel } from "./legendLayout";
-import { CHART_COLOURS } from "./chartTheme";
+import { CHART_COLOURS, TICK_STYLE } from "./chartTheme";
+import { EXPORT_FONT } from "./exportFrame";
 
 /**
  * Convert an image URL to a base64 data URL.
@@ -41,12 +42,42 @@ async function imageToBase64(url) {
   });
 }
 
+// Room kept under the drawing's bounding box, so no descender is clipped
+const CONTENT_PAD = 4;
+
+/**
+ * The bounding box of everything an SVG draws (getBBox: its axes, tick
+ * labels and axis titles included, in its own units), or null where it
+ * cannot be measured (jsdom, a hidden chart).
+ *
+ * @param {SVGSVGElement} svgElement
+ * @returns {{x: number, y: number, width: number, height: number}|null}
+ */
+export function contentBox(svgElement) {
+  try {
+    const box = svgElement.getBBox?.();
+    if (!box || !(box.width > 0) || !(box.height > 0)) return null;
+    return { x: box.x, y: box.y, width: box.width, height: box.height };
+  } catch {
+    return null;
+  }
+}
+
+// The legend's text, as the plot's tick labels draw theirs (TICK_STYLE, in
+// the dashboard's face), so a downloaded legend reads at the plot's size
+const LEGEND_TEXT = {
+  fontFamily: EXPORT_FONT,
+  fontSize: TICK_STYLE.fontSize,
+  fontWeight: "400",
+  fill: TICK_STYLE.fill,
+};
+
 // Style constants
 const STYLES = {
   padding: 20,
   titleFontSize: 18,
   descriptionFontSize: 13,
-  legendFontSize: 12,
+  legendFontSize: LEGEND_TEXT.fontSize,
   lineHeight: 1.5,
   titleDescGap: 8,
   legendIconSize: 14,
@@ -55,7 +86,7 @@ const STYLES = {
   colors: {
     title: CHART_COLOURS.text,
     description: CHART_COLOURS.axisTitle,
-    legendText: CHART_COLOURS.text,
+    legendText: LEGEND_TEXT.fill,
     background: CHART_COLOURS.surface,
   },
 };
@@ -130,6 +161,8 @@ function calculateItemWidth(item) {
   const { legendFontSize, legendIconSize, legendIconTextGap } = STYLES;
   const textWidth = measureTextWidth(item.label, {
     fontSize: legendFontSize,
+    fontWeight: LEGEND_TEXT.fontWeight,
+    fontFamily: LEGEND_TEXT.fontFamily,
   });
   return legendIconSize + legendIconTextGap + textWidth;
 }
@@ -242,12 +275,11 @@ function createLegend(items, maxWidth, yPosition, options = {}) {
         itemGroup.appendChild(rect);
       }
 
-      // Draw label with proper font styling (matching axis titles)
+      // The label in the plot's tick text (LEGEND_TEXT)
       const text = createSvgText(item.label, {
         x: currentX + legendIconSize + legendIconTextGap,
         y: currentY + legendFontSize / 3,
-        fontSize: legendFontSize,
-        fontWeight: "500",
+        ...LEGEND_TEXT,
         fill: colors.legendText,
       });
       itemGroup.appendChild(text);
@@ -421,6 +453,9 @@ export async function buildChartSvg(containerRef, options = {}) {
   const bbox = svgElement.getBoundingClientRect();
   const chartWidth = bbox.width;
   const chartHeight = bbox.height;
+  // What the chart draws, axis tick labels and titles included: the file
+  // keeps all of it, wherever it falls in (or past) the on-screen box
+  const drawn = contentBox(svgElement);
 
   // Clone and prepare SVG
   const clonedSvg = svgElement.cloneNode(true);
@@ -460,12 +495,22 @@ export async function buildChartSvg(containerRef, options = {}) {
   // logo at the bottom right, inside a uniform padding. No title or
   // description is drawn: the title names the file and the SVG <title>.
   const PAD = 24;
-  const plotHeight = Math.max(0, chartHeight - originalLegendHeight);
+  // The plot runs from the drawing's top-left (or the box's, if earlier)
+  // to the bottom of what is drawn; with nothing measurable, the box less
+  // the on-screen legend's space
+  const plotLeft = drawn ? Math.min(0, drawn.x) : 0;
+  const plotTopEdge = drawn ? Math.min(0, drawn.y) : 0;
+  const plotRight = drawn ? Math.max(chartWidth, drawn.x + drawn.width) : chartWidth;
+  const plotBottom = drawn
+    ? drawn.y + drawn.height + CONTENT_PAD
+    : Math.max(0, chartHeight - originalLegendHeight);
+  const plotWidth = plotRight - plotLeft;
+  const plotHeight = Math.max(0, plotBottom - plotTopEdge);
   const legend = legendItems.length
     ? legendItems.some((item) => item.group)
-      ? createGroupedLegend(legendItems, chartWidth)
-      : createLegend(legendItems, chartWidth - STYLES.padding * 2, 0, {
-          legendAreaWidth: chartWidth,
+      ? createGroupedLegend(legendItems, plotWidth)
+      : createLegend(legendItems, plotWidth - STYLES.padding * 2, 0, {
+          legendAreaWidth: plotWidth,
         })
     : null;
   const legendGap = legend ? 16 : 0;
@@ -474,7 +519,7 @@ export async function buildChartSvg(containerRef, options = {}) {
   const logoHeight = logo?.href ? logo.height : 0;
   const logoGap = logo?.href ? (logo.gap ?? 16) : 0;
 
-  const width = chartWidth + PAD * 2;
+  const width = plotWidth + PAD * 2;
   const height =
     PAD + plotHeight + legendGap + legendHeight + logoGap + logoHeight + PAD;
 
@@ -485,13 +530,15 @@ export async function buildChartSvg(containerRef, options = {}) {
 
   // The plot, clipped to its own height (the on-screen legend space goes)
   const existingContent = Array.from(clonedSvg.childNodes);
-  const contentGroup = createSvgGroup({ transform: `translate(${PAD}, ${PAD})` });
+  const contentGroup = createSvgGroup({
+    transform: `translate(${PAD - plotLeft}, ${PAD - plotTopEdge})`,
+  });
   existingContent.forEach((child) => contentGroup.appendChild(child));
   const clipId = `export-plot-clip-${Math.random().toString(36).slice(2, 8)}`;
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   const clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
   clip.setAttribute("id", clipId);
-  clip.appendChild(createSvgRect({ x: 0, y: 0, width: chartWidth, height: plotHeight }));
+  clip.appendChild(createSvgRect({ x: plotLeft, y: plotTopEdge, width: plotWidth, height: plotHeight }));
   defs.appendChild(clip);
   contentGroup.setAttribute("clip-path", `url(#${clipId})`);
 
@@ -542,6 +589,9 @@ export async function buildChartSvg(containerRef, options = {}) {
     svg: serializeSvg(clonedSvg),
     width,
     height,
+    // Where the legend starts, so a frame can scale the plot and the
+    // legend apart (exportFrame.frameSvg)
+    ...(legend ? { legendTop: PAD + plotHeight + legendGap / 2 } : {}),
   };
 }
 
@@ -559,8 +609,8 @@ export async function buildChartSvg(containerRef, options = {}) {
  */
 export function createGroupedLegend(items, areaWidth) {
   const { legendFontSize, legendIconSize, legendIconTextGap, colors } = STYLES;
-  const font = { fontSize: legendFontSize, fontWeight: "500" };
-  const headingFont = { fontSize: 11, fontWeight: "600" };
+  const font = { fontSize: legendFontSize, fontWeight: LEGEND_TEXT.fontWeight, fontFamily: LEGEND_TEXT.fontFamily };
+  const headingFont = { fontSize: 11, fontWeight: "600", fontFamily: LEGEND_TEXT.fontFamily };
   const lineHeight = legendFontSize + 4;
   const itemGap = 6;
   const headingHeight = 18;
@@ -571,7 +621,7 @@ export function createGroupedLegend(items, areaWidth) {
   const groups = [
     ["Raise revenue", items.filter((item) => item.group === "raise")],
     ["Cost revenue", items.filter((item) => item.group === "cost")],
-    ["Other measures", items.filter((item) => item.group === "other")],
+    ["Other policies", items.filter((item) => item.group === "other")],
   ].filter(([, groupItems]) => groupItems.length > 0);
   const rest = items.filter((item) => !item.group);
 

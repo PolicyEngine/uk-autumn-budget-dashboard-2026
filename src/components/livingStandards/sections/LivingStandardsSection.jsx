@@ -114,7 +114,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     if (a != null && b != null && a !== 0) {
       const pct = ((b - a) / a) * 100;
       const verb = changeVerb(pct, "%");
-      const who = metric.startsWith("mean") ? "the average household's income" : "the typical household's income";
+      const who = metric.startsWith("mean") ? "mean income (adjusted for household size)" : "median income (adjusted for household size)";
       // Prices (real or cash) are said in About this chart
       const real = ", ";
       summary = verb ? (

@@ -9,6 +9,8 @@ import {
   roundProgrammeGroups,
   signedMoney,
 } from "../../utils/singleYear";
+import { ChevronRight } from "lucide-react";
+import TitleIcon from "../TitleIcon";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
@@ -17,7 +19,9 @@ import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
 // brackets ("(COUNCIL_TAX_BAND_D)")
 const plainNote = (text) => String(text ?? "").replace(/\s*\([A-Z][A-Z0-9_]{3,}\)/g, "");
 import { downloadFile } from "../../utils/downloadFile";
-import TitleIcon from "../TitleIcon";
+
+/** "+£60", "−£12", or a muted "—" for no change. */
+const changeText = (value) => (Math.round(value) === 0 ? "—" : signedMoney(value));
 
 const changeClass = (value) => {
   const rounded = Math.round(value);
@@ -31,9 +35,9 @@ const changeClass = (value) => {
  * personal calculator: Before | After | Change for market income, taxes
  * (as negative amounts), benefits and pension contributions, then net
  * income. Each top row shows its taxes or benefits, open at first.
- * Net income shows its before and after only: its change is the headline
- * card above (each fact once). On a phone the table is Item | Change,
- * and each row opens to its before and after too.
+ * Net income is the total row, with its change (the rows add up to it).
+ * On a phone the table is Item | Change, with one switch to show Before
+ * and After.
  *
  * Whole pounds that agree with the rest of the page (roundProgrammeGroups):
  * the rows add up to net income, each row's after is its before plus its
@@ -47,6 +51,62 @@ const changeClass = (value) => {
  * @param {string} props.yearLabel - "2029-30"
  * @param {Object} [props.engine] - The API's versions
  */
+// Each group in words: what "up" means for it (taxes are negative amounts,
+// so a rise in the amount is a fall in what you pay). Market income, taxes
+// and benefits are always named; pension contributions only when they move.
+const GROUP_WORDS = [
+  { id: "income", noun: "market income", up: "rises", down: "falls", always: true },
+  { id: "tax", noun: "taxes", up: "fall", down: "rise", always: true },
+  { id: "benefit", noun: "benefits", up: "rise", down: "fall", always: true },
+  { id: "pension", noun: "pension contributions", up: "fall", down: "rise", always: false },
+];
+
+// "Fuel duty" -> "fuel duty"; "VAT" and "Council Tax" keep their capitals;
+// the "VAT change" row is just "VAT" in a sentence about changes
+const inSentence = (label) => {
+  const text = String(label ?? "").replace(/ change$/, "");
+  return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
+};
+
+// The row behind most of a group's change: "from fuel duty" when it is the
+// only row that moves, "mostly fuel duty" when it is more than half
+const mainRow = (group, change) => {
+  const moving = (group.rows ?? []).filter((row) => Math.round(row.shown?.change ?? 0) !== 0);
+  if (!moving.length) return "";
+  if (moving.length === 1) return `, all from ${inSentence(moving[0].label)}`;
+  const top = moving.reduce((a, b) => (Math.abs(b.shown.change) > Math.abs(a.shown.change) ? b : a));
+  const share = Math.round(top.shown.change) / change;
+  return share > 0.5 ? `, mostly ${inSentence(top.label)}` : "";
+};
+
+/**
+ * The card's one line, under its title: each group the policies change, by
+ * how much a year and which row is most of it, then those they leave
+ * alone: "Taxes fall by £9 a year, mostly fuel duty; market income and
+ * benefits are unchanged." The net change is the result card's.
+ */
+export function breakdownSentence(groups) {
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  const moved = [];
+  const still = [];
+  for (const words of GROUP_WORDS) {
+    const group = byId.get(words.id);
+    if (!group && !words.always) continue;
+    const change = Math.round(group?.shown?.change ?? 0);
+    if (change === 0) {
+      if (words.always) still.push(words.noun);
+    } else {
+      moved.push(`${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year${mainRow(group, change)}`);
+    }
+  }
+  if (!moved.length) return "No change to your taxes or benefits.";
+  const list = (items) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
+  const parts = [...moved];
+  if (still.length) parts.push(`${list(still)} ${still.length === 1 && still[0] === "market income" ? "is" : "are"} unchanged`);
+  const text = parts.join("; ");
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+}
+
 export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel, engine = {} }) {
   const narrow = useNarrowViewport();
   const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
@@ -55,7 +115,8 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
     () => new Set(groups.filter((group) => (group.rows ?? []).length > 0).map((group) => group.id)),
   );
   const notes = programmeNotes(groups);
-  const title = `Breakdown of household net income, ${yearLabel}`;
+  const title = `Your income, taxes and benefits, ${yearLabel}`;
+  const sentence = breakdownSentence(groups);
   const toggle = (id) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -98,76 +159,85 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
       ),
   };
 
-  const columns = narrow ? 2 : 4;
+  // On a phone the table is Item | Change; Before and After open together
+  // with one switch above it
+  const [showBoth, setShowBoth] = useState(false);
+  const wide = !narrow || showBoth;
 
-  // One row: a group (depth 0), a programme (1) or a programme's part (2)
-  const renderRow = (row, depth, key, color) => {
-    const hasParts = (row.children ?? row.rows ?? []).length > 0;
-    // On a phone every row opens (to its before and after)
-    const expandable = depth < 2 && (narrow || hasParts);
-    const isOpen = open.has(key);
+  // One row: a group (depth 0, semibold on a tint), a programme (1) or a
+  // programme's part (2). Every row keeps a chevron's width, so names at
+  // one depth start at one indent whether or not they open.
+  const renderRow = (row, depth, key) => {
     const parts = depth === 0 ? row.rows : row.children;
-    const label = (
-      <span className="programme-name">
-        {color && <span className="breakdown-dot" style={{ background: color }} aria-hidden="true" />}
-        {row.label}
-      </span>
-    );
+    const expandable = depth < 2 && (parts ?? []).length > 0;
+    const isOpen = open.has(key);
+    const name = <span className="programme-name">{row.label}</span>;
     return (
       <Fragment key={key}>
-        <tr className={`programme-row depth-${depth}`}>
+        <tr className={`programme-row depth-${depth}${depth === 0 ? " is-group" : ""}`}>
           <th scope="row">
             {expandable ? (
               <button type="button" className="programme-toggle" aria-expanded={isOpen} onClick={() => toggle(key)}>
-                <span className="programme-chevron" aria-hidden="true">
-                  {isOpen ? "▾" : "▸"}
-                </span>
-                {label}
+                <ChevronRight className={`programme-chevron${isOpen ? " is-open" : ""}`} size={14} strokeWidth={2} aria-hidden="true" />
+                {name}
               </button>
             ) : (
-              label
+              <span className="programme-leaf">
+                <span className="programme-chevron-space" aria-hidden="true" />
+                {name}
+              </span>
             )}
           </th>
-          {!narrow && <td className="num">{money(row.shown.before)}</td>}
-          {!narrow && <td className="num">{money(row.shown.after)}</td>}
-          <td className={`num change ${changeClass(row.shown.change)}`}>{signedMoney(row.shown.change)}</td>
+          {/* A change-only row (VAT change) has no before; its after is
+              the change, signed as the other taxes */}
+          {wide && (
+            <td className={`num${row.changeOnly ? " is-none" : ""}`}>{row.changeOnly ? "—" : money(row.shown.before)}</td>
+          )}
+          {wide && <td className="num">{row.changeOnly ? changeText(row.shown.after) : money(row.shown.after)}</td>}
+          <td className={`num change ${changeClass(row.shown.change)}`}>{changeText(row.shown.change)}</td>
         </tr>
-        {isOpen && narrow && (
-          <tr className={`programme-detail depth-${depth}`}>
-            <td colSpan={columns}>
-              Before {money(row.shown.before)} → after {money(row.shown.after)}
-            </td>
-          </tr>
-        )}
         {isOpen && parts?.map((part) => renderRow(part, depth + 1, `${key}/${part.id}`))}
       </Fragment>
     );
   };
 
   return (
+    // Headed as every other card: icon, title with its year and the
+    // download, then one sentence on what the policies change
     <div className="card single-year-card breakdown-card">
       <div className="chart-header">
         <div>
           <h3>
-            <TitleIcon name="list" />
+            <TitleIcon name="layers" />
             <span className="title-text">{title}</span>
           </h3>
+          <p className="chart-description">{sentence}</p>
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>
+      {narrow && (
+        <button
+          type="button"
+          className="light-pill-button breakdown-columns-toggle"
+          aria-pressed={showBoth}
+          onClick={() => setShowBoth((value) => !value)}
+        >
+          {showBoth ? "Hide before and after" : "Show before and after"}
+        </button>
+      )}
       <div className="programme-table-wrap">
-        <table className="programme-table breakdown-table">
+        <table className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
           <thead>
             <tr>
               <th scope="col">
                 <span className="visually-hidden">Item</span>
               </th>
-              {!narrow && (
+              {wide && (
                 <th scope="col" className="num">
                   Before
                 </th>
               )}
-              {!narrow && (
+              {wide && (
                 <th scope="col" className="num">
                   After
                 </th>
@@ -178,21 +248,18 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
             </tr>
           </thead>
           <tbody>
-            {groups.map((group) => renderRow(group, 0, group.id, group.color))}
+            {groups.map((group) => renderRow(group, 0, group.id))}
             <tr className="breakdown-net-row">
-              <th scope="row">Net income</th>
-              {!narrow && <td className="num">{money(totals.before)}</td>}
-              {!narrow && <td className="num">{money(totals.after)}</td>}
-              <td className="num">
-                {narrow ? (
-                  <>
-                    <span className="breakdown-net-label">Before → After</span>
-                    {`${money(totals.before)} → ${money(totals.after)}`}
-                  </>
-                ) : (
-                  <span className="visually-hidden">See the headline above.</span>
-                )}
-              </td>
+              <th scope="row">
+                <span className="programme-leaf">
+                  <span className="programme-chevron-space" aria-hidden="true" />
+                  <span className="programme-name">Net income</span>
+                </span>
+              </th>
+              {wide && <td className="num">{money(totals.before)}</td>}
+              {wide && <td className="num">{money(totals.after)}</td>}
+              {/* The table's total: the rows above add up to it */}
+              <td className={`num change ${changeClass(totals.change)}`}>{changeText(totals.change)}</td>
             </tr>
           </tbody>
         </table>

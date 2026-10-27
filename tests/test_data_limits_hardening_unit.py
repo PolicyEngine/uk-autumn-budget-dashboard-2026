@@ -73,6 +73,23 @@ def test_an_empty_registry_imports_without_holding_any_parameters(
     )
 
 
+def non_residential(limits):
+    """The non-residential purchase limit, lifted from the registry at the
+    a6299504 cut, built in the module under test: these checks need a limit
+    whose input a stand-in model reads (tests/data_limit_stand_ins.py keeps
+    the copy the other tests register)."""
+    return limits.DataLimit(
+        key="non_residential_purchases",
+        parameters=(
+            "gov.hmrc.stamp_duty.non_residential.purchase",
+            "gov.revenue_scotland.lbtt.non_residential",
+            "gov.wra.land_transaction_tax.non_residential",
+        ),
+        missing_input="non_residential_property_purchased",
+        reason="A stand-in for the lifted non-residential purchase limit.",
+    )
+
+
 def variable(**changes):
     return SimpleNamespace(
         **{
@@ -307,12 +324,13 @@ def test_storage_location_alone_does_not_change_a_stored_input(
         )
     for other in sims[1:]:
         assert (
-            limits._inputs_changed(sims[0], other, limits.DATA_LIMITS[1]) == []
+            limits._inputs_changed(sims[0], other, non_residential(limits))
+            == []
         )
 
 
 def test_stored_input_differences_reach_the_limit_record(monkeypatch, limits):
-    limit = limits.DATA_LIMITS[1]
+    limit = non_residential(limits)
     monkeypatch.setattr(limits, "DATA_LIMITS", (limit,))
     monkeypatch.setattr(
         limits, "limit_variables", lambda *args: frozenset({"purchase_tax"})
@@ -343,7 +361,8 @@ def test_stored_input_differences_reach_the_limit_record(monkeypatch, limits):
 def test_input_records_accept_only_variables_of_their_limit(
     monkeypatch, limits
 ):
-    limit = limits.DATA_LIMITS[1]
+    limit = non_residential(limits)
+    monkeypatch.setattr(limits, "DATA_LIMITS", (limit,))
     monkeypatch.setattr(
         limits, "limit_variables", lambda *args: frozenset({"purchase_tax"})
     )
@@ -375,7 +394,7 @@ def test_reader_names_are_derived_from_formula_input_and_parameter_reads(
     monkeypatch.setitem(
         sys.modules, "policyengine_uk.system", SimpleNamespace(system=model)
     )
-    assert limits.limit_variables(limits.DATA_LIMITS[1]) == frozenset(
+    assert limits.limit_variables(non_residential(limits)) == frozenset(
         {
             "non_residential_property_purchased",
             "new_reader",

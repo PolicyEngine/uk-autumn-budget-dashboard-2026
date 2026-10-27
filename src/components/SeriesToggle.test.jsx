@@ -25,6 +25,8 @@ describe("SeriesToggle", () => {
     const chip = (name) => screen.getByRole("button", { name });
     // A first-visit hint, gone after the first click
     expect(screen.getByText("Click to show or hide")).toBeInTheDocument();
+    // On a touch screen the CSS shows "Tap" in its place
+    expect(screen.getByText("Tap to show or hide")).toHaveClass("series-toggle-hint-tap");
     expect(chip("Alpha")).toHaveAttribute("aria-pressed", "true");
     expect(chip("Gamma")).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(chip("Gamma"));
@@ -37,6 +39,14 @@ describe("SeriesToggle", () => {
     fireEvent.click(chip("Gamma"));
     expect(document.querySelector("output")).toHaveTextContent("c");
     expect(chip("Gamma")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("shows a chip that is on by its fill and border only, never a tick", () => {
+    render(<Harness />);
+    const on = screen.getByRole("button", { name: "Alpha" });
+    expect(on).toHaveClass("is-on");
+    expect(on.querySelector(".series-toggle-check")).toBeNull();
+    expect(on.querySelectorAll("path")).toHaveLength(0);
   });
 
   it("highlights a line on hover, only while it is shown", () => {
