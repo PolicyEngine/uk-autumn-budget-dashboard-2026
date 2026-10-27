@@ -22,6 +22,14 @@ const OUTLOOK = readFileSync(
   "utf8",
 );
 
+// Once `obr-forecast` loads a Budget forecast into the committed outlook
+// (forecast.post_published), Forecast changes shows its unavailable notice
+// in place of the March forecast's heading (ForecastPanel)
+const forecastShown = (panel) =>
+  JSON.parse(OUTLOOK).forecast.post_published
+    ? within(panel).findByText("Budget-day forecast is unavailable until verified")
+    : within(panel).findByRole("heading", { name: /economic forecast$/ });
+
 const PUBLIC = join(__dirname, "..", "..", "..", "public");
 
 beforeEach(() => {
@@ -113,7 +121,7 @@ describe("the Pre-measures forecast view", () => {
     expect(await within(panel).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(panel).queryByRole("heading", { name: /economic forecast$/ })).toBeNull();
     fireEvent.click(subTabs[2]);
-    expect(await within(panel).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
+    expect(await forecastShown(panel)).toBeInTheDocument();
     expect(window.location.search).toBe("?tab=outlook&sub=forecast");
     fireEvent.click(subTabs[0]);
     // Its engine and data are said in Methodology, not on this view
@@ -473,7 +481,7 @@ describe("the Pre-measures forecast view", () => {
     window.history.replaceState({}, "", "/?tab=living&sub=forecast");
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(panel).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
+    expect(await forecastShown(panel)).toBeInTheDocument();
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", "forecast"]);
     // The OBR's household income per person card is gone
