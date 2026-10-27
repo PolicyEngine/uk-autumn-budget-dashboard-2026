@@ -248,7 +248,8 @@ describe("InfoSections", () => {
     expect(container.querySelectorAll(".info-section-caveat")).toHaveLength(0);
     expect(container.querySelector(".info-caveats").tagName).toBe("DIV");
     expect(container.querySelectorAll("ul.info-list li")).toHaveLength(2);
-    expect(container.querySelector(".info-term")).toHaveTextContent("Hex map — One hexagon per seat.");
+    expect(container.querySelector(".info-term dt")).toHaveTextContent("Hex map");
+    expect(container.querySelector(".info-term dd")).toHaveTextContent("One hexagon per seat.");
     const last = container.querySelector(".info-sections").lastElementChild;
     expect(last).toHaveClass("info-method");
     expect(last).toHaveTextContent(/^More in Methodology: How the figures by area are estimated · Household net income →$/);

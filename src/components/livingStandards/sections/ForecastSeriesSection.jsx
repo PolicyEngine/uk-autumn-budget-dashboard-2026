@@ -31,10 +31,10 @@ const NOT_OBR = {
 // What each inflation measure is, one line each, first in its card's
 // "About this chart" (the derivation caveat stays in NOT_OBR)
 const MEASURES = {
-  cpi: "Consumer Prices Index: the headline measure of price rises across a typical basket of goods and services, and the one the Bank of England targets at 2%.",
+  cpi: "Price rises across a typical basket; the Bank of England's 2% target.",
   cpih: "CPI plus owner-occupiers' housing costs and Council Tax.",
-  cpi_ahc: "CPI with housing costs taken out, used to put incomes after housing costs in real terms.",
-  rpi: "Retail Prices Index: an older measure that includes mortgage interest and is still used for some charges, such as fuel duty.",
+  cpi_ahc: "CPI without housing costs; used to adjust incomes after housing costs.",
+  rpi: "Older measure including mortgage interest; still used for some charges such as fuel duty.",
 };
 
 // Notes on a series' years, said once in its card's "About this chart"

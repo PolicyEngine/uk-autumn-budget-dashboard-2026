@@ -57,24 +57,22 @@
   color: var(--pe-gray-400);
 }
 
-/* Definitions: "Term — meaning", one line each */
+/* Definitions: each term in semibold on its own line, its meaning muted below */
 .info-terms {
-  margin: 0;
-}
-
-.info-term + .info-term {
-  margin-top: 2px;
-}
-
-.info-term dt,
-.info-term dd {
-  display: inline;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
 }
 
 .info-term dt {
   font-weight: 600;
   color: var(--pe-gray-800);
+}
+
+.info-term dd {
+  margin: 0;
+  color: var(--pe-gray-600);
 }
 
 .info-sections a {

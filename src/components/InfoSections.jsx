@@ -89,7 +89,7 @@ const Items = ({ items, className = "" }) =>
  * Definitions, Caveats and Source, each with its icon and heading, in that
  * order, and only those with content. Every section looks the same (Caveats
  * too, bar its icon); bullets only where a section has two or more items;
- * definitions as "Term — meaning" lines. The Methodology links (the card's
+ * definitions as the term in semibold over its meaning. The Methodology links (the card's
  * section and its shared terms) close it as one "More in Methodology" line.
  *
  * @param {{info: ChartInfo}} props
@@ -119,7 +119,6 @@ export default function InfoSections({ info }) {
             {p.own.map(({ term, meaning }) => (
               <div key={term} className="info-term">
                 <dt>{term}</dt>
-                <span aria-hidden="true"> — </span>
                 <dd>{meaning}</dd>
               </div>
             ))}
