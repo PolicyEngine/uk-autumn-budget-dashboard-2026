@@ -160,9 +160,13 @@ describe("symmetricAxis", () => {
 });
 
 describe("divergingAxis", () => {
-  it("is symmetric when values fall on both sides of 0", async () => {
-    const { divergingAxis, symmetricAxis } = await import("./chartTheme");
-    expect(divergingAxis([-7.7, 4.6])).toEqual(symmetricAxis([-7.7, 4.6]));
+  it("fits each side, never forced symmetric, when values fall on both sides of 0", async () => {
+    const { divergingAxis } = await import("./chartTheme");
+    expect(divergingAxis([-0.46, 0.13])).toEqual({ domain: [-0.5, 0.15], ticks: [-0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1] });
+    expect(divergingAxis([-7.7, 4.6])).toEqual({ domain: [-10, 5], ticks: [-10, -7.5, -5, -2.5, 0, 2.5, 5] });
+    // A symmetric input stays symmetric (the salary sweep's change axis)
+    const { domain } = divergingAxis([-120, 120]);
+    expect(domain[0]).toBe(-domain[1]);
   });
 
   it("runs from 0 when every value has one sign", async () => {

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { pctTick, tightAxis } from "./DecileGrowthSection";
 
 describe("tightAxis", () => {
-  it("ends close to the data: ±0.47 is ±0.5 in 0.25s, not ±0.75", () => {
-    expect(tightAxis([-0.47, 0.2])).toEqual({ domain: [-0.5, 0.5], ticks: [-0.5, -0.25, 0, 0.25, 0.5] });
+  it("fits each side when values go both ways, never forced symmetric: −0.46 to +0.13 is −0.5 to +0.15 by 0.1s", () => {
+    expect(tightAxis([-0.46, 0.13])).toEqual({ domain: [-0.5, 0.15], ticks: [-0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1] });
   });
 
   it("starts at 0 when every value has one sign", () => {

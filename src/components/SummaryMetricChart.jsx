@@ -34,6 +34,7 @@ import {
   axisWidth,
   chartMargin,
   fiscalYearTick,
+  fittedAxis,
   shortFiscalYearTick,
   useNarrowViewport,
 } from "../utils/chartTheme";
@@ -195,10 +196,12 @@ export function povertyMetric({ basis, housing, group }) {
 /**
  * A value axis fitted tight to the bars: the largest bar plus 8%, rounded
  * up to a step of 1, 2, 2.5 or 5 × 10^k (two steps a side), from zero when
- * every value has one sign and symmetric about zero when they go both ways.
+ * every value has one sign; fitted to each side (chartTheme.fittedAxis),
+ * never forced symmetric, when they go both ways.
  */
 export function tightAxis(values) {
   const finite = values.filter(Number.isFinite);
+  if (finite.some((v) => v > 0) && finite.some((v) => v < 0)) return fittedAxis(finite);
   const size = Math.max(...finite.map(Math.abs), 1e-9) * 1.08;
   const raw = size / 2;
   const power = 10 ** Math.floor(Math.log10(raw));
@@ -458,8 +461,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
-  // Fitted to the data: from zero when every bar has one sign, symmetric
-  // when they go both ways, with round ticks (tightAxis)
+  // Fitted to the data: from zero when every bar has one sign, fitted to
+  // each side when they go both ways, with round ticks (tightAxis)
   const { domain, ticks } = tightAxis(shown.map((point) => point.value));
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
