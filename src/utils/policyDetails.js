@@ -224,14 +224,14 @@ export const POLICY_DETAILS = [
     sentence: "unfreezing Local Housing Allowance",
     name: "Local Housing Allowance unfrozen",
     description: "Re-set Local Housing Allowance rates to local rents from April 2027",
-    writtenFor: "Candidate measure. From April 2027 Local Housing Allowance rates in Great Britain are no longer frozen at their April 2024 level: each April they are re-set to the 30th percentile of local rents, as policyengine-uk determines them from its projected rents, with the national maximum and the March 2020 minimum. It raises Universal Credit's housing element and Housing Benefit for private renters whose rent is above the frozen rate. Northern Ireland's rates are unchanged.",
+    writtenFor: "Candidate measure. From April 2027 Local Housing Allowance rates are no longer frozen at their April 2024 level: each April they are re-set to the 30th percentile of local rents, as policyengine-uk determines them from its projected rents, with the national maximum and the March 2020 minimum. It raises Universal Credit's housing element and Housing Benefit for private renters whose rent is above the frozen rate. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
     summary:
       "Re-sets Local Housing Allowance rates to the 30th percentile of local rents each April from 2027, ending the freeze at April 2024 levels.",
     starts: "April 2027",
     type: "Benefit",
     inForce: { from: "2027-04" },
     details:
-      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. Northern Ireland's rates are unchanged.",
+      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
     source: {
       label: "Local Housing Allowance",
       href: "https://www.gov.uk/government/collections/local-housing-allowance-lha-rates",

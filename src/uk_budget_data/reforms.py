@@ -67,6 +67,8 @@ BADR_LIFETIME_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
 PLAN_2_THRESHOLD = "gov.hmrc.student_loans.thresholds.plan_2"
 CAPITAL_GAINS_RESPONSES = "gov.simulation.capital_gains_responses"
 LHA_FREEZE = "gov.dwp.LHA.freeze"
+# Northern Ireland's, which the Housing Executive sets as DWP does
+LHA_FREEZE_NI = "gov.dfc.LHA.freeze"
 # The employer (secondary) Class 1 threshold, weekly: £5,000 a year from
 # April 2025 is stored as 5,000 / 52.
 SECONDARY_THRESHOLD = (
@@ -520,15 +522,19 @@ def _create_lha_unfreeze_2027() -> Reform:
         name="Local Housing Allowance unfrozen",
         description=(
             "Candidate measure. From April 2027 Local Housing Allowance "
-            "rates in Great Britain are no longer frozen at their April "
-            "2024 level: each April they are re-set to the 30th percentile "
+            "rates are no longer frozen at their April 2024 level: each "
+            "April they are re-set to the 30th percentile "
             "of local rents, as policyengine-uk determines them from its "
             "projected rents, with the national maximum and the March 2020 "
             "minimum. It raises Universal Credit's housing element and "
             "Housing Benefit for private renters whose rent is above the "
-            "frozen rate. Northern Ireland's rates are unchanged."
+            "frozen rate. Northern Ireland's rates, which follow Great "
+            "Britain's, are unfrozen too."
         ),
-        parameter_changes={LHA_FREEZE: _years_from(2027, False)},
+        parameter_changes={
+            LHA_FREEZE: _years_from(2027, False),
+            LHA_FREEZE_NI: _years_from(2027, False),
+        },
     )
 
 
