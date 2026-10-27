@@ -7,12 +7,20 @@ One modifier in a module of its own: see the package docstring.
 from uk_budget_data.measure_templates import apply_vat_base_change
 
 # The October to March share of a financial year's domestic electricity
-# use: DESNZ Energy Trends Table 5.5 (September 2026), domestic sales by
-# quarter, pooled over 2022-23 to 2025-26 (Q4 plus the next Q1, over Q2 to
-# the next Q1: 208.0072 of 366.9466 TWh; 56.1%, 56.5%, 57.2% and 57.0% by
-# year). It is a share of use, not of spending: the price cap moves by
-# quarter too. A literal, 208.0072 / 366.9466, since a receipt binds this
-# module only if each assignment in it is a literal.
+# use, pooled over 2022-23 to 2025-26. Source: DESNZ Energy Trends Table
+# 5.5, ET_5.5_SEP_26.xlsx (published 29 September 2026), sheet "Quarter",
+# column I ("Domestic sales", TWh):
+# https://assets.publishing.service.gov.uk/media/6aba6e088cb3c0580e501289/ET_5.5_SEP_26.xlsx
+# - October to March, each year's Quarter 4 and the next Quarter 1: I118,
+#   I119, I122, I123, I126, I127, I130 and I131 (Quarter 4 2022 to Quarter
+#   1 2026), 208.0072 TWh;
+# - the four years, Quarter 2 2022 to Quarter 1 2026: I116:I131, 366.9466
+#   TWh.
+# By year, 56.1%, 56.5%, 57.2% and 57.0%. Later editions revise recent
+# quarters (August 2026's Quarter 1 2026 was 0.2438 TWh higher). It is a
+# share of use, not of spending: the price cap moves by quarter too. A
+# literal, 208.0072 / 366.9466, since a receipt binds this module only if
+# each assignment in it is a literal.
 WINTER_SHARE = 0.5668595921041373
 
 
