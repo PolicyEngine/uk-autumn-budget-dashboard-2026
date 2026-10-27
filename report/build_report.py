@@ -43,6 +43,33 @@ PROVISIONAL_LABEL = "Provisional: statement figures, awaiting Treasury costing"
 CANDIDATE_PROVISIONAL_LABEL = (
     "Provisional: candidate measures modelled before the Budget, not announced policy"
 )
+
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def is_candidate_manifest(manifest: dict) -> bool:
+    """Whether the manifest's entries are pre-Budget candidates, the page's
+    rule (src/utils/publication/manifest.js, isCandidateManifest).
+
+    The forecast basis alone cannot say this: the runbook keeps it at
+    pre_budget on Budget day unless the forecast is rebased. So: last written
+    (updated_at, UTC) before the Budget date the manifest names (budget.date,
+    from CURRENT_BUDGET), and not rebased. Without both dates, not a
+    candidate: "not announced policy" is said only on evidence.
+    """
+    forecast = (manifest.get("basis") or {}).get("forecast") or {}
+    if forecast.get("status") == "updated":
+        return False
+    updated = manifest.get("updated_at")
+    budget_date = (manifest.get("budget") or {}).get("date")
+    if not isinstance(updated, str) or not isinstance(budget_date, str):
+        return False
+    if not _ISO_DATE.match(updated) or not _ISO_DATE.match(budget_date):
+        return False
+    return updated[:10] < budget_date[:10]
+
+
 DEFAULT_YEAR = 2027
 GAIN, GAIN_TEXT = "#319795", "#0F766E"
 LOSS, LOSS_TEXT = "#D97706", "#B45309"
@@ -241,9 +268,8 @@ class Publication:
         self.provisional = any(e.status == "provisional" for e in self.measures.values()) or (
             self.combined is not None and self.combined.status == "provisional"
         )
-        pre_budget = (m.get("basis", {}).get("forecast", {}) or {}).get("status") == "pre_budget"
-        self.provisional_label = CANDIDATE_PROVISIONAL_LABEL if pre_budget else PROVISIONAL_LABEL
-        self.pre_budget = pre_budget
+        self.candidate = is_candidate_manifest(m)
+        self.provisional_label = CANDIDATE_PROVISIONAL_LABEL if self.candidate else PROVISIONAL_LABEL
 
     def _combined(self):
         ids = set(self.measures)

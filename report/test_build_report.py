@@ -188,6 +188,45 @@ def test_all_approved_has_no_watermark(tmp_path):
     assert br.CANDIDATE_PROVISIONAL_LABEL not in html and br.PROVISIONAL_LABEL not in html
 
 
+def _with_manifest(data: Path, **changes) -> Path:
+    m = json.loads((data / "manifest.json").read_text())
+    m.update(changes)
+    (data / "manifest.json").write_text(json.dumps(m))
+    return data
+
+
+def test_budget_day_provisional_is_statement_figures_though_the_basis_stays_pre_budget(tmp_path):
+    # The runbook keeps basis.forecast.status at pre_budget on Budget day
+    # unless the forecast is rebased: the label must not call announced
+    # measures candidates.
+    html = build(publication(tmp_path), tmp_path / "out")
+    assert br.PROVISIONAL_LABEL in html
+    assert br.CANDIDATE_PROVISIONAL_LABEL not in html
+
+
+def test_a_manifest_written_before_the_budget_calls_provisional_figures_candidates(tmp_path):
+    data = _with_manifest(publication(tmp_path), updated_at="2026-10-27T23:59:59+00:00")
+    html = build(data, tmp_path / "out")
+    assert br.CANDIDATE_PROVISIONAL_LABEL in html
+    assert br.PROVISIONAL_LABEL not in html
+
+
+@pytest.mark.parametrize(
+    "manifest, candidate",
+    [
+        ({"updated_at": "2026-10-27T23:59:59+00:00", "budget": {"date": "2026-10-28"}, "basis": {"forecast": {"status": "pre_budget"}}}, True),
+        ({"updated_at": "2026-10-28T00:00:01+00:00", "budget": {"date": "2026-10-28"}, "basis": {"forecast": {"status": "pre_budget"}}}, False),
+        ({"updated_at": "2026-11-02T09:00:00+00:00", "budget": {"date": "2026-10-28"}}, False),
+        ({"updated_at": "2026-10-24T13:00:00+00:00", "budget": {"date": "2026-10-28"}, "basis": {"forecast": {"status": "updated"}}}, False),
+        ({"budget": {"date": "2026-10-28"}, "basis": {"forecast": {"status": "pre_budget"}}}, False),
+        ({"updated_at": "2026-10-24T13:00:00+00:00", "basis": {"forecast": {"status": "pre_budget"}}}, False),
+        ({"updated_at": "not a date", "budget": {"date": "2026-10-28"}}, False),
+    ],
+)
+def test_candidate_rule(manifest, candidate):
+    assert br.is_candidate_manifest(manifest) is candidate
+
+
 def test_staged_measure_is_listed_not_shown(tmp_path):
     html = build(publication(tmp_path, statuses={"m02": "staged"}, combined=False), tmp_path / "out")
     assert "Measures in the release but not shown" in html
