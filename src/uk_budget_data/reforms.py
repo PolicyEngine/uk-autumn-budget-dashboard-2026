@@ -200,7 +200,8 @@ def _create_fuel_duty_rise_deferral() -> Reform:
             "winter 2026-27, with no April 2027 RPI rise; the 5p is restored "
             "in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI "
             "uprating resumes in April 2028 from 57.95p, so that rise is never "
-            "made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price."
+            "made up. Rates are day-weighted to fiscal years. Includes the "
+            "VAT on the lower pump price."
         ),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
         simulation_modifier=pump_vat_on_fuel_duty_deferral,
